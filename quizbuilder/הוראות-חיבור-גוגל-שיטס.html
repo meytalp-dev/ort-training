@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הוראות חיבור Google Sheets</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Heebo', sans-serif; background: #f0fdfa; color: #1e293b; line-height: 1.8; }
+        .header { background: linear-gradient(135deg, #0891b2, #065f6e); padding: 40px 20px; text-align: center; color: white; }
+        .header h1 { font-family: 'Rubik', sans-serif; font-size: 1.8rem; margin-bottom: 8px; }
+        .header p { opacity: 0.85; font-size: 1rem; }
+        .container { max-width: 750px; margin: 30px auto; padding: 0 20px; }
+        .step { background: white; border-radius: 16px; padding: 28px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(8,145,178,0.08); border: 1px solid #e2e8f0; }
+        .step-number { display: inline-block; background: linear-gradient(135deg, #0891b2, #0e7490); color: white; width: 40px; height: 40px; border-radius: 12px; text-align: center; line-height: 40px; font-weight: 700; font-size: 1.1rem; margin-bottom: 12px; }
+        .step h2 { font-family: 'Rubik', sans-serif; font-size: 1.2rem; color: #0891b2; margin-bottom: 10px; }
+        .step p { margin-bottom: 10px; }
+        .step img { max-width: 100%; border-radius: 8px; margin: 10px 0; }
+        .code-box { background: #1e293b; color: #e2e8f0; padding: 18px; border-radius: 10px; font-family: monospace; font-size: 0.85rem; line-height: 1.6; overflow-x: auto; direction: ltr; text-align: left; margin: 14px 0; position: relative; white-space: pre-wrap; word-break: break-all; }
+        .copy-btn { position: absolute; top: 10px; right: 10px; background: #0891b2; color: white; border: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-family: 'Heebo', sans-serif; font-size: 0.85rem; }
+        .copy-btn:hover { background: #0e7490; }
+        .highlight { background: #fef3c7; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+        .warning { background: #fef3c7; border: 1px solid #fbbf24; padding: 14px 18px; border-radius: 10px; margin: 14px 0; }
+        .success { background: #d1fae5; border: 1px solid #6ee7b7; padding: 14px 18px; border-radius: 10px; margin: 14px 0; }
+        a { color: #0891b2; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>הוראות הגדרה – חיבור ציונים ל-Google Sheets</h1>
+    <p>פעם אחת בלבד! אחרי זה הכל אוטומטי</p>
+</div>
+
+<div class="container">
+
+    <div class="step">
+        <div class="step-number">1</div>
+        <h2>פתחו Google Sheet חדש</h2>
+        <p>היכנסו ל-<a href="https://sheets.google.com" target="_blank">sheets.google.com</a> וצרו גיליון חדש.</p>
+        <p>תנו לו שם, למשל: <span class="highlight">ציוני מבחן – מודל לינארי</span></p>
+    </div>
+
+    <div class="step">
+        <div class="step-number">2</div>
+        <h2>פתחו את עורך הסקריפט</h2>
+        <p>בתפריט למעלה לחצו על: <span class="highlight">תוספים</span> (Extensions) ← <span class="highlight">Apps Script</span></p>
+        <p>ייפתח חלון חדש של עורך קוד.</p>
+    </div>
+
+    <div class="step">
+        <div class="step-number">3</div>
+        <h2>מחקו את הקוד הקיים והדביקו את הקוד הזה:</h2>
+        <p>סמנו את כל הקוד למטה, העתיקו (Ctrl+C), ובעורך הסקריפט מחקו הכל והדביקו (Ctrl+V):</p>
+        <div class="code-box" id="scriptCode">
+            <button class="copy-btn" onclick="copyCode()">העתקה</button>
+function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var data = JSON.parse(e.postData.contents);
+
+    // Use quiz name as sheet tab, or default
+    var sheetName = data.quiz || 'ציונים';
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+
+    // Build row from data
+    var keys = Object.keys(data);
+    var fixedKeys = ['date','time','quiz','name','studentClass',
+                     'multipleScore','totalScore','percentage'];
+
+    // Add headers if sheet is empty
+    if (sheet.getLastRow() === 0) {
+      var headers = ['תאריך','שעה','שאלון','שם תלמיד','כיתה',
+                     'אמריקאיות','ציון כולל','אחוז'];
+      // Add dynamic question columns
+      keys.forEach(function(k) {
+        if (fixedKeys.indexOf(k) === -1) headers.push(k);
+      });
+      sheet.appendRow(headers);
+      var hRange = sheet.getRange(1, 1, 1, headers.length);
+      hRange.setFontWeight('bold');
+      hRange.setBackground('#0891b2');
+      hRange.setFontColor('white');
+    }
+
+    // Build row
+    var row = [
+      data.date, data.time, data.quiz, data.name,
+      data.studentClass, data.multipleScore,
+      data.totalScore, data.percentage
+    ];
+    keys.forEach(function(k) {
+      if (fixedKeys.indexOf(k) === -1) row.push(data[k]);
+    });
+
+    sheet.appendRow(row);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput('The script is working!')
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+        </div>
+    </div>
+
+    <div class="step">
+        <div class="step-number">4</div>
+        <h2>שמרו ופרסמו</h2>
+        <p>1. לחצו <span class="highlight">Ctrl+S</span> לשמירה</p>
+        <p>2. לחצו על <span class="highlight">Deploy</span> (פריסה) ← <span class="highlight">New deployment</span></p>
+        <p>3. ליד "Select type" לחצו על גלגל השיניים ובחרו <span class="highlight">Web app</span></p>
+        <p>4. הגדרות:</p>
+        <ul style="margin-right: 20px; margin-bottom: 10px;">
+            <li>Description: <span class="highlight">quiz results</span></li>
+            <li>Execute as: <span class="highlight">Me</span></li>
+            <li>Who has access: <span class="highlight">Anyone</span></li>
+        </ul>
+        <p>5. לחצו <span class="highlight">Deploy</span></p>
+        <p>6. אשרו את ההרשאות (Authorize access → בחרו את החשבון שלכם → Allow)</p>
+        <div class="warning">
+            אם מופיע "Google hasn't verified this app" – לחצו <strong>Advanced</strong> ← <strong>Go to (unsafe)</strong>. זה בסדר, כי זה הסקריפט שלכם.
+        </div>
+    </div>
+
+    <div class="step">
+        <div class="step-number">5</div>
+        <h2>העתיקו את הקישור</h2>
+        <p>אחרי הפריסה יופיע <span class="highlight">Web app URL</span> – זה קישור ארוך שמתחיל ב:</p>
+        <div class="code-box" style="font-size: 0.8rem;">https://script.google.com/macros/s/XXXX.../exec</div>
+        <p><strong>העתיקו את הקישור הזה והדביקו אותו במחולל השאלונים</strong> (בשלב "הגדרות" יש שדה לקישור).</p>
+        <div class="success">
+            זהו! מאותו רגע כל ציון ייכנס אוטומטית לטבלה שלכם ב-Google Sheets.<br>
+            כל שאלון יקבל גיליון (tab) נפרד בטבלה!
+        </div>
+    </div>
+
+</div>
+
+<script>
+function copyCode() {
+    const code = document.getElementById('scriptCode').textContent.replace('העתקה', '').trim();
+    navigator.clipboard.writeText(code).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'הועתק!';
+        setTimeout(() => btn.textContent = 'העתקה', 2000);
+    });
+}
+</script>
+
+<div id="logo" style="position:fixed;bottom:18px;right:20px;z-index:200;opacity:.45;pointer-events:none"><img src="../לוגו לרני עיגולים.png" alt="Lerani" style="height:32px;width:auto"></div>
+
+</body>
+</html>

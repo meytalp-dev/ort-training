@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>שאלון – שם המספר | אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#0891b2;--primary-light:#22d3ee;--primary-dark:#0e7490;--accent:#10b981;--bg:#f0fdfa;--card:#fff;--text:#1e293b;--text-light:#64748b;--correct:#10b981;--correct-bg:#d1fae5;--wrong:#ef4444;--wrong-bg:#fee2e2;--border:#e2e8f0;--shadow:0 4px 24px rgba(8,145,178,.08)}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.7}
+.header{background:linear-gradient(135deg,var(--primary),var(--primary-dark),#065f6e);padding:40px 20px 50px;text-align:center;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,255,255,.05) 0%,transparent 60%);animation:shimmer 8s infinite linear}
+@keyframes shimmer{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.header h1{font-family:'Rubik',sans-serif;font-size:clamp(1.8rem,5vw,2.6rem);color:#fff;font-weight:700;position:relative;margin-bottom:8px}
+.header .subtitle{color:rgba(255,255,255,.85);font-size:1.1rem;font-weight:300;position:relative}
+.header .badge{display:inline-block;background:rgba(255,255,255,.15);backdrop-filter:blur(10px);padding:6px 18px;border-radius:20px;color:#fff;font-size:.85rem;margin-top:14px;position:relative}
+.intro{max-width:700px;margin:-30px auto 30px;padding:0 20px;position:relative;z-index:2}
+.intro-card{background:var(--card);border-radius:16px;padding:28px 32px;box-shadow:0 8px 40px rgba(8,145,178,.12);border:1px solid var(--border)}
+.intro-card h2{font-family:'Rubik',sans-serif;font-size:1.2rem;color:var(--primary);margin-bottom:12px}
+.intro-card p{color:var(--text-light);font-size:.95rem;line-height:1.8}
+.student-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.student-info input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:10px;font-family:'Heebo',sans-serif;font-size:1rem;transition:border-color .3s;outline:none}
+.student-info input:focus{border-color:var(--primary-light)}
+.student-info input::placeholder{color:#b0bec5}
+.start-btn{display:block;width:100%;margin-top:20px;padding:14px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:12px;font-family:'Heebo',sans-serif;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 4px 15px rgba(8,145,178,.3)}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(8,145,178,.4)}
+.quiz-container{max-width:700px;margin:0 auto 40px;padding:0 20px;display:none}
+.quiz-container.active{display:block}
+.progress-bar-wrapper{background:var(--card);border-radius:16px;padding:20px 24px;margin-bottom:24px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.progress-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.progress-info span{font-size:.9rem;color:var(--text-light);font-weight:500}
+.progress-info .qc{color:var(--primary);font-weight:700;font-size:1rem}
+.progress-track{width:100%;height:8px;background:#e0f2fe;border-radius:10px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary-light),var(--primary));border-radius:10px;transition:width .5s;width:0}
+.question-card{background:var(--card);border-radius:16px;padding:32px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:20px;animation:slideUp .4s ease}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.q-num-badge{display:inline-block;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;width:36px;height:36px;border-radius:10px;text-align:center;line-height:36px;font-weight:700;font-size:.95rem;margin-bottom:14px}
+.q-type-badge{display:inline-block;background:#e0f2fe;color:var(--primary);padding:3px 12px;border-radius:8px;font-size:.75rem;font-weight:500;margin-right:10px;vertical-align:middle}
+.q-text{font-family:'Rubik',sans-serif;font-size:1.15rem;font-weight:500;color:var(--text);margin-bottom:20px;line-height:1.8}
+.options-list{display:flex;flex-direction:column;gap:10px}
+.option-btn{display:flex;align-items:center;gap:14px;width:100%;padding:14px 18px;background:#f8fafc;border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:all .25s;text-align:right;font-family:'Heebo',sans-serif;font-size:1rem;color:var(--text)}
+.option-btn:hover:not(.disabled){border-color:var(--primary-light);background:#ecfeff;transform:translateX(-3px)}
+.option-btn .ol{min-width:32px;height:32px;border-radius:8px;background:#fff;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;color:var(--text-light);transition:all .25s}
+.option-btn:hover:not(.disabled) .ol{border-color:var(--primary-light);color:var(--primary)}
+.option-btn.selected{border-color:var(--primary);background:#ecfeff}
+.option-btn.selected .ol{background:var(--primary);border-color:var(--primary);color:#fff}
+.option-btn.correct{border-color:var(--correct);background:var(--correct-bg)}
+.option-btn.correct .ol{background:var(--correct);border-color:var(--correct);color:#fff}
+.option-btn.wrong{border-color:var(--wrong);background:var(--wrong-bg)}
+.option-btn.wrong .ol{background:var(--wrong);border-color:var(--wrong);color:#fff}
+.option-btn.disabled{cursor:default;opacity:.7}
+.open-answer{width:100%;min-height:100px;padding:14px 18px;border:2px solid var(--border);border-radius:12px;font-family:'Heebo',sans-serif;font-size:1rem;line-height:1.7;resize:vertical;outline:none;transition:border-color .3s}
+.open-answer:focus{border-color:var(--primary-light)}
+.open-answer::placeholder{color:#b0bec5}
+.feedback{margin-top:16px;padding:14px 18px;border-radius:12px;font-size:.95rem;font-weight:500;display:none;animation:slideUp .3s ease}
+.feedback.correct{display:block;background:var(--correct-bg);color:#065f46;border:1px solid #a7f3d0}
+.feedback.wrong{display:block;background:var(--wrong-bg);color:#991b1b;border:1px solid #fca5a5}
+.feedback.info{display:block;background:#e0f2fe;color:var(--primary-dark);border:1px solid #7dd3fc}
+.fi{margin-left:8px;font-size:1.1rem}
+.nav-buttons{display:flex;gap:12px;margin-top:24px}
+.nav-btn{flex:1;padding:13px;border:none;border-radius:12px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:all .3s}
+.nav-btn.check{background:linear-gradient(135deg,var(--accent),#059669);color:#fff;box-shadow:0 4px 15px rgba(16,185,129,.3)}
+.nav-btn.check:hover{transform:translateY(-2px)}
+.nav-btn.next{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 4px 15px rgba(8,145,178,.3);display:none}
+.nav-btn.next:hover{transform:translateY(-2px)}
+.nav-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.results-container{max-width:700px;margin:0 auto 40px;padding:0 20px;display:none}
+.results-container.active{display:block}
+.results-card{background:var(--card);border-radius:20px;padding:40px;box-shadow:0 8px 40px rgba(8,145,178,.12);border:1px solid var(--border);text-align:center;animation:slideUp .5s ease}
+.results-icon{font-size:4rem;margin-bottom:16px}
+.results-card h2{font-family:'Rubik',sans-serif;font-size:1.8rem;color:var(--text);margin-bottom:8px}
+.score-display{font-size:3.5rem;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:20px 0}
+.score-label{color:var(--text-light);font-size:1.1rem;margin-bottom:24px}
+.results-breakdown{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:24px 0}
+.breakdown-item{background:#f8fafc;padding:16px;border-radius:12px}
+.breakdown-item .number{font-size:1.8rem;font-weight:700}
+.breakdown-item .label{font-size:.8rem;color:var(--text-light);margin-top:4px}
+.breakdown-item.cs .number{color:var(--correct)}
+.breakdown-item.ws .number{color:var(--wrong)}
+.breakdown-item.ts .number{color:var(--primary)}
+.results-message{margin-top:20px;padding:16px;background:#f0fdfa;border-radius:12px;color:var(--text);font-size:1rem;line-height:1.8}
+.email-status{margin-top:20px;padding:14px 18px;border-radius:12px;font-size:.95rem;font-weight:500;display:none}
+.email-status.sending{display:block;background:#e0f2fe;color:var(--primary-dark);border:1px solid #7dd3fc;animation:pulse 1.5s infinite}
+.email-status.sent{display:block;background:var(--correct-bg);color:#065f46;border:1px solid #a7f3d0}
+.email-status.error{display:block;background:var(--wrong-bg);color:#991b1b;border:1px solid #fca5a5}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.retry-btn{margin-top:24px;padding:14px 40px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:12px;font-family:'Heebo',sans-serif;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 4px 15px rgba(8,145,178,.3)}
+.retry-btn:hover{transform:translateY(-2px)}
+@media(max-width:600px){.header{padding:30px 16px 40px}.question-card{padding:22px}.intro-card{padding:22px}.student-info{grid-template-columns:1fr}.results-breakdown{grid-template-columns:1fr;gap:10px}.results-card{padding:28px 20px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>שאלון – שם המספר</h1>
+    <div class="subtitle">עברית | כיתה י'</div>
+    <div class="badge">אורט בית הערבה</div>
+</div>
+
+<div class="intro" id="introSection">
+    <div class="intro-card">
+        <h2>ברוכים הבאים לשאלון!</h2>
+        <p>
+            השאלון בודק את הידע שלכם בנושא <strong>שם המספר</strong> בעברית.<br>
+            יש <strong>10 שאלות</strong> – כל שאלה שווה <strong>10 נקודות</strong>.<br>
+            קראו כל שאלה בעיון ובחרו את התשובה הנכונה.
+        </p>
+        <div class="student-info">
+            <input type="text" id="studentName" placeholder="שם מלא" />
+            <input type="text" id="studentClass" placeholder="כיתה" />
+        </div>
+        <button class="start-btn" onclick="startQuiz()">התחלת השאלון</button>
+    </div>
+</div>
+
+<div class="quiz-container" id="quizContainer">
+    <div class="progress-bar-wrapper">
+        <div class="progress-info">
+            <span class="qc" id="questionCounter">שאלה 1 מתוך 10</span>
+            <span id="scoreDisplay">ניקוד: 0</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div id="questionArea"></div>
+</div>
+
+<div class="results-container" id="resultsContainer">
+    <div class="results-card">
+        <div class="results-icon" id="resultsIcon">🏆</div>
+        <h2>סיום השאלון!</h2>
+        <div class="score-display" id="finalScore">0</div>
+        <div class="score-label">מתוך 100 נקודות</div>
+        <div class="results-breakdown">
+            <div class="breakdown-item cs"><div class="number" id="correctCount">0</div><div class="label">תשובות נכונות</div></div>
+            <div class="breakdown-item ws"><div class="number" id="wrongCount">0</div><div class="label">תשובות שגויות</div></div>
+            <div class="breakdown-item ts"><div class="number" id="totalQuestions">10</div><div class="label">סה"כ שאלות</div></div>
+        </div>
+        <div class="results-message" id="resultsMessage"></div>
+        <div class="email-status" id="emailStatus"></div>
+        <button class="retry-btn" onclick="location.reload()">נסו שוב</button>
+    </div>
+</div>
+
+<script>
+const questions = [
+    {
+        type: 'multiple',
+        text: 'מהו "שם המספר" בעברית?',
+        points: 10,
+        options: [
+            'מילה שמתארת פעולה',
+            'מילה שמציינת כמות או מיקום של שם עצם',
+            'מילה שמתארת תכונה של שם עצם',
+            'מילה שמחליפה שם עצם'
+        ],
+        correct: 1,
+        explanation: 'שם המספר הוא מילה שמציינת כמות (מספר מונה) או מיקום בסדר (מספר סודר) של שם עצם. למשל: שלושה ילדים, הילד הרביעי.'
+    },
+    {
+        type: 'multiple',
+        text: 'מה ההבדל בין מספר מונה למספר סודר?',
+        points: 10,
+        options: [
+            'מספר מונה מציין כמות, מספר סודר מציין מיקום בסדר',
+            'מספר מונה הוא זוגי, מספר סודר הוא אי-זוגי',
+            'מספר מונה בזכר, מספר סודר בנקבה',
+            'אין הבדל ביניהם'
+        ],
+        correct: 0,
+        explanation: 'מספר מונה מציין כמות: "חמישה תלמידים". מספר סודר מציין מיקום: "התלמיד החמישי".'
+    },
+    {
+        type: 'multiple',
+        text: 'במספרים 3–10, מה כלל "ההיפוך"?',
+        points: 10,
+        options: [
+            'המספר תמיד בזכר',
+            'המספר תמיד בנקבה',
+            'צורת המספר הפוכה ממין שם העצם',
+            'המספר בא אחרי שם העצם'
+        ],
+        correct: 2,
+        explanation: 'כלל ההיפוך: במספרים 3–10, כשהעצם זכר – המספר בצורת נקבה (שלושָה ילדים), וכשהעצם נקבה – המספר בצורת זכר (שלוש ילדות).'
+    },
+    {
+        type: 'multiple',
+        text: 'מהי הצורה הנכונה?\n"הגיעו ___ תלמידות לכיתה"',
+        points: 10,
+        options: [
+            'שבעה',
+            'שבע',
+            'שביעית',
+            'השביעי'
+        ],
+        correct: 1,
+        explanation: '"תלמידות" – נקבה. לפי כלל ההיפוך (3–10): עצם בנקבה → מספר בצורת זכר. "שבע" היא צורת הזכר של המספר. לכן: שבע תלמידות.'
+    },
+    {
+        type: 'multiple',
+        text: 'מהי הצורה הנכונה?\n"בחצר עומדים ___ כלבים"',
+        points: 10,
+        options: [
+            'ארבע',
+            'רביעי',
+            'ארבעה',
+            'הרביעית'
+        ],
+        correct: 2,
+        explanation: '"כלבים" – זכר. לפי כלל ההיפוך (3–10): עצם בזכר → מספר בצורת נקבה. "ארבעה" היא צורת הנקבה. לכן: ארבעה כלבים.'
+    },
+    {
+        type: 'multiple',
+        text: 'באיזה מספרים הכלל הוא שהמספר מתאים למין שם העצם (בלי היפוך)?',
+        points: 10,
+        options: [
+            'במספרים 3–10',
+            'במספרים 1–2',
+            'במספרים 11–19',
+            'בכל המספרים'
+        ],
+        correct: 1,
+        explanation: 'במספרים 1–2 אין היפוך! המספר מתאים למין שם העצם: ילד אחד / ילדה אחת, שני ילדים / שתי ילדות.'
+    },
+    {
+        type: 'multiple',
+        text: 'מהי הצורה הנכונה?\n"זה הספר ___"',
+        points: 10,
+        options: [
+            'השלוש',
+            'שלישי',
+            'השלישי',
+            'שלושה'
+        ],
+        correct: 2,
+        explanation: 'כשמדברים על מיקום בסדר (סודר), משתמשים במספר סודר עם ה"א הידיעה: "הספר השלישי". ספר = זכר, לכן "השלישי".'
+    },
+    {
+        type: 'multiple',
+        text: 'מהי הצורה הנכונה?\n"קראתי ___ ספרים השבוע"',
+        points: 10,
+        options: [
+            'שנים',
+            'שני',
+            'שתיים',
+            'שתי'
+        ],
+        correct: 1,
+        explanation: '"ספרים" – זכר. המספר 2 בזכר לפני שם עצם הוא "שני" (בנסמך): שני ספרים. "שניים" היא הצורה הנפרדת.'
+    },
+    {
+        type: 'multiple',
+        text: 'איזה משפט כתוב נכון?',
+        points: 10,
+        options: [
+            'עשר בנים משחקים בחצר',
+            'עשרה בנים משחקים בחצר',
+            'עשרה בנות משחקות בחצר',
+            'עשר בנים משחקות בחצר'
+        ],
+        correct: 1,
+        explanation: '"בנים" – זכר. לפי כלל ההיפוך (3–10): עצם בזכר → מספר בצורת נקבה. "עשרה" היא צורת הנקבה. לכן: עשרה בנים משחקים בחצר.'
+    },
+    {
+        type: 'open',
+        text: 'כתבו משפט עם מספר מונה ומשפט עם מספר סודר.\nסמנו בכל משפט מהו שם המספר ומהו סוגו (מונה / סודר).',
+        points: 10,
+        hint: 'מספר מונה = כמה? (שלושה, חמש...)\nמספר סודר = באיזה מקום? (ראשון, שלישית...)',
+        sampleAnswer: 'מונה: "בכיתה יש עשרים תלמידים" – עשרים = מספר מונה.\nסודר: "דנה סיימה במקום הראשון" – הראשון = מספר סודר.'
+    }
+];
+
+const TOTAL_POINTS = 100;
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwc0veY5waDX-DSoA0soE1Hca5kIxPt8Wyghvg5tIwZI-T4mY94D3cdt40LeHZMLHHOWA/exec';
+const QUIZ_TITLE = 'שאלון שם המספר – עברית כיתה י';
+
+let currentQuestion = 0, score = 0, selectedOption = -1;
+let answeredQuestions = new Array(questions.length).fill(false);
+let questionScores = new Array(questions.length).fill(0);
+let openAnswers = {};
+
+function startQuiz() {
+    const n = document.getElementById('studentName').value.trim();
+    const c = document.getElementById('studentClass').value.trim();
+    if (!n || !c) {
+        document.getElementById('studentName').style.borderColor = n ? '' : 'var(--wrong)';
+        document.getElementById('studentClass').style.borderColor = c ? '' : 'var(--wrong)';
+        return;
+    }
+    document.getElementById('introSection').style.display = 'none';
+    document.getElementById('quizContainer').classList.add('active');
+    renderQuestion();
+}
+
+function renderQuestion() {
+    const q = questions[currentQuestion];
+    const area = document.getElementById('questionArea');
+    document.getElementById('questionCounter').textContent = 'שאלה ' + (currentQuestion+1) + ' מתוך ' + questions.length;
+    document.getElementById('progressFill').style.width = ((currentQuestion)/questions.length*100) + '%';
+    document.getElementById('scoreDisplay').textContent = 'ניקוד: ' + score;
+
+    let h = '<div class="question-card">';
+    h += '<span class="q-num-badge">' + (currentQuestion+1) + '</span>';
+    h += '<span class="q-type-badge">' + (q.type==='multiple'?'אמריקאית':'שאלה פתוחה') + ' | ' + q.points + ' נק׳</span>';
+    h += '<div class="q-text">' + q.text.replace(/\n/g,'<br>') + '</div>';
+
+    if (q.type === 'multiple') {
+        h += '<div class="options-list">';
+        const letters = ['א','ב','ג','ד'];
+        q.options.forEach(function(opt, i) {
+            h += '<button class="option-btn" onclick="selectOption('+i+')"><span class="ol">'+letters[i]+'</span><span>'+opt+'</span></button>';
+        });
+        h += '</div>';
+        h += '<div class="feedback" id="feedback"></div>';
+        h += '<div class="nav-buttons"><button class="nav-btn check" id="checkBtn" onclick="checkAnswer()" disabled>בדיקת תשובה</button>';
+        h += '<button class="nav-btn next" id="nextBtn" onclick="nextQuestion()">' + (currentQuestion < questions.length-1 ? 'שאלה הבאה ←' : 'סיום השאלון') + '</button></div>';
+    } else {
+        if (q.hint) h += '<div style="background:#f0fdfa;padding:12px 16px;border-radius:10px;margin-bottom:14px;color:var(--primary-dark);font-size:.9rem;line-height:1.8"><strong>רמז:</strong><br>' + q.hint.replace(/\n/g,'<br>') + '</div>';
+        h += '<textarea class="open-answer" id="openAnswer" placeholder="כתבו את תשובתכם כאן..." oninput="toggleOpen()"></textarea>';
+        h += '<div class="feedback" id="feedback"></div>';
+        h += '<div class="nav-buttons"><button class="nav-btn check" id="checkBtn" onclick="checkOpen()" disabled>שלחו תשובה</button>';
+        h += '<button class="nav-btn next" id="nextBtn" onclick="nextQuestion()">' + (currentQuestion < questions.length-1 ? 'שאלה הבאה ←' : 'סיום השאלון') + '</button></div>';
+    }
+    h += '</div>';
+    area.innerHTML = h;
+    if (answeredQuestions[currentQuestion]) disableCurrent();
+}
+
+function selectOption(i) {
+    if (answeredQuestions[currentQuestion]) return;
+    selectedOption = i;
+    document.querySelectorAll('.option-btn').forEach(function(b){b.classList.remove('selected')});
+    document.querySelectorAll('.option-btn')[i].classList.add('selected');
+    document.getElementById('checkBtn').disabled = false;
+}
+
+function toggleOpen() {
+    document.getElementById('checkBtn').disabled = !document.getElementById('openAnswer').value.trim();
+}
+
+function checkAnswer() {
+    if (answeredQuestions[currentQuestion]) return;
+    const q = questions[currentQuestion];
+    const fb = document.getElementById('feedback');
+    const btns = document.querySelectorAll('.option-btn');
+    answeredQuestions[currentQuestion] = true;
+    btns.forEach(function(b){b.classList.add('disabled')});
+    btns[q.correct].classList.add('correct');
+    if (selectedOption === q.correct) {
+        score += q.points; questionScores[currentQuestion] = q.points;
+        fb.className = 'feedback correct';
+        fb.innerHTML = '<span class="fi">✓</span> תשובה נכונה! ' + q.explanation;
+    } else {
+        btns[selectedOption].classList.add('wrong');
+        fb.className = 'feedback wrong';
+        fb.innerHTML = '<span class="fi">✗</span> לא נכון. ' + q.explanation;
+    }
+    document.getElementById('checkBtn').style.display='none';
+    document.getElementById('nextBtn').style.display='block';
+    document.getElementById('scoreDisplay').textContent = 'ניקוד: ' + score;
+}
+
+function checkOpen() {
+    if (answeredQuestions[currentQuestion]) return;
+    const q = questions[currentQuestion];
+    const fb = document.getElementById('feedback');
+    answeredQuestions[currentQuestion] = true;
+    score += q.points; questionScores[currentQuestion] = q.points;
+    openAnswers[currentQuestion] = document.getElementById('openAnswer').value.trim();
+    document.getElementById('openAnswer').disabled = true;
+    fb.className = 'feedback info';
+    fb.innerHTML = '<span class="fi">📝</span> התשובה נשמרה! הציון יינתן על ידי המורה.<br><br><strong>תשובה לדוגמה:</strong><br>' + q.sampleAnswer.replace(/\n/g,'<br>');
+    document.getElementById('checkBtn').style.display='none';
+    document.getElementById('nextBtn').style.display='block';
+    document.getElementById('scoreDisplay').textContent = 'ניקוד: ' + score;
+}
+
+function disableCurrent() {
+    document.getElementById('checkBtn').style.display='none';
+    document.getElementById('nextBtn').style.display='block';
+}
+
+function nextQuestion() {
+    if (currentQuestion < questions.length-1) { currentQuestion++; selectedOption=-1; renderQuestion(); window.scrollTo({top:0,behavior:'smooth'}); }
+    else showResults();
+}
+
+function showResults() {
+    document.getElementById('quizContainer').classList.remove('active');
+    document.getElementById('resultsContainer').classList.add('active');
+    const mc = questions.reduce(function(s,q,i){ return q.type==='multiple' && questionScores[i]>0 ? s+1 : s; },0);
+    const mt = questions.filter(function(q){return q.type==='multiple'}).length;
+    const oc = questions.filter(function(q){return q.type==='open'}).length;
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('correctCount').textContent = mc;
+    document.getElementById('wrongCount').textContent = mt - mc;
+    document.getElementById('totalQuestions').textContent = questions.length;
+    const pct = Math.round(score/TOTAL_POINTS*100);
+    let icon, msg;
+    if (pct>=90){icon='🏆';msg='מצוין! שליטה מעולה בחומר. כל הכבוד!';}
+    else if(pct>=70){icon='⭐';msg='כל הכבוד! הבנה טובה. כדאי לחזור על מה שפספסתם.';}
+    else if(pct>=50){icon='💪';msg='סביר! מומלץ לחזור על החומר ולתרגל עוד.';}
+    else{icon='📖';msg='כדאי לחזור על החומר ולתרגל שוב. אל תוותרו!';}
+    if(oc>0) msg+='<br><br>📝 <strong>שימו לב:</strong> '+oc+' שאלות פתוחות ייבדקו על ידי המורה.';
+    document.getElementById('resultsIcon').textContent=icon;
+    document.getElementById('resultsMessage').innerHTML=msg;
+    document.getElementById('progressFill').style.width='100%';
+    window.scrollTo({top:0,behavior:'smooth'});
+    sendToSheets(mc, mt);
+}
+
+function sendToSheets(mc, mt) {
+    if (!SHEETS_URL) return;
+    const st = document.getElementById('emailStatus');
+    const name = document.getElementById('studentName').value.trim();
+    const cls = document.getElementById('studentClass').value.trim();
+    const data = {
+        date: new Date().toLocaleDateString('he-IL'),
+        time: new Date().toLocaleTimeString('he-IL'),
+        quiz: QUIZ_TITLE,
+        name: name,
+        studentClass: cls,
+        multipleScore: mc + '/' + mt,
+        totalScore: score + '/' + TOTAL_POINTS,
+        percentage: Math.round(score/TOTAL_POINTS*100) + '%'
+    };
+    questions.forEach(function(q, i) {
+        if (q.type === 'multiple') data['q'+(i+1)] = questionScores[i]>0 ? '✓' : '✗';
+        else data['q'+(i+1)+'_open'] = openAnswers[i] || '(לא ענה)';
+    });
+    st.className='email-status sending';
+    st.textContent='📊 שומר את הציון בטבלה...';
+    fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(function(){st.className='email-status sent';st.textContent='✓ הציון נשמר בהצלחה בטבלת הציונים!';})
+    .catch(function(){st.className='email-status error';st.innerHTML='⚠ לא הצלחנו לשמור. אפשר לצלם מסך.';});
+}
+</script>
+</body>
+</html>
