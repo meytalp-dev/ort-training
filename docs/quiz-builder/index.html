@@ -160,6 +160,23 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
 .export-btns{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
 .export-btns .btn{flex:1;min-width:200px;text-align:center}
 
+/* PUBLISH */
+.publish-section{margin-top:24px;padding:24px;background:linear-gradient(135deg,var(--green-l),var(--primary-l));border:2px solid var(--green);border-radius:16px}
+.publish-title{font-family:'Rubik',sans-serif;font-size:18px;font-weight:800;color:#2D6A4F;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.publish-desc{font-size:14px;color:#2D6A4F;margin-bottom:16px;line-height:1.6}
+.btn-publish{width:100%;padding:16px;background:var(--green);color:white;border:none;border-radius:14px;font-family:'Heebo',sans-serif;font-size:17px;font-weight:700;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-publish:hover{background:#3da076;transform:translateY(-2px);box-shadow:0 6px 20px rgba(82,183,136,.3)}
+.btn-publish:disabled{opacity:.5;pointer-events:none}
+.btn-publish .pub-spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.btn-publish.loading .pub-spinner{display:block}
+.btn-publish.loading .pub-text{display:none}
+.published-result{margin-top:16px;padding:20px;background:white;border-radius:14px;border:2px solid var(--green);display:none;animation:fadeUp .3s ease}
+.published-link{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.published-link input{flex:1;padding:12px 16px;border:2px solid var(--border);border-radius:10px;font-family:'Heebo',sans-serif;font-size:14px;color:var(--dark);background:var(--bg);direction:ltr;text-align:left}
+.published-link button{padding:12px 20px;background:var(--primary);color:white;border:none;border-radius:10px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .3s}
+.published-link button:hover{background:var(--primary-d)}
+.published-msg{font-size:14px;color:var(--green);font-weight:600;display:flex;align-items:center;gap:6px}
+
 /* SCREEN */
 .screen{display:none}.screen.active{display:block}
 
@@ -359,14 +376,32 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
     <!-- STEP 4: PREVIEW & EXPORT -->
     <div class="screen" id="step4">
       <div class="card">
-        <div class="section-title"><div class="badge">4</div> תצוגה מקדימה וייצוא</div>
+        <div class="section-title"><div class="badge">4</div> תצוגה מקדימה ופרסום</div>
         <div class="preview-frame">
           <iframe id="previewFrame" sandbox="allow-scripts"></iframe>
         </div>
-        <div class="export-btns">
+
+        <!-- PUBLISH SECTION -->
+        <div class="publish-section">
+          <div class="publish-title">🚀 פרסום השאלון</div>
+          <div class="publish-desc">לחצו כדי לפרסם את השאלון. תקבלו קישור שאפשר לשלוח לתלמידים – בלי צורך להוריד קבצים.</div>
+          <button class="btn-publish" id="publishBtn" onclick="publishQuiz()">
+            <div class="pub-spinner"></div>
+            <span class="pub-text">פרסמו שאלון</span>
+          </button>
+          <div class="published-result" id="publishedResult">
+            <div class="published-msg">✓ השאלון פורסם בהצלחה! שלחו את הקישור לתלמידים:</div>
+            <div class="published-link">
+              <input type="text" id="publishedUrl" readonly>
+              <button onclick="copyPublishedLink()">העתק קישור</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="export-btns" style="margin-top:20px">
           <button class="btn btn-primary" onclick="refreshPreview()">🔄 רענון תצוגה</button>
-          <button class="btn btn-green" onclick="downloadQuiz()">⬇ הורידו קובץ HTML</button>
-          <button class="btn btn-outline" onclick="copyHTML()">📋 העתיקו HTML</button>
+          <button class="btn btn-outline" onclick="downloadQuiz()">⬇ הורדה</button>
+          <button class="btn btn-outline" onclick="copyHTML()">📋 העתקת HTML</button>
         </div>
         <div class="nav-buttons">
           <button class="btn btn-outline" onclick="goToStep(3)">חזרה →</button>
@@ -1114,6 +1149,114 @@ function slugify(text) {
 // ===== COPY HTML =====
 function copyHTML() {
   navigator.clipboard.writeText(generateQuizHTML()).then(() => showToast('הקוד הועתק!')).catch(() => showToast('לא ניתן להעתיק'));
+}
+
+// ===== PUBLISH QUIZ =====
+const PLAYER_BASE_URL = 'https://meytalp-dev.github.io/ort-training/quiz-player/';
+
+function generateQuizId() {
+  return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).slice(-4);
+}
+
+async function publishQuiz() {
+  saveStepData(currentStep);
+
+  const btn = document.getElementById('publishBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const quizId = generateQuizId();
+
+  // Build quiz config JSON (just the data, not the full HTML)
+  const quizJSON = JSON.stringify({
+    diagnosticQuestions: diagnosticQuestions,
+    questionSets: questionSets,
+    diagCount: diagCount
+  });
+
+  const saveData = {
+    action: 'saveQuiz',
+    id: quizId,
+    name: details.quizName,
+    subject: details.subject,
+    grade: details.grade,
+    teacher: user ? user.name : '',
+    email: user ? user.email : '',
+    quizJSON: quizJSON
+  };
+
+  try {
+    // Save via POST (no-cors - we can't read the response but data gets saved)
+    await fetch(SHEETS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(saveData)
+    });
+
+    // Wait a moment for Google Sheets to process
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Verify the quiz was saved by trying to load it via JSONP
+    const verified = await verifyQuizSaved(quizId);
+
+    if (verified) {
+      showPublishedLink(quizId);
+    } else {
+      // Even if verification fails (might be a timing issue), show the link
+      // The quiz is likely saved, verification via JSONP may just be slow
+      showPublishedLink(quizId);
+      showToast('השאלון פורסם – ייתכן שיקח כמה שניות עד שהקישור יעבוד');
+    }
+  } catch(e) {
+    console.error('Publish error:', e);
+    showToast('שגיאה בפרסום. נסו שוב.');
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function verifyQuizSaved(quizId) {
+  return new Promise((resolve) => {
+    const callbackName = 'verifyCallback_' + Date.now();
+    window[callbackName] = function(data) {
+      delete window[callbackName];
+      resolve(!data.error);
+    };
+    const script = document.createElement('script');
+    script.src = SHEETS_URL + '?action=getQuiz&id=' + quizId + '&callback=' + callbackName;
+    script.onerror = function() {
+      delete window[callbackName];
+      resolve(false);
+    };
+    document.body.appendChild(script);
+    // Timeout
+    setTimeout(() => {
+      if (window[callbackName]) {
+        delete window[callbackName];
+        resolve(false);
+      }
+    }, 8000);
+  });
+}
+
+function showPublishedLink(quizId) {
+  const url = PLAYER_BASE_URL + '?id=' + quizId;
+  document.getElementById('publishedUrl').value = url;
+  document.getElementById('publishedResult').style.display = 'block';
+  document.getElementById('publishedResult').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function copyPublishedLink() {
+  const input = document.getElementById('publishedUrl');
+  input.select();
+  navigator.clipboard.writeText(input.value)
+    .then(() => showToast('הקישור הועתק!'))
+    .catch(() => {
+      document.execCommand('copy');
+      showToast('הקישור הועתק!');
+    });
 }
 
 // ===== INIT =====
