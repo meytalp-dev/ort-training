@@ -266,7 +266,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
     <div class="step active"><div class="step-circle">1</div><span class="step-label">פרטים</span><div class="step-line"></div></div>
     <div class="step"><div class="step-circle">2</div><span class="step-label">אבחון</span><div class="step-line"></div></div>
     <div class="step"><div class="step-circle">3</div><span class="step-label">שאלות</span><div class="step-line"></div></div>
-    <div class="step"><div class="step-circle">4</div><span class="step-label">ייצוא</span></div>
+    <div class="step"><div class="step-circle">4</div><span class="step-label">פרסום</span></div>
   </div>
 
   <!-- CONTAINER -->
@@ -309,16 +309,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
         </div>
 
         <div class="form-group">
-          <label>מספר שאלות אבחון</label>
-          <div class="hint">שאלה אחת = 2 רמות (בסיסי/מתקדם) | שתי שאלות = 3 רמות (בסיסי/בינוני/מתקדם)</div>
-          <div class="radio-group" id="diagCount">
-            <div class="radio-opt active" onclick="setDiagCount(1)">שאלה אחת</div>
-            <div class="radio-opt" onclick="setDiagCount(2)">שתי שאלות</div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>מספר שאלות בכל ערכת קושי</label>
+          <label>מספר שאלות</label>
+          <div class="hint">השאלון מתאים את עצמו אוטומטית לרמת התלמיד – אין צורך להגדיר רמות</div>
           <div class="range-group">
             <input type="range" id="qPerSet" min="5" max="15" value="8" oninput="document.getElementById('qPerSetVal').textContent=this.value">
             <div class="range-val" id="qPerSetVal">8</div>
@@ -350,7 +342,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
         </div>
 
         <div class="hint" style="margin-bottom:20px;font-size:13px;color:var(--gray)">
-          או כתבו שאלות ידנית – שאלות אלה קובעות את רמת הקושי. כתבו שאלות ברמה בינונית.
+          או כתבו שאלות ידנית – 2 שאלות אבחון שעוזרות למערכת להתאים את הקושי לכל תלמיד.
         </div>
         <div id="diagEditors"></div>
         <div class="nav-buttons">
@@ -363,7 +355,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
     <!-- STEP 3: QUESTION SETS -->
     <div class="screen" id="step3">
       <div class="card">
-        <div class="section-title"><div class="badge">3</div> ערכות שאלות</div>
+        <div class="section-title"><div class="badge">3</div> שאלות השאלון</div>
+        <div class="hint" style="margin-bottom:16px;font-size:13px;color:var(--gray)">השאלון כולל 3 ערכות שאלות. המערכת מנתבת כל תלמיד לערכה המתאימה לו אוטומטית.</div>
         <div class="tabs" id="levelTabs"></div>
         <div id="setEditors"></div>
         <div class="nav-buttons">
@@ -428,7 +421,7 @@ const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNC
 
 // ===== STATE =====
 let currentStep = 1;
-let diagCount = 1;
+let diagCount = 2;
 let qPerSet = 8;
 let user = null; // { name, email, photo }
 
@@ -437,7 +430,7 @@ let diagnosticQuestions = [];
 let questionSets = { basic: [], medium: [], advanced: [] };
 let activeLevel = 'basic';
 
-const levelNames = { basic: 'בסיסי', medium: 'בינוני', advanced: 'מתקדם' };
+const levelNames = { basic: 'ערכה א׳', medium: 'ערכה ב׳', advanced: 'ערכה ג׳' };
 const letters = ['א','ב','ג','ד'];
 
 // ===== GOOGLE SIGN-IN =====
@@ -508,9 +501,9 @@ async function generateWithAI() {
   btn.classList.add('loading');
   btn.disabled = true;
 
-  const numDiag = diagCount;
+  const numDiag = 2;
   const numPerSet = parseInt(document.getElementById('qPerSet').value);
-  const levels = numDiag === 1 ? ['basic', 'advanced'] : ['basic', 'medium', 'advanced'];
+  const levels = ['basic', 'medium', 'advanced'];
 
   const levelDescriptions = {
     basic: 'שאלות בסיסיות – זיהוי, התאמה, שינון, הבנה ישירה',
@@ -631,13 +624,7 @@ function goToStep(step) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ===== DIAG COUNT =====
-function setDiagCount(n) {
-  diagCount = n;
-  document.querySelectorAll('#diagCount .radio-opt').forEach((o, i) => {
-    o.classList.toggle('active', i === n - 1);
-  });
-}
+// diagCount is always 2 (3 difficulty sets, auto-routing)
 
 // ===== VALIDATION =====
 function validateStep(step) {
@@ -663,15 +650,15 @@ function validateStep(step) {
 
   if (step === 3) {
     saveSetData();
-    const levels = diagCount === 1 ? ['basic', 'advanced'] : ['basic', 'medium', 'advanced'];
+    const levels = ['basic', 'medium', 'advanced'];
     for (const lvl of levels) {
       if (!questionSets[lvl] || questionSets[lvl].length < 1) {
-        showToast('יש להוסיף שאלות לכל ערכת קושי');
+        showToast('יש להוסיף שאלות לכל ערכה');
         valid = false; break;
       }
       for (const q of questionSets[lvl]) {
         if (!q.text || q.options.some(o => !o) || q.correct === -1) {
-          showToast('יש למלא את כל השדות בכל ערכת קושי');
+          showToast('יש למלא את כל השדות בכל הערכות');
           valid = false; break;
         }
       }
@@ -748,9 +735,7 @@ function renderDiagEditors() {
 
 // ===== RENDER LEVEL TABS =====
 function renderLevelTabs() {
-  const levels = diagCount === 1
-    ? [{ key: 'basic', name: 'בסיסי' }, { key: 'advanced', name: 'מתקדם' }]
-    : [{ key: 'basic', name: 'בסיסי' }, { key: 'medium', name: 'בינוני' }, { key: 'advanced', name: 'מתקדם' }];
+  const levels = [{ key: 'basic', name: 'ערכה א׳' }, { key: 'medium', name: 'ערכה ב׳' }, { key: 'advanced', name: 'ערכה ג׳' }];
 
   if (!levels.find(l => l.key === activeLevel)) activeLevel = levels[0].key;
 
@@ -892,7 +877,7 @@ function loadDraft() {
     const raw = localStorage.getItem('ort-quiz-builder-draft');
     if (!raw) return;
     const draft = JSON.parse(raw);
-    diagCount = draft.diagCount || 1;
+    diagCount = 2;
     qPerSet = draft.qPerSet || 8;
     details = draft.details || {};
     diagnosticQuestions = draft.diagnosticQuestions || [];
@@ -902,7 +887,7 @@ function loadDraft() {
     if (details.grade) document.getElementById('quizGrade').value = details.grade;
     document.getElementById('qPerSet').value = qPerSet;
     document.getElementById('qPerSetVal').textContent = qPerSet;
-    setDiagCount(diagCount);
+    // diagCount is always 2
     document.getElementById('draftBanner').style.display = 'none';
     showToast('הטיוטה נטענה בהצלחה');
   } catch(e) { console.error(e); }
@@ -919,7 +904,7 @@ function generateQuizHTML() {
   const d = details;
   const diag = diagnosticQuestions;
   const sets = questionSets;
-  const levels = diagCount === 1 ? ['basic', 'advanced'] : ['basic', 'medium', 'advanced'];
+  const levels = ['basic', 'medium', 'advanced'];
   const sheetName = d.quizName + ' – ' + d.grade;
   const subjectIcons = { 'עברית':'א','מתמטיקה':'➗','היסטוריה':'📜','אנגלית':'A','מדעים':'🔬','חשבונאות':'📊' };
   const icon = subjectIcons[d.subject] || '📝';
@@ -929,19 +914,10 @@ function generateQuizHTML() {
   };
   const classOptions = (gradeMap[d.grade]||['א','ב','ג','ד']).map(c=>`<option>${c}</option>`).join('');
 
-  let branchingJS;
-  if (diagCount === 1) {
-    branchingJS = `
-    if(diagnosticCorrect===1){detectedLevel='מתקדם';activeQuestions=diagnosticQuestions.concat(advancedQuestions)}
-    else{detectedLevel='בסיסי';activeQuestions=diagnosticQuestions.concat(basicQuestions)}`;
-  } else {
-    branchingJS = `
+  const branchingJS = `
     if(diagnosticCorrect===0){detectedLevel='בסיסי';activeQuestions=diagnosticQuestions.concat(basicQuestions)}
     else if(diagnosticCorrect===1){detectedLevel='בינוני';activeQuestions=diagnosticQuestions.concat(mediumQuestions)}
     else{detectedLevel='מתקדם';activeQuestions=diagnosticQuestions.concat(advancedQuestions)}`;
-  }
-
-  const mediumJS = sets.medium && sets.medium.length > 0 ? `const mediumQuestions=${JSON.stringify(sets.medium)};` : '';
 
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -1039,7 +1015,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
 <script>
 const diagnosticQuestions=${JSON.stringify(diag)};
 const basicQuestions=${JSON.stringify(sets.basic)};
-${mediumJS}
+const mediumQuestions=${JSON.stringify(sets.medium)};
 const advancedQuestions=${JSON.stringify(sets.advanced)};
 
 let studentName='',studentClass='',currentQ=0,score=0,answers=[],activeQuestions=[],detectedLevel='',totalQuestions=0,diagnosticCorrect=0;
