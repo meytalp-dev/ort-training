@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>מחולל משחקים – אורט בית הערבה</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
 :root {
   --bg:#F0F4F8;--card:#ffffff;
@@ -198,13 +197,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
     <div class="login-card">
       <div class="login-icon">🎮</div>
       <h2>מחולל משחקים</h2>
-      <p>היכנסו עם חשבון Google כדי ליצור משחקים לימודיים</p>
-      <div id="g_id_onload"
-        data-client_id="18351568270-9bos1rm966pnv8i6bcf7vmlkk1luqdte.apps.googleusercontent.com"
-        data-callback="handleGoogleSignIn"
-        data-auto_prompt="false">
+      <p>הזינו את הפרטים שלכם כדי ליצור משחקים לימודיים</p>
+      <div style="text-align:right;margin-bottom:12px">
+        <label style="display:block;font-size:14px;font-weight:600;color:var(--gray);margin-bottom:6px">שם מלא</label>
+        <input type="text" id="loginName" placeholder="למשל: מיטל פרידמן" style="width:100%;padding:14px 18px;border:2px solid var(--border);border-radius:14px;font-family:'Heebo',sans-serif;font-size:15px;background:var(--bg)">
       </div>
-      <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="signin_with" data-shape="rectangular" data-logo_alignment="center" data-width="300"></div>
+      <div style="text-align:right;margin-bottom:20px">
+        <label style="display:block;font-size:14px;font-weight:600;color:var(--gray);margin-bottom:6px">אימייל</label>
+        <input type="email" id="loginEmail" placeholder="your@email.com" dir="ltr" style="width:100%;padding:14px 18px;border:2px solid var(--border);border-radius:14px;font-family:'Heebo',sans-serif;font-size:15px;background:var(--bg)">
+      </div>
+      <button onclick="loginWithForm()" style="width:100%;padding:16px;background:var(--primary);color:white;border:none;border-radius:14px;font-family:'Heebo',sans-serif;font-size:17px;font-weight:700;cursor:pointer;transition:all .3s">התחילו ליצור!</button>
     </div>
   </div>
 </div>
@@ -431,16 +433,14 @@ const gtKeys = Object.keys(GT);
 const gameTypeNames = {}; const gameTypeIcons = {};
 gtKeys.forEach(k => { gameTypeNames[k] = GT[k].name; gameTypeIcons[k] = GT[k].icon; });
 
-// ===== GOOGLE SIGN-IN =====
-function handleGoogleSignIn(response) {
-  try {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    user = { name: payload.name, email: payload.email, photo: payload.picture };
-    localStorage.setItem('ort-game-user', JSON.stringify(user));
-    showApp();
-  } catch(e) {
-    showToast('שגיאה בהתחברות, נסו שוב');
-  }
+// ===== LOGIN =====
+function loginWithForm() {
+  const name = document.getElementById('loginName').value.trim();
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!name || !email) { showToast('יש למלא שם ואימייל'); return; }
+  user = { name, email, photo: '' };
+  localStorage.setItem('ort-game-user', JSON.stringify(user));
+  showApp();
 }
 
 function showApp() {
@@ -460,10 +460,17 @@ function logout() {
   document.getElementById('appView').style.display = 'none';
 }
 
-// Auto-login: bypass Google Sign-In for local testing
+// Auto-login from localStorage
 (function() {
-  user = { name: 'מורה לבדיקה', email: 'meytalp@bethaarava.ort.org.il', photo: '' };
-  showApp();
+  const saved = localStorage.getItem('ort-game-user');
+  if (saved) {
+    try {
+      user = JSON.parse(saved);
+      if (user.name && user.email) { showApp(); return; }
+    } catch(e) {}
+  }
+  // Pre-fill if saved
+  document.getElementById('loginView').style.display = 'block';
 })();
 
 // ===== RENDER TYPE CARDS =====
