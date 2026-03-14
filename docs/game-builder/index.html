@@ -299,6 +299,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
 
         <div class="ai-box">
           <div class="ai-box-title">✨ יצירה עם בינה מלאכותית</div>
+          <div id="aiKeySetup" style="display:none;margin-bottom:16px;padding:16px;background:white;border-radius:14px;border:2px solid rgba(139,92,246,.2)">
+            <div style="font-size:14px;font-weight:600;color:#5B21B6;margin-bottom:8px">🔑 נדרש מפתח Gemini API (פעם אחת בלבד)</div>
+            <p style="font-size:13px;color:var(--gray);margin-bottom:12px;line-height:1.6">1. לחצו על הכפתור למטה → היכנסו עם חשבון Google<br>2. לחצו "Create API Key" → העתיקו את המפתח<br>3. הדביקו אותו כאן</p>
+            <a href="https://aistudio.google.com/apikey" target="_blank" style="display:inline-block;padding:8px 16px;background:#5B21B6;color:white;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;margin-bottom:12px">🔗 קבלו מפתח חינמי מ-Google</a>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="geminiKeyInput" placeholder="הדביקו את המפתח כאן..." dir="ltr" style="flex:1;padding:10px 14px;border:2px solid var(--border);border-radius:10px;font-family:'Heebo',sans-serif;font-size:14px">
+              <button onclick="saveGeminiKey()" style="padding:10px 20px;background:#5B21B6;color:white;border:none;border-radius:10px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap">שמרו</button>
+            </div>
+          </div>
           <textarea id="aiPrompt" placeholder="כתבו רק את הנושא הספציפי, לדוגמה:&#10;בניינים בדקדוק – קל, נפעל, פיעל, הפעיל, התפעל&#10;המרד הגדול – סיבות, מהלך ותוצאות&#10;נוסחאות כימיות – שמות וסמלים"></textarea>
           <div class="hint">כתבו רק את הנושא – סוג המשחק, המקצוע והכיתה נלקחים מהשלב הקודם.</div>
           <button class="ai-btn" id="aiGenBtn" onclick="generateWithAI()">
@@ -379,12 +388,18 @@ const GOOGLE_CLIENT_ID = '18351568270-9bos1rm966pnv8i6bcf7vmlkk1luqdte.apps.goog
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 function getGeminiKey() {
-  let key = localStorage.getItem('ort-gemini-key');
-  if (!key) {
-    key = prompt('הזינו מפתח Gemini API:\n(ניתן להשיג בחינם ב-aistudio.google.com/apikey)');
-    if (key) localStorage.setItem('ort-gemini-key', key.trim());
-  }
-  return key ? key.trim() : null;
+  return localStorage.getItem('ort-gemini-key') || null;
+}
+function saveGeminiKey() {
+  const key = document.getElementById('geminiKeyInput').value.trim();
+  if (!key) { showToast('יש להדביק מפתח'); return; }
+  localStorage.setItem('ort-gemini-key', key);
+  document.getElementById('aiKeySetup').style.display = 'none';
+  showToast('המפתח נשמר! תוכלו ליצור עם AI');
+}
+function checkGeminiKey() {
+  if (!getGeminiKey()) document.getElementById('aiKeySetup').style.display = 'block';
+  else document.getElementById('aiKeySetup').style.display = 'none';
 }
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';
 const PLAYER_BASE_URL = 'https://meytalp-dev.github.io/ort-training/game-player/';
@@ -490,7 +505,7 @@ function goToStep(step) {
     if (i + 1 < step) s.classList.add('done');
     else if (i + 1 === step) s.classList.add('active');
   });
-  if (step === 2) renderItemEditors();
+  if (step === 2) { renderItemEditors(); checkGeminiKey(); }
   if (step === 3) renderReview();
   if (step === 4) refreshPreview();
   saveDraft();
@@ -872,7 +887,7 @@ async function generateWithAI() {
 
   try {
     const apiKey = getGeminiKey();
-    if (!apiKey) { btn.classList.remove('loading'); btn.disabled = false; return; }
+    if (!apiKey) { btn.classList.remove('loading'); btn.disabled = false; document.getElementById('aiKeySetup').style.display = 'block'; showToast('יש להזין מפתח Gemini API קודם'); return; }
     const res = await fetch(GEMINI_URL + '?key=' + apiKey, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
