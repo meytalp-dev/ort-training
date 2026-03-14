@@ -43,6 +43,58 @@ function doGet(e) {
     }
   }
 
+  // === טעינת משחק לפי ID ===
+  if (params.action === 'getGame') {
+    try {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_gameData');
+      var result;
+
+      if (!sheet) {
+        result = JSON.stringify({ error: 'not_found' });
+      } else {
+        var data = sheet.getDataRange().getValues();
+        var found = false;
+        for (var i = 1; i < data.length; i++) {
+          if (data[i][0] === params.id) {
+            result = JSON.stringify({
+              id: data[i][0],
+              name: data[i][1],
+              gameType: data[i][2],
+              subject: data[i][3],
+              grade: data[i][4],
+              teacher: data[i][5],
+              email: data[i][6],
+              date: data[i][7] ? data[i][7].toString() : '',
+              gameJSON: data[i][8]
+            });
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          result = JSON.stringify({ error: 'not_found' });
+        }
+      }
+
+      // JSONP support
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + result + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(result)
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      var errResult = JSON.stringify({ error: err.toString() });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + errResult + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errResult)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // === טעינת שאלון לפי ID ===
   if (params.action === 'getQuiz') {
     try {
@@ -146,6 +198,56 @@ function doPost(e) {
       try { data = JSON.parse(e.postData.contents); } catch(x) { data = e.parameter; }
     } else {
       data = e.parameter;
+    }
+
+    // === שמירת משחק חדש ===
+    if (data.action === 'saveGame') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_gameData');
+      if (!sheet) {
+        sheet = ss.insertSheet('_gameData');
+        sheet.appendRow(['ID', 'שם משחק', 'סוג', 'מקצוע', 'כיתה', 'שם מורה', 'מייל מורה', 'תאריך', 'נתוני משחק']);
+        sheet.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#D4F3EF');
+        sheet.setColumnWidth(9, 400);
+      }
+
+      // Check if game ID already exists (update)
+      var dataRange = sheet.getDataRange().getValues();
+      var found = false;
+      for (var i = 1; i < dataRange.length; i++) {
+        if (dataRange[i][0] === data.id) {
+          sheet.getRange(i + 1, 1, 1, 9).setValues([[
+            data.id,
+            data.name || '',
+            data.gameType || '',
+            data.subject || '',
+            data.grade || '',
+            data.teacher || '',
+            data.email || '',
+            new Date().toLocaleString('he-IL'),
+            data.gameJSON || ''
+          ]]);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        sheet.appendRow([
+          data.id,
+          data.name || '',
+          data.gameType || '',
+          data.subject || '',
+          data.grade || '',
+          data.teacher || '',
+          data.email || '',
+          new Date().toLocaleString('he-IL'),
+          data.gameJSON || ''
+        ]);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', id: data.id }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // === שמירת שאלון חדש ===
