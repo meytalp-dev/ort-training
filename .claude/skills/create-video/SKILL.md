@@ -1,184 +1,292 @@
 ---
 name: create-video
-description: יצירת סרטון לימודי בסגנון TikTok – מהיר, צבעוני, רקע לבן, auto-play ב-60 שניות.
+description: סרטון סיכום שיעור ~50 שניות עם מוזיקה ואנימציות נושאיות – משתלב עם מערכי שיעור.
 ---
 
-# Skill: סרטון לימודי – /create-video
+# Skill: סיכום שיעור ~50 שניות – /create-video
 
-יצירת **סרטון לימודי בסגנון TikTok** – מהיר, צבעוני, תוסס, עם auto-play.
+יצירת **סרטון סיכום שיעור ב-50 שניות** בסגנון TikTok עם **מוזיקה** ו**אנימציות נושאיות**.
 
-**זה לא מצגת!** זה סרטון שרץ לבד, בלי כפתורי ניווט גלויים, בדיוק כמו TikTok לימודי.
+**המטרה:** בסוף כל שיעור, המורה מציג סרטון מהיר שמסכם את מה שלמדו.
 
----
-
-## קלט
-
-| שדה | חובה | דוגמה |
-|------|------|--------|
-| מקצוע | כן | מתמטיקה, היסטוריה, תספורת, מדעים |
-| נושא | כן | משוואות ריבועיות, המרד הגדול |
-| כיתה | כן | ט, י, יא, יב |
-| רמה | כן | בסיסי / בינוני / מתקדם |
-| אורך | כן | 60 שניות / 90 שניות / 3 דקות |
-| סגנון | כן | מונפש / אנימציה / רגיל / מצחיק |
-
-**קלט נוסף אפשרי:** פרומפט חופשי / קובץ (PPTX/PDF/DOCX/TXT)
-
-אם חסר פרמטר – **לשאול**.
+**זה לא מצגת.** זה סרטון שרץ לבד, מהיר, חד, מגניב – עם מוזיקה תוססת ואנימציות שקשורות לנושא.
 
 ---
 
-## אורך
+## שילוב עם מערכי שיעור (lesson-builder)
 
-| אורך | סצנות | שימוש |
-|-------|--------|-------|
-| 60 שניות | 8–10 | סיכום שיעור, חזרה מהירה |
-| 90 שניות | 12–15 | הסבר נושא |
-| 3 דקות | 18–25 | הקנייה מלאה |
+הסקיל הזה **משתלב ישירות עם `/lesson-builder`**.
 
-ברירת מחדל: **60 שניות** (סיכום שיעור)
+כשמופעל כחלק מ-`/lesson-builder`:
+- **אין צורך בקלט נוסף** – הכל נשאב מהתוצרים שכבר נוצרו
+- הסרטון נשמר ב-`docs/lessons/{name}/video.html`
 
----
-
-## פורמט – TikTok Phone
-
-הסרטון מוצג בתוך **מסגרת טלפון** (9:16 portrait):
-
-```css
-#phone {
-  width: min(400px, 100vw);
-  height: min(100vh, 860px);
-  background: #fff;
-  border-radius: 2rem;
-  overflow: hidden;
-  box-shadow: 0 20px 80px rgba(0,0,0,0.15);
-}
-```
-
-- **רקע הדף:** אפור בהיר (`#f0f0f0`)
-- **רקע הסצנות:** לבן (`#fff`) עם עיגולי צבע שקופים כאקסנט
-- במובייל: מסך מלא, בלי border-radius
+כשמופעל עצמאית:
+- המשתמש מספק מקצוע + נושא + כיתה + תוכן
 
 ---
 
-## עיצוב – צעיר, רענן, תוסס
+## קלט (הפעלה עצמאית)
 
-### רקע לבן עם אקסנטים צבעוניים
-כל סצנה = **רקע לבן** + עיגולים גדולים שקופים (opacity 0.12) בצבעים שונים:
+המשתמש מספק:
+- **מקצוע + נושא** (חובה)
+- **כיתה** (חובה)
+- **תוכן השיעור** – פרומפט / קובץ / רשימת נקודות
 
-```css
-.scene { background: #fff; }
-.scene::before {
-  /* עיגול צבעוני גדול בפינה */
-  width: 300px; height: 300px; border-radius: 50%;
-  opacity: 0.12; position: absolute;
-}
+אם חסר – **לשאול**.
+
+---
+
+## מבנה – 10 סצנות × 3.5-5 שניות = ~50 שניות
+
+| סצנה | תוכן | משך |
+|-------|-------|-----|
+| 1 | **Hook** – כותרת + "60 שניות על מה למדנו" | 3.5s |
+| 2-8 | **תוכן** – נקודה מרכזית אחת לסצנה | 4.5-5s |
+| 9 | **סיכום** – 3-5 נקודות מרכזיות עם צ'ק | 5s |
+| 10 | **סיום** – "עכשיו תורכם" + שם בית הספר | 3.5s |
+
+```javascript
+var timings = [3500, 5000, 5000, 5000, 5000, 4500, 5000, 4500, 5000, 3500];
 ```
 
-### פלטת צבעים – תוססת וצעירה
+**קצב מהיר:** סצנות קצרות, אנימציות מהירות (0.3s), חדות.
 
-| שימוש | צבע | קוד |
-|-------|------|-----|
-| כחול | תכלת רענן | `#5b9ce6` / `#7babd4` |
-| ירוק | ירוק בהיר | `#3db87a` / `#5abf92` |
-| ורוד | ורוד חי | `#e6457a` / `#ff6b8a` |
-| סגול | סגול צעיר | `#7c5cfc` / `#b08cff` |
-| כתום | כתום חם | `#e67e22` / `#f0a04b` |
-| צהוב | צהוב זהב | `#ffd43b` / `#ffe066` |
+---
 
-### Tags צבעוניים
-```css
-.tag { padding: 0.35rem 1rem; border-radius: 50px; font-weight: 700; }
-.tag-blue { background: #e8f4fd; color: #2b7de9; }
-.tag-green { background: #e6f9f0; color: #1da363; }
-.tag-pink { background: #fde8ee; color: #e63b7a; }
-.tag-purple { background: #efe6fd; color: #7c5cfc; }
-```
+## עיצוב – מגניב, צעיר, תוסס, בוגר
 
-### אימוג'י בעיגול צבעוני
-```css
-.emoji-circle {
-  width: 90px; height: 90px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2.8rem;
-}
-.ec-pink { background: linear-gradient(135deg, #fde8ee, #fcc5d5); }
-.ec-blue { background: linear-gradient(135deg, #e8f4fd, #d0e8ff); }
-```
+### כלל ברזל: לא ילדותי, כן מגניב
 
-### מספרים בבועות צבעוניות
-כל נושא מקבל מספר בבועה עגולה עם gradient שונה.
+- **כן:** מודרני, אנרגטי, צעיר – כמו TikTok / Instagram / אפליקציה לנוער
+- **כן:** צבעים חיים אבל בטעם טוב, gradient עדין, אלמנטים גרפיים
+- **לא:** אימוג'ים מוגזמים, סגנון ילדים, עיגולים ענקיים צבעוניים
 
-### רשימות עם נקודות צבעוניות
-```css
-.step-dot {
-  width: 32px; height: 32px; border-radius: 50%;
-  color: #fff; font-weight: 900;
-}
-/* כל נקודה בצבע אחר */
-```
+### רקע
+- **רקע הסצנות:** לבן טהור (`#ffffff`)
+- **אקסנט עדין:** עיגול אחד בלבד, שקוף מאוד (opacity 0.06), בפינה
+- **רקע הדף:** `#f5f5f5` (אפור בהיר)
+
+### צבעים – אקסנט חי לפי מקצוע
+
+- **טקסט ראשי:** `#111` (שחור כמעט)
+- **טקסט משני:** `#666`
+- **אקסנט:** צבע אחד חי לפי מקצוע:
+
+| מקצוע | אקסנט |
+|-------|--------|
+| מתמטיקה | `#4F46E5` (כחול-סגול) |
+| היסטוריה | `#B45309` (חום-זהב) |
+| מדעים | `#059669` (ירוק) |
+| עברית/תנ"ך | `#7C3AED` (סגול) |
+| אנגלית | `#2563EB` (כחול) |
+| תספורת | `#EC4899` (ורוד) |
+| אזרחות | `#0891B2` (טורקיז) |
+| ברירת מחדל | `#6366F1` (אינדיגו) |
 
 ### טיפוגרפיה
-- כותרות: **Secular One** / **Rubik Black**
-- טקסט: **Heebo**
-- צבע טקסט: `#1a1a2e` (כהה על רקע לבן)
-- תת-כותרות: `#666`
+- **כותרות:** `Rubik` weight 800-900, גדול וחד
+- **טקסט:** `Heebo` weight 400-600
+- **מספרים/אקסנטים:** `Secular One`
+- **גודל כותרת:** `clamp(1.6rem, 5vw, 2.4rem)`
+
+### רכיבי UI
+
+**מספר סצנה** – עיגול קטן (36px) עם צבע האקסנט:
+```css
+.scene-num {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-weight: 800; font-size: 0.9rem;
+}
+```
+
+**רשימה** – מינימליסטית, בלי רקע לפריטים:
+```css
+.item {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 1rem; color: #333;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.item-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+}
+```
+
+**ללא:** emoji circles ענקיים, tags צבעוניים, icon-grids, כרטיסים עם borders.
 
 ---
 
-## מבנה סצנות
+## מוזיקה – Web Audio API (חובה!)
 
-### סצנה 1 – Hook (5 שניות)
-- אימוג'י גדול בעיגול צבעוני
-- כותרת ב-Secular One
-- tags צבעוניים
+כל סרטון **חייב** מוזיקת רקע שנוצרת ב-Web Audio API. המוזיקה נלכדת בהקלטת מסך (Win+G).
 
-### סצנות הקנייה (5–7 שניות כל אחת)
-- מספר בבועה צבעונית
-- כותרת קצרה וברורה
-- תוכן ב-icon-grid (2x2) או step-list
-- אנימציות: `zoomBounce`, `slideUp`, `popIn`
+### סגנון: Dance/EDM 140 BPM
 
-### סצנת סיכום (6 שניות)
-- check-list עם וי ירוק
-- "מה למדנו?"
+**BPM:** 140 (אנרגטי, תוסס – לא lo-fi!)
 
-### סצנת סיום (4 שניות)
-- אימוג'י + "עכשיו תורכם!"
-- tags של בית הספר
+**פרוגרסיה:** Em → C → G → D (או פרוגרסיה אנרגטית דומה)
+
+### רכיבי המוזיקה (כולם חובה)
+
+| רכיב | תיאור | פרמטרים |
+|-------|--------|----------|
+| **Kick** | four-on-the-floor, כל ביט | sine 200→30Hz + click transient 3500Hz |
+| **Clap** | ביט 2 ו-4 | 3 noise bursts × 8ms stagger, bandpass 2500Hz |
+| **Hi-hat** | 16th notes (closed + open) | noise, highpass 11000Hz (closed) / 7000Hz (open) |
+| **Pad** | כל 8 ביטים, filter sweep | sawtooth + detune, lowpass sweep 800→3500→1200Hz |
+| **Bass** | offbeat pumping pattern | sawtooth, lowpass 400Hz, Q=2 |
+| **Pluck** | catchy riff על offbeats | square, filter decay 5000→400Hz |
+
+### Master Gain – fade in/out
+
+```javascript
+masterGain.gain.setValueAtTime(0, now);
+masterGain.gain.linearRampToValueAtTime(0.4, now + 1);      // fade in 1s
+masterGain.gain.setValueAtTime(0.4, now + dur - 2);
+masterGain.gain.linearRampToValueAtTime(0, now + dur);       // fade out 2s
+```
+
+### סנכרון עם pause/play
+
+```javascript
+// On pause:
+if (audioCtx) audioCtx.suspend();
+// On resume:
+if (audioCtx) audioCtx.resume();
+```
+
+### כפתור Mute
+
+- כפתור `#mute-btn` בפינה ימנית עליונה (z-index:50)
+- אייקון: `&#128266;` (speaker) / `&#128264;` (muted)
+- מקש קיצור: **M** (toggleMute)
+- לחיצה על mute **לא עוצרת** את הסרטון (stopPropagation)
+
+```css
+#mute-btn {
+  position: absolute; top: 16px; right: 16px; z-index: 50;
+  background: none; border: none; cursor: pointer;
+  color: #bbb; font-size: 1.2rem;
+}
+```
+
+---
+
+## אנימציות נושאיות – CSS (חובה!)
+
+כל סרטון **חייב** אנימציות CSS ייחודיות שקשורות לנושא השיעור.
+
+### כלל: אנימציות מופעלות על `.scene.active`
+
+כל אנימציה מתחילה כש-`.scene` מקבל class `active`. כשהסצנה מתחלפת, האנימציה מתאפסת.
+
+### דוגמאות לפי נושא
+
+**תספורת/שיער:**
+- שערות צומחות מלמטה (`hairGrow` + `hairSway`)
+- שערות נושרות כגשם (`rain` עם `--dur`, `--delay`, `--rot`)
+- זקיק שיער עם גדילה/הצטמקות (`follicle` + `growUp` / `shrinkDown`)
+- נבט ירוק צומח (`sproutGrow`)
+- ספרקלים חוגגים (`sparkle`)
+
+**היסטוריה:**
+- דגלים מתנופפים, חרב/מגן מסתובב
+- שריפה (להבות CSS), חומות מתמוטטות
+- מפה מתגלה בהדרגה
+
+**מתמטיקה/מדעים:**
+- גרף עולה, מספרים מסתובבים
+- מולקולות/אטומים מתנדנדים
+- נוסחה מתגלה אות אחרי אות
+
+**עברית/תנ"ך:**
+- אותיות צפות ומתרכבות למילה
+- מגילה נפתחת
+- עט כותב
+
+### מבנה CSS טיפוסי
+
+```css
+/* אלמנט בסיס */
+.element-name {
+  position: absolute;
+  /* מיקום ומראה */
+}
+
+/* מופעל רק כשהסצנה פעילה */
+.scene.active .element-name {
+  animation: animName 2s ease-out forwards;
+}
+.scene.active .element-name:nth-child(2) { animation-delay: .3s }
+.scene.active .element-name:nth-child(3) { animation-delay: .6s }
+
+@keyframes animName {
+  0% { opacity: 0; transform: ... }
+  100% { opacity: 1; transform: ... }
+}
+```
+
+### סוגי אנימציות שימושיים
+
+| אנימציה | שימוש | keyframes |
+|----------|-------|-----------|
+| `slideInRight` | רשימות, פריטים | `translateX(40px)→0` |
+| `checkPop` | צ'קליסט | `scale(0)→scale(1)` cubic-bezier bounce |
+| `fadeIn` | הופעה עדינה | `opacity 0→1` |
+| `numPulse` | מספרים גדולים | `scale(1)→1.08→1` infinite |
+| `vsFlash` | VS divider | `opacity + scale` infinite |
+| `sparkle` | חגיגה, סיום | `scale(0)→1→0` infinite |
+| `rain` | נפילה | `translateY(0→700px)` with rotation |
+
+### כלל חשוב: stagger delays
+
+כל פריט ברשימה/קבוצה מקבל `animation-delay` שונה ליצירת אפקט "גל":
+```css
+:nth-child(1) { animation-delay: .2s }
+:nth-child(2) { animation-delay: .5s }
+:nth-child(3) { animation-delay: .8s }
+```
 
 ---
 
 ## מבנה טכני
 
+### פורמט טלפון (9:16)
+```css
+#phone {
+  width: min(380px, 100vw);
+  height: min(100vh, 680px);
+  background: #fff;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+}
+```
+
 ### Auto-Play
-- סצנות רצות אוטומטית – **בלי כפתורי ניווט גלויים**
-- לחיצה על המסך = pause/play (כמו TikTok)
-- progress bar דק מאוד בתחתית (3px) עם gradient מונפש
-- טיימר קטן בפינה (0:00 / 1:00)
-- badge נושא בפינה הנגדית
+- סצנות רצות אוטומטית – **בלי כפתורי ניווט**
+- לחיצה על המסך = pause/play
+- progress bar דק (2px) בתחתית – צבע אקסנט בלבד
+- טיימר בפינה שמאלית: `0:00 / 0:50`
+- כפתור mute בפינה ימנית
 
 ### מסך פתיחה
-- "לחצו להתחיל" עם כפתור play בגרדיאנט סגול-ורוד
-- מאפשר סנכרון עם הקלטת מסך
+- כותרת הנושא
+- "סיכום ב-50 שניות"
+- כפתור play פשוט (עיגול עם משולש)
+- מאפשר סנכרון עם הקלטת מסך (Win+G)
 
-### אנימציות
-```css
-@keyframes popIn { 0%{scale:0;rotate:-5deg;} 70%{scale:1.1;rotate:2deg;} 100%{scale:1;rotate:0;} }
-@keyframes slideUp { from{translateY:40px;opacity:0;} to{translateY:0;opacity:1;} }
-@keyframes zoomBounce { 0%{scale:0;} 60%{scale:1.15;} 100%{scale:1;} }
-```
+### מעברים בין סצנות
+- `opacity 0→1` + `translateY 15px→0` ב-0.3s
+- לא slide, לא zoom, לא bounce
 
-כל אלמנט בסצנה מקבל `data-anim` + `data-t` (delay ב-ms):
-```html
-<div data-anim="zoomBounce" data-t="500">תוכן</div>
-```
-
-### ניווט
-- **מקלדת:** חצים (הבא/הקודם), רווח (pause)
-- **Touch:** swipe שמאלה/ימינה
-- **לחיצה:** pause/play
-- **Progress bar:** לחיצה לדילוג
+### כפתור חזרה
+- קישור חזרה לדף הנחיתה (`index.html`)
+- `position:fixed; top:16px; left:16px;`
+- עיצוב: רקע כהה שקוף עם backdrop-filter:blur
 
 ---
 
@@ -188,42 +296,31 @@ description: יצירת סרטון לימודי בסגנון TikTok – מהיר
 docs/videos/{subject}-{topic}/index.html
 ```
 
----
-
-## עיצוב – עקרונות חשובים
-
-**העיצוב חייב להיות מותאם לנוער בתיכון (כיתות ט–יב).**
-
-- **כן:** מודרני, מקצועי, צעיר, נקי – כמו אפליקציה אמיתית
-- **לא:** ילדותי, מצויר, עמוס אימוג'ים, צבעוני מדי
-
-### אייקונים ואימוג'ים
-- שימוש **מדוד** באימוג'ים – רק כשזה מוסיף ערך
-- לא להעמיס אימוג'ים בכל שורה
-- אייקונים outline מינימליסטיים עדיפים על אימוג'ים צבעוניים
-- להימנע מאימוג'ים ילדותיים: 🎈 🧸 ⭐ 🎮
-
-### צבעים
-- צבעים רכים ונעימים, לא צעקניים
-- רקע לבן + אקסנטים עדינים
-- ניגודיות טובה לקריאות
-
-### טון
-- בוגר אך נגיש
-- לא מתנשא, לא ילדותי
-- כמו תוכן של יוצר תוכן מקצועי ב-TikTok/Instagram
+כשנוצר כחלק מ-`/lesson-builder`:
+```
+docs/lessons/{lesson-name}/video.html
+```
 
 ---
 
 ## כללים
 
-1. **סגנון TikTok** – לא מצגת! סרטון שרץ לבד, מהיר, תוסס
-2. **רקע לבן** – עם עיגולי צבע שקופים, לא רקע כהה
-3. **צבעים תוססים אך לא ילדותיים** – מודרני ומקצועי
-4. **פורמט טלפון** – 9:16, מסגרת טלפון על רקע אפור
-5. **קובץ HTML אחד** – self-contained
-6. **RTL** – `dir="rtl" lang="he"`
-7. **שפה פשוטה** – משפטים קצרים, מנות ידע קטנות
-8. **בלי כפתורי ניווט** – רק progress bar דק + pause בלחיצה
-9. **מותאם לנוער** – עיצוב בוגר ומקצועי, לא ילדותי
-10. **Google Fonts:** Heebo + Secular One + Rubik
+1. **~50 שניות** – קצב מהיר, לא להאריך
+2. **10 סצנות** – 3.5-5 שניות לסצנה
+3. **מוזיקה חובה** – Web Audio API, dance/EDM 140 BPM, עם mute
+4. **אנימציות נושאיות חובה** – CSS animations שקשורות לנושא
+5. **עיצוב מגניב ובוגר** – צעיר, תוסס, לא ילדותי
+6. **רקע לבן** – אקסנט חי אחד לפי מקצוע
+7. **פורמט טלפון** – 9:16
+8. **HTML אחד** – self-contained (ללא קבצים חיצוניים מלבד Google Fonts)
+9. **RTL** – `dir="rtl" lang="he"`
+10. **שפה פשוטה** – מנות קטנות, משפטים קצרים
+11. **Pause = music suspend** – מוזיקה עוצרת עם הווידאו
+12. **שואב תוכן** – כשמשולב עם lesson-builder, שואב אוטומטית מהמצגת
+
+### דוגמה מלאה
+
+ראה: `docs/lessons/hair-growth/video.html` – סרטון על מחזוריות צמיחת השיער עם:
+- מוזיקה dance/EDM 140 BPM (Em→C→G→D)
+- אנימציות: שערות צומחות, זקיקים, שערות נושרות, ספרקלים
+- 10 סצנות × ~5 שניות = ~50 שניות

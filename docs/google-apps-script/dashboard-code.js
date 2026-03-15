@@ -185,6 +185,57 @@ function doGet(e) {
     }
   }
 
+  // === טעינת מערך שיעור לפי ID ===
+  if (params.action === 'getLesson') {
+    try {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_lessonData');
+      var result;
+
+      if (!sheet) {
+        result = JSON.stringify({ error: 'not_found' });
+      } else {
+        var data = sheet.getDataRange().getValues();
+        var found = false;
+        for (var i = 1; i < data.length; i++) {
+          if (data[i][0] === params.id) {
+            result = JSON.stringify({
+              id: data[i][0],
+              name: data[i][1],
+              subject: data[i][2],
+              grade: data[i][3],
+              teacher: data[i][4],
+              email: data[i][5],
+              date: data[i][6] ? data[i][6].toString() : '',
+              lessonJSON: data[i][7]
+            });
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          result = JSON.stringify({ error: 'not_found' });
+        }
+      }
+
+      // JSONP support
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + result + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(result)
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      var errResult = JSON.stringify({ error: err.toString() });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + errResult + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errResult)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // === דשבורד מורים ===
   return HtmlService.createHtmlOutput(getDashboardHTML())
     .setTitle('דשבורד ציונים – אורט בית הערבה')
@@ -298,11 +349,59 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // === שמירת מערך שיעור חדש ===
+    if (data.action === 'saveLesson') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_lessonData');
+      if (!sheet) {
+        sheet = ss.insertSheet('_lessonData');
+        sheet.appendRow(['ID', 'שם שיעור', 'מקצוע', 'כיתה', 'שם מורה', 'מייל מורה', 'תאריך', 'נתוני שיעור']);
+        sheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#D4F3EF');
+        sheet.setColumnWidth(8, 400);
+      }
+      sheet.appendRow([
+        data.id,
+        data.name || '',
+        data.subject || '',
+        data.grade || '',
+        data.teacher || '',
+        data.email || '',
+        new Date().toLocaleString('he-IL'),
+        data.lessonJSON || ''
+      ]);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', id: data.id }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === בקשת מערך שיעור (טופס בקשה) ===
+    if (data.action === 'lessonRequest') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_lessonRequests');
+      if (!sheet) {
+        sheet = ss.insertSheet('_lessonRequests');
+        sheet.appendRow(['שם מורה', 'מייל', 'נושא', 'מקצוע', 'כיתה', 'הערות', 'תאריך', 'סטטוס']);
+        sheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#D4F3EF');
+      }
+      sheet.appendRow([
+        data.name || '',
+        data.email || '',
+        data.topic || '',
+        data.subject || '',
+        data.grade || '',
+        data.notes || '',
+        data.date || new Date().toLocaleString('he-IL'),
+        'ממתין'
+      ]);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // === שליחת ציונים (קיים) ===
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    var sheet = ss.getSheetByName(data.quizName);
+    var sheetName = data.sheet || data.quizName;
+    var sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
-      sheet = ss.insertSheet(data.quizName);
+      sheet = ss.insertSheet(sheetName);
       sheet.appendRow(['שם תלמיד', 'כיתה', 'ציון', 'שאלות נכונות', 'סה"כ שאלות', 'רמה שזוהתה', 'מייל מורה', 'תאריך']);
       sheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#D4F3EF');
     }

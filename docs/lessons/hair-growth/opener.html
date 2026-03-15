@@ -1171,19 +1171,42 @@ document.addEventListener('keydown', function(e) {
 function shareActivity(num, title) {
   var base = window.location.href.split('#')[0];
   var url = base + '#activity' + num;
-  var text = '📚 ' + title + '\n🔗 ' + url;
-  var waUrl = 'https://wa.me/?text=' + encodeURIComponent(text);
-  window.open(waUrl, '_blank');
+  navigator.clipboard.writeText(url).then(function() {
+    showToast('הקישור הועתק! אפשר לשלוח לתלמידים');
+  }).catch(function() {
+    prompt('העתיקו את הקישור:', url);
+  });
+}
+function showToast(msg) {
+  var t = document.getElementById('share-toast');
+  if (!t) { t = document.createElement('div'); t.id = 'share-toast'; t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1E293B;color:#fff;padding:14px 28px;border-radius:14px;font-weight:600;z-index:9999;transition:transform .3s;box-shadow:0 8px 24px rgba(0,0,0,.2);font-family:Heebo,sans-serif'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(function() { t.style.transform = 'translateX(-50%) translateY(100px)'; }, 2500);
 }
 
-// Auto-scroll to activity if hash is present
+// If hash = #activity1/2/3, show ONLY that activity
 (function() {
   var hash = window.location.hash;
   if (hash && hash.match(/^#activity\d$/)) {
-    setTimeout(function() {
-      var el = document.querySelector(hash);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 600);
+    var num = hash.replace('#activity', '');
+    // Hide all other activities
+    document.querySelectorAll('[id^="activity"]').forEach(function(el) {
+      if (el.id !== 'activity' + num) el.style.display = 'none';
+    });
+    // Hide grid, show single activity
+    var grid = document.querySelector('.activities-grid');
+    if (grid) grid.style.display = 'block';
+    // Add "back to all" button
+    var target = document.getElementById('activity' + num);
+    if (target) {
+      var backBtn = document.createElement('a');
+      backBtn.href = window.location.href.split('#')[0];
+      backBtn.textContent = '← חזרה לכל הפעילויות';
+      backBtn.style.cssText = 'display:block;text-align:center;margin:16px auto;color:#2A9D8F;font-weight:700;text-decoration:none;font-size:.95rem';
+      target.parentNode.insertBefore(backBtn, target.nextSibling);
+      setTimeout(function() { target.scrollIntoView({ behavior:'smooth', block:'start' }); }, 300);
+    }
   }
 })();
 
