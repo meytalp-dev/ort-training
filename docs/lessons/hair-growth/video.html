@@ -522,11 +522,11 @@ body{
       <svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>
     </div>
     <div class="start-text">לחצי להתחיל</div>
-    <div class="start-sub">סיכום ב-60 שניות</div>
+    <div class="start-sub">סיכום ב-50 שניות</div>
   </div>
 
   <!-- Timer -->
-  <div id="timer">0:00 / 1:00</div>
+  <div id="timer">0:00 / 0:50</div>
   <!-- Mute -->
   <button id="mute-btn" title="השתק/הפעל מוזיקה">&#128266;</button>
 
@@ -695,7 +695,8 @@ body{
 <script>
 (function(){
   // Scene timings (ms)
-  var timings = [4000, 6000, 6000, 6000, 6000, 5500, 6000, 5500, 6000, 4000];
+  // Faster pace – ~50 seconds total
+  var timings = [3500, 5000, 5000, 5000, 5000, 4500, 5000, 4500, 5000, 3500];
   var totalDuration = timings.reduce(function(a,b){return a+b}, 0);
 
   var scenes = document.querySelectorAll('.scene');
@@ -715,7 +716,7 @@ body{
   var sceneTimeout = null;
   var timerInterval = null;
 
-  // ===== MUSIC ENGINE (Web Audio API) – Upbeat Pop =====
+  // ===== MUSIC ENGINE (Web Audio API) – Dance/EDM 140 BPM =====
   var audioCtx = null;
   var masterGain = null;
   var isMuted = false;
@@ -729,46 +730,53 @@ body{
     masterGain.connect(audioCtx.destination);
 
     var now = audioCtx.currentTime;
-    var dur = 62;
-    var bpm = 124;
+    var dur = 54;
+    var bpm = 140;
     var beat = 60 / bpm;
+    var half = beat / 2;
 
-    // Master fade in/out
     masterGain.gain.setValueAtTime(0, now);
-    masterGain.gain.linearRampToValueAtTime(0.35, now + 1.5);
-    masterGain.gain.setValueAtTime(0.35, now + dur - 3);
+    masterGain.gain.linearRampToValueAtTime(0.4, now + 1);
+    masterGain.gain.setValueAtTime(0.4, now + dur - 2);
     masterGain.gain.linearRampToValueAtTime(0, now + dur);
 
-    // Upbeat pop progression: C → G → Am → F
+    // Energetic progression: Em → C → G → D
     var chords = [
-      [523.25, 659.25, 783.99],  // C5
-      [392, 493.88, 587.33],     // G4
-      [440, 523.25, 659.25],     // Am4
-      [349.23, 440, 523.25]      // F4
+      [329.63, 392, 493.88],     // Em
+      [523.25, 659.25, 783.99],  // C
+      [392, 493.88, 587.33],     // G
+      [293.66, 369.99, 440]      // D
     ];
-    var roots = [130.81, 98, 110, 87.31]; // C3, G2, A2, F2
+    var roots = [82.41, 130.81, 98, 73.42]; // E2, C3, G2, D2
 
     var totalBeats = Math.ceil(dur / beat);
 
     for (var b = 0; b < totalBeats; b++){
       var t = now + b * beat;
       var ci = Math.floor(b / 8) % chords.length;
-      var localBeat = b % 4;
+      var lb = b % 4; // local beat in bar
 
-      // Pad – every 8 beats
+      // Four-on-the-floor kick – EVERY beat
+      scheduleKick(t);
+      // Clap on 2 and 4
+      if (lb === 1 || lb === 3) scheduleClap(t);
+      // Hi-hat: closed on every 8th, open on offbeats
+      scheduleHat(t, 0.06, false);
+      scheduleHat(t + half, 0.04, true);
+      // Extra 16th hats for energy
+      scheduleHat(t + half * 0.5, 0.02, false);
+      scheduleHat(t + half * 1.5, 0.02, false);
+      // Pad – every 8 beats with filter sweep
       if (b % 8 === 0) schedulePad(t, chords[ci], beat * 8);
-      // Kick – beats 1 and 3
-      if (localBeat === 0 || localBeat === 2) scheduleKick(t);
-      // Snare – beats 2 and 4
-      if (localBeat === 1 || localBeat === 3) scheduleSnare(t);
-      // Hi-hat – every beat + offbeats
-      scheduleHat(t, 0.07);
-      scheduleHat(t + beat * 0.5, 0.035);
-      // Bass – bouncy pattern
-      if (localBeat === 0) scheduleBass(t, roots[ci], beat * 1.5);
-      if (localBeat === 2) scheduleBass(t, roots[ci] * 1.5, beat * 0.8);
-      // Pluck arpeggio – offbeats for sparkle
-      if (b % 2 === 1) schedulePluck(t, chords[ci][b % 3], beat * 0.4);
+      // Bass – offbeat pumping pattern
+      if (lb === 0) scheduleBass(t + half, roots[ci], beat * 0.8);
+      if (lb === 1) scheduleBass(t + half, roots[ci] * 1.5, beat * 0.4);
+      if (lb === 2) scheduleBass(t + half, roots[ci], beat * 0.8);
+      if (lb === 3) scheduleBass(t, roots[ci] * 2, beat * 0.3);
+      // Lead pluck – catchy riff on offbeats
+      if (b % 4 === 0) schedulePluck(t + half, chords[ci][0], beat * 0.3);
+      if (b % 4 === 1) schedulePluck(t, chords[ci][2], beat * 0.2);
+      if (b % 4 === 2) schedulePluck(t + half, chords[ci][1], beat * 0.3);
     }
   }
 
@@ -779,13 +787,16 @@ body{
       var filt = audioCtx.createBiquadFilter();
       osc.type = 'sawtooth';
       osc.frequency.value = freqs[i];
-      osc.detune.value = (i - 1) * 8;
+      osc.detune.value = (i - 1) * 10;
       filt.type = 'lowpass';
-      filt.frequency.value = 2200;
-      filt.Q.value = 0.5;
+      // Filter sweep up for energy
+      filt.frequency.setValueAtTime(800, t);
+      filt.frequency.linearRampToValueAtTime(3500, t + dur * 0.7);
+      filt.frequency.linearRampToValueAtTime(1200, t + dur);
+      filt.Q.value = 1.5;
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.018, t + 0.3);
-      g.gain.setValueAtTime(0.018, t + dur - 0.5);
+      g.gain.linearRampToValueAtTime(0.02, t + 0.2);
+      g.gain.setValueAtTime(0.02, t + dur - 0.3);
       g.gain.linearRampToValueAtTime(0, t + dur);
       osc.connect(filt); filt.connect(g); g.connect(masterGain);
       osc.start(t); osc.stop(t + dur + 0.1);
@@ -796,44 +807,46 @@ body{
     var osc = audioCtx.createOscillator();
     var g = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(180, t);
-    osc.frequency.exponentialRampToValueAtTime(35, t + 0.08);
-    g.gain.setValueAtTime(0.45, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(30, t + 0.06);
+    g.gain.setValueAtTime(0.5, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
     osc.connect(g); g.connect(masterGain);
-    osc.start(t); osc.stop(t + 0.2);
-  }
-
-  function scheduleSnare(t){
-    // Noise burst
-    var len = Math.floor(audioCtx.sampleRate * 0.08);
-    var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-    var d = buf.getChannelData(0);
-    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    var src = audioCtx.createBufferSource();
-    var g = audioCtx.createGain();
-    var filt = audioCtx.createBiquadFilter();
-    src.buffer = buf;
-    filt.type = 'bandpass';
-    filt.frequency.value = 4000;
-    filt.Q.value = 0.8;
-    g.gain.setValueAtTime(0.18, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-    src.connect(filt); filt.connect(g); g.connect(masterGain);
-    src.start(t);
-    // Tonal body
-    var osc = audioCtx.createOscillator();
+    osc.start(t); osc.stop(t + 0.18);
+    // Click transient
+    var osc2 = audioCtx.createOscillator();
     var g2 = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = 200;
-    g2.gain.setValueAtTime(0.12, t);
-    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-    osc.connect(g2); g2.connect(masterGain);
-    osc.start(t); osc.stop(t + 0.1);
+    osc2.type = 'sine';
+    osc2.frequency.value = 3500;
+    g2.gain.setValueAtTime(0.08, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
+    osc2.connect(g2); g2.connect(masterGain);
+    osc2.start(t); osc2.stop(t + 0.02);
   }
 
-  function scheduleHat(t, vol){
-    var len = Math.floor(audioCtx.sampleRate * 0.03);
+  function scheduleClap(t){
+    for (var c = 0; c < 3; c++){
+      var delay = c * 0.008;
+      var len = Math.floor(audioCtx.sampleRate * 0.06);
+      var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      var src = audioCtx.createBufferSource();
+      var g = audioCtx.createGain();
+      var filt = audioCtx.createBiquadFilter();
+      src.buffer = buf;
+      filt.type = 'bandpass';
+      filt.frequency.value = 2500;
+      filt.Q.value = 0.6;
+      g.gain.setValueAtTime(0.12, t + delay);
+      g.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.06);
+      src.connect(filt); filt.connect(g); g.connect(masterGain);
+      src.start(t + delay);
+    }
+  }
+
+  function scheduleHat(t, vol, open){
+    var len = Math.floor(audioCtx.sampleRate * (open ? 0.06 : 0.02));
     var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
     var d = buf.getChannelData(0);
     for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
@@ -842,9 +855,9 @@ body{
     var filt = audioCtx.createBiquadFilter();
     src.buffer = buf;
     filt.type = 'highpass';
-    filt.frequency.value = 10000;
+    filt.frequency.value = open ? 7000 : 11000;
     g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.06 : 0.02));
     src.connect(filt); filt.connect(g); g.connect(masterGain);
     src.start(t);
   }
@@ -852,14 +865,14 @@ body{
   function scheduleBass(t, freq, dur){
     var osc = audioCtx.createOscillator();
     var g = audioCtx.createGain();
-    osc.type = 'square';
+    osc.type = 'sawtooth';
     osc.frequency.value = freq;
     var filt = audioCtx.createBiquadFilter();
     filt.type = 'lowpass';
-    filt.frequency.value = 300;
-    g.gain.setValueAtTime(0.18, t);
-    g.gain.setValueAtTime(0.18, t + dur * 0.5);
-    g.gain.linearRampToValueAtTime(0, t + dur);
+    filt.frequency.value = 400;
+    filt.Q.value = 2;
+    g.gain.setValueAtTime(0.2, t);
+    g.gain.exponentialRampToValueAtTime(0.01, t + dur);
     osc.connect(filt); filt.connect(g); g.connect(masterGain);
     osc.start(t); osc.stop(t + dur + 0.05);
   }
@@ -868,12 +881,13 @@ body{
     var osc = audioCtx.createOscillator();
     var g = audioCtx.createGain();
     var filt = audioCtx.createBiquadFilter();
-    osc.type = 'triangle';
+    osc.type = 'square';
     osc.frequency.value = freq;
     filt.type = 'lowpass';
-    filt.frequency.setValueAtTime(4000, t);
-    filt.frequency.exponentialRampToValueAtTime(600, t + dur);
-    g.gain.setValueAtTime(0.1, t);
+    filt.frequency.setValueAtTime(5000, t);
+    filt.frequency.exponentialRampToValueAtTime(400, t + dur);
+    filt.Q.value = 2;
+    g.gain.setValueAtTime(0.08, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     osc.connect(filt); filt.connect(g); g.connect(masterGain);
     osc.start(t); osc.stop(t + dur + 0.05);
@@ -883,14 +897,15 @@ body{
     if (!audioCtx || !masterGain) return;
     isMuted = !isMuted;
     masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
-    masterGain.gain.setValueAtTime(isMuted ? 0 : 0.35, audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(isMuted ? 0 : 0.4, audioCtx.currentTime);
     muteBtn.innerHTML = isMuted ? '&#128264;' : '&#128266;';
   }
 
   // ===== VIDEO PLAYER =====
   function formatTime(ms){
-    var s = Math.min(Math.floor(ms/1000), 60);
-    return '0:' + (s < 10 ? '0' : '') + s + ' / 1:00';
+    var total = Math.round(totalDuration/1000);
+    var s = Math.min(Math.floor(ms/1000), total);
+    return '0:' + (s < 10 ? '0' : '') + s + ' / 0:' + total;
   }
 
   function updateTimer(){
