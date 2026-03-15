@@ -283,6 +283,21 @@ body{
 }
 /* Nav buttons hidden */
 .nav-btn{display:none!important}
+/* Mute button */
+#mute-btn{
+  position:absolute;
+  top:16px;
+  right:16px;
+  z-index:50;
+  background:none;
+  border:none;
+  cursor:pointer;
+  color:#bbb;
+  font-size:1.2rem;
+  padding:4px;
+  transition:color .2s;
+}
+#mute-btn:hover{color:#EC4899}
 </style>
 </head>
 <body>
@@ -303,6 +318,8 @@ body{
 
   <!-- Timer -->
   <div id="timer">0:00 / 1:00</div>
+  <!-- Mute -->
+  <button id="mute-btn" title="השתק/הפעל מוזיקה">&#128266;</button>
 
   <!-- Scene 1 – Hook -->
   <div class="scene" id="scene-0">
@@ -427,35 +444,169 @@ body{
 
 <script>
 (function(){
-  // Scene timings (ms) – total = 58 seconds (adjusted to ~60s with transitions)
-  const timings = [4000, 6000, 6000, 6000, 6000, 5500, 6000, 5500, 6000, 4000];
-  const totalDuration = timings.reduce((a,b)=>a+b, 0); // 59000ms
+  // Scene timings (ms)
+  var timings = [4000, 6000, 6000, 6000, 6000, 5500, 6000, 5500, 6000, 4000];
+  var totalDuration = timings.reduce(function(a,b){return a+b}, 0);
 
-  const scenes = document.querySelectorAll('.scene');
-  const overlay = document.getElementById('start-overlay');
-  const progressBar = document.getElementById('progress-bar');
-  const timerEl = document.getElementById('timer');
-  const pauseIndicator = document.getElementById('pause-indicator');
-  const phone = document.getElementById('phone');
+  var scenes = document.querySelectorAll('.scene');
+  var overlay = document.getElementById('start-overlay');
+  var progressBar = document.getElementById('progress-bar');
+  var timerEl = document.getElementById('timer');
+  var pauseIndicator = document.getElementById('pause-indicator');
+  var phone = document.getElementById('phone');
+  var muteBtn = document.getElementById('mute-btn');
 
-  let currentScene = 0;
-  let isPlaying = false;
-  let isPaused = false;
-  let startTime = 0;
-  let elapsed = 0;
-  let pausedAt = 0;
-  let sceneTimeout = null;
-  let timerInterval = null;
+  var currentScene = 0;
+  var isPlaying = false;
+  var isPaused = false;
+  var startTime = 0;
+  var elapsed = 0;
+  var pausedAt = 0;
+  var sceneTimeout = null;
+  var timerInterval = null;
 
+  // ===== MUSIC ENGINE (Web Audio API) =====
+  var audioCtx = null;
+  var masterGain = null;
+  var isMuted = false;
+
+  function initMusic(){
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e){ return; }
+
+    masterGain = audioCtx.createGain();
+    masterGain.connect(audioCtx.destination);
+
+    var now = audioCtx.currentTime;
+    var dur = 62;
+    var bpm = 82;
+    var beat = 60 / bpm;
+
+    // Master fade in/out
+    masterGain.gain.setValueAtTime(0, now);
+    masterGain.gain.linearRampToValueAtTime(0.3, now + 2);
+    masterGain.gain.setValueAtTime(0.3, now + dur - 4);
+    masterGain.gain.linearRampToValueAtTime(0, now + dur);
+
+    // Chord progression – lo-fi chill
+    var chords = [
+      [261.63, 329.63, 392, 493.88],   // Cmaj7
+      [220, 261.63, 329.63, 392],       // Am7
+      [174.61, 220, 261.63, 329.63],    // Fmaj7
+      [196, 246.94, 293.66, 349.23]     // G7
+    ];
+
+    var totalBeats = Math.ceil(dur / beat);
+
+    for (var b = 0; b < totalBeats; b++){
+      var t = now + b * beat;
+      var ci = Math.floor(b / 8) % chords.length;
+
+      // Pad – every 8 beats
+      if (b % 8 === 0) schedulePad(t, chords[ci], beat * 8);
+      // Kick – every 4 beats
+      if (b % 4 === 0) scheduleKick(t);
+      // Hi-hat – every 2 beats
+      if (b % 2 === 0) scheduleHat(t);
+      // Bass – every 4 beats
+      if (b % 4 === 0) scheduleBass(t, chords[ci][0] / 2, beat * 3.5);
+    }
+  }
+
+  function schedulePad(t, freqs, dur){
+    for (var i = 0; i < freqs.length; i++){
+      var osc = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      var filt = audioCtx.createBiquadFilter();
+
+      osc.type = 'sawtooth';
+      osc.frequency.value = freqs[i];
+      // slight detune for warmth
+      osc.detune.value = (i - 1.5) * 6;
+
+      filt.type = 'lowpass';
+      filt.frequency.value = 900;
+      filt.Q.value = 0.7;
+
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.025, t + 0.8);
+      g.gain.setValueAtTime(0.025, t + dur - 0.8);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+
+      osc.connect(filt);
+      filt.connect(g);
+      g.connect(masterGain);
+      osc.start(t);
+      osc.stop(t + dur + 0.1);
+    }
+  }
+
+  function scheduleKick(t){
+    var osc = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, t);
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+    g.gain.setValueAtTime(0.35, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 0.3);
+  }
+
+  function scheduleHat(t){
+    var len = Math.floor(audioCtx.sampleRate * 0.04);
+    var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+
+    var src = audioCtx.createBufferSource();
+    var g = audioCtx.createGain();
+    var filt = audioCtx.createBiquadFilter();
+    src.buffer = buf;
+    filt.type = 'highpass';
+    filt.frequency.value = 9000;
+    g.gain.setValueAtTime(0.06, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    src.connect(filt);
+    filt.connect(g);
+    g.connect(masterGain);
+    src.start(t);
+  }
+
+  function scheduleBass(t, freq, dur){
+    var osc = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.12, t);
+    g.gain.setValueAtTime(0.12, t + dur * 0.6);
+    g.gain.linearRampToValueAtTime(0, t + dur);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + dur + 0.1);
+  }
+
+  function toggleMute(){
+    if (!audioCtx || !masterGain) return;
+    isMuted = !isMuted;
+    masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(isMuted ? 0 : 0.3, audioCtx.currentTime);
+    muteBtn.innerHTML = isMuted ? '&#128264;' : '&#128266;';
+  }
+
+  // ===== VIDEO PLAYER =====
   function formatTime(ms){
-    const s = Math.min(Math.floor(ms/1000), 60);
-    const sec = s % 60;
-    return '0:' + (sec < 10 ? '0' : '') + sec + ' / 1:00';
+    var s = Math.min(Math.floor(ms/1000), 60);
+    return '0:' + (s < 10 ? '0' : '') + s + ' / 1:00';
   }
 
   function updateTimer(){
     if(!isPlaying || isPaused) return;
-    const now = Date.now();
+    var now = Date.now();
     elapsed = pausedAt + (now - startTime);
     if(elapsed > totalDuration) elapsed = totalDuration;
     timerEl.textContent = formatTime(elapsed);
@@ -463,19 +614,15 @@ body{
   }
 
   function showScene(index){
-    scenes.forEach((s, i) => {
-      if(i === index){
-        s.classList.add('active');
-      } else {
-        s.classList.remove('active');
-      }
-    });
+    for (var i = 0; i < scenes.length; i++){
+      if(i === index) scenes[i].classList.add('active');
+      else scenes[i].classList.remove('active');
+    }
     currentScene = index;
   }
 
   function playFrom(sceneIndex){
     if(sceneIndex >= scenes.length){
-      // End
       isPlaying = false;
       clearInterval(timerInterval);
       elapsed = totalDuration;
@@ -483,12 +630,8 @@ body{
       progressBar.style.width = '100%';
       return;
     }
-
     showScene(sceneIndex);
-
-    sceneTimeout = setTimeout(function(){
-      playFrom(sceneIndex + 1);
-    }, timings[sceneIndex]);
+    sceneTimeout = setTimeout(function(){ playFrom(sceneIndex + 1); }, timings[sceneIndex]);
   }
 
   function startPlayback(){
@@ -501,6 +644,9 @@ body{
     timerInterval = setInterval(updateTimer, 100);
     showScene(0);
     playFrom(0);
+
+    // Start background music
+    initMusic();
   }
 
   function pause(){
@@ -510,6 +656,7 @@ body{
     clearTimeout(sceneTimeout);
     clearInterval(timerInterval);
     pauseIndicator.style.display = 'flex';
+    if (audioCtx) audioCtx.suspend();
   }
 
   function resume(){
@@ -518,53 +665,44 @@ body{
     startTime = Date.now();
     pauseIndicator.style.display = 'none';
 
-    // Calculate remaining time for current scene
-    let accum = 0;
-    for(let i = 0; i < currentScene; i++){
-      accum += timings[i];
-    }
-    const sceneElapsed = pausedAt - accum;
-    const remaining = timings[currentScene] - sceneElapsed;
+    var accum = 0;
+    for(var i = 0; i < currentScene; i++) accum += timings[i];
+    var remaining = timings[currentScene] - (pausedAt - accum);
 
     timerInterval = setInterval(updateTimer, 100);
-
-    sceneTimeout = setTimeout(function(){
-      playFrom(currentScene + 1);
-    }, Math.max(remaining, 100));
+    sceneTimeout = setTimeout(function(){ playFrom(currentScene + 1); }, Math.max(remaining, 100));
+    if (audioCtx) audioCtx.resume();
   }
 
   function togglePause(){
     if(!isPlaying) return;
-    if(isPaused){
-      resume();
-    } else {
-      pause();
-    }
+    if(isPaused) resume(); else pause();
   }
 
-  // Overlay click
   overlay.addEventListener('click', function(e){
     e.stopPropagation();
     startPlayback();
   });
 
-  // Phone click to pause/resume
   phone.addEventListener('click', function(e){
     if(!isPlaying) return;
     if(e.target.closest('#start-overlay')) return;
+    if(e.target.closest('#mute-btn')) return;
     togglePause();
   });
 
-  // Keyboard
+  muteBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    toggleMute();
+  });
+
   document.addEventListener('keydown', function(e){
     if(e.code === 'Space'){
       e.preventDefault();
-      if(!isPlaying && overlay.style.display !== 'none'){
-        startPlayback();
-      } else {
-        togglePause();
-      }
+      if(!isPlaying && overlay.style.display !== 'none') startPlayback();
+      else togglePause();
     }
+    if(e.code === 'KeyM') toggleMute();
   });
 })();
 </script>
