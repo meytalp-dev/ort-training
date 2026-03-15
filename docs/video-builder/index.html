@@ -140,13 +140,27 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
 .draft-banner{background:#fff8dd;border:2px solid #ffe066;border-radius:14px;padding:0.8rem 1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
 .draft-banner p{font-size:0.9rem;font-weight:600}
 .draft-btns{display:flex;gap:0.5rem}
+
+/* === TYPE SELECTOR === */
+.type-selector{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1.2rem}
+@media(max-width:500px){.type-selector{grid-template-columns:1fr}}
+.type-card{padding:1rem;border:2px solid #e8e8e8;border-radius:16px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:0.8rem}
+.type-card:hover{border-color:var(--primary-l);background:var(--light-gray)}
+.type-card.selected{border-color:var(--primary);background:var(--primary-l);box-shadow:0 4px 15px rgba(124,92,252,0.12)}
+.type-icon{font-size:1.8rem;flex-shrink:0}
+.type-info h3{font-size:0.95rem;font-weight:700;margin-bottom:0.15rem}
+.type-info p{font-size:0.78rem;color:var(--gray);line-height:1.4}
+
+/* === FULL-MODE PREVIEW === */
+.wide-frame{position:relative;width:100%;max-width:580px;aspect-ratio:16/9;background:#fff;border-radius:1rem;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.12);border:3px solid #e8e8e8}
+.wide-frame iframe{width:100%;height:100%;border:none}
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>&#127909; מחולל סרטונים לימודיים</h1>
-  <p>יצירת סרטון TikTok לימודי בקליק</p>
+  <p>סיכום 60 שניות או סרטון הקנייה מלא – בקליק</p>
 </div>
 
 <!-- LOGIN -->
@@ -186,6 +200,26 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
   <div class="screen active" id="step1">
     <div class="card">
       <h2>&#128221; פרטי הסרטון</h2>
+
+      <!-- Video Type Selector -->
+      <div class="type-selector">
+        <div class="type-card selected" onclick="setVideoType('summary')" id="typeSummary">
+          <div class="type-icon">&#9889;</div>
+          <div class="type-info">
+            <h3>סיכום 60 שניות</h3>
+            <p>סיכום מהיר בסגנון TikTok – 10 סצנות, קצב מהיר</p>
+          </div>
+        </div>
+        <div class="type-card" onclick="setVideoType('full')" id="typeFull">
+          <div class="type-icon">&#127916;</div>
+          <div class="type-info">
+            <h3>סרטון לימודי מלא</h3>
+            <p>הקנייה עם שאלות – קצר / בינוני / ארוך</p>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="videoType" value="summary">
+
       <div class="form-group">
         <label>שם הסרטון</label>
         <input type="text" id="videoName" placeholder='למשל: "סיכום שיעור – משוואות"'>
@@ -229,16 +263,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
             <option>מתקדם</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="durationGroup">
           <label>אורך</label>
           <select id="duration">
             <option value="60">60 שניות (סיכום)</option>
-            <option value="90">90 שניות</option>
-            <option value="180">3 דקות (הקנייה)</option>
+            <option value="120">2 דקות (קצר)</option>
+            <option value="300">5 דקות (בינוני)</option>
+            <option value="600">10 דקות (ארוך)</option>
           </select>
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="styleGroup">
         <label>סגנון</label>
         <select id="style">
           <option value="animated">מונפש – אנימציות חלקות</option>
@@ -299,7 +334,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-h
       <h2>&#128250; תצוגה מקדימה</h2>
       <div class="preview-container">
         <div class="phone-frame" id="phoneFrame">
-          <iframe id="previewFrame" sandbox="allow-scripts"></iframe>
+          <iframe id="previewFramePhone" sandbox="allow-scripts"></iframe>
+        </div>
+        <div class="wide-frame" id="wideFrame" style="display:none">
+          <iframe id="previewFrameWide" sandbox="allow-scripts"></iframe>
         </div>
         <div class="preview-controls">
           <button class="btn btn-outline btn-sm" onclick="refreshPreview()">&#128260; רענן</button>
@@ -357,6 +395,38 @@ let currentStep = 1;
 let user = null;
 let details = {};
 let scenes = [];
+let videoType = 'summary'; // 'summary' or 'full'
+
+// === VIDEO TYPE ===
+function setVideoType(type) {
+  videoType = type;
+  document.getElementById('videoType').value = type;
+  document.getElementById('typeSummary').classList.toggle('selected', type === 'summary');
+  document.getElementById('typeFull').classList.toggle('selected', type === 'full');
+  // Show/hide duration & style for full mode
+  document.getElementById('durationGroup').style.display = type === 'full' ? 'block' : 'none';
+  document.getElementById('styleGroup').style.display = type === 'full' ? 'block' : 'none';
+  // Set defaults for summary
+  if (type === 'summary') {
+    document.getElementById('duration').value = '60';
+    document.getElementById('style').value = 'animated';
+  }
+}
+
+// Subject accent colors (used for 60-sec summary minimalist style)
+const SUBJECT_ACCENTS = {
+  'מתמטיקה': '#4F46E5',
+  'היסטוריה': '#B45309',
+  'מדעים': '#059669',
+  'עברית': '#7C3AED',
+  'תנ"ך': '#7C3AED',
+  'אנגלית': '#2563EB',
+  'תספורת ועיצוב שיער': '#EC4899',
+  'קוסמטיקה': '#EC4899',
+  'אזרחות': '#0891B2',
+  'חשמל': '#D97706',
+  'מחשבים': '#4F46E5'
+};
 
 // === AUTH ===
 function login() {
@@ -387,6 +457,8 @@ function showApp() {
 (function() {
   const saved = localStorage.getItem('ort-video-user');
   if (saved) { user = JSON.parse(saved); showApp(); }
+  // Init video type UI
+  setVideoType('summary');
 })();
 
 // === GEMINI KEY ===
@@ -401,8 +473,9 @@ function saveGeminiKey() {
 }
 
 function checkGeminiKey() {
+  // Only hide key setup if key exists – don't auto-show it
   const setup = document.getElementById('aiKeySetup');
-  if (setup) setup.style.display = getGeminiKey() ? 'none' : 'block';
+  if (setup && getGeminiKey()) setup.style.display = 'none';
 }
 
 // === NAVIGATION ===
@@ -445,13 +518,15 @@ function validateStep(step) {
 }
 
 function saveStepData() {
+  videoType = document.getElementById('videoType').value || 'summary';
   details = {
+    videoType: videoType,
     videoName: document.getElementById('videoName').value.trim(),
     subject: document.getElementById('subject').value,
     grade: document.getElementById('grade').value,
     level: document.getElementById('level').value,
-    duration: document.getElementById('duration').value,
-    style: document.getElementById('style').value,
+    duration: videoType === 'summary' ? '60' : document.getElementById('duration').value,
+    style: videoType === 'summary' ? 'animated' : document.getElementById('style').value,
     content: document.getElementById('content').value.trim()
   };
 }
@@ -477,6 +552,7 @@ function loadDraft() {
     if (!draft) return;
     details = draft.details || {};
     scenes = draft.scenes || [];
+    if (details.videoType) setVideoType(details.videoType);
     if (details.videoName) document.getElementById('videoName').value = details.videoName;
     if (details.subject) document.getElementById('subject').value = details.subject;
     if (details.grade) document.getElementById('grade').value = details.grade;
@@ -497,6 +573,7 @@ function dismissDraft() {
 // === SCENES ===
 const sceneTypes = {
   hook:    { label: 'פתיחה (Hook)', icon: '&#127916;' },
+  question:{ label: 'שאלה', icon: '&#10068;' },
   content: { label: 'תוכן', icon: '&#128218;' },
   list:    { label: 'רשימה', icon: '&#128203;' },
   grid:    { label: 'כרטיסים (2x2)', icon: '&#128200;' },
@@ -588,18 +665,64 @@ function updateScene(idx, field, value) {
 // === AI GENERATION ===
 async function generateWithAI() {
   const apiKey = getGeminiKey();
-  if (!apiKey) { checkGeminiKey(); showToast('צריך מפתח Gemini'); return; }
+  if (!apiKey) {
+    const setup = document.getElementById('aiKeySetup');
+    if (setup) setup.style.display = 'block';
+    showToast('יש להזין מפתח Gemini כדי לייצר עם AI');
+    return;
+  }
 
   saveStepData();
   const { videoName, subject, grade, level, duration, style, content } = details;
+  const isSummary = videoType === 'summary';
 
-  const sceneCounts = { '60': '8-10', '90': '12-14', '180': '18-22' };
-  const styleNames = { animated: 'מונפש', normal: 'רגיל ומקצועי', funny: 'מצחיק עם הומור' };
-  const sceneCount = sceneCounts[duration] || '8-10';
-  const styleName = styleNames[style] || 'מונפש';
+  let sceneCount, styleName, prompt;
 
-  const prompt = `אתה מורה מנוסה בבית ספר תיכון מקצועי "אורט בית הערבה".
-יצור סצנות לסרטון לימודי קצר בסגנון TikTok.
+  if (isSummary) {
+    sceneCount = '10';
+    prompt = `אתה מורה מנוסה בבית ספר תיכון מקצועי "אורט בית הערבה".
+יצור בדיוק 10 סצנות לסרטון סיכום שיעור ב-60 שניות בסגנון TikTok.
+
+פרטים:
+- שם: ${videoName}
+- מקצוע: ${subject}
+- כיתה: ${grade}
+- רמה: ${level}
+- אורך: 60 שניות (10 סצנות × 4-6 שניות)
+
+תוכן/נושא:
+${content}
+
+הנחיות:
+- שפה פשוטה וברורה, מתאימה לנוער בתיכון
+- משפטים קצרים מאוד, מנות ידע קטנות
+- קצב מהיר – כל סצנה 4-6 שניות
+- סצנה 1 = hook: כותרת + "60 שניות על מה למדנו"
+- סצנות 2-8 = content: נקודה מרכזית אחת לכל סצנה (2-4 פריטים קצרים)
+- סצנה 9 = summary: 3-5 נקודות מרכזיות לסיכום
+- סצנה 10 = ending: "עכשיו תורכם" + קריאה לפעולה
+- items = 2-4 פריטים קצרים לסצנה. משפט אחד לפריט!
+
+החזר JSON בלבד בפורמט:
+{
+  "scenes": [
+    {
+      "type": "hook|content|list|summary|ending",
+      "emoji": "אימוג'י אחד",
+      "title": "כותרת קצרה",
+      "items": ["פריט 1", "פריט 2"],
+      "subtitle": "טקסט משנה (אופציונלי, מחרוזת ריקה אם אין)"
+    }
+  ]
+}`;
+  } else {
+    const sceneCounts = { '120': '8-12', '300': '15-20', '600': '25-35' };
+    const styleNames = { animated: 'מונפש', normal: 'רגיל ומקצועי', funny: 'מצחיק עם הומור' };
+    sceneCount = sceneCounts[duration] || '15-20';
+    styleName = styleNames[style] || 'מונפש';
+
+    prompt = `אתה מורה מנוסה בבית ספר תיכון מקצועי "אורט בית הערבה".
+יצור סצנות לסרטון לימודי מלא (הקנייה).
 
 פרטים:
 - שם: ${videoName}
@@ -618,6 +741,8 @@ ${content}
 - הסצנה הראשונה = hook (פתיחה מושכת)
 - הסצנה האחרונה = ending (סיום + קריאה לפעולה)
 - סצנה לפני אחרונה = summary (סיכום 3-5 נקודות)
+- כל 3-4 סצנות, הוסף סצנה מסוג "question" (שאלת הבנה אינטראקטיבית)
+- שאלה = type "question", title = השאלה, items = 4 תשובות, subtitle = אינדקס התשובה הנכונה (0-3)
 - שאר הסצנות = תוכן לימודי מגוון (content, list, grid, warning)
 - items = רשימת פריטים/נקודות בכל סצנה (2-6 פריטים)
 - אימוג'י אחד מתאים לכל סצנה
@@ -627,14 +752,15 @@ ${style === 'funny' ? '- הוסף הומור קל, בדיחות קשורות ל�
 {
   "scenes": [
     {
-      "type": "hook|content|list|grid|warning|summary|ending",
+      "type": "hook|content|list|grid|warning|question|summary|ending",
       "emoji": "אימוג'י אחד",
       "title": "כותרת קצרה",
       "items": ["פריט 1", "פריט 2"],
-      "subtitle": "טקסט משנה (אופציונלי, מחרוזת ריקה אם אין)"
+      "subtitle": "טקסט משנה (או אינדקס תשובה נכונה לשאלה)"
     }
   ]
 }`;
+  }
 
   const btn = document.getElementById('aiGenerateBtn');
   const loading = document.getElementById('aiLoading');
@@ -689,8 +815,12 @@ ${style === 'funny' ? '- הוסף הומור קל, בדיחות קשורות ל�
 
 // === PREVIEW ===
 function refreshPreview() {
+  saveStepData();
   const html = generateVideoHTML();
-  const frame = document.getElementById('previewFrame');
+  const isSummary = videoType === 'summary';
+  document.getElementById('phoneFrame').style.display = isSummary ? 'block' : 'none';
+  document.getElementById('wideFrame').style.display = isSummary ? 'none' : 'block';
+  const frame = document.getElementById(isSummary ? 'previewFramePhone' : 'previewFrameWide');
   frame.srcdoc = html;
 }
 
@@ -698,27 +828,180 @@ function refreshPreview() {
 function generateVideoHTML() {
   saveStepData();
   const d = details;
-  const totalDur = scenes.reduce((a, s) => a + (s.duration || 6000), 0);
+  const isSummary = videoType === 'summary';
+  return isSummary ? generateSummaryHTML(d) : generateFullHTML(d);
+}
 
-  // Color palettes per scene
+// ============================================
+// 60-SECOND SUMMARY – Minimalist TikTok Style
+// ============================================
+function generateSummaryHTML(d) {
+  const accent = SUBJECT_ACCENTS[d.subject] || '#6366F1';
+  const totalDur = scenes.reduce((a, s) => a + (s.duration || 6000), 0);
+  const totalSec = Math.floor(totalDur / 1000);
+  const mm = Math.floor(totalSec / 60);
+  const ss = totalSec % 60;
+  const timeLabel = `${mm}:${ss < 10 ? '0' : ''}${ss}`;
+
+  // Build scenes HTML – minimalist style
+  let scenesHTML = '';
+  scenes.forEach((scene, i) => {
+    const isActive = i === 0 ? ' active' : '';
+    let inner = '';
+
+    switch (scene.type) {
+      case 'hook':
+        inner = `
+          <div class="scene-num" data-anim="fadeUp" data-t="0">${esc(scene.emoji || '60')}</div>
+          <div class="big-title" data-anim="fadeUp" data-t="200">${esc(scene.title)}</div>
+          ${scene.subtitle ? `<div class="sub" data-anim="fadeUp" data-t="500">${esc(scene.subtitle)}</div>` : ''}
+          ${scene.items.length ? `<div class="item-list" data-anim="fadeUp" data-t="700">
+            ${scene.items.map(item => `<div class="item"><span class="item-dot"></span>${esc(item)}</div>`).join('')}
+          </div>` : ''}`;
+        break;
+
+      case 'summary':
+        inner = `
+          <div class="scene-num" data-anim="fadeUp" data-t="0">${esc(scene.emoji || '')}</div>
+          <div class="caption" data-anim="fadeUp" data-t="150">${esc(scene.title)}</div>
+          <ul class="check-list">${scene.items.map((item, j) =>
+            `<li data-anim="fadeUp" data-t="${400 + j * 200}"><span class="check">&#10003;</span>${esc(item)}</li>`
+          ).join('')}</ul>`;
+        break;
+
+      case 'ending':
+        inner = `
+          <div class="scene-num" data-anim="fadeUp" data-t="0" style="font-size:2rem">${esc(scene.emoji)}</div>
+          <div class="big-title" data-anim="fadeUp" data-t="200">${esc(scene.title)}</div>
+          ${scene.subtitle ? `<div class="sub" data-anim="fadeUp" data-t="500">${esc(scene.subtitle)}</div>` : ''}
+          <div class="school-tag" data-anim="fadeUp" data-t="800">&#127979; אורט בית הערבה</div>`;
+        break;
+
+      default: // content, list
+        inner = `
+          ${i > 0 ? `<div class="scene-badge" data-anim="fadeUp" data-t="0">${i}</div>` : ''}
+          <div class="caption" data-anim="fadeUp" data-t="150">${esc(scene.emoji)} ${esc(scene.title)}</div>
+          <div class="item-list">${scene.items.map((item, j) =>
+            `<div class="item" data-anim="fadeUp" data-t="${350 + j * 180}"><span class="item-dot"></span>${esc(item)}</div>`
+          ).join('')}</div>
+          ${scene.subtitle ? `<div class="sub" data-anim="fadeUp" data-t="${350 + scene.items.length * 180 + 150}">${esc(scene.subtitle)}</div>` : ''}`;
+    }
+
+    scenesHTML += `<div class="scene${isActive}" data-dur="${scene.duration || 6000}">${inner}</div>\n`;
+  });
+
+  return `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(d.videoName)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700&family=Rubik:wght@400;700;800;900&family=Secular+One&display=swap" rel="stylesheet">
+<style>
+:root{--accent:${accent}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#f5f5f5}
+body{display:flex;align-items:center;justify-content:center;font-family:'Heebo',sans-serif}
+#phone{position:relative;width:min(380px,100vw);height:min(100vh,680px);background:#fff;border-radius:1.5rem;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.08)}
+@media(max-width:420px){#phone{width:100vw;height:100vh;border-radius:0}}
+.scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3rem 1.6rem 3.5rem;opacity:0;transform:translateY(15px);transition:opacity .3s ease,transform .3s ease;pointer-events:none;overflow:hidden;background:#fff}
+.scene.active{opacity:1;transform:translateY(0);pointer-events:auto}
+.scene::before{content:'';position:absolute;width:280px;height:280px;border-radius:50%;top:-100px;right:-100px;background:var(--accent);opacity:0.06;z-index:0}
+.big-title{font-family:'Rubik',sans-serif;font-size:clamp(1.6rem,5vw,2.4rem);font-weight:900;line-height:1.3;color:#111;position:relative;z-index:2}
+.caption{font-family:'Rubik',sans-serif;font-size:clamp(1.2rem,4vw,1.6rem);font-weight:800;color:#111;line-height:1.4;position:relative;z-index:2;margin-bottom:0.6rem}
+.sub{font-size:0.9rem;color:#888;margin-top:0.5rem;line-height:1.5;position:relative;z-index:2}
+.scene-num{width:40px;height:40px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Secular One',sans-serif;font-size:1.1rem;font-weight:800;margin-bottom:0.8rem;position:relative;z-index:2}
+.scene-badge{width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;margin-bottom:0.6rem;position:relative;z-index:2}
+.item-list{width:100%;max-width:300px;position:relative;z-index:2;margin-top:0.5rem}
+.item{padding:0.4rem 0;border-bottom:1px solid #f0f0f0;font-size:1rem;color:#333;display:flex;align-items:center;gap:0.6rem}
+.item:last-child{border-bottom:none}
+.item-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.check-list{list-style:none;width:100%;max-width:280px;position:relative;z-index:2;margin-top:0.6rem}
+.check-list li{display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0;font-size:0.95rem;color:#333;font-weight:600;border-bottom:1px solid #f0f0f0}
+.check-list li:last-child{border-bottom:none}
+.check{color:var(--accent);font-weight:700;font-size:1.1rem;flex-shrink:0}
+.school-tag{margin-top:1.2rem;font-size:0.85rem;color:#888;position:relative;z-index:2}
+#progressWrap{position:absolute;bottom:0;left:0;right:0;height:2px;background:#eee;z-index:200;cursor:pointer}
+#progress{height:100%;width:0;background:var(--accent);transition:width .1s linear}
+#progressWrap:hover{height:4px}
+#timerBadge{position:absolute;top:0.7rem;left:0.7rem;background:rgba(255,255,255,.9);padding:0.15rem 0.5rem;border-radius:20px;font-size:0.7rem;color:#999;z-index:200;font-variant-numeric:tabular-nums;border:1px solid #eee}
+#topicBadge{position:absolute;top:0.7rem;right:0.7rem;background:rgba(255,255,255,.9);padding:0.15rem 0.5rem;border-radius:20px;font-size:0.7rem;color:var(--accent);z-index:200;font-weight:700;border:1px solid #eee}
+#pauseOverlay{position:absolute;inset:0;z-index:150;background:rgba(255,255,255,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;cursor:pointer}
+#pauseOverlay.show{display:flex}
+#pauseOverlay .p-btn{width:50px;height:50px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+#pauseOverlay .p-btn svg{width:20px;height:20px;fill:#fff;margin-right:-2px}
+#startOverlay{position:absolute;inset:0;z-index:300;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:opacity .4s}
+#startOverlay.hidden{opacity:0;pointer-events:none}
+#startOverlay h2{font-family:'Rubik',sans-serif;font-size:1.4rem;font-weight:900;color:#111;margin-bottom:0.2rem}
+#startOverlay .ss{font-size:0.85rem;color:#888;margin-bottom:1.5rem}
+#startOverlay .time-label{font-family:'Secular One',sans-serif;font-size:1.8rem;color:var(--accent);margin-bottom:1.5rem}
+#startOverlay .sb{width:60px;height:60px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.1);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+#startOverlay .sb svg{width:24px;height:24px;fill:#fff;margin-right:-2px}
+#startOverlay .tap{margin-top:1rem;font-size:0.75rem;color:#ccc}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="phone">
+<div id="startOverlay" onclick="startVideo()">
+<h2>${esc(d.videoName)}</h2>
+<div class="ss">${esc(d.subject)} | ${esc(d.grade)}</div>
+<div class="time-label">60 &#x2033;</div>
+<div class="sb"><svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg></div>
+<div class="tap">&#9654; \u05DC\u05D7\u05E6\u05D5 \u05DC\u05D4\u05EA\u05D7\u05D9\u05DC</div>
+</div>
+<div id="pauseOverlay" onclick="togglePause()"><div class="p-btn"><svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg></div></div>
+${scenesHTML}
+<div id="timerBadge">0:00 / ${timeLabel}</div>
+<div id="topicBadge">${esc(d.subject)}</div>
+<div id="progressWrap" onclick="seekTo(event)"><div id="progress"></div></div>
+</div>
+<` + `script>
+const scenes=document.querySelectorAll('.scene'),T=${scenes.length};
+let c=0,run=false,st=null,ti=null,el=0;
+const D=[...scenes].map(s=>parseInt(s.dataset.dur)||6000),tot=D.reduce((a,b)=>a+b,0);
+function startVideo(){document.getElementById('startOverlay').classList.add('hidden');run=true;el=0;anim(0);sn();ti=setInterval(tick,50)}
+function tick(){if(!run)return;el+=50;document.getElementById('progress').style.width=Math.min(el/tot*100,100)+'%';const s=Math.floor(el/1000),ts=Math.floor(tot/1000);document.getElementById('timerBadge').textContent=Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60)+' / '+Math.floor(ts/60)+':'+(ts%60<10?'0':'')+(ts%60)}
+function anim(i){scenes.forEach(s=>s.classList.remove('active'));c=i;scenes[c].classList.add('active');scenes[c].querySelectorAll('[data-anim]').forEach(e=>{const d=parseInt(e.dataset.t)||0;e.style.opacity='0';e.style.animation='none';setTimeout(()=>{e.style.animation='fadeUp .3s ease forwards'},d)})}
+function sn(){clearTimeout(st);if(c>=T-1)return;st=setTimeout(()=>{anim(c+1);sn()},D[c])}
+function togglePause(){const o=document.getElementById('pauseOverlay');if(run){run=false;clearTimeout(st);o.classList.add('show')}else{run=true;o.classList.remove('show');sn()}}
+function seekTo(e){const p=(e.clientX-e.currentTarget.getBoundingClientRect().left)/e.currentTarget.offsetWidth;let cum=0,t=p*tot;for(let i=0;i<T;i++){if(cum+D[i]>t){el=t;clearTimeout(st);anim(i);if(run)sn();return}cum+=D[i]}}
+document.getElementById('phone').addEventListener('click',e=>{if(!document.getElementById('startOverlay').classList.contains('hidden'))return;if(e.target.closest('#progressWrap')||e.target.closest('#startOverlay'))return;togglePause()});
+document.addEventListener('keydown',e=>{if(!document.getElementById('startOverlay').classList.contains('hidden')){if(e.key===' '||e.key==='Enter')startVideo();return}if(e.key===' '){e.preventDefault();togglePause()}else if(e.key==='ArrowLeft'&&c<T-1){clearTimeout(st);anim(c+1);if(run)sn()}else if(e.key==='ArrowRight'&&c>0){clearTimeout(st);anim(c-1);if(run)sn()}});
+let tx=0;document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX});document.addEventListener('touchend',e=>{const d=tx-e.changedTouches[0].clientX;if(Math.abs(d)>60){clearTimeout(st);d>0&&c<T-1?anim(c+1):d<0&&c>0&&anim(c-1);if(run)sn()}});
+<` + `/script>
+</body>
+</html>`;
+}
+
+// =============================================
+// FULL EDUCATIONAL VIDEO – 16:9 with Questions
+// =============================================
+function generateFullHTML(d) {
+  const accent = SUBJECT_ACCENTS[d.subject] || '#6366F1';
+  const totalDur = scenes.reduce((a, s) => a + (s.duration || 6000), 0);
+  const totalSec = Math.floor(totalDur / 1000);
+  const mm = Math.floor(totalSec / 60);
+  const ss = totalSec % 60;
+  const timeLabel = `${mm}:${ss < 10 ? '0' : ''}${ss}`;
+
   const accentColors = [
     ['#ff6b8a','#ffb088'], ['#7c5cfc','#b08cff'], ['#5b9ce6','#7babd4'],
     ['#3db87a','#5abf92'], ['#e67e22','#f0a04b'], ['#ffd43b','#ffe066'],
     ['#e6457a','#ff6b8a'], ['#5abf92','#7dd4ac'], ['#7babd4','#a8d8ea'],
     ['#7c5cfc','#b08cff']
   ];
-
   const tagClasses = ['tag-pink','tag-purple','tag-blue','tag-green','tag-orange','tag-yellow'];
   const dotClasses = ['dot-blue','dot-green','dot-pink','dot-purple','dot-orange','dot-yellow'];
   const ecClasses = ['ec-pink','ec-purple','ec-blue','ec-green','ec-orange','ec-yellow'];
 
-  // Build scenes HTML
   let scenesHTML = '';
   scenes.forEach((scene, i) => {
     const colors = accentColors[i % accentColors.length];
     const isActive = i === 0 ? ' active' : '';
     const ecClass = ecClasses[i % ecClasses.length];
-    const dotClass = dotClasses[i % dotClasses.length];
+    const isQ = scene.type === 'question';
 
     let inner = '';
     switch (scene.type) {
@@ -730,6 +1013,17 @@ function generateVideoHTML() {
           ${scene.items.length ? `<div style="display:flex;gap:0.4rem;flex-wrap:wrap;justify-content:center;margin-top:0.8rem;position:relative;z-index:2">
             ${scene.items.map((item, j) => `<span class="tag ${tagClasses[j % tagClasses.length]}" data-anim="zoomBounce" data-t="${500 + j * 200}">${esc(item)}</span>`).join('')}
           </div>` : ''}`;
+        break;
+
+      case 'question':
+        const correctIdx = parseInt(scene.subtitle) || 0;
+        inner = `
+          <div class="q-badge" data-anim="popIn" data-t="0">&#10068; \u05E9\u05D0\u05DC\u05D4</div>
+          <div class="caption" data-anim="slideUp" data-t="300">${esc(scene.title)}</div>
+          <div class="q-options">${scene.items.map((item, j) =>
+            `<button class="q-opt" data-anim="slideUp" data-t="${600 + j * 200}" onclick="checkAns(this,${j},${correctIdx})">${esc(item)}</button>`
+          ).join('')}</div>
+          <button class="q-continue" style="display:none" onclick="continueFromQ()">\u05D4\u05DE\u05E9\u05DA &#8592;</button>`;
         break;
 
       case 'grid':
@@ -744,7 +1038,7 @@ function generateVideoHTML() {
 
       case 'warning':
         inner = `
-          <div class="emoji-circle ec-orange" data-anim="popIn" data-t="0" style="font-size:2.5rem">${esc(scene.emoji || '⚠️')}</div>
+          <div class="emoji-circle ec-orange" data-anim="popIn" data-t="0" style="font-size:2.5rem">${esc(scene.emoji || '&#x26A0;')}</div>
           <div class="caption" data-anim="slideUp" data-t="300" style="color:#e67e22">${esc(scene.title)}</div>
           <ul class="step-list">${scene.items.map((item, j) =>
             `<li data-anim="slideUp" data-t="${600 + j * 300}"><span class="step-dot dot-orange">${j+1}</span>${esc(item)}</li>`
@@ -753,7 +1047,7 @@ function generateVideoHTML() {
 
       case 'summary':
         inner = `
-          <div class="emoji-circle ec-blue" data-anim="popIn" data-t="0" style="font-size:2.5rem">${esc(scene.emoji || '📋')}</div>
+          <div class="emoji-circle ec-blue" data-anim="popIn" data-t="0" style="font-size:2.5rem">${esc(scene.emoji || '')}</div>
           <div class="caption" data-anim="slideUp" data-t="200">${esc(scene.title)}</div>
           <ul class="check-list">${scene.items.map((item, j) =>
             `<li data-anim="slideUp" data-t="${500 + j * 300}"><span class="check-mark">&#10003;</span>${esc(item)}</li>`
@@ -764,13 +1058,10 @@ function generateVideoHTML() {
         inner = `
           <div class="emoji-circle ${ecClass}" data-anim="popIn" data-t="0" style="width:100px;height:100px;font-size:3rem">${esc(scene.emoji)}</div>
           <div class="big-title" data-anim="slideUp" data-t="400">${esc(scene.title)}</div>
-          ${scene.subtitle ? `<div class="sub" data-anim="fadeIn" data-t="800">${esc(scene.subtitle)}</div>` : ''}
-          ${scene.items.length ? `<div style="display:flex;gap:0.4rem;flex-wrap:wrap;justify-content:center;margin-top:1rem;position:relative;z-index:2">
-            ${scene.items.map((item, j) => `<span class="tag ${tagClasses[j % tagClasses.length]}" data-anim="fadeIn" data-t="${900 + j * 200}">${esc(item)}</span>`).join('')}
-          </div>` : ''}`;
+          ${scene.subtitle ? `<div class="sub" data-anim="fadeIn" data-t="800">${esc(scene.subtitle)}</div>` : ''}`;
         break;
 
-      default: // content, list
+      default:
         inner = `
           ${i > 0 ? `<div class="num-bubble" style="background:linear-gradient(135deg,${colors[0]},${colors[1]})" data-anim="zoomBounce" data-t="0">${i}</div>` : ''}
           <div class="caption" data-anim="slideUp" data-t="200">${esc(scene.emoji)} ${esc(scene.title)}</div>
@@ -780,13 +1071,8 @@ function generateVideoHTML() {
           ${scene.subtitle ? `<div class="sub" data-anim="fadeIn" data-t="${500 + scene.items.length * 300 + 200}">${esc(scene.subtitle)}</div>` : ''}`;
     }
 
-    scenesHTML += `<div class="scene${isActive}" data-dur="${scene.duration || 6000}">${inner}</div>\n`;
+    scenesHTML += `<div class="scene${isActive}${isQ ? ' is-question' : ''}" data-dur="${scene.duration || 6000}">${inner}</div>\n`;
   });
-
-  const totalSec = Math.floor(totalDur / 1000);
-  const mm = Math.floor(totalSec / 60);
-  const ss = totalSec % 60;
-  const timeLabel = `${mm}:${ss < 10 ? '0' : ''}${ss}`;
 
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -796,23 +1082,23 @@ function generateVideoHTML() {
 <title>${esc(d.videoName)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&family=Secular+One&family=Rubik:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
+:root{--accent:${accent}}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:#f0f0f0}
+html,body{height:100%;overflow:hidden;background:#1a1a2e}
 body{display:flex;align-items:center;justify-content:center;font-family:'Heebo',sans-serif}
-#phone{position:relative;width:min(400px,100vw);height:min(100vh,860px);background:#fff;border-radius:2rem;overflow:hidden;box-shadow:0 20px 80px rgba(0,0,0,.15)}
-@media(max-width:500px){#phone{width:100vw;height:100vh;border-radius:0}}
-.scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:3rem 1.8rem 4rem;opacity:0;transform:translateY(30px);transition:opacity .45s cubic-bezier(.4,0,.2,1),transform .45s cubic-bezier(.4,0,.2,1);pointer-events:none;overflow:hidden;background:#fff}
+#screen{position:relative;width:min(960px,100vw);aspect-ratio:16/9;background:#fff;border-radius:1rem;overflow:hidden;box-shadow:0 20px 80px rgba(0,0,0,.3)}
+@media(max-width:960px){#screen{width:100vw;height:100vh;aspect-ratio:auto;border-radius:0}}
+.scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2.5rem 3rem;opacity:0;transform:translateY(30px);transition:opacity .5s cubic-bezier(.4,0,.2,1),transform .5s cubic-bezier(.4,0,.2,1);pointer-events:none;overflow:hidden;background:#fff}
 .scene.active{opacity:1;transform:translateY(0);pointer-events:auto}
-.scene::before,.scene::after{content:'';position:absolute;border-radius:50%;z-index:0;opacity:.12}
-.scene::before{width:300px;height:300px;top:-80px;right:-80px;background:linear-gradient(135deg,#7babd4,#a8d8ea)}
-.scene::after{width:250px;height:250px;bottom:-60px;left:-60px;background:linear-gradient(135deg,#5abf92,#7dd4ac)}
+.scene::before,.scene::after{content:'';position:absolute;border-radius:50%;z-index:0;opacity:.1}
+.scene::before{width:400px;height:400px;top:-120px;right:-120px;background:linear-gradient(135deg,#7babd4,#a8d8ea)}
+.scene::after{width:350px;height:350px;bottom:-80px;left:-80px;background:linear-gradient(135deg,#5abf92,#7dd4ac)}
 .scene:nth-child(odd)::before{background:linear-gradient(135deg,#ff6b8a,#ffb088)}
 .scene:nth-child(even)::after{background:linear-gradient(135deg,#7c5cfc,#b08cff)}
-.scene:nth-child(3n)::before{background:linear-gradient(135deg,#ffd43b,#ffe066)}
-.big-title{font-family:'Secular One',sans-serif;font-size:2.2rem;line-height:1.3;color:#1a1a2e;position:relative;z-index:2}
-.caption{font-family:'Rubik',sans-serif;font-size:1.7rem;font-weight:900;color:#1a1a2e;line-height:1.4;position:relative;z-index:2}
-.sub{font-size:1rem;color:#666;margin-top:.6rem;line-height:1.6;position:relative;z-index:2}
-.tag{display:inline-block;padding:.3rem .8rem;border-radius:50px;font-size:.82rem;font-weight:700;position:relative;z-index:2;margin:.2rem}
+.big-title{font-family:'Secular One',sans-serif;font-size:clamp(1.8rem,4vw,3rem);line-height:1.3;color:#1a1a2e;position:relative;z-index:2}
+.caption{font-family:'Rubik',sans-serif;font-size:clamp(1.3rem,3vw,2rem);font-weight:900;color:#1a1a2e;line-height:1.4;position:relative;z-index:2}
+.sub{font-size:1.1rem;color:#666;margin-top:.6rem;line-height:1.6;position:relative;z-index:2}
+.tag{display:inline-block;padding:.3rem .8rem;border-radius:50px;font-size:.9rem;font-weight:700;position:relative;z-index:2;margin:.2rem}
 .tag-blue{background:#e8f4fd;color:#2b7de9}.tag-green{background:#e6f9f0;color:#1da363}
 .tag-pink{background:#fde8ee;color:#e63b7a}.tag-purple{background:#efe6fd;color:#7c5cfc}
 .tag-orange{background:#fff0e0;color:#e67e22}.tag-yellow{background:#fff8dd;color:#c89200}
@@ -820,38 +1106,50 @@ body{display:flex;align-items:center;justify-content:center;font-family:'Heebo',
 .ec-pink{background:linear-gradient(135deg,#fde8ee,#fcc5d5)}.ec-blue{background:linear-gradient(135deg,#e8f4fd,#d0e8ff)}
 .ec-green{background:linear-gradient(135deg,#e6f9f0,#c8f5de)}.ec-orange{background:linear-gradient(135deg,#fff0e0,#ffd9b3)}
 .ec-purple{background:linear-gradient(135deg,#efe6fd,#d5c4fb)}.ec-yellow{background:linear-gradient(135deg,#fff8dd,#ffe99a)}
-.icon-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.7rem;width:100%;max-width:300px;position:relative;z-index:2;margin-top:1rem}
-.icon-card{background:#f8f9fa;border-radius:14px;padding:.9rem;border:2px solid #eee;opacity:0}
-.icon-card .ic-label{font-size:.92rem;font-weight:700;color:#333}
-.step-list{list-style:none;width:100%;max-width:300px;position:relative;z-index:2;margin-top:1rem}
-.step-list li{display:flex;align-items:center;gap:.7rem;padding:.55rem .7rem;margin-bottom:.4rem;background:#f8f9fa;border-radius:10px;font-size:.95rem;font-weight:700;color:#333;opacity:0}
-.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;font-weight:900}
+.icon-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.8rem;width:100%;max-width:500px;position:relative;z-index:2;margin-top:1rem}
+.icon-card{background:#f8f9fa;border-radius:14px;padding:1rem;border:2px solid #eee;opacity:0}
+.icon-card .ic-label{font-size:1rem;font-weight:700;color:#333}
+.step-list{list-style:none;width:100%;max-width:500px;position:relative;z-index:2;margin-top:1rem}
+.step-list li{display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;margin-bottom:.4rem;background:#f8f9fa;border-radius:10px;font-size:1.05rem;font-weight:700;color:#333;opacity:0}
+.step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;flex-shrink:0;font-weight:900}
 .dot-blue{background:linear-gradient(135deg,#5b9ce6,#7babd4)}.dot-green{background:linear-gradient(135deg,#3db87a,#5abf92)}
 .dot-pink{background:linear-gradient(135deg,#e6457a,#ff6b8a)}.dot-purple{background:linear-gradient(135deg,#6a4ff0,#7c5cfc)}
 .dot-orange{background:linear-gradient(135deg,#e67e22,#f0a04b)}.dot-yellow{background:linear-gradient(135deg,#d4a017,#f0c040)}
-.num-bubble{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Secular One',sans-serif;font-size:1.4rem;color:#fff;margin-bottom:.7rem;position:relative;z-index:2;opacity:0}
-.check-list{list-style:none;width:100%;max-width:280px;position:relative;z-index:2;margin-top:1rem}
-.check-list li{display:flex;align-items:center;gap:.6rem;padding:.5rem 0;font-size:1rem;color:#333;font-weight:700;opacity:0;border-bottom:1px solid #f0f0f0}
+.num-bubble{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Secular One',sans-serif;font-size:1.5rem;color:#fff;margin-bottom:.7rem;position:relative;z-index:2;opacity:0}
+.check-list{list-style:none;width:100%;max-width:500px;position:relative;z-index:2;margin-top:1rem}
+.check-list li{display:flex;align-items:center;gap:.6rem;padding:.5rem 0;font-size:1.1rem;color:#333;font-weight:700;opacity:0;border-bottom:1px solid #f0f0f0}
 .check-list li:last-child{border-bottom:none}
-.check-mark{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#5abf92,#7dd4ac);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0}
+.check-mark{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#5abf92,#7dd4ac);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0}
+.q-badge{display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 1rem;border-radius:50px;background:var(--accent);color:#fff;font-size:1rem;font-weight:700;position:relative;z-index:2;margin-bottom:0.8rem}
+.q-options{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;width:100%;max-width:550px;position:relative;z-index:2;margin-top:1rem}
+.q-opt{padding:0.8rem 1rem;border:2px solid #e8e8e8;border-radius:12px;background:#fff;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:all 0.2s;color:#333}
+.q-opt:hover{border-color:var(--accent);background:rgba(0,0,0,.02)}
+.q-opt.correct{border-color:#52B788;background:#e6f9f0;color:#1a7c4e}
+.q-opt.wrong{border-color:#e74c3c;background:#fde8e8;color:#c0392b}
+.q-opt.disabled{pointer-events:none;opacity:0.6}
+.q-continue{margin-top:1rem;padding:0.7rem 2rem;background:var(--accent);color:#fff;border:none;border-radius:12px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;position:relative;z-index:2}
 #progressWrap{position:absolute;bottom:0;left:0;right:0;height:3px;background:#eee;z-index:200;cursor:pointer}
 #progress{height:100%;width:0;background:linear-gradient(90deg,#ff6b8a,#7c5cfc,#5abf92);background-size:300% 100%;animation:gm 3s linear infinite;transition:width .1s linear}
 @keyframes gm{0%{background-position:0 50%}100%{background-position:300% 50%}}
 #progressWrap:hover{height:6px}
-#timerBadge{position:absolute;top:.8rem;left:.8rem;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);padding:.2rem .6rem;border-radius:20px;font-size:.75rem;color:#999;z-index:200;font-variant-numeric:tabular-nums;border:1px solid #eee}
-#topicBadge{position:absolute;top:.8rem;right:.8rem;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);padding:.2rem .6rem;border-radius:20px;font-size:.72rem;color:#7c5cfc;z-index:200;font-weight:700;border:1px solid #efe6fd}
+#timerBadge{position:absolute;top:.8rem;left:.8rem;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);padding:.2rem .6rem;border-radius:20px;font-size:.8rem;color:#999;z-index:200;font-variant-numeric:tabular-nums;border:1px solid #eee}
+#topicBadge{position:absolute;top:.8rem;right:.8rem;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);padding:.2rem .6rem;border-radius:20px;font-size:.75rem;color:var(--accent);z-index:200;font-weight:700;border:1px solid #eee}
+#ctrlBar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:0.5rem;z-index:200}
+.ctrl-btn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.9);border:1px solid #eee;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.9rem;transition:all 0.2s;backdrop-filter:blur(6px)}
+.ctrl-btn:hover{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1)}
 #pauseOverlay{position:absolute;inset:0;z-index:150;background:rgba(255,255,255,.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;cursor:pointer}
 #pauseOverlay.show{display:flex}
-#pauseOverlay .p-btn{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#7c5cfc,#ff6b8a);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 25px rgba(124,92,252,.3)}
-#pauseOverlay .p-btn svg{width:24px;height:24px;fill:#fff;margin-right:-3px}
+#pauseOverlay .p-btn{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#7c5cfc,#ff6b8a);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 25px rgba(124,92,252,.3)}
+#pauseOverlay .p-btn svg{width:28px;height:28px;fill:#fff;margin-right:-3px}
 #startOverlay{position:absolute;inset:0;z-index:300;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:opacity .5s}
 #startOverlay.hidden{opacity:0;pointer-events:none}
-#startOverlay h2{font-family:'Secular One',sans-serif;font-size:1.5rem;color:#1a1a2e;margin-bottom:.3rem}
-#startOverlay .ss{font-size:.9rem;color:#999;margin-bottom:2rem}
-#startOverlay .sb{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#7c5cfc,#ff6b8a);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 35px rgba(124,92,252,.3);animation:pulse 2s infinite}
+#startOverlay h2{font-family:'Secular One',sans-serif;font-size:clamp(1.5rem,3vw,2.2rem);color:#1a1a2e;margin-bottom:.3rem}
+#startOverlay .ss{font-size:1rem;color:#999;margin-bottom:2rem}
+#startOverlay .sb{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#7c5cfc,#ff6b8a);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 35px rgba(124,92,252,.3);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-#startOverlay .sb svg{width:28px;height:28px;fill:#fff;margin-right:-3px}
-#startOverlay .tap{margin-top:1.2rem;font-size:.8rem;color:#ccc}
+#startOverlay .sb svg{width:32px;height:32px;fill:#fff;margin-right:-3px}
+#startOverlay .tap{margin-top:1.2rem;font-size:.85rem;color:#ccc}
+#frameBadge{position:absolute;bottom:14px;right:12px;background:rgba(255,255,255,.85);padding:0.15rem 0.6rem;border-radius:20px;font-size:0.75rem;color:#999;z-index:200;border:1px solid #eee}
 @keyframes popIn{0%{transform:scale(0) rotate(-5deg);opacity:0}70%{transform:scale(1.1) rotate(2deg)}100%{transform:scale(1) rotate(0);opacity:1}}
 @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -859,33 +1157,43 @@ body{display:flex;align-items:center;justify-content:center;font-family:'Heebo',
 </style>
 </head>
 <body>
-<div id="phone">
+<div id="screen">
 <div id="startOverlay" onclick="startVideo()">
-<div style="font-size:3.5rem;margin-bottom:1rem">${esc(scenes[0]?.emoji || '🎬')}</div>
+<div style="font-size:4rem;margin-bottom:1rem">${esc(scenes[0]?.emoji || '&#127916;')}</div>
 <h2>${esc(d.videoName)}</h2>
 <div class="ss">${esc(d.subject)} | ${esc(d.grade)} | ${esc(d.level)}</div>
 <div class="sb"><svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg></div>
-<div class="tap">&#9654; לחצו להתחיל</div>
+<div class="tap">&#9654; \u05DC\u05D7\u05E6\u05D5 \u05DC\u05D4\u05EA\u05D7\u05D9\u05DC</div>
 </div>
 <div id="pauseOverlay" onclick="togglePause()"><div class="p-btn"><svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg></div></div>
 ${scenesHTML}
 <div id="timerBadge">0:00 / ${timeLabel}</div>
 <div id="topicBadge">${esc(d.subject)}</div>
+<div id="frameBadge">1 / ${scenes.length}</div>
+<div id="ctrlBar">
+<div class="ctrl-btn" onclick="prevScene()">&#9654;</div>
+<div class="ctrl-btn" onclick="togglePause()">&#9208;</div>
+<div class="ctrl-btn" onclick="nextScene()">&#9664;</div>
+</div>
 <div id="progressWrap" onclick="seekTo(event)"><div id="progress"></div></div>
 </div>
-<script>
+<` + `script>
 const scenes=document.querySelectorAll('.scene'),T=${scenes.length};
-let c=0,run=false,st=null,ti=null,el=0;
+let c=0,run=false,st=null,ti=null,el=0,paused=false;
 const D=[...scenes].map(s=>parseInt(s.dataset.dur)||6000),tot=D.reduce((a,b)=>a+b,0);
 function startVideo(){document.getElementById('startOverlay').classList.add('hidden');run=true;el=0;anim(0);sn();ti=setInterval(tick,50)}
 function tick(){if(!run)return;el+=50;document.getElementById('progress').style.width=Math.min(el/tot*100,100)+'%';const s=Math.floor(el/1000),ts=Math.floor(tot/1000);document.getElementById('timerBadge').textContent=Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60)+' / '+Math.floor(ts/60)+':'+(ts%60<10?'0':'')+(ts%60)}
-function anim(i){scenes.forEach(s=>s.classList.remove('active'));c=i;scenes[c].classList.add('active');scenes[c].querySelectorAll('[data-anim]').forEach(e=>{const a=e.dataset.anim,d=parseInt(e.dataset.t)||0;e.style.opacity='0';e.style.animation='none';setTimeout(()=>{e.style.animation=a+' .5s cubic-bezier(.4,0,.2,1) forwards'},d)})}
+function anim(i){scenes.forEach(s=>s.classList.remove('active'));c=i;scenes[c].classList.add('active');document.getElementById('frameBadge').textContent=(c+1)+' / '+T;if(scenes[c].classList.contains('is-question')){run=false;clearTimeout(st)}scenes[c].querySelectorAll('[data-anim]').forEach(e=>{const a=e.dataset.anim,d=parseInt(e.dataset.t)||0;e.style.opacity='0';e.style.animation='none';setTimeout(()=>{e.style.animation=a+' .5s cubic-bezier(.4,0,.2,1) forwards'},d)})}
 function sn(){clearTimeout(st);if(c>=T-1)return;st=setTimeout(()=>{anim(c+1);sn()},D[c])}
 function togglePause(){const o=document.getElementById('pauseOverlay');if(run){run=false;clearTimeout(st);o.classList.add('show')}else{run=true;o.classList.remove('show');sn()}}
+function prevScene(){if(c>0){clearTimeout(st);anim(c-1);if(run)sn()}}
+function nextScene(){if(c<T-1){clearTimeout(st);anim(c+1);if(run)sn()}}
+function checkAns(btn,idx,correct){const opts=btn.parentElement.querySelectorAll('.q-opt');opts.forEach((o,j)=>{o.classList.add('disabled');if(j===correct)o.classList.add('correct');else if(j===idx&&idx!==correct)o.classList.add('wrong')});btn.closest('.scene').querySelector('.q-continue').style.display='inline-block'}
+function continueFromQ(){run=true;sn()}
 function seekTo(e){const p=(e.clientX-e.currentTarget.getBoundingClientRect().left)/e.currentTarget.offsetWidth;let cum=0,t=p*tot;for(let i=0;i<T;i++){if(cum+D[i]>t){el=t;clearTimeout(st);anim(i);if(run)sn();return}cum+=D[i]}}
-document.getElementById('phone').addEventListener('click',e=>{if(!document.getElementById('startOverlay').classList.contains('hidden'))return;if(e.target.closest('#progressWrap')||e.target.closest('#startOverlay'))return;togglePause()});
-document.addEventListener('keydown',e=>{if(!document.getElementById('startOverlay').classList.contains('hidden')){if(e.key===' '||e.key==='Enter')startVideo();return}if(e.key===' '){e.preventDefault();togglePause()}else if(e.key==='ArrowLeft'&&c<T-1){clearTimeout(st);anim(c+1);if(run)sn()}else if(e.key==='ArrowRight'&&c>0){clearTimeout(st);anim(c-1);if(run)sn()}});
-let tx=0;document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX});document.addEventListener('touchend',e=>{const d=tx-e.changedTouches[0].clientX;if(Math.abs(d)>60){clearTimeout(st);d>0&&c<T-1?anim(c+1):d<0&&c>0&&anim(c-1);if(run)sn()}});
+document.getElementById('screen').addEventListener('click',e=>{if(!document.getElementById('startOverlay').classList.contains('hidden'))return;if(e.target.closest('#progressWrap')||e.target.closest('#startOverlay')||e.target.closest('#ctrlBar')||e.target.closest('.q-opt')||e.target.closest('.q-continue'))return;togglePause()});
+document.addEventListener('keydown',e=>{if(!document.getElementById('startOverlay').classList.contains('hidden')){if(e.key===' '||e.key==='Enter')startVideo();return}if(e.key===' '){e.preventDefault();togglePause()}else if(e.key==='ArrowLeft'&&c<T-1){nextScene()}else if(e.key==='ArrowRight'&&c>0){prevScene()}});
+let tx=0;document.addEventListener('touchstart',e=>{tx=e.touches[0].clientX});document.addEventListener('touchend',e=>{const d=tx-e.changedTouches[0].clientX;if(Math.abs(d)>60){d>0?nextScene():prevScene()}});
 <` + `/script>
 </body>
 </html>`;
