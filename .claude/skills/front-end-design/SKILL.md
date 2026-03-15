@@ -1,3 +1,8 @@
+---
+name: front-end-design
+description: שיפור עיצוב ומבנה ויזואלי של מצגות (CSS, אנימציות, layout).
+---
+
 # Skill: Front End Design למצגות
 
 Skill זה משפר את העיצוב והמבנה הויזואלי של מצגות.

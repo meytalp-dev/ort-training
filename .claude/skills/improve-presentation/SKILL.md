@@ -1,3 +1,8 @@
+---
+name: improve-presentation
+description: שיפור מצגת HTML קיימת – עיצוב, תוכן, אנימציות ואינטראקטיביות.
+---
+
 # Skill: שפר מצגת – /improve-presentation
 
 כאשר המשתמש מבקש **לשפר מצגת קיימת** – יש להפעיל את הסקיל הזה.

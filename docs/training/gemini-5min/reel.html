@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel – מצגת ב-5 דקות עם Gemini | Lerani</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&family=Rubik:wght@500;600;700;800;900&family=Secular+One&family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;background:#111;font-family:'Heebo',sans-serif;
+}
+
+.reel{
+  width:1080px;height:1920px;
+  transform:scale(0.45);transform-origin:center center;
+  position:relative;overflow:hidden;
+  border-radius:48px;
+  box-shadow:0 0 80px rgba(123,171,212,.2);
+}
+
+.frame{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:100px 60px;
+  opacity:0;pointer-events:none;
+  transition:opacity .4s ease;
+}
+.frame.active{opacity:1;z-index:10;pointer-events:auto}
+
+/* ===== SPARKLES ===== */
+.sparkle-box{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:50;overflow:hidden}
+.sp{position:absolute;border-radius:50%;animation:spFloat 3s ease-in-out infinite}
+@keyframes spFloat{
+  0%{opacity:0;transform:translateY(0) scale(0)}
+  20%{opacity:1;transform:translateY(-20px) scale(1)}
+  80%{opacity:.8;transform:translateY(-80px) scale(.8)}
+  100%{opacity:0;transform:translateY(-120px) scale(0)}
+}
+.star{position:absolute;pointer-events:none;animation:starPulse 2s ease-in-out infinite}
+@keyframes starPulse{
+  0%,100%{opacity:.3;transform:scale(.6) rotate(0deg)}
+  50%{opacity:1;transform:scale(1.2) rotate(180deg)}
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeUp{from{opacity:0;transform:translateY(60px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{0%{opacity:0;transform:scale(.3)}60%{opacity:1;transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-60px)}to{opacity:1;transform:translateY(0)}}
+@keyframes swoopIn{0%{opacity:0;transform:translateX(80px)}100%{opacity:1;transform:translateX(0)}}
+@keyframes revealUp{0%{clip-path:inset(100% 0 0 0);opacity:0}100%{clip-path:inset(0% 0 0 0);opacity:1}}
+@keyframes countPop{0%{opacity:0;transform:scale(0) rotate(-10deg)}60%{transform:scale(1.15) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+.frame.active .a-fu{animation:fadeUp .7s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-fi{animation:fadeIn .5s ease both}
+.frame.active .a-si{animation:scaleIn .6s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-sd{animation:slideDown .6s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-sw{animation:swoopIn .7s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-rv{animation:revealUp .8s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-cp{animation:countPop .6s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-p{animation:pulse 2s ease infinite}
+
+.d1{animation-delay:.1s!important}.d2{animation-delay:.2s!important}
+.d3{animation-delay:.3s!important}.d4{animation-delay:.4s!important}
+.d5{animation-delay:.5s!important}.d6{animation-delay:.6s!important}
+.d7{animation-delay:.7s!important}.d8{animation-delay:.8s!important}
+.d9{animation-delay:.9s!important}.d10{animation-delay:1s!important}
+
+/* ===== PROGRESS ===== */
+.progress{position:absolute;top:0;left:0;right:0;height:5px;background:rgba(255,255,255,.08);z-index:100}
+.progress-fill{
+  height:100%;border-radius:0 3px 3px 0;
+  background:linear-gradient(90deg,#7babd4,#7dd4ac,#f0d060);
+  background-size:200% 100%;animation:gradShift 3s ease infinite;
+  transition:width .3s ease;width:10%;
+}
+
+/* ===== HELPERS ===== */
+.grad-text{background:linear-gradient(135deg,#7babd4,#5abf92,#7dd4ac);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad-magic{
+  background:linear-gradient(90deg,#7babd4,#b39ddb,#f0b4c8,#f0d060,#7dd4ac,#7babd4);
+  background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:shimmer 4s ease infinite;
+}
+
+/* ===== FRAME STYLES ===== */
+
+.f-intro{background:linear-gradient(160deg,#f8fafb,#eef5f0 40%,#e8f0fa)}
+.logo-area{display:flex;flex-direction:column;align-items:center}
+.logo-circles{position:relative;width:280px;height:180px;margin-bottom:20px}
+.logo-c{position:absolute;width:150px;height:150px;border-radius:50%;top:15px}
+.logo-c.bl{left:15px;background:radial-gradient(circle at 40% 40%,#a8c8f0,#7babd4,#5a93c0);opacity:.75}
+.logo-c.gr{left:115px;background:radial-gradient(circle at 60% 40%,#a8e6cf,#7dd4ac,#5abf92);opacity:.75}
+.logo-name{font-family:'Poppins',sans-serif;font-size:68px;font-weight:800;color:#1e3a5f;letter-spacing:2px}
+.logo-tag{font-size:28px;color:#4a6a8a;margin-top:8px;letter-spacing:1px}
+.intro-sub{font-family:'Secular One',sans-serif;font-size:34px;margin-top:36px;padding:14px 44px;border-radius:50px;background:rgba(123,171,212,.08);border:2px solid rgba(123,171,212,.15)}
+
+.f-hook{background:linear-gradient(160deg,#f0f4f8,#e4eef8 50%,#dce8f5)}
+.hook-badge{padding:12px 32px;border-radius:50px;font-size:26px;color:#4a6a8a;font-weight:500;background:linear-gradient(135deg,rgba(123,171,212,.12),rgba(125,212,172,.12));border:1px solid rgba(123,171,212,.2);margin-bottom:50px}
+.hook-q{font-family:'Secular One',sans-serif;font-size:72px;color:#1e3a5f;text-align:center;line-height:1.35}
+.hook-big{font-size:84px}
+.hook-ans{font-family:'Rubik',sans-serif;font-size:88px;font-weight:800;margin-top:50px}
+
+.f-what{background:linear-gradient(150deg,#f4f8f6,#e8f4f0 40%,#e0f0ec)}
+.gem-badge{display:flex;align-items:center;gap:18px;padding:18px 44px;background:rgba(255,255,255,.7);border-radius:100px;border:2px solid rgba(42,157,143,.15);margin-bottom:44px}
+.gem-icon{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#4285F4,#34A853,#FBBC05,#EA4335);display:flex;align-items:center;justify-content:center;font-size:26px}
+.gem-name{font-family:'Poppins',sans-serif;font-size:34px;font-weight:700;color:#1e3a5f}
+.what-hero{font-family:'Secular One',sans-serif;font-size:58px;color:#1e3a5f;text-align:center;line-height:1.4;margin-bottom:36px}
+.what-hl{font-size:50px;font-weight:800;text-align:center;margin-bottom:36px}
+.what-chips{display:flex;gap:18px;margin-top:24px}
+.what-chip{padding:14px 26px;border-radius:18px;font-size:26px;font-weight:600;color:#2D3436;background:rgba(255,255,255,.8);border:1.5px solid rgba(42,157,143,.15)}
+
+.f-step{background:linear-gradient(150deg,#fafbfc,#f0f4f8 50%,#e8f0f5);padding:80px 50px}
+.step-head{display:flex;align-items:center;gap:18px;margin-bottom:28px}
+.step-num{width:68px;height:68px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:34px;font-weight:800;color:#fff;flex-shrink:0}
+.step-num.c1{background:linear-gradient(135deg,#2A9D8F,#45B7C5)}
+.step-num.c2{background:linear-gradient(135deg,#52B788,#2A9D8F)}
+.step-num.c3{background:linear-gradient(135deg,#7E57C2,#B39DDB)}
+.step-lbl{font-family:'Secular One',sans-serif;font-size:46px;color:#1e3a5f}
+.step-desc{font-size:30px;color:#4a6a8a;font-weight:500;margin-bottom:28px;text-align:center}
+.ss-frame{width:100%;max-width:920px;background:#fff;border-radius:20px;box-shadow:0 16px 48px rgba(0,0,0,.07),0 4px 12px rgba(0,0,0,.03);overflow:hidden;border:1px solid rgba(0,0,0,.06)}
+.ss-bar{height:40px;background:#f5f5f5;display:flex;align-items:center;padding:0 14px;gap:7px;border-bottom:1px solid rgba(0,0,0,.06)}
+.ss-dot{width:11px;height:11px;border-radius:50%}
+.ss-dot.r{background:#ff5f57}.ss-dot.y{background:#ffbd2e}.ss-dot.g{background:#28c840}
+.ss-url{flex:1;text-align:center;font-family:'Poppins',sans-serif;font-size:15px;color:#999;margin-left:16px}
+.ss-frame img{width:100%;display:block}
+
+.f-tip{background:linear-gradient(160deg,#fdf8e8,#fef3d0 50%,#fdefc0)}
+.tip-icon{width:130px;height:130px;border-radius:50%;background:linear-gradient(135deg,#f0c040,#e8a030);display:flex;align-items:center;justify-content:center;font-size:65px;margin-bottom:44px;box-shadow:0 14px 44px rgba(240,176,64,.3)}
+.tip-main{font-family:'Secular One',sans-serif;font-size:50px;color:#5a4010;text-align:center;line-height:1.5}
+.tip-res{font-family:'Rubik',sans-serif;font-size:58px;font-weight:800;color:#2A9D8F;margin-top:28px;text-align:center}
+
+.f-cmp{background:linear-gradient(150deg,#fafbfc,#f2f5f8)}
+.cmp-vs{display:flex;flex-direction:column;align-items:center;gap:24px;width:100%;max-width:900px}
+.cmp-card{width:100%;border-radius:26px;padding:40px;text-align:center;position:relative;overflow:hidden}
+.cmp-card.before{background:#fff;border:2px solid rgba(200,80,80,.15)}
+.cmp-card.before::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E76F7A,#f0a0a0)}
+.cmp-card.after{background:linear-gradient(135deg,rgba(42,157,143,.04),rgba(125,212,172,.06));border:2px solid rgba(42,157,143,.2)}
+.cmp-card.after::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#2A9D8F,#5abf92,#7dd4ac)}
+.cmp-emoji{font-size:52px;margin-bottom:10px}
+.cmp-label{font-size:28px;font-weight:600;margin-bottom:6px}
+.cmp-label.red{color:#c06060}.cmp-label.grn{color:#2A9D8F}
+.cmp-num{font-family:'Poppins',sans-serif;font-size:96px;font-weight:900;line-height:1}
+.cmp-num.red{color:#E76F7A}.cmp-num.grn{color:#2A9D8F}
+.cmp-unit{font-size:32px;color:#64748B;font-weight:500;margin-top:6px}
+.cmp-arrow{display:flex;align-items:center;gap:14px}
+.cmp-line{width:3px;height:36px;background:linear-gradient(180deg,#E76F7A,#2A9D8F);border-radius:2px}
+
+.f-cta{background:linear-gradient(160deg,#e8f4f0,#d0ece4 40%,#c0e8dc)}
+.cta-hero{font-family:'Secular One',sans-serif;font-size:64px;color:#1e3a5f;margin-bottom:36px;text-align:center}
+.cta-btn{background:linear-gradient(135deg,#2A9D8F,#45B7C5);color:#fff;padding:28px 60px;border-radius:60px;font-family:'Rubik',sans-serif;font-size:40px;font-weight:700;box-shadow:0 14px 44px rgba(42,157,143,.3);margin-bottom:20px;position:relative;overflow:hidden}
+.cta-btn::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);animation:shimmer 2.5s ease infinite}
+.cta-sub{font-size:30px;color:#4a6a8a;font-weight:500;margin-top:18px}
+.cta-link{display:flex;align-items:center;gap:10px;margin-top:26px;padding:12px 32px;background:rgba(255,255,255,.6);border-radius:50px;border:1px solid rgba(42,157,143,.2);font-size:26px;color:#2A9D8F;font-weight:600}
+
+.f-outro{background:linear-gradient(160deg,#f4f8fa,#eaf2ee 40%,#e4eef8)}
+.outro-cta{font-family:'Secular One',sans-serif;font-size:44px;color:#1e3a5f;margin-top:36px;text-align:center}
+.outro-social{display:flex;gap:18px;margin-top:26px}
+.social-chip{padding:12px 26px;border-radius:50px;font-size:24px;font-weight:600;background:rgba(123,171,212,.1);color:#4a6a8a;border:1px solid rgba(123,171,212,.15)}
+
+.start-overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:200;
+  background:linear-gradient(160deg,#f8fafb,#eef5f0 40%,#e8f0fa);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.start-overlay .start-logo{font-family:'Poppins',sans-serif;font-size:58px;font-weight:800;color:#1e3a5f;margin-bottom:30px}
+.start-overlay .start-txt{font-family:'Secular One',sans-serif;font-size:36px;color:#4a6a8a;animation:pulse 2s ease infinite}
+
+.controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:1000;display:none}
+.controls button{padding:8px 20px;border:none;border-radius:8px;font-family:'Heebo',sans-serif;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#2A9D8F,#45B7C5);color:#fff;font-weight:600}
+.controls button:hover{transform:scale(1.05)}
+
+</style>
+</head>
+<body>
+
+<div class="reel" id="reel">
+  <div class="start-overlay" id="startOverlay">
+    <div class="start-logo">Lerani ✨</div>
+    <div class="start-txt">לחצי להתחיל ▶</div>
+  </div>
+  <div class="progress"><div class="progress-fill" id="pBar"></div></div>
+  <div class="sparkle-box" id="spBox"></div>
+
+  <!-- 1 -->
+  <div class="frame f-intro active" data-duration="2500">
+    <div class="logo-area a-si">
+      <div class="logo-circles"><div class="logo-c bl"></div><div class="logo-c gr"></div></div>
+      <div class="logo-name">Lerani</div>
+    </div>
+    <div class="logo-tag a-fi d5">חינוך · בינה מלאכותית · הגשמת חלומות</div>
+    <div class="intro-sub grad-text a-fu d8">מגישה לכם קסם ✨</div>
+  </div>
+
+  <!-- 2 -->
+  <div class="frame f-hook" data-duration="3200">
+    <div class="hook-badge a-sd">✨ רגע, מה?!</div>
+    <div class="hook-q a-fu d2">מצגת מושלמת<br><span class="hook-big">תוך 5 דקות?!</span></div>
+    <div class="hook-ans grad-magic a-cp d7">בטח שאפשר! 🪄</div>
+  </div>
+
+  <!-- 3 -->
+  <div class="frame f-what" data-duration="3600">
+    <div class="gem-badge a-sd"><div class="gem-icon">✨</div><div class="gem-name">Google Gemini</div></div>
+    <div class="what-hero a-fu d2">AI שהופך רעיון<br>למצגת מוכנה<br>בלחיצת כפתור</div>
+    <div class="what-hl grad-text a-cp d6">חינמי. מיידי. וואו. 🤯</div>
+    <div class="what-chips a-fu d8"><div class="what-chip">🎨 מצגות</div><div class="what-chip">📝 תוכן</div><div class="what-chip">🧠 חכם</div></div>
+  </div>
+
+  <!-- 4 -->
+  <div class="frame f-step" data-duration="4000">
+    <div class="step-head a-sd"><div class="step-num c1">1</div><div class="step-lbl">נכנסים ל-Gemini</div></div>
+    <div class="step-desc a-fi d2">פותחים דפדפן ← מתחברים עם גוגל ← בוחרים Canvas</div>
+    <div class="ss-frame a-rv d4">
+      <div class="ss-bar"><div class="ss-dot r"></div><div class="ss-dot y"></div><div class="ss-dot g"></div><div class="ss-url">gemini.google.com</div></div>
+      <img src="images/step1.png" alt="מסך Gemini">
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="frame f-step" data-duration="4200">
+    <div class="step-head a-sd"><div class="step-num c2">2</div><div class="step-lbl">בוחרים Canvas ✨</div></div>
+    <div class="step-desc a-fi d2">הפיצ'ר שבונה מצגות ישירות בתוך Gemini!</div>
+    <div class="ss-frame a-rv d4">
+      <div class="ss-bar"><div class="ss-dot r"></div><div class="ss-dot y"></div><div class="ss-dot g"></div><div class="ss-url">gemini.google.com/canvas</div></div>
+      <img src="images/step2.png" alt="בחירת Canvas">
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="frame f-step" data-duration="4200">
+    <div class="step-head a-sd"><div class="step-num c3">3</div><div class="step-lbl">תאמינו? מוכן! 🎉</div></div>
+    <div class="step-desc a-fi d2">מצגת מקצועית מוכנה לייצוא ל-Google Slides!</div>
+    <div class="ss-frame a-rv d4">
+      <div class="ss-bar"><div class="ss-dot r"></div><div class="ss-dot y"></div><div class="ss-dot g"></div><div class="ss-url">gemini.google.com</div></div>
+      <img src="images/step3.png" alt="ייצוא מצגת">
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="frame f-tip" data-duration="3600">
+    <div class="tip-icon a-si a-p">💡</div>
+    <div class="tip-main a-fu d3">ככל שתכתבו פרומפט<br>מפורט יותר...</div>
+    <div class="tip-res a-cp d8">המצגת תהיה מ-ד-ה-י-מ-ה! ✨</div>
+  </div>
+
+  <!-- 8 -->
+  <div class="frame f-cmp" data-duration="4000">
+    <div class="cmp-vs">
+      <div class="cmp-card before a-sw d1"><div class="cmp-emoji">😩</div><div class="cmp-label red">בלי Gemini</div><div class="cmp-num red">60</div><div class="cmp-unit">דקות של סבל</div></div>
+      <div class="cmp-arrow a-si d5"><div class="cmp-line"></div><span style="font-size:32px">⚡</span><div class="cmp-line"></div></div>
+      <div class="cmp-card after a-sw d7"><div class="cmp-emoji">🤩</div><div class="cmp-label grn">עם Gemini</div><div class="cmp-num grn">5</div><div class="cmp-unit">דקות של קסם!</div></div>
+    </div>
+  </div>
+
+  <!-- 9 -->
+  <div class="frame f-cta" data-duration="3600">
+    <div class="cta-hero a-fu">עכשיו תורכם<br>לנסות! 🪄</div>
+    <div class="cta-btn a-si d3 a-p">gemini.google.com</div>
+    <div class="cta-sub a-fi d6">חינמי · פשוט · מדהים</div>
+    <div class="cta-link a-fu d9"><span>🔗</span><span>קישור בביו</span></div>
+  </div>
+
+  <!-- 10 -->
+  <div class="frame f-outro" data-duration="2800">
+    <div class="logo-area a-si">
+      <div class="logo-circles"><div class="logo-c bl"></div><div class="logo-c gr"></div></div>
+      <div class="logo-name">Lerani</div>
+    </div>
+    <div class="outro-cta a-fu d5">עקבו ל-<span class="grad-text">Lerani</span><br>לעוד טיפים שישנו לכם את השיעור! 🔔</div>
+    <div class="outro-social a-fi d9"><div class="social-chip">💙 לייק</div><div class="social-chip">💾 שמרו</div><div class="social-chip">📤 שתפו</div></div>
+  </div>
+
+</div>
+
+<div class="controls">
+  <button id="btnPlay">▶ הפעל</button>
+  <button id="btnPrev">◀ הקודם</button>
+  <button id="btnNext">הבא ▶</button>
+  <button id="btnPause">⏸ עצור</button>
+</div>
+
+<script>
+try {
+  var spBox = document.getElementById('spBox');
+  var allFrames = document.querySelectorAll('.frame');
+  var pBar = document.getElementById('pBar');
+  var currentIdx = 0;
+  var autoTimer = null;
+  var isPaused = false;
+
+  // Ready
+
+  // Sparkle system
+  var spColors = ['#fff','#f0d060','#5abf92','#7babd4'];
+  function addSparkle(){
+    var s = document.createElement('div');
+    s.className = 'sp';
+    var col = spColors[Math.floor(Math.random()*spColors.length)];
+    var sz = (2+Math.random()*4)+'px';
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*100+'%';
+    s.style.width = sz;
+    s.style.height = sz;
+    s.style.background = col;
+    s.style.boxShadow = '0 0 6px '+col;
+    s.style.animationDuration = (2+Math.random()*3)+'s';
+    s.style.animationDelay = Math.random()*2+'s';
+    spBox.appendChild(s);
+    setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 5000);
+  }
+  function addStar(){
+    var s = document.createElement('div');
+    s.className = 'star';
+    var sz = 12+Math.random()*14;
+    var col = spColors[Math.floor(Math.random()*spColors.length)];
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*100+'%';
+    s.style.animationDuration = (1.5+Math.random()*2)+'s';
+    s.style.animationDelay = Math.random()+'s';
+    s.innerHTML = '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24"><path d="M12 2 L14 9 L21 9 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 9 L10 9 Z" fill="'+col+'" opacity="0.7"></path></svg>';
+    spBox.appendChild(s);
+    setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 4000);
+  }
+  setInterval(addSparkle, 400);
+  setInterval(addStar, 900);
+
+  // Show frame
+  function showFrame(idx){
+    for(var j=0; j<allFrames.length; j++){
+      allFrames[j].classList.remove('active');
+    }
+    allFrames[idx].classList.add('active');
+    currentIdx = idx;
+    pBar.style.width = ((idx+1)/allFrames.length*100)+'%';
+    // frame change
+    // sparkle burst
+    for(var k=0;k<5;k++){
+      setTimeout(addSparkle, k*50);
+      setTimeout(addStar, k*70);
+    }
+  }
+
+  function goNext(){ if(currentIdx < allFrames.length-1) showFrame(currentIdx+1); }
+  function goPrev(){ if(currentIdx > 0) showFrame(currentIdx-1); }
+
+  function scheduleNext(){
+    clearTimeout(autoTimer);
+    if(isPaused) return;
+    var dur = parseInt(allFrames[currentIdx].getAttribute('data-duration')) || 3000;
+    autoTimer = setTimeout(function(){
+      if(currentIdx < allFrames.length-1){
+        showFrame(currentIdx+1);
+        scheduleNext();
+      } else {
+        // done
+      }
+    }, dur);
+  }
+
+  function startPlay(){
+    isPaused = false;
+    showFrame(0);
+    scheduleNext();
+  }
+
+  function togglePause(){
+    isPaused = !isPaused;
+    if(!isPaused) scheduleNext();
+    // toggle
+  }
+
+  // Button handlers (using addEventListener, not onclick)
+  document.getElementById('btnPlay').addEventListener('click', startPlay);
+  document.getElementById('btnPrev').addEventListener('click', goPrev);
+  document.getElementById('btnNext').addEventListener('click', goNext);
+  document.getElementById('btnPause').addEventListener('click', togglePause);
+
+  // Keyboard
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowLeft') goNext();
+    else if(e.key === 'ArrowRight') goPrev();
+    else if(e.key === ' '){ e.preventDefault(); togglePause(); }
+    else if(e.key === 'r') startPlay();
+  });
+
+  // Click overlay to start
+  var overlay = document.getElementById('startOverlay');
+  overlay.addEventListener('click', function(){
+    overlay.style.display = 'none';
+    startPlay();
+  });
+
+} catch(err) {
+  console.error('Reel error:', err);
+}
+</script>
+</body>
+</html>

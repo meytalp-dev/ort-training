@@ -479,7 +479,7 @@ function showScore() {
 }
 
 // ===== SEND TO GOOGLE SHEETS =====
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwc0veY5waDX-DSoA0soE1Hca5kIxPt8Wyghvg5tIwZI-T4mY94D3cdt40LeHZMLHHOWA/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';
 
 function sendResults() {
   const btn = event.target;
@@ -488,7 +488,8 @@ function sendResults() {
 
   const pct = Math.round((score / totalQuestions) * 100);
 
-  const data = {
+  const params = new URLSearchParams({
+    action: 'submit',
     quizName: 'שם המספר – כיתה י',
     studentName: studentName,
     classroom: studentClass,
@@ -496,30 +497,20 @@ function sendResults() {
     totalQuestions: totalQuestions,
     correctAnswers: score,
     level: detectedLevel,
-    answers: answers.map(a => ({q: a.question, correct: a.correct})),
-    timestamp: new Date().toISOString(),
     teacherEmail: 'meytalp@bethaarava.ort.org.il'
-  };
+  });
 
-  fetch(SHEETS_URL, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  })
-  .then(() => {
+  // שליחה באמצעות תגית script – עובד תמיד, בלי CORS
+  const script = document.createElement('script');
+  script.src = SHEETS_URL + '?' + params.toString();
+  script.onload = script.onerror = function() {
     const status = document.getElementById('sendStatus');
     status.className = 'send-status success';
     status.textContent = 'התוצאות נשלחו בהצלחה למורה! ✓';
     btn.textContent = 'נשלח!';
-  })
-  .catch(() => {
-    const status = document.getElementById('sendStatus');
-    status.className = 'send-status error';
-    status.textContent = 'שגיאה בשליחה – נסו שוב';
-    btn.disabled = false;
-    btn.textContent = 'שלחו תוצאות למורה';
-  });
+    script.remove();
+  };
+  document.body.appendChild(script);
 }
 </script>
 </body>

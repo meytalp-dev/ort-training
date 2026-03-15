@@ -1,3 +1,8 @@
+---
+name: create-presentation
+description: יצירת מצגת לימודית HTML חדשה מנושא או מקובץ (PPTX/PDF/DOCX).
+---
+
 # Skill: צור מצגת – /create-presentation
 
 כאשר המשתמש מבקש **ליצור מצגת חדשה** על נושא כלשהו, או מעלה קובץ (PPTX / PDF / DOCX / טקסט) ומבקש להפוך אותו למצגת – יש להפעיל את הסקיל הזה.

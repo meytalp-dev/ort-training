@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>שאלון: המרד הגדול – אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F0F4F8;--card:#fff;--primary:#2A9D8F;--primary-l:#D4F3EF;--primary-d:#1a7a6d;--secondary:#E76F7A;--sec-l:#FDE8EA;--green:#52B788;--green-l:#D8F3DC;--dark:#1E293B;--gray:#64748B;--shadow:0 2px 20px -4px rgba(0,0,0,.06);--r:20px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--dark);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.screen{display:none;width:100%;max-width:600px;padding:20px}
+.screen.active{display:block}
+.card{background:var(--card);border-radius:var(--r);padding:32px;box-shadow:var(--shadow);animation:fadeUp .5s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+h1{font-family:'Rubik',sans-serif;font-size:1.8rem;font-weight:700;color:var(--primary-d);margin-bottom:8px;text-align:center}
+h2{font-size:1.3rem;font-weight:600;color:var(--dark);margin-bottom:20px;line-height:1.6}
+.subtitle{text-align:center;color:var(--gray);font-size:1rem;margin-bottom:24px}
+.icon{text-align:center;font-size:3rem;margin-bottom:16px}
+.input-group{margin-bottom:16px}
+.input-group label{display:block;font-weight:500;margin-bottom:6px;color:var(--gray);font-size:.9rem}
+.input-group input,.input-group select{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:12px;font-family:'Heebo',sans-serif;font-size:1rem;transition:border .2s}
+.input-group input:focus,.input-group select:focus{outline:none;border-color:var(--primary)}
+.btn{display:block;width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-family:'Heebo',sans-serif;font-size:1.1rem;font-weight:600;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--primary-d)}
+.btn:disabled{background:var(--gray);cursor:not-allowed}
+.progress{position:fixed;top:0;left:0;height:4px;background:var(--primary);transition:width .3s;z-index:100}
+.q-counter{text-align:center;color:var(--gray);font-size:.85rem;margin-bottom:16px}
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.opt-btn{padding:14px 18px;background:#f8fafc;border:2px solid #e2e8f0;border-radius:14px;font-family:'Heebo',sans-serif;font-size:1rem;cursor:pointer;text-align:right;transition:all .2s;line-height:1.5}
+.opt-btn:hover{border-color:var(--primary);background:var(--primary-l)}
+.opt-btn.correct{background:var(--green-l);border-color:var(--green);color:#2d6a4f}
+.opt-btn.wrong{background:var(--sec-l);border-color:var(--secondary);color:#9b1c31}
+.opt-btn.disabled{pointer-events:none;opacity:.7}
+.opt-btn.correct-answer{border-color:var(--green);background:var(--green-l)}
+.feedback{padding:14px 18px;border-radius:12px;margin-bottom:16px;font-size:.95rem;line-height:1.6;display:none}
+.feedback.show{display:block;animation:fadeUp .3s ease}
+.feedback.correct-fb{background:var(--green-l);color:#2d6a4f}
+.feedback.wrong-fb{background:var(--sec-l);color:#9b1c31}
+.next-btn{display:none;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-family:'Heebo',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;width:100%}
+.next-btn.show{display:block;animation:fadeUp .3s ease}
+.score-num{font-size:4rem;font-weight:800;color:var(--primary);text-align:center;font-family:'Rubik',sans-serif}
+.score-label{text-align:center;font-size:1.2rem;color:var(--gray);margin-bottom:20px}
+.score-msg{text-align:center;font-size:1.3rem;font-weight:600;margin-bottom:24px;padding:16px;border-radius:14px}
+.send-status{text-align:center;margin-top:12px;padding:10px;border-radius:10px;font-size:.9rem}
+.send-status.success{background:var(--green-l);color:#2d6a4f}
+.send-status.error{background:var(--sec-l);color:#9b1c31}
+</style>
+</head>
+<body>
+
+<div class="progress" id="progressBar"></div>
+
+<!-- ===== מסך פתיחה ===== -->
+<div class="screen active" id="startScreen">
+<div class="card">
+  <div class="icon">&#9876;</div>
+  <h1>המרד הגדול</h1>
+  <p class="subtitle">שאלון היסטוריה – כיתה יא</p>
+  <div class="input-group">
+    <label>שם מלא</label>
+    <input type="text" id="nameInput" placeholder="הכניסו את שמכם">
+  </div>
+  <div class="input-group">
+    <label>כיתה</label>
+    <input type="text" id="classInput" placeholder='למשל: יא1'>
+  </div>
+  <button class="btn" onclick="startQuiz()">התחילו!</button>
+</div>
+</div>
+
+<!-- ===== מסך שאלה ===== -->
+<div class="screen" id="questionScreen">
+<div class="card">
+  <div class="q-counter" id="qCounter"></div>
+  <h2 id="qText"></h2>
+  <div class="options" id="optionsContainer"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next-btn" id="nextBtn" onclick="nextQuestion()">שאלה הבאה</button>
+</div>
+</div>
+
+<!-- ===== מסך ציון ===== -->
+<div class="screen" id="scoreScreen">
+<div class="card">
+  <div class="icon" id="scoreIcon"></div>
+  <div class="score-num" id="scoreNum"></div>
+  <div class="score-label">מתוך 100</div>
+  <div class="score-msg" id="scoreMsg"></div>
+  <button class="btn" onclick="sendResults()">שלחו תוצאות למורה</button>
+  <div class="send-status" id="sendStatus"></div>
+</div>
+</div>
+
+<!-- ===== לוגו ===== -->
+<div style="position:fixed;bottom:18px;right:20px;z-index:200;opacity:.45;pointer-events:none">
+  <img src="../../logo.png" alt="Lerani" style="height:32px;width:auto">
+</div>
+
+<script>
+// ===== DATA =====
+var studentName = '', studentClass = '';
+var currentQ = 0, score = 0, questionsPerSet = 8;
+var diagnosticCorrect = 0;
+var detectedLevel = '';
+var answers = [];
+var activeQuestions = [];
+var totalDisplayQuestions = 10; // 2 diagnostic + 8 regular
+var diagnosticPhase = true;
+var diagnosticIndex = 0;
+
+// 2 שאלות מאבחנות
+var diagnosticQuestions = [
+  {
+    q: 'מה היה הגורם המיידי לפרוץ המרד הגדול בשנת 66 לספירה?',
+    opts: [
+      'כיבוש ירושלים על ידי הרומאים',
+      'גזילת כספים מאוצר המקדש על ידי הנציב פלורוס',
+      'הריסת בית המקדש',
+      'מינוי מלך חדש על ידי הקיסר'
+    ],
+    correct: 1,
+    explain: 'הנציב הרומאי גסיוס פלורוס גזל כספים מאוצר בית המקדש, ומעשה זה הצית את המרד.'
+  },
+  {
+    q: 'מי כתב את הספר "מלחמות היהודים" שמתעד את המרד?',
+    opts: [
+      'הלל הזקן',
+      'רבי עקיבא',
+      'פילון האלכסנדרוני',
+      'יוסף בן מתתיהו (יוספוס פלביוס)'
+    ],
+    correct: 3,
+    explain: 'יוסף בן מתתיהו, שהפך ליוספוס פלביוס, תיעד את המרד הגדול בספרו "מלחמות היהודים".'
+  }
+];
+
+// ערכה בסיסית – correct מפוזר: 1,3,1,0,2,1,2,3
+var basicQuestions = [
+  {q:'באיזו שנה פרץ המרד הגדול?', opts:['63 לספירה','66 לספירה','70 לספירה','73 לספירה'], correct:1, explain:'המרד הגדול פרץ בשנת 66 לספירה.'},
+  {q:'מי כבש את ירושלים בסוף המרד?', opts:['נירון','אספסיאנוס','הדריאנוס','טיטוס'], correct:3, explain:'טיטוס, בנו של אספסיאנוס, כבש את ירושלים בשנת 70.'},
+  {q:'מה קרה לבית המקדש בסוף המרד?', opts:['נשאר שלם','נחרב ונשרף','הפך לכנסייה','הפך למסגד'], correct:1, explain:'בית המקדש השני נחרב ונשרף בט\' באב שנת 70 לספירה.'},
+  {q:'איזה מבצר נפל אחרון במרד הגדול?', opts:['מצדה','הרודיון','גמלא','מכוור'], correct:0, explain:'מצדה הייתה המבצר האחרון שנפל, בשנת 73 לספירה.'},
+  {q:'מהו "שנאת חינם" בהקשר של המרד?', opts:['שנאה בין יהודים לרומאים','סירוב לשלם מסים','מחלוקות פנימיות בין היהודים','שנאה דתית'], correct:2, explain:'חז"ל אמרו שבית המקדש חרב בגלל שנאת חינם – מחלוקות פנימיות בין סיעות יהודיות.'},
+  {q:'איזו קבוצה קיצונית הובילה את המרד?', opts:['הפרושים','הקנאים (זילוטים)','הצדוקים','האיסיים'], correct:1, explain:'הקנאים (זילוטים) היו הקבוצה הקיצונית שהובילה את המרד נגד רומא.'},
+  {q:'מה קרה ליהודים אחרי חורבן בית המקדש?', opts:['המשיכו לחיות כרגיל','הקימו מדינה חדשה','גלו מירושלים','חזרו לבבל'], correct:2, explain:'לאחר החורבן, רבים מהיהודים גלו מירושלים ומיהודה.'},
+  {q:'כמה שנים נמשך המרד הגדול בערך?', opts:['שנה אחת','3 שנים','10 שנים','7 שנים'], correct:3, explain:'המרד נמשך כ-7 שנים, משנת 66 עד 73 לספירה (נפילת מצדה).'}
+];
+
+// ערכה בינונית – correct מפוזר: 2,1,1,0,2,1,2,1
+var mediumQuestions = [
+  {q:'מדוע הפסיקו להקריב קורבן לשלום הקיסר בבית המקדש?', opts:['הרומאים אסרו','נגמרו הקורבנות','הקנאים דרשו להפסיק','הכוהנים סירבו'], correct:2, explain:'הקנאים דרשו להפסיק את הקרבת הקורבן לשלום הקיסר – צעד שנחשב כהכרזת מלחמה.'},
+  {q:'מה עשה רבן יוחנן בן זכאי כשהבין שירושלים תיפול?', opts:['נלחם עד הסוף','ברח מירושלים והקים מרכז תורה ביבנה','נכנע לרומאים','התחבא בבית המקדש'], correct:1, explain:'רבן יוחנן יצא מירושלים בארון מתים והקים את מרכז התורה ביבנה.'},
+  {q:'מדוע השתמשו הרומאים בטקטיקת מצור על ירושלים?', opts:['לא ידעו לכבוש','רצו להרעיב את התושבים ולשבור את ההגנה','רצו לחכות לחורף','לא היו להם חיילים'], correct:1, explain:'המצור נועד להרעיב את התושבים, לשבור את המורל ולמנוע אספקה.'},
+  {q:'באיזה תאריך עברי נחרב בית המקדש?', opts:['ט\' באב','ט"ו בשבט','י\' בטבת','י"ז בתמוז'], correct:0, explain:'בית המקדש נחרב בט\' באב – תאריך שהפך ליום אבל לאומי.'},
+  {q:'מה המשותף בין המרד הגדול למרד בר כוכבא?', opts:['שניהם הצליחו','שניהם התרחשו באותה שנה','שניהם היו מרידות נגד רומא שנכשלו','שניהם הונהגו על ידי כוהנים'], correct:2, explain:'שני המרדות היו ניסיונות יהודיים להשתחרר מעול רומא, ושניהם הסתיימו בכישלון.'},
+  {q:'מה תפקידם של הסיקריקין במרד?', opts:['כוהנים במקדש','לוחמי גרילה שרצחו משתפי פעולה','מנהיגים מדיניים','שליחי שלום'], correct:1, explain:'הסיקריקין היו קבוצה קיצונית שנקראו על שם הסיקה (פגיון) ורצחו יהודים שראו כבוגדים.'},
+  {q:'מה קרה בגמלא במהלך המרד?', opts:['הייתה בירת המורדים','נכנעה לרומאים','תושביה קפצו מהצוק ולא נכנעו','שם נחתם הסכם שלום'], correct:2, explain:'תושבי גמלא בגולן העדיפו לקפוץ מהצוק על פני כניעה לרומאים.'},
+  {q:'איזה שינוי חל ביהדות לאחר חורבן המקדש?', opts:['הפסיקו להתפלל','עברו מיהדות מקדש ליהדות בית כנסת','עזבו את ארץ ישראל לגמרי','ביטלו את התורה'], correct:1, explain:'החורבן שינה את היהדות מיהדות מקדש וקורבנות ליהדות של תפילה ולימוד בבית הכנסת.'}
+];
+
+// ערכה מתקדמת – correct מפוזר: 2,2,1,3,2,1,1,3
+var advancedQuestions = [
+  {q:'מהו ההבדל העיקרי בין הפרושים לקנאים ביחס למרד?', opts:['הפרושים תמכו ברומא','אין הבדל ביניהם','הפרושים העדיפו שלום והקנאים רצו מלחמה','הפרושים היו חיילים והקנאים כוהנים'], correct:2, explain:'הפרושים, בהנהגת רבן יוחנן בן זכאי, העדיפו דרכי שלום, בעוד הקנאים דגלו במלחמה בכל מחיר.'},
+  {q:'מה ניתן ללמוד מבריחתו של רבן יוחנן בן זכאי מירושלים?', opts:['שהוא בגד בעמו','שהוא פחד מהרומאים','שהוא הבין שהמרד נידון לכישלון ורצה להציל את התורה','שהוא רצה להיות מלך'], correct:2, explain:'רבן יוחנן הבין שירושלים תיפול, ויצא להקים את מרכז התורה ביבנה כדי להבטיח את המשך היהדות.'},
+  {q:'כיצד השפיעו הפילוגים הפנימיים על תוצאות המרד?', opts:['חיזקו את הלוחמים','החלישו את ההגנה ותרמו לכישלון','לא השפיעו כלל','עזרו לרומאים באופן ישיר'], correct:1, explain:'המחלוקות בין הסיעות (קנאים, ביריונים, סיקריקין) החלישו את ההגנה על ירושלים ותרמו לנפילתה.'},
+  {q:'מדוע בחרו לוחמי מצדה להתאבד ולא להיכנע?', opts:['חשבו שינצחו','רצו להפחיד את הרומאים','לא ידעו שהמרד נכשל','העדיפו מוות על פני שעבוד רומאי'], correct:3, explain:'לפי יוספוס, אלעזר בן יאיר שכנע את הלוחמים שמוות בחירי עדיף על שעבוד וביזיון רומאי.'},
+  {q:'האם יוספוס פלביוס הוא מקור אמין לתיעוד המרד? למה?', opts:['כן, כי הוא היה נביא','לא, כי הוא לא חי באותה תקופה','חלקית – הוא היה עד ראייה אך עבד לצד הרומאים','כן, כי הוא היה מלך יהודי'], correct:2, explain:'יוספוס היה מפקד יהודי שנכנע ועבר לצד הרומאים. הוא עד ראייה חשוב, אך הפרספקטיבה שלו מוטה.'},
+  {q:'מה ההבדל בין הגישה של הקנאים לגישה של רבן יוחנן?', opts:['שניהם רצו מלחמה','הקנאים רצו חירות מיידית, רבן יוחנן חשב לטווח ארוך','רבן יוחנן תמך ברומא','אין הבדל משמעותי'], correct:1, explain:'הקנאים רצו חירות עכשיו או מוות, בעוד רבן יוחנן הבין שהמשך התורה והעם חשוב יותר מניצחון צבאי.'},
+  {q:'מדוע חורבן בית המקדש נחשב לאירוע מכונן ביהדות?', opts:['כי זה היה בניין יפה','כי הוא שינה לחלוטין את אופי היהדות והזהות היהודית','כי הרומאים היו אכזריים','כי הוא קרה בט\' באב'], correct:1, explain:'החורבן שינה את היהדות מיסודה – ממרכז פולחני אחד למערכת מבוזרת של בתי כנסת, תפילה ולימוד.'},
+  {q:'איזו לקח ניתן ללמוד מהמרד הגדול לימינו?', opts:['מלחמה תמיד עדיפה','כוח צבאי הוא הדבר היחיד שחשוב','אין מה ללמוד מההיסטוריה','אחדות פנימית חשובה להישרדות העם'], correct:3, explain:'הלקח המרכזי הוא שפילוג ושנאת חינם מובילים לאסון, ואחדות היא המפתח להישרדות.'}
+];
+
+// ===== LOGIC =====
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+}
+
+function updateProgress() {
+  var current = diagnosticPhase ? diagnosticIndex : 2 + currentQ;
+  var pct = ((current + 1) / totalDisplayQuestions) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+}
+
+function startQuiz() {
+  studentName = document.getElementById('nameInput').value.trim();
+  studentClass = document.getElementById('classInput').value.trim();
+  if (!studentName || !studentClass) { alert('נא למלא שם וכיתה'); return; }
+  diagnosticIndex = 0;
+  diagnosticCorrect = 0;
+  diagnosticPhase = true;
+  currentQ = 0;
+  score = 0;
+  answers = [];
+  showQuestion(diagnosticQuestions[0], true);
+  showScreen('questionScreen');
+  updateProgress();
+}
+
+function showQuestion(q, isDiagnostic) {
+  var qNum = isDiagnostic ? diagnosticIndex + 1 : 2 + currentQ + 1;
+  document.getElementById('qCounter').textContent = 'שאלה ' + qNum + ' מתוך ' + totalDisplayQuestions;
+  document.getElementById('qText').textContent = q.q;
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('nextBtn').className = 'next-btn';
+
+  var container = document.getElementById('optionsContainer');
+  container.innerHTML = '';
+  q.opts.forEach(function(opt, i) {
+    var btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.textContent = opt;
+    btn.onclick = function() { checkAnswer(i, q, isDiagnostic); };
+    container.appendChild(btn);
+  });
+}
+
+function checkAnswer(selected, q, isDiagnostic) {
+  var btns = document.querySelectorAll('.opt-btn');
+  btns.forEach(function(b, i) {
+    b.classList.add('disabled');
+    if (i === q.correct) b.classList.add('correct-answer');
+    if (i === selected && i !== q.correct) b.classList.add('wrong');
+    if (i === selected && i === q.correct) b.classList.add('correct');
+  });
+
+  var fb = document.getElementById('feedback');
+  var isCorrect = selected === q.correct;
+
+  if (isDiagnostic) {
+    if (isCorrect) diagnosticCorrect++;
+  } else {
+    if (isCorrect) score++;
+    answers.push({question: q.q, correct: isCorrect});
+  }
+
+  fb.textContent = isCorrect ? 'נכון! ' + q.explain : 'לא נכון. ' + q.explain;
+  fb.className = 'feedback show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
+  document.getElementById('nextBtn').className = 'next-btn show';
+}
+
+function nextQuestion() {
+  // עדיין בשאלות מאבחנות?
+  if (diagnosticPhase) {
+    diagnosticIndex++;
+    if (diagnosticIndex < diagnosticQuestions.length) {
+      showQuestion(diagnosticQuestions[diagnosticIndex], true);
+      updateProgress();
+      return;
+    }
+    // סיום אבחון – בחירת רמה
+    diagnosticPhase = false;
+    if (diagnosticCorrect === 0) {
+      detectedLevel = 'בסיסי';
+      activeQuestions = basicQuestions;
+    } else if (diagnosticCorrect === 1) {
+      detectedLevel = 'בינוני';
+      activeQuestions = mediumQuestions;
+    } else {
+      detectedLevel = 'מתקדם';
+      activeQuestions = advancedQuestions;
+    }
+  }
+
+  if (currentQ < activeQuestions.length) {
+    showQuestion(activeQuestions[currentQ], false);
+    currentQ++;
+    updateProgress();
+  } else {
+    showScore();
+  }
+}
+
+function showScore() {
+  var pct = Math.round((score / questionsPerSet) * 100);
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('scoreNum').textContent = pct;
+
+  var icon, msg, bg;
+  if (pct >= 90) { icon = '&#127942;'; msg = 'מצוין! שליטה מרשימה בחומר!'; bg = 'background:var(--green-l);color:#2d6a4f'; }
+  else if (pct >= 70) { icon = '&#128170;'; msg = 'כל הכבוד! ידע טוב מאוד!'; bg = 'background:var(--primary-l);color:var(--primary-d)'; }
+  else if (pct >= 50) { icon = '&#128161;'; msg = 'אפשר לשפר – חזרו על החומר'; bg = 'background:#FEF3C7;color:#92400e'; }
+  else { icon = '&#128214;'; msg = 'כדאי לחזור על החומר ולנסות שוב'; bg = 'background:var(--sec-l);color:#9b1c31'; }
+
+  document.getElementById('scoreIcon').innerHTML = icon;
+  document.getElementById('scoreMsg').textContent = msg;
+  document.getElementById('scoreMsg').style.cssText = bg + ';border-radius:14px;padding:16px';
+  showScreen('scoreScreen');
+}
+
+// ===== SEND TO GOOGLE SHEETS =====
+var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';
+
+function sendResults() {
+  var btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'שולח...';
+
+  var pct = Math.round((score / questionsPerSet) * 100);
+
+  var params = new URLSearchParams({
+    action: 'submit',
+    quizName: 'המרד הגדול – כיתה יא',
+    studentName: studentName,
+    classroom: studentClass,
+    score: pct,
+    totalQuestions: questionsPerSet,
+    correctAnswers: score,
+    level: detectedLevel,
+    teacherEmail: 'golanliron1@gmail.com'
+  });
+
+  var script = document.createElement('script');
+  script.src = SHEETS_URL + '?' + params.toString();
+  script.onload = script.onerror = function() {
+    var status = document.getElementById('sendStatus');
+    status.className = 'send-status success';
+    status.textContent = 'התוצאות נשלחו בהצלחה למורה! ✓';
+    btn.textContent = 'נשלח!';
+    script.remove();
+  };
+  document.body.appendChild(script);
+}
+</script>
+</body>
+</html>
