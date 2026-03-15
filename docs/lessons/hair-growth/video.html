@@ -465,7 +465,7 @@ body{
   var sceneTimeout = null;
   var timerInterval = null;
 
-  // ===== MUSIC ENGINE (Web Audio API) =====
+  // ===== MUSIC ENGINE (Web Audio API) – Upbeat Pop =====
   var audioCtx = null;
   var masterGain = null;
   var isMuted = false;
@@ -480,37 +480,45 @@ body{
 
     var now = audioCtx.currentTime;
     var dur = 62;
-    var bpm = 82;
+    var bpm = 124;
     var beat = 60 / bpm;
 
     // Master fade in/out
     masterGain.gain.setValueAtTime(0, now);
-    masterGain.gain.linearRampToValueAtTime(0.3, now + 2);
-    masterGain.gain.setValueAtTime(0.3, now + dur - 4);
+    masterGain.gain.linearRampToValueAtTime(0.35, now + 1.5);
+    masterGain.gain.setValueAtTime(0.35, now + dur - 3);
     masterGain.gain.linearRampToValueAtTime(0, now + dur);
 
-    // Chord progression – lo-fi chill
+    // Upbeat pop progression: C → G → Am → F
     var chords = [
-      [261.63, 329.63, 392, 493.88],   // Cmaj7
-      [220, 261.63, 329.63, 392],       // Am7
-      [174.61, 220, 261.63, 329.63],    // Fmaj7
-      [196, 246.94, 293.66, 349.23]     // G7
+      [523.25, 659.25, 783.99],  // C5
+      [392, 493.88, 587.33],     // G4
+      [440, 523.25, 659.25],     // Am4
+      [349.23, 440, 523.25]      // F4
     ];
+    var roots = [130.81, 98, 110, 87.31]; // C3, G2, A2, F2
 
     var totalBeats = Math.ceil(dur / beat);
 
     for (var b = 0; b < totalBeats; b++){
       var t = now + b * beat;
       var ci = Math.floor(b / 8) % chords.length;
+      var localBeat = b % 4;
 
       // Pad – every 8 beats
       if (b % 8 === 0) schedulePad(t, chords[ci], beat * 8);
-      // Kick – every 4 beats
-      if (b % 4 === 0) scheduleKick(t);
-      // Hi-hat – every 2 beats
-      if (b % 2 === 0) scheduleHat(t);
-      // Bass – every 4 beats
-      if (b % 4 === 0) scheduleBass(t, chords[ci][0] / 2, beat * 3.5);
+      // Kick – beats 1 and 3
+      if (localBeat === 0 || localBeat === 2) scheduleKick(t);
+      // Snare – beats 2 and 4
+      if (localBeat === 1 || localBeat === 3) scheduleSnare(t);
+      // Hi-hat – every beat + offbeats
+      scheduleHat(t, 0.07);
+      scheduleHat(t + beat * 0.5, 0.035);
+      // Bass – bouncy pattern
+      if (localBeat === 0) scheduleBass(t, roots[ci], beat * 1.5);
+      if (localBeat === 2) scheduleBass(t, roots[ci] * 1.5, beat * 0.8);
+      // Pluck arpeggio – offbeats for sparkle
+      if (b % 2 === 1) schedulePluck(t, chords[ci][b % 3], beat * 0.4);
     }
   }
 
@@ -519,26 +527,18 @@ body{
       var osc = audioCtx.createOscillator();
       var g = audioCtx.createGain();
       var filt = audioCtx.createBiquadFilter();
-
       osc.type = 'sawtooth';
       osc.frequency.value = freqs[i];
-      // slight detune for warmth
-      osc.detune.value = (i - 1.5) * 6;
-
+      osc.detune.value = (i - 1) * 8;
       filt.type = 'lowpass';
-      filt.frequency.value = 900;
-      filt.Q.value = 0.7;
-
+      filt.frequency.value = 2200;
+      filt.Q.value = 0.5;
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.025, t + 0.8);
-      g.gain.setValueAtTime(0.025, t + dur - 0.8);
+      g.gain.linearRampToValueAtTime(0.018, t + 0.3);
+      g.gain.setValueAtTime(0.018, t + dur - 0.5);
       g.gain.linearRampToValueAtTime(0, t + dur);
-
-      osc.connect(filt);
-      filt.connect(g);
-      g.connect(masterGain);
-      osc.start(t);
-      osc.stop(t + dur + 0.1);
+      osc.connect(filt); filt.connect(g); g.connect(masterGain);
+      osc.start(t); osc.stop(t + dur + 0.1);
     }
   }
 
@@ -546,55 +546,94 @@ body{
     var osc = audioCtx.createOscillator();
     var g = audioCtx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(150, t);
-    osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
-    g.gain.setValueAtTime(0.35, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-    osc.connect(g);
-    g.connect(masterGain);
-    osc.start(t);
-    osc.stop(t + 0.3);
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(35, t + 0.08);
+    g.gain.setValueAtTime(0.45, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(t); osc.stop(t + 0.2);
   }
 
-  function scheduleHat(t){
-    var len = Math.floor(audioCtx.sampleRate * 0.04);
+  function scheduleSnare(t){
+    // Noise burst
+    var len = Math.floor(audioCtx.sampleRate * 0.08);
     var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
     var d = buf.getChannelData(0);
     for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    var src = audioCtx.createBufferSource();
+    var g = audioCtx.createGain();
+    var filt = audioCtx.createBiquadFilter();
+    src.buffer = buf;
+    filt.type = 'bandpass';
+    filt.frequency.value = 4000;
+    filt.Q.value = 0.8;
+    g.gain.setValueAtTime(0.18, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    src.connect(filt); filt.connect(g); g.connect(masterGain);
+    src.start(t);
+    // Tonal body
+    var osc = audioCtx.createOscillator();
+    var g2 = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = 200;
+    g2.gain.setValueAtTime(0.12, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    osc.connect(g2); g2.connect(masterGain);
+    osc.start(t); osc.stop(t + 0.1);
+  }
 
+  function scheduleHat(t, vol){
+    var len = Math.floor(audioCtx.sampleRate * 0.03);
+    var buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     var src = audioCtx.createBufferSource();
     var g = audioCtx.createGain();
     var filt = audioCtx.createBiquadFilter();
     src.buffer = buf;
     filt.type = 'highpass';
-    filt.frequency.value = 9000;
-    g.gain.setValueAtTime(0.06, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-    src.connect(filt);
-    filt.connect(g);
-    g.connect(masterGain);
+    filt.frequency.value = 10000;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+    src.connect(filt); filt.connect(g); g.connect(masterGain);
     src.start(t);
   }
 
   function scheduleBass(t, freq, dur){
     var osc = audioCtx.createOscillator();
     var g = audioCtx.createGain();
-    osc.type = 'sine';
+    osc.type = 'square';
     osc.frequency.value = freq;
-    g.gain.setValueAtTime(0.12, t);
-    g.gain.setValueAtTime(0.12, t + dur * 0.6);
+    var filt = audioCtx.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = 300;
+    g.gain.setValueAtTime(0.18, t);
+    g.gain.setValueAtTime(0.18, t + dur * 0.5);
     g.gain.linearRampToValueAtTime(0, t + dur);
-    osc.connect(g);
-    g.connect(masterGain);
-    osc.start(t);
-    osc.stop(t + dur + 0.1);
+    osc.connect(filt); filt.connect(g); g.connect(masterGain);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  }
+
+  function schedulePluck(t, freq, dur){
+    var osc = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    var filt = audioCtx.createBiquadFilter();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    filt.type = 'lowpass';
+    filt.frequency.setValueAtTime(4000, t);
+    filt.frequency.exponentialRampToValueAtTime(600, t + dur);
+    g.gain.setValueAtTime(0.1, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(filt); filt.connect(g); g.connect(masterGain);
+    osc.start(t); osc.stop(t + dur + 0.05);
   }
 
   function toggleMute(){
     if (!audioCtx || !masterGain) return;
     isMuted = !isMuted;
     masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
-    masterGain.gain.setValueAtTime(isMuted ? 0 : 0.3, audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(isMuted ? 0 : 0.35, audioCtx.currentTime);
     muteBtn.innerHTML = isMuted ? '&#128264;' : '&#128266;';
   }
 
