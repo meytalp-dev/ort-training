@@ -810,6 +810,14 @@ const TRACK_45={
 };
 // Which track each class uses
 const CLASS_TRACK={'ט1':55,'י1':45,'י2':45,'י3':45,'יא1':45,'יא2':55,'יא3':45,'יב1':45,'יב2':55,'יב3':45};
+// מגמות רוחביות – מתקיימות במקביל, נספרות פעם אחת בסיכום שעות כיתה
+const PARALLEL_SUBJECTS=['עיצוב שיער','מחשבים','אוטוטרוניקה'];
+function classEffectiveHours(cls){
+  const rows=classSchedule[cls]||[];
+  let total=0,parallelMax=0;
+  rows.forEach(r=>{const h=num(r.hours);if(PARALLEL_SUBJECTS.includes(r.subject)){if(h>parallelMax)parallelMax=h}else{total+=h}});
+  return total+parallelMax;
+}
 
 function buildDefaultSchedule(){
   const sched={};
@@ -880,8 +888,9 @@ function renderCurriculum(){
   const tMap=getTeacherHoursMap();
   const teachersWithHours=Object.entries(tMap).filter(([,v])=>v.frontal>0).length;
   CLASS_LIST.forEach(cls=>{
+    totalHours+=classEffectiveHours(cls);
     (classSchedule[cls]||[]).forEach(row=>{
-      const h=num(row.hours);totalHours+=h;
+      const h=num(row.hours);
       if(h>0&&row.teacher)assignedCount++;
       if(h>0&&!row.teacher)emptyCount++;
     });
@@ -922,7 +931,7 @@ function renderCurriculum(){
   const sRows=Object.entries(subjTotals).filter(([,h])=>h>0).sort((a,b)=>b[1]-a[1]);
   document.getElementById('subjectSummary').innerHTML=
     '<thead><tr><th>מקצוע</th><th>סה"כ שעות</th></tr></thead><tbody>'+
-    (sRows.length?sRows.map(([s,h])=>'<tr><td>'+esc(s)+'</td><td style="text-align:center;font-weight:700">'+h+'</td></tr>').join(''):'<tr><td colspan="2" style="text-align:center;padding:16px;color:var(--muted)">אין נתונים</td></tr>')+
+    (sRows.length?sRows.map(([s,h])=>'<tr><td>'+esc(s)+(PARALLEL_SUBJECTS.includes(s)?' <span style="font-size:.7rem;color:var(--muted)">(מקביל)</span>':'')+'</td><td style="text-align:center;font-weight:700">'+h+'</td></tr>').join(''):'<tr><td colspan="2" style="text-align:center;padding:16px;color:var(--muted)">אין נתונים</td></tr>')+
     '</tbody>';
 
   localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));
@@ -940,7 +949,7 @@ function renderCurMainContent(){
   const track=CLASS_TRACK[cls];
   let html='<div class="class-section">';
   html+='<div class="class-section-header"><span>'+cls+' <span style="font-size:.8rem;font-weight:400;color:var(--muted)">(מסלול '+track+')</span></span>';
-  const hrTotal=(classSchedule[cls]||[]).reduce((s,r)=>s+num(r.hours),0);
+  const hrTotal=classEffectiveHours(cls);
   html+='<span>'+hrTotal+' ש"ש</span></div>';
   html+=renderClassSubjectsHTML(cls);
   html+='</div>';
@@ -1001,7 +1010,7 @@ function renderClassHoursEditor(el){
   CLASS_LIST.forEach(cls=>{
     const g3=cls.replace(/[0-9]/g,'');
     const sep3=g3!==pGrade?' border-right:3px solid var(--primary);':'';pGrade=g3;
-    const total=(classSchedule[cls]||[]).reduce((s,r)=>s+num(r.hours),0);grand+=total;
+    const total=classEffectiveHours(cls);grand+=total;
     html+='<td style="padding:8px 3px;text-align:center;color:var(--primary-dark);font-size:.92rem;'+sep3+'">'+total+'</td>';
   });
   html+='<td style="padding:8px;text-align:center;font-size:.92rem;border-right:3px solid var(--primary)">'+grand+'</td></tr>';
@@ -1054,74 +1063,100 @@ function resetAndFillFromTracks(){
   renderCurriculum();
 }
 
-// Teacher assignments from משרות מורים תשפז.xlsx
-// Maps: teacher → subject (mapped to track subject) → grades
-const TEACHER_ASSIGN=[
-  // עברית/לשון → הבעה, הבנה ולשון
-  {t:'אופירה מלכה',s:'הבעה, הבנה ולשון',g:['ט','יא','יב']},
-  {t:'אפרת בר אשר',s:'הבעה, הבנה ולשון',g:['י','יא']},
-  // מתמטיקה
-  {t:'נעמה קוסטן',s:'מתמטיקה',g:['ט','י','יא','יב']},
-  {t:'ויקי קלדרון',s:'מתמטיקה',g:['יא','יב']},
-  // אנגלית
-  {t:'בת שבע אדלר',s:'אנגלית',g:['יא','יב']},
-  // אזרחות
-  {t:'משה צברי',s:'אזרחות',g:['ט']},
-  {t:'אליאל קוסקאס',s:'אזרחות',g:['י','יב']},
-  // היסטוריה
-  {t:'משה צברי',s:'היסטוריה',g:['ט']},
-  {t:'גיא נתנאל',s:'היסטוריה',g:['יא']},
-  {t:'יעקב גרונספלד',s:'היסטוריה',g:['יא','יב']},
-  // תנ"ך
-  {t:'משה צברי',s:'תנ"ך',g:['ט']},
-  {t:'אליאל קוסקאס',s:'תנ"ך',g:['יא']},
-  {t:'יואב רוט',s:'תנ"ך',g:['יא']},
-  // ספרות
-  {t:'ויקי קלדרון',s:'ספרות',g:['יב']},
-  // ספורט
-  {t:'גיא נתנאל',s:'ספורט',g:['ט','י','יא','יב']},
+// נתוני שיבוץ מקובץ משרות מורים תשפז.xlsx
+// כל רשומה: מורה, מקצוע (מותאם לשם בלו"ז), סה"כ שעות לפי שכבה
+const TEACHER_FILE_DATA=[
+  {t:'אופירה מלכה',s:'הבעה, הבנה ולשון',hours:{ט:6,יא:2,יב:3}},
+  {t:'אפרת בר אשר',s:'הבעה, הבנה ולשון',hours:{י:10.5,יא:11}},
+  {t:'נעמה קוסטן',s:'מתמטיקה',hours:{ט:4,י:9,יא:3,יב:3}},
+  {t:'ויקי קלדרון',s:'מתמטיקה',hours:{יא:3.5,יב:4}},
+  {t:'בת שבע אדלר',s:'אנגלית',hours:{יא:5.5,יב:5.5}},
+  {t:'אליאל קוסקאס',s:'אזרחות',hours:{י:6,יב:7.5}},
+  {t:'משה צברי',s:'אזרחות',hours:{ט:4}},
+  {t:'משה צברי',s:'היסטוריה',hours:{ט:4}},
+  {t:'גיא נתנאל',s:'היסטוריה',hours:{יא:5.5}},
+  {t:'יעקב גרונספלד',s:'היסטוריה',hours:{יא:5.5,יב:2}},
+  {t:'משה צברי',s:'תנ"ך',hours:{ט:4}},
+  {t:'אליאל קוסקאס',s:'תנ"ך',hours:{יא:5.5}},
+  {t:'יואב רוט',s:'תנ"ך',hours:{יא:5.5}},
+  {t:'ויקי קלדרון',s:'ספרות',hours:{יב:10}},
+  {t:'גיא נתנאל',s:'ספורט',hours:{ט:2,י:3,יא:3,יב:3}},
+  // מקצועות נוספים שאינם בטבלת המסלולים
+  {t:'גיא נתנאל',s:'חינוך פיננסי',hours:{י:6}},
+  {t:'יואב רוט',s:'מטלת ביצוע',hours:{יב:5}},
+  {t:'יואב רוט',s:'מטו"ל',hours:{י:7}},
+  {t:'מנו דהאן',s:'חינוך תעבורתי',hours:{י:8}},
 ];
-// Specific class overrides for teachers sharing a subject in same grade
+// שיבוצים ספציפיים לכיתה (כשיש 2+ מורים באותה שכבה+מקצוע)
 const TEACHER_CLASS_OVERRIDE={
-  // יא הבעה: אופירה רק ביא2 (מחנכת שם), אפרת ביא1+יא3
   'יא2|הבעה, הבנה ולשון':'אופירה מלכה',
   'יא1|הבעה, הבנה ולשון':'אפרת בר אשר',
   'יא3|הבעה, הבנה ולשון':'אפרת בר אשר',
-  // יא היסטוריה: גיא ביא1+יא3, יעקב ביא2
   'יא1|היסטוריה':'גיא נתנאל',
   'יא2|היסטוריה':'יעקב גרונספלד',
   'יא3|היסטוריה':'גיא נתנאל',
-  // יא תנ"ך: split between אליאל and יואב
   'יא1|תנ"ך':'אליאל קוסקאס',
   'יא2|תנ"ך':'יואב רוט',
   'יא3|תנ"ך':'אליאל קוסקאס',
-  // יא מתמטיקה: נעמה ביא2, ויקי ביא1+יא3
   'יא1|מתמטיקה':'ויקי קלדרון',
   'יא2|מתמטיקה':'נעמה קוסטן',
   'יא3|מתמטיקה':'ויקי קלדרון',
-  // יב מתמטיקה: נעמה ביב2, ויקי ביב1+יב3
   'יב1|מתמטיקה':'ויקי קלדרון',
   'יב2|מתמטיקה':'נעמה קוסטן',
   'יב3|מתמטיקה':'ויקי קלדרון',
 };
 
 function fillTeachersFromFile(){
-  // First assign by grade (all classes in grade get the teacher)
-  TEACHER_ASSIGN.forEach(({t,s,g})=>{
-    g.forEach(grade=>{
+  if(!confirm('שיבוץ חכם: יחלק מורים לכיתות לפי סה"כ שעות מהקובץ.\nמקצועות שלא בלו"ז (חינוך פיננסי, מטו"ל וכו\') יתווספו.\nלהמשיך?'))return;
+
+  // 1. Add extra subjects to relevant classes (not in tracks)
+  TEACHER_FILE_DATA.forEach(({s,hours})=>{
+    if(DEFAULT_SUBJECTS.includes(s))return;
+    Object.entries(hours).forEach(([grade,totalH])=>{
       const classes=GRADE_CLASSES[grade]||[];
+      const perClass=Math.round(totalH/classes.length*10)/10;
       classes.forEach(cls=>{
-        const row=(classSchedule[cls]||[]).find(r=>r.subject===s);
-        if(row&&!row.teacher)row.teacher=t;
+        if(!(classSchedule[cls]||[]).find(r=>r.subject===s)){
+          classSchedule[cls]=classSchedule[cls]||[];
+          classSchedule[cls].push({subject:s,hours:String(perClass),teacher:''});
+        }
       });
     });
   });
-  // Apply specific overrides
+
+  // 2. Smart assignment: distribute teacher across classes based on total hours
+  TEACHER_FILE_DATA.forEach(({t,s,hours})=>{
+    Object.entries(hours).forEach(([grade,totalH])=>{
+      const classes=GRADE_CLASSES[grade]||[];
+      if(classes.length<=1){
+        // Single class in grade → assign directly
+        const row=(classSchedule[classes[0]]||[]).find(r=>r.subject===s);
+        if(row&&!row.teacher)row.teacher=t;
+        return;
+      }
+      // Multiple classes: assign until total hours used up
+      let remaining=totalH;
+      classes.forEach(cls=>{
+        if(remaining<=0)return;
+        const row=(classSchedule[cls]||[]).find(r=>r.subject===s);
+        if(row&&!row.teacher){
+          const classH=num(row.hours);
+          if(classH>0&&remaining>=classH*0.4){
+            row.teacher=t;
+            remaining-=classH;
+          }
+        }
+      });
+    });
+  });
+
+  // 3. Apply specific overrides (manual assignments for shared grade+subject)
   Object.entries(TEACHER_CLASS_OVERRIDE).forEach(([key,teacher])=>{
     const [cls,subj]=key.split('|');
     const row=(classSchedule[cls]||[]).find(r=>r.subject===subj);
     if(row)row.teacher=teacher;
   });
+
   localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));
   renderCurriculum();
 }
@@ -1239,7 +1274,6 @@ function renderOverviewGrid(el){
     const grade=cls.replace(/[0-9]/g,'');
     const sep=grade!==prevGrade&&prevGrade?' class="grade-sep"':'';prevGrade=grade;
     html+='<tr'+sep+'><td>'+cls+'</td>';
-    let rowTotal=0;
     subjects.forEach(s=>{
       const match=(classSchedule[cls]||[]).find(r=>r.subject===s);
       if(match&&num(match.hours)){
@@ -1247,10 +1281,9 @@ function renderOverviewGrid(el){
         if(match.teacher)html+='<div class="ov-teacher">'+esc(match.teacher)+'</div>';
         else html+='<div class="ov-teacher" style="color:var(--danger)">חסר</div>';
         html+='</td>';
-        rowTotal+=num(match.hours);
       }else{html+='<td class="ov-empty">—</td>'}
     });
-    html+='<td style="font-weight:800">'+rowTotal+'</td></tr>';
+    html+='<td style="font-weight:800">'+classEffectiveHours(cls)+'</td></tr>';
   });
   html+='</tbody></table></div>';
   el.innerHTML=html;
@@ -1291,7 +1324,7 @@ function updateClassRow2(cls,idx,field,val){
     sections.forEach(sec=>{
       const hdr=sec.querySelector('.class-section-header');
       if(hdr&&hdr.querySelector('span')&&hdr.querySelector('span').textContent===cls){
-        const total=(classSchedule[cls]||[]).reduce((s,r)=>s+num(r.hours),0);
+        const total=classEffectiveHours(cls);
         hdr.querySelectorAll('span')[1].textContent=total+' ש"ש';
       }
     });
