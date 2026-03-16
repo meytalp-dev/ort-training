@@ -319,6 +319,49 @@ function doGet(e) {
     }
   }
 
+  // === טעינת טפסי מורים ===
+  if (params.action === 'getTeacherForms') {
+    try {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_teacherForms');
+      var forms = [];
+
+      if (sheet) {
+        var data = sheet.getDataRange().getValues();
+        for (var i = 1; i < data.length; i++) {
+          forms.push({
+            name: data[i][0],
+            subject: data[i][1],
+            currentScope: data[i][2],
+            desiredScope: data[i][3],
+            hasDay: data[i][4],
+            currentDay: data[i][5],
+            preferredDay: data[i][6],
+            changes: data[i][7],
+            requests: data[i][8],
+            date: data[i][9] ? data[i][9].toString() : ''
+          });
+        }
+      }
+
+      var result = JSON.stringify({ forms: forms });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + result + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(result)
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      var errResult = JSON.stringify({ error: err.toString() });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + errResult + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errResult)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // === דשבורד מורים ===
   return HtmlService.createHtmlOutput(getDashboardHTML())
     .setTitle('דשבורד ציונים – אורט בית הערבה')
@@ -575,6 +618,31 @@ function doPost(e) {
           }
         }
       }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === טופס מורים – תכנון לשנה הבאה ===
+    if (data.action === 'teacherForm') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_teacherForms');
+      if (!sheet) {
+        sheet = ss.insertSheet('_teacherForms');
+        sheet.appendRow(['שם', 'מקצוע', 'משרה נוכחית', 'משרה רצויה', 'יש יום חופשי', 'יום חופשי נוכחי', 'יום חופשי מבוקש', 'שינויים', 'בקשות מיוחדות', 'תאריך']);
+        sheet.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#D4F3EF');
+      }
+      sheet.appendRow([
+        data.name || '',
+        data.subject || '',
+        data.currentScope || '',
+        data.desiredScope || '',
+        data.hasDay || '',
+        data.currentDay || '',
+        data.preferredDay || '',
+        data.changes || '',
+        data.requests || '',
+        data.date || new Date().toLocaleString('he-IL')
+      ]);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }

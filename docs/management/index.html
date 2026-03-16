@@ -196,6 +196,8 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
           <div class="card-header">
             <h3>טבלת משרות</h3>
             <button class="btn btn-primary btn-sm" onclick="startAddPos()">+ הוספת משרה</button>
+            <button class="btn btn-sm" style="background:#E9C46A;color:#1E293B" onclick="copyFormLink()">📋 קישור לטופס מורים</button>
+            <button class="btn btn-sm btn-ghost" onclick="loadTeacherForms()">📥 טען תשובות</button>
           </div>
           <div class="card-body" style="padding:0">
             <div id="posForm" style="display:none;padding:12px"></div>
@@ -591,6 +593,47 @@ function loadRemoteData(){
 }
 
 // ===================== UTILS =====================
+// ===================== TEACHER FORM =====================
+function copyFormLink(){
+  const url=location.href.replace('index.html','').replace(/\/$/,'')+'/'+'teacher-form.html';
+  navigator.clipboard.writeText(url).then(()=>{
+    alert('הקישור הועתק! שלחי אותו למורים:\n\n'+url);
+  }).catch(()=>{
+    prompt('העתיקי את הקישור:',url);
+  });
+}
+
+function loadTeacherForms(){
+  const cb='cbForms_'+Date.now();
+  window[cb]=function(d){
+    delete window[cb];
+    if(!d.forms||!d.forms.length){alert('אין תשובות עדיין');return}
+    // Add forms as positions
+    let added=0;
+    d.forms.forEach(f=>{
+      const exists=positions.find(p=>p.name===f.name&&p.notes&&p.notes.includes('טופס'));
+      if(!exists){
+        positions.push({
+          id:'form_'+Date.now()+'_'+(added++),
+          name:f.name,
+          subject:f.subject,
+          scope:f.desiredScope,
+          positionType:'טופס מורה',
+          status:f.currentScope===f.desiredScope?'פעיל':'מבוקש',
+          notes:`נוכחי: ${f.currentScope} | יום חופשי: ${f.preferredDay||'לא'} | ${f.changes||''} ${f.requests||''}`.trim(),
+          updatedAt:f.date||''
+        });
+      }
+    });
+    renderPositions();
+    alert(`נטענו ${d.forms.length} תשובות (${added} חדשות)`);
+  };
+  const s=document.createElement('script');
+  s.src=`${APPS_SCRIPT}?action=getTeacherForms&callback=${cb}`;
+  s.onerror=()=>{delete window[cb];alert('שגיאה בטעינה')};
+  document.head.appendChild(s);
+}
+
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
 </script>
 </body>
