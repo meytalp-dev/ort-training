@@ -1063,100 +1063,55 @@ function resetAndFillFromTracks(){
   renderCurriculum();
 }
 
-// נתוני שיבוץ מקובץ משרות מורים תשפז.xlsx
-// כל רשומה: מורה, מקצוע (מותאם לשם בלו"ז), סה"כ שעות לפי שכבה
+// === נתוני שיבוץ מורים – תשפ"ז (מפורט לפי כיתה) ===
+// כל רשומה: מורה, מקצוע, {כיתה: שעות}, גמול בגרות
 const TEACHER_FILE_DATA=[
-  {t:'אופירה מלכה',s:'הבעה, הבנה ולשון',hours:{ט:6,יא:2,יב:3}},
-  {t:'אפרת בר אשר',s:'הבעה, הבנה ולשון',hours:{י:10.5,יא:11}},
-  {t:'נעמה קוסטן',s:'מתמטיקה',hours:{ט:4,י:9,יא:3,יב:3}},
-  {t:'ויקי קלדרון',s:'מתמטיקה',hours:{יא:3.5,יב:4}},
-  {t:'בת שבע אדלר',s:'אנגלית',hours:{יא:5.5,יב:5.5}},
-  {t:'אליאל קוסקאס',s:'אזרחות',hours:{י:6,יב:7.5}},
-  {t:'משה צברי',s:'אזרחות',hours:{ט:4}},
-  {t:'משה צברי',s:'היסטוריה',hours:{ט:4}},
-  {t:'גיא נתנאל',s:'היסטוריה',hours:{יא:5.5}},
-  {t:'יעקב גרונספלד',s:'היסטוריה',hours:{יא:5.5,יב:2}},
-  {t:'משה צברי',s:'תנ"ך',hours:{ט:4}},
-  {t:'אליאל קוסקאס',s:'תנ"ך',hours:{יא:5.5}},
-  {t:'יואב רוט',s:'תנ"ך',hours:{יא:5.5}},
-  {t:'ויקי קלדרון',s:'ספרות',hours:{יב:10}},
-  {t:'גיא נתנאל',s:'ספורט',hours:{ט:2,י:3,יא:3,יב:3}},
-  // מקצועות נוספים שאינם בטבלת המסלולים
-  {t:'גיא נתנאל',s:'חינוך פיננסי',hours:{י:6}},
-  {t:'יואב רוט',s:'מטלת ביצוע',hours:{יב:5}},
-  {t:'יואב רוט',s:'מטו"ל',hours:{י:7}},
-  {t:'מנו דהאן',s:'חינוך תעבורתי',hours:{י:8}},
+  {t:'אופירה מלכה',s:'הבעה, הבנה ולשון',c:{ט1:3,י1:2,י2:2,י3:2,יא2:2,יב2:3}},
+  {t:'אליאל קוסקאס',s:'אזרחות',c:{י1:2,י2:2,י3:2,יב1:3,יב3:3},bonus:1.5},
+  {t:'אליאל קוסקאס',s:'תנ"ך',c:{יא1:4},bonus:1.5},
+  {t:'אפרת בר אשר',s:'הבעה, הבנה ולשון',c:{יא1:4,יא3:4},bonus:2.5},
+  {t:'בת שבע אדלר',s:'אנגלית',c:{יא1:4,יב1:4},bonus:3},
+  {t:'גיא נתנאל',s:'ספורט',c:{ט1:1,י1:1,י2:1,י3:1,יא1:1,יא2:1,יא3:1,יב1:1,יב2:1,יב3:1}},
+  {t:'גיא נתנאל',s:'חינוך פיננסי',c:{י1:2,י2:2,י3:2}},
+  {t:'גיא נתנאל',s:'היסטוריה',c:{יב1:4},bonus:1.5},
+  {t:'ויקי קלדרון',s:'ספרות',c:{יב1:4,יב3:4},bonus:1.5},
+  {t:'ויקי קלדרון',s:'מתמטיקה',c:{יא1:3,יב1:3},bonus:1.5},
+  {t:'יואב רוט',s:'מטלת ביצוע',c:{יב1:2,יב3:2},bonus:1},
+  {t:'יואב רוט',s:'מטו"ל',c:{י1:2,י2:2,י3:2},bonus:1},
+  {t:'יואב רוט',s:'תנ"ך',c:{יא1:4},bonus:1.5},
+  {t:'יעקב גרונספלד',s:'היסטוריה',c:{יא1:4},bonus:1.5},
+  {t:'מנו דהאן',s:'חינוך תעבורתי',c:{י1:2,י2:2,י3:2},bonus:1},
+  {t:'משה צברי',s:'תנ"ך',c:{ט1:4}},
+  {t:'משה צברי',s:'אזרחות',c:{ט1:4}},
+  {t:'משה צברי',s:'היסטוריה',c:{ט1:4}},
+  {t:'נעמה קוסטן',s:'מתמטיקה',c:{ט1:4,י1:3,י2:3,י3:3,יא2:3,יב2:3},bonus:1},
 ];
-// שיבוצים ספציפיים לכיתה (כשיש 2+ מורים באותה שכבה+מקצוע)
-const TEACHER_CLASS_OVERRIDE={
-  'יא2|הבעה, הבנה ולשון':'אופירה מלכה',
-  'יא1|הבעה, הבנה ולשון':'אפרת בר אשר',
-  'יא3|הבעה, הבנה ולשון':'אפרת בר אשר',
-  'יא1|היסטוריה':'גיא נתנאל',
-  'יא2|היסטוריה':'יעקב גרונספלד',
-  'יא3|היסטוריה':'גיא נתנאל',
-  'יא1|תנ"ך':'אליאל קוסקאס',
-  'יא2|תנ"ך':'יואב רוט',
-  'יא3|תנ"ך':'אליאל קוסקאס',
-  'יא1|מתמטיקה':'ויקי קלדרון',
-  'יא2|מתמטיקה':'נעמה קוסטן',
-  'יא3|מתמטיקה':'ויקי קלדרון',
-  'יב1|מתמטיקה':'ויקי קלדרון',
-  'יב2|מתמטיקה':'נעמה קוסטן',
-  'יב3|מתמטיקה':'ויקי קלדרון',
+// מידע נוסף למורה: משרה, תפקיד, גמול חינוך
+const TEACHER_META={
+  'אופירה מלכה':{role:'ריכוז שכבה',roleH:2,eduBonus:3},
+  'אליאל קוסקאס':{scope:25,eduBonus:3},
+  'בת שבע אדלר':{scope:8},
+  'גיא נתנאל':{scope:25,eduBonus:3},
+  'ויקי קלדרון':{scope:20},
+  'יואב רוט':{scope:25},
+  'יעקב גרונספלד':{scope:25},
+  'ליאת בנג\'ו':{scope:20},
+  'מנו דהאן':{scope:4},
+  'משה צברי':{scope:25},
+  'נעמה קוסטן':{scope:25},
 };
 
 function fillTeachersFromFile(){
-  if(!confirm('שיבוץ חכם: יחלק מורים לכיתות לפי סה"כ שעות מהקובץ.\nמקצועות שלא בלו"ז (חינוך פיננסי, מטו"ל וכו\') יתווספו.\nלהמשיך?'))return;
-
-  // 1. Add extra subjects to relevant classes (not in tracks)
-  TEACHER_FILE_DATA.forEach(({s,hours})=>{
-    if(DEFAULT_SUBJECTS.includes(s))return;
-    Object.entries(hours).forEach(([grade,totalH])=>{
-      const classes=GRADE_CLASSES[grade]||[];
-      const perClass=Math.round(totalH/classes.length*10)/10;
-      classes.forEach(cls=>{
-        if(!(classSchedule[cls]||[]).find(r=>r.subject===s)){
-          classSchedule[cls]=classSchedule[cls]||[];
-          classSchedule[cls].push({subject:s,hours:String(perClass),teacher:''});
-        }
-      });
+  if(!confirm('שיבוץ מורים לפי טבלת שיבוץ מעודכנת.\nיעדכן שעות ומורים בכיתות ספציפיות.\nמקצועות שלא קיימים יתווספו.\nלהמשיך?'))return;
+  TEACHER_FILE_DATA.forEach(({t,s,c})=>{
+    Object.entries(c).forEach(([cls,hours])=>{
+      if(!classSchedule[cls])classSchedule[cls]=[];
+      let row=classSchedule[cls].find(r=>r.subject===s);
+      if(!row){row={subject:s,hours:'',teacher:''};classSchedule[cls].push(row)}
+      row.hours=String(hours);
+      row.teacher=t;
     });
   });
-
-  // 2. Smart assignment: distribute teacher across classes based on total hours
-  TEACHER_FILE_DATA.forEach(({t,s,hours})=>{
-    Object.entries(hours).forEach(([grade,totalH])=>{
-      const classes=GRADE_CLASSES[grade]||[];
-      if(classes.length<=1){
-        // Single class in grade → assign directly
-        const row=(classSchedule[classes[0]]||[]).find(r=>r.subject===s);
-        if(row&&!row.teacher)row.teacher=t;
-        return;
-      }
-      // Multiple classes: assign until total hours used up
-      let remaining=totalH;
-      classes.forEach(cls=>{
-        if(remaining<=0)return;
-        const row=(classSchedule[cls]||[]).find(r=>r.subject===s);
-        if(row&&!row.teacher){
-          const classH=num(row.hours);
-          if(classH>0&&remaining>=classH*0.4){
-            row.teacher=t;
-            remaining-=classH;
-          }
-        }
-      });
-    });
-  });
-
-  // 3. Apply specific overrides (manual assignments for shared grade+subject)
-  Object.entries(TEACHER_CLASS_OVERRIDE).forEach(([key,teacher])=>{
-    const [cls,subj]=key.split('|');
-    const row=(classSchedule[cls]||[]).find(r=>r.subject===subj);
-    if(row)row.teacher=teacher;
-  });
-
   localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));
   renderCurriculum();
 }
@@ -1211,49 +1166,84 @@ function renderClassSubjectsHTML(cls){
   return html;
 }
 
+function getTeacherBonus(name){
+  // Collect bonus data from TEACHER_FILE_DATA
+  let totalBonus=0;
+  const bonusList=[];
+  TEACHER_FILE_DATA.filter(d=>d.t===name&&d.bonus).forEach(d=>{
+    totalBonus+=d.bonus;
+    bonusList.push({subject:d.s,bonus:d.bonus});
+  });
+  return {totalBonus,bonusList};
+}
+
 function renderTeacherCards(el){
   const tMap=getTeacherHoursMap();
   let html='<div style="padding:16px">';
   TEACHER_LIST.forEach(name=>{
     const data=tMap[name]||{frontal:0,classes:[],subjects:{}};
+    const meta=TEACHER_META[name]||{};
     const age=getTeacherAge(name);
     const oz=data.frontal>0?getOzRow(data.frontal,age):null;
     const ageLabel=age?(age>=55?'55+':age>=50?'50-55':'רגיל'):'—';
     const maxFrontal=age?(age>=55?21:age>=50?23:25):25;
+    const {totalBonus,bonusList}=getTeacherBonus(name);
+    const roleH=meta.roleH||0;
+    const eduBonus=meta.eduBonus||0;
+    const totalNonFrontal=totalBonus+roleH+eduBonus;
+    const grandTotal=data.frontal+totalNonFrontal;
 
     html+='<div class="form-card" style="margin-bottom:14px">';
-    html+='<h4>'+esc(name)+'<span style="font-size:.75rem;font-weight:400;color:var(--muted);margin-right:auto;margin-left:8px">';
+    // Header with name + scope badge
+    html+='<h4 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+esc(name);
+    if(meta.scope)html+='<span style="font-size:.72rem;padding:2px 10px;border-radius:8px;background:var(--primary);color:#fff;font-weight:600">משרה '+meta.scope+'</span>';
+    html+='<span style="font-size:.75rem;font-weight:400;color:var(--muted);margin-right:auto">';
     if(age)html+='גיל '+age+' ('+ageLabel+') | בסיס: '+maxFrontal+' ש"ש';
     html+='</span></h4>';
 
-    // Subjects breakdown
+    // Subjects breakdown table
     const subjEntries=Object.entries(data.subjects);
     if(subjEntries.length){
       html+='<table style="width:100%;border-collapse:collapse;font-size:.82rem;margin-bottom:8px">';
-      html+='<thead><tr style="background:#D4F3EF"><th style="text-align:right;padding:6px 8px">מקצוע</th><th style="text-align:center;padding:6px">כיתה</th><th style="text-align:center;padding:6px">שעות</th></tr></thead><tbody>';
+      html+='<thead><tr style="background:#D4F3EF"><th style="text-align:right;padding:6px 8px">מקצוע</th><th style="text-align:center;padding:6px">כיתה</th><th style="text-align:center;padding:6px">שעות</th><th style="text-align:center;padding:6px">גמול בגרות</th></tr></thead><tbody>';
       subjEntries.forEach(([subj,assignments])=>{
-        assignments.forEach(a=>{
+        const subjBonus=bonusList.find(b=>b.subject===subj);
+        assignments.forEach((a,idx)=>{
           html+='<tr><td style="padding:4px 8px;border-bottom:1px solid var(--border)">'+esc(subj)+'</td>';
           html+='<td style="text-align:center;padding:4px;border-bottom:1px solid var(--border)">'+esc(a.cls)+'</td>';
-          html+='<td style="text-align:center;padding:4px;border-bottom:1px solid var(--border);font-weight:700">'+a.hours+'</td></tr>';
+          html+='<td style="text-align:center;padding:4px;border-bottom:1px solid var(--border);font-weight:700">'+a.hours+'</td>';
+          html+='<td style="text-align:center;padding:4px;border-bottom:1px solid var(--border);color:var(--muted)">'+(idx===0&&subjBonus?subjBonus.bonus:'')+'</td></tr>';
         });
       });
-      html+='<tr style="background:var(--bg);font-weight:700"><td style="padding:6px 8px">סה"כ פרונטלי</td><td></td><td style="text-align:center;padding:6px">'+data.frontal+'</td></tr>';
+      // Totals row
+      html+='<tr style="background:var(--bg);font-weight:700"><td style="padding:6px 8px">סה"כ פרונטלי</td><td></td><td style="text-align:center;padding:6px">'+data.frontal+'</td><td style="text-align:center;padding:6px;color:var(--primary-dark)">'+(totalBonus||'')+'</td></tr>';
       html+='</tbody></table>';
     }else{
       html+='<div style="padding:8px;color:var(--muted);font-size:.85rem">אין שיבוצים עדיין</div>';
     }
 
-    // Position calculation
-    if(oz&&data.frontal>0){
+    // Role + bonus summary
+    if(meta.role||eduBonus||totalNonFrontal){
+      html+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:.82rem">';
+      if(meta.role)html+='<span style="padding:3px 10px;border-radius:8px;background:#EDE9FE;color:#6D28D9">'+esc(meta.role)+' ('+roleH+' ש"ש)</span>';
+      if(eduBonus)html+='<span style="padding:3px 10px;border-radius:8px;background:var(--success-bg);color:var(--success)">גמול חינוך: '+eduBonus+'</span>';
+      if(totalBonus)html+='<span style="padding:3px 10px;border-radius:8px;background:var(--warn-bg);color:var(--warn)">גמולי בגרות: '+totalBonus+'</span>';
+      html+='</div>';
+    }
+
+    // Position calculation grid
+    if(data.frontal>0){
       html+='<div class="form-grid" style="margin-top:6px">';
-      html+='<div class="form-field"><div class="ff-label">ש"ש פרונטלי</div><div class="ff-value">'+data.frontal+' / '+maxFrontal+'</div></div>';
-      html+='<div class="form-field"><div class="ff-label">אחוז משרה</div><div class="ff-value" style="color:var(--primary-dark);font-size:1.1rem">'+oz[4]+'%</div></div>';
-      html+='<div class="form-field"><div class="ff-label">שעות פרטניות</div><div class="ff-value">'+oz[1]+'</div></div>';
-      html+='<div class="form-field"><div class="ff-label">שעות תומכות הוראה</div><div class="ff-value">'+oz[2]+'</div></div>';
-      html+='<div class="form-field"><div class="ff-label">סה"כ נוכחות שבועית</div><div class="ff-value">'+oz[3]+'</div></div>';
+      html+='<div class="form-field"><div class="ff-label">ש"ש פרונטלי</div><div class="ff-value">'+data.frontal+'</div></div>';
+      if(totalNonFrontal)html+='<div class="form-field"><div class="ff-label">שעות נוספות (גמולים+תפקיד)</div><div class="ff-value">'+totalNonFrontal+'</div></div>';
+      html+='<div class="form-field"><div class="ff-label" style="font-weight:700">סה"כ שעות</div><div class="ff-value" style="font-weight:800;font-size:1.1rem">'+grandTotal+'</div></div>';
+      if(oz){
+        html+='<div class="form-field"><div class="ff-label">אחוז משרה (עוז לתמורה)</div><div class="ff-value" style="color:var(--primary-dark);font-size:1.1rem">'+oz[4]+'%</div></div>';
+        html+='<div class="form-field"><div class="ff-label">נוכחות שבועית</div><div class="ff-value">'+oz[3]+'</div></div>';
+      }
       const missing=maxFrontal-data.frontal;
-      if(missing>0)html+='<div class="form-field" style="background:var(--warn-bg)"><div class="ff-label">חסר ש"ש</div><div class="ff-value" style="color:var(--warn)">'+missing+'</div></div>';
+      if(missing>0)html+='<div class="form-field" style="background:var(--warn-bg)"><div class="ff-label">שעות פרונטליות חסרות</div><div class="ff-value" style="color:var(--warn)">'+missing+'</div></div>';
+      if(missing<0)html+='<div class="form-field" style="background:var(--danger-bg)"><div class="ff-label">עודף שעות!</div><div class="ff-value" style="color:var(--danger)">'+Math.abs(missing)+'</div></div>';
       html+='</div>';
     }
     html+='</div>';
@@ -1295,19 +1285,26 @@ function renderTeacherSummaryTable(tMap){
   if(tRows.length){
     tRows.forEach(([t,v])=>{
       const age=getTeacherAge(t);
+      const meta=TEACHER_META[t]||{};
       const oz=getOzRow(v.frontal,age);
       const maxF=age?(age>=55?21:age>=50?23:25):25;
       const barW=Math.min(100,Math.round(v.frontal/maxF*100));
       const barColor=barW>=100?'var(--success)':barW>=70?'var(--primary)':'var(--accent)';
-      tbody+='<tr><td>'+esc(t)+'</td><td style="text-align:center;font-weight:700">'+v.frontal+'</td>';
+      const {totalBonus}=getTeacherBonus(t);
+      const extra=(meta.roleH||0)+(meta.eduBonus||0)+totalBonus;
+      const grand=v.frontal+extra;
+      const missing=maxF-v.frontal;
+      tbody+='<tr><td>'+esc(t)+(meta.scope?'<div style="font-size:.7rem;color:var(--muted)">משרה '+meta.scope+'</div>':'')+'</td>';
+      tbody+='<td style="text-align:center;font-weight:700">'+v.frontal+(extra?'<div style="font-size:.7rem;font-weight:400;color:var(--muted)">+'+extra+' = '+grand+'</div>':'')+'</td>';
       tbody+='<td style="text-align:center"><div class="pos-bar-wrap"><div class="pos-bar" style="width:'+barW+'%;background:'+barColor+'"></div></div>'+oz[4]+'%</td>';
-      tbody+='<td style="text-align:center;font-size:.8rem">'+v.classes.join(', ')+'</td></tr>';
+      tbody+='<td style="text-align:center;font-size:.8rem">'+v.classes.join(', ')+'</td>';
+      tbody+='<td style="text-align:center;font-weight:700;color:'+(missing>0?'var(--warn)':'var(--success)')+'">'+missing+'</td></tr>';
     });
   }else{
-    tbody='<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--muted)">אין שיבוצים עדיין</td></tr>';
+    tbody='<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--muted)">אין שיבוצים עדיין</td></tr>';
   }
   document.getElementById('teacherSummary').innerHTML=
-    '<thead><tr><th>מורה</th><th>ש"ש</th><th>משרה</th><th>כיתות</th></tr></thead><tbody>'+tbody+'</tbody>';
+    '<thead><tr><th>מורה</th><th>ש"ש</th><th>משרה</th><th>כיתות</th><th>חסר</th></tr></thead><tbody>'+tbody+'</tbody>';
 }
 
 function updateClassRow2(cls,idx,field,val){
