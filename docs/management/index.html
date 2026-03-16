@@ -757,7 +757,7 @@ const CLASS_LIST=['ט1','י1','י2','י3','יא1','יא2','יא3','יב1','יב2
 const GRADE_CLASSES={'ט':['ט1'],'י':['י1','י2','י3'],'יא':['יא1','יא2','יא3'],'יב':['יב1','יב2','יב3']};
 const GRADE_LIST=['ט','י','יא','יב'];
 const DEFAULT_SUBJECTS=['עיצוב שיער','מחשבים','אוטוטרוניקה','מתמטיקה','אנגלית','הבעה, הבנה ולשון','אזרחות','היסטוריה','תנ"ך','ספרות','פרט, קבוצה וחברה','הכנה לעולם התעסוקה','ספורט'];
-const TEACHER_LIST=['אופירה מלכה','אליאל קוסקאס','אפרת בר אשר','בת שבע אדלר','גיא נתנאל','ויקי קלדרון','חווה','יואב רוט','יעקב גרונספלד','ליאת בנג\'ו','מלי נמיר','מנו דהאן','מריאן','משה צברי','נעמה קוסטן','פרלה שאזו','רעיה יצחקי','שי בגלר'];
+const TEACHER_LIST=['אופירה מלכה','אליאל קוסקאס','אפרת בר אשר','אושר אהרוני','בת שבע אדלר','גיא נתנאל','ויקי קלדרון','חווה','יהודית בן גיגי','יואב רוט','יעל טננבאום','יעקב גרונספלד','ליאת בנג\'ו','מירב בטיטו','מלי נמיר','מנו דהאן','מריאן','משה צברי','נעמה קוסטן','פרלה שאזו','רעיה יצחקי','שי בגלר'];
 // Teacher birthdates (DD/MM/YYYY) for age-based position calculation
 const TEACHER_BIRTH={
   'אופירה מלכה':'12/11/1970','אליאל קוסקאס':'26/03/1997','אפרת בר אשר':'20/07/1992',
@@ -960,6 +960,7 @@ function renderClassHoursEditor(el){
   html+='<span style="font-size:.88rem;color:var(--muted)">הגדירי שעות לכל מקצוע בכל כיתה. מסלול 45 / 55 מצוין בכותרת.</span>';
   html+='<button class="btn btn-primary btn-sm" onclick="fillFromTracks()">📋 מלא ממסלולים</button>';
   html+='<button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger)" onclick="resetAndFillFromTracks()">🔄 אפס ומלא מחדש</button>';
+  html+='<button class="btn btn-sm" style="background:#EDE9FE;color:#6D28D9" onclick="fillTeachersFromFile()">👩‍🏫 שבץ מורים מקובץ</button>';
   html+='</div>';
   html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.8rem;min-width:1100px">';
   // Header
@@ -1048,6 +1049,78 @@ function resetAndFillFromTracks(){
       if(h!==undefined&&h>0)newSched.push({subject:subj,hours:String(h),teacher:''});
     });
     classSchedule[cls]=newSched;
+  });
+  localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));
+  renderCurriculum();
+}
+
+// Teacher assignments from משרות מורים תשפז.xlsx
+// Maps: teacher → subject (mapped to track subject) → grades
+const TEACHER_ASSIGN=[
+  // עברית/לשון → הבעה, הבנה ולשון
+  {t:'אופירה מלכה',s:'הבעה, הבנה ולשון',g:['ט','יא','יב']},
+  {t:'אפרת בר אשר',s:'הבעה, הבנה ולשון',g:['י','יא']},
+  // מתמטיקה
+  {t:'נעמה קוסטן',s:'מתמטיקה',g:['ט','י','יא','יב']},
+  {t:'ויקי קלדרון',s:'מתמטיקה',g:['יא','יב']},
+  // אנגלית
+  {t:'בת שבע אדלר',s:'אנגלית',g:['יא','יב']},
+  // אזרחות
+  {t:'משה צברי',s:'אזרחות',g:['ט']},
+  {t:'אליאל קוסקאס',s:'אזרחות',g:['י','יב']},
+  // היסטוריה
+  {t:'משה צברי',s:'היסטוריה',g:['ט']},
+  {t:'גיא נתנאל',s:'היסטוריה',g:['יא']},
+  {t:'יעקב גרונספלד',s:'היסטוריה',g:['יא','יב']},
+  // תנ"ך
+  {t:'משה צברי',s:'תנ"ך',g:['ט']},
+  {t:'אליאל קוסקאס',s:'תנ"ך',g:['יא']},
+  {t:'יואב רוט',s:'תנ"ך',g:['יא']},
+  // ספרות
+  {t:'ויקי קלדרון',s:'ספרות',g:['יב']},
+  // ספורט
+  {t:'גיא נתנאל',s:'ספורט',g:['ט','י','יא','יב']},
+];
+// Specific class overrides for teachers sharing a subject in same grade
+const TEACHER_CLASS_OVERRIDE={
+  // יא הבעה: אופירה רק ביא2 (מחנכת שם), אפרת ביא1+יא3
+  'יא2|הבעה, הבנה ולשון':'אופירה מלכה',
+  'יא1|הבעה, הבנה ולשון':'אפרת בר אשר',
+  'יא3|הבעה, הבנה ולשון':'אפרת בר אשר',
+  // יא היסטוריה: גיא ביא1+יא3, יעקב ביא2
+  'יא1|היסטוריה':'גיא נתנאל',
+  'יא2|היסטוריה':'יעקב גרונספלד',
+  'יא3|היסטוריה':'גיא נתנאל',
+  // יא תנ"ך: split between אליאל and יואב
+  'יא1|תנ"ך':'אליאל קוסקאס',
+  'יא2|תנ"ך':'יואב רוט',
+  'יא3|תנ"ך':'אליאל קוסקאס',
+  // יא מתמטיקה: נעמה ביא2, ויקי ביא1+יא3
+  'יא1|מתמטיקה':'ויקי קלדרון',
+  'יא2|מתמטיקה':'נעמה קוסטן',
+  'יא3|מתמטיקה':'ויקי קלדרון',
+  // יב מתמטיקה: נעמה ביב2, ויקי ביב1+יב3
+  'יב1|מתמטיקה':'ויקי קלדרון',
+  'יב2|מתמטיקה':'נעמה קוסטן',
+  'יב3|מתמטיקה':'ויקי קלדרון',
+};
+
+function fillTeachersFromFile(){
+  // First assign by grade (all classes in grade get the teacher)
+  TEACHER_ASSIGN.forEach(({t,s,g})=>{
+    g.forEach(grade=>{
+      const classes=GRADE_CLASSES[grade]||[];
+      classes.forEach(cls=>{
+        const row=(classSchedule[cls]||[]).find(r=>r.subject===s);
+        if(row&&!row.teacher)row.teacher=t;
+      });
+    });
+  });
+  // Apply specific overrides
+  Object.entries(TEACHER_CLASS_OVERRIDE).forEach(([key,teacher])=>{
+    const [cls,subj]=key.split('|');
+    const row=(classSchedule[cls]||[]).find(r=>r.subject===subj);
+    if(row)row.teacher=teacher;
   });
   localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));
   renderCurriculum();
