@@ -236,6 +236,89 @@ function doGet(e) {
     }
   }
 
+  // === טעינת משרות ===
+  if (params.action === 'getPositions') {
+    try {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_positions');
+      var positions = [];
+
+      if (sheet) {
+        var data = sheet.getDataRange().getValues();
+        for (var i = 1; i < data.length; i++) {
+          positions.push({
+            id: data[i][0],
+            name: data[i][1],
+            subject: data[i][2],
+            scope: data[i][3],
+            positionType: data[i][4],
+            status: data[i][5],
+            notes: data[i][6],
+            updatedAt: data[i][7] ? data[i][7].toString() : ''
+          });
+        }
+      }
+
+      var result = JSON.stringify({ positions: positions });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + result + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(result)
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      var errResult = JSON.stringify({ error: err.toString() });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + errResult + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errResult)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // === טעינת אירועים ===
+  if (params.action === 'getCalendarEvents') {
+    try {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_calendarEvents');
+      var events = [];
+
+      if (sheet) {
+        var data = sheet.getDataRange().getValues();
+        for (var i = 1; i < data.length; i++) {
+          events.push({
+            id: data[i][0],
+            date: data[i][1],
+            endDate: data[i][2],
+            type: data[i][3],
+            title: data[i][4],
+            description: data[i][5],
+            grade: data[i][6],
+            createdBy: data[i][7],
+            updatedAt: data[i][8] ? data[i][8].toString() : ''
+          });
+        }
+      }
+
+      var result = JSON.stringify({ events: events });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + result + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(result)
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      var errResult = JSON.stringify({ error: err.toString() });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + errResult + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errResult)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // === דשבורד מורים ===
   return HtmlService.createHtmlOutput(getDashboardHTML())
     .setTitle('דשבורד ציונים – אורט בית הערבה')
@@ -392,6 +475,106 @@ function doPost(e) {
         data.date || new Date().toLocaleString('he-IL'),
         'ממתין'
       ]);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === שמירת משרה ===
+    if (data.action === 'savePosition') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_positions');
+      if (!sheet) {
+        sheet = ss.insertSheet('_positions');
+        sheet.appendRow(['ID', 'שם', 'מקצוע', 'היקף', 'סוג תקן', 'סטטוס', 'הערות', 'עדכון']);
+        sheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#D4F3EF');
+      }
+      var dataRange = sheet.getDataRange().getValues();
+      var found = false;
+      for (var i = 1; i < dataRange.length; i++) {
+        if (dataRange[i][0] === data.id) {
+          sheet.getRange(i + 1, 1, 1, 8).setValues([[
+            data.id, data.name || '', data.subject || '', data.scope || '',
+            data.positionType || '', data.status || '', data.notes || '',
+            new Date().toLocaleString('he-IL')
+          ]]);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        sheet.appendRow([
+          data.id, data.name || '', data.subject || '', data.scope || '',
+          data.positionType || '', data.status || '', data.notes || '',
+          new Date().toLocaleString('he-IL')
+        ]);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', id: data.id }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === מחיקת משרה ===
+    if (data.action === 'deletePosition') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_positions');
+      if (sheet) {
+        var dataRange = sheet.getDataRange().getValues();
+        for (var i = 1; i < dataRange.length; i++) {
+          if (dataRange[i][0] === data.id) {
+            sheet.deleteRow(i + 1);
+            break;
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === שמירת אירוע ===
+    if (data.action === 'saveCalendarEvent') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_calendarEvents');
+      if (!sheet) {
+        sheet = ss.insertSheet('_calendarEvents');
+        sheet.appendRow(['ID', 'תאריך', 'תאריך סיום', 'סוג', 'כותרת', 'תיאור', 'שכבה', 'נוצר ע"י', 'עדכון']);
+        sheet.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#D4F3EF');
+      }
+      var dataRange = sheet.getDataRange().getValues();
+      var found = false;
+      for (var i = 1; i < dataRange.length; i++) {
+        if (dataRange[i][0] === data.id) {
+          sheet.getRange(i + 1, 1, 1, 9).setValues([[
+            data.id, data.date || '', data.endDate || '', data.type || '',
+            data.title || '', data.description || '', data.grade || '',
+            data.createdBy || '', new Date().toLocaleString('he-IL')
+          ]]);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        sheet.appendRow([
+          data.id, data.date || '', data.endDate || '', data.type || '',
+          data.title || '', data.description || '', data.grade || '',
+          data.createdBy || '', new Date().toLocaleString('he-IL')
+        ]);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', id: data.id }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === מחיקת אירוע ===
+    if (data.action === 'deleteCalendarEvent') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_calendarEvents');
+      if (sheet) {
+        var dataRange = sheet.getDataRange().getValues();
+        for (var i = 1; i < dataRange.length; i++) {
+          if (dataRange[i][0] === data.id) {
+            sheet.deleteRow(i + 1);
+            break;
+          }
+        }
+      }
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
