@@ -362,6 +362,52 @@ function doGet(e) {
     }
   }
 
+  // === טעינת פריסת שעות (תכנון פדגוגי) ===
+  if (params.action === 'getCurriculum') {
+    try {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_curriculum');
+      var curriculum = [];
+
+      if (sheet) {
+        var data = sheet.getDataRange().getValues();
+        for (var i = 1; i < data.length; i++) {
+          curriculum.push({
+            id: data[i][0],
+            teacher: data[i][1],
+            scope: data[i][2] ? data[i][2].toString() : '',
+            subject: data[i][3],
+            g9: data[i][4] ? data[i][4].toString() : '',
+            g10: data[i][5] ? data[i][5].toString() : '',
+            g11: data[i][6] ? data[i][6].toString() : '',
+            g12: data[i][7] ? data[i][7].toString() : '',
+            role: data[i][8],
+            roleHours: data[i][9] ? data[i][9].toString() : '',
+            eduBonus: data[i][10] ? data[i][10].toString() : '',
+            remaining: data[i][11] ? data[i][11].toString() : '',
+            updatedAt: data[i][12] ? data[i][12].toString() : ''
+          });
+        }
+      }
+
+      var result = JSON.stringify({ curriculum: curriculum });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + result + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(result)
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      var errResult = JSON.stringify({ error: err.toString() });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + errResult + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errResult)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // === דשבורד מורים ===
   return HtmlService.createHtmlOutput(getDashboardHTML())
     .setTitle('דשבורד ציונים – אורט בית הערבה')
@@ -609,6 +655,58 @@ function doPost(e) {
     if (data.action === 'deleteCalendarEvent') {
       var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       var sheet = ss.getSheetByName('_calendarEvents');
+      if (sheet) {
+        var dataRange = sheet.getDataRange().getValues();
+        for (var i = 1; i < dataRange.length; i++) {
+          if (dataRange[i][0] === data.id) {
+            sheet.deleteRow(i + 1);
+            break;
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === שמירת שורת פריסה (תכנון פדגוגי) ===
+    if (data.action === 'saveCurriculum') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_curriculum');
+      if (!sheet) {
+        sheet = ss.insertSheet('_curriculum');
+        sheet.appendRow(['ID', 'מורה', 'משרה%', 'מקצוע', 'שעות ט', 'שעות י', 'שעות יא', 'שעות יב', 'תפקיד', 'שעות תפקיד', 'גמול חינוך', 'נשאר שעות', 'עודכן']);
+        sheet.getRange(1, 1, 1, 13).setFontWeight('bold').setBackground('#D4F3EF');
+      }
+      var dataRange = sheet.getDataRange().getValues();
+      var found = false;
+      for (var i = 1; i < dataRange.length; i++) {
+        if (dataRange[i][0] === data.id) {
+          sheet.getRange(i + 1, 1, 1, 13).setValues([[
+            data.id, data.teacher || '', data.scope || '', data.subject || '',
+            data.g9 || '', data.g10 || '', data.g11 || '', data.g12 || '',
+            data.role || '', data.roleHours || '', data.eduBonus || '', data.remaining || '',
+            new Date().toLocaleString('he-IL')
+          ]]);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        sheet.appendRow([
+          data.id, data.teacher || '', data.scope || '', data.subject || '',
+          data.g9 || '', data.g10 || '', data.g11 || '', data.g12 || '',
+          data.role || '', data.roleHours || '', data.eduBonus || '', data.remaining || '',
+          new Date().toLocaleString('he-IL')
+        ]);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === מחיקת שורת פריסה ===
+    if (data.action === 'deleteCurriculumRow') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_curriculum');
       if (sheet) {
         var dataRange = sheet.getDataRange().getValues();
         for (var i = 1; i < dataRange.length; i++) {

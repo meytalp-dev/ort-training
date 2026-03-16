@@ -154,6 +154,27 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 .key-screen{max-width:400px;margin:80px auto;text-align:center}
 .key-screen input{width:100%;padding:12px;border:2px solid var(--border);border-radius:12px;font-family:Heebo;font-size:1rem;text-align:center;direction:ltr;margin:16px 0}
 .key-screen input:focus{outline:none;border-color:var(--primary)}
+
+/* ===== Curriculum ===== */
+.cur-tbl{width:100%;border-collapse:collapse;font-size:.8rem}
+.cur-tbl th{background:#D4F3EF;color:var(--primary-dark);padding:8px 6px;text-align:right;font-weight:600;font-size:.75rem;white-space:nowrap}
+.cur-tbl td{padding:7px 6px;border-bottom:1px solid var(--border)}
+.cur-tbl tr:hover td{background:#f8fffe}
+.cur-tbl tr.empty-row td{background:var(--danger-bg)}
+.cur-tbl tr.remaining-row td{background:var(--warn-bg)}
+.cur-tbl .hours-cell{text-align:center;font-weight:600;min-width:40px}
+.cur-tbl .hours-cell:empty::after{content:'—';color:var(--border);font-weight:400}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+@media(max-width:900px){.summary-grid{grid-template-columns:1fr}}
+.summary-tbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.summary-tbl th{background:#E9C46A33;color:var(--warn);padding:8px;text-align:right;font-weight:600}
+.summary-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:center}
+.summary-tbl td:first-child{text-align:right;font-weight:600}
+.homeroom-cards{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.homeroom-card{background:var(--bg);border-radius:10px;padding:10px 16px;font-size:.85rem}
+.homeroom-card strong{color:var(--primary-dark)}
+.stats-row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.cur-wide{overflow-x:auto}
 </style>
 </head>
 <body>
@@ -165,6 +186,7 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
     <button class="active" onclick="showPage('dashboard')">דשבורד</button>
     <button onclick="showPage('positions')">תכנון משרות</button>
     <button onclick="showPage('calendar')">תכנון שנתי</button>
+    <button onclick="showPage('curriculum')">תכנון פדגוגי</button>
   </div>
 </div>
 
@@ -278,6 +300,72 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
   </div>
 </div>
 
+<!-- CURRICULUM -->
+<div id="page-curriculum" style="display:none">
+  <div class="section-header">
+    <div class="section-icon">📋</div>
+    <div><h2>תכנון פדגוגי</h2><p>פריסת שעות מורים לפי שכבה – עם סוכן AI שמסייע</p></div>
+  </div>
+  <div id="keyGateCurriculum"></div>
+  <div id="curriculumContent" style="display:none">
+    <!-- Stats -->
+    <div class="stats-row-4" id="curStats"></div>
+    <!-- Homeroom -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header"><h3>מחנכים לשנה הבאה</h3></div>
+      <div class="card-body"><div id="homeroomCards"></div></div>
+    </div>
+    <!-- Gaps -->
+    <div id="curGaps"></div>
+    <div class="split">
+      <div>
+        <!-- Main Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3>פריסת שעות</h3>
+            <button class="btn btn-primary btn-sm" onclick="startAddCur()">+ הוספת שורה</button>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div id="curForm" style="display:none;padding:12px"></div>
+            <div class="cur-wide">
+              <table class="cur-tbl"><thead><tr>
+                <th>מורה</th><th>משרה%</th><th>מקצוע</th><th>ט</th><th>י</th><th>יא</th><th>יב</th><th>תפקיד</th><th>שעות תפקיד</th><th>גמול</th><th>נשאר</th><th style="width:60px"></th>
+              </tr></thead><tbody id="curBody"></tbody></table>
+            </div>
+          </div>
+        </div>
+        <!-- Summaries -->
+        <div class="summary-grid">
+          <div class="card">
+            <div class="card-header"><h3>סיכום לפי מקצוע</h3></div>
+            <div class="card-body" style="padding:0"><table class="summary-tbl" id="subjectSummary"></table></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>סיכום לפי שכבה</h3></div>
+            <div class="card-body" style="padding:0"><table class="summary-tbl" id="gradeSummary"></table></div>
+          </div>
+        </div>
+      </div>
+      <!-- AI Chat -->
+      <div class="card" style="display:flex;flex-direction:column">
+        <div class="card-header"><h3>🤖 סוכן AI – תכנון פדגוגי</h3></div>
+        <div class="chat-area" id="curChatArea">
+          <div class="chat-messages" id="curChatMsgs">
+            <div class="chat-empty">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+              שאלו אותי על פריסת שעות, שיבוץ מורים, פערים...
+            </div>
+          </div>
+          <div class="chat-input">
+            <textarea id="curChatIn" placeholder="כתבו הודעה..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat('curriculum')}"></textarea>
+            <button class="chat-send" onclick="sendChat('curriculum')">➤</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /container -->
 
 <script>
@@ -290,14 +378,15 @@ const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/${GEMI
 let apiKey=localStorage.getItem('mgmt-gemini-key')||'';
 let positions=JSON.parse(localStorage.getItem('mgmt-positions')||'[]');
 let calEvents=JSON.parse(localStorage.getItem('mgmt-events')||'[]');
-let editingPos=null, editingEvt=null;
+let editingPos=null, editingEvt=null, editingCur=null;
 let calYear,calMonth,selectedDate=null;
-let chatHistory={positions:[],calendar:[]};
+let chatHistory={positions:[],calendar:[],curriculum:[]};
 
 // ===================== AGENTS CONFIG =====================
 const agents=[
   {id:'positions',title:'תכנון משרות',desc:'ניהול משרות, תקנים, פערים וגיוס מורים',icon:'👥',ready:true},
   {id:'calendar',title:'תכנון שנתי',desc:'לוח שנה, אירועים ומערכת שעות',icon:'📅',ready:true},
+  {id:'curriculum',title:'תכנון פדגוגי',desc:'פריסת שעות מורים לפי שכבה וניתוח צרכים',icon:'📋',ready:true},
   {id:'dimensions',title:'חמשת הממדים',desc:'מעקב אחרי יישום הממדים בכל שכבה',icon:'⭐',ready:false},
   {id:'skills',title:'מיומנויות',desc:'מעקב מיומנויות תלמידים ודוחות',icon:'🧠',ready:false},
   {id:'handbook',title:'ספר בית הספר',desc:'נהלים, כללים ומענה לשאלות',icon:'📖',ready:false},
@@ -315,9 +404,11 @@ function showPage(id){
   document.querySelectorAll('[id^="page-"]').forEach(p=>p.style.display='none');
   document.getElementById('page-'+id).style.display='';
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.nav button').forEach(b=>{if(b.textContent.includes(id==='dashboard'?'דשבורד':id==='positions'?'משרות':'שנתי'))b.classList.add('active')});
+  const labels={dashboard:'דשבורד',positions:'משרות',calendar:'שנתי',curriculum:'פדגוגי'};
+  document.querySelectorAll('.nav button').forEach(b=>{if(b.textContent.includes(labels[id]||''))b.classList.add('active')});
   if(id==='positions')initPositions();
   if(id==='calendar')initCalendar();
+  if(id==='curriculum')initCurriculum();
 }
 
 // ===================== DASHBOARD =====================
@@ -352,19 +443,34 @@ function saveKey(page){
   if(!v)return;
   apiKey=v;localStorage.setItem('mgmt-gemini-key',v);
   if(page==='positions')initPositions();
-  else initCalendar();
+  else if(page==='calendar')initCalendar();
+  else if(page==='curriculum')initCurriculum();
 }
 
 // ===================== POSITIONS =====================
 const SUBJECTS=["מתמטיקה","אנגלית","עברית","היסטוריה","אזרחות",'תנ"ך',"מדעים","תספורת ועיצוב שיער","קוסמטיקה","חשמל","מחשבים","חינוך גופני","אמנות","ייעוץ","הנהלה","אחר"];
 const POS_TYPES=["תקן","חוזה","ממלא מקום","שעתי"];
-const POS_STATUS=["פעיל","מבוקש","פנוי"];
+const POS_STATUS=["פעיל","מבוקש","פנוי","עוזב"];
 
 function initPositions(){
   if(!checkKey('positions'))return;
   document.getElementById('keyGatePositions').innerHTML='';
   document.getElementById('positionsContent').style.display='';
+  dedupePositions();
   renderPositions();
+}
+
+function dedupePositions(){
+  const seen=new Set();
+  const before=positions.length;
+  positions=positions.filter(p=>{
+    const key=`${p.name}|${p.subject}|${p.scope}`;
+    if(seen.has(key))return false;
+    seen.add(key);return true;
+  });
+  if(positions.length<before){
+    localStorage.setItem('mgmt-positions',JSON.stringify(positions));
+  }
 }
 
 function renderPositions(){
@@ -382,7 +488,7 @@ function renderPositions(){
       <div><h4>פערים שדורשים טיפול</h4><ul>${gaps.map(g=>`<li>${g.subject} – ${g.scope} (${g.status})</li>`).join('')}</ul></div>
     </div>`:'';
   // Table
-  const stCls={פעיל:'st-active',מבוקש:'st-wanted',פנוי:'st-open'};
+  const stCls={פעיל:'st-active',מבוקש:'st-wanted',פנוי:'st-open',עוזב:'st-open'};
   document.getElementById('posBody').innerHTML=positions.length?positions.map(p=>`
     <tr>
       <td>${esc(p.name||'—')}</td><td>${esc(p.subject)}</td><td>${esc(p.scope)}</td><td>${esc(p.positionType)}</td>
@@ -527,14 +633,22 @@ const PROMPTS={
 עזור למנהלת בנושאים: תכנון אירועים, מערכת שעות, לוח שנה בית ספרי.
 מגמות: תספורת ועיצוב שיער, קוסמטיקה, חשמל, מחשבים. שכבות: ט-יב.
 שנת לימודים: ספטמבר–יוני. חופשות: סוכות, חנוכה, פסח, קיץ.
+ענה בעברית, בקצרה ובבהירות.`,
+  curriculum:`אתה סוכן AI לתכנון פדגוגי בבית ספר אורט בית הערבה.
+עזור למנהלת בנושאים: פריסת שעות מורים, שיבוץ, ניתוח עומס, זיהוי פערים, המלצות לגיוס, תרחישי "מה אם".
+מבנה: שכבה ט (כיתה 1), שכבות י-יא-יב (3 כיתות כל אחת). סה"כ 10 כיתות.
+מגמות: תספורת ועיצוב שיער, קוסמטיקה, חשמל, מחשבים.
+מחנכים יא: רעיה יצחקי, אופירה מלכה, פרלה שאזו. מחנכים יב: יעקב גרונספלד, נעמה קוסטן, גיא נתנאל.
 ענה בעברית, בקצרה ובבהירות.`
 };
 
 async function sendChat(agent){
-  const input=document.getElementById(agent==='positions'?'posChatIn':'calChatIn');
+  const inputIds={positions:'posChatIn',calendar:'calChatIn',curriculum:'curChatIn'};
+  const msgsIds={positions:'posChatMsgs',calendar:'calChatMsgs',curriculum:'curChatMsgs'};
+  const input=document.getElementById(inputIds[agent]);
   const text=input.value.trim();if(!text)return;
   input.value='';
-  const msgsEl=document.getElementById(agent==='positions'?'posChatMsgs':'calChatMsgs');
+  const msgsEl=document.getElementById(msgsIds[agent]);
   // Clear empty state
   const empty=msgsEl.querySelector('.chat-empty');if(empty)empty.remove();
   // User msg
@@ -547,8 +661,10 @@ async function sendChat(agent){
   let context='';
   if(agent==='positions'){
     context=positions.length?`טבלת משרות (${positions.length}):\nשם | מקצוע | היקף | סוג | סטטוס\n`+positions.map(p=>`${p.name||'(ריק)'} | ${p.subject} | ${p.scope} | ${p.positionType} | ${p.status}`).join('\n'):'אין משרות בטבלה.';
-  }else{
+  }else if(agent==='calendar'){
     context=calEvents.length?`אירועים (${calEvents.length}):\nתאריך | סוג | כותרת | שכבה\n`+calEvents.map(e=>`${e.date} | ${e.type} | ${e.title} | ${e.grade}`).join('\n'):'אין אירועים בלוח השנה.';
+  }else if(agent==='curriculum'){
+    context=curriculum.length?`פריסת שעות (${curriculum.length} שורות):\nמורה | משרה | מקצוע | ט | י | יא | יב | תפקיד | שעות תפקיד | גמול | נשאר\n`+curriculum.map(c=>`${c.teacher||'—'} | ${c.scope||'—'} | ${c.subject||'—'} | ${c.g9||'—'} | ${c.g10||'—'} | ${c.g11||'—'} | ${c.g12||'—'} | ${c.role||'—'} | ${c.roleHours||'—'} | ${c.eduBonus||'—'} | ${c.remaining||'—'}`).join('\n'):'אין נתוני פריסה.';
   }
 
   const fullPrompt=`${PROMPTS[agent]}\n\nנתונים עדכניים:\n${context}\n\nשאלת המשתמש:\n${text}`;
@@ -577,6 +693,182 @@ async function sendChat(agent){
   msgsEl.scrollTop=msgsEl.scrollHeight;
 }
 
+// ===================== CURRICULUM =====================
+const HOMEROOMS=[
+  {grade:'יא',cls:'יא1',teacher:'רעיה יצחקי'},{grade:'יא',cls:'יא2',teacher:'אופירה מלכה'},{grade:'יא',cls:'יא3',teacher:'פרלה שאזו'},
+  {grade:'יב',cls:'יב1',teacher:'יעקב גרונספלד'},{grade:'יב',cls:'יב2',teacher:'נעמה קוסטן'},{grade:'יב',cls:'יב3',teacher:'גיא נתנאל'}
+];
+const GRADE_CLASSES={ט:1,י:3,יא:3,יב:3};
+const INITIAL_CURRICULUM=[
+  {id:'c1',teacher:'אופירה מלכה',scope:'',subject:'עברית',g9:'6',g10:'',g11:'2',g12:'3',role:'ריכוז שכבה',roleHours:'2',eduBonus:'3',remaining:''},
+  {id:'c2',teacher:'אליאל קוסקאס',scope:'25',subject:'אזרחות',g9:'',g10:'6',g11:'',g12:'7.5',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c3',teacher:'אליאל קוסקאס',scope:'',subject:'תנ"ך',g9:'',g10:'',g11:'5.5',g12:'',role:'',roleHours:'',eduBonus:'3',remaining:'3'},
+  {id:'c4',teacher:'אפרת בר אשר',scope:'',subject:'לשון',g9:'',g10:'10.5',g11:'11',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c5',teacher:'בת שבע אדלר',scope:'8',subject:'אנגלית 5 יח"ל',g9:'',g10:'',g11:'5.5',g12:'5.5',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c6',teacher:'גיא נתנאל',scope:'25',subject:'חינוך גופני',g9:'2',g10:'3',g11:'3',g12:'3',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c7',teacher:'גיא נתנאל',scope:'',subject:'חינוך פיננסי',g9:'',g10:'6',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c8',teacher:'גיא נתנאל',scope:'',subject:'היסטוריה',g9:'',g10:'',g11:'5.5',g12:'',role:'',roleHours:'',eduBonus:'3',remaining:''},
+  {id:'c9',teacher:'ויקי קלדרון',scope:'20',subject:'ספרות',g9:'',g10:'',g11:'',g12:'10',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c10',teacher:'ויקי קלדרון',scope:'',subject:'מתמטיקה',g9:'',g10:'',g11:'3.5',g12:'4',role:'',roleHours:'',eduBonus:'',remaining:'2.5'},
+  {id:'c11',teacher:'חווה?',scope:'',subject:'',g9:'',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c12',teacher:'יואב רוט',scope:'',subject:'מטלת ביצוע',g9:'',g10:'',g11:'',g12:'5',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c13',teacher:'יואב רוט',scope:'',subject:'מטו"ל',g9:'',g10:'7',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c14',teacher:'יואב רוט',scope:'25',subject:'תנ"ך',g9:'',g10:'',g11:'5.5',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c15',teacher:'יעקב גרונספלד',scope:'25',subject:'היסטוריה',g9:'',g10:'',g11:'5.5',g12:'2',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c16',teacher:'ליאת בנג\'ו',scope:'20',subject:'',g9:'',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c17',teacher:'מלי נמיר',scope:'',subject:'',g9:'',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c18',teacher:'מנו דהאן',scope:'4',subject:'חינוך תעבורתי',g9:'',g10:'8',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c19',teacher:'מריאן',scope:'',subject:'',g9:'',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c20',teacher:'משה צברי',scope:'',subject:'תנ"ך',g9:'4',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c21',teacher:'משה צברי',scope:'',subject:'אזרחות',g9:'4',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c22',teacher:'משה צברי',scope:'25',subject:'היסטוריה',g9:'4',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c23',teacher:'נעמה קוסטן',scope:'25',subject:'מתמטיקה',g9:'4',g10:'9',g11:'3',g12:'3',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c24',teacher:'פרלה שאזו',scope:'',subject:'עיוני',g9:'',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c25',teacher:'רעיה יצחקי',scope:'',subject:'',g9:'',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''},
+  {id:'c26',teacher:'שי בגלר',scope:'',subject:'',g9:'',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''}
+];
+
+let curriculum=JSON.parse(localStorage.getItem('mgmt-curriculum')||'null')||INITIAL_CURRICULUM.map(c=>({...c}));
+
+function initCurriculum(){
+  if(!checkKey('curriculum'))return;
+  document.getElementById('keyGateCurriculum').innerHTML='';
+  document.getElementById('curriculumContent').style.display='';
+  renderCurriculum();
+}
+
+function renderCurriculum(){
+  // Stats
+  const teachers=new Set(curriculum.map(c=>c.teacher).filter(Boolean));
+  const totalHours=curriculum.reduce((s,c)=>s+num(c.g9)+num(c.g10)+num(c.g11)+num(c.g12)+num(c.roleHours)+num(c.eduBonus),0);
+  const remainHours=curriculum.reduce((s,c)=>s+num(c.remaining),0);
+  const emptyTeachers=curriculum.filter(c=>!c.subject&&!c.g9&&!c.g10&&!c.g11&&!c.g12);
+  document.getElementById('curStats').innerHTML=`
+    <div class="stat-box"><div class="num">${teachers.size}</div><div class="label">מורים</div></div>
+    <div class="stat-box"><div class="num">${totalHours}</div><div class="label">סה"כ שעות</div></div>
+    <div class="stat-box"><div class="num" style="color:var(--warn)">${remainHours}</div><div class="label">שעות פנויות</div></div>
+    <div class="stat-box"><div class="num" style="color:var(--danger)">${emptyTeachers.length}</div><div class="label">ללא שיבוץ</div></div>`;
+
+  // Homerooms
+  document.getElementById('homeroomCards').innerHTML=`<div class="homeroom-cards">`+
+    HOMEROOMS.map(h=>`<div class="homeroom-card"><strong>${h.cls}</strong> – ${h.teacher}</div>`).join('')+
+    `</div>`;
+
+  // Gaps
+  const gaps=[];
+  emptyTeachers.forEach(c=>gaps.push(`${c.teacher} – ללא שיבוץ`));
+  curriculum.filter(c=>num(c.remaining)>0).forEach(c=>gaps.push(`${c.teacher} (${c.subject||'?'}) – ${c.remaining} שעות פנויות`));
+  document.getElementById('curGaps').innerHTML=gaps.length?`
+    <div class="gap-alert">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <div><h4>פערים שדורשים טיפול (${gaps.length})</h4><ul>${gaps.map(g=>`<li>${g}</li>`).join('')}</ul></div>
+    </div>`:'';
+
+  // Main table
+  document.getElementById('curBody').innerHTML=curriculum.map((c,i)=>{
+    const isEmpty=!c.subject&&!c.g9&&!c.g10&&!c.g11&&!c.g12;
+    const hasRemain=num(c.remaining)>0;
+    return `<tr class="${isEmpty?'empty-row':hasRemain?'remaining-row':''}">
+      <td style="font-weight:600">${esc(c.teacher||'—')}</td>
+      <td class="hours-cell">${esc(c.scope)}</td>
+      <td>${esc(c.subject)}</td>
+      <td class="hours-cell">${esc(c.g9)}</td>
+      <td class="hours-cell">${esc(c.g10)}</td>
+      <td class="hours-cell">${esc(c.g11)}</td>
+      <td class="hours-cell">${esc(c.g12)}</td>
+      <td style="font-size:.78rem">${esc(c.role)}</td>
+      <td class="hours-cell">${esc(c.roleHours)}</td>
+      <td class="hours-cell">${esc(c.eduBonus)}</td>
+      <td class="hours-cell">${esc(c.remaining)}</td>
+      <td><div class="actions-cell">
+        <button class="btn btn-ghost btn-sm" onclick="editCur(${i})">✏️</button>
+        <button class="btn btn-ghost btn-sm btn-danger" onclick="delCur(${i})">🗑️</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  // Subject summary
+  const subjectMap={};
+  curriculum.forEach(c=>{
+    if(!c.subject)return;
+    if(!subjectMap[c.subject])subjectMap[c.subject]={g9:0,g10:0,g11:0,g12:0,total:0};
+    const s=subjectMap[c.subject];
+    s.g9+=num(c.g9);s.g10+=num(c.g10);s.g11+=num(c.g11);s.g12+=num(c.g12);
+    s.total+=num(c.g9)+num(c.g10)+num(c.g11)+num(c.g12);
+  });
+  const subjectRows=Object.entries(subjectMap).sort((a,b)=>b[1].total-a[1].total);
+  document.getElementById('subjectSummary').innerHTML=`
+    <thead><tr><th>מקצוע</th><th>ט</th><th>י</th><th>יא</th><th>יב</th><th>סה"כ</th></tr></thead>
+    <tbody>${subjectRows.map(([subj,s])=>`<tr><td>${esc(subj)}</td><td>${s.g9||'—'}</td><td>${s.g10||'—'}</td><td>${s.g11||'—'}</td><td>${s.g12||'—'}</td><td style="font-weight:700">${s.total}</td></tr>`).join('')}
+    <tr style="background:var(--bg);font-weight:700"><td>סה"כ</td><td>${subjectRows.reduce((s,r)=>s+r[1].g9,0)||'—'}</td><td>${subjectRows.reduce((s,r)=>s+r[1].g10,0)||'—'}</td><td>${subjectRows.reduce((s,r)=>s+r[1].g11,0)||'—'}</td><td>${subjectRows.reduce((s,r)=>s+r[1].g12,0)||'—'}</td><td>${subjectRows.reduce((s,r)=>s+r[1].total,0)}</td></tr>
+    </tbody>`;
+
+  // Grade summary
+  const gradeData={ט:{hours:0,classes:1},י:{hours:0,classes:3},יא:{hours:0,classes:3},יב:{hours:0,classes:3}};
+  curriculum.forEach(c=>{gradeData['ט'].hours+=num(c.g9);gradeData['י'].hours+=num(c.g10);gradeData['יא'].hours+=num(c.g11);gradeData['יב'].hours+=num(c.g12)});
+  document.getElementById('gradeSummary').innerHTML=`
+    <thead><tr><th>שכבה</th><th>כיתות</th><th>סה"כ שעות</th><th>ממוצע/כיתה</th></tr></thead>
+    <tbody>${Object.entries(gradeData).map(([g,d])=>`<tr><td>${g}</td><td>${d.classes}</td><td style="font-weight:700">${d.hours}</td><td>${d.classes?Math.round(d.hours/d.classes*10)/10:'—'}</td></tr>`).join('')}</tbody>`;
+
+  localStorage.setItem('mgmt-curriculum',JSON.stringify(curriculum));
+}
+
+function num(v){return parseFloat(v)||0}
+
+function startAddCur(){
+  editingCur={id:'c_'+Date.now(),teacher:'',scope:'',subject:'',g9:'',g10:'',g11:'',g12:'',role:'',roleHours:'',eduBonus:'',remaining:''};
+  showCurForm(-1);
+}
+function editCur(idx){editingCur={...curriculum[idx]};editingCur._idx=idx;showCurForm(idx)}
+function showCurForm(idx){
+  const c=editingCur;
+  document.getElementById('curForm').style.display='';
+  document.getElementById('curForm').innerHTML=`
+    <div class="form-row">
+      <input id="cf_teacher" value="${esc(c.teacher)}" placeholder="שם מורה" style="min-width:120px">
+      <input id="cf_scope" value="${esc(c.scope)}" placeholder="משרה%" style="width:60px">
+      <input id="cf_subject" value="${esc(c.subject)}" placeholder="מקצוע" style="min-width:100px">
+      <input id="cf_g9" value="${esc(c.g9)}" placeholder="ט" style="width:50px">
+      <input id="cf_g10" value="${esc(c.g10)}" placeholder="י" style="width:50px">
+      <input id="cf_g11" value="${esc(c.g11)}" placeholder="יא" style="width:50px">
+      <input id="cf_g12" value="${esc(c.g12)}" placeholder="יב" style="width:50px">
+    </div>
+    <div class="form-row">
+      <input id="cf_role" value="${esc(c.role)}" placeholder="תפקיד">
+      <input id="cf_roleH" value="${esc(c.roleHours)}" placeholder="שעות תפקיד" style="width:80px">
+      <input id="cf_edu" value="${esc(c.eduBonus)}" placeholder="גמול" style="width:60px">
+      <input id="cf_rem" value="${esc(c.remaining)}" placeholder="נשאר" style="width:60px">
+      <button class="btn btn-primary btn-sm" onclick="saveCur()">✓ שמור</button>
+      <button class="btn btn-ghost btn-sm" onclick="cancelCurForm()">✕</button>
+    </div>`;
+}
+function cancelCurForm(){editingCur=null;document.getElementById('curForm').style.display='none';document.getElementById('curForm').innerHTML=''}
+function saveCur(){
+  editingCur.teacher=document.getElementById('cf_teacher').value;
+  editingCur.scope=document.getElementById('cf_scope').value;
+  editingCur.subject=document.getElementById('cf_subject').value;
+  editingCur.g9=document.getElementById('cf_g9').value;
+  editingCur.g10=document.getElementById('cf_g10').value;
+  editingCur.g11=document.getElementById('cf_g11').value;
+  editingCur.g12=document.getElementById('cf_g12').value;
+  editingCur.role=document.getElementById('cf_role').value;
+  editingCur.roleHours=document.getElementById('cf_roleH').value;
+  editingCur.eduBonus=document.getElementById('cf_edu').value;
+  editingCur.remaining=document.getElementById('cf_rem').value;
+  editingCur.updatedAt=new Date().toLocaleDateString('he-IL');
+  const idx=editingCur._idx;
+  delete editingCur._idx;
+  if(idx>=0&&idx<curriculum.length)curriculum[idx]=editingCur;else curriculum.push(editingCur);
+  cancelCurForm();renderCurriculum();
+  remoteSave('saveCurriculum',editingCur);
+}
+function delCur(idx){
+  const c=curriculum[idx];
+  curriculum.splice(idx,1);
+  renderCurriculum();
+  if(c.id)remoteSave('deleteCurriculumRow',{id:c.id});
+}
+
 // ===================== REMOTE DATA =====================
 function remoteSave(action,data){
   fetch(APPS_SCRIPT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})}).catch(()=>{});
@@ -590,6 +882,10 @@ function loadRemoteData(){
   const cb2='cb2_'+Date.now();
   window[cb2]=function(d){delete window[cb2];if(d.events&&d.events.length){calEvents=d.events;localStorage.setItem('mgmt-events',JSON.stringify(calEvents));if(document.getElementById('page-calendar').style.display!=='none')renderCalendar()}};
   const s2=document.createElement('script');s2.src=`${APPS_SCRIPT}?action=getCalendarEvents&callback=${cb2}`;s2.onerror=()=>delete window[cb2];document.head.appendChild(s2);
+  // Load curriculum
+  const cb3='cb3_'+Date.now();
+  window[cb3]=function(d){delete window[cb3];if(d.curriculum&&d.curriculum.length){curriculum=d.curriculum;localStorage.setItem('mgmt-curriculum',JSON.stringify(curriculum));if(document.getElementById('page-curriculum').style.display!=='none')renderCurriculum()}};
+  const s3=document.createElement('script');s3.src=`${APPS_SCRIPT}?action=getCurriculum&callback=${cb3}`;s3.onerror=()=>delete window[cb3];document.head.appendChild(s3);
 }
 
 // ===================== UTILS =====================
@@ -619,7 +915,7 @@ function loadTeacherForms(){
           subject:f.subject,
           scope:f.desiredScope,
           positionType:'טופס מורה',
-          status:f.currentScope===f.desiredScope?'פעיל':'מבוקש',
+          status:f.desiredScope==='לא ממשיך'?'עוזב':f.currentScope===f.desiredScope?'פעיל':'מבוקש',
           notes:`נוכחי: ${f.currentScope} | יום חופשי: ${f.preferredDay||'לא'} | ${f.changes||''} ${f.requests||''}`.trim(),
           updatedAt:f.date||''
         });
