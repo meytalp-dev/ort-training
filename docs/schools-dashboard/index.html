@@ -1789,15 +1789,25 @@ function renderAnalytics() {
       items.push({sev:'yellow', challenge:'אחוז תלמידי שילוב גבוה (' + s.committee.inclusionPercent + '%)', rec:'בחינת הקצאת משאבים, גיוס מורי שילוב נוספים, הדרכת צוות להוראה דיפרנציאלית'});
     }
 
+    // Good schools - add positive goals
+    if (!items.length || items.every(i => i.sev !== 'red')) {
+      if (emp >= 80) items.push({sev:'green', challenge:'תעסוקה מצוינת (' + emp + '%)', rec:'שימור הרמה הגבוהה, הרחבת שת"פ עם מעסיקים, פיתוח מודלים לבתי ספר אחרים'});
+      if (students >= 150 && !items.some(i=>i.challenge.includes('תלמידים'))) items.push({sev:'green', challenge:'בית ספר יציב (' + students + ' תלמידים)', rec:'מיצוב כבית ספר מוביל, פיתוח מגמות חדשות, הרחבת ריבוי תעודות'});
+      if (bd) { const yrs=Object.keys(bd).sort(); const l=bd[yrs[yrs.length-1]]; if(l?.graduates&&l?.vocationalCert&&Math.round(l.vocationalCert/l.graduates*100)>=90) items.push({sev:'green', challenge:'זכאות מקצוע גבוהה ('+Math.round(l.vocationalCert/l.graduates*100)+'%)', rec:'שמירה על הרמה, פיתוח מסלולי הסמכה טכנולוגית, ריבוי תעודות'}); }
+      if (!emp && emp !== 0) items.push({sev:'yellow', challenge:'חסרים נתוני תעסוקה', rec:'דרוש מיפוי תעסוקה מלא, איסוף נתונים מרכזי חניכות'});
+    }
+
     if (items.length) {
       const hasRed = items.some(i => i.sev === 'red');
-      const borderColor = hasRed ? 'rgba(231,76,60,0.3)' : 'rgba(247,220,111,0.3)';
+      const hasGreen = items.some(i => i.sev === 'green') && !hasRed;
+      const borderColor = hasRed ? 'rgba(231,76,60,0.3)' : hasGreen ? 'rgba(78,205,196,0.3)' : 'rgba(247,220,111,0.3)';
       html += '<div style="background:rgba(255,255,255,0.02);border:1px solid ' + borderColor + ';border-radius:14px;padding:16px">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-weight:700;font-size:15px;color:var(--text-bright)">' + s.name + '</div><span style="font-size:12px;color:var(--text-dim)">' + students + ' תלמידים' + (emp ? ' | תעסוקה ' + emp + '%' : '') + '</span></div>';
       items.forEach(item => {
-        const color = item.sev === 'red' ? 'var(--danger)' : 'var(--warning)';
+        const color = item.sev === 'red' ? 'var(--danger)' : item.sev === 'green' ? 'var(--success)' : 'var(--warning)';
+        const icon = item.sev === 'red' ? '&#9888;' : item.sev === 'green' ? '&#10004;' : '&#9733;';
         html += '<div style="margin-bottom:10px;padding:10px;background:rgba(0,0,0,0.15);border-radius:10px;border-right:3px solid ' + color + '">';
-        html += '<div style="font-size:13px;font-weight:600;color:' + color + ';margin-bottom:4px">' + (item.sev==='red'?'&#9888;':'&#9733;') + ' ' + item.challenge + '</div>';
+        html += '<div style="font-size:13px;font-weight:600;color:' + color + ';margin-bottom:4px">' + icon + ' ' + item.challenge + '</div>';
         html += '<div style="font-size:12px;color:var(--text);line-height:1.6">&#10148; ' + item.rec + '</div>';
         html += '</div>';
       });
