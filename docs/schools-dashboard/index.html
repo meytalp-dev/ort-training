@@ -1712,8 +1712,8 @@ function renderAnalytics() {
   html += '</div>';
 
   // Goals per school
-  html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:24px"><h3 style="color:var(--accent);font-size:18px;margin-bottom:16px">אתגרים והמלצות לכל בית ספר</h3>';
-  html += '<div style="display:grid;grid-template-columns:1fr;gap:16px;max-height:800px;overflow-y:auto">';
+  html += '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:24px"><h3 style="color:var(--accent);font-size:18px;margin-bottom:16px">אבחון מלא והמלצות לכל בית ספר</h3>';
+  html += '<div style="max-height:900px;overflow-y:auto">';
 
   for (const s of withStudents.sort((a,b) => a.name.localeCompare(b.name,'he'))) {
     const items = [];
@@ -1722,97 +1722,171 @@ function renderAnalytics() {
     const h = s.committee?.studentHistory;
     const bd = s.committee?.bagrutData;
     const tracks = s.committee?.employmentData?.tracks;
+    const principal = s.committee?.principal || s.summary?.principal || '';
+    const inspector = s.committee?.inspector || '';
+    const mgamot = s.committee?.tracks || [];
 
-    // Student count challenges
+    // --- STUDENT COUNT ---
     if (students < 80) {
-      items.push({sev:'red', challenge:'מספר תלמידים נמוך מאוד (' + students + ')', rec:'תוכנית גיוס אגרסיבית: ימים פתוחים, שיווק דיגיטלי, כנסי קב"סים, חיבור לחט"ב. יעד: 100+ תלמידים'});
+      items.push({sev:'red', cat:'גיוס', challenge:'מספר תלמידים נמוך מאוד: ' + students + ' בלבד',
+        why:'בית ספר מתחת ל-80 תלמידים מתקשה לקיים מגמות מגוונות, צוות יציב ותקציב מספק. קיים סיכון לסגירת מגמות.',
+        rec:'1. תוכנית גיוס אגרסיבית: ימים פתוחים, כנסי קב"סים, סיורי היכרות להורים ותלמידים. 2. שיווק דיגיטלי ממוקד ברשתות חברתיות. 3. מבצע "חבר מביא חבר". 4. חשיפת המגמות בחטיבות ביניים באזור.',
+        target:'יעד תשפ"ז: ' + Math.round(students*1.3) + ' תלמידים לפחות'});
     } else if (students < 120) {
-      items.push({sev:'yellow', challenge:'בית ספר קטן (' + students + ' תלמידים)', rec:'שימור תלמידים קיימים + גיוס ממוקד. יעד: ' + Math.round(students*1.15) + ' תלמידים'});
+      items.push({sev:'yellow', cat:'גיוס', challenge:'בית ספר קטן יחסית: ' + students + ' תלמידים',
+        why:'בית ספר בגודל זה פגיע לשינויים - נשירה של כמה תלמידים משפיעה משמעותית על התקציב והמגמות.',
+        rec:'1. שימור: חיזוק תחושת שייכות, מעטפת אישית לכל תלמיד. 2. גיוס ממוקד: זיהוי אוכלוסיות יעד חדשות. 3. בחינת פתיחת מגמה חדשה שתמשוך קהל נוסף.',
+        target:'יעד: ' + Math.round(students*1.15) + ' תלמידים'});
     }
 
-    // Decline trend
+    // --- DECLINE TREND ---
     if (h) {
       const vals = Object.values(h).filter(v => typeof v==='number');
       if (vals.length >= 2) {
         const change = Math.round((vals[vals.length-1]-vals[0])/vals[0]*100);
         if (change < -15) {
-          items.push({sev:'red', challenge:'ירידה של ' + Math.abs(change) + '% במספר התלמידים (' + vals[0] + ' ל-' + vals[vals.length-1] + ')', rec:'בדיקת סיבות הנשירה, סקר שביעות רצון, חיזוק שיווק ומיתוג, שיפור אטרקטיביות המגמות'});
+          items.push({sev:'red', cat:'שימור', challenge:'ירידה של ' + Math.abs(change) + '% במספר התלמידים: ' + vals.join(' ← '),
+            why:'מגמת ירידה מתמשכת מעידה על בעיה מערכתית - ייתכן שמדובר בתדמית, אי-התאמת מגמות, או בעיות אקלים.',
+            rec:'1. סקר סיבות עזיבה בקרב תלמידים שעזבו והוריהם. 2. ניתוח פרופיל העוזבים - מאיזו מגמה? מאיזו שכבה? 3. שיפור אטרקטיביות - חדשנות במגמות, שיפוץ מבנה, חיזוק שיווק. 4. חיזוק המעטפת הטיפולית למניעת נשירה.',
+            target:'יעד: עצירת הירידה ויציבות בתשפ"ז'});
+        } else if (change > 30) {
+          items.push({sev:'green', cat:'צמיחה', challenge:'צמיחה מרשימה של +' + change + '%: ' + vals.join(' ← '),
+            why:'',
+            rec:'שמירה על קצב הצמיחה תוך הקפדה שהתשתית (מורים, סדנאות, כיתות) עומדת בקצב. מניעת "כאבי גדילה".',
+            target:''});
         }
       }
     }
 
-    // Employment - overall and by track
+    // --- EMPLOYMENT ---
     if (emp !== undefined && emp !== null) {
       if (emp < 40) {
-        items.push({sev:'red', challenge:'תעסוקה נמוכה מאוד (' + emp + '%)', rec:'מינוי/חיזוק רכז תעסוקה, כנס מעסיקים, הרחבת מאגר מעסיקים, בחינת התאמת מגמות לשוק העבודה המקומי'});
+        items.push({sev:'red', cat:'תעסוקה', challenge:'שיעור תעסוקה קריטי: ' + emp + '% בלבד',
+          why:'רוב התלמידים לא מועסקים במסגרת החניכות. זה פוגע בחוויית הלמידה הדואלית, בהכנה לעולם העבודה, ובלגיטימציה של בית הספר.',
+          rec:'1. מינוי רכז/ת תעסוקה ייעודי עם יעדים מדידים. 2. כנס מעסיקים: הזמנת בעלי עסקים מהאזור להכיר את ביה"ס. 3. בניית מאגר מעסיקים דיגיטלי. 4. בחינת פתיחת מפעלון/עסק בית-ספרי. 5. שקילת התאמת מגמות לביקוש בשוק העבודה המקומי.',
+          target:'יעד מיידי: 60% תעסוקה. יעד תשפ"ז: 75%'});
       } else if (emp < 60) {
-        items.push({sev:'yellow', challenge:'תעסוקה מתחת ליעד (' + emp + '%)', rec:'הגברת שיתופי פעולה עם מעסיקים, הכשרת תלמידים למיומנויות תעסוקתיות, סדנאות הכנה לעולם העבודה. יעד: 75%'});
+        items.push({sev:'yellow', cat:'תעסוקה', challenge:'תעסוקה מתחת ליעד: ' + emp + '%',
+          why:'מעל שליש מהתלמידים לא מועסקים. יש מקום משמעותי לשיפור.',
+          rec:'1. הגברת שת"פ עם מעסיקים קיימים - בקשה להגדלת תקנים. 2. סדנאות הכנה לעולם העבודה: קו"ח, ראיון, התנהלות. 3. פרויקט "שותפים" - עסקים בית-ספריים. 4. מעקב חודשי אחר שיבוץ תלמידים.',
+          target:'יעד: 75% תעסוקה'});
+      } else if (emp >= 80) {
+        items.push({sev:'green', cat:'תעסוקה', challenge:'תעסוקה מצוינת: ' + emp + '%',
+          why:'',
+          rec:'שימור: חיזוק קשר עם מעסיקים קיימים, כנס הוקרה שנתי, פיתוח מודל מנטורינג של מעסיקים-תלמידים.',
+          target:''});
+      }
+    } else {
+      items.push({sev:'yellow', cat:'תעסוקה', challenge:'חסרים נתוני תעסוקה מלאים',
+        why:'לא ניתן להעריך את מצב החניכות ללא נתונים. ייתכן שהתלמידים מועסקים אך הנתונים לא מדווחים.',
+        rec:'1. מיפוי תעסוקה מלא: כל תלמיד בשכבות יא-יב. 2. בניית טבלת מעקב דיגיטלית. 3. דיווח חודשי של רכזת חניכות.',
+        target:'יעד: השלמת מיפוי עד סוף מחצית א'});
+    }
+
+    // --- TRACK-SPECIFIC ---
+    if (tracks && tracks.length) {
+      const weakTracks = tracks.filter(t => t.enrolled > 3 && t.employed/t.enrolled < 0.4);
+      const strongTracks = tracks.filter(t => t.enrolled > 3 && t.employed/t.enrolled >= 0.8);
+      weakTracks.forEach(t => {
+        const pct = Math.round(t.employed/t.enrolled*100);
+        items.push({sev:'red', cat:'מגמה', challenge:'מגמת ' + t.name + ': תעסוקה ' + pct + '% בלבד (' + t.employed + ' מתוך ' + t.enrolled + ')',
+          why:'מגמה עם תעסוקה נמוכה מעידה על חוסר התאמה בין ההכשרה לביקוש בשוק, או על קושי במציאת מעסיקים באזור.',
+          rec:'1. בדיקת רלוונטיות המגמה: האם יש ביקוש למקצוע באזור? 2. פגישות עם מעסיקים פוטנציאליים בתחום. 3. עדכון תוכנית הלימודים לדרישות השוק. 4. שקילת הסבה/שדרוג של המגמה.',
+          target:''});
+      });
+      if (strongTracks.length && weakTracks.length) {
+        items.push({sev:'yellow', cat:'מגמה', challenge:'פער בין מגמות: ' + strongTracks.map(t=>t.name+' ('+Math.round(t.employed/t.enrolled*100)+'%)').join(', ') + ' מול ' + weakTracks.map(t=>t.name+' ('+Math.round(t.employed/t.enrolled*100)+'%)').join(', '),
+          why:'פערים גדולים בין מגמות מעידים על צורך בהתאמה דיפרנציאלית של יעדי התעסוקה.',
+          rec:'למידה מהמגמות החזקות: מה עובד שם? העברת ידע ושיטות למגמות החלשות.',
+          target:''});
       }
     }
 
-    // Track-specific employment issues
-    if (tracks) {
-      const weakTracks = tracks.filter(t => t.enrolled > 3 && t.employed/t.enrolled < 0.4);
-      weakTracks.forEach(t => {
-        const pct = Math.round(t.employed/t.enrolled*100);
-        items.push({sev:'red', challenge:'מגמת ' + t.name + ': תעסוקה ' + pct + '% (' + t.employed + '/' + t.enrolled + ')', rec:'בחינת רלוונטיות המגמה, חיפוש מעסיקים חדשים בתחום, שקילת שינוי/עדכון תוכנית הלימודים'});
-      });
-    }
-
-    // Vocational cert
+    // --- BAGRUT ---
     if (bd) {
       const yrs = Object.keys(bd).sort();
       const l = bd[yrs[yrs.length-1]];
       if (l?.graduates && l?.vocationalCert) {
         const p = Math.round(l.vocationalCert/l.graduates*100);
         if (p < 60) {
-          items.push({sev:'red', challenge:'זכאות לתעודת מקצוע נמוכה (' + p + '%)', rec:'חיזוק הכנה לבחינות גמר, תגבורים, ליווי אישי לתלמידים מתקשים, בניית תוכנית הכנה מובנית'});
+          items.push({sev:'red', cat:'בגרות', challenge:'זכאות לתעודת מקצוע: ' + p + '% בלבד (' + l.vocationalCert + ' מתוך ' + l.graduates + ' בוגרים)',
+            why:'יותר מ-40% מהבוגרים יוצאים ללא תעודת מקצוע - פוגע ביכולת ההשתלבות בשוק העבודה.',
+            rec:'1. זיהוי תלמידים בסיכון כבר בתחילת יא. 2. תוכנית תגבורים אינטנסיבית לקראת בחינות גמר. 3. ליווי אישי של מורה-מנטור לכל תלמיד מתקשה. 4. מבחני מתכונת ומשוב מפורט.',
+            target:'יעד: 75% זכאות'});
         } else if (p < 80) {
-          items.push({sev:'yellow', challenge:'זכאות מקצוע ' + p + '% - יש מקום לשיפור', rec:'זיהוי תלמידים בסיכון לאי-זכאות, מעקב אישי, תגבורים ממוקדים. יעד: 90%'});
+          items.push({sev:'yellow', cat:'בגרות', challenge:'זכאות מקצוע ' + p + '% - יש מקום לשיפור',
+            why:'כ-' + (100-p) + '% מהבוגרים לא זכאים לתעודת מקצוע.',
+            rec:'1. מיפוי פערים אישי לכל תלמיד. 2. תגבורים ממוקדים במקצועות החלשים. 3. הערכה מעצבת שוטפת.',
+            target:'יעד: 90% זכאות'});
+        } else if (p >= 95) {
+          items.push({sev:'green', cat:'בגרות', challenge:'זכאות מקצוע מצוינת: ' + p + '%',
+            why:'',
+            rec:'שמירה על הרמה. שקילת מעבר למסלולי הסמכה טכנולוגית וריבוי תעודות.',
+            target:''});
         }
       }
       if (l?.fullBagrut && l?.graduates) {
         const bp = Math.round(l.fullBagrut/l.graduates*100);
-        if (bp < 15) {
-          items.push({sev:'yellow', challenge:'בגרות מלאה ' + bp + '% בלבד', rec:'בניית מסלול בגרות לתלמידים מתאימים, חיזוק מקצועות ליבה, פתיחת מסלול הסמכה טכנולוגית'});
+        if (bp < 15 && bp > 0) {
+          items.push({sev:'yellow', cat:'בגרות', challenge:'בגרות מלאה: ' + bp + '% בלבד (' + l.fullBagrut + ' מתוך ' + l.graduates + ')',
+            why:'אחוז נמוך של בגרות מלאה מצמצם אפשרויות ההמשך של הבוגרים.',
+            rec:'1. בניית מסלול בגרות ייעודי לתלמידים בעלי פוטנציאל. 2. חיזוק מקצועות ליבה (מתמטיקה, אנגלית). 3. פתיחת אפיק הסמכה טכנולוגית 2.1.',
+            target:'יעד: ' + Math.max(bp+10, 25) + '% בגרות מלאה'});
         }
       }
     }
 
-    // Climate notes from committee
+    // --- CLIMATE ---
     if (s.committee?.climateNotes?.toImprove) {
-      items.push({sev:'yellow', challenge:'אקלים - נקודות לשיפור', rec:s.committee.climateNotes.toImprove});
+      items.push({sev:'yellow', cat:'אקלים', challenge:'אקלים בית-ספרי: נקודות לשיפור (מתוך הוועדה המלווה)',
+        why:'',
+        rec:s.committee.climateNotes.toImprove,
+        target:''});
     }
 
-    // Inclusion overload
-    if (s.committee?.inclusionPercent > 30) {
-      items.push({sev:'yellow', challenge:'אחוז תלמידי שילוב גבוה (' + s.committee.inclusionPercent + '%)', rec:'בחינת הקצאת משאבים, גיוס מורי שילוב נוספים, הדרכת צוות להוראה דיפרנציאלית'});
+    // --- INCLUSION ---
+    if (s.committee?.inclusionStudents) {
+      const pct = s.committee.inclusionPercent || Math.round(s.committee.inclusionStudents/students*100);
+      if (pct > 30) {
+        items.push({sev:'yellow', cat:'שילוב', challenge:s.committee.inclusionStudents + ' תלמידי שילוב (' + pct + '% מכלל התלמידים)',
+          why:'אחוז גבוה של תלמידי שילוב דורש משאבים ייעודיים ומורים מיומנים בהוראה דיפרנציאלית.',
+          rec:'1. בחינת הקצאת שעות שילוב ביחס לצרכים. 2. גיוס מורי שילוב נוספים אם חסרים. 3. הדרכת כלל הצוות בהכלה ודיפרנציאציה. 4. ודא שכל תלמיד מקבל תח"י מותאמת.',
+          target:''});
+      }
     }
 
-    // Good schools - add positive goals
-    if (!items.length || items.every(i => i.sev !== 'red')) {
-      if (emp >= 80) items.push({sev:'green', challenge:'תעסוקה מצוינת (' + emp + '%)', rec:'שימור הרמה הגבוהה, הרחבת שת"פ עם מעסיקים, פיתוח מודלים לבתי ספר אחרים'});
-      if (students >= 150 && !items.some(i=>i.challenge.includes('תלמידים'))) items.push({sev:'green', challenge:'בית ספר יציב (' + students + ' תלמידים)', rec:'מיצוב כבית ספר מוביל, פיתוח מגמות חדשות, הרחבת ריבוי תעודות'});
-      if (bd) { const yrs=Object.keys(bd).sort(); const l=bd[yrs[yrs.length-1]]; if(l?.graduates&&l?.vocationalCert&&Math.round(l.vocationalCert/l.graduates*100)>=90) items.push({sev:'green', challenge:'זכאות מקצוע גבוהה ('+Math.round(l.vocationalCert/l.graduates*100)+'%)', rec:'שמירה על הרמה, פיתוח מסלולי הסמכה טכנולוגית, ריבוי תעודות'}); }
-      if (!emp && emp !== 0) items.push({sev:'yellow', challenge:'חסרים נתוני תעסוקה', rec:'דרוש מיפוי תעסוקה מלא, איסוף נתונים מרכזי חניכות'});
+    // --- COMMITTEE LEAPS (school's own goals) ---
+    if (s.committee?.leaps) {
+      const leapText = s.committee.leaps.replace(/קפיצות מדרגה[:\s|]*/g,'').replace(/\|/g, '\n').trim();
+      if (leapText.length > 20) {
+        items.push({sev:'blue', cat:'יעדי ביה"ס', challenge:'יעדים שבית הספר הציב לעצמו (מתוך הוועדה המלווה)',
+          why:'',
+          rec:leapText,
+          target:''});
+      }
     }
 
-    if (items.length) {
-      const hasRed = items.some(i => i.sev === 'red');
-      const hasGreen = items.some(i => i.sev === 'green') && !hasRed;
-      const borderColor = hasRed ? 'rgba(231,76,60,0.3)' : hasGreen ? 'rgba(78,205,196,0.3)' : 'rgba(247,220,111,0.3)';
-      html += '<div style="background:rgba(255,255,255,0.02);border:1px solid ' + borderColor + ';border-radius:14px;padding:16px">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-weight:700;font-size:15px;color:var(--text-bright)">' + s.name + '</div><span style="font-size:12px;color:var(--text-dim)">' + students + ' תלמידים' + (emp ? ' | תעסוקה ' + emp + '%' : '') + '</span></div>';
-      items.forEach(item => {
-        const color = item.sev === 'red' ? 'var(--danger)' : item.sev === 'green' ? 'var(--success)' : 'var(--warning)';
-        const icon = item.sev === 'red' ? '&#9888;' : item.sev === 'green' ? '&#10004;' : '&#9733;';
-        html += '<div style="margin-bottom:10px;padding:10px;background:rgba(0,0,0,0.15);border-radius:10px;border-right:3px solid ' + color + '">';
-        html += '<div style="font-size:13px;font-weight:600;color:' + color + ';margin-bottom:4px">' + icon + ' ' + item.challenge + '</div>';
-        html += '<div style="font-size:12px;color:var(--text);line-height:1.6">&#10148; ' + item.rec + '</div>';
-        html += '</div>';
-      });
+    // Build HTML for this school
+    const hasRed = items.some(i => i.sev === 'red');
+    const hasGreen = items.some(i => i.sev === 'green') && !hasRed;
+    const borderColor = hasRed ? 'rgba(231,76,60,0.3)' : hasGreen ? 'rgba(78,205,196,0.3)' : 'rgba(247,220,111,0.3)';
+    const statusBadge = hasRed ? '<span style="background:var(--danger);color:white;padding:2px 8px;border-radius:6px;font-size:11px">דורש התערבות</span>' : hasGreen ? '<span style="background:var(--success);color:white;padding:2px 8px;border-radius:6px;font-size:11px">מצב טוב</span>' : '<span style="background:var(--warning);color:#333;padding:2px 8px;border-radius:6px;font-size:11px">דורש שיפור</span>';
+
+    html += '<div style="background:rgba(255,255,255,0.02);border:1px solid ' + borderColor + ';border-radius:14px;padding:20px;margin-bottom:16px">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div style="font-weight:800;font-size:17px;color:var(--text-bright)">' + s.name + '</div>' + statusBadge + '</div>';
+    html += '<div style="font-size:12px;color:var(--text-dim);margin-bottom:14px">' + (principal ? 'מנהל/ת: ' + principal + ' | ' : '') + students + ' תלמידים' + (emp ? ' | תעסוקה: ' + emp + '%' : '') + (mgamot.length ? ' | מגמות: ' + mgamot.join(', ') : '') + '</div>';
+
+    items.forEach(item => {
+      const color = item.sev === 'red' ? 'var(--danger)' : item.sev === 'green' ? 'var(--success)' : item.sev === 'blue' ? 'var(--accent2)' : 'var(--warning)';
+      const icon = item.sev === 'red' ? '&#9888;' : item.sev === 'green' ? '&#10004;' : item.sev === 'blue' ? '&#9776;' : '&#9733;';
+      html += '<div style="margin-bottom:12px;padding:12px 14px;background:rgba(0,0,0,0.2);border-radius:12px;border-right:4px solid ' + color + '">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px;font-weight:600;color:' + color + '">' + icon + ' ' + item.challenge + '</div><span style="font-size:10px;color:var(--text-dim);background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:4px">' + (item.cat||'') + '</span></div>';
+      if (item.why) html += '<div style="font-size:12px;color:var(--text-dim);margin:6px 0;line-height:1.5;font-style:italic">' + item.why + '</div>';
+      html += '<div style="font-size:13px;color:var(--text);line-height:1.7;margin-top:6px">' + item.rec.replace(/\d+\./g, '<br>$&').replace(/^<br>/,'') + '</div>';
+      if (item.target) html += '<div style="font-size:12px;font-weight:600;color:' + color + ';margin-top:8px;padding:6px 10px;background:rgba(0,0,0,0.15);border-radius:8px;display:inline-block">' + item.target + '</div>';
       html += '</div>';
-    }
+    });
+    html += '</div>';
   }
   html += '</div></div>';
 
