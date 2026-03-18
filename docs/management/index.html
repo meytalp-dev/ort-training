@@ -374,6 +374,7 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
     <button onclick="showPage('curriculum')">תכנון פדגוגי</button>
     <button onclick="showPage('tasks')">משימות</button>
     <button onclick="showPage('strategy')">אסטרטגיה</button>
+    <button onclick="showPage('stratreport')">דוח אסטרטגי</button>
   </div>
 </div>
 
@@ -708,6 +709,21 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
   <div style="margin-top:16px"><div style="display:flex;justify-content:space-between;font-size:.82rem;color:var(--muted);margin-bottom:6px"><span>התקדמות מילוי</span><span id="stratProgressPct">0%</span></div><div class="strat-progress"><div class="strat-progress-fill" id="stratProgressBar" style="width:0%"></div></div></div>
 </div>
 
+<!-- STRATEGY REPORT -->
+<div id="page-stratreport" style="display:none">
+  <div class="section-header">
+    <div class="section-icon" style="background:linear-gradient(135deg,#6366F1,#4F46E5)">📄</div>
+    <div><h2>דוח אסטרטגי מלא</h2><p>כל המחקר והניתוח במסמך אחד – ניתן להדפסה ושמירה כ-PDF</p></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn btn-primary btn-sm" onclick="printReport()">🖨️ הדפס / שמור PDF</button>
+    <button class="btn btn-sm btn-ghost" onclick="openReportFullscreen()">🔲 פתח במסך מלא</button>
+  </div>
+  <div class="card" style="overflow:hidden">
+    <iframe id="reportFrame" src="about:blank" style="width:100%;height:calc(100vh - 220px);border:none;background:#fff"></iframe>
+  </div>
+</div>
+
 </div><!-- /container -->
 
 <script>
@@ -751,7 +767,7 @@ function showPage(id){
   document.querySelectorAll('[id^="page-"]').forEach(p=>p.style.display='none');
   document.getElementById('page-'+id).style.display='';
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  const labels={dashboard:'דשבורד',positions:'תכנון משרות',calendar:'תכנון שנתי',curriculum:'תכנון פדגוגי',tasks:'משימות',strategy:'אסטרטגיה'};
+  const labels={dashboard:'דשבורד',positions:'תכנון משרות',calendar:'תכנון שנתי',curriculum:'תכנון פדגוגי',tasks:'משימות',strategy:'אסטרטגיה',stratreport:'דוח אסטרטגי'};
   const target=labels[id]||'';
   document.querySelectorAll('.nav button').forEach(b=>{if(b.textContent.trim()===target)b.classList.add('active')});
   if(id==='positions')initPositions();
@@ -759,6 +775,7 @@ function showPage(id){
   if(id==='curriculum')initCurriculum();
   if(id==='tasks')initTasks();
   if(id==='strategy')initStrategy();
+  if(id==='stratreport')initStratReport();
 }
 
 // ===================== DASHBOARD =====================
@@ -2464,6 +2481,93 @@ function exportStrategy(){
 }
 
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+
+// ===================== STRATEGY REPORT =====================
+let reportLoaded=false;
+function initStratReport(){
+  if(reportLoaded)return;
+  const frame=document.getElementById('reportFrame');
+  frame.srcdoc=buildReportHTML();
+  reportLoaded=true;
+}
+function printReport(){
+  const frame=document.getElementById('reportFrame');
+  frame.contentWindow.print();
+}
+function openReportFullscreen(){
+  const w=window.open('','_blank');
+  w.document.write(buildReportHTML());
+  w.document.close();
+}
+function buildReportHTML(){
+  const strat=JSON.parse(localStorage.getItem('mgmt-strategy')||'{}');
+  const goals=JSON.parse(localStorage.getItem('mgmt-strategy-goals')||'[]');
+  const actions=JSON.parse(localStorage.getItem('mgmt-strategy-actions')||'[]');
+  const fieldLabels={market:'השוק / הסביבה',customers:'הלקוחות שלנו',products:'המוצרים / השירותים',org:'יכולת הארגון',domain:'תחום העיסוק',future:'תמונת העתיד',data:'נתונים כמותיים',differentiation:'הבידול שלנו',mission:'הייעוד שלנו',how:'נעשה זאת על ידי',impact:'נהיה הגורם המרכזי',promise:'כך אנו נבטיח',val1:'האדם במרכז',val2:'רלוונטיות',val3:'למידה דואלית',val4:'תיקון הלב',val5:'הובלה מקצועית'};
+  let h=`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>דוח אסטרטגי – אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--teal:#2A9D8F;--teal-l:#D4F3EF;--teal-d:#1a7a6d;--purple:#7E57C2;--green:#52B788;--green-l:#D8F3DC;--amber:#E9A319;--amber-l:#FEF3C7;--rose:#E76F7A;--text:#1E293B;--text-mid:#475569;--text-muted:#94A3B8;--border:#E2E8F0}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Heebo,sans-serif;color:var(--text);background:#fff;line-height:1.7;font-size:14px;max-width:900px;margin:0 auto;padding:40px 48px}
+h1{font-size:2rem;font-weight:900;text-align:center;margin-bottom:4px}
+.subtitle{text-align:center;color:var(--text-mid);font-size:1.1rem;margin-bottom:24px}
+.badge{display:block;text-align:center;margin-bottom:32px}
+.badge span{background:var(--teal);color:#fff;padding:6px 20px;border-radius:20px;font-weight:700;font-size:.85rem}
+.stats{display:flex;gap:24px;justify-content:center;margin-bottom:40px;flex-wrap:wrap}
+.stat{text-align:center}
+.stat .n{font-family:Rubik;font-size:1.8rem;font-weight:800;color:var(--teal)}
+.stat .l{font-size:.78rem;color:var(--text-muted)}
+h2{font-size:1.2rem;font-weight:800;color:var(--teal-d);margin-top:36px;margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--teal-l)}
+h3{font-size:1rem;font-weight:700;color:var(--text);margin-top:24px;margin-bottom:8px;padding-right:14px;border-right:4px solid var(--teal)}
+p{margin-bottom:8px;color:var(--text-mid)}
+ul{padding-right:18px;margin-bottom:10px}
+li{margin-bottom:3px;font-size:.88rem;color:var(--text-mid)}
+strong{color:var(--text)}
+table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:.82rem}
+th{background:var(--teal);color:#fff;padding:8px 12px;text-align:right;font-weight:600}
+td{padding:7px 12px;border-bottom:1px solid var(--border)}
+tr:nth-child(even){background:#F8FAFC}
+.section{page-break-before:always;margin-top:48px;padding-top:24px;border-top:3px solid var(--teal)}
+.section-num{font-family:Rubik;font-size:2.5rem;font-weight:800;color:var(--teal);opacity:.2}
+.section-title{font-size:1.5rem;font-weight:800;margin-top:-12px;margin-bottom:20px}
+.box{background:var(--teal-l);border-radius:10px;padding:14px 18px;margin:12px 0;border-right:4px solid var(--teal)}
+.box p{margin:0;font-weight:600;color:var(--text)}
+@media print{body{padding:20px;font-size:12px}h2{page-break-after:avoid}table,.box{page-break-inside:avoid}.section{page-break-before:always}}
+</style></head><body>`;
+  // Cover
+  h+=`<h1>מסמך אסטרטגי מלא</h1><div class="subtitle">תיכון אורט בית הערבה | ירושלים</div>
+<div class="badge"><span>תוכנית 3 שנים | 2026–2029</span></div>
+<div class="stats"><div class="stat"><div class="n">190</div><div class="l">תלמידים</div></div><div class="stat"><div class="n">3</div><div class="l">מגמות</div></div><div class="stat"><div class="n">22</div><div class="l">מורים</div></div><div class="stat"><div class="n">70%</div><div class="l">בגרות</div></div><div class="stat"><div class="n">95%</div><div class="l">מקצוע</div></div><div class="stat"><div class="n">50%</div><div class="l">תעסוקה</div></div></div>`;
+  // Part 1 - Strategy from localStorage
+  h+=`<div class="section"><div class="section-num">01</div><div class="section-title">ניתוח מצב ותכנון אסטרטגי</div>`;
+  h+=`<h2>ניתוח מצב קיים</h2>`;
+  ['market','customers','products','org'].forEach(f=>{h+=`<h3>${fieldLabels[f]}</h3><p>${(strat[f]||'טרם מולא').replace(/\n/g,'<br>')}</p>`});
+  h+=`<h2>שאלות מפתח</h2>`;
+  ['domain','future','data','differentiation'].forEach(f=>{h+=`<h3>${fieldLabels[f]}</h3><p>${(strat[f]||'טרם מולא').replace(/\n/g,'<br>')}</p>`});
+  h+=`<h2>ייעוד וחזון</h2>`;
+  if(strat.mission)h+=`<div class="box"><p>${strat.mission}</p></div>`;
+  ['how','impact','promise'].forEach(f=>{h+=`<h3>${fieldLabels[f]}</h3><p>${(strat[f]||'טרם מולא').replace(/\n/g,'<br>')}</p>`});
+  h+=`<h2>ערכי ליבה – חמשת עקרונות אורט</h2>`;
+  ['val1','val2','val3','val4','val5'].forEach(f=>{h+=`<h3>${fieldLabels[f]}</h3><p>${(strat[f]||'טרם מולא').replace(/\n/g,'<br>')}</p>`});
+  // Goals
+  if(goals.length){
+    h+=`<h2>יעדים ומדדים</h2><table><thead><tr><th>#</th><th>יעד</th><th>מדד (KPI)</th><th>יעד מספרי</th><th>דדליין</th><th>סטטוס</th></tr></thead><tbody>`;
+    goals.forEach((g,i)=>{h+=`<tr><td>${i+1}</td><td>${g.title||'-'}</td><td>${g.kpi||'-'}</td><td>${g.target||'-'}</td><td>${g.deadline||'-'}</td><td>${g.status}</td></tr>`});
+    h+=`</tbody></table>`;
+  }
+  // Actions
+  if(actions.length){
+    h+=`<h2>תוכנית פעולה</h2><table><thead><tr><th>#</th><th>פעולה</th><th>אחראי</th><th>דדליין</th><th>סטטוס</th></tr></thead><tbody>`;
+    actions.forEach((a,i)=>{h+=`<tr><td>${i+1}</td><td>${a.title||'-'}</td><td>${a.owner||'-'}</td><td>${a.deadline||'-'}</td><td>${a.status}</td></tr>`});
+    h+=`</tbody></table>`;
+  }
+  h+=`</div>`;
+  h+=`<div style="text-align:center;margin-top:60px;color:var(--text-muted);font-size:.8rem">מסמך פנימי | אורט בית הערבה | מרץ 2026</div>`;
+  h+=`</body></html>`;
+  return h;
+}
 </script>
 </body>
 </html>
