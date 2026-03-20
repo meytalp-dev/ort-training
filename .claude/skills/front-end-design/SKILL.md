@@ -75,18 +75,30 @@ description: מערכת עיצוב WOW מלאה לכל HTML – מצגות, דש
 לפרטי כל theme: `references/themes.md`
 לסגנון האישי של מייטל: `references/meytal-style.md`
 
-### שלב 3 – בחר טיפוגרפיה
+### שלב 3 – בחר טיפוגרפיה מספריית מייטל
 
-**כלל:** אל תבחר Inter/Roboto/Open Sans. הם גנריים.
+**כלל ברזל: להשתמש בפונטים של מייטל! לא Inter/Roboto/Open Sans/Heebo לבד.**
 
-לפרויקט ORT: **Heebo + Rubik** (RTL, עברית, ברורים)
+ספריית הפונטים: `fonts/` (TTF files + Google Fonts)
+דף תצוגה: `fonts/preview.html`
+קבצים ב-GitHub Pages: `docs/fonts/`
 
-לתוכן באנגלית/בינלאומי – בחר pairing מובחן:
-→ ראה `references/typography.md`
+**בחר שילוב לפי הקשר:**
+
+| הקשר | כותרת | כותרת משנה | גוף |
+|------|--------|------------|------|
+| **Warm / הזמנות / מורים** | Playpen Sans Hebrew 700 | Cafe | Heebo 400 |
+| **מצגת לימודית / שיעור** | Shuneet3 Square Bold | Petel Bold | Shuneet3 Medium |
+| **דרמטי / היסטוריה / ספרות** | Antiochus Bold | Dybbuk | Heebo 400 |
+| **טכני / דשבורד** | Heebo 800 | Heebo 400 | Heebo 300 |
+
+פרטים מלאים: `references/typography.md`
 
 ### שלב 4 – בנה
 
 - טען `references/ort-css-system.md` לקוד CSS הבסיסי
+- טען פונטים מקומיים עם `@font-face` (src מ-`fonts/` או `../fonts/` לפי מיקום ה-HTML)
+- ב-GitHub Pages: `src: url('/ort-training/fonts/Cafe.ttf')`
 - הוסף אנימציות page-load מתוזמרות (staggered)
 - רקע עם עומק – לא solid color
 - RTL מלא לעברית
@@ -94,6 +106,14 @@ description: מערכת עיצוב WOW מלאה לכל HTML – מצגות, דש
 ### שלב 5 – בדוק Pre-Delivery Checklist
 
 לפני כל deliverable → `references/checklist.md`
+
+### שלב 6 – פתח בדפדפן אוטומטית
+
+לאחר יצירת/עדכון קובץ HTML, **תמיד פתח אותו אוטומטית בדפדפן** עם:
+```bash
+start "" "path/to/file.html"
+```
+אל תבקש מהמשתמשת לפתוח בעצמה – פשוט תפתח.
 
 ---
 
@@ -186,3 +206,4 @@ SVG inline גיאומטריים בלבד:
 | `references/themes.md` | 10 themes עם hex + fonts |
 | `references/checklist.md` | Pre-delivery checklist מלא |
 | `references/anti-patterns.md` | AI slop + כללי כתיבה |
+| `references/whatsapp-image-guide.md` | גדלים, פונטים מינימליים, ייצוא PNG לוואטסאפ |

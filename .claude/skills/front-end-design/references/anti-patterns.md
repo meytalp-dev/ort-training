@@ -6,7 +6,7 @@
 
 | סימן | במקום |
 |------|-------|
-| Inter / Roboto / Arial | פונט מובחן לפי קונטקסט |
+| Inter / Roboto / Arial / Heebo לבד | פונט מספריית מייטל (Playpen Sans, Cafe, Dybbuk, Petel, Antiochus, Shuneet3) |
 | Purple gradient על לבן | Palette ייחודית לנושא |
 | Uniform 8px rounded corners בכל מקום | radius שונה לפי hierarchy |
 | 5 צבעים מפוזרים שווה | dominant + sharp accent |

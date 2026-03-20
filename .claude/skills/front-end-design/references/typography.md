@@ -8,14 +8,50 @@
 
 ---
 
-## לפרויקט ORT (ברירת מחדל)
+## ספריית הפונטים של מייטל (ברירת מחדל!)
 
+**כלל: תמיד להשתמש בפונטים של מייטל. לא Heebo/Rubik לבד!**
+
+קבצי TTF: `fonts/` (בתיקיית הסקיל)
+
+### פונטי כתב יד (לכותרות, ציטוטים, הדגשות)
+- **Playpen Sans Hebrew** – כתב יד ילדי, חם, variable (Google Fonts)
+- **Cafe** – כתב יד חופשי וקליל (מקומי)
+- **Dybbuk** – כתב יד דרמטי ואמנותי (מקומי)
+- **Petel Bold** – כתב יד עגלגל ורך (מקומי)
+
+### פונטי כותרות (רשמי / חזק)
+- **Antiochus Bold** – serif קלאסי וחגיגי (מקומי)
+- **Shuneet3 Square Bold** – sans מרובע וחזק (מקומי)
+
+### פונט גוף טקסט
+- **Shuneet3 Medium** – sans מודרני ונקי (מקומי)
+- **Heebo** – fallback, כפתורים, ממשק (Google Fonts)
+
+### טעינה ב-HTML
 ```html
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@100;300;400;500;700;800&family=Heebo:wght@300;400;700;800&display=swap" rel="stylesheet">
+
+<!-- פונטים מקומיים -->
+<style>
+@font-face { font-family: 'Cafe'; src: url('fonts/Cafe.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Dybbuk'; src: url('fonts/Dybbuk.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Petel'; src: url('fonts/Petel Bold.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Antiochus'; src: url('fonts/Antiochus Bold.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Shuneet3'; src: url('fonts/Shuneet3 Medium.ttf') format('truetype'); font-display: swap; }
+@font-face { font-family: 'Shuneet3 Square'; src: url('fonts/Shuneet3 Square Bold.ttf') format('truetype'); font-display: swap; }
+</style>
 ```
 
-- **Heebo** – כותרות, כפתורים, מספרים (RTL מצוין)
-- **Rubik** – גוף טקסט, תוויות
+### בחירת פונט לפי הקשר
+
+| הקשר | כותרת | כותרת משנה | גוף |
+|------|--------|------------|------|
+| **Warm / הזמנות / מורים** | Playpen Sans Hebrew 700 | Cafe | Heebo 400 |
+| **מצגת לימודית / שיעור** | Shuneet3 Square Bold | Petel Bold | Shuneet3 Medium |
+| **דרמטי / היסטוריה / ספרות** | Antiochus Bold | Dybbuk | Heebo 400 |
+| **טכני / דשבורד** | Heebo 800 | Heebo 400 | Heebo 300 |
 
 ---
 

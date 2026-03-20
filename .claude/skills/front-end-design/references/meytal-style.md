@@ -34,11 +34,54 @@ Think: Canva stationery templates, teacher planners, handcrafted feel.
 - Can be implemented as SVG overlays or CSS pseudo-elements
 - Watercolor-style blobs as section backgrounds
 
-### 4. Typography: Warm Hebrew
-- Serif or handwritten-style fonts for headings
-- Softer than geometric sans-serif
-- Good options: Alef, Secular One, Assistant (not Heebo's bold geometric style)
-- Weight contrast still important (light body vs bold titles)
+### 4. Typography: ספריית הפונטים של מייטל
+
+**כלל ברזל: להשתמש בפונטים של מייטל – לא בפונטים גנריים!**
+
+קבצי הפונטים: `fonts/` (באותה תיקייה של הסקיל)
+דף תצוגה: `fonts/preview.html`
+
+| פונט | סוג | זמינות | מתאים ל |
+|------|------|--------|---------|
+| **Playpen Sans Hebrew** | כתב יד ילדים | Google Fonts | כותרות חמות, דפי פתיחה, הזמנות, חומרי הורים |
+| **Cafe** | כתב יד חופשי | מקומי (TTF) | כותרות משעשעות, יצירה, פוסטרים, לא-פורמלי |
+| **Dybbuk** | כתב יד דרמטי | מקומי (TTF) | כותרות דרמטיות, היסטוריה, ספרות, ציטוטים |
+| **Petel Bold** | כתב יד עגלגל | מקומי (TTF) | כותרות רכות, תוכן למורים, חגים |
+| **Antiochus Bold** | Serif קלאסי | מקומי (TTF) | כותרות רשמיות, תעודות, מסמכים חגיגיים |
+| **Shuneet3 Medium** | Sans מודרני | מקומי (TTF) | גוף טקסט נקי, מצגות, ממשקים |
+| **Shuneet3 Square Bold** | Sans מרובע | מקומי (TTF) | כותרות חזקות, באנרים, כפתורים |
+
+**שילובים מומלצים:**
+
+1. **Warm Botanical** (הזמנות, מורים, ספר בי"ס):
+   - כותרת: Playpen Sans Hebrew 700
+   - כותרת משנה: Cafe
+   - גוף: Heebo 400
+
+2. **מצגת לימודית** (שקפים לשיעור):
+   - כותרת: Shuneet3 Square Bold
+   - כותרת משנה / הדגשה: Petel Bold
+   - גוף: Shuneet3 Medium
+
+3. **דרמטי** (היסטוריה, ספרות, אירועים):
+   - כותרת: Antiochus Bold
+   - כותרת משנה: Dybbuk
+   - גוף: Heebo 400
+
+**טעינת פונטים מקומיים ב-HTML:**
+```css
+@font-face {
+  font-family: 'Cafe';
+  src: url('fonts/Cafe.ttf') format('truetype');
+  font-display: swap;
+}
+```
+**טעינת Playpen Sans Hebrew (Google Fonts):**
+```html
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@100;300;400;500;700;800&display=swap" rel="stylesheet">
+```
+
+- Weight contrast חשוב: light body vs bold titles
 
 ### 5. Layout: Notebook/Planner Feel
 - Rounded corners (20px+)
