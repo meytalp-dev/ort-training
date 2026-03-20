@@ -130,6 +130,10 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
     פונטים
   </button>
+  <button onclick="showPage('formats')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    גדלים
+  </button>
   <button onclick="showPage('inspiration')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
     השראה
@@ -161,6 +165,20 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 <div class="page" id="page-fonts">
   <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="#D4766E" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg> שילובי פונטים בעברית</div>
   <div id="fntGrid"></div>
+</div>
+
+<!-- ===== PAGE: FORMATS ===== -->
+<div class="page" id="page-formats">
+  <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="#C9A96E" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> גדלים ופורמטים</div>
+  <div class="filters" id="fmtFilters">
+    <div class="filter-chip active" onclick="filterFmt('all')">הכל</div>
+    <div class="filter-chip" onclick="filterFmt('presentation')">מצגות</div>
+    <div class="filter-chip" onclick="filterFmt('social')">רשתות</div>
+    <div class="filter-chip" onclick="filterFmt('messaging')">הודעות</div>
+    <div class="filter-chip" onclick="filterFmt('print')">הדפסה</div>
+    <div class="filter-chip" onclick="filterFmt('web')">אתרים</div>
+  </div>
+  <div id="fmtGrid"></div>
 </div>
 
 <!-- ===== PAGE: INSPIRATION ===== -->
@@ -346,11 +364,71 @@ function renderInspiration(){
     </div>`).join('');
 }
 
+// ===== FORMATS =====
+const formats=[
+  {id:"presentation-16-9",name:"מצגת רגילה (16:9)",w:1920,h:1080,aspect:"16:9",scroll:false,cat:"presentation"},
+  {id:"presentation-4-3",name:"מצגת קלאסית (4:3)",w:1024,h:768,aspect:"4:3",scroll:false,cat:"presentation"},
+  {id:"google-slides",name:"Google Slides / Canva",w:1280,h:720,aspect:"16:9",scroll:false,cat:"presentation"},
+  {id:"facebook-post-square",name:"פוסט פייסבוק (ריבועי)",w:1080,h:1080,aspect:"1:1",scroll:false,cat:"social"},
+  {id:"facebook-post-landscape",name:"פוסט פייסבוק (רחב)",w:1200,h:630,aspect:"1.91:1",scroll:false,cat:"social"},
+  {id:"facebook-cover",name:"תמונת כיסוי פייסבוק",w:1640,h:624,aspect:"2.63:1",scroll:false,cat:"social"},
+  {id:"facebook-story",name:"סטורי פייסבוק",w:1080,h:1920,aspect:"9:16",scroll:false,cat:"social"},
+  {id:"instagram-square",name:"פוסט אינסטגרם (ריבועי)",w:1080,h:1080,aspect:"1:1",scroll:false,cat:"social"},
+  {id:"instagram-portrait",name:"פוסט אינסטגרם (פורטרט)",w:1080,h:1350,aspect:"4:5",scroll:false,cat:"social"},
+  {id:"instagram-story",name:"סטורי / ריל אינסטגרם",w:1080,h:1920,aspect:"9:16",scroll:false,cat:"social"},
+  {id:"tiktok-video",name:"סרטון טיקטוק",w:1080,h:1920,aspect:"9:16",scroll:false,cat:"social"},
+  {id:"linkedin-post",name:"פוסט לינקדאין",w:1200,h:627,aspect:"1.91:1",scroll:false,cat:"social"},
+  {id:"linkedin-cover",name:"כיסוי לינקדאין",w:1584,h:396,aspect:"4:1",scroll:false,cat:"social"},
+  {id:"youtube-thumbnail",name:"תמונה ממוזערת יוטיוב",w:1280,h:720,aspect:"16:9",scroll:false,cat:"social"},
+  {id:"whatsapp-image",name:"תמונה לוואטסאפ",w:1080,h:1080,aspect:"1:1",scroll:false,cat:"messaging"},
+  {id:"whatsapp-status",name:"סטטוס וואטסאפ",w:1080,h:1920,aspect:"9:16",scroll:false,cat:"messaging"},
+  {id:"a4-portrait",name:"A4 לאורך",w:2480,h:3508,aspect:"A4",scroll:false,cat:"print"},
+  {id:"a4-landscape",name:"A4 לרוחב",w:3508,h:2480,aspect:"A4",scroll:false,cat:"print"},
+  {id:"a5",name:"A5",w:1748,h:2480,aspect:"A5",scroll:false,cat:"print"},
+  {id:"business-card",name:"כרטיס ביקור",w:1050,h:600,aspect:"3.5:2",scroll:false,cat:"print"},
+  {id:"poster-a3",name:"פוסטר A3",w:3508,h:4961,aspect:"A3",scroll:false,cat:"print"},
+  {id:"landing-page",name:"דף נחיתה",w:1440,h:900,aspect:"16:10",scroll:true,cat:"web"},
+  {id:"blog-header",name:"כותרת בלוג",w:1200,h:628,aspect:"1.91:1",scroll:false,cat:"web"},
+  {id:"email-newsletter",name:"ניוזלטר / מייל",w:600,h:800,aspect:"3:4",scroll:true,cat:"web"},
+  {id:"infographic",name:"אינפוגרפיקה",w:800,h:2000,aspect:"2:5",scroll:true,cat:"web"},
+  {id:"og-image",name:"תצוגה מקדימה (OG)",w:1200,h:630,aspect:"1.91:1",scroll:false,cat:"web"},
+];
+let currentFmt='all';
+const catColors={presentation:'#C9A96E',social:'#E8A0BF',messaging:'#25D366',print:'#AB5B46',web:'#89CFF0'};
+const catNames={presentation:'מצגות',social:'רשתות',messaging:'הודעות',print:'הדפסה',web:'אתרים'};
+
+function filterFmt(cat){
+  currentFmt=cat;
+  document.querySelectorAll('#page-formats .filter-chip').forEach(c=>c.classList.toggle('active',c.textContent.includes(cat==='all'?'הכל':catNames[cat]||'')));
+  renderFormats();
+}
+
+function renderFormats(){
+  const list=formats.filter(f=>currentFmt==='all'||f.cat===currentFmt);
+  document.getElementById('fmtGrid').innerHTML=list.map(f=>{
+    const ratio=f.w/f.h;
+    const previewW=Math.min(60,60*ratio);
+    const previewH=Math.min(60,60/ratio);
+    const col=catColors[f.cat];
+    return `<div style="background:var(--card);border-radius:14px;border:2px solid var(--border);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:14px;transition:.2s" onmouseover="this.style.borderColor='${col}'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="width:65px;height:65px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div style="width:${previewW}px;height:${previewH}px;border-radius:4px;background:${col}18;border:2px solid ${col};display:flex;align-items:center;justify-content:center;font-size:.55rem;color:${col};font-weight:600">${f.aspect}</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.92rem">${f.name}</div>
+        <div style="font-size:.78rem;color:var(--muted)">${f.w} × ${f.h} px</div>
+      </div>
+      <span style="padding:3px 10px;border-radius:12px;font-size:.68rem;font-weight:600;background:${col}18;color:${col}">${catNames[f.cat]}</span>
+    </div>`;
+  }).join('');
+}
+
 // Init
 renderPalettes();
 renderStyles();
 renderFonts();
 renderInspiration();
+renderFormats();
 
 // PWA
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js')}
