@@ -365,11 +365,12 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
   <!-- Live result -->
   <div class="live-preview" id="outputPreview" style="min-height:400px"></div>
 
-  <div class="btn-row" id="outputActions">
+  <div class="btn-row" id="outputActions" style="flex-wrap:wrap">
     <button class="btn btn-back" onclick="show('screen-product')">חזרה</button>
     <button class="btn btn-secondary" onclick="openInNewTab()">פתח בטאב חדש</button>
-    <button class="btn btn-secondary" onclick="downloadAsImage()">הורד כתמונה</button>
-    <button class="btn btn-primary" onclick="downloadAsFile()">הורד קובץ</button>
+    <button class="btn btn-secondary" onclick="downloadAsImage()" id="btnDownloadImg" style="display:none">הורד כתמונה</button>
+    <button class="btn btn-primary" onclick="downloadAsPPTX()" id="btnDownloadPptx" style="display:none">הורד ל-Google Slides (.pptx)</button>
+    <button class="btn btn-primary" onclick="downloadAsFile()" id="btnDownloadHtml">הורד קובץ HTML</button>
   </div>
 
   <!-- Advanced: code -->
@@ -411,6 +412,7 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 </div><!-- /main -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js"></script>
 <script>
 // ===== UTILITY =====
 function isLight(hex){
@@ -1130,6 +1132,13 @@ Keep text concise, clear, suitable for Israeli school context.`;
   document.getElementById('outputTitle').textContent='התוצר שלך מוכן!';
   document.getElementById('outputSub').textContent=`${selectedProduct.name} – ${p.name} | ${f.n1} + ${f.n2}`;
 
+  // Show/hide action buttons by product type
+  const isPres=selectedProduct.id==='presentation';
+  const isImg=['social-post','invitation','card'].includes(selectedProduct.id);
+  document.getElementById('btnDownloadPptx').style.display=isPres?'':'none';
+  document.getElementById('btnDownloadImg').style.display=isImg?'':'none';
+  document.getElementById('btnDownloadHtml').style.display=isPres?'none':'';
+
   // Show preview
   const preview=document.getElementById('outputPreview');
   preview.innerHTML=`<iframe id="previewFrame" srcdoc="${generatedHTML.replace(/"/g,'&quot;')}" style="width:100%;min-height:500px;border:none"></iframe>`;
@@ -1218,6 +1227,111 @@ function downloadAsFile(){
   a.href=URL.createObjectURL(blob);
   a.download=(selectedProduct?.id||'design')+'.html';
   a.click();
+}
+
+function downloadAsPPTX(){
+  const p=wizardChoices.palette;
+  const f=wizardChoices.font;
+  const b=wizardChoices.button;
+  if(!p||!f||!b) return;
+
+  const pptx=new PptxGenJS();
+  pptx.layout='LAYOUT_WIDE'; // 16:9
+  pptx.author='Design Builder - ORT';
+
+  // Define master slide
+  pptx.defineSlideMaster({
+    title:'BRAND_MASTER',
+    background:{color:p.bg.replace('#','')},
+    objects:[
+      {rect:{x:0,y:'92%',w:'100%',h:'8%',fill:{color:p.primary.replace('#','')+'15'}}},
+    ]
+  });
+
+  pptx.defineSlideMaster({
+    title:'BRAND_TITLE',
+    background:{fill:p.primary.replace('#','')},
+  });
+
+  // Helper - hex to PPTX color (no #)
+  const clr=(hex)=>hex.replace('#','');
+  const txtClr=clr(p.text);
+  const primClr=clr(p.primary);
+  const secClr=clr(p.secondary);
+  const accClr=clr(p.accent);
+  const bgClr=clr(p.bg);
+  const titleOnPrimary=isLight(p.primary)?'333333':'FFFFFF';
+
+  // Get content (from AI or placeholder)
+  const promptText=document.getElementById('contentPrompt')?.value||'';
+  // Parse generated HTML for slide content
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(generatedHTML,'text/html');
+  const htmlSlides=doc.querySelectorAll('.slide');
+
+  if(htmlSlides.length>0){
+    // Use content from generated HTML
+    htmlSlides.forEach((s,i)=>{
+      const isTitle=i===0;
+      const h1=s.querySelector('h1')?.textContent||'';
+      const content=s.querySelector('div[contenteditable]')?.textContent||s.querySelector('p')?.textContent||'';
+
+      const slide=pptx.addSlide({masterName:isTitle?'BRAND_TITLE':'BRAND_MASTER'});
+
+      if(isTitle){
+        slide.addText(h1,{x:'10%',y:'30%',w:'80%',h:'20%',fontSize:44,fontFace:'Arial',color:titleOnPrimary,bold:true,align:'center',isTextBox:true});
+        slide.addText(content,{x:'15%',y:'52%',w:'70%',h:'12%',fontSize:22,fontFace:'Arial',color:titleOnPrimary,align:'center',isTextBox:true,transparency:30});
+        // Decorative circle
+        slide.addShape(pptx.ShapeType.oval,{x:11,y:-0.5,w:2.5,h:2.5,fill:{color:secClr,transparency:70}});
+      } else {
+        slide.addText(h1,{x:'8%',y:'8%',w:'84%',h:'15%',fontSize:32,fontFace:'Arial',color:primClr,bold:true,align:'right',isTextBox:true});
+        // Divider line
+        slide.addShape(pptx.ShapeType.rect,{x:'8%',y:'24%',w:'15%',h:'0.5%',fill:{color:primClr}});
+        // Content as bullet points
+        const lines=content.split('\n').filter(l=>l.trim());
+        if(lines.length>1){
+          slide.addText(lines.map(l=>({text:l.trim(),options:{bullet:true,fontSize:20,color:txtClr,align:'right',rtlMode:true,paraSpaceAfter:10}})),
+            {x:'8%',y:'30%',w:'84%',h:'55%',fontFace:'Arial',isTextBox:true,valign:'top'});
+        } else {
+          slide.addText(content,{x:'8%',y:'30%',w:'84%',h:'55%',fontSize:20,fontFace:'Arial',color:txtClr,align:'right',isTextBox:true,valign:'top',lineSpacing:32});
+        }
+        // Slide number
+        slide.addText(`${i+1}`,{x:'92%',y:'90%',w:'6%',h:'6%',fontSize:11,color:'999999',align:'center'});
+      }
+    });
+  } else {
+    // Default 5-slide template
+    const defaultSlides=[
+      {title:'כותרת המצגת',sub:'תת כותרת',type:'title'},
+      {title:'מה נלמד היום?',sub:'נקודה ראשונה\nנקודה שנייה\nנקודה שלישית',type:'content'},
+      {title:'נושא מרכזי',sub:'הסבר קצר על הנושא',type:'content'},
+      {title:'שאלה לדיון',sub:'מה דעתכם?',type:'question'},
+      {title:'סיכום',sub:'רעיון 1\nרעיון 2\nרעיון 3',type:'summary'},
+    ];
+
+    defaultSlides.forEach((s,i)=>{
+      const slide=pptx.addSlide({masterName:s.type==='title'?'BRAND_TITLE':'BRAND_MASTER'});
+
+      if(s.type==='title'){
+        slide.addText(s.title,{x:'10%',y:'30%',w:'80%',h:'20%',fontSize:44,fontFace:'Arial',color:titleOnPrimary,bold:true,align:'center',isTextBox:true});
+        slide.addText(s.sub,{x:'15%',y:'52%',w:'70%',h:'12%',fontSize:22,fontFace:'Arial',color:titleOnPrimary,align:'center',isTextBox:true,transparency:30});
+        slide.addShape(pptx.ShapeType.oval,{x:11,y:-0.5,w:2.5,h:2.5,fill:{color:secClr,transparency:70}});
+      } else if(s.type==='question'){
+        slide.background={fill:primClr+'10'};
+        slide.addText(s.title,{x:'10%',y:'25%',w:'80%',h:'20%',fontSize:36,fontFace:'Arial',color:primClr,bold:true,align:'center',isTextBox:true});
+        slide.addText(s.sub,{x:'15%',y:'50%',w:'70%',h:'15%',fontSize:24,fontFace:'Arial',color:txtClr,align:'center',isTextBox:true});
+      } else {
+        slide.addText(s.title,{x:'8%',y:'8%',w:'84%',h:'15%',fontSize:32,fontFace:'Arial',color:primClr,bold:true,align:'right',isTextBox:true});
+        slide.addShape(pptx.ShapeType.rect,{x:'8%',y:'24%',w:'15%',h:'0.5%',fill:{color:primClr}});
+        const lines=s.sub.split('\n');
+        slide.addText(lines.map(l=>({text:l,options:{bullet:true,fontSize:20,color:txtClr,align:'right',rtlMode:true,paraSpaceAfter:10}})),
+          {x:'8%',y:'30%',w:'84%',h:'55%',fontFace:'Arial',isTextBox:true,valign:'top'});
+      }
+      if(s.type!=='title') slide.addText(`${i+1}/${defaultSlides.length}`,{x:'92%',y:'90%',w:'6%',h:'6%',fontSize:11,color:'999999',align:'center'});
+    });
+  }
+
+  pptx.writeFile({fileName:(selectedProduct?.id||'presentation')+'.pptx'});
 }
 
 function switchOutput(tab){
