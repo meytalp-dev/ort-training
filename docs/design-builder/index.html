@@ -1271,23 +1271,165 @@ function buildProductHTML(type,p,f,b,content){
   }
 
   if(type==='presentation'){
-    const slides=c.slides||[
-      {title:'כותרת המצגת',content:'תת כותרת',type:'title'},
-      {title:'מה נלמד היום?',content:'נקודה ראשונה\nנקודה שנייה\nנקודה שלישית',type:'content'},
-      {title:'נושא מרכזי',content:'הסבר קצר על הנושא. הטקסט ניתן לעריכה.',type:'content'},
-      {title:'שאלה לדיון',content:'מה דעתכם?',type:'question'},
-      {title:'סיכום',content:'רעיון 1\nרעיון 2\nרעיון 3',type:'summary'},
-    ];
-    const slideHTML=slides.map((s,i)=>{
-      const isTitleSlide=s.type==='title';
-      const isQuestion=s.type==='question';
-      return `<div class="slide" style="background:${isTitleSlide?`linear-gradient(135deg,${p.primary},${darken(p.primary,30)})`:isQuestion?p.primary+'10':p.bg}">
-        <h1 contenteditable style="font-size:${isTitleSlide?'3rem':'2.2rem'};color:${isTitleSlide?(isLight(p.primary)?'#333':'#fff'):p.text};margin-bottom:16px">${s.title}</h1>
-        <div contenteditable style="font-size:1.3rem;line-height:2;${isTitleSlide?`color:${isLight(p.primary)?'#333':'#fff'};opacity:.8`:`color:${p.text};opacity:.7`};white-space:pre-line">${s.content}</div>
-        ${!isTitleSlide?`<div style="position:absolute;bottom:20px;left:20px;font-size:.8rem;color:${p.muted||p.text};opacity:.3">${i+1}/${slides.length}</div>`:''}
-      </div>`;
-    }).join('');
-    return `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">${fontLink}<style>${baseCSS}.slide{width:100%;max-width:960px;aspect-ratio:16/9;margin:20px auto;padding:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.1);position:relative;page-break-after:always}@media print{.slide{box-shadow:none;margin:0;border-radius:0}}</style></head><body>${slideHTML}</body></html>`;
+    const pri=p.primary,sec=p.secondary,acc=p.accent,bg=p.bg,txt=p.text;
+    const onP=isLight(pri)?'#333':'#fff';
+    const priL=pri+'12', secL=sec+'15';
+    const css=`${baseCSS}
+body{padding:20px;background:#e8e0d8}
+.slide{width:100%;max-width:960px;aspect-ratio:16/9;margin:16px auto;padding:0;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.12);position:relative;overflow:hidden;page-break-after:always;background:${bg}}
+.slide-inner{position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;padding:50px 60px}
+.deco{position:absolute;border-radius:50%;z-index:1;pointer-events:none}
+.num{position:absolute;bottom:16px;left:24px;font-size:.75rem;opacity:.3;z-index:3}
+.accent-bar{position:absolute;z-index:1}
+[contenteditable]:hover{outline:2px dashed ${pri}50;outline-offset:3px;border-radius:6px}
+[contenteditable]:focus{outline:2px solid ${pri};outline-offset:3px;border-radius:6px}
+.edit-hint{position:fixed;bottom:0;left:0;right:0;background:${pri};color:${onP};padding:10px;text-align:center;font-size:.85rem;font-family:Heebo;z-index:100;opacity:.9}
+@media print{body{background:#fff;padding:0}.slide{box-shadow:none;margin:0;border-radius:0}.edit-hint{display:none}}`;
+
+    return `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">${fontLink}<style>${css}</style></head><body>
+<div class="edit-hint">לחצו על כל טקסט כדי לערוך אותו</div>
+
+<!-- SLIDE 1: TITLE -->
+<div class="slide" style="background:linear-gradient(135deg,${pri},${darken(pri,30)})">
+  <div class="deco" style="width:200px;height:200px;top:-60px;left:-60px;background:${sec};opacity:.15"></div>
+  <div class="deco" style="width:140px;height:140px;bottom:-40px;right:-40px;background:${acc};opacity:.12"></div>
+  <div class="deco" style="width:80px;height:80px;top:40%;left:80px;background:#fff;opacity:.06"></div>
+  <div class="slide-inner" style="align-items:center;justify-content:center;text-align:center">
+    <h1 contenteditable style="font-size:3rem;color:${onP};margin-bottom:12px">כותרת</h1>
+    <div style="width:80px;height:4px;background:${onP};opacity:.4;border-radius:2px;margin:0 auto 16px"></div>
+    <p contenteditable style="font-size:1.4rem;color:${onP};opacity:.75">תת כותרת</p>
+  </div>
+</div>
+
+<!-- SLIDE 2: AGENDA / BULLETS -->
+<div class="slide">
+  <div class="accent-bar" style="top:0;right:0;width:6px;height:100%;background:${pri}"></div>
+  <div class="deco" style="width:120px;height:120px;bottom:-30px;left:-30px;background:${sec};opacity:.08"></div>
+  <div class="slide-inner" style="justify-content:center">
+    <h2 contenteditable style="font-size:2rem;color:${pri};margin-bottom:8px">כותרת</h2>
+    <div style="width:60px;height:3px;background:${pri};border-radius:2px;margin-bottom:28px"></div>
+    <div style="display:flex;flex-direction:column;gap:16px;max-width:700px">
+      ${[1,2,3,4].map(n=>`<div style="display:flex;align-items:center;gap:16px">
+        <div style="width:40px;height:40px;border-radius:50%;background:${pri};color:${onP};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;flex-shrink:0">${n}</div>
+        <span contenteditable style="font-size:1.15rem;color:${txt}">טקסט</span>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div class="num">2</div>
+</div>
+
+<!-- SLIDE 3: 3 CARDS -->
+<div class="slide">
+  <div class="deco" style="width:100px;height:100px;top:-20px;right:-20px;background:${pri};opacity:.06"></div>
+  <div class="slide-inner" style="justify-content:center;align-items:center">
+    <h2 contenteditable style="font-size:1.8rem;color:${pri};margin-bottom:28px;text-align:center">כותרת</h2>
+    <div style="display:flex;gap:20px;width:100%">
+      ${[{col:pri,n:'01'},{col:sec,n:'02'},{col:acc,n:'03'}].map(cd=>`<div style="flex:1;background:#fff;border-radius:16px;padding:24px 18px;text-align:center;border-top:4px solid ${cd.col};box-shadow:0 2px 12px rgba(0,0,0,.05)">
+        <div style="width:48px;height:48px;border-radius:50%;background:${cd.col}15;color:${cd.col};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;margin:0 auto 12px">${cd.n}</div>
+        <h3 contenteditable style="font-size:1.1rem;color:${txt};margin-bottom:6px">כותרת</h3>
+        <p contenteditable style="font-size:.9rem;color:${txt};opacity:.6">טקסט</p>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div class="num">3</div>
+</div>
+
+<!-- SLIDE 4: TEXT + IMAGE -->
+<div class="slide">
+  <div class="accent-bar" style="bottom:0;left:0;width:100%;height:5px;background:linear-gradient(90deg,${pri},${sec})"></div>
+  <div class="slide-inner" style="flex-direction:row;gap:40px;align-items:center">
+    <div style="flex:1">
+      <h2 contenteditable style="font-size:1.8rem;color:${pri};margin-bottom:12px">כותרת</h2>
+      <div style="width:50px;height:3px;background:${pri};border-radius:2px;margin-bottom:16px"></div>
+      <p contenteditable style="font-size:1.05rem;color:${txt};line-height:1.8;opacity:.8">טקסט</p>
+    </div>
+    <div style="flex:1;background:${priL};border-radius:16px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center">
+      <span style="color:${pri};opacity:.4;font-size:1rem">מקום לתמונה</span>
+    </div>
+  </div>
+  <div class="num">4</div>
+</div>
+
+<!-- SLIDE 5: TWO COLUMNS -->
+<div class="slide">
+  <div class="deco" style="width:160px;height:160px;top:-40px;left:-40px;background:${sec};opacity:.07"></div>
+  <div class="slide-inner" style="justify-content:center;align-items:center">
+    <h2 contenteditable style="font-size:1.8rem;color:${pri};margin-bottom:24px;text-align:center">כותרת</h2>
+    <div style="display:flex;gap:24px;width:100%">
+      <div style="flex:1;background:${priL};border-radius:16px;padding:28px 22px;text-align:center">
+        <h3 contenteditable style="font-size:1.2rem;color:${pri};margin-bottom:10px">עמודה א</h3>
+        <p contenteditable style="font-size:.95rem;color:${txt};opacity:.7;line-height:1.7">טקסט</p>
+      </div>
+      <div style="flex:1;background:${secL};border-radius:16px;padding:28px 22px;text-align:center">
+        <h3 contenteditable style="font-size:1.2rem;color:${sec};margin-bottom:10px">עמודה ב</h3>
+        <p contenteditable style="font-size:.95rem;color:${txt};opacity:.7;line-height:1.7">טקסט</p>
+      </div>
+    </div>
+  </div>
+  <div class="num">5</div>
+</div>
+
+<!-- SLIDE 6: BIG IMAGE -->
+<div class="slide">
+  <div class="slide-inner" style="padding:24px">
+    <div style="flex:1;background:${priL};border-radius:16px;display:flex;align-items:center;justify-content:center;width:100%">
+      <span style="color:${pri};opacity:.35;font-size:1.2rem">מקום לתמונה גדולה</span>
+    </div>
+  </div>
+  <div class="num">6</div>
+</div>
+
+<!-- SLIDE 7: CONTENT WITH SIDE BAR -->
+<div class="slide">
+  <div class="accent-bar" style="top:0;right:0;width:60px;height:100%;background:${pri}"></div>
+  <div class="slide-inner" style="justify-content:center;padding-right:90px">
+    <h2 contenteditable style="font-size:2rem;color:${pri};margin-bottom:10px">כותרת</h2>
+    <div style="width:50px;height:3px;background:${pri};border-radius:2px;margin-bottom:20px"></div>
+    <p contenteditable style="font-size:1.1rem;color:${txt};line-height:2;opacity:.8">טקסט</p>
+  </div>
+  <div class="num">7</div>
+</div>
+
+<!-- SLIDE 8: QUOTE / HIGHLIGHT -->
+<div class="slide" style="background:${pri}">
+  <div class="deco" style="width:200px;height:200px;top:-60px;right:-60px;background:${sec};opacity:.1"></div>
+  <div class="deco" style="width:100px;height:100px;bottom:30px;left:30px;background:#fff;opacity:.05"></div>
+  <div class="slide-inner" style="align-items:center;justify-content:center;text-align:center">
+    <div style="font-size:5rem;color:${onP};opacity:.2;line-height:1;font-family:Georgia">"</div>
+    <h2 contenteditable style="font-size:1.8rem;color:${onP};line-height:1.7;margin-top:-10px">טקסט מודגש</h2>
+    <div style="width:60px;height:3px;background:${onP};opacity:.3;border-radius:2px;margin:16px auto"></div>
+    <p contenteditable style="font-size:1rem;color:${onP};opacity:.5">מקור</p>
+  </div>
+</div>
+
+<!-- SLIDE 9: 4 BOXES -->
+<div class="slide">
+  <div class="deco" style="width:80px;height:80px;top:20px;left:20px;background:${sec};opacity:.08"></div>
+  <div class="slide-inner" style="justify-content:center;align-items:center">
+    <h2 contenteditable style="font-size:1.8rem;color:${pri};margin-bottom:24px;text-align:center">כותרת</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;width:100%">
+      ${[{col:pri},{col:sec},{col:acc},{col:pri}].map((bx,i)=>`<div style="background:#fff;border-radius:14px;padding:20px 14px;text-align:center;border-top:3px solid ${bx.col};box-shadow:0 2px 10px rgba(0,0,0,.04)">
+        <div style="width:40px;height:40px;border-radius:50%;background:${bx.col}12;color:${bx.col};display:flex;align-items:center;justify-content:center;font-weight:800;margin:0 auto 10px">${i+1}</div>
+        <h3 contenteditable style="font-size:1rem;color:${txt};margin-bottom:4px">כותרת</h3>
+        <p contenteditable style="font-size:.8rem;color:${txt};opacity:.5">טקסט</p>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div class="num">9</div>
+</div>
+
+<!-- SLIDE 10: THANK YOU -->
+<div class="slide" style="background:linear-gradient(135deg,${pri},${darken(pri,25)})">
+  <div class="deco" style="width:180px;height:180px;bottom:-50px;left:-50px;background:${sec};opacity:.1"></div>
+  <div class="deco" style="width:120px;height:120px;top:-30px;right:-30px;background:#fff;opacity:.06"></div>
+  <div class="slide-inner" style="align-items:center;justify-content:center;text-align:center">
+    <h1 contenteditable style="font-size:3rem;color:${onP};margin-bottom:12px">תודה!</h1>
+    <div style="width:80px;height:4px;background:${onP};opacity:.3;border-radius:2px;margin:0 auto 20px"></div>
+    <p contenteditable style="font-size:1.2rem;color:${onP};opacity:.6;line-height:1.8">סיכום</p>
+  </div>
+</div>
+
+</body></html>`;
   }
 
   if(type==='summary'){
