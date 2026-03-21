@@ -1382,9 +1382,23 @@ function buildProductHTML(type,p,f,b,content){
   }
   const hCol=headingColor(p);
 
-  // Font link - Google Fonts + local font @font-face for iframe
-  const localFontCSS=document.querySelectorAll('style')[0].textContent.match(/@font-face\\{[^}]+\\}/g)?.join('')||'';
-  const fontLink=`<link href="https://fonts.googleapis.com/css2?family=${f.n1.replace(/ /g,'+')}:wght@300;400;500;600;700;800;900&family=${f.n2.replace(/ /g,'+')}:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"><style>${document.querySelector('style').textContent.split('*{')[0]}</style>`;
+  // Font link - Google Fonts + local font @font-face with absolute URLs
+  function cleanFontName(name){
+    return name.replace(/\s+(Light|Regular|Medium|SemiBold|Bold|Black|Thin|ExtraLight|ExtraBold)$/i,'');
+  }
+  const gf1=cleanFontName(f.n1).replace(/ /g,'+');
+  const gf2=cleanFontName(f.n2).replace(/ /g,'+');
+
+  // Extract @font-face declarations and convert relative paths to absolute
+  const baseUrl=new URL('.',window.location.href).href;
+  const fontFaceCSS=document.querySelector('style').textContent.split('*{')[0];
+  const absoluteFontCSS=fontFaceCSS.replace(/url\(['"]?([^'")]+)['"]?\)/g,(match,path)=>{
+    if(path.startsWith('http')||path.startsWith('data:')) return match;
+    const absUrl=new URL(path,baseUrl).href;
+    return "url('"+absUrl+"')";
+  });
+
+  const fontLink=`<link href="https://fonts.googleapis.com/css2?family=${gf1}:wght@300;400;500;600;700;800;900&family=${gf2}:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"><style>${absoluteFontCSS}</style>`;
 
   const baseCSS=`*{margin:0;padding:0;box-sizing:border-box}:root{--bg:${p.bg};--text:${p.text};--primary:${hCol};--secondary:${p.secondary};--accent:${p.accent};--heading:${hCol}}body{font-family:${f.body},sans-serif;font-weight:${f.bw};background:var(--bg);color:var(--text);direction:rtl}h1,h2,h3{font-family:${f.title},sans-serif;font-weight:${f.tw};color:var(--heading)}.btn-p{${b.css.replace(/PRIMARY/g,hCol).replace(/\.\.\./g,hCol)}background:${hCol};color:${isLight(hCol)?'#333':'#fff'};font-weight:600;border:none;cursor:pointer;font-family:${f.body},sans-serif}.btn-s{padding:10px 28px;border-radius:30px;border:2px solid ${hCol};background:transparent;color:${hCol};font-weight:600;cursor:pointer;font-family:${f.body},sans-serif}[contenteditable]:hover{outline:2px dashed ${hCol}40;outline-offset:2px}[contenteditable]:focus{outline:2px solid ${hCol};outline-offset:2px}`;
 
@@ -1658,9 +1672,12 @@ function downloadAsPPTX(){
   const onPri=isLight(hClr)?'333333':'FFFFFF';
   const onSec=isLight(p.secondary)?'333333':'FFFFFF';
   const totalSlides=10;
-  // Use chosen fonts - Google Slides supports Google Fonts
-  const titleFont=f.n1.replace(/'/g,'')||'Arial';
-  const bodyFont=f.n2.replace(/'/g,'')||'Arial';
+  // Use chosen fonts - clean weight suffixes for proper font matching
+  function cleanPptxFont(name){
+    return name.replace(/'/g,'').replace(/\s+(Light|Regular|Medium|SemiBold|Bold|Black|Thin|ExtraLight|ExtraBold)$/i,'')||'Arial';
+  }
+  const titleFont=cleanPptxFont(f.n1);
+  const bodyFont=cleanPptxFont(f.n2);
 
   // Helper: add branded footer to slide
   function addFooter(slide,num){
