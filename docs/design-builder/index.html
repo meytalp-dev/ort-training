@@ -275,7 +275,6 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
     </div>
 
   </div>
-  </div>
 </div>
 
 <!-- ===== SCREEN: AI PROMPT ===== -->
@@ -693,8 +692,9 @@ function renderMoods(){
 function selectMood(id){
   selectedMood=id;
   document.querySelectorAll('.mood-chip').forEach(c=>c.classList.toggle('selected',c.querySelector('.mood-name').textContent===moods.find(m=>m.id===id).name));
-  // Auto-advance after short delay
-  setTimeout(()=>generateMoodSuggestions(),400);
+  document.getElementById('moodGoBtn').disabled=false;
+  // Auto-advance only for quick design path
+  if(quickProductId) setTimeout(()=>generateMoodSuggestions(),400);
 }
 
 // ===== SUGGESTION GENERATION =====
@@ -722,7 +722,7 @@ function generateMoodSuggestions(){
     currentSuggestions.push({palette:pal,font:fnt,button:btn,label:`הצעה ${i+1}`});
   }
 
-  sugSource='mood';
+  if(!quickProductId) sugSource='mood'; // preserve 'quick' if in quick design path
   document.getElementById('sugTitle').textContent=`הצעות לסגנון: ${moodObj.name}`;
   document.getElementById('sugSub').textContent='בחרי את השילוב שהכי מדבר אלייך – כל קלף מראה תצוגה מקדימה חיה';
   renderSuggestions();
@@ -779,15 +779,15 @@ function selectSuggestion(i){
   document.getElementById('sugGoBtn').disabled=false;
   document.getElementById('sugBrandBtn').disabled=false;
 
-  // Auto-advance to product after selection
   if(quickProductId){
     document.getElementById('sugBrandBtn').style.display='none';
     document.getElementById('sugGoBtn').textContent='המשך לעיצוב';
+    // Auto-advance only for quick design
+    setTimeout(()=>goToProduct(),600);
   } else {
     document.getElementById('sugBrandBtn').style.display='';
     document.getElementById('sugGoBtn').textContent='צור תוצר';
   }
-  setTimeout(()=>goToProduct(),600);
 }
 
 function goBackFromSuggestions(){
@@ -1083,9 +1083,9 @@ function renderWizardStep(){
   }
 }
 
-function wizSelectPalette(i){wizardChoices.palette=palettes[i];renderWizardStep();setTimeout(()=>wizardNext(),500)}
-function wizSelectFont(i){wizardChoices.font=fontPairs[i];renderWizardStep();setTimeout(()=>wizardNext(),500)}
-function wizSelectButton(i){wizardChoices.button=btnStyles[i];renderWizardStep();setTimeout(()=>wizardNext(),500)}
+function wizSelectPalette(i){wizardChoices.palette=palettes[i];renderWizardStep();document.getElementById('wizNext').disabled=false}
+function wizSelectFont(i){wizardChoices.font=fontPairs[i];renderWizardStep();document.getElementById('wizNext').disabled=false}
+function wizSelectButton(i){wizardChoices.button=btnStyles[i];renderWizardStep();document.getElementById('wizNext').disabled=false}
 
 function wizardNext(){
   if(wizardStep<wizSteps.length-1){wizardStep++;renderWizardStep()}
@@ -1351,10 +1351,14 @@ JSON structure by product type:
   // Show preview - scale down large content to fit
   const preview=document.getElementById('outputPreview');
   const isLargeContent=['social-post','invitation','card'].includes(selectedProduct.id);
-  const iframeStyle=isLargeContent
-    ?'width:1100px;height:1100px;border:none;transform:scale(0.5);transform-origin:top right;'
+  const dims={
+    'social-post':{w:1080,h:1080},'invitation':{w:1080,h:1350},'card':{w:1050,h:600}
+  };
+  const dim=dims[selectedProduct.id];
+  const iframeStyle=isLargeContent&&dim
+    ?`width:${dim.w}px;height:${dim.h}px;border:none;transform:scale(0.5);transform-origin:top right;`
     :'width:100%;min-height:500px;border:none;';
-  preview.style.height=isLargeContent?'560px':'auto';
+  preview.style.height=isLargeContent&&dim?Math.ceil(dim.h*0.5+10)+'px':'auto';
   preview.style.overflow='hidden';
   preview.innerHTML=`<iframe id="previewFrame" srcdoc="${generatedHTML.replace(/"/g,'&quot;')}" style="${iframeStyle}"></iframe>`;
   if(aiUsed) document.getElementById('outputSub').textContent+=` | תוכן נוצר עם AI`;
@@ -1386,8 +1390,14 @@ function buildProductHTML(type,p,f,b,content){
   function cleanFontName(name){
     return name.replace(/\s+(Light|Regular|Medium|SemiBold|Bold|Black|Thin|ExtraLight|ExtraBold)$/i,'');
   }
-  const gf1=cleanFontName(f.n1).replace(/ /g,'+');
-  const gf2=cleanFontName(f.n2).replace(/ /g,'+');
+  // Google Font families (only include if it's actually a Google Font)
+  const googleFonts=['Heebo','Rubik','Assistant','Alef','Secular One','Varela Round','Frank Ruhl Libre','David Libre','Suez One','Miriam Libre','Amatic SC','Playpen Sans Hebrew'];
+  const gf1raw=cleanFontName(f.n1);
+  const gf2raw=cleanFontName(f.n2);
+  const gfFamilies=[];
+  if(googleFonts.includes(gf1raw)) gfFamilies.push(gf1raw.replace(/ /g,'+'));
+  if(googleFonts.includes(gf2raw)) gfFamilies.push(gf2raw.replace(/ /g,'+'));
+  const gfLink=gfFamilies.length?`<link href="https://fonts.googleapis.com/css2?${gfFamilies.map(f=>'family='+f+':wght@300;400;500;600;700;800;900').join('&')}&display=swap" rel="stylesheet">`:'';
 
   // Extract @font-face declarations and convert relative paths to absolute
   const baseUrl=new URL('.',window.location.href).href;
@@ -1398,9 +1408,11 @@ function buildProductHTML(type,p,f,b,content){
     return "url('"+absUrl+"')";
   });
 
-  const fontLink=`<link href="https://fonts.googleapis.com/css2?family=${gf1}:wght@300;400;500;600;700;800;900&family=${gf2}:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"><style>${absoluteFontCSS}</style>`;
+  const fontLink=`${gfLink}<style>${absoluteFontCSS}</style>`;
 
-  const baseCSS=`*{margin:0;padding:0;box-sizing:border-box}:root{--bg:${p.bg};--text:${p.text};--primary:${hCol};--secondary:${p.secondary};--accent:${p.accent};--heading:${hCol}}body{font-family:${f.body},sans-serif;font-weight:${f.bw};background:var(--bg);color:var(--text);direction:rtl}h1,h2,h3{font-family:${f.title},sans-serif;font-weight:${f.tw};color:var(--heading)}.btn-p{${b.css.replace(/PRIMARY/g,hCol).replace(/\.\.\./g,hCol)}background:${hCol};color:${isLight(hCol)?'#333':'#fff'};font-weight:600;border:none;cursor:pointer;font-family:${f.body},sans-serif}.btn-s{padding:10px 28px;border-radius:30px;border:2px solid ${hCol};background:transparent;color:${hCol};font-weight:600;cursor:pointer;font-family:${f.body},sans-serif}[contenteditable]:hover{outline:2px dashed ${hCol}40;outline-offset:2px}[contenteditable]:focus{outline:2px solid ${hCol};outline-offset:2px}`;
+  // Button CSS - put background BEFORE button-specific CSS so gradients aren't overridden
+  const btnCSS=b.css.replace(/PRIMARY/g,hCol).replace(/\.\.\./g,hCol);
+  const baseCSS=`*{margin:0;padding:0;box-sizing:border-box}:root{--bg:${p.bg};--text:${p.text};--primary:${hCol};--secondary:${p.secondary};--accent:${p.accent};--heading:${hCol}}body{font-family:${f.body},sans-serif;font-weight:${f.bw};background:var(--bg);color:var(--text);direction:rtl}h1,h2,h3{font-family:${f.title},sans-serif;font-weight:${f.tw};color:var(--heading)}.btn-p{background:${hCol};${btnCSS}color:${isLight(hCol)?'#333':'#fff'};font-weight:600;border:none;cursor:pointer;font-family:${f.body},sans-serif}.btn-s{padding:10px 28px;border-radius:30px;border:2px solid ${hCol};background:transparent;color:${hCol};font-weight:600;cursor:pointer;font-family:${f.body},sans-serif}[contenteditable]:hover{outline:2px dashed ${hCol}40;outline-offset:2px}[contenteditable]:focus{outline:2px solid ${hCol};outline-offset:2px}`;
 
   if(type==='social-post'){
     return `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">${fontLink}<style>${baseCSS}body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}.post{width:1080px;height:1080px;background:${p.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px;position:relative;overflow:hidden}.post::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:${p.primary}15}.post::after{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;border-radius:50%;background:${p.secondary}15}</style></head><body><div class="post"><h1 contenteditable style="font-size:3.2rem;margin-bottom:20px;color:${p.text}">${c.headline||'כותרת הפוסט'}</h1><p contenteditable style="font-size:1.6rem;line-height:1.8;margin-bottom:40px;opacity:.8">${c.body||'תוכן הפוסט – ערכי את הטקסט הזה'}</p><button class="btn-p" contenteditable style="font-size:1.3rem;padding:18px 48px">${c.cta||'קריאה לפעולה'}</button></div></body></html>`;
@@ -1609,7 +1621,11 @@ async function downloadAsImage(){
   // Open content in hidden iframe, render with html2canvas, download PNG
   const container=document.createElement('div');
   container.style.cssText='position:fixed;left:-9999px;top:0';
-  container.innerHTML=`<iframe id="imgFrame" style="width:1080px;height:1080px;border:none"></iframe>`;
+  const imgDims={
+    'social-post':{w:1080,h:1080},'invitation':{w:1080,h:1350},'card':{w:1050,h:600}
+  };
+  const imgD=imgDims[selectedProduct?.id]||{w:1080,h:1080};
+  container.innerHTML=`<iframe id="imgFrame" style="width:${imgD.w}px;height:${imgD.h}px;border:none"></iframe>`;
   document.body.appendChild(container);
   const frame=document.getElementById('imgFrame');
   frame.contentDocument.open();
@@ -1621,7 +1637,7 @@ async function downloadAsImage(){
 
   try{
     const canvas=await html2canvas(frame.contentDocument.body,{
-      width:1080,height:1080,scale:1,useCORS:true,
+      width:imgD.w,height:imgD.h,scale:1,useCORS:true,
       backgroundColor:null
     });
     const link=document.createElement('a');
