@@ -1366,8 +1366,27 @@ JSON structure by product type:
 // ===== BUILD PRODUCT HTML =====
 function buildProductHTML(type,p,f,b,content){
   const c=content||{};
-  const fontLink=`<link href="https://fonts.googleapis.com/css2?family=${f.n1.replace(/ /g,'+')}:wght@${f.tw}&family=${f.n2.replace(/ /g,'+')}:wght@${f.bw}&display=swap" rel="stylesheet">`;
-  const baseCSS=`*{margin:0;padding:0;box-sizing:border-box}:root{--bg:${p.bg};--text:${p.text};--primary:${p.primary};--secondary:${p.secondary};--accent:${p.accent}}body{font-family:${f.body},sans-serif;font-weight:${f.bw};background:var(--bg);color:var(--text);direction:rtl}h1,h2,h3{font-family:${f.title},sans-serif;font-weight:${f.tw}}.btn-p{${b.css.replace(/PRIMARY/g,p.primary).replace(/\.\.\./g,p.primary)}background:${p.primary};color:${isLight(p.primary)?'#333':'#fff'};font-weight:600;border:none;cursor:pointer;font-family:${f.body},sans-serif}.btn-s{padding:10px 28px;border-radius:30px;border:2px solid ${p.primary};background:transparent;color:${p.primary};font-weight:600;cursor:pointer;font-family:${f.body},sans-serif}[contenteditable]:hover{outline:2px dashed ${p.primary}40;outline-offset:2px}[contenteditable]:focus{outline:2px solid ${p.primary};outline-offset:2px}`;
+
+  // Smart heading color: if primary is too light for headings on light bg, use darkest available color
+  function headingColor(pal){
+    const candidates=[pal.primary,pal.accent,pal.secondary,pal.text];
+    // On a light background, pick the darkest color that has good contrast
+    if(isLight(pal.bg)){
+      for(const col of candidates){
+        if(!isLight(col)) return col; // dark enough
+      }
+      // All colors are light – darken the primary
+      return darken(pal.primary,60);
+    }
+    return pal.primary;
+  }
+  const hCol=headingColor(p);
+
+  // Font link - Google Fonts + local font @font-face for iframe
+  const localFontCSS=document.querySelectorAll('style')[0].textContent.match(/@font-face\\{[^}]+\\}/g)?.join('')||'';
+  const fontLink=`<link href="https://fonts.googleapis.com/css2?family=${f.n1.replace(/ /g,'+')}:wght@300;400;500;600;700;800;900&family=${f.n2.replace(/ /g,'+')}:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"><style>${document.querySelector('style').textContent.split('*{')[0]}</style>`;
+
+  const baseCSS=`*{margin:0;padding:0;box-sizing:border-box}:root{--bg:${p.bg};--text:${p.text};--primary:${hCol};--secondary:${p.secondary};--accent:${p.accent};--heading:${hCol}}body{font-family:${f.body},sans-serif;font-weight:${f.bw};background:var(--bg);color:var(--text);direction:rtl}h1,h2,h3{font-family:${f.title},sans-serif;font-weight:${f.tw};color:var(--heading)}.btn-p{${b.css.replace(/PRIMARY/g,hCol).replace(/\.\.\./g,hCol)}background:${hCol};color:${isLight(hCol)?'#333':'#fff'};font-weight:600;border:none;cursor:pointer;font-family:${f.body},sans-serif}.btn-s{padding:10px 28px;border-radius:30px;border:2px solid ${hCol};background:transparent;color:${hCol};font-weight:600;cursor:pointer;font-family:${f.body},sans-serif}[contenteditable]:hover{outline:2px dashed ${hCol}40;outline-offset:2px}[contenteditable]:focus{outline:2px solid ${hCol};outline-offset:2px}`;
 
   if(type==='social-post'){
     return `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">${fontLink}<style>${baseCSS}body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}.post{width:1080px;height:1080px;background:${p.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px;position:relative;overflow:hidden}.post::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:${p.primary}15}.post::after{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;border-radius:50%;background:${p.secondary}15}</style></head><body><div class="post"><h1 contenteditable style="font-size:3.2rem;margin-bottom:20px;color:${p.text}">${c.headline||'כותרת הפוסט'}</h1><p contenteditable style="font-size:1.6rem;line-height:1.8;margin-bottom:40px;opacity:.8">${c.body||'תוכן הפוסט – ערכי את הטקסט הזה'}</p><button class="btn-p" contenteditable style="font-size:1.3rem;padding:18px 48px">${c.cta||'קריאה לפעולה'}</button></div></body></html>`;
@@ -1378,7 +1397,7 @@ function buildProductHTML(type,p,f,b,content){
   }
 
   if(type==='presentation'){
-    const pri=p.primary,sec=p.secondary,acc=p.accent,bg=p.bg,txt=p.text;
+    const pri=hCol,sec=p.secondary,acc=p.accent,bg=p.bg,txt=p.text;
     const onP=isLight(pri)?'#333':'#fff';
     const priL=pri+'12', secL=sec+'15';
     const css=`${baseCSS}
@@ -1625,8 +1644,18 @@ function downloadAsPPTX(){
   pptx.rtlMode=true;
 
   const clr=hex=>hex.replace('#','');
-  const C={txt:clr(p.text),pri:clr(p.primary),sec:clr(p.secondary),acc:clr(p.accent),bg:clr(p.bg)};
-  const onPri=isLight(p.primary)?'333333':'FFFFFF';
+  // Smart heading color for PPTX too
+  function pptxHeadingColor(pal){
+    const candidates=[pal.primary,pal.accent,pal.secondary,pal.text];
+    if(isLight(pal.bg)){
+      for(const col of candidates){ if(!isLight(col)) return col; }
+      return darken(pal.primary,60);
+    }
+    return pal.primary;
+  }
+  const hClr=pptxHeadingColor(p);
+  const C={txt:clr(p.text),pri:clr(hClr),sec:clr(p.secondary),acc:clr(p.accent),bg:clr(p.bg)};
+  const onPri=isLight(hClr)?'333333':'FFFFFF';
   const onSec=isLight(p.secondary)?'333333':'FFFFFF';
   const totalSlides=10;
   // Use chosen fonts - Google Slides supports Google Fonts
