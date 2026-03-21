@@ -623,11 +623,19 @@ function generateMoodSuggestions(){
   const matchFonts=fontPairs.filter(f=>f.moods.includes(mood));
   const matchBtns=btnStyles.filter(b=>b.moods.includes(mood));
 
-  // Generate 4 combinations
+  // Generate 4 diverse combinations - ensure each has DIFFERENT fonts
+  // If not enough matching fonts, pull from all fonts to ensure variety
+  let availFonts=[...matchFonts];
+  if(availFonts.length<4){
+    for(const fp of fontPairs){
+      if(!availFonts.find(f=>f.id===fp.id)) availFonts.push(fp);
+      if(availFonts.length>=4) break;
+    }
+  }
   currentSuggestions=[];
   for(let i=0;i<4;i++){
     const pal=matchPals[i%matchPals.length];
-    const fnt=matchFonts[i%matchFonts.length];
+    const fnt=availFonts[i%availFonts.length];
     const btn=matchBtns[i%matchBtns.length];
     currentSuggestions.push({palette:pal,font:fnt,button:btn,label:`הצעה ${i+1}`});
   }
@@ -644,21 +652,36 @@ function renderSuggestions(){
   document.getElementById('sugGoBtn').disabled=true;
   document.getElementById('sugGrid').innerHTML=currentSuggestions.map((s,i)=>{
     const p=s.palette, f=s.font, b=s.button;
+    const onP=isLight(p.primary)?'#333':'#fff';
     return `<div class="sug-card" onclick="selectSuggestion(${i})">
-      <div class="sug-preview" style="background:${p.bg}">
-        <div style="font-family:${f.title};font-weight:${f.tw};font-size:1.3rem;color:${p.text};margin-bottom:4px">כותרת ראשית</div>
-        <div style="font-family:${f.body};font-weight:${f.bw};font-size:.82rem;color:${p.text};opacity:.7;margin-bottom:12px">טקסט משנה – כך זה ייראה בפועל</div>
-        <div style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap">
-          ${b.render(p.primary)}
-          <span style="padding:8px 20px;border-radius:30px;border:2px solid ${p.secondary};color:${p.text};font-size:.78rem;font-weight:600">משני</span>
+      <div class="sug-preview" style="background:${p.bg};min-height:260px;padding:24px">
+        <!-- Color strip -->
+        <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:16px">
+          ${p.colors.slice(0,5).map(c=>`<div style="flex:1;background:${c}"></div>`).join('')}
         </div>
-        <div style="display:flex;gap:3px;margin-top:12px">
-          ${p.colors.slice(0,5).map(c=>`<div style="width:20px;height:20px;border-radius:6px;background:${c}"></div>`).join('')}
+        <!-- Font showcase - big and clear -->
+        <div style="background:${p.primary}08;border-radius:14px;padding:18px;margin-bottom:14px">
+          <div style="font-family:${f.title};font-weight:${f.tw};font-size:1.8rem;color:${p.text};margin-bottom:6px;line-height:1.2">כותרת לדוגמה</div>
+          <div style="font-family:${f.body};font-weight:${f.bw};font-size:1rem;color:${p.text};opacity:.6;line-height:1.6">טקסט גוף – כך ייראה הטקסט הרגיל שלכם בכל החומרים</div>
+        </div>
+        <!-- Button + font names -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;gap:6px;align-items:center">
+            ${b.render(p.primary)}
+          </div>
+          <div style="text-align:left">
+            <div style="font-size:.7rem;color:${p.text};opacity:.4">${f.desc}</div>
+          </div>
         </div>
       </div>
       <div class="sug-meta">
-        <div class="sug-name">${p.name}</div>
-        <div class="sug-desc">${f.n1} + ${f.n2} | ${b.name}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="sug-name">${p.name}</div>
+            <div class="sug-desc">${f.n1} + ${f.n2}</div>
+          </div>
+          <div style="font-size:.72rem;padding:4px 10px;border-radius:10px;background:${p.primary}15;color:${p.primary};font-weight:600">${b.name}</div>
+        </div>
       </div>
     </div>`;
   }).join('');
