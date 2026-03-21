@@ -658,31 +658,78 @@ function handleLogoUpload(e){
 function extractColorsFromImage(img){
   const canvas=document.createElement('canvas');
   const ctx=canvas.getContext('2d');
-  const size=50;
+  const size=100;
   canvas.width=size;canvas.height=size;
   ctx.drawImage(img,0,0,size,size);
   const data=ctx.getImageData(0,0,size,size).data;
 
-  // Simple color quantization
-  const buckets={};
+  // Collect all pixel colors (skip transparent, near-white, near-black)
+  const pixels=[];
   for(let i=0;i<data.length;i+=4){
-    const r=Math.round(data[i]/32)*32;
-    const g=Math.round(data[i+1]/32)*32;
-    const b=Math.round(data[i+2]/32)*32;
-    const a=data[i+3];
-    if(a<128) continue; // skip transparent
-    if(r>240&&g>240&&b>240) continue; // skip white
-    if(r<15&&g<15&&b<15) continue; // skip black
-    const key=`${r},${g},${b}`;
-    buckets[key]=(buckets[key]||0)+1;
+    const r=data[i],g=data[i+1],bl=data[i+2],a=data[i+3];
+    if(a<128) continue;
+    if(r>235&&g>235&&bl>235) continue;
+    if(r<20&&g<20&&bl<20) continue;
+    // Skip very desaturated (grays)
+    const max=Math.max(r,g,bl),min=Math.min(r,g,bl);
+    if(max-min<25&&max>60&&max<200) continue;
+    pixels.push([r,g,bl]);
   }
 
-  // Get top colors
-  const sorted=Object.entries(buckets).sort((a,b)=>b[1]-a[1]);
-  extractedLogoColors=sorted.slice(0,6).map(([k])=>{
-    const [r,g,b]=k.split(',').map(Number);
-    return '#'+[r,g,b].map(x=>Math.min(255,x).toString(16).padStart(2,'0')).join('');
-  });
+  // K-means clustering to find dominant colors
+  if(pixels.length<10){
+    extractedLogoColors=['#C9A96E','#89CFF0','#9DB5A0','#D4766E'];
+  } else {
+    // Initialize centroids from spread of pixels
+    let centroids=[];
+    const step=Math.floor(pixels.length/6);
+    for(let i=0;i<6;i++) centroids.push([...pixels[Math.min(i*step,pixels.length-1)]]);
+
+    // Run k-means for 10 iterations
+    for(let iter=0;iter<10;iter++){
+      const clusters=centroids.map(()=>({sum:[0,0,0],count:0}));
+      for(const px of pixels){
+        let minD=Infinity,minI=0;
+        for(let ci=0;ci<centroids.length;ci++){
+          const d=Math.sqrt((px[0]-centroids[ci][0])**2+(px[1]-centroids[ci][1])**2+(px[2]-centroids[ci][2])**2);
+          if(d<minD){minD=d;minI=ci}
+        }
+        clusters[minI].sum[0]+=px[0];clusters[minI].sum[1]+=px[1];clusters[minI].sum[2]+=px[2];
+        clusters[minI].count++;
+      }
+      for(let ci=0;ci<centroids.length;ci++){
+        if(clusters[ci].count>0){
+          centroids[ci]=[Math.round(clusters[ci].sum[0]/clusters[ci].count),Math.round(clusters[ci].sum[1]/clusters[ci].count),Math.round(clusters[ci].sum[2]/clusters[ci].count)];
+        }
+      }
+    }
+
+    // Sort by cluster size and remove duplicates
+    const clusterSizes=centroids.map((_,i)=>{
+      let count=0;
+      for(const px of pixels){
+        let minD=Infinity,minI=0;
+        for(let ci=0;ci<centroids.length;ci++){
+          const d=Math.sqrt((px[0]-centroids[ci][0])**2+(px[1]-centroids[ci][1])**2+(px[2]-centroids[ci][2])**2);
+          if(d<minD){minD=d;minI=ci}
+        }
+        if(minI===i) count++;
+      }
+      return {centroid:centroids[i],count};
+    }).sort((a,b)=>b.count-a.count);
+
+    // Convert to hex, remove too-similar colors
+    extractedLogoColors=[];
+    for(const cs of clusterSizes){
+      const hex='#'+cs.centroid.map(x=>Math.min(255,Math.max(0,x)).toString(16).padStart(2,'0')).join('');
+      let tooClose=false;
+      for(const existing of extractedLogoColors){
+        if(hexDistance(hex,existing)<60) {tooClose=true;break}
+      }
+      if(!tooClose) extractedLogoColors.push(hex);
+      if(extractedLogoColors.length>=5) break;
+    }
+  }
 
   // Show extracted colors
   document.getElementById('logoExtracted').style.display='';
@@ -693,7 +740,17 @@ function extractColorsFromImage(img){
 }
 
 function generateLogoSuggestions(){
-  // Find closest palettes by color distance
+  // Create a custom palette from logo colors
+  const logoColors=extractedLogoColors.slice(0,5);
+  while(logoColors.length<5) logoColors.push(lighten(logoColors[0],40+logoColors.length*20));
+  const customPalette={
+    id:'logo-custom',name:'מהלוגו שלך',colors:logoColors,
+    bg:lighten(logoColors[0],80),text:darken(logoColors[0],100),
+    primary:logoColors[0],secondary:logoColors[1]||logoColors[0],
+    accent:logoColors[2]||logoColors[0],moods:['professional']
+  };
+
+  // Find closest existing palettes by color distance
   const scored=palettes.map(p=>{
     let totalDist=0;
     for(const ec of extractedLogoColors){
@@ -707,13 +764,14 @@ function generateLogoSuggestions(){
     return {palette:p,dist:totalDist};
   }).sort((a,b)=>a.dist-b.dist);
 
-  // Take top 4 palettes, pair with appropriate fonts & buttons
-  currentSuggestions=scored.slice(0,4).map((s,i)=>{
-    const pal=s.palette;
+  // First suggestion = custom palette from logo, next 3 = closest existing
+  const suggestions=[customPalette,...scored.slice(0,3).map(s=>s.palette)];
+
+  currentSuggestions=suggestions.map((pal,i)=>{
     const mood=pal.moods[0];
     const fnt=fontPairs.find(f=>f.moods.includes(mood))||fontPairs[0];
     const btn=btnStyles.find(b=>b.moods.includes(mood))||btnStyles[0];
-    return {palette:pal,font:fnt,button:btn,label:`הצעה ${i+1}`};
+    return {palette:pal,font:fnt,button:btn,label:i===0?'מצבעי הלוגו':`הצעה ${i}`};
   });
 
   sugSource='logo';
