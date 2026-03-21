@@ -443,6 +443,19 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
     <div>יוצר את התוצר שלך...</div>
   </div>
 
+  <!-- Editing panel -->
+  <div id="editPanel" style="display:none;background:var(--card);border-radius:var(--r-lg);border:2px solid var(--border);padding:16px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <span style="font-weight:700;font-size:.95rem">צבע רקע:</span>
+      <div id="editBgColors" style="display:flex;gap:6px"></div>
+      <span style="font-weight:700;font-size:.95rem;margin-right:10px">צבע כותרת:</span>
+      <div id="editTitleColors" style="display:flex;gap:6px"></div>
+      <span style="font-weight:700;font-size:.95rem;margin-right:10px">צבע טקסט:</span>
+      <div id="editTextColors" style="display:flex;gap:6px"></div>
+    </div>
+    <div style="margin-top:8px;font-size:.78rem;color:var(--muted)">לחצו על טקסט בתצוגה כדי לערוך. השינויים נשמרים בהורדה.</div>
+  </div>
+
   <!-- Live result -->
   <div class="live-preview" id="outputPreview" style="min-height:400px"></div>
 
@@ -1372,6 +1385,7 @@ JSON structure by product type:
 
   // Show code
   switchOutput('css');
+  renderEditPanel();
 }
 
 // ===== BUILD PRODUCT HTML =====
@@ -1619,14 +1633,74 @@ body{padding:20px;background:#e8e0d8}
 // ===== OUTPUT ACTIONS =====
 let currentOutputTab='css';
 
+// ===== EDITING PANEL =====
+function renderEditPanel(){
+  const p=wizardChoices.palette;
+  if(!p) return;
+  document.getElementById('editPanel').style.display='';
+
+  // All palette colors + white + black for variety
+  const allColors=[...p.colors, p.bg, p.text, '#FFFFFF', '#000000'];
+  const uniqueColors=[...new Set(allColors)];
+
+  function colorDot(color,onclick){
+    return `<div onclick="${onclick}" style="width:32px;height:32px;border-radius:8px;background:${color};cursor:pointer;border:2px solid ${isLight(color)?'#ddd':'rgba(255,255,255,.3)'};transition:.2s" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" title="${color}"></div>`;
+  }
+
+  document.getElementById('editBgColors').innerHTML=uniqueColors.map(c=>
+    colorDot(c,`applyEdit('bg','${c}')`)
+  ).join('');
+
+  document.getElementById('editTitleColors').innerHTML=uniqueColors.map(c=>
+    colorDot(c,`applyEdit('title','${c}')`)
+  ).join('');
+
+  document.getElementById('editTextColors').innerHTML=uniqueColors.map(c=>
+    colorDot(c,`applyEdit('text','${c}')`)
+  ).join('');
+}
+
+function applyEdit(type,color){
+  const frame=document.getElementById('previewFrame');
+  if(!frame||!frame.contentDocument) return;
+  const doc=frame.contentDocument;
+
+  if(type==='bg'){
+    // Change main background
+    doc.body.style.background=color;
+    // For social posts, change the post container bg
+    const post=doc.querySelector('.post')||doc.querySelector('.inv')||doc.querySelector('.slide');
+    if(post) post.style.background=color;
+  }
+  if(type==='title'){
+    doc.querySelectorAll('h1,h2,h3').forEach(el=>el.style.color=color);
+  }
+  if(type==='text'){
+    doc.querySelectorAll('p,span,div').forEach(el=>{
+      if(!el.querySelector('h1,h2,h3')&&!el.closest('h1,h2,h3')){
+        el.style.color=color;
+      }
+    });
+  }
+}
+
+// Get current HTML from preview iframe (preserves user edits)
+function getCurrentHTML(){
+  const frame=document.getElementById('previewFrame');
+  if(frame&&frame.contentDocument){
+    return '<!DOCTYPE html><html lang="he" dir="rtl">'+frame.contentDocument.documentElement.innerHTML+'</html>';
+  }
+  return generatedHTML;
+}
+
 function openInNewTab(){
   const w=window.open();
-  w.document.write(generatedHTML);
+  w.document.write(getCurrentHTML());
   w.document.close();
 }
 
 async function downloadAsImage(){
-  // Open content in hidden iframe, render with html2canvas, download PNG
+  const currentHTML=getCurrentHTML();
   const container=document.createElement('div');
   container.style.cssText='position:fixed;left:-9999px;top:0';
   const imgDims={
@@ -1637,7 +1711,7 @@ async function downloadAsImage(){
   document.body.appendChild(container);
   const frame=document.getElementById('imgFrame');
   frame.contentDocument.open();
-  frame.contentDocument.write(generatedHTML);
+  frame.contentDocument.write(currentHTML);
   frame.contentDocument.close();
 
   // Wait for render
@@ -1663,7 +1737,7 @@ async function downloadAsImage(){
 }
 
 function downloadAsFile(){
-  const blob=new Blob([generatedHTML],{type:'text/html;charset=utf-8'});
+  const blob=new Blob([getCurrentHTML()],{type:'text/html;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
   a.download=(selectedProduct?.id||'design')+'.html';
