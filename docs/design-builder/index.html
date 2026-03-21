@@ -178,7 +178,7 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 
 <div class="app-header">
   <h1>בונה עיצוב</h1>
-  <p>בחרי סגנון, צבעים ופונטים – קבלי קוד מוכן</p>
+  <p>בחרי סגנון – קבלי מצגת, פוסט או חומרים מוכנים לשימוש</p>
 </div>
 
 <div class="main">
@@ -979,6 +979,7 @@ function goToProduct(){
 }
 function goBackFromProduct(){
   if(sugSource==='wizard') show('screen-wizard');
+  else if(sugSource==='brand') show('screen-brand');
   else show('screen-suggestions');
 }
 
@@ -1091,35 +1092,66 @@ async function generateProduct(){
   document.getElementById('outputSub').textContent='';
 
   let content=null;
+  let aiUsed=false;
 
   // If AI mode, generate content first
   if(contentMode==='ai'){
     const prompt=document.getElementById('contentPrompt').value.trim();
     const key=document.getElementById('aiKey')?.value?.trim()||localStorage.getItem('ai-key')||'';
+
+    if(!prompt){
+      document.getElementById('outputLoading').style.display='none';
+      alert('נא לכתוב מה תרצי שיהיה בתוצר');
+      show('screen-product');
+      return;
+    }
+
+    if(!key){
+      document.getElementById('outputLoading').style.display='none';
+      if(confirm('יצירת תוכן עם AI דורשת מפתח API.\n\nרוצה להמשיך עם תבנית ריקה במקום?')){
+        contentMode='template'; // fallback
+      } else {
+        show('screen-product');
+        return;
+      }
+    }
+
     if(prompt&&key){
       try{
-        const sysPrompt=`You are a content creator for Israeli schools. Generate content in Hebrew for a ${selectedProduct.name}. Return ONLY valid JSON (no markdown). The JSON should have fields appropriate for the product type:
-For presentations: {"title":"","subtitle":"","slides":[{"title":"","content":"","type":"title|content|question|summary"}]}
-For social posts: {"headline":"","body":"","cta":""}
-For invitations: {"title":"","date":"","time":"","location":"","body":"","cta":""}
-For summaries: {"title":"","period":"","highlights":["",""],"stats":[{"label":"","value":""}]}
-For worksheets: {"title":"","subject":"","instructions":"","questions":["",""]}
-For landing pages: {"hero_title":"","hero_sub":"","features":[{"title":"","desc":""}],"cta":""}
-For business cards: {"name":"","title":"","org":"","phone":"","email":""}
-For brand pages: {"org_name":"","slogan":"","values":["",""]}
-Keep text concise, clear, suitable for Israeli school context.`;
+        const productType=selectedProduct.name;
+        const sysPrompt=`You are a creative content writer for Israeli schools and organizations. Write in Hebrew. Generate content for: ${productType}.
+
+The user will describe what they want. Create compelling, specific, relevant content in Hebrew based on their request.
+
+Return ONLY valid JSON (no markdown fences). Use this structure based on product type:
+- Social post: {"headline":"כותרת קצרה וקליטה","body":"2-3 שורות תוכן","cta":"קריאה לפעולה"}
+- Presentation: {"title":"","subtitle":"","slides":[{"title":"","content":"תוכן - כל שורה בשורה חדשה","type":"title|content|question|summary"}]}
+- Invitation: {"title":"שם האירוע","date":"תאריך","time":"שעה","location":"מיקום","body":"טקסט הזמנה","cta":"כפתור"}
+- Summary: {"title":"","period":"","highlights":["נקודה 1","נקודה 2","נקודה 3"],"stats":[{"label":"","value":""}]}
+- Worksheet: {"title":"","subject":"","instructions":"","questions":["שאלה 1","שאלה 2","שאלה 3","שאלה 4","שאלה 5"]}
+- Landing page: {"hero_title":"","hero_sub":"","features":[{"title":"","desc":""}],"cta":""}
+- Business card: {"name":"","title":"","org":"","phone":"","email":""}
+
+IMPORTANT: Content must be specific to the user's request, not generic placeholders. Write real meaningful text in Hebrew.`;
         const resp=await fetch('https://api.anthropic.com/v1/messages',{
           method:'POST',
           headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-          body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sysPrompt,messages:[{role:'user',content:prompt}]})
+          body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,system:sysPrompt,messages:[{role:'user',content:prompt}]})
         });
         const data=await resp.json();
-        if(!data.error){
+        if(data.error){
+          console.error('AI error:',data.error);
+          alert('שגיאה ביצירת תוכן: '+data.error.message);
+        } else {
           let text=data.content[0].text;
           text=text.replace(/^```json?\n?/,'').replace(/\n?```$/,'').trim();
           content=JSON.parse(text);
+          aiUsed=true;
         }
-      }catch(e){console.error('AI content error:',e)}
+      }catch(e){
+        console.error('AI content error:',e);
+        alert('שגיאה ביצירת תוכן. ממשיך עם תבנית ריקה.');
+      }
     }
   }
 
@@ -1139,9 +1171,16 @@ Keep text concise, clear, suitable for Israeli school context.`;
   document.getElementById('btnDownloadImg').style.display=isImg?'':'none';
   document.getElementById('btnDownloadHtml').style.display=isPres?'none':'';
 
-  // Show preview
+  // Show preview - scale down large content to fit
   const preview=document.getElementById('outputPreview');
-  preview.innerHTML=`<iframe id="previewFrame" srcdoc="${generatedHTML.replace(/"/g,'&quot;')}" style="width:100%;min-height:500px;border:none"></iframe>`;
+  const isLargeContent=['social-post','invitation','card'].includes(selectedProduct.id);
+  const iframeStyle=isLargeContent
+    ?'width:1100px;height:1100px;border:none;transform:scale(0.5);transform-origin:top right;'
+    :'width:100%;min-height:500px;border:none;';
+  preview.style.height=isLargeContent?'560px':'auto';
+  preview.style.overflow='hidden';
+  preview.innerHTML=`<iframe id="previewFrame" srcdoc="${generatedHTML.replace(/"/g,'&quot;')}" style="${iframeStyle}"></iframe>`;
+  if(aiUsed) document.getElementById('outputSub').textContent+=` | תוכן נוצר עם AI`;
 
   // Show code
   switchOutput('css');
@@ -1214,11 +1253,37 @@ function openInNewTab(){
   w.document.close();
 }
 
-function downloadAsImage(){
-  // Open in new tab with instruction
-  const w=window.open();
-  w.document.write(generatedHTML+`<div style="position:fixed;bottom:0;left:0;right:0;background:#333;color:#fff;padding:12px;text-align:center;font-family:Heebo,sans-serif;font-size:14px;z-index:9999">לשמירה כתמונה: לחצי ימני → "שמור תמונה" | או צילום מסך (Win+Shift+S)</div>`);
-  w.document.close();
+async function downloadAsImage(){
+  // Open content in hidden iframe, render with html2canvas, download PNG
+  const container=document.createElement('div');
+  container.style.cssText='position:fixed;left:-9999px;top:0';
+  container.innerHTML=`<iframe id="imgFrame" style="width:1080px;height:1080px;border:none"></iframe>`;
+  document.body.appendChild(container);
+  const frame=document.getElementById('imgFrame');
+  frame.contentDocument.open();
+  frame.contentDocument.write(generatedHTML);
+  frame.contentDocument.close();
+
+  // Wait for render
+  await new Promise(r=>setTimeout(r,500));
+
+  try{
+    const canvas=await html2canvas(frame.contentDocument.body,{
+      width:1080,height:1080,scale:1,useCORS:true,
+      backgroundColor:null
+    });
+    const link=document.createElement('a');
+    link.download=(selectedProduct?.id||'design')+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  }catch(e){
+    console.error('Image export error:',e);
+    // Fallback: open in new tab
+    const w=window.open();
+    w.document.write(generatedHTML+`<div style="position:fixed;bottom:0;left:0;right:0;background:#333;color:#fff;padding:12px;text-align:center;font-family:Heebo,sans-serif;font-size:14px;z-index:9999">לשמירה: לחצי Win+Shift+S לצילום מסך</div>`);
+    w.document.close();
+  }
+  container.remove();
 }
 
 function downloadAsFile(){
@@ -1245,6 +1310,9 @@ function downloadAsPPTX(){
   const onPri=isLight(p.primary)?'333333':'FFFFFF';
   const onSec=isLight(p.secondary)?'333333':'FFFFFF';
   const totalSlides=10;
+  // Use chosen fonts - Google Slides supports Google Fonts
+  const titleFont=f.n1.replace(/'/g,'')||'Arial';
+  const bodyFont=f.n2.replace(/'/g,'')||'Arial';
 
   // Helper: add branded footer to slide
   function addFooter(slide,num){
@@ -1275,24 +1343,24 @@ function downloadAsPPTX(){
   const s1=pptx.addSlide();
   s1.background={fill:C.pri};
   addDeco(s1,1);
-  s1.addText('כותרת המצגת',{x:'8%',y:'28%',w:'84%',h:'22%',fontSize:48,fontFace:'Arial',color:onPri,bold:true,align:'center',isTextBox:true});
+  s1.addText('כותרת המצגת',{x:'8%',y:'28%',w:'84%',h:'22%',fontSize:48,fontFace:titleFont,color:onPri,bold:true,align:'center',isTextBox:true});
   s1.addShape(pptx.ShapeType.rect,{x:'38%',y:'52%',w:'24%',h:'0.6%',fill:{color:onPri,transparency:50},rectRadius:0.1});
-  s1.addText('תת כותרת – ערכו כאן',{x:'15%',y:'55%',w:'70%',h:'12%',fontSize:22,fontFace:'Arial',color:onPri,align:'center',isTextBox:true,transparency:25});
+  s1.addText('תת כותרת – ערכו כאן',{x:'15%',y:'55%',w:'70%',h:'12%',fontSize:22,fontFace:bodyFont,color:onPri,align:'center',isTextBox:true,transparency:25});
 
   // ===== SLIDE 2: AGENDA / BULLET POINTS =====
   const s2=pptx.addSlide();
   s2.background={fill:C.bg};
   addDeco(s2,2);
   addFooter(s2,2);
-  s2.addText('מה נלמד היום?',{x:'6%',y:'6%',w:'88%',h:'12%',fontSize:34,fontFace:'Arial',color:C.pri,bold:true,align:'right',isTextBox:true});
+  s2.addText('מה נלמד היום?',{x:'6%',y:'6%',w:'88%',h:'12%',fontSize:34,fontFace:titleFont,color:C.pri,bold:true,align:'right',isTextBox:true});
   s2.addShape(pptx.ShapeType.rect,{x:'6%',y:'19%',w:'12%',h:'0.5%',fill:{color:C.pri},rectRadius:0.05});
   const bullets=['נקודה ראשונה – ערכו','נקודה שנייה – ערכו','נקודה שלישית – ערכו','נקודה רביעית – ערכו'];
   bullets.forEach((txt,i)=>{
     const y=1.4+i*0.85;
     // Colored circle number
     s2.addShape(pptx.ShapeType.oval,{x:11.5,y:y,w:0.5,h:0.5,fill:{color:C.pri}});
-    s2.addText(`${i+1}`,{x:11.5,y:y,w:0.5,h:0.5,fontSize:16,fontFace:'Arial',color:onPri,bold:true,align:'center',valign:'middle'});
-    s2.addText(txt,{x:'6%',y:y,w:'78%',h:0.5,fontSize:20,fontFace:'Arial',color:C.txt,align:'right',isTextBox:true});
+    s2.addText(`${i+1}`,{x:11.5,y:y,w:0.5,h:0.5,fontSize:16,fontFace:bodyFont,color:onPri,bold:true,align:'center',valign:'middle'});
+    s2.addText(txt,{x:'6%',y:y,w:'78%',h:0.5,fontSize:20,fontFace:bodyFont,color:C.txt,align:'right',isTextBox:true});
   });
 
   // ===== SLIDE 3: 3 CARDS =====
@@ -1300,7 +1368,7 @@ function downloadAsPPTX(){
   s3.background={fill:C.bg};
   addDeco(s3,3);
   addFooter(s3,3);
-  s3.addText('נקודות מרכזיות',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'center',isTextBox:true});
+  s3.addText('נקודות מרכזיות',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'center',isTextBox:true});
   const cards=[{num:'01',title:'נושא ראשון',desc:'הסבר קצר על הנושא'},{num:'02',title:'נושא שני',desc:'הסבר קצר על הנושא'},{num:'03',title:'נושא שלישי',desc:'הסבר קצר על הנושא'}];
   const cardColors=[C.pri,C.sec,C.acc];
   cards.forEach((c,i)=>{
@@ -1311,18 +1379,18 @@ function downloadAsPPTX(){
     s3.addShape(pptx.ShapeType.rect,{x:x,y:1.3,w:3.8,h:0.08,fill:{color:cardColors[i]}});
     // Number circle
     s3.addShape(pptx.ShapeType.oval,{x:x+1.4,y:1.7,w:1,h:1,fill:{color:cardColors[i],transparency:15}});
-    s3.addText(c.num,{x:x+1.4,y:1.7,w:1,h:1,fontSize:24,fontFace:'Arial',color:cardColors[i],bold:true,align:'center',valign:'middle'});
+    s3.addText(c.num,{x:x+1.4,y:1.7,w:1,h:1,fontSize:24,fontFace:bodyFont,color:cardColors[i],bold:true,align:'center',valign:'middle'});
     // Title
-    s3.addText(c.title,{x:x+0.2,y:2.9,w:3.4,h:0.5,fontSize:18,fontFace:'Arial',color:C.txt,bold:true,align:'center',isTextBox:true});
+    s3.addText(c.title,{x:x+0.2,y:2.9,w:3.4,h:0.5,fontSize:18,fontFace:bodyFont,color:C.txt,bold:true,align:'center',isTextBox:true});
     // Description
-    s3.addText(c.desc,{x:x+0.2,y:3.4,w:3.4,h:0.8,fontSize:14,fontFace:'Arial',color:'888888',align:'center',isTextBox:true});
+    s3.addText(c.desc,{x:x+0.2,y:3.4,w:3.4,h:0.8,fontSize:14,fontFace:bodyFont,color:'888888',align:'center',isTextBox:true});
   });
 
   // ===== SLIDE 4: BAR CHART =====
   const s4=pptx.addSlide();
   s4.background={fill:C.bg};
   addFooter(s4,4);
-  s4.addText('נתונים בתרשים עמודות',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'right',isTextBox:true});
+  s4.addText('נתונים בתרשים עמודות',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'right',isTextBox:true});
   s4.addShape(pptx.ShapeType.rect,{x:'6%',y:'17%',w:'12%',h:'0.5%',fill:{color:C.pri},rectRadius:0.05});
   s4.addChart(pptx.ChartType.bar,
     [{name:'סדרה 1',labels:['קטגוריה א','קטגוריה ב','קטגוריה ג','קטגוריה ד','קטגוריה ה'],values:[85,72,90,65,78]},
@@ -1337,7 +1405,7 @@ function downloadAsPPTX(){
   s5.background={fill:C.bg};
   addDeco(s5,2);
   addFooter(s5,5);
-  s5.addText('התפלגות – תרשים עוגה',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'right',isTextBox:true});
+  s5.addText('התפלגות – תרשים עוגה',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'right',isTextBox:true});
   s5.addChart(pptx.ChartType.pie,
     [{name:'נתונים',labels:['חלק א','חלק ב','חלק ג','חלק ד'],values:[35,28,22,15]}],
     {x:2.5,y:1.2,w:8,h:4,showTitle:false,showPercent:true,showLegend:true,legendPos:'l',legendFontSize:14,
@@ -1348,7 +1416,7 @@ function downloadAsPPTX(){
   const s6=pptx.addSlide();
   s6.background={fill:C.bg};
   addFooter(s6,6);
-  s6.addText('מגמות לאורך זמן',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'right',isTextBox:true});
+  s6.addText('מגמות לאורך זמן',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'right',isTextBox:true});
   s6.addShape(pptx.ShapeType.rect,{x:'6%',y:'17%',w:'12%',h:'0.5%',fill:{color:C.pri},rectRadius:0.05});
   s6.addChart(pptx.ChartType.line,
     [{name:'מגמה א',labels:['ינואר','פברואר','מרץ','אפריל','מאי','יוני'],values:[30,45,55,60,72,85]},
@@ -1361,19 +1429,19 @@ function downloadAsPPTX(){
   const s7=pptx.addSlide();
   s7.background={fill:C.bg};
   addFooter(s7,7);
-  s7.addText('השוואה',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'center',isTextBox:true});
+  s7.addText('השוואה',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'center',isTextBox:true});
   // Left column
   s7.addShape(pptx.ShapeType.roundRect,{x:0.6,y:1.2,w:5.8,h:3.8,fill:{color:C.pri,transparency:92},rectRadius:0.15});
   s7.addShape(pptx.ShapeType.oval,{x:2.8,y:1.5,w:0.8,h:0.8,fill:{color:C.pri}});
   s7.addText('A',{x:2.8,y:1.5,w:0.8,h:0.8,fontSize:24,color:onPri,bold:true,align:'center',valign:'middle'});
-  s7.addText('אפשרות א',{x:0.8,y:2.5,w:5.4,h:0.5,fontSize:20,fontFace:'Arial',color:C.pri,bold:true,align:'center',isTextBox:true});
-  s7.addText('נקודה 1\nנקודה 2\nנקודה 3',{x:0.8,y:3.1,w:5.4,h:1.6,fontSize:16,fontFace:'Arial',color:C.txt,align:'center',isTextBox:true,lineSpacing:26});
+  s7.addText('אפשרות א',{x:0.8,y:2.5,w:5.4,h:0.5,fontSize:20,fontFace:bodyFont,color:C.pri,bold:true,align:'center',isTextBox:true});
+  s7.addText('נקודה 1\nנקודה 2\nנקודה 3',{x:0.8,y:3.1,w:5.4,h:1.6,fontSize:16,fontFace:bodyFont,color:C.txt,align:'center',isTextBox:true,lineSpacing:26});
   // Right column
   s7.addShape(pptx.ShapeType.roundRect,{x:6.8,y:1.2,w:5.8,h:3.8,fill:{color:C.sec,transparency:92},rectRadius:0.15});
   s7.addShape(pptx.ShapeType.oval,{x:9.0,y:1.5,w:0.8,h:0.8,fill:{color:C.sec}});
   s7.addText('B',{x:9.0,y:1.5,w:0.8,h:0.8,fontSize:24,color:onSec,bold:true,align:'center',valign:'middle'});
-  s7.addText('אפשרות ב',{x:7.0,y:2.5,w:5.4,h:0.5,fontSize:20,fontFace:'Arial',color:C.sec,bold:true,align:'center',isTextBox:true});
-  s7.addText('נקודה 1\nנקודה 2\nנקודה 3',{x:7.0,y:3.1,w:5.4,h:1.6,fontSize:16,fontFace:'Arial',color:C.txt,align:'center',isTextBox:true,lineSpacing:26});
+  s7.addText('אפשרות ב',{x:7.0,y:2.5,w:5.4,h:0.5,fontSize:20,fontFace:bodyFont,color:C.sec,bold:true,align:'center',isTextBox:true});
+  s7.addText('נקודה 1\nנקודה 2\nנקודה 3',{x:7.0,y:3.1,w:5.4,h:1.6,fontSize:16,fontFace:bodyFont,color:C.txt,align:'center',isTextBox:true,lineSpacing:26});
 
   // ===== SLIDE 8: QUOTE =====
   const s8=pptx.addSlide();
@@ -1381,32 +1449,32 @@ function downloadAsPPTX(){
   addDeco(s8,1);
   // Big quote mark
   s8.addText('"',{x:1,y:0.5,w:2,h:2,fontSize:120,fontFace:'Georgia',color:onPri,align:'center',isTextBox:true,transparency:30});
-  s8.addText('ציטוט משמעותי שמסכם\nאת המסר המרכזי',{x:'12%',y:'30%',w:'76%',h:'25%',fontSize:30,fontFace:'Arial',color:onPri,bold:true,align:'center',isTextBox:true,lineSpacing:40});
+  s8.addText('ציטוט משמעותי שמסכם\nאת המסר המרכזי',{x:'12%',y:'30%',w:'76%',h:'25%',fontSize:30,fontFace:titleFont,color:onPri,bold:true,align:'center',isTextBox:true,lineSpacing:40});
   s8.addShape(pptx.ShapeType.rect,{x:'42%',y:'58%',w:'16%',h:'0.5%',fill:{color:onPri,transparency:50},rectRadius:0.1});
-  s8.addText('– שם המחבר',{x:'20%',y:'62%',w:'60%',h:'10%',fontSize:18,fontFace:'Arial',color:onPri,align:'center',isTextBox:true,transparency:30});
+  s8.addText('– שם המחבר',{x:'20%',y:'62%',w:'60%',h:'10%',fontSize:18,fontFace:bodyFont,color:onPri,align:'center',isTextBox:true,transparency:30});
 
   // ===== SLIDE 9: KEY NUMBERS =====
   const s9=pptx.addSlide();
   s9.background={fill:C.bg};
   addDeco(s9,3);
   addFooter(s9,9);
-  s9.addText('מספרים מרכזיים',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'center',isTextBox:true});
+  s9.addText('מספרים מרכזיים',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'center',isTextBox:true});
   const kpis=[{val:'85%',label:'נוכחות',col:C.pri},{val:'342',label:'שעות',col:C.sec},{val:'45',label:'מורים',col:C.acc},{val:'12',label:'פרויקטים',col:C.pri}];
   kpis.forEach((k,i)=>{
     const x=0.5+i*3.2;
     s9.addShape(pptx.ShapeType.roundRect,{x:x,y:1.5,w:2.9,h:3,fill:{color:'FFFFFF'},shadow:{type:'outer',blur:8,offset:2,color:'00000008'},rectRadius:0.15});
     s9.addShape(pptx.ShapeType.oval,{x:x+0.95,y:1.8,w:1,h:1,fill:{color:k.col,transparency:85}});
-    s9.addText(k.val,{x:x+0.2,y:2.9,w:2.5,h:0.7,fontSize:36,fontFace:'Arial',color:k.col,bold:true,align:'center',isTextBox:true});
-    s9.addText(k.label,{x:x+0.2,y:3.6,w:2.5,h:0.5,fontSize:16,fontFace:'Arial',color:'888888',align:'center',isTextBox:true});
+    s9.addText(k.val,{x:x+0.2,y:2.9,w:2.5,h:0.7,fontSize:36,fontFace:titleFont,color:k.col,bold:true,align:'center',isTextBox:true});
+    s9.addText(k.label,{x:x+0.2,y:3.6,w:2.5,h:0.5,fontSize:16,fontFace:bodyFont,color:'888888',align:'center',isTextBox:true});
   });
 
   // ===== SLIDE 10: SUMMARY / THANK YOU =====
   const s10=pptx.addSlide();
   s10.background={fill:C.pri};
   addDeco(s10,1);
-  s10.addText('תודה!',{x:'10%',y:'25%',w:'80%',h:'20%',fontSize:52,fontFace:'Arial',color:onPri,bold:true,align:'center',isTextBox:true});
+  s10.addText('תודה!',{x:'10%',y:'25%',w:'80%',h:'20%',fontSize:52,fontFace:titleFont,color:onPri,bold:true,align:'center',isTextBox:true});
   s10.addShape(pptx.ShapeType.rect,{x:'38%',y:'48%',w:'24%',h:'0.5%',fill:{color:onPri,transparency:50},rectRadius:0.1});
-  s10.addText('סיכום:\nרעיון מרכזי 1\nרעיון מרכזי 2\nרעיון מרכזי 3',{x:'15%',y:'52%',w:'70%',h:'30%',fontSize:20,fontFace:'Arial',color:onPri,align:'center',isTextBox:true,transparency:20,lineSpacing:28});
+  s10.addText('סיכום:\nרעיון מרכזי 1\nרעיון מרכזי 2\nרעיון מרכזי 3',{x:'15%',y:'52%',w:'70%',h:'30%',fontSize:20,fontFace:bodyFont,color:onPri,align:'center',isTextBox:true,transparency:20,lineSpacing:28});
 
   pptx.writeFile({fileName:(selectedProduct?.id||'presentation')+'.pptx'});
 }
@@ -1499,7 +1567,7 @@ function renderBrandPage(){
 
 function brandCreateProduct(i){
   selectedProduct=products[i];
-  // Go to product screen with brand pre-loaded
+  sugSource='brand';
   show('screen-product');
   renderProducts();
   selectProduct(i);
