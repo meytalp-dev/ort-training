@@ -1232,104 +1232,181 @@ function downloadAsFile(){
 function downloadAsPPTX(){
   const p=wizardChoices.palette;
   const f=wizardChoices.font;
-  const b=wizardChoices.button;
-  if(!p||!f||!b) return;
+  const bt=wizardChoices.button;
+  if(!p||!f||!bt) return;
 
   const pptx=new PptxGenJS();
-  pptx.layout='LAYOUT_WIDE'; // 16:9
+  pptx.layout='LAYOUT_WIDE';
   pptx.author='Design Builder - ORT';
+  pptx.rtlMode=true;
 
-  // Define master slide
-  pptx.defineSlideMaster({
-    title:'BRAND_MASTER',
-    background:{color:p.bg.replace('#','')},
-    objects:[
-      {rect:{x:0,y:'92%',w:'100%',h:'8%',fill:{color:p.primary.replace('#','')+'15'}}},
-    ]
-  });
+  const clr=hex=>hex.replace('#','');
+  const C={txt:clr(p.text),pri:clr(p.primary),sec:clr(p.secondary),acc:clr(p.accent),bg:clr(p.bg)};
+  const onPri=isLight(p.primary)?'333333':'FFFFFF';
+  const onSec=isLight(p.secondary)?'333333':'FFFFFF';
+  const totalSlides=10;
 
-  pptx.defineSlideMaster({
-    title:'BRAND_TITLE',
-    background:{fill:p.primary.replace('#','')},
-  });
-
-  // Helper - hex to PPTX color (no #)
-  const clr=(hex)=>hex.replace('#','');
-  const txtClr=clr(p.text);
-  const primClr=clr(p.primary);
-  const secClr=clr(p.secondary);
-  const accClr=clr(p.accent);
-  const bgClr=clr(p.bg);
-  const titleOnPrimary=isLight(p.primary)?'333333':'FFFFFF';
-
-  // Get content (from AI or placeholder)
-  const promptText=document.getElementById('contentPrompt')?.value||'';
-  // Parse generated HTML for slide content
-  const parser=new DOMParser();
-  const doc=parser.parseFromString(generatedHTML,'text/html');
-  const htmlSlides=doc.querySelectorAll('.slide');
-
-  if(htmlSlides.length>0){
-    // Use content from generated HTML
-    htmlSlides.forEach((s,i)=>{
-      const isTitle=i===0;
-      const h1=s.querySelector('h1')?.textContent||'';
-      const content=s.querySelector('div[contenteditable]')?.textContent||s.querySelector('p')?.textContent||'';
-
-      const slide=pptx.addSlide({masterName:isTitle?'BRAND_TITLE':'BRAND_MASTER'});
-
-      if(isTitle){
-        slide.addText(h1,{x:'10%',y:'30%',w:'80%',h:'20%',fontSize:44,fontFace:'Arial',color:titleOnPrimary,bold:true,align:'center',isTextBox:true});
-        slide.addText(content,{x:'15%',y:'52%',w:'70%',h:'12%',fontSize:22,fontFace:'Arial',color:titleOnPrimary,align:'center',isTextBox:true,transparency:30});
-        // Decorative circle
-        slide.addShape(pptx.ShapeType.oval,{x:11,y:-0.5,w:2.5,h:2.5,fill:{color:secClr,transparency:70}});
-      } else {
-        slide.addText(h1,{x:'8%',y:'8%',w:'84%',h:'15%',fontSize:32,fontFace:'Arial',color:primClr,bold:true,align:'right',isTextBox:true});
-        // Divider line
-        slide.addShape(pptx.ShapeType.rect,{x:'8%',y:'24%',w:'15%',h:'0.5%',fill:{color:primClr}});
-        // Content as bullet points
-        const lines=content.split('\n').filter(l=>l.trim());
-        if(lines.length>1){
-          slide.addText(lines.map(l=>({text:l.trim(),options:{bullet:true,fontSize:20,color:txtClr,align:'right',rtlMode:true,paraSpaceAfter:10}})),
-            {x:'8%',y:'30%',w:'84%',h:'55%',fontFace:'Arial',isTextBox:true,valign:'top'});
-        } else {
-          slide.addText(content,{x:'8%',y:'30%',w:'84%',h:'55%',fontSize:20,fontFace:'Arial',color:txtClr,align:'right',isTextBox:true,valign:'top',lineSpacing:32});
-        }
-        // Slide number
-        slide.addText(`${i+1}`,{x:'92%',y:'90%',w:'6%',h:'6%',fontSize:11,color:'999999',align:'center'});
-      }
-    });
-  } else {
-    // Default 5-slide template
-    const defaultSlides=[
-      {title:'כותרת המצגת',sub:'תת כותרת',type:'title'},
-      {title:'מה נלמד היום?',sub:'נקודה ראשונה\nנקודה שנייה\nנקודה שלישית',type:'content'},
-      {title:'נושא מרכזי',sub:'הסבר קצר על הנושא',type:'content'},
-      {title:'שאלה לדיון',sub:'מה דעתכם?',type:'question'},
-      {title:'סיכום',sub:'רעיון 1\nרעיון 2\nרעיון 3',type:'summary'},
-    ];
-
-    defaultSlides.forEach((s,i)=>{
-      const slide=pptx.addSlide({masterName:s.type==='title'?'BRAND_TITLE':'BRAND_MASTER'});
-
-      if(s.type==='title'){
-        slide.addText(s.title,{x:'10%',y:'30%',w:'80%',h:'20%',fontSize:44,fontFace:'Arial',color:titleOnPrimary,bold:true,align:'center',isTextBox:true});
-        slide.addText(s.sub,{x:'15%',y:'52%',w:'70%',h:'12%',fontSize:22,fontFace:'Arial',color:titleOnPrimary,align:'center',isTextBox:true,transparency:30});
-        slide.addShape(pptx.ShapeType.oval,{x:11,y:-0.5,w:2.5,h:2.5,fill:{color:secClr,transparency:70}});
-      } else if(s.type==='question'){
-        slide.background={fill:primClr+'10'};
-        slide.addText(s.title,{x:'10%',y:'25%',w:'80%',h:'20%',fontSize:36,fontFace:'Arial',color:primClr,bold:true,align:'center',isTextBox:true});
-        slide.addText(s.sub,{x:'15%',y:'50%',w:'70%',h:'15%',fontSize:24,fontFace:'Arial',color:txtClr,align:'center',isTextBox:true});
-      } else {
-        slide.addText(s.title,{x:'8%',y:'8%',w:'84%',h:'15%',fontSize:32,fontFace:'Arial',color:primClr,bold:true,align:'right',isTextBox:true});
-        slide.addShape(pptx.ShapeType.rect,{x:'8%',y:'24%',w:'15%',h:'0.5%',fill:{color:primClr}});
-        const lines=s.sub.split('\n');
-        slide.addText(lines.map(l=>({text:l,options:{bullet:true,fontSize:20,color:txtClr,align:'right',rtlMode:true,paraSpaceAfter:10}})),
-          {x:'8%',y:'30%',w:'84%',h:'55%',fontFace:'Arial',isTextBox:true,valign:'top'});
-      }
-      if(s.type!=='title') slide.addText(`${i+1}/${defaultSlides.length}`,{x:'92%',y:'90%',w:'6%',h:'6%',fontSize:11,color:'999999',align:'center'});
-    });
+  // Helper: add branded footer to slide
+  function addFooter(slide,num){
+    slide.addShape(pptx.ShapeType.rect,{x:0,y:4.9,w:'100%',h:0.6,fill:{color:C.pri,transparency:92}});
+    slide.addText(`${num} / ${totalSlides}`,{x:0.3,y:5.0,w:1,h:0.4,fontSize:10,color:'999999',align:'left'});
+    // Decorative dot
+    slide.addShape(pptx.ShapeType.oval,{x:12.5,y:5.05,w:0.25,h:0.25,fill:{color:C.pri,transparency:60}});
   }
+
+  // Helper: add decorative shapes
+  function addDeco(slide,variant){
+    if(variant===1){
+      slide.addShape(pptx.ShapeType.oval,{x:11.5,y:-0.6,w:2.5,h:2.5,fill:{color:C.sec,transparency:75}});
+      slide.addShape(pptx.ShapeType.oval,{x:-0.8,y:3.8,w:1.8,h:1.8,fill:{color:C.acc,transparency:80}});
+    }
+    if(variant===2){
+      slide.addShape(pptx.ShapeType.oval,{x:12,y:3.5,w:2,h:2,fill:{color:C.pri,transparency:85}});
+      slide.addShape(pptx.ShapeType.rect,{x:-0.5,y:0,w:0.15,h:5.63,fill:{color:C.sec,transparency:70}});
+    }
+    if(variant===3){
+      slide.addShape(pptx.ShapeType.oval,{x:0.3,y:0.3,w:0.5,h:0.5,fill:{color:C.sec,transparency:70}});
+      slide.addShape(pptx.ShapeType.oval,{x:0.5,y:0.9,w:0.3,h:0.3,fill:{color:C.acc,transparency:75}});
+      slide.addShape(pptx.ShapeType.oval,{x:12.5,y:4,w:0.6,h:0.6,fill:{color:C.pri,transparency:70}});
+    }
+  }
+
+  // ===== SLIDE 1: TITLE =====
+  const s1=pptx.addSlide();
+  s1.background={fill:C.pri};
+  addDeco(s1,1);
+  s1.addText('כותרת המצגת',{x:'8%',y:'28%',w:'84%',h:'22%',fontSize:48,fontFace:'Arial',color:onPri,bold:true,align:'center',isTextBox:true});
+  s1.addShape(pptx.ShapeType.rect,{x:'38%',y:'52%',w:'24%',h:'0.6%',fill:{color:onPri,transparency:50},rectRadius:0.1});
+  s1.addText('תת כותרת – ערכו כאן',{x:'15%',y:'55%',w:'70%',h:'12%',fontSize:22,fontFace:'Arial',color:onPri,align:'center',isTextBox:true,transparency:25});
+
+  // ===== SLIDE 2: AGENDA / BULLET POINTS =====
+  const s2=pptx.addSlide();
+  s2.background={fill:C.bg};
+  addDeco(s2,2);
+  addFooter(s2,2);
+  s2.addText('מה נלמד היום?',{x:'6%',y:'6%',w:'88%',h:'12%',fontSize:34,fontFace:'Arial',color:C.pri,bold:true,align:'right',isTextBox:true});
+  s2.addShape(pptx.ShapeType.rect,{x:'6%',y:'19%',w:'12%',h:'0.5%',fill:{color:C.pri},rectRadius:0.05});
+  const bullets=['נקודה ראשונה – ערכו','נקודה שנייה – ערכו','נקודה שלישית – ערכו','נקודה רביעית – ערכו'];
+  bullets.forEach((txt,i)=>{
+    const y=1.4+i*0.85;
+    // Colored circle number
+    s2.addShape(pptx.ShapeType.oval,{x:11.5,y:y,w:0.5,h:0.5,fill:{color:C.pri}});
+    s2.addText(`${i+1}`,{x:11.5,y:y,w:0.5,h:0.5,fontSize:16,fontFace:'Arial',color:onPri,bold:true,align:'center',valign:'middle'});
+    s2.addText(txt,{x:'6%',y:y,w:'78%',h:0.5,fontSize:20,fontFace:'Arial',color:C.txt,align:'right',isTextBox:true});
+  });
+
+  // ===== SLIDE 3: 3 CARDS =====
+  const s3=pptx.addSlide();
+  s3.background={fill:C.bg};
+  addDeco(s3,3);
+  addFooter(s3,3);
+  s3.addText('נקודות מרכזיות',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'center',isTextBox:true});
+  const cards=[{num:'01',title:'נושא ראשון',desc:'הסבר קצר על הנושא'},{num:'02',title:'נושא שני',desc:'הסבר קצר על הנושא'},{num:'03',title:'נושא שלישי',desc:'הסבר קצר על הנושא'}];
+  const cardColors=[C.pri,C.sec,C.acc];
+  cards.forEach((c,i)=>{
+    const x=0.8+i*4.2;
+    // Card background
+    s3.addShape(pptx.ShapeType.roundRect,{x:x,y:1.3,w:3.8,h:3.5,fill:{color:'FFFFFF'},shadow:{type:'outer',blur:10,offset:3,color:'00000010'},rectRadius:0.2});
+    // Top accent bar
+    s3.addShape(pptx.ShapeType.rect,{x:x,y:1.3,w:3.8,h:0.08,fill:{color:cardColors[i]}});
+    // Number circle
+    s3.addShape(pptx.ShapeType.oval,{x:x+1.4,y:1.7,w:1,h:1,fill:{color:cardColors[i],transparency:15}});
+    s3.addText(c.num,{x:x+1.4,y:1.7,w:1,h:1,fontSize:24,fontFace:'Arial',color:cardColors[i],bold:true,align:'center',valign:'middle'});
+    // Title
+    s3.addText(c.title,{x:x+0.2,y:2.9,w:3.4,h:0.5,fontSize:18,fontFace:'Arial',color:C.txt,bold:true,align:'center',isTextBox:true});
+    // Description
+    s3.addText(c.desc,{x:x+0.2,y:3.4,w:3.4,h:0.8,fontSize:14,fontFace:'Arial',color:'888888',align:'center',isTextBox:true});
+  });
+
+  // ===== SLIDE 4: BAR CHART =====
+  const s4=pptx.addSlide();
+  s4.background={fill:C.bg};
+  addFooter(s4,4);
+  s4.addText('נתונים בתרשים עמודות',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'right',isTextBox:true});
+  s4.addShape(pptx.ShapeType.rect,{x:'6%',y:'17%',w:'12%',h:'0.5%',fill:{color:C.pri},rectRadius:0.05});
+  s4.addChart(pptx.ChartType.bar,
+    [{name:'סדרה 1',labels:['קטגוריה א','קטגוריה ב','קטגוריה ג','קטגוריה ד','קטגוריה ה'],values:[85,72,90,65,78]},
+     {name:'סדרה 2',labels:['קטגוריה א','קטגוריה ב','קטגוריה ג','קטגוריה ד','קטגוריה ה'],values:[60,80,55,88,70]}],
+    {x:0.8,y:1.3,w:11.5,h:3.8,showTitle:false,showValue:true,valueFontSize:10,catAxisOrientation:'minMax',
+     chartColors:[C.pri,C.sec],catAxisLabelFontSize:12,valAxisLabelFontSize:10,
+     catAxisLabelColor:C.txt,valAxisLabelColor:'888888',gridLineColor:'E8E8E8',
+     barGapWidthPct:80,dataLabelColor:C.txt,showLegend:true,legendPos:'b',legendFontSize:11});
+
+  // ===== SLIDE 5: PIE CHART =====
+  const s5=pptx.addSlide();
+  s5.background={fill:C.bg};
+  addDeco(s5,2);
+  addFooter(s5,5);
+  s5.addText('התפלגות – תרשים עוגה',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'right',isTextBox:true});
+  s5.addChart(pptx.ChartType.pie,
+    [{name:'נתונים',labels:['חלק א','חלק ב','חלק ג','חלק ד'],values:[35,28,22,15]}],
+    {x:2.5,y:1.2,w:8,h:4,showTitle:false,showPercent:true,showLegend:true,legendPos:'l',legendFontSize:14,
+     chartColors:[C.pri,C.sec,C.acc,lighten(p.primary,60).replace('#','')],
+     dataLabelFontSize:14,dataLabelColor:'FFFFFF'});
+
+  // ===== SLIDE 6: LINE CHART =====
+  const s6=pptx.addSlide();
+  s6.background={fill:C.bg};
+  addFooter(s6,6);
+  s6.addText('מגמות לאורך זמן',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'right',isTextBox:true});
+  s6.addShape(pptx.ShapeType.rect,{x:'6%',y:'17%',w:'12%',h:'0.5%',fill:{color:C.pri},rectRadius:0.05});
+  s6.addChart(pptx.ChartType.line,
+    [{name:'מגמה א',labels:['ינואר','פברואר','מרץ','אפריל','מאי','יוני'],values:[30,45,55,60,72,85]},
+     {name:'מגמה ב',labels:['ינואר','פברואר','מרץ','אפריל','מאי','יוני'],values:[50,48,62,58,68,75]}],
+    {x:0.8,y:1.3,w:11.5,h:3.8,showTitle:false,lineSize:3,lineSmooth:true,showMarker:true,markerSize:8,
+     chartColors:[C.pri,C.sec],showLegend:true,legendPos:'b',legendFontSize:11,
+     catAxisLabelFontSize:12,valAxisLabelFontSize:10,catAxisLabelColor:C.txt,valAxisLabelColor:'888888',gridLineColor:'E8E8E8'});
+
+  // ===== SLIDE 7: COMPARISON (2 COLUMNS) =====
+  const s7=pptx.addSlide();
+  s7.background={fill:C.bg};
+  addFooter(s7,7);
+  s7.addText('השוואה',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'center',isTextBox:true});
+  // Left column
+  s7.addShape(pptx.ShapeType.roundRect,{x:0.6,y:1.2,w:5.8,h:3.8,fill:{color:C.pri,transparency:92},rectRadius:0.15});
+  s7.addShape(pptx.ShapeType.oval,{x:2.8,y:1.5,w:0.8,h:0.8,fill:{color:C.pri}});
+  s7.addText('A',{x:2.8,y:1.5,w:0.8,h:0.8,fontSize:24,color:onPri,bold:true,align:'center',valign:'middle'});
+  s7.addText('אפשרות א',{x:0.8,y:2.5,w:5.4,h:0.5,fontSize:20,fontFace:'Arial',color:C.pri,bold:true,align:'center',isTextBox:true});
+  s7.addText('נקודה 1\nנקודה 2\nנקודה 3',{x:0.8,y:3.1,w:5.4,h:1.6,fontSize:16,fontFace:'Arial',color:C.txt,align:'center',isTextBox:true,lineSpacing:26});
+  // Right column
+  s7.addShape(pptx.ShapeType.roundRect,{x:6.8,y:1.2,w:5.8,h:3.8,fill:{color:C.sec,transparency:92},rectRadius:0.15});
+  s7.addShape(pptx.ShapeType.oval,{x:9.0,y:1.5,w:0.8,h:0.8,fill:{color:C.sec}});
+  s7.addText('B',{x:9.0,y:1.5,w:0.8,h:0.8,fontSize:24,color:onSec,bold:true,align:'center',valign:'middle'});
+  s7.addText('אפשרות ב',{x:7.0,y:2.5,w:5.4,h:0.5,fontSize:20,fontFace:'Arial',color:C.sec,bold:true,align:'center',isTextBox:true});
+  s7.addText('נקודה 1\nנקודה 2\nנקודה 3',{x:7.0,y:3.1,w:5.4,h:1.6,fontSize:16,fontFace:'Arial',color:C.txt,align:'center',isTextBox:true,lineSpacing:26});
+
+  // ===== SLIDE 8: QUOTE =====
+  const s8=pptx.addSlide();
+  s8.background={fill:C.pri};
+  addDeco(s8,1);
+  // Big quote mark
+  s8.addText('"',{x:1,y:0.5,w:2,h:2,fontSize:120,fontFace:'Georgia',color:onPri,align:'center',isTextBox:true,transparency:30});
+  s8.addText('ציטוט משמעותי שמסכם\nאת המסר המרכזי',{x:'12%',y:'30%',w:'76%',h:'25%',fontSize:30,fontFace:'Arial',color:onPri,bold:true,align:'center',isTextBox:true,lineSpacing:40});
+  s8.addShape(pptx.ShapeType.rect,{x:'42%',y:'58%',w:'16%',h:'0.5%',fill:{color:onPri,transparency:50},rectRadius:0.1});
+  s8.addText('– שם המחבר',{x:'20%',y:'62%',w:'60%',h:'10%',fontSize:18,fontFace:'Arial',color:onPri,align:'center',isTextBox:true,transparency:30});
+
+  // ===== SLIDE 9: KEY NUMBERS =====
+  const s9=pptx.addSlide();
+  s9.background={fill:C.bg};
+  addDeco(s9,3);
+  addFooter(s9,9);
+  s9.addText('מספרים מרכזיים',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:'Arial',color:C.pri,bold:true,align:'center',isTextBox:true});
+  const kpis=[{val:'85%',label:'נוכחות',col:C.pri},{val:'342',label:'שעות',col:C.sec},{val:'45',label:'מורים',col:C.acc},{val:'12',label:'פרויקטים',col:C.pri}];
+  kpis.forEach((k,i)=>{
+    const x=0.5+i*3.2;
+    s9.addShape(pptx.ShapeType.roundRect,{x:x,y:1.5,w:2.9,h:3,fill:{color:'FFFFFF'},shadow:{type:'outer',blur:8,offset:2,color:'00000008'},rectRadius:0.15});
+    s9.addShape(pptx.ShapeType.oval,{x:x+0.95,y:1.8,w:1,h:1,fill:{color:k.col,transparency:85}});
+    s9.addText(k.val,{x:x+0.2,y:2.9,w:2.5,h:0.7,fontSize:36,fontFace:'Arial',color:k.col,bold:true,align:'center',isTextBox:true});
+    s9.addText(k.label,{x:x+0.2,y:3.6,w:2.5,h:0.5,fontSize:16,fontFace:'Arial',color:'888888',align:'center',isTextBox:true});
+  });
+
+  // ===== SLIDE 10: SUMMARY / THANK YOU =====
+  const s10=pptx.addSlide();
+  s10.background={fill:C.pri};
+  addDeco(s10,1);
+  s10.addText('תודה!',{x:'10%',y:'25%',w:'80%',h:'20%',fontSize:52,fontFace:'Arial',color:onPri,bold:true,align:'center',isTextBox:true});
+  s10.addShape(pptx.ShapeType.rect,{x:'38%',y:'48%',w:'24%',h:'0.5%',fill:{color:onPri,transparency:50},rectRadius:0.1});
+  s10.addText('סיכום:\nרעיון מרכזי 1\nרעיון מרכזי 2\nרעיון מרכזי 3',{x:'15%',y:'52%',w:'70%',h:'30%',fontSize:20,fontFace:'Arial',color:onPri,align:'center',isTextBox:true,transparency:20,lineSpacing:28});
 
   pptx.writeFile({fileName:(selectedProduct?.id||'presentation')+'.pptx'});
 }
