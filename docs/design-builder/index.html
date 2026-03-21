@@ -485,7 +485,7 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 </div><!-- /main -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script>
 // ===== UTILITY =====
 function isLight(hex){
@@ -1676,6 +1676,12 @@ function downloadAsPPTX(){
   const bt=wizardChoices.button;
   if(!p||!f||!bt) return;
 
+  if(typeof PptxGenJS==='undefined'){
+    alert('ספריית PPTX לא נטענה. נסי לרענן את הדף.');
+    return;
+  }
+
+  try{
   const pptx=new PptxGenJS();
   pptx.layout='LAYOUT_WIDE';
   pptx.author='Design Builder - ORT';
@@ -1828,31 +1834,83 @@ function downloadAsPPTX(){
   s8.addShape(pptx.ShapeType.rect,{x:'42%',y:'58%',w:'16%',h:'0.5%',fill:{color:onPri,transparency:50},rectRadius:0.1});
   s8.addText('מקור',{x:'20%',y:'62%',w:'60%',h:'10%',fontSize:18,fontFace:bodyFont,color:onPri,align:'center',isTextBox:true,transparency:30});
 
-  // ===== SLIDE 9: 4 BOXES =====
+  // ===== SLIDE 9: BAR CHART =====
   const s9=pptx.addSlide();
   s9.background={fill:C.bg};
-  addDeco(s9,3);
   addFooter(s9,9);
-  s9.addText('כותרת',{x:'6%',y:'5%',w:'88%',h:'12%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'center',isTextBox:true});
-  const boxColors=[C.pri,C.sec,C.acc,C.pri];
-  [{n:'1',x:0.5,y:1.5},{n:'2',x:3.6,y:1.5},{n:'3',x:6.7,y:1.5},{n:'4',x:9.8,y:1.5}].forEach((bx,i)=>{
-    s9.addShape(pptx.ShapeType.roundRect,{x:bx.x,y:bx.y,w:2.9,h:3,fill:{color:'FFFFFF'},shadow:{type:'outer',blur:8,offset:2,color:'00000008'},rectRadius:0.15});
-    s9.addShape(pptx.ShapeType.rect,{x:bx.x,y:bx.y,w:2.9,h:0.08,fill:{color:boxColors[i]}});
-    s9.addShape(pptx.ShapeType.oval,{x:bx.x+0.95,y:bx.y+0.4,w:1,h:1,fill:{color:boxColors[i],transparency:85}});
-    s9.addText(bx.n,{x:bx.x+0.95,y:bx.y+0.4,w:1,h:1,fontSize:24,fontFace:bodyFont,color:boxColors[i],bold:true,align:'center',valign:'middle'});
-    s9.addText('כותרת',{x:bx.x+0.2,y:bx.y+1.6,w:2.5,h:0.5,fontSize:16,fontFace:titleFont,color:C.txt,bold:true,align:'center',isTextBox:true});
-    s9.addText('טקסט',{x:bx.x+0.2,y:bx.y+2.1,w:2.5,h:0.6,fontSize:14,fontFace:bodyFont,color:'888888',align:'center',isTextBox:true});
+  s9.addText('תרשים עמודות',{x:'6%',y:'4%',w:'88%',h:'10%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'right',isTextBox:true});
+  s9.addShape(pptx.ShapeType.rect,{x:'6%',y:'15%',w:'10%',h:'0.5%',fill:{color:C.pri},rectRadius:0.05});
+  s9.addChart(pptx.ChartType.bar,
+    [{name:'סדרה א',labels:['נושא 1','נושא 2','נושא 3','נושא 4','נושא 5'],values:[85,72,90,65,78]},
+     {name:'סדרה ב',labels:['נושא 1','נושא 2','נושא 3','נושא 4','נושא 5'],values:[60,80,55,88,70]}],
+    {x:0.6,y:1.3,w:12,h:4.2,showTitle:false,showValue:true,valueFontSize:10,
+     chartColors:[C.pri,C.sec],catAxisLabelFontSize:12,valAxisLabelFontSize:10,
+     catAxisLabelColor:C.txt,valAxisLabelColor:'888888',gridLineColor:'E8E8E8',
+     barGapWidthPct:80,dataLabelColor:C.txt,showLegend:true,legendPos:'b',legendFontSize:11});
+
+  // ===== SLIDE 10: PIE + DONUT =====
+  const s10=pptx.addSlide();
+  s10.background={fill:C.bg};
+  addDeco(s10,2);
+  addFooter(s10,10);
+  s10.addText('התפלגות',{x:'6%',y:'4%',w:'88%',h:'10%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'right',isTextBox:true});
+  s10.addChart(pptx.ChartType.doughnut,
+    [{name:'נתונים',labels:['חלק א','חלק ב','חלק ג','חלק ד'],values:[35,28,22,15]}],
+    {x:1.5,y:1.1,w:5,h:5,showTitle:false,showPercent:true,showLegend:false,
+     chartColors:[C.pri,C.sec,C.acc,lighten(p.primary,60).replace('#','')],
+     dataLabelFontSize:14,dataLabelColor:'333333',holeSize:55});
+  // Legend cards on the right
+  [{label:'חלק א',val:'35%',col:C.pri},{label:'חלק ב',val:'28%',col:C.sec},{label:'חלק ג',val:'22%',col:C.acc},{label:'חלק ד',val:'15%',col:lighten(p.primary,60).replace('#','')}].forEach((item,i)=>{
+    const ly=1.4+i*1.3;
+    s10.addShape(pptx.ShapeType.roundRect,{x:7.5,y:ly,w:5,h:1.05,fill:{color:'FFFFFF'},shadow:{type:'outer',blur:6,offset:2,color:'00000008'},rectRadius:0.1});
+    s10.addShape(pptx.ShapeType.oval,{x:7.7,y:ly+0.2,w:0.65,h:0.65,fill:{color:item.col}});
+    s10.addText(item.label,{x:8.5,y:ly+0.05,w:2.5,h:0.5,fontSize:16,fontFace:titleFont,color:C.txt,bold:true,align:'right'});
+    s10.addText(item.val,{x:8.5,y:ly+0.5,w:2.5,h:0.4,fontSize:14,fontFace:bodyFont,color:'888888',align:'right'});
   });
 
-  // ===== SLIDE 10: SUMMARY / THANK YOU =====
-  const s10=pptx.addSlide();
-  s10.background={fill:C.pri};
-  addDeco(s10,1);
-  s10.addText('תודה!',{x:'10%',y:'25%',w:'80%',h:'20%',fontSize:52,fontFace:titleFont,color:onPri,bold:true,align:'center',isTextBox:true});
-  s10.addShape(pptx.ShapeType.rect,{x:'38%',y:'48%',w:'24%',h:'0.5%',fill:{color:onPri,transparency:50},rectRadius:0.1});
-  s10.addText('סיכום:\nרעיון מרכזי 1\nרעיון מרכזי 2\nרעיון מרכזי 3',{x:'15%',y:'52%',w:'70%',h:'30%',fontSize:20,fontFace:bodyFont,color:onPri,align:'center',isTextBox:true,transparency:20,lineSpacing:28});
+  // ===== SLIDE 11: LINE CHART =====
+  const s11=pptx.addSlide();
+  s11.background={fill:C.bg};
+  addFooter(s11,11);
+  s11.addText('מגמות',{x:'6%',y:'4%',w:'88%',h:'10%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'right',isTextBox:true});
+  s11.addShape(pptx.ShapeType.rect,{x:'6%',y:'15%',w:'10%',h:'0.5%',fill:{color:C.pri},rectRadius:0.05});
+  s11.addChart(pptx.ChartType.line,
+    [{name:'מגמה א',labels:['ינואר','פברואר','מרץ','אפריל','מאי','יוני'],values:[30,45,55,60,72,85]},
+     {name:'מגמה ב',labels:['ינואר','פברואר','מרץ','אפריל','מאי','יוני'],values:[50,48,62,58,68,75]}],
+    {x:0.6,y:1.3,w:12,h:4.2,showTitle:false,lineSize:3,lineSmooth:true,showMarker:true,markerSize:8,
+     chartColors:[C.pri,C.sec],showLegend:true,legendPos:'b',legendFontSize:11,
+     catAxisLabelFontSize:12,valAxisLabelFontSize:10,catAxisLabelColor:C.txt,valAxisLabelColor:'888888',gridLineColor:'E8E8E8'});
+
+  // ===== SLIDE 12: 4 BOXES =====
+  const s12=pptx.addSlide();
+  s12.background={fill:C.bg};
+  addDeco(s12,3);
+  addFooter(s12,12);
+  s12.addText('כותרת',{x:'6%',y:'5%',w:'88%',h:'10%',fontSize:32,fontFace:titleFont,color:C.pri,bold:true,align:'center',isTextBox:true});
+  const boxColors=[C.pri,C.sec,C.acc,C.pri];
+  [{n:'1',x:0.5,y:1.5},{n:'2',x:3.6,y:1.5},{n:'3',x:6.7,y:1.5},{n:'4',x:9.8,y:1.5}].forEach((bx,i)=>{
+    s12.addShape(pptx.ShapeType.roundRect,{x:bx.x,y:bx.y,w:2.9,h:3,fill:{color:'FFFFFF'},shadow:{type:'outer',blur:8,offset:2,color:'00000008'},rectRadius:0.15});
+    s12.addShape(pptx.ShapeType.rect,{x:bx.x,y:bx.y,w:2.9,h:0.08,fill:{color:boxColors[i]}});
+    s12.addShape(pptx.ShapeType.oval,{x:bx.x+0.95,y:bx.y+0.4,w:1,h:1,fill:{color:boxColors[i],transparency:85}});
+    s12.addText(bx.n,{x:bx.x+0.95,y:bx.y+0.4,w:1,h:1,fontSize:24,fontFace:bodyFont,color:boxColors[i],bold:true,align:'center',valign:'middle'});
+    s12.addText('כותרת',{x:bx.x+0.2,y:bx.y+1.6,w:2.5,h:0.5,fontSize:16,fontFace:titleFont,color:C.txt,bold:true,align:'center',isTextBox:true});
+    s12.addText('טקסט',{x:bx.x+0.2,y:bx.y+2.1,w:2.5,h:0.6,fontSize:14,fontFace:bodyFont,color:'888888',align:'center',isTextBox:true});
+  });
+
+  // ===== SLIDE 13: SUMMARY / THANK YOU =====
+  const s13=pptx.addSlide();
+  s13.background={fill:C.pri};
+  addDeco(s13,1);
+  s13.addText('תודה!',{x:'10%',y:'25%',w:'80%',h:'20%',fontSize:52,fontFace:titleFont,color:onPri,bold:true,align:'center',isTextBox:true});
+  s13.addShape(pptx.ShapeType.rect,{x:'38%',y:'48%',w:'24%',h:'0.5%',fill:{color:onPri,transparency:50},rectRadius:0.1});
+  s13.addText('סיכום:\nרעיון מרכזי 1\nרעיון מרכזי 2\nרעיון מרכזי 3',{x:'15%',y:'52%',w:'70%',h:'30%',fontSize:20,fontFace:bodyFont,color:onPri,align:'center',isTextBox:true,transparency:20,lineSpacing:28});
 
   pptx.writeFile({fileName:(selectedProduct?.id||'presentation')+'.pptx'});
+
+  }catch(e){
+    console.error('PPTX error:',e);
+    alert('שגיאה ביצירת PPTX: '+e.message);
+  }
 }
 
 function switchOutput(tab){
