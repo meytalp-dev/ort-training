@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>נחש - המשחק הקלאסי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --primary: #7C3AED;
+    --primary-light: #A78BFA;
+    --secondary: #14B8A6;
+    --accent: #F59E0B;
+    --bg: #F5F3FA;
+    --dark: #1E1B3A;
+    --card: #FFFFFF;
+  }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding: 16px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+    color: var(--primary-light);
+    font-weight: 300;
+    margin-top: 2px;
+  }
+
+  .score-bar {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    margin-bottom: 10px;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+
+  .score-bar span {
+    padding: 6px 18px;
+    border-radius: 20px;
+    background: var(--card);
+    box-shadow: 0 2px 8px rgba(124,58,237,0.10);
+  }
+
+  .score-bar .label { font-weight: 400; color: #888; margin-left: 6px; }
+
+  #gameWrapper {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(124,58,237,0.18);
+    border: 3px solid var(--primary-light);
+    background: #1a1a2e;
+    line-height: 0;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  /* Overlay screens */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(30,27,58,0.88);
+    backdrop-filter: blur(6px);
+    z-index: 10;
+    transition: opacity 0.3s;
+  }
+
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .overlay h2 {
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+
+  .overlay p {
+    color: var(--primary-light);
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .overlay .final-score {
+    font-size: 2.6rem;
+    font-weight: 900;
+    color: var(--accent);
+    margin: 10px 0;
+    text-shadow: 0 0 20px rgba(245,158,11,0.5);
+  }
+
+  .overlay .hint {
+    color: #aaa;
+    font-size: 0.85rem;
+    margin-top: 14px;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .btn {
+    margin-top: 16px;
+    padding: 12px 36px;
+    font-family: 'Heebo', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(124,58,237,0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .btn:hover { transform: scale(1.05); box-shadow: 0 6px 24px rgba(124,58,237,0.45); }
+  .btn:active { transform: scale(0.97); }
+
+  /* Mobile controls */
+  .mobile-controls {
+    display: none;
+    margin-top: 14px;
+    gap: 4px;
+  }
+
+  .arrow-btn {
+    width: 56px;
+    height: 56px;
+    border: 2px solid var(--primary-light);
+    border-radius: 14px;
+    background: var(--card);
+    color: var(--primary);
+    font-size: 1.4rem;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(124,58,237,0.12);
+    transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .arrow-btn:active { background: var(--primary-light); color: #fff; }
+
+  .controls-row { display: flex; justify-content: center; gap: 4px; }
+  .controls-mid { display: flex; justify-content: center; gap: 60px; }
+
+  /* Arrow SVGs inside buttons */
+  .arrow-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+  @media (pointer: coarse), (max-width: 600px) {
+    .mobile-controls { display: flex; flex-direction: column; align-items: center; }
+  }
+
+  footer {
+    margin-top: 18px;
+    color: #aaa;
+    font-size: 0.75rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>נחש - המשחק הקלאסי</h1>
+  <p class="subtitle">נבנה עם Claude Code</p>
+</header>
+
+<div class="score-bar">
+  <span><span class="label">ניקוד:</span> <span id="scoreDisplay">0</span></span>
+  <span><span class="label">שיא:</span> <span id="highScoreDisplay">0</span></span>
+</div>
+
+<div id="gameWrapper">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Start Screen -->
+  <div class="overlay" id="startScreen">
+    <h2>נחש - המשחק הקלאסי</h2>
+    <p>אכלו את האוכל, גדלו, הישרדו</p>
+    <p class="hint">לחצו SPACE להתחלה</p>
+    <button class="btn" id="startBtn">התחל משחק</button>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div class="overlay hidden" id="gameOverScreen">
+    <h2>המשחק נגמר!</h2>
+    <p>הניקוד שלכם:</p>
+    <div class="final-score" id="finalScore">0</div>
+    <p id="newHighLabel" style="color:var(--accent);font-weight:700;display:none;">שיא חדש!</p>
+    <button class="btn" id="restartBtn">שחק שוב</button>
+    <p class="hint">או לחצו SPACE</p>
+  </div>
+</div>
+
+<!-- Mobile Controls -->
+<div class="mobile-controls" id="mobileControls">
+  <div class="controls-row">
+    <button class="arrow-btn" id="btnUp"><svg viewBox="0 0 24 24"><path d="M12 5l-8 10h16z"/></svg></button>
+  </div>
+  <div class="controls-mid">
+    <button class="arrow-btn" id="btnRight"><svg viewBox="0 0 24 24"><path d="M19 12L9 4v16z"/></svg></button>
+    <button class="arrow-btn" id="btnLeft"><svg viewBox="0 0 24 24"><path d="M5 12l10-8v16z"/></svg></button>
+  </div>
+  <div class="controls-row">
+    <button class="arrow-btn" id="btnDown"><svg viewBox="0 0 24 24"><path d="M12 19l8-10H4z"/></svg></button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // --- Config ---
+  const GRID = 20;
+  const BASE_SPEED = 140;
+  const MIN_SPEED = 55;
+  const SPEED_STEP = 3;
+
+  // --- Elements ---
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const scoreDisplay = document.getElementById('scoreDisplay');
+  const highScoreDisplay = document.getElementById('highScoreDisplay');
+  const finalScore = document.getElementById('finalScore');
+  const newHighLabel = document.getElementById('newHighLabel');
+  const wrapper = document.getElementById('gameWrapper');
+
+  // --- Size ---
+  function resize() {
+    const maxW = Math.min(window.innerWidth - 40, 520);
+    const cols = Math.floor(maxW / GRID);
+    const rows = cols; // square
+    canvas.width = cols * GRID;
+    canvas.height = rows * GRID;
+    wrapper.style.width = canvas.width + 'px';
+    return { cols, rows };
+  }
+
+  let dims = resize();
+
+  // --- Audio ---
+  let audioCtx;
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  function playEat() {
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(660, audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.08);
+    g.gain.setValueAtTime(0.18, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    o.start(); o.stop(audioCtx.currentTime + 0.15);
+  }
+
+  function playGameOver() {
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = 'square';
+    o.frequency.setValueAtTime(440, audioCtx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.5);
+    g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.55);
+    o.start(); o.stop(audioCtx.currentTime + 0.55);
+  }
+
+  // --- State ---
+  let snake, dir, nextDir, food, score, highScore, running, loopId, lastTime, interval;
+
+  highScore = parseInt(localStorage.getItem('snakeHigh') || '0');
+  highScoreDisplay.textContent = highScore;
+
+  function init() {
+    dims = resize();
+    const cx = Math.floor(dims.cols / 2);
+    const cy = Math.floor(dims.rows / 2);
+    snake = [{x:cx, y:cy},{x:cx+1,y:cy},{x:cx+2,y:cy}];
+    dir = {x:-1, y:0};
+    nextDir = {x:-1, y:0};
+    score = 0;
+    scoreDisplay.textContent = 0;
+    interval = BASE_SPEED;
+    placeFood();
+  }
+
+  function placeFood() {
+    let pos;
+    do {
+      pos = { x: Math.floor(Math.random()*dims.cols), y: Math.floor(Math.random()*dims.rows) };
+    } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+    food = pos;
+  }
+
+  // --- Drawing ---
+  function draw() {
+    const w = canvas.width, h = canvas.height;
+    // Background
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, w, h);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(124,58,237,0.07)';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x <= w; x += GRID) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    for (let y = 0; y <= h; y += GRID) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    // Food glow
+    const fx = food.x * GRID + GRID/2;
+    const fy = food.y * GRID + GRID/2;
+    const glowR = GRID * 1.6;
+    const glow = ctx.createRadialGradient(fx, fy, 2, fx, fy, glowR);
+    glow.addColorStop(0, 'rgba(245,158,11,0.35)');
+    glow.addColorStop(1, 'rgba(245,158,11,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(fx - glowR, fy - glowR, glowR*2, glowR*2);
+
+    // Food circle
+    ctx.beginPath();
+    ctx.arc(fx, fy, GRID/2 - 2, 0, Math.PI*2);
+    const fg = ctx.createRadialGradient(fx-2, fy-3, 1, fx, fy, GRID/2-2);
+    fg.addColorStop(0, '#FCD34D');
+    fg.addColorStop(1, '#F59E0B');
+    ctx.fillStyle = fg;
+    ctx.fill();
+
+    // Snake
+    for (let i = snake.length - 1; i >= 0; i--) {
+      const s = snake[i];
+      const t = i / snake.length;
+      const r = lerp(90, 124, t);
+      const g = lerp(20, 58, t);
+      const b = lerp(180, 237, t);
+
+      const pad = i === 0 ? 1 : 2;
+      const radius = i === 0 ? 6 : 5;
+
+      ctx.fillStyle = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+      roundRect(ctx, s.x*GRID+pad, s.y*GRID+pad, GRID-pad*2, GRID-pad*2, radius);
+      ctx.fill();
+
+      // Head highlight
+      if (i === 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        roundRect(ctx, s.x*GRID+pad+2, s.y*GRID+pad+1, GRID-pad*2-4, (GRID-pad*2)/2-1, 3);
+        ctx.fill();
+
+        // Eyes
+        const ex1 = s.x*GRID + GRID/2 + dir.y*4 - dir.x*3;
+        const ey1 = s.y*GRID + GRID/2 + dir.x*4 - dir.y*3;
+        const ex2 = s.x*GRID + GRID/2 - dir.y*4 - dir.x*3;
+        const ey2 = s.y*GRID + GRID/2 - dir.x*4 - dir.y*3;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(ex1, ey1, 2.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex2, ey2, 2.5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#1E1B3A';
+        ctx.beginPath(); ctx.arc(ex1-dir.x*0.6, ey1-dir.y*0.6, 1.2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex2-dir.x*0.6, ey2-dir.y*0.6, 1.2, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  }
+
+  function lerp(a, b, t) { return a + (b-a)*t; }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y);
+    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r);
+    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h);
+    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r);
+    ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.closePath();
+  }
+
+  // --- Update ---
+  function update() {
+    dir = { ...nextDir };
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    // Wall collision
+    if (head.x < 0 || head.x >= dims.cols || head.y < 0 || head.y >= dims.rows) {
+      return gameOver();
+    }
+    // Self collision
+    if (snake.some(s => s.x === head.x && s.y === head.y)) {
+      return gameOver();
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      scoreDisplay.textContent = score;
+      interval = Math.max(MIN_SPEED, BASE_SPEED - score * SPEED_STEP);
+      playEat();
+      placeFood();
+    } else {
+      snake.pop();
+    }
+  }
+
+  function gameOver() {
+    running = false;
+    playGameOver();
+    finalScore.textContent = score;
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem('snakeHigh', highScore);
+      highScoreDisplay.textContent = highScore;
+      newHighLabel.style.display = 'block';
+    } else {
+      newHighLabel.style.display = 'none';
+    }
+    gameOverScreen.classList.remove('hidden');
+  }
+
+  // --- Loop ---
+  function loop(ts) {
+    if (!running) return;
+    loopId = requestAnimationFrame(loop);
+    if (!lastTime) lastTime = ts;
+    if (ts - lastTime >= interval) {
+      lastTime = ts;
+      update();
+      if (running) draw();
+    }
+  }
+
+  function start() {
+    init();
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    running = true;
+    lastTime = 0;
+    draw();
+    loopId = requestAnimationFrame(loop);
+  }
+
+  // --- Input ---
+  function setDir(x, y) {
+    if (x !== 0 && dir.x !== 0) return; // same axis
+    if (y !== 0 && dir.y !== 0) return;
+    nextDir = {x, y};
+  }
+
+  document.addEventListener('keydown', function(e) {
+    ensureAudio();
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!running) start();
+      return;
+    }
+    switch(e.code) {
+      case 'ArrowUp':    case 'KeyW': e.preventDefault(); setDir(0,-1); break;
+      case 'ArrowDown':  case 'KeyS': e.preventDefault(); setDir(0,1);  break;
+      case 'ArrowLeft':  case 'KeyA': e.preventDefault(); setDir(-1,0); break;
+      case 'ArrowRight': case 'KeyD': e.preventDefault(); setDir(1,0);  break;
+    }
+  });
+
+  // Buttons
+  document.getElementById('startBtn').addEventListener('click', function() { ensureAudio(); start(); });
+  document.getElementById('restartBtn').addEventListener('click', function() { ensureAudio(); start(); });
+
+  // Mobile
+  document.getElementById('btnUp').addEventListener('touchstart', function(e){ e.preventDefault(); ensureAudio(); setDir(0,-1); });
+  document.getElementById('btnDown').addEventListener('touchstart', function(e){ e.preventDefault(); ensureAudio(); setDir(0,1); });
+  document.getElementById('btnLeft').addEventListener('touchstart', function(e){ e.preventDefault(); ensureAudio(); setDir(-1,0); });
+  document.getElementById('btnRight').addEventListener('touchstart', function(e){ e.preventDefault(); ensureAudio(); setDir(1,0); });
+
+  // Swipe support
+  let touchStartX = 0, touchStartY = 0;
+  canvas.addEventListener('touchstart', function(e) {
+    ensureAudio();
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  canvas.addEventListener('touchend', function(e) {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      setDir(dx > 0 ? 1 : -1, 0);
+    } else {
+      setDir(0, dy > 0 ? 1 : -1);
+    }
+  }, { passive: true });
+
+  // Resize
+  window.addEventListener('resize', function() {
+    dims = resize();
+    if (!running) {
+      draw();
+    }
+  });
+
+  // Initial draw
+  init();
+  draw();
+})();
+</script>
+</body>
+</html>
