@@ -735,7 +735,7 @@ body {
 const themes = [
   { id:'freedom', name:'חירות וחופש', heading:'חג החירות', text:'שנדע לבחור את הדרך שלנו ולפרוש כנפיים לעבר האור,\nולמצוא את החופש האמיתי — להיות מי שאנחנו באמת.', signature:'חג פסח שמח',
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2c-1 3-4 5-7 5 2 2 3 5 2 8 2-1 4-1 5 1 1-2 3-2 5-1-1-3 0-6 2-8-3 0-6-2-7-5z"/><path d="M9 12c0 2 1.5 4 3 5 1.5-1 3-3 3-5"/></svg>' },
-  { id:'purity', name:'ניקיון הנפש', heading:'התחדשות', text:'כמו טל הבוקר שמרענן את העולם, נדע גם אנחנו להתחדש —\nלהקל, לפשט, לנשום ולפנות מקום לדברים יפים.', signature:'בברכת התחדשות',
+  { id:'purity', name:'התחדשות', heading:'התחדשות', text:'כמו טל הבוקר שמרענן את העולם, נדע גם אנחנו להתחדש —\nלהקל, לפשט, לנשום ולפנות מקום לדברים יפים.', signature:'בברכת התחדשות',
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2c-3 6-8 8-8 14a8 8 0 0016 0c0-6-5-8-8-14z"/><path d="M12 18c-2 0-4-1.5-4-4"/></svg>' },
   { id:'love', name:'אהבה', heading:'באהבה', text:'מה שמחבר אותנו חזק מכל מה שמפריד.\nשנדע לאהוב בלי תנאי, לחבק ולהיות שם אחד לשני.', signature:'באהבה רבה',
     icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/></svg>' },
@@ -1446,116 +1446,30 @@ function downloadCard() {
 
 function doExport() {
   const dims = formatDims[state.format];
-  const exportEl = document.getElementById('exportContainer');
-  exportEl.style.width = dims.w + 'px';
-  exportEl.style.height = dims.h + 'px';
+  const cardCanvas = document.querySelector('.card-canvas');
 
-  // Clone current preview content into export container at full resolution
-  const previewCanvas = document.querySelector('.card-canvas');
-  const clone = previewCanvas.cloneNode(true);
-  clone.style.width = '100%';
-  clone.style.height = '100%';
-
-  // Read all text fields (same as render)
-  const heading = document.getElementById('headingInput').value;
-  const quote = document.getElementById('quoteInput').value;
-  const blessing = document.getElementById('blessingInput').value;
-  const personal = document.getElementById('personalInput').value;
-  const signature = document.getElementById('signatureInput').value;
-  const style = styles.find(s => s.id === state.style);
-  const pal = palettes.find(p => p.id === state.palette);
-  const font = fontCombos.find(f => f.id === state.fontCombo);
-  const isDark = state.style === 'dramatic';
-
-  // Use same color logic as render()
-  const textColor = isDark ? '#f0e8d8' : pal.textColor;
-  const headingColor = isDark ? '#d4af37' : pal.headingColor;
-  const signatureColor = isDark ? '#c0b090' : pal.headingColor;
-  const quoteColor = isDark ? '#c0b090' : pal.textColor;
-  const dividerColor = isDark ? '#d4af3744' : pal.colors[0] + '66';
-  const bannerTextColor = isDark ? '#d4af37' : pal.headingColor;
-  const bannerBg = isDark
-    ? 'linear-gradient(to top, rgba(26,58,58,1) 0%, rgba(26,58,58,0.95) 40%, rgba(26,58,58,0) 100%)'
-    : 'linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 40%, rgba(255,255,255,0) 100%)';
-
-  const headingFont = `'${font.heading}', sans-serif`;
-  const bodyFont = `'${font.body}', sans-serif`;
-  const headingWeight = font.headingWeight || 700;
-  const bodyWeight = font.bodyWeight || 400;
-
-  const quoteHTML = quote ? quote.split('\n').map(l => l.trim()).join('<br>') : '';
-  const blessingHTML = blessing.split('\n').map(l => l.trim()).join('<br>');
-  const personalHTML = personal ? personal.split('\n').map(l => l.trim()).join('<br>') : '';
-  const svgDecorations = getSVGDecorations(state.style, pal, dims.w, dims.h);
-
-  const scale = dims.w / 1080;
-  const hSize = state.headingSize * scale * 3.5;
-  const bSize = state.blessingSize * scale * 3.5;
-  const sSize = state.signatureSize * scale * 3.5;
-  const bannerSize = hSize * 0.55;
-
-  const isStory = state.format === 'story';
-
-  const exportIllust = getIllustrationHTMLForExport();
-
-  // Background image support (same as render)
-  const hasBgImage = !!(state.bgImage && state.bgMode !== 'none');
-  const overlayOpacity = hasBgImage ? (+document.getElementById('bgOpacity').value / 100) : 0;
-  const cardBg = hasBgImage
-    ? `background:url('${state.bgImage}') center/cover no-repeat;`
-    : `background:${style.gradient};`;
-  const textOverlay = hasBgImage
-    ? `<div style="position:absolute;inset:0;background:rgba(255,255,255,${overlayOpacity});z-index:1;"></div>`
-    : '';
-
-  // Convert inline SVG decorations to <img> data URIs for html2canvas
-  function svgToImg(svgHTML) {
-    if (!svgHTML) return '';
-    return svgHTML.replace(/<svg\s+style="([^"]*)"([^>]*)>([\s\S]*?)<\/svg>/gi, (match, styleAttr, attrs, inner) => {
-      const fullSvg = `<svg xmlns="http://www.w3.org/2000/svg" style="${styleAttr}"${attrs}>${inner}</svg>`;
-      const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fullSvg);
-      const topM = styleAttr.match(/top:\s*[^;]+/);
-      const rightM = styleAttr.match(/right:\s*[^;]+/);
-      const bottomM = styleAttr.match(/bottom:\s*[^;]+/);
-      const leftM = styleAttr.match(/left:\s*[^;]+/);
-      const wM = styleAttr.match(/width:\s*[^;]+/);
-      const hM = styleAttr.match(/height:\s*[^;]+/);
-      const opM = styleAttr.match(/opacity:\s*[^;]+/);
-      const trM = styleAttr.match(/transform:\s*[^;]+/);
-      let s = 'position:absolute;';
-      [topM,rightM,bottomM,leftM,wM,hM,opM,trM].forEach(m => { if(m) s += m[0] + ';'; });
-      return `<img src="${dataUri}" style="${s}" />`;
-    });
-  }
-  const exportDecorations = hasBgImage ? '' : svgToImg(svgDecorations);
-
-  exportEl.innerHTML = `
-    <div style="width:100%;height:100%;position:relative;overflow:hidden;direction:rtl;${cardBg}">
-      ${textOverlay}
-      ${exportDecorations}
-      ${exportIllust}
-      <div style="position:relative;z-index:2;text-align:center;padding:30% 5% 4%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;width:100%;height:100%;gap:2%;">
-        <div style="font-family:${headingFont};font-size:${hSize}px;font-weight:${headingWeight};color:${headingColor};line-height:1.3;">${heading}</div>
-        ${quoteHTML ? `<div style="font-family:${bodyFont};font-size:${bSize*0.8}px;font-style:italic;color:${quoteColor};line-height:1.5;max-width:90%;opacity:0.75;">${quoteHTML}</div>
-        <div style="width:15%;height:2px;background:linear-gradient(90deg,transparent,${dividerColor},transparent);"></div>` : ''}
-        <div style="font-family:${bodyFont};font-size:${bSize}px;font-weight:${bodyWeight};color:${textColor};line-height:1.6;max-width:90%;">${blessingHTML}</div>
-        ${personalHTML ? `<div style="width:15%;height:2px;background:linear-gradient(90deg,transparent,${dividerColor},transparent);"></div>
-        <div style="font-family:${bodyFont};font-size:${bSize*0.9}px;font-weight:${bodyWeight};color:${textColor};line-height:1.6;max-width:90%;opacity:0.9;">${personalHTML}</div>` : ''}
-        <div style="width:25%;height:2px;background:linear-gradient(90deg,transparent,${dividerColor},transparent);"></div>
-        <div style="font-family:${bodyFont};font-size:${sSize}px;color:${signatureColor};font-weight:500;">${signature}</div>
-        <div style="font-family:'Suez One',serif;font-size:${bannerSize}px;color:${bannerTextColor};letter-spacing:2px;margin-top:auto;">חג פסח שמח</div>
-      </div>
-    </div>
-  `;
+  // Set the preview to exact export dimensions temporarily
+  const origWidth = cardCanvas.style.width;
+  const origHeight = cardCanvas.style.height;
+  const origMaxW = cardCanvas.style.maxWidth;
+  cardCanvas.style.width = dims.w + 'px';
+  cardCanvas.style.height = dims.h + 'px';
+  cardCanvas.style.maxWidth = 'none';
 
   setTimeout(() => {
-    html2canvas(exportEl, {
+    html2canvas(cardCanvas, {
       width: dims.w,
       height: dims.h,
       scale: 1,
       useCORS: true,
-      backgroundColor: null
+      backgroundColor: null,
+      allowTaint: true
     }).then(canvas => {
+      // Restore original size
+      cardCanvas.style.width = origWidth;
+      cardCanvas.style.height = origHeight;
+      cardCanvas.style.maxWidth = origMaxW;
+
       canvas.toBlob(blob => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -1564,12 +1478,15 @@ function doExport() {
         link.click();
         setTimeout(() => URL.revokeObjectURL(url), 5000);
         document.getElementById('loading').classList.remove('show');
-        exportEl.innerHTML = '';
       }, 'image/png');
     }).catch(err => {
-      console.error(err);
+      console.error('Export error:', err);
+      // Restore original size on error too
+      cardCanvas.style.width = origWidth;
+      cardCanvas.style.height = origHeight;
+      cardCanvas.style.maxWidth = origMaxW;
       document.getElementById('loading').classList.remove('show');
-      alert('שגיאה ביצירת התמונה');
+      alert('שגיאה ביצירת התמונה: ' + err.message);
     });
   }, 300);
 }
