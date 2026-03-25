@@ -1796,6 +1796,50 @@ document.getElementById('blessingInput').value = initTheme.text;
 document.getElementById('signatureInput').value = initTheme.signature;
 
 render();
+
+// ============ ANALYTICS ============
+const ANALYTICS_URL = 'ANALYTICS_SCRIPT_URL'; // TODO: Replace with Google Apps Script URL
+const _startTime = Date.now();
+const _device = /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+
+function track(event, details) {
+  if (!ANALYTICS_URL || ANALYTICS_URL === 'ANALYTICS_SCRIPT_URL') return;
+  const duration = Math.round((Date.now() - _startTime) / 1000);
+  const s = document.createElement('script');
+  s.src = ANALYTICS_URL + '?callback=_tc&event=' + encodeURIComponent(event)
+    + '&details=' + encodeURIComponent(details || '')
+    + '&device=' + _device
+    + '&duration=' + duration;
+  document.head.appendChild(s);
+  setTimeout(() => s.remove(), 3000);
+}
+window._tc = function() {};
+
+// Track page view
+track('page_view', document.referrer || 'direct');
+
+// Track download
+const _origDownload = downloadCard;
+downloadCard = async function() {
+  track('download', state.style + '|' + state.palette + '|' + state.format);
+  return _origDownload();
+};
+
+// Track theme selection
+const _origSetTheme = setTheme;
+setTheme = function(id) {
+  track('theme_select', id);
+  return _origSetTheme(id);
+};
+
+// Track time on page when leaving
+window.addEventListener('beforeunload', () => {
+  const sec = Math.round((Date.now() - _startTime) / 1000);
+  if (navigator.sendBeacon && ANALYTICS_URL && ANALYTICS_URL !== 'ANALYTICS_SCRIPT_URL') {
+    const url = ANALYTICS_URL + '?callback=_tc&event=session_end&details=&device=' + _device + '&duration=' + sec;
+    navigator.sendBeacon(url);
+  }
+});
 </script>
 </body>
 </html>
