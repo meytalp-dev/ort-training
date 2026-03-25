@@ -1437,11 +1437,15 @@ function downloadCard() {
   const loading = document.getElementById('loading');
   loading.classList.add('show');
 
-  // Lazy load html2canvas
-  if (!window.html2canvas) {
+  // Lazy load dom-to-image-more (handles SVGs perfectly unlike html2canvas)
+  if (!window.domtoimage) {
     const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    script.src = 'https://cdn.jsdelivr.net/npm/dom-to-image-more@3.4.5/dist/dom-to-image-more.min.js';
     script.onload = () => doExport();
+    script.onerror = () => {
+      loading.classList.remove('show');
+      alert('שגיאה בטעינת ספריית הייצוא');
+    };
     document.head.appendChild(script);
   } else {
     doExport();
@@ -1451,37 +1455,25 @@ function downloadCard() {
 function doExport() {
   const dims = formatDims[state.format];
   const cardCanvas = document.querySelector('.card-canvas');
-
-  // Calculate scale to get from preview size to export size
   const previewW = cardCanvas.offsetWidth;
   const previewH = cardCanvas.offsetHeight;
   const scaleFactor = dims.w / previewW;
 
-  // Capture the preview as-is, scaled up to target resolution
-  // ignoreElements: skip SVGs that cause html2canvas issues, we'll handle them separately
-  html2canvas(cardCanvas, {
-    scale: scaleFactor,
-    useCORS: true,
-    backgroundColor: null,
-    allowTaint: true,
-    foreignObjectRendering: true
-  }).then(canvas => {
-    // Resize to exact target dimensions if needed
-    const finalCanvas = document.createElement('canvas');
-    finalCanvas.width = dims.w;
-    finalCanvas.height = dims.h;
-    const ctx = finalCanvas.getContext('2d');
-    ctx.drawImage(canvas, 0, 0, dims.w, dims.h);
-
-    finalCanvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = 'pesach-greeting.png';
-      link.href = url;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      document.getElementById('loading').classList.remove('show');
-    }, 'image/png');
+  domtoimage.toPng(cardCanvas, {
+    width: dims.w,
+    height: dims.h,
+    style: {
+      width: dims.w + 'px',
+      height: dims.h + 'px',
+      maxWidth: 'none'
+    },
+    quality: 1
+  }).then(dataUrl => {
+    const link = document.createElement('a');
+    link.download = 'pesach-greeting.png';
+    link.href = dataUrl;
+    link.click();
+    document.getElementById('loading').classList.remove('show');
   }).catch(err => {
     console.error('Export error:', err);
     document.getElementById('loading').classList.remove('show');
