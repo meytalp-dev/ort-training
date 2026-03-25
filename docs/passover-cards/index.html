@@ -1498,38 +1498,6 @@ function doExport() {
 
   const exportIllust = getIllustrationHTMLForExport();
 
-  // Convert inline SVG decorations to <img> data URIs for html2canvas
-  function svgToImgExport(svgHTML) {
-    if (!svgHTML) return '';
-    // Extract each <svg ...>...</svg> and convert to <img>
-    return svgHTML.replace(/<svg\s+style="([^"]*)"([^>]*)>([\s\S]*?)<\/svg>/gi, (match, styleAttr, attrs, inner) => {
-      const fullSvg = `<svg xmlns="http://www.w3.org/2000/svg" style="${styleAttr}"${attrs}>${inner}</svg>`;
-      const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fullSvg);
-      // Extract position styles for the wrapper
-      const posMatch = styleAttr.match(/position:\s*absolute[^;]*/);
-      const topMatch = styleAttr.match(/top:\s*[^;]+/);
-      const rightMatch = styleAttr.match(/right:\s*[^;]+/);
-      const bottomMatch = styleAttr.match(/bottom:\s*[^;]+/);
-      const leftMatch = styleAttr.match(/left:\s*[^;]+/);
-      const wMatch = styleAttr.match(/width:\s*[^;]+/);
-      const hMatch = styleAttr.match(/height:\s*[^;]+/);
-      const opMatch = styleAttr.match(/opacity:\s*[^;]+/);
-      const trMatch = styleAttr.match(/transform:\s*[^;]+/);
-      let imgStyle = 'position:absolute;';
-      if (topMatch) imgStyle += topMatch[0] + ';';
-      if (rightMatch) imgStyle += rightMatch[0] + ';';
-      if (bottomMatch) imgStyle += bottomMatch[0] + ';';
-      if (leftMatch) imgStyle += leftMatch[0] + ';';
-      if (wMatch) imgStyle += wMatch[0] + ';';
-      if (hMatch) imgStyle += hMatch[0] + ';';
-      if (opMatch) imgStyle += opMatch[0] + ';';
-      if (trMatch) imgStyle += trMatch[0] + ';';
-      return `<img src="${dataUri}" style="${imgStyle}" />`;
-    });
-  }
-
-  const exportDecorations = hasBgImage ? '' : svgToImgExport(svgDecorations);
-
   // Background image support (same as render)
   const hasBgImage = !!(state.bgImage && state.bgMode !== 'none');
   const overlayOpacity = hasBgImage ? (+document.getElementById('bgOpacity').value / 100) : 0;
@@ -1539,6 +1507,27 @@ function doExport() {
   const textOverlay = hasBgImage
     ? `<div style="position:absolute;inset:0;background:rgba(255,255,255,${overlayOpacity});z-index:1;"></div>`
     : '';
+
+  // Convert inline SVG decorations to <img> data URIs for html2canvas
+  function svgToImg(svgHTML) {
+    if (!svgHTML) return '';
+    return svgHTML.replace(/<svg\s+style="([^"]*)"([^>]*)>([\s\S]*?)<\/svg>/gi, (match, styleAttr, attrs, inner) => {
+      const fullSvg = `<svg xmlns="http://www.w3.org/2000/svg" style="${styleAttr}"${attrs}>${inner}</svg>`;
+      const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fullSvg);
+      const topM = styleAttr.match(/top:\s*[^;]+/);
+      const rightM = styleAttr.match(/right:\s*[^;]+/);
+      const bottomM = styleAttr.match(/bottom:\s*[^;]+/);
+      const leftM = styleAttr.match(/left:\s*[^;]+/);
+      const wM = styleAttr.match(/width:\s*[^;]+/);
+      const hM = styleAttr.match(/height:\s*[^;]+/);
+      const opM = styleAttr.match(/opacity:\s*[^;]+/);
+      const trM = styleAttr.match(/transform:\s*[^;]+/);
+      let s = 'position:absolute;';
+      [topM,rightM,bottomM,leftM,wM,hM,opM,trM].forEach(m => { if(m) s += m[0] + ';'; });
+      return `<img src="${dataUri}" style="${s}" />`;
+    });
+  }
+  const exportDecorations = hasBgImage ? '' : svgToImg(svgDecorations);
 
   exportEl.innerHTML = `
     <div style="width:100%;height:100%;position:relative;overflow:hidden;direction:rtl;${cardBg}">
