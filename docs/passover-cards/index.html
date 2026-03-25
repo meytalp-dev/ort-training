@@ -814,7 +814,7 @@ let state = {
   headingSize: 42,
   blessingSize: 20,
   signatureSize: 15,
-  illustration: null,
+  illustrations: [],
   illustPos: 'top-right',
   illustSize: 35,
   illustOpacity: 70
@@ -955,12 +955,12 @@ function buildIllustGrid() {
     : illustrations.filter(il => il.category === illustCatFilter);
 
   grid.innerHTML = `
-    <div class="illust-option ${!state.illustration ? 'active' : ''}" onclick="setIllustration(null)" title="ללא איור">
+    <div class="illust-option ${state.illustrations.length === 0 ? 'active' : ''}" onclick="clearIllustrations()" title="ללא איורים">
       <svg viewBox="0 0 48 48" width="48" height="48"><line x1="10" y1="10" x2="38" y2="38" stroke="#ccc" stroke-width="2"/><line x1="38" y1="10" x2="10" y2="38" stroke="#ccc" stroke-width="2"/><rect x="8" y="8" width="32" height="32" rx="4" fill="none" stroke="#ddd" stroke-width="1.5"/></svg>
       <div class="illust-name">ללא</div>
     </div>
   ` + filtered.map(il => `
-    <div class="illust-option ${state.illustration === il.id ? 'active' : ''}" onclick="setIllustration('${il.id}')" title="${il.name}">
+    <div class="illust-option ${state.illustrations.includes(il.id) ? 'active' : ''}" onclick="toggleIllustration('${il.id}')" title="${il.name}">
       ${il.svg.replace('viewBox="0 0 200 200"', 'viewBox="0 0 200 200" width="48" height="48"')}
       <div class="illust-name">${il.name}</div>
     </div>
@@ -972,12 +972,23 @@ function filterIllustCat(cat) {
   buildIllustGrid();
 }
 
-function setIllustration(id) {
-  state.illustration = id;
-  const showControls = !!id;
+function toggleIllustration(id) {
+  const idx = state.illustrations.indexOf(id);
+  if (idx >= 0) state.illustrations.splice(idx, 1);
+  else state.illustrations.push(id);
+  const showControls = state.illustrations.length > 0;
   document.getElementById('illustPosGrid').style.display = showControls ? 'flex' : 'none';
   document.getElementById('illustSizeField').style.display = showControls ? 'block' : 'none';
   document.getElementById('illustOpacityField').style.display = showControls ? 'block' : 'none';
+  buildIllustGrid();
+  render();
+}
+
+function clearIllustrations() {
+  state.illustrations = [];
+  document.getElementById('illustPosGrid').style.display = 'none';
+  document.getElementById('illustSizeField').style.display = 'none';
+  document.getElementById('illustOpacityField').style.display = 'none';
   buildIllustGrid();
   render();
 }
@@ -989,10 +1000,17 @@ function setIllustPos(pos, btn) {
   render();
 }
 
+// Auto-distribute positions for multiple illustrations
+const autoPositions = [
+  'top:3%;right:3%;',
+  'bottom:12%;left:3%;',
+  'top:3%;left:3%;',
+  'bottom:12%;right:3%;',
+  'top:50%;left:50%;transform:translate(-50%,-50%);'
+];
+
 function getIllustrationHTML() {
-  if (!state.illustration) return '';
-  const il = illustrations.find(i => i.id === state.illustration);
-  if (!il) return '';
+  if (!state.illustrations.length) return '';
 
   state.illustSize = +document.getElementById('illustSize').value;
   state.illustOpacity = +document.getElementById('illustOpacity').value;
@@ -1001,18 +1019,37 @@ function getIllustrationHTML() {
 
   const size = state.illustSize;
   const opacity = state.illustOpacity / 100;
-  const pos = state.illustPos;
 
-  let posStyle = '';
-  switch (pos) {
-    case 'top-right': posStyle = 'top:3%;right:3%;'; break;
-    case 'top-left': posStyle = 'top:3%;left:3%;'; break;
-    case 'bottom-right': posStyle = 'bottom:12%;right:3%;'; break;
-    case 'bottom-left': posStyle = 'bottom:12%;left:3%;'; break;
-    case 'center': posStyle = 'top:50%;left:50%;transform:translate(-50%,-50%);'; break;
-  }
-
-  return `<div style="position:absolute;${posStyle}width:${size}%;z-index:1;opacity:${opacity};pointer-events:none;">${il.svg}</div>`;
+  return state.illustrations.map((id, i) => {
+    const il = illustrations.find(x => x.id === id);
+    if (!il) return '';
+    // First illustration uses selected position, rest auto-distributed
+    let posStyle;
+    if (i === 0) {
+      switch (state.illustPos) {
+        case 'top-right': posStyle = 'top:3%;right:3%;'; break;
+        case 'top-left': posStyle = 'top:3%;left:3%;'; break;
+        case 'bottom-right': posStyle = 'bottom:12%;right:3%;'; break;
+        case 'bottom-left': posStyle = 'bottom:12%;left:3%;'; break;
+        case 'center': posStyle = 'top:50%;left:50%;transform:translate(-50%,-50%);'; break;
+        default: posStyle = autoPositions[0];
+      }
+    } else {
+      // Skip position used by first, cycle through remaining
+      const firstPos = autoPositions.findIndex(p => {
+        if (state.illustPos === 'top-right') return p.includes('top') && p.includes('right');
+        if (state.illustPos === 'top-left') return p.includes('top') && p.includes('left') && !p.includes('right');
+        if (state.illustPos === 'bottom-right') return p.includes('bottom') && p.includes('right');
+        if (state.illustPos === 'bottom-left') return p.includes('bottom') && p.includes('left') && !p.includes('right');
+        return p.includes('translate');
+      });
+      const remaining = autoPositions.filter((_, idx) => idx !== firstPos);
+      posStyle = remaining[(i - 1) % remaining.length];
+    }
+    // Scale down additional illustrations
+    const s = i === 0 ? size : Math.round(size * 0.7);
+    return `<div style="position:absolute;${posStyle}width:${s}%;z-index:1;opacity:${opacity};pointer-events:none;">${il.svg}</div>`;
+  }).join('');
 }
 
 // Export-safe version: converts SVG to <img> with data URI for html2canvas compatibility
@@ -1609,27 +1646,32 @@ async function downloadCard() {
       }
     }
 
-    // 3. Illustration
-    if (state.illustration) {
-      const il = illustrations.find(i => i.id === state.illustration);
-      if (il) {
+    // 3. Illustrations (multiple)
+    if (state.illustrations.length) {
+      const posOptions = [
+        state.illustPos || 'top-right',
+        ...((['top-right','bottom-left','top-left','bottom-right','center']).filter(p => p !== (state.illustPos || 'top-right')))
+      ];
+      const opacity = state.illustOpacity / 100;
+      for (let idx = 0; idx < state.illustrations.length; idx++) {
+        const il = illustrations.find(x => x.id === state.illustrations[idx]);
+        if (!il) continue;
         const svgDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(il.svg);
         const img = await loadImage(svgDataUri);
-        if (img) {
-          const size = state.illustSize / 100 * W;
-          const opacity = state.illustOpacity / 100;
-          let ix = 0, iy = 0;
-          switch (state.illustPos) {
-            case 'top-right': ix = W * 0.97 - size; iy = H * 0.03; break;
-            case 'top-left': ix = W * 0.03; iy = H * 0.03; break;
-            case 'bottom-right': ix = W * 0.97 - size; iy = H * 0.85; break;
-            case 'bottom-left': ix = W * 0.03; iy = H * 0.85; break;
-            case 'center': ix = (W - size) / 2; iy = (H - size) / 2; break;
-          }
-          ctx.globalAlpha = opacity;
-          ctx.drawImage(img, ix, iy, size, size * (img.height / img.width));
-          ctx.globalAlpha = 1;
+        if (!img) continue;
+        const size = (idx === 0 ? state.illustSize : Math.round(state.illustSize * 0.7)) / 100 * W;
+        const pos = posOptions[idx % posOptions.length];
+        let ix = 0, iy = 0;
+        switch (pos) {
+          case 'top-right': ix = W * 0.97 - size; iy = H * 0.03; break;
+          case 'top-left': ix = W * 0.03; iy = H * 0.03; break;
+          case 'bottom-right': ix = W * 0.97 - size; iy = H * 0.85; break;
+          case 'bottom-left': ix = W * 0.03; iy = H * 0.85; break;
+          case 'center': ix = (W - size) / 2; iy = (H - size) / 2; break;
         }
+        ctx.globalAlpha = opacity;
+        ctx.drawImage(img, ix, iy, size, size * (img.height / img.width));
+        ctx.globalAlpha = 1;
       }
     }
 
