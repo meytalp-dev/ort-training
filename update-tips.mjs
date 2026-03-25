@@ -123,9 +123,12 @@ function buildHtml(tips) {
 
   return `${START_MARKER}
         <!-- Daily Tip Floating Button -->
-        <button class="daily-tip-btn" onclick="toggleDailyTip()" title="הטיפ היומי" id="daily-tip">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>
-        </button>
+        <div class="daily-tip-btn-wrap" onclick="toggleDailyTip()" id="daily-tip">
+            <button class="daily-tip-btn">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>
+            </button>
+            <span class="daily-tip-label">הטיפ היומי</span>
+        </div>
 
         <!-- Daily Tip Overlay -->
         <div class="daily-tip-overlay" id="tipOverlay" onclick="toggleDailyTip()"></div>
