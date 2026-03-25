@@ -1026,6 +1026,30 @@ function getIllustrationHTML() {
   return `<div style="position:absolute;${posStyle}width:${size}%;z-index:1;opacity:${opacity};pointer-events:none;">${il.svg}</div>`;
 }
 
+// Export-safe version: converts SVG to <img> with data URI for html2canvas compatibility
+function getIllustrationHTMLForExport() {
+  if (!state.illustration) return '';
+  const il = illustrations.find(i => i.id === state.illustration);
+  if (!il) return '';
+
+  const size = state.illustSize;
+  const opacity = state.illustOpacity / 100;
+  const pos = state.illustPos;
+
+  let posStyle = '';
+  switch (pos) {
+    case 'top-right': posStyle = 'top:3%;right:3%;'; break;
+    case 'top-left': posStyle = 'top:3%;left:3%;'; break;
+    case 'bottom-right': posStyle = 'bottom:12%;right:3%;'; break;
+    case 'bottom-left': posStyle = 'bottom:12%;left:3%;'; break;
+    case 'center': posStyle = 'top:50%;left:50%;transform:translate(-50%,-50%);'; break;
+  }
+
+  // Encode SVG as data URI for html2canvas compatibility
+  const svgEncoded = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(il.svg);
+  return `<div style="position:absolute;${posStyle}width:${size}%;z-index:1;opacity:${opacity};pointer-events:none;"><img src="${svgEncoded}" style="width:100%;height:auto;" /></div>`;
+}
+
 function setBgMode(mode, btn) {
   state.bgMode = mode;
   document.querySelectorAll('.bg-mode-btn').forEach(b => {
@@ -1472,7 +1496,39 @@ function doExport() {
 
   const isStory = state.format === 'story';
 
-  const exportIllust = getIllustrationHTML();
+  const exportIllust = getIllustrationHTMLForExport();
+
+  // Convert inline SVG decorations to <img> data URIs for html2canvas
+  function svgToImgExport(svgHTML) {
+    if (!svgHTML) return '';
+    // Extract each <svg ...>...</svg> and convert to <img>
+    return svgHTML.replace(/<svg\s+style="([^"]*)"([^>]*)>([\s\S]*?)<\/svg>/gi, (match, styleAttr, attrs, inner) => {
+      const fullSvg = `<svg xmlns="http://www.w3.org/2000/svg" style="${styleAttr}"${attrs}>${inner}</svg>`;
+      const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(fullSvg);
+      // Extract position styles for the wrapper
+      const posMatch = styleAttr.match(/position:\s*absolute[^;]*/);
+      const topMatch = styleAttr.match(/top:\s*[^;]+/);
+      const rightMatch = styleAttr.match(/right:\s*[^;]+/);
+      const bottomMatch = styleAttr.match(/bottom:\s*[^;]+/);
+      const leftMatch = styleAttr.match(/left:\s*[^;]+/);
+      const wMatch = styleAttr.match(/width:\s*[^;]+/);
+      const hMatch = styleAttr.match(/height:\s*[^;]+/);
+      const opMatch = styleAttr.match(/opacity:\s*[^;]+/);
+      const trMatch = styleAttr.match(/transform:\s*[^;]+/);
+      let imgStyle = 'position:absolute;';
+      if (topMatch) imgStyle += topMatch[0] + ';';
+      if (rightMatch) imgStyle += rightMatch[0] + ';';
+      if (bottomMatch) imgStyle += bottomMatch[0] + ';';
+      if (leftMatch) imgStyle += leftMatch[0] + ';';
+      if (wMatch) imgStyle += wMatch[0] + ';';
+      if (hMatch) imgStyle += hMatch[0] + ';';
+      if (opMatch) imgStyle += opMatch[0] + ';';
+      if (trMatch) imgStyle += trMatch[0] + ';';
+      return `<img src="${dataUri}" style="${imgStyle}" />`;
+    });
+  }
+
+  const exportDecorations = hasBgImage ? '' : svgToImgExport(svgDecorations);
 
   // Background image support (same as render)
   const hasBgImage = !!(state.bgImage && state.bgMode !== 'none');
@@ -1487,7 +1543,7 @@ function doExport() {
   exportEl.innerHTML = `
     <div style="width:100%;height:100%;position:relative;overflow:hidden;direction:rtl;${cardBg}">
       ${textOverlay}
-      ${hasBgImage ? '' : svgDecorations}
+      ${exportDecorations}
       ${exportIllust}
       <div style="position:relative;z-index:2;text-align:center;padding:30% 5% 4%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;width:100%;height:100%;gap:2%;">
         <div style="font-family:${headingFont};font-size:${hSize}px;font-weight:${headingWeight};color:${headingColor};line-height:1.3;">${heading}</div>
