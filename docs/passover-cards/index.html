@@ -1446,62 +1446,43 @@ function downloadCard() {
 
 function doExport() {
   const dims = formatDims[state.format];
-  const exportEl = document.getElementById('exportContainer');
   const cardCanvas = document.querySelector('.card-canvas');
 
-  // Clone the live preview into the export container at full resolution
-  const clone = cardCanvas.cloneNode(true);
-  clone.style.width = dims.w + 'px';
-  clone.style.height = dims.h + 'px';
-  clone.style.maxWidth = 'none';
-  clone.style.position = 'relative';
+  // Calculate scale to get from preview size to export size
+  const previewW = cardCanvas.offsetWidth;
+  const previewH = cardCanvas.offsetHeight;
+  const scaleFactor = dims.w / previewW;
 
-  // Convert all inline SVGs inside the clone to <img> tags for html2canvas
-  clone.querySelectorAll('svg').forEach((svg, i) => {
-    try {
-      const svgStr = new XMLSerializer().serializeToString(svg);
-      const dataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
-      const img = document.createElement('img');
-      img.src = dataUri;
-      // Copy all styles from the SVG
-      img.style.cssText = svg.style.cssText;
-      img.style.width = svg.style.width || svg.getAttribute('width') || '100%';
-      img.style.height = svg.style.height || svg.getAttribute('height') || 'auto';
-      svg.parentNode.replaceChild(img, svg);
-    } catch(e) { console.warn('SVG conversion failed for svg #' + i, e); }
-  });
+  // Capture the preview as-is, scaled up to target resolution
+  // ignoreElements: skip SVGs that cause html2canvas issues, we'll handle them separately
+  html2canvas(cardCanvas, {
+    scale: scaleFactor,
+    useCORS: true,
+    backgroundColor: null,
+    allowTaint: true,
+    foreignObjectRendering: true
+  }).then(canvas => {
+    // Resize to exact target dimensions if needed
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = dims.w;
+    finalCanvas.height = dims.h;
+    const ctx = finalCanvas.getContext('2d');
+    ctx.drawImage(canvas, 0, 0, dims.w, dims.h);
 
-  exportEl.style.width = dims.w + 'px';
-  exportEl.style.height = dims.h + 'px';
-  exportEl.innerHTML = '';
-  exportEl.appendChild(clone);
-
-  setTimeout(() => {
-    html2canvas(exportEl, {
-      width: dims.w,
-      height: dims.h,
-      scale: 1,
-      useCORS: true,
-      backgroundColor: null,
-      allowTaint: true
-    }).then(canvas => {
-      canvas.toBlob(blob => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.download = 'pesach-greeting.png';
-        link.href = url;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 5000);
-        document.getElementById('loading').classList.remove('show');
-        exportEl.innerHTML = '';
-      }, 'image/png');
-    }).catch(err => {
-      console.error('Export error:', err);
+    finalCanvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = 'pesach-greeting.png';
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
       document.getElementById('loading').classList.remove('show');
-      exportEl.innerHTML = '';
-      alert('שגיאה ביצירת התמונה: ' + err.message);
-    });
-  }, 500);
+    }, 'image/png');
+  }).catch(err => {
+    console.error('Export error:', err);
+    document.getElementById('loading').classList.remove('show');
+    alert('שגיאה ביצירת התמונה: ' + err.message);
+  });
 }
 
 // ============ INIT ============
