@@ -12,7 +12,7 @@
  * 8. הדביקו את ה-URL בקובץ feedback.html במקום 'YOUR_GOOGLE_APPS_SCRIPT_URL'
  *
  * כותרות הגיליון (שורה 1):
- * תאריך | שם | ארגון | תפקיד | מפגש 1 | מפגש 2 | מפגש 3 | מפגש שהכי תרם |
+ * תאריך | שם | ארגון | תפקיד | כמה מפגשים | סיבה שלא המשיך | מפגש 1 | מפגש 2 | מפגש 3 | מפגש שהכי תרם |
  * בהירות הסברים | קצב העברה | זמינות לשאלות | עניין והשראה |
  * אווירה | בנוח לשאול | הנאה | הרגע הכי מוצלח |
  * רמת קושי | התקנה מאתגרת |
@@ -43,6 +43,8 @@ function doGet(e) {
       safe(params.respondent_name, 100),
       safe(params.organization, 100),
       safe(params.role, 100),
+      safe(params.meetings_attended, 10),
+      safe(params.didnt_continue_reason, 1000),
       safe(params.meeting1_rating, 10),
       safe(params.meeting2_rating, 10),
       safe(params.meeting3_rating, 10),
