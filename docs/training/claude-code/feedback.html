@@ -1037,14 +1037,14 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
   formData.timestamp = new Date().toISOString();
 
   try {
-    // Send via JSONP (like existing registration form)
-    const result = await sendViaJSONP(formData);
-    if (result && result.result === 'error') {
-      btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> שליחת משוב';
-      showValidationError('אירעה שגיאה בשליחה, נסו שוב');
-      return;
-    }
+    // Send via POST (supports long Hebrew text without URL length limits)
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(formData).toString()
+    });
+    // no-cors returns opaque response — if no network error, data was saved
     showThankYou();
   } catch (err) {
     console.error('Submit error:', err);
@@ -1053,29 +1053,6 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     showValidationError('אירעה שגיאה בשליחה, נסו שוב');
   }
 });
-
-function sendViaJSONP(data) {
-  return new Promise((resolve, reject) => {
-    const cbName = 'cb_' + Date.now();
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      reject(new Error('timeout'));
-    }, 8000);
-
-    window[cbName] = function(response) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      resolve(response);
-    };
-
-    const script = document.createElement('script');
-    data.callback = cbName;
-    script.src = APPS_SCRIPT_URL + '?' + new URLSearchParams(data).toString();
-    script.onerror = () => { clearTimeout(timeout); delete window[cbName]; reject(new Error('network')); };
-    document.body.appendChild(script);
-    script.onload = () => script.remove();
-  });
-}
 
 function showValidationError(msg) {
   let el = document.getElementById('validationMsg');
