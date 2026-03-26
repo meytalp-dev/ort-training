@@ -73,6 +73,42 @@ const cards = [
     colorBottom: '#C8E8F5',
     accent: '#5AAFCF',
   },
+  {
+    id: 'dedication',
+    quote: 'שזה לא מובן מאליו שהקדשת לי זמן\nלמענה על שאלות מעבר לזמני ההדרכה\nוהכל בסבלנות ובאכפתיות אמיתית.\nתודה גדולה!!',
+    author: 'הדס שרון',
+    role: 'רשת עתיד',
+    colorTop: '#A8D5BA',
+    colorBottom: '#D4EDDA',
+    accent: '#7BC496',
+  },
+  {
+    id: 'short-and-fun',
+    quote: 'תודה על קורס קצר וקולע\nובעיקר מהנה.\nיישר כוח מיטל!',
+    author: 'נוריאל',
+    role: 'רשת עתיד',
+    colorTop: '#F0DFC0',
+    colorBottom: '#F8F0E0',
+    accent: '#D4A96E',
+  },
+  {
+    id: 'personal-project',
+    quote: 'פרויקט לזכרו של אבי\nשעוד כמה ימים יום השנה לפטירתו.\nיצא מדהים.',
+    author: 'מאיר',
+    role: 'מורה',
+    colorTop: '#D4C0E8',
+    colorBottom: '#EDE0F5',
+    accent: '#B088D0',
+  },
+  {
+    id: 'devotion',
+    quote: 'אשרייך על המסירות והנתינה,\nמחכה לשלב הבא —\nאולי שיעורי תירגול והטמעה.\nתבורכי.',
+    author: 'אבינועם',
+    role: 'משתתף',
+    colorTop: '#7EC8E3',
+    colorBottom: '#B8E4F0',
+    accent: '#5AAFCF',
+  },
 ];
 
 // --- Drawing Utilities ---
@@ -226,7 +262,7 @@ function drawCard(card, width, height, suffix) {
   ctx.font = `bold ${16 * scale}px Heebo`;
   ctx.fillStyle = card.accent;
   ctx.textAlign = 'center';
-  ctx.fillText('9.0 / 10', badgeX + badgeW / 2, badgeY + badgeH * 0.68);
+  ctx.fillText('8.9 / 10', badgeX + badgeW / 2, badgeY + badgeH * 0.68);
 
   // --- Learni branding (bottom) ---
   ctx.textAlign = 'center';
