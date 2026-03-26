@@ -60,7 +60,9 @@ function doGet(e) {
       params.would_recommend || '',
       params.what_to_change || '',
       params.what_to_keep || '',
-      params.future_topics || ''
+      params.future_topics || '',
+      params.enough_practice || '',
+      params.anything_else || ''
     ]);
 
     return ContentService
