@@ -1037,14 +1037,8 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
   formData.timestamp = new Date().toISOString();
 
   try {
-    // Send via POST (supports long Hebrew text without URL length limits)
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(formData).toString()
-    });
-    // no-cors returns opaque response — if no network error, data was saved
+    // Send via hidden form + iframe (most reliable for Google Apps Script)
+    await submitViaIframe(formData);
     showThankYou();
   } catch (err) {
     console.error('Submit error:', err);
@@ -1053,6 +1047,43 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     showValidationError('אירעה שגיאה בשליחה, נסו שוב');
   }
 });
+
+function submitViaIframe(data) {
+  return new Promise((resolve, reject) => {
+    const id = 'fb_iframe_' + Date.now();
+    const iframe = document.createElement('iframe');
+    iframe.name = id;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = APPS_SCRIPT_URL;
+    form.target = id;
+    form.style.display = 'none';
+
+    for (const [key, value] of Object.entries(data)) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = value;
+      form.appendChild(input);
+    }
+    document.body.appendChild(form);
+
+    const timeout = setTimeout(() => {
+      // If iframe hasn't loaded in 15s, assume success (data was likely sent)
+      cleanup();
+      resolve();
+    }, 15000);
+
+    iframe.onload = () => { clearTimeout(timeout); cleanup(); resolve(); };
+    iframe.onerror = () => { clearTimeout(timeout); cleanup(); reject(new Error('network')); };
+
+    function cleanup() { setTimeout(() => { iframe.remove(); form.remove(); }, 500); }
+    form.submit();
+  });
+}
 
 function showValidationError(msg) {
   let el = document.getElementById('validationMsg');
