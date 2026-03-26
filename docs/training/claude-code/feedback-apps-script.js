@@ -12,57 +12,67 @@
  * 8. הדביקו את ה-URL בקובץ feedback.html במקום 'YOUR_GOOGLE_APPS_SCRIPT_URL'
  *
  * כותרות הגיליון (שורה 1):
- * תאריך | ארגון | תפקיד | מפגש 1 | מפגש 2 | מפגש 3 | מפגש שהכי תרם |
+ * תאריך | שם | ארגון | תפקיד | מפגש 1 | מפגש 2 | מפגש 3 | מפגש שהכי תרם |
  * בהירות הסברים | קצב העברה | זמינות לשאלות | עניין והשראה |
  * אווירה | בנוח לשאול | הנאה | הרגע הכי מוצלח |
  * רמת קושי | התקנה מאתגרת |
  * רלוונטיות | כבר השתמש | למה השתמש |
  * איכות מצגות | דף קישורים | הדגמות חיות |
  * ידע קודם AI | ביטחון עצמי |
- * ציון כולל | ימליץ | מה לשנות | מה לשמור | נושאים להמשך
+ * ציון כולל | ימליץ | מה לשנות | מה לשמור | נושאים להמשך |
+ * מספיק תרגול | עוד משהו | הערות לסקציות
  */
 
 function doGet(e) {
   var params = e.parameter;
-  var callback = params.callback;
+  // Sanitize callback to prevent injection (allow only alphanumeric + underscore)
+  var callback = (params.callback || 'callback').replace(/[^a-zA-Z0-9_]/g, '');
 
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
+    // Truncate text fields to prevent abuse (max 1000 chars)
+    function safe(val, maxLen) {
+      var s = val || '';
+      return s.substring(0, maxLen || 500);
+    }
+
     // Add new row with all feedback data
     sheet.appendRow([
       params.timestamp || new Date().toISOString(),
-      params.organization || '',
-      params.role || '',
-      params.meeting1_rating || '',
-      params.meeting2_rating || '',
-      params.meeting3_rating || '',
-      params.best_meeting || '',
-      params.clarity_rating || '',
-      params.pace_rating || '',
-      params.support_rating || '',
-      params.inspiration_rating || '',
-      params.atmosphere_rating || '',
-      params.comfortable_asking || '',
-      params.enjoyment_rating || '',
-      params.best_moment || '',
-      params.difficulty_level || '',
-      params.installation_challenge || '',
-      params.relevance_rating || '',
-      params.already_used || '',
-      params.used_for || '',
-      params.presentations_rating || '',
-      params.links_page_rating || '',
-      params.demos_rating || '',
-      params.prior_knowledge || '',
-      params.confidence_rating || '',
-      params.overall_score || '',
-      params.would_recommend || '',
-      params.what_to_change || '',
-      params.what_to_keep || '',
-      params.future_topics || '',
-      params.enough_practice || '',
-      params.anything_else || ''
+      safe(params.respondent_name, 100),
+      safe(params.organization, 100),
+      safe(params.role, 100),
+      safe(params.meeting1_rating, 10),
+      safe(params.meeting2_rating, 10),
+      safe(params.meeting3_rating, 10),
+      safe(params.best_meeting, 100),
+      safe(params.clarity_rating, 10),
+      safe(params.pace_rating, 50),
+      safe(params.support_rating, 10),
+      safe(params.inspiration_rating, 10),
+      safe(params.atmosphere_rating, 10),
+      safe(params.comfortable_asking, 50),
+      safe(params.enjoyment_rating, 10),
+      safe(params.best_moment, 1000),
+      safe(params.difficulty_level, 50),
+      safe(params.installation_challenge, 50),
+      safe(params.relevance_rating, 10),
+      safe(params.already_used, 50),
+      safe(params.used_for, 1000),
+      safe(params.presentations_rating, 10),
+      safe(params.links_page_rating, 10),
+      safe(params.demos_rating, 10),
+      safe(params.prior_knowledge, 50),
+      safe(params.confidence_rating, 10),
+      safe(params.overall_score, 10),
+      safe(params.would_recommend, 50),
+      safe(params.what_to_change, 1000),
+      safe(params.what_to_keep, 1000),
+      safe(params.future_topics, 500),
+      safe(params.enough_practice, 50),
+      safe(params.anything_else, 1000),
+      safe(params.section_comments, 2000)
     ]);
 
     return ContentService
@@ -70,8 +80,9 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
 
   } catch (error) {
+    var safeError = error.toString().replace(/["\\\n\r]/g, ' ').substring(0, 200);
     return ContentService
-      .createTextOutput(callback + '({"result":"error","message":"' + error.toString() + '"})')
+      .createTextOutput(callback + '({"result":"error","message":"' + safeError + '"})')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
 }

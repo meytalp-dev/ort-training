@@ -231,6 +231,24 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
+/* Section comment toggle */
+.section-comment-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px dashed #D4D0E8; border-radius: 8px;
+  padding: 6px 14px; margin-top: 12px;
+  color: #94A3B8; font-family: 'Heebo', sans-serif; font-size: 0.8rem;
+  cursor: pointer; transition: all 0.2s;
+}
+.section-comment-toggle:hover { color: #7C3AED; border-color: #7C3AED; }
+.section-comment-toggle svg { width: 14px; height: 14px; }
+.section-comment-area {
+  display: none; margin-top: 10px;
+}
+.section-comment-area.open { display: block; }
+.section-comment-area textarea {
+  min-height: 50px; font-size: 0.85rem;
+}
+
 /* Slider */
 .slider-container {
   padding: 10px 0;
@@ -368,8 +386,15 @@ textarea:focus {
   .checkbox-option { min-height: 44px; padding: 12px 16px; }
   .submit-btn { width: 100%; justify-content: center; }
   .lerani-logo { width: 60px !important; top: 10px !important; right: 10px !important; }
-  .slider-container input[type="range"]::-webkit-slider-thumb { width: 36px; height: 36px; }
-  .slider-container input[type="range"]::-moz-range-thumb { width: 36px; height: 36px; }
+  .slider-container input[type="range"]::-webkit-slider-thumb { width: 44px; height: 44px; }
+  .slider-container input[type="range"]::-moz-range-thumb { width: 44px; height: 44px; }
+  /* Fix iOS zoom on inputs */
+  select, textarea { font-size: 16px !important; }
+}
+
+/* Accessibility: reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 </style>
 </head>
@@ -408,7 +433,7 @@ textarea:focus {
     <p style="color:#94A3B8; font-size:0.85rem; margin-top:8px;">ייקח כ-3 דקות למילוי</p>
     <div class="anonymous-badge">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      הטופס אנונימי
+      ניתן למלא בצורה אנונימית או עם שם
     </div>
   </div>
 
@@ -419,6 +444,11 @@ textarea:focus {
       <div class="section-header">
         <div class="section-num purple">1</div>
         <div class="section-title">קצת עליך</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">שם (לא חובה)</label>
+        <input type="text" name="respondent_name" placeholder="אפשר להשאיר ריק אם מעדיפים אנונימיות" style="width:100%; padding:12px 16px; border:2px solid #E8E5F0; border-radius:12px; font-family:'Heebo',sans-serif; font-size:0.95rem; color:#334155; background:#FAFAFF; direction:rtl; transition:border-color 0.3s;" onfocus="this.style.borderColor='#7C3AED'; this.style.boxShadow='0 0 0 3px rgba(124,58,237,0.1)'" onblur="this.style.borderColor='#E8E5F0'; this.style.boxShadow='none'">
       </div>
 
       <div class="form-group">
@@ -797,8 +827,6 @@ textarea:focus {
           <div class="checkbox-option" data-value="בניית אתרים">בניית אתרים</div>
         </div>
       </div>
-    </div>
-
       <div class="form-group">
         <label class="form-label">עוד משהו שחשוב לך שנדע?</label>
         <textarea name="anything_else" placeholder="כל מחשבה, רעיון, או הערה נוספת..."></textarea>
@@ -811,7 +839,7 @@ textarea:focus {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
         שליחת משוב
       </button>
-      <p style="color: #94A3B8; font-size: 0.8rem; margin-top: 12px;">התשובות שלכם יישמרו באופן אנונימי</p>
+      <p style="color: #94A3B8; font-size: 0.8rem; margin-top: 12px;">ניתן למלא עם שם או בצורה אנונימית</p>
     </div>
 
   </form>
@@ -920,7 +948,9 @@ slider.addEventListener('input', () => {
   formData.overall_score = slider.value;
   updateProgress();
 });
-formData.overall_score = '5';
+// Don't set default - only save if user actually interacts with slider
+let sliderTouched = false;
+slider.addEventListener('input', () => { sliderTouched = true; });
 
 // ========== Progress Bar ==========
 function updateProgress() {
@@ -959,6 +989,11 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
   btn.disabled = true;
   btn.innerHTML = '<svg class="spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="32"><animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/></circle></svg> שולח...';
 
+  // Collect input values (name field)
+  document.querySelectorAll('input[type="text"]').forEach(inp => {
+    if (inp.name && inp.value) formData[inp.name] = inp.value;
+  });
+
   // Collect select values
   document.querySelectorAll('select').forEach(sel => {
     if (sel.name && sel.value) formData[sel.name] = sel.value;
@@ -969,17 +1004,33 @@ document.getElementById('feedbackForm').addEventListener('submit', async (e) => 
     if (ta.name) formData[ta.name] = ta.value;
   });
 
+  // Collect section comments into one field
+  const sectionComments = [];
+  for (let i = 1; i <= 9; i++) {
+    const ta = document.querySelector(`textarea[name="section_comment_${i}"]`);
+    if (ta && ta.value.trim()) sectionComments.push(`[${i}] ${ta.value.trim()}`);
+    delete formData[`section_comment_${i}`];
+  }
+  if (sectionComments.length) formData.section_comments = sectionComments.join(' | ');
+
   // Add timestamp
   formData.timestamp = new Date().toISOString();
 
   try {
     // Send via JSONP (like existing registration form)
-    await sendViaJSONP(formData);
+    const result = await sendViaJSONP(formData);
+    if (result && result.result === 'error') {
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> שליחת משוב';
+      showValidationError('אירעה שגיאה בשליחה, נסו שוב');
+      return;
+    }
     showThankYou();
   } catch (err) {
-    // Fallback: still show thank you (data might have been saved)
     console.error('Submit error:', err);
-    showThankYou();
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> שליחת משוב';
+    showValidationError('אירעה שגיאה בשליחה, נסו שוב');
   }
 });
 
@@ -988,7 +1039,7 @@ function sendViaJSONP(data) {
     const cbName = 'cb_' + Date.now();
     const timeout = setTimeout(() => {
       delete window[cbName];
-      resolve(); // Resolve anyway to show thank you
+      reject(new Error('timeout'));
     }, 8000);
 
     window[cbName] = function(response) {
@@ -1000,7 +1051,7 @@ function sendViaJSONP(data) {
     const script = document.createElement('script');
     data.callback = cbName;
     script.src = APPS_SCRIPT_URL + '?' + new URLSearchParams(data).toString();
-    script.onerror = () => { clearTimeout(timeout); delete window[cbName]; resolve(); };
+    script.onerror = () => { clearTimeout(timeout); delete window[cbName]; reject(new Error('network')); };
     document.body.appendChild(script);
     script.onload = () => script.remove();
   });
@@ -1018,6 +1069,20 @@ function showValidationError(msg) {
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   setTimeout(() => el.remove(), 5000);
 }
+
+// ========== Section comment toggles ==========
+document.querySelectorAll('.form-section').forEach((section, i) => {
+  const toggleDiv = document.createElement('div');
+  toggleDiv.innerHTML = `
+    <button type="button" class="section-comment-toggle" onclick="this.nextElementSibling.classList.toggle('open'); this.querySelector('span').textContent = this.nextElementSibling.classList.contains('open') ? 'סגור הערה' : 'הוסיפו הערה';">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>הוסיפו הערה</span>
+    </button>
+    <div class="section-comment-area">
+      <textarea name="section_comment_${i+1}" placeholder="הערות או הצעות לשיפור..."></textarea>
+    </div>`;
+  section.appendChild(toggleDiv);
+});
 
 function showThankYou() {
   document.getElementById('formContainer').style.display = 'none';
