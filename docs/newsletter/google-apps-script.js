@@ -2,7 +2,7 @@
  * Google Apps Script - Newsletter Signup Handler
  *
  * הוראות התקנה:
- * 1. פתחו Google Sheet חדש בשם "תפוצת מייל - Lerani"
+ * 1. פתחו Google Sheet חדש בשם "תפוצת מייל - Learni"
  * 2. בשורה הראשונה הוסיפו כותרות: תאריך | שם | אימייל | ארגון | תפקיד
  * 3. לחצו על Extensions → Apps Script
  * 4. העתיקו את הקוד הזה לתוך הקובץ
