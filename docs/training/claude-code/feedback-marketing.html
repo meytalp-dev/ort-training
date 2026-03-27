@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>משוב הדרכת Claude Code</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: #0F0F1A;
+    color: #E2E8F0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  .bg-glow {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
+  .bg-glow .orb {
+    position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.3;
+    animation: float 12s ease-in-out infinite;
+  }
+  .bg-glow .orb:nth-child(1) {
+    width: 500px; height: 500px; background: #7C3AED; top: -10%; right: -5%;
+  }
+  .bg-glow .orb:nth-child(2) {
+    width: 400px; height: 400px; background: #14B8A6; bottom: -10%; left: -5%;
+    animation-delay: -4s;
+  }
+  .bg-glow .orb:nth-child(3) {
+    width: 300px; height: 300px; background: #F59E0B; top: 50%; left: 40%;
+    animation-delay: -8s; opacity: 0.15;
+  }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -20px) scale(1.05); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+  }
+
+  .dashboard {
+    position: relative; z-index: 1;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    padding: 48px 20px 40px;
+  }
+
+  .header h1 {
+    font-size: clamp(2rem, 5vw, 2.8rem);
+    font-weight: 900;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #fff 0%, #A78BFA 50%, #14B8A6 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .header .subtitle {
+    font-size: 1.1rem;
+    color: #94A3B8;
+    font-weight: 400;
+  }
+
+  /* Hero Quote */
+  .hero-quote {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 48px 40px;
+    margin-bottom: 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-quote::before {
+    content: '\201F';
+    position: absolute;
+    top: -20px;
+    right: 30px;
+    font-size: 12rem;
+    opacity: 0.05;
+    font-family: serif;
+    line-height: 1;
+    color: #A78BFA;
+  }
+
+  .hero-quote::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #7C3AED, #14B8A6);
+    border-radius: 24px 24px 0 0;
+  }
+
+  .hero-quote .hero-text {
+    font-size: 1.3rem;
+    font-weight: 500;
+    line-height: 2;
+    max-width: 750px;
+    margin: 0 auto 16px;
+    position: relative;
+    z-index: 1;
+    color: #E2E8F0;
+  }
+
+  .hero-quote .hero-author {
+    font-size: 1rem;
+    color: #A78BFA;
+    font-weight: 600;
+  }
+
+  .hero-quote .hero-divider {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, #7C3AED, #14B8A6);
+    margin: 28px auto;
+    border-radius: 2px;
+  }
+
+  .hero-sub-quotes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-top: 24px;
+    max-width: 750px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-sub-quote {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 18px 20px;
+    border-right: 3px solid rgba(124,58,237,0.4);
+    text-align: right;
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: #CBD5E1;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .hero-sub-quote:hover {
+    border-color: rgba(124,58,237,0.7);
+    transform: translateY(-2px);
+  }
+
+  .hero-sub-quote .author {
+    font-size: 0.8rem;
+    color: #64748B;
+    margin-top: 6px;
+  }
+
+  /* KPI Cards */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+
+  .kpi-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 28px 16px;
+    text-align: center;
+    transition: transform 0.3s ease, border-color 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(124, 58, 237, 0.3);
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; left: 0;
+    height: 4px;
+  }
+
+  .kpi-card:nth-child(1)::before { background: linear-gradient(90deg, #7C3AED, #A78BFA); }
+  .kpi-card:nth-child(2)::before { background: linear-gradient(90deg, #14B8A6, #5EEAD4); }
+  .kpi-card:nth-child(3)::before { background: linear-gradient(90deg, #F59E0B, #FCD34D); }
+  .kpi-card:nth-child(4)::before { background: linear-gradient(90deg, #EC4899, #F9A8D4); }
+
+  .kpi-number {
+    font-size: 2.8rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .kpi-card:nth-child(1) .kpi-number {
+    background: linear-gradient(135deg, #A78BFA, #7C3AED);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .kpi-card:nth-child(2) .kpi-number {
+    background: linear-gradient(135deg, #5EEAD4, #14B8A6);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .kpi-card:nth-child(3) .kpi-number {
+    background: linear-gradient(135deg, #FCD34D, #F59E0B);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .kpi-card:nth-child(4) .kpi-number {
+    background: linear-gradient(135deg, #F9A8D4, #EC4899);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  .kpi-unit {
+    font-size: 1rem;
+    font-weight: 400;
+    opacity: 0.5;
+  }
+
+  .kpi-label {
+    font-size: 0.9rem;
+    color: #94A3B8;
+    font-weight: 500;
+    margin-top: 4px;
+  }
+
+  /* Charts Grid */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 36px;
+  }
+
+  .chart-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 28px;
+    transition: border-color 0.3s;
+  }
+
+  .chart-card:hover {
+    border-color: rgba(124, 58, 237, 0.3);
+  }
+
+  .chart-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #F1F5F9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chart-card h3 .icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .chart-container {
+    position: relative;
+    height: 260px;
+  }
+
+  .chart-container.tall {
+    height: 300px;
+  }
+
+  /* Section Title */
+  .section-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 24px;
+    color: #F1F5F9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  /* Best Moments */
+  .moments-section {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 36px;
+  }
+
+  .moment {
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 14px;
+    margin-bottom: 10px;
+    border-right: 3px solid rgba(124,58,237,0.4);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #CBD5E1;
+    transition: border-color 0.3s;
+  }
+
+  .moment:hover {
+    border-color: rgba(124,58,237,0.7);
+  }
+
+  .moment .author {
+    font-size: 0.8rem;
+    color: #64748B;
+    margin-top: 4px;
+  }
+
+  /* Quotes Section */
+  .quotes-section {
+    margin-bottom: 36px;
+  }
+
+  .quotes-card {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    padding: 28px;
+  }
+
+  .quotes-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #5EEAD4;
+  }
+
+  .quote {
+    padding: 14px 18px;
+    background: rgba(20,184,166,0.06);
+    border: 1px solid rgba(20,184,166,0.1);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    border-right: 3px solid rgba(20,184,166,0.3);
+    font-size: 0.93rem;
+    line-height: 1.7;
+    color: #CBD5E1;
+    transition: border-color 0.3s;
+  }
+
+  .quote:hover {
+    border-color: rgba(20,184,166,0.6);
+  }
+
+  .quote-author {
+    font-size: 0.8rem;
+    color: #64748B;
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    color: #475569;
+    font-size: 0.85rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .hero-sub-quotes { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 500px) {
+    .kpi-row { grid-template-columns: 1fr; }
+    .dashboard { padding: 12px; }
+    .hero-quote { padding: 32px 20px; }
+    .hero-quote .hero-text { font-size: 1.1rem; }
+  }
+
+  @media print {
+    body { background: #0F0F1A; }
+    .bg-glow { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background Glow -->
+<div class="bg-glow">
+  <div class="orb"></div>
+  <div class="orb"></div>
+  <div class="orb"></div>
+</div>
+
+<!-- Learni Logo -->
+<div style="position: fixed; top: 16px; right: 16px; z-index: 9999; width: 100px; pointer-events: none;">
+  <svg viewBox="0 0 360 160" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="ll-lg" cx="40%" cy="40%" r="60%"><stop offset="0%" stop-color="#A78BFA"/><stop offset="100%" stop-color="#7C3AED"/></radialGradient>
+      <radialGradient id="ll-rg" cx="60%" cy="40%" r="60%"><stop offset="0%" stop-color="#5EEAD4"/><stop offset="100%" stop-color="#14B8A6"/></radialGradient>
+      <linearGradient id="ll-og" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#A78BFA" stop-opacity="0.5"/><stop offset="100%" stop-color="#5EEAD4" stop-opacity="0.5"/></linearGradient>
+      <clipPath id="ll-cr"><circle cx="218" cy="78" r="72"/></clipPath>
+    </defs>
+    <circle cx="142" cy="78" r="72" fill="url(#ll-lg)" opacity="0.7"/>
+    <circle cx="218" cy="78" r="72" fill="url(#ll-rg)" opacity="0.7"/>
+    <circle cx="142" cy="78" r="72" fill="url(#ll-og)" clip-path="url(#ll-cr)" opacity="0.4"/>
+    <text x="180" y="90" text-anchor="middle" font-family="'Poppins', sans-serif" font-size="44" font-weight="700" fill="#F1F5F9" letter-spacing="2">Learni</text>
+  </svg>
+</div>
+
+<div class="dashboard">
+
+  <!-- Header -->
+  <header class="header">
+    <h1>משוב הדרכת Claude Code</h1>
+    <div class="subtitle">מה אומרים המשתתפים</div>
+  </header>
+
+  <!-- Hero Special Quote -->
+  <div class="hero-quote">
+    <div class="hero-text">"מיטל, אין לי מילים להודות לך. ברשת יש הרבה קורסים בתשלום לקלוד קוד, אבל לא מצאתי קורס מותאם למורים. חסכת לי המון זמן ותלמידים רבים יוכלו להנות מהיכולות שלימדת. תודה רבה!!!! תבורכי"</div>
+    <div class="hero-author">— מורה, בית ספר עירוני</div>
+    <div class="hero-divider"></div>
+    <div class="hero-sub-quotes">
+      <div class="hero-sub-quote">
+        <div>"שזה לא מובן מאליו שהקדשת לי זמן למענה על שאלות מעבר לזמני ההדרכה והכל בסבלנות ובאכפתיות אמיתית. תודה גדולה!!"</div>
+        <div class="author">— משתתפת, רשת עתיד</div>
+      </div>
+      <div class="hero-sub-quote">
+        <div>"תודה על קורס קצר וקולע ובעיקר מהנה. יישר כוח מיטל!"</div>
+        <div class="author">— משתתף, רשת עתיד</div>
+      </div>
+      <div class="hero-sub-quote">
+        <div>"אשרייך על המסירות והנתינה, מחכה לשלב הבא — אולי שיעורי תירגול והטמעה. תבורכי"</div>
+        <div class="author">— משתתף</div>
+      </div>
+      <div class="hero-sub-quote">
+        <div>"אני ממש מתחיל ומנסה ליישם את הנושאים"</div>
+        <div class="author">— מנהל, רשת עתיד</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-number">8.9 <span class="kpi-unit">/ 10</span></div>
+      <div class="kpi-label">ציון כולל ממוצע</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-number">85%</div>
+      <div class="kpi-label">ימליצו בהחלט / כנראה</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-number">4.6 <span class="kpi-unit">/ 5</span></div>
+      <div class="kpi-label">בהירות הסברים</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-number">4.9 <span class="kpi-unit">/ 5</span></div>
+      <div class="kpi-label">השראה ועניין</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <!-- Recommendation -->
+    <div class="chart-card">
+      <h3>
+        <span class="icon" style="background: rgba(20,184,166,0.2);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5EEAD4" stroke-width="2.5"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+        </span>
+        האם ימליצו על ההדרכה?
+      </h3>
+      <div class="chart-container">
+        <canvas id="recommendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Teaching Quality -->
+    <div class="chart-card">
+      <h3>
+        <span class="icon" style="background: rgba(124,58,237,0.2);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </span>
+        איכות ההוראה (ממוצע 1-5)
+      </h3>
+      <div class="chart-container tall">
+        <canvas id="qualityChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Best Moments -->
+  <div class="moments-section">
+    <h3 class="section-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FCD34D" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      הרגעים הכי מוצלחים
+    </h3>
+    <div class="moment">
+      <div>"היה קסום! הכל! כיף גדול להיחשף לעולם חדש מלא הפתעות — והכי חשוב שיש ליווי צמוד שלך שמפחית תסכולים של מתחילים"</div>
+      <div class="author">— משתתפת, רשת עתיד</div>
+    </div>
+    <div class="moment">
+      <div>"כשהטטריס שלי קיבל חיים :)"</div>
+      <div class="author">— מורה, בית ספר עירוני</div>
+    </div>
+    <div class="moment">
+      <div>"לא רגע ספציפי. מבחינתי רגע מוצלח היה אחרי הקורס, כשהצלחתי לייצר משחק"</div>
+      <div class="author">— מורה, בית ספר עירוני</div>
+    </div>
+    <div class="moment">
+      <div>"הכל"</div>
+      <div class="author">— משתתפת, מכללה</div>
+    </div>
+    <div class="moment">
+      <div>"לזהות את התשוקה והמסירות והקשבה. כך שכל רגע הוא מוצלח"</div>
+      <div class="author">— משתתף</div>
+    </div>
+    <div class="moment">
+      <div>"פרויקט לזכרו של אבי שעוד כמה ימים יום השנה לפטירתו. יצא מדהים"</div>
+      <div class="author">— משתתף</div>
+    </div>
+    <div class="moment">
+      <div>"ההדגמה"</div>
+      <div class="author">— מנהל, רשת עתיד</div>
+    </div>
+  </div>
+
+  <!-- What They Loved -->
+  <div class="quotes-section">
+    <div class="quotes-card">
+      <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5EEAD4" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        מה הכי אהבו המשתתפים
+      </h3>
+      <div class="quote">
+        <div>"את מיטל המהממת והסבלנית והמשקיענית והאיכפתית!!"</div>
+        <div class="quote-author">מורה, בית ספר עירוני</div>
+      </div>
+      <div class="quote">
+        <div>"אותך!! מנחה מדהימה"</div>
+        <div class="quote-author">משתתפת, רשת עתיד</div>
+      </div>
+      <div class="quote">
+        <div>"המצגות ודפי הקישורים — מעולים!!!"</div>
+        <div class="quote-author">מורה, בית ספר עירוני</div>
+      </div>
+      <div class="quote">
+        <div>"יחס המרצה"</div>
+        <div class="quote-author">משתתף, מכללה</div>
+      </div>
+      <div class="quote">
+        <div>"סדר, נגישות לחומרים"</div>
+        <div class="quote-author">משתתפת, רשת עתיד</div>
+      </div>
+      <div class="quote">
+        <div>"המנחה פשוט תותחית!"</div>
+        <div class="quote-author">משתתף, רשת עתיד</div>
+      </div>
+      <div class="quote">
+        <div>"נעימות של המרצה"</div>
+        <div class="quote-author">משתתף</div>
+      </div>
+      <div class="quote">
+        <div>"מצגת — מצוינת"</div>
+        <div class="quote-author">משתתף</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    הדרכת Claude Code — Learni | מרץ 2026
+  </div>
+
+</div>
+
+<script>
+// Chart.js RTL & Hebrew defaults
+Chart.defaults.font.family = "'Heebo', sans-serif";
+Chart.defaults.font.size = 13;
+Chart.defaults.color = '#94A3B8';
+Chart.defaults.plugins.legend.rtl = true;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+
+const colors = {
+  purple: '#A78BFA',
+  teal: '#5EEAD4',
+  amber: '#FCD34D',
+  pink: '#F9A8D4',
+  green: '#10B981',
+  blue: '#60A5FA',
+};
+
+// 1. Recommendation
+new Chart(document.getElementById('recommendChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['בהחלט', 'כנראה שכן'],
+    datasets: [{
+      data: [9, 2],
+      backgroundColor: ['#14B8A6', '#7C3AED'],
+      borderWidth: 3,
+      borderColor: '#0F0F1A',
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '55%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { padding: 16, font: { size: 13 }, color: '#CBD5E1' }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const pct = Math.round(ctx.raw / 11 * 100);
+            return ctx.label + ': ' + ctx.raw + ' (' + pct + '%)';
+          }
+        }
+      }
+    }
+  }
+});
+
+// 2. Teaching Quality
+new Chart(document.getElementById('qualityChart'), {
+  type: 'bar',
+  data: {
+    labels: ['בהירות\nהסברים', 'תמיכה\nוזמינות', 'השראה\nועניין', 'אווירה', 'הנאה\nכללית', 'ביטחון\nעצמי'],
+    datasets: [{
+      label: 'ממוצע (1-5)',
+      data: [4.6, 4.8, 4.9, 4.7, 4.6, 3.8],
+      backgroundColor: [
+        'rgba(167,139,250,0.5)',
+        'rgba(94,234,212,0.5)',
+        'rgba(252,211,77,0.5)',
+        'rgba(249,168,212,0.5)',
+        'rgba(96,165,250,0.5)',
+        'rgba(16,185,129,0.5)'
+      ],
+      borderColor: [colors.purple, colors.teal, colors.amber, colors.pink, colors.blue, colors.green],
+      borderWidth: 2,
+      borderRadius: 8,
+      borderSkipped: false,
+      barThickness: 36
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.raw + ' / 5'
+        }
+      }
+    },
+    scales: {
+      x: {
+        min: 0,
+        max: 5,
+        ticks: { stepSize: 1, color: '#64748B' },
+        grid: { color: 'rgba(255,255,255,0.04)' }
+      },
+      y: {
+        grid: { display: false },
+        ticks: { font: { size: 12, weight: '600' }, color: '#CBD5E1' }
+      }
+    }
+  }
+});
+</script>
+
+</body>
+</html>
