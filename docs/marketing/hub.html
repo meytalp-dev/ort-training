@@ -186,6 +186,50 @@
     }
     .toast.show { opacity: 1; }
 
+    /* ===== Weekly Board ===== */
+    .week-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+    .day-col { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); overflow: hidden; min-height: 300px; }
+    .day-header { padding: 12px 14px; font-weight: 700; font-size: 14px; border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center; }
+    .day-header .day-date { font-size: 12px; font-weight: 400; color: var(--gray-500); }
+    .day-body { padding: 8px; }
+    .day-today .day-header { background: var(--teal-600); color: #fff; }
+    .day-today .day-header .day-date { color: rgba(255,255,255,0.8); }
+    .day-today { border-color: var(--teal-500); box-shadow: 0 0 0 2px rgba(20,184,166,0.2); }
+
+    .sched-item {
+      padding: 10px; margin: 6px 0; border-radius: 8px; font-size: 13px;
+      border-right: 3px solid var(--gray-300); background: var(--gray-50); position: relative;
+      transition: all 0.2s;
+    }
+    .sched-item.done { opacity: 0.5; text-decoration: line-through; background: var(--green-50); border-right-color: var(--green-600); }
+    .sched-item .sched-time { font-size: 11px; color: var(--gray-500); }
+    .sched-item .sched-platform { font-size: 11px; font-weight: 600; }
+    .sched-item .sched-check {
+      position: absolute; top: 8px; left: 8px; width: 22px; height: 22px;
+      border: 2px solid var(--gray-300); border-radius: 50%; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 12px;
+      transition: all 0.2s; background: #fff;
+    }
+    .sched-item .sched-check:hover { border-color: var(--green-600); }
+    .sched-item.done .sched-check { background: var(--green-600); border-color: var(--green-600); color: #fff; }
+    .sched-item .sched-thumb { width: 100%; border-radius: 6px; margin-top: 6px; max-height: 80px; object-fit: cover; }
+
+    .week-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .week-nav button { background: none; border: 1px solid var(--gray-200); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-family: inherit; font-size: 14px; }
+    .week-nav button:hover { background: var(--gray-50); }
+    .week-nav h3 { margin: 0; font-size: 18px; }
+
+    .checklist-section { margin-top: 20px; }
+    .check-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--gray-100); cursor: pointer; transition: background 0.2s; }
+    .check-item:hover { background: var(--gray-50); }
+    .check-box { width: 22px; height: 22px; border: 2px solid var(--gray-300); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .check-item.checked .check-box { background: var(--green-600); border-color: var(--green-600); color: #fff; }
+    .check-item.checked .check-text { text-decoration: line-through; color: var(--gray-500); }
+    .check-text { flex: 1; font-size: 14px; }
+    .check-meta { font-size: 12px; color: var(--gray-500); }
+
+    @media (max-width: 768px) { .week-grid { grid-template-columns: 1fr; } }
+
     /* ===== Mobile ===== */
     .mobile-toggle {
       display: none; position: fixed; top: 12px; right: 12px; z-index: 200;
@@ -219,6 +263,9 @@
     </button>
     <button class="nav-item" data-section="leads">
       <span class="nav-icon">&#9734;</span> לידים
+    </button>
+    <button class="nav-item" data-section="weekly">
+      <span class="nav-icon">&#9776;</span> לוח שבועי
     </button>
     <button class="nav-item" data-section="content">
       <span class="nav-icon">&#9998;</span> תוכן ופוסטים
@@ -281,6 +328,39 @@
         <div class="panel-body" id="recent-leads">
           <div class="loading"><div class="spinner"></div><br>טוען...</div>
         </div>
+      </div>
+    </div>
+
+    <!-- ==================== WEEKLY BOARD ==================== -->
+    <div id="sec-weekly" class="section">
+      <div class="page-header">
+        <h1>לוח שבועי</h1>
+        <p>מה מתוכנן, מה בוצע, מה נשאר</p>
+      </div>
+
+      <div class="week-nav">
+        <button onclick="changeWeek(-1)">&#8594; שבוע קודם</button>
+        <h3 id="week-title">שבוע נוכחי</h3>
+        <button onclick="changeWeek(1)">שבוע הבא &#8592;</button>
+      </div>
+
+      <div class="week-grid" id="week-grid"></div>
+
+      <!-- Checklist -->
+      <div class="panel checklist-section">
+        <div class="panel-header">
+          <h3>צ'קליסט פרסום שבועי</h3>
+          <div id="checklist-progress" style="font-size:14px;color:var(--gray-500)">0/0</div>
+        </div>
+        <div class="panel-body" id="checklist-body"></div>
+      </div>
+
+      <!-- Published this week -->
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-header">
+          <h3>פורסמו השבוע</h3>
+        </div>
+        <div class="panel-body" id="published-this-week" style="overflow-x:auto"></div>
       </div>
     </div>
 
@@ -746,6 +826,7 @@
         if (data.result !== 'success') return;
         allContent = data.content;
         renderContent(allContent);
+        renderWeeklyBoard();
       });
     }
 
@@ -898,12 +979,230 @@
     }
 
     // ============================================
+    // Weekly Board
+    // ============================================
+
+    var currentWeekOffset = 0;
+
+    // לוח הפרסום הקבוע
+    var WEEKLY_SCHEDULE = [
+      { day: 0, time: '10:00', platform: 'WhatsApp', series: '#טיפ_AI_למורה', color: '#25D366' },
+      { day: 0, time: '20:00', platform: 'Facebook', series: 'פוסט ערב', color: '#1877F2' },
+      { day: 1, time: '09:00', platform: 'LinkedIn', series: '#מאחורי_הקלעים', color: '#0A66C2' },
+      { day: 2, time: '14:00', platform: 'Facebook', series: '#לפני_אחרי_AI', color: '#1877F2' },
+      { day: 2, time: '19:00', platform: 'Instagram', series: '#דקה_עם_מיטל', color: '#E4405F' },
+      { day: 3, time: '10:00', platform: 'LinkedIn', series: 'מאמרון AI', color: '#0A66C2' },
+      { day: 3, time: '16:00', platform: 'WhatsApp', series: 'עדכון שבועי', color: '#25D366' },
+      { day: 4, time: '12:00', platform: 'Instagram', series: '#כלי_השבוע', color: '#E4405F' },
+      { day: 4, time: '20:00', platform: 'Facebook', series: 'פוסט סוף שבוע', color: '#1877F2' }
+    ];
+
+    var DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי'];
+    var checkedItems = JSON.parse(localStorage.getItem('marketing_checked') || '{}');
+
+    function getWeekDates(offset) {
+      var now = new Date();
+      var day = now.getDay();
+      var sunday = new Date(now);
+      sunday.setDate(now.getDate() - day + (offset * 7));
+      var dates = [];
+      for (var i = 0; i < 5; i++) {
+        var d = new Date(sunday);
+        d.setDate(sunday.getDate() + i);
+        dates.push(d);
+      }
+      return dates;
+    }
+
+    function formatDate(d) {
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+
+    function changeWeek(dir) {
+      currentWeekOffset += dir;
+      renderWeeklyBoard();
+    }
+
+    function renderWeeklyBoard() {
+      var dates = getWeekDates(currentWeekOffset);
+      var today = formatDate(new Date());
+
+      // Title
+      var startStr = dates[0].toLocaleDateString('he-IL', {day:'numeric',month:'short'});
+      var endStr = dates[4].toLocaleDateString('he-IL', {day:'numeric',month:'short'});
+      document.getElementById('week-title').textContent = startStr + ' — ' + endStr;
+
+      // Find published content for this week
+      var weekStart = formatDate(dates[0]);
+      var weekEnd = formatDate(dates[4]);
+      var weekContent = {};
+      allContent.forEach(function(c) {
+        if (c.date >= weekStart && c.date <= weekEnd) {
+          if (!weekContent[c.date]) weekContent[c.date] = [];
+          weekContent[c.date].push(c);
+        }
+      });
+
+      // Render grid
+      var gridHtml = '';
+      dates.forEach(function(date, idx) {
+        var dateStr = formatDate(date);
+        var isToday = dateStr === today;
+        var daySchedule = WEEKLY_SCHEDULE.filter(function(s) { return s.day === idx; });
+
+        gridHtml += '<div class="day-col' + (isToday ? ' day-today' : '') + '">';
+        gridHtml += '<div class="day-header"><span>' + DAY_NAMES[idx] + '</span><span class="day-date">' + date.toLocaleDateString('he-IL', {day:'numeric',month:'numeric'}) + '</span></div>';
+        gridHtml += '<div class="day-body">';
+
+        // Scheduled items
+        daySchedule.forEach(function(sched) {
+          var key = dateStr + '_' + sched.platform + '_' + sched.time;
+          var isDone = checkedItems[key];
+
+          // Check if there's actual published content matching
+          var matchingContent = null;
+          if (weekContent[dateStr]) {
+            weekContent[dateStr].forEach(function(c) {
+              if (c.platform === sched.platform && !matchingContent) matchingContent = c;
+            });
+          }
+          if (matchingContent && matchingContent.status === 'published') isDone = true;
+
+          gridHtml += '<div class="sched-item' + (isDone ? ' done' : '') + '" data-key="' + key + '">';
+          gridHtml += '<div class="sched-check" onclick="toggleCheck(\'' + key + '\', this)">' + (isDone ? '&#10003;' : '') + '</div>';
+          gridHtml += '<div class="sched-platform" style="color:' + sched.color + '">' + sched.platform + '</div>';
+          gridHtml += '<div class="sched-time">' + sched.time + ' | ' + sched.series + '</div>';
+
+          if (matchingContent && matchingContent.link && /\.(gif|png|jpg|jpeg|webp)/i.test(matchingContent.link)) {
+            gridHtml += '<img class="sched-thumb" src="' + matchingContent.link + '" alt="">';
+          }
+          if (matchingContent && matchingContent.title) {
+            gridHtml += '<div style="font-size:12px;margin-top:4px;color:var(--gray-700)">' + matchingContent.title.substring(0,40) + '</div>';
+          }
+
+          gridHtml += '</div>';
+        });
+
+        // Extra published content not in schedule
+        if (weekContent[dateStr]) {
+          weekContent[dateStr].forEach(function(c) {
+            var alreadyShown = daySchedule.some(function(s) { return s.platform === c.platform; });
+            if (!alreadyShown) {
+              gridHtml += '<div class="sched-item done" style="border-right-color:var(--purple-600)">';
+              gridHtml += '<div class="sched-check" style="background:var(--purple-600);border-color:var(--purple-600);color:#fff">&#10003;</div>';
+              gridHtml += '<div class="sched-platform" style="color:var(--purple-600)">' + (c.platform || 'אחר') + '</div>';
+              gridHtml += '<div style="font-size:12px;color:var(--gray-700)">' + (c.title || '').substring(0,40) + '</div>';
+              if (c.link && /\.(gif|png|jpg|jpeg|webp)/i.test(c.link)) {
+                gridHtml += '<img class="sched-thumb" src="' + c.link + '" alt="">';
+              }
+              gridHtml += '</div>';
+            }
+          });
+        }
+
+        gridHtml += '</div></div>';
+      });
+      document.getElementById('week-grid').innerHTML = gridHtml;
+
+      // Render checklist
+      renderChecklist(dates);
+
+      // Render published this week
+      renderPublishedThisWeek(weekStart, weekEnd);
+    }
+
+    function toggleCheck(key, el) {
+      checkedItems[key] = !checkedItems[key];
+      localStorage.setItem('marketing_checked', JSON.stringify(checkedItems));
+      var item = el.closest('.sched-item');
+      if (checkedItems[key]) {
+        item.classList.add('done');
+        el.innerHTML = '&#10003;';
+        toast('סומן כבוצע!');
+      } else {
+        item.classList.remove('done');
+        el.innerHTML = '';
+      }
+      renderChecklist(getWeekDates(currentWeekOffset));
+    }
+
+    function renderChecklist(dates) {
+      var html = '';
+      var total = 0, done = 0;
+
+      dates.forEach(function(date, idx) {
+        var dateStr = formatDate(date);
+        var daySchedule = WEEKLY_SCHEDULE.filter(function(s) { return s.day === idx; });
+
+        daySchedule.forEach(function(sched) {
+          total++;
+          var key = dateStr + '_' + sched.platform + '_' + sched.time;
+          var isDone = checkedItems[key];
+
+          // Check actual content too
+          allContent.forEach(function(c) {
+            if (c.date === dateStr && c.platform === sched.platform && c.status === 'published') isDone = true;
+          });
+
+          if (isDone) done++;
+
+          html += '<div class="check-item' + (isDone ? ' checked' : '') + '" onclick="toggleCheckFromList(\'' + key + '\', this)">';
+          html += '<div class="check-box">' + (isDone ? '&#10003;' : '') + '</div>';
+          html += '<div class="check-text">' + sched.series + '</div>';
+          html += '<div class="check-meta">' + DAY_NAMES[idx] + ' ' + sched.time + ' | <span style="color:' + sched.color + '">' + sched.platform + '</span></div>';
+          html += '</div>';
+        });
+      });
+
+      document.getElementById('checklist-body').innerHTML = html;
+      document.getElementById('checklist-progress').textContent = done + '/' + total + ' בוצעו';
+
+      // Update progress bar color
+      var pct = total > 0 ? (done / total * 100) : 0;
+      document.getElementById('checklist-progress').style.color = pct === 100 ? 'var(--green-600)' : pct > 50 ? 'var(--amber-600)' : 'var(--gray-500)';
+    }
+
+    function toggleCheckFromList(key, el) {
+      checkedItems[key] = !checkedItems[key];
+      localStorage.setItem('marketing_checked', JSON.stringify(checkedItems));
+      renderWeeklyBoard();
+    }
+
+    function renderPublishedThisWeek(weekStart, weekEnd) {
+      var published = allContent.filter(function(c) {
+        return c.date >= weekStart && c.date <= weekEnd && c.status === 'published';
+      });
+
+      if (published.length === 0) {
+        document.getElementById('published-this-week').innerHTML = '<p style="color:var(--gray-500);text-align:center">עדיין לא פורסם כלום השבוע</p>';
+        return;
+      }
+
+      var html = '<table class="data-table"><thead><tr><th>תמונה</th><th>תאריך</th><th>פלטפורמה</th><th>סדרה</th><th>כותרת</th></tr></thead><tbody>';
+      published.forEach(function(c) {
+        var isImage = c.link && /\.(gif|png|jpg|jpeg|webp)/i.test(c.link);
+        html += '<tr>';
+        html += '<td style="width:50px">' + (isImage ? '<img src="' + c.link + '" style="width:40px;height:40px;object-fit:cover;border-radius:6px">' : '') + '</td>';
+        html += '<td>' + c.date + '</td>';
+        html += '<td><span class="platform-tag platform-' + c.platform + '">' + c.platform + '</span></td>';
+        html += '<td>' + (c.series || '—') + '</td>';
+        html += '<td>' + (c.title || '—').substring(0, 50) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('published-this-week').innerHTML = html;
+    }
+
+    // ============================================
     // Init
     // ============================================
     loadDashboard();
     loadLeads();
     loadContent();
     loadNewsletter();
+
+    // Wait for content to load, then render weekly board
+    setTimeout(renderWeeklyBoard, 2000);
   </script>
 </body>
 </html>
