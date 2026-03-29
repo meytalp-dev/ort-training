@@ -37,28 +37,27 @@ function sendWelcomeEmail(lead) {
 
   if (!email) return;
 
-  var subject = 'שמחה שהצטרפת! הנה מה שמחכה לך';
+  var subject = 'תודה שהתעניינת בהדרכת Claude Code!';
 
   var html = buildEmailTemplate({
-    preheader: 'ברוכה הבאה למשפחת ההדרכות שלי',
-    title: name + ', שמחה שהצטרפת!',
+    preheader: 'קיבלתי את הפרטים שלך — אחזור אליך בקרוב',
+    title: name + ', תודה שהתעניינת!',
     body: [
-      'תודה שנרשמת לקבל עדכונים על הדרכות AI למורים.',
+      'שמחה שהשארת פרטים להדרכת <strong>Claude Code</strong> — הכלי שמאפשר לאנשי חינוך לבנות כלים טכנולוגיים בלי לכתוב שורת קוד.',
       '',
-      '<strong>מה מחכה לך:</strong>',
+      '<strong>מה קורה עכשיו?</strong>',
       '',
       '<div style="background:#F0FDFA;border-radius:8px;padding:16px;margin:12px 0">',
-      '&#10004; גישה לתיק עבודות עם 131+ תוצרים דיגיטליים<br>',
-      '&#10004; טיפים שבועיים על AI בחינוך<br>',
-      '&#10004; הזמנה ראשונה למחזורי הדרכה חדשים<br>',
-      '&#10004; משאבים חינמיים להורדה',
+      '&#10148; אחזור אליך תוך 24 שעות לתיאום שיעור ראשון (פרטני + חינם)<br>',
+      '&#10148; בשיעור הראשון — נתקין ביחד את הכלי ותראי בדיוק מה אפשר לעשות<br>',
+      '&#10148; שאלות? שלחי הודעה ב-<a href="' + CONFIG.WHATSAPP_LINK + '" style="color:#0D9488;text-decoration:none">WhatsApp</a> ואני כאן',
       '</div>',
       '',
-      'בינתיים, מוזמנת להציץ בתיק העבודות שלי:'
+      'בינתיים, מוזמנת לראות מה בניתי עם הכלי:'
     ].join('<br>'),
-    ctaText: 'לתיק העבודות',
+    ctaText: 'לתיק העבודות שלי',
     ctaUrl: CONFIG.SITE_URL + '/marketing/portfolio.html',
-    footer: 'שאלות? פשוט תשלחי הודעה ב-WhatsApp'
+    footer: 'מיטל פלג | הדרכת Claude Code לאנשי חינוך'
   });
 
   MailApp.sendEmail({
@@ -417,8 +416,8 @@ function doPost(e) {
 
     if (action === 'newLead') {
       saveLead(data);
-      sendWelcomeEmail(data);
-      notifyNewLead(data);
+      try { sendWelcomeEmail(data); } catch(mailErr) { Logger.log('Welcome email failed: ' + mailErr); }
+      try { notifyNewLead(data); } catch(mailErr) { Logger.log('Notify email failed: ' + mailErr); }
     } else if (action === 'unsubscribe') {
       unsubscribeLead(data.email);
     }
@@ -447,8 +446,8 @@ function doGet(e) {
   // Fallback — save lead via GET (image pixel / fallback)
   if (action === 'newLead' && e.parameter.email) {
     saveLead(e.parameter);
-    sendWelcomeEmail(e.parameter);
-    notifyNewLead(e.parameter);
+    try { sendWelcomeEmail(e.parameter); } catch(mailErr) { Logger.log('Welcome email failed: ' + mailErr); }
+    try { notifyNewLead(e.parameter); } catch(mailErr) { Logger.log('Notify email failed: ' + mailErr); }
     return ContentService
       .createTextOutput(callback + '({"result":"success","message":"lead saved"})')
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
