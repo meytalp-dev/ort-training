@@ -21,7 +21,7 @@ var CONFIG = {
   ADMIN_EMAIL: 'meytalp@bethaarava.ort.org.il',
   SITE_URL: 'https://meytalp-dev.github.io/ort-presentation-builder',
   BRAND_NAME: 'מיטל פלג — הדרכות AI למורים',
-  WHATSAPP_LINK: 'https://wa.me/972526857000'
+  WHATSAPP_LINK: 'https://wa.me/972536256653'
 };
 
 // ============================================
@@ -39,24 +39,21 @@ function sendWelcomeEmail(lead) {
 
   var subject = 'תודה שהתעניינת בהדרכת Claude Code!';
 
+  var bodyHtml = '<p>שמחה שהשארת פרטים להדרכת <strong>Claude Code</strong> — הכלי שמאפשר לאנשי חינוך לבנות כלים טכנולוגיים בלי לכתוב שורת קוד.</p>' +
+    '<p><strong>מה קורה עכשיו?</strong></p>' +
+    '<table cellpadding="8" cellspacing="0" style="background:#F0FDFA;border-radius:8px;width:100%;margin:12px 0"><tr><td>' +
+    '&#10148; אחזור אליך תוך 24 שעות לתיאום שיעור ראשון (פרטני + חינם)<br><br>' +
+    '&#10148; בשיעור הראשון — נתקין ביחד את הכלי ותראי בדיוק מה אפשר לעשות<br><br>' +
+    '&#10148; שאלות? שלחי הודעה ב-<a href="' + CONFIG.WHATSAPP_LINK + '" style="color:#0D9488">WhatsApp</a> ואני כאן' +
+    '</td></tr></table>' +
+    '<p>בינתיים, מוזמנת לעיין בדף ההדרכה:</p>';
+
   var html = buildEmailTemplate({
     preheader: 'קיבלתי את הפרטים שלך — אחזור אליך בקרוב',
     title: name + ', תודה שהתעניינת!',
-    body: [
-      'שמחה שהשארת פרטים להדרכת <strong>Claude Code</strong> — הכלי שמאפשר לאנשי חינוך לבנות כלים טכנולוגיים בלי לכתוב שורת קוד.',
-      '',
-      '<strong>מה קורה עכשיו?</strong>',
-      '',
-      '<div style="background:#F0FDFA;border-radius:8px;padding:16px;margin:12px 0">',
-      '&#10148; אחזור אליך תוך 24 שעות לתיאום שיעור ראשון (פרטני + חינם)<br>',
-      '&#10148; בשיעור הראשון — נתקין ביחד את הכלי ותראי בדיוק מה אפשר לעשות<br>',
-      '&#10148; שאלות? שלחי הודעה ב-<a href="' + CONFIG.WHATSAPP_LINK + '" style="color:#0D9488;text-decoration:none">WhatsApp</a> ואני כאן',
-      '</div>',
-      '',
-      'בינתיים, מוזמנת לראות מה בניתי עם הכלי:'
-    ].join('<br>'),
-    ctaText: 'לתיק העבודות שלי',
-    ctaUrl: CONFIG.SITE_URL + '/marketing/portfolio.html',
+    body: bodyHtml,
+    ctaText: 'לדף ההדרכה',
+    ctaUrl: CONFIG.SITE_URL + '/training/claude-code/landing-page.html',
     footer: 'מיטל פלג | הדרכת Claude Code לאנשי חינוך'
   });
 
@@ -262,7 +259,7 @@ function notifyNewLead(lead) {
  * רץ כל יום ב-10:00
  */
 function sendFollowUpEmails() {
-  var sheet = getOrCreateSheet_('לידים');
+  var sheet = getOrCreateSheet_('leads');
   var rows = sheet.getDataRange().getValues();
   var threeDaysAgo = new Date();
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -324,7 +321,7 @@ function sendFollowUpEmails() {
  * דוח שבועי — נשלח כל שישי ב-12:00
  */
 function sendWeeklyReport() {
-  var sheet = getOrCreateSheet_('לידים');
+  var sheet = getOrCreateSheet_('leads');
   var logSheet = getOrCreateSheet_('log');
 
   // ספירת לידים חדשים השבוע
@@ -473,7 +470,7 @@ function getOrCreateSheet_(name) {
   sheet = ss.insertSheet(name);
 
   var headers = {
-    'לידים': ['שם', 'מייל', 'טלפון', 'תפקיד', 'מקור', 'תאריך רישום', 'סטטוס', 'הערות', 'followup_sent', 'welcome_sent', 'newsletter'],
+    'leads': ['שם', 'מייל', 'טלפון', 'תפקיד', 'מקור', 'תאריך רישום', 'סטטוס', 'הערות', 'followup_sent', 'welcome_sent', 'newsletter'],
     'log': ['תאריך', 'פעולה', 'פרטים'],
     'newsletter_content': ['שבוע', 'נושא', 'preheader', 'כותרת', 'תוכן HTML', 'טקסט CTA', 'קישור CTA', 'סטטוס'],
     'subscribers': ['מייל', 'שם', 'תאריך הצטרפות', 'פעיל', 'מקור']
@@ -489,7 +486,7 @@ function getOrCreateSheet_(name) {
 }
 
 function saveLead(data) {
-  var sheet = getOrCreateSheet_('לידים');
+  var sheet = getOrCreateSheet_('leads');
   sheet.appendRow([
     data.name || '',
     data.email || '',
@@ -506,7 +503,7 @@ function saveLead(data) {
 }
 
 function markLeadAction(email, action, value) {
-  var sheet = getOrCreateSheet_('לידים');
+  var sheet = getOrCreateSheet_('leads');
   var rows = sheet.getDataRange().getValues();
   var colIndex = { 'welcome_sent': 10, 'followup_sent': 9 };
   var col = colIndex[action];
@@ -522,7 +519,7 @@ function markLeadAction(email, action, value) {
 
 function unsubscribeLead(email) {
   if (!email) return;
-  var sheet = getOrCreateSheet_('לידים');
+  var sheet = getOrCreateSheet_('leads');
   var rows = sheet.getDataRange().getValues();
 
   for (var i = 1; i < rows.length; i++) {
@@ -535,7 +532,7 @@ function unsubscribeLead(email) {
 }
 
 function getActiveSubscribers() {
-  var sheet = getOrCreateSheet_('לידים');
+  var sheet = getOrCreateSheet_('leads');
   var rows = sheet.getDataRange().getValues();
   var subs = [];
 
