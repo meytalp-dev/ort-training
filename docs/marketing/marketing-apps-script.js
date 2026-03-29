@@ -263,7 +263,7 @@ function notifyNewLead(lead) {
  * רץ כל יום ב-10:00
  */
 function sendFollowUpEmails() {
-  var sheet = getOrCreateSheet_('leads');
+  var sheet = getOrCreateSheet_('לידים');
   var rows = sheet.getDataRange().getValues();
   var threeDaysAgo = new Date();
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -325,7 +325,7 @@ function sendFollowUpEmails() {
  * דוח שבועי — נשלח כל שישי ב-12:00
  */
 function sendWeeklyReport() {
-  var sheet = getOrCreateSheet_('leads');
+  var sheet = getOrCreateSheet_('לידים');
   var logSheet = getOrCreateSheet_('log');
 
   // ספירת לידים חדשים השבוע
@@ -403,7 +403,12 @@ function doPost(e) {
   try {
     var data;
     if (e.postData && e.postData.contents) {
-      data = JSON.parse(e.postData.contents);
+      try {
+        data = JSON.parse(e.postData.contents);
+      } catch (parseErr) {
+        // Form submission (application/x-www-form-urlencoded) — use parameters
+        data = e.parameter;
+      }
     } else {
       data = e.parameter;
     }
@@ -439,6 +444,16 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JAVASCRIPT);
   }
 
+  // Fallback — save lead via GET (image pixel / fallback)
+  if (action === 'newLead' && e.parameter.email) {
+    saveLead(e.parameter);
+    sendWelcomeEmail(e.parameter);
+    notifyNewLead(e.parameter);
+    return ContentService
+      .createTextOutput(callback + '({"result":"success","message":"lead saved"})')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
   return ContentService
     .createTextOutput(callback + '({"result":"ok","message":"marketing API active"})')
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
@@ -459,7 +474,7 @@ function getOrCreateSheet_(name) {
   sheet = ss.insertSheet(name);
 
   var headers = {
-    'leads': ['שם', 'מייל', 'טלפון', 'תפקיד', 'מקור', 'תאריך רישום', 'סטטוס', 'הערות', 'followup_sent', 'welcome_sent', 'newsletter'],
+    'לידים': ['שם', 'מייל', 'טלפון', 'תפקיד', 'מקור', 'תאריך רישום', 'סטטוס', 'הערות', 'followup_sent', 'welcome_sent', 'newsletter'],
     'log': ['תאריך', 'פעולה', 'פרטים'],
     'newsletter_content': ['שבוע', 'נושא', 'preheader', 'כותרת', 'תוכן HTML', 'טקסט CTA', 'קישור CTA', 'סטטוס'],
     'subscribers': ['מייל', 'שם', 'תאריך הצטרפות', 'פעיל', 'מקור']
@@ -475,7 +490,7 @@ function getOrCreateSheet_(name) {
 }
 
 function saveLead(data) {
-  var sheet = getOrCreateSheet_('leads');
+  var sheet = getOrCreateSheet_('לידים');
   sheet.appendRow([
     data.name || '',
     data.email || '',
@@ -492,7 +507,7 @@ function saveLead(data) {
 }
 
 function markLeadAction(email, action, value) {
-  var sheet = getOrCreateSheet_('leads');
+  var sheet = getOrCreateSheet_('לידים');
   var rows = sheet.getDataRange().getValues();
   var colIndex = { 'welcome_sent': 10, 'followup_sent': 9 };
   var col = colIndex[action];
@@ -508,7 +523,7 @@ function markLeadAction(email, action, value) {
 
 function unsubscribeLead(email) {
   if (!email) return;
-  var sheet = getOrCreateSheet_('leads');
+  var sheet = getOrCreateSheet_('לידים');
   var rows = sheet.getDataRange().getValues();
 
   for (var i = 1; i < rows.length; i++) {
@@ -521,7 +536,7 @@ function unsubscribeLead(email) {
 }
 
 function getActiveSubscribers() {
-  var sheet = getOrCreateSheet_('leads');
+  var sheet = getOrCreateSheet_('לידים');
   var rows = sheet.getDataRange().getValues();
   var subs = [];
 

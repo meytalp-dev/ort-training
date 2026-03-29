@@ -2482,7 +2482,7 @@ h1, h2, h3, h4, h5, h6 {
 <!-- ===== SCRIPTS ===== -->
 <script>
 // CRM Marketing — Google Apps Script endpoint
-const CRM_URL = 'https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';
+const CRM_URL = 'https://script.google.com/macros/s/AKfycbwDgaG_6ymf0xpK427KvJCOht9paFD1AaAFXbc9FwgqSHRXIqJnSMIwSJEydzFf9rHQ/exec';
 
 const regForm = document.getElementById('reg-form');
 if (regForm) {
@@ -2511,21 +2511,42 @@ if (regForm) {
     };
 
     try {
-      await fetch(CRM_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leadData)
-      });
+      // Submit via hidden form + iframe (most reliable for Google Apps Script)
+      const iframe = document.createElement('iframe');
+      iframe.name = 'crm-frame';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = CRM_URL;
+      form.target = 'crm-frame';
+
+      for (const [key, val] of Object.entries(leadData)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = val;
+        form.appendChild(input);
+      }
+
+      document.body.appendChild(form);
+      form.submit();
+
+      // Cleanup after submission
+      setTimeout(() => {
+        form.remove();
+        iframe.remove();
+      }, 5000);
     } catch(err) {
-      // Fallback — send via GET params
+      // Fallback — send via image pixel
       const params = new URLSearchParams({
-        sheet: 'leads',
+        action: 'newLead',
         name, email, phone, role,
         source: 'claude-code-landing',
         timestamp: new Date().toLocaleString('he-IL')
       });
-      try { await fetch(CRM_URL + '?' + params.toString(), { method: 'GET', mode: 'no-cors' }); } catch(e) {}
+      new Image().src = CRM_URL + '?' + params.toString();
     }
 
     document.getElementById('reg-form').style.display = 'none';
