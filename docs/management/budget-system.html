@@ -271,6 +271,27 @@ tr:hover td { background: var(--hover); }
   </div>
 </div>
 
+<!-- ==================== CHAT EXPERT ==================== -->
+<div class="section" style="margin-top:20px; border-right: 4px solid var(--teal)">
+  <h2>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    מומחה תקציבים — שאל אותי
+  </h2>
+  <div id="chat-messages" style="max-height:360px;overflow-y:auto;padding:12px;background:var(--bg);border-radius:10px;margin-bottom:12px;min-height:80px">
+    <div style="background:var(--teal-bg);padding:10px 14px;border-radius:12px;font-size:13px;max-width:85%">שלום! אני מומחה התקציבים שלך. אפשר לשאול אותי כל שאלה על התקציב — יתרות, המרות, היסטוריה ועוד.</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <input type="text" id="chat-input" placeholder="למשל: כמה שעות נשארו? מה ההמרות שבוצעו?" style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;direction:rtl" onkeydown="if(event.key==='Enter')askExpert()">
+    <button class="btn btn-primary" onclick="askExpert()" style="padding:10px 20px">שלח</button>
+  </div>
+  <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('chat-input').value='כמה שעות תפעול נשארו?';askExpert()">יתרת תפעול</button>
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('chat-input').value='מה ההמרות שבוצעו השנה?';askExpert()">המרות שבוצעו</button>
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('chat-input').value='מה המצב הכללי של התקציב?';askExpert()">מצב כללי</button>
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('chat-input').value='כמה שעות חינוך מיוחד הועברו?';askExpert()">חנ\"מ</button>
+  </div>
+</div>
+
 <p style="text-align:center;color:var(--light);font-size:11px;margin-top:16px">מערכת תקציבית — אורט בית הערבה | נוצר ע"י Claude Code | מרץ 2026</p>
 </div>
 
@@ -650,6 +671,89 @@ function exportExcel() {
   XLSX.utils.book_append_sheet(wb, ws3, 'סל חינוך מיוחד');
 
   XLSX.writeFile(wb, 'תקציב_אורט_בית_הערבה_תשפו.xlsx');
+}
+
+// ===== CHAT EXPERT =====
+const GEMINI_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
+
+function getBudgetContext() {
+  let t1Budget = 0, t1Used = 0;
+  data.operational.rows.forEach(r => { t1Budget += r.budget; t1Used += r.used; });
+
+  let t2ExecH = 0, t2ExecA = 0, t2PendH = 0;
+  data.conversions.forEach(c => {
+    if(c.status === 'בוצע') { t2ExecH += c.hours; t2ExecA += c.amount; }
+    else { t2PendH += c.hours; }
+  });
+
+  let t3Alloc = 0, t3Used = 0;
+  data.specEd.forEach(s => {
+    if(s.type === 'הקצאה' || s.type === 'העברה') t3Alloc += s.hours;
+    if(s.type === 'ניצול') t3Used += s.hours;
+  });
+
+  return `אתה מומחה תקציבים של בית ספר אורט בית הערבה, שנת תשפ"ו.
+ענה בעברית, בקצרה ובבהירות. השתמש במספרים מדויקים מהנתונים.
+
+=== מצב תקציב נוכחי ===
+
+טאב 1 — שעות תפעול:
+${data.operational.rows.map(r => `- ${r.type}: תקציב ${r.budget}, ביצוע ${r.used}, יתרה ${r.budget - r.used} | ${r.notes}`).join('\n')}
+סה"כ תפעול: תקציב ${t1Budget}, ביצוע ${t1Used}, יתרה ${t1Budget - t1Used} ש"ש
+
+טאב 2 — המרות (פעילויות נוספות):
+${data.conversions.map(c => `- ${formatDate(c.date)}: ${c.hours} ש"ש (${c.amount.toLocaleString()} ש"ח) — ${c.purpose} [${c.status}]`).join('\n')}
+סה"כ בוצע: ${t2ExecH} ש"ש (${t2ExecA.toLocaleString()} ש"ח) | ממתין: ${t2PendH} ש"ש
+
+טאב 3 — סל חינוך מיוחד:
+${data.specEd.map(s => `- ${s.type}: ${s.hours} ש"ש — ${s.workers} (${s.source}) ${s.notes}`).join('\n')}
+סה"כ סל: ${t3Alloc} ש"ש | ניצול: ${t3Used} ש"ש | יתרה: ${t3Alloc - t3Used} ש"ש
+
+היסטוריה:
+${data.operational.history.map(h => `- ${formatDate(h.date)} [${h.action}]: ${h.source}`).join('\n')}
+
+הערה חשובה: 44 ש"ש חינוך מיוחד (14+30) הועברו מתפעול לסל חנ"מ.
+שכירות ~960,000 ש"ח/שנה (~160 ש"ש) אכלה את התוספתיות.
+1 ש"ש = 6,000 ש"ח.`;
+}
+
+async function askExpert() {
+  const input = document.getElementById('chat-input');
+  const question = input.value.trim();
+  if(!question) return;
+
+  const msgs = document.getElementById('chat-messages');
+
+  // הוספת שאלה
+  msgs.innerHTML += `<div style="background:var(--blue-bg);padding:10px 14px;border-radius:12px;font-size:13px;max-width:85%;margin-top:10px;margin-right:auto;text-align:left">${question}</div>`;
+  input.value = '';
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Loading
+  const loadingId = 'loading-' + Date.now();
+  msgs.innerHTML += `<div id="${loadingId}" style="padding:10px;font-size:13px;color:var(--muted)">חושב...</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+
+  try {
+    const res = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: getBudgetContext() + '\n\nשאלה: ' + question }] }],
+        generationConfig: { maxOutputTokens: 600, temperature: 0.3 }
+      })
+    });
+    const json = await res.json();
+    const answer = json.candidates?.[0]?.content?.parts?.[0]?.text || 'לא הצלחתי לענות. נסי שוב.';
+
+    document.getElementById(loadingId).remove();
+    msgs.innerHTML += `<div style="background:var(--teal-bg);padding:10px 14px;border-radius:12px;font-size:13px;max-width:85%;margin-top:10px;white-space:pre-wrap">${answer}</div>`;
+  } catch(e) {
+    document.getElementById(loadingId).remove();
+    msgs.innerHTML += `<div style="background:var(--red-bg);padding:10px 14px;border-radius:12px;font-size:13px;max-width:85%;margin-top:10px">שגיאה בחיבור. ודאי שהדומיין מורשה ב-Google Cloud Console.</div>`;
+  }
+  msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ===== UTILS =====
