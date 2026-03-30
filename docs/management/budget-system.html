@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת תקציבית — אורט בית הערבה תשפ"ו</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #F0F4F8; --card: #fff; --text: #1a202c; --muted: #718096; --light: #A0AEC0;
+  --border: #E2E8F0; --hover: #F7FAFC;
+  --green: #38A169; --green-bg: #C6F6D5; --green-dark: #22543D;
+  --red: #E53E3E; --red-bg: #FED7D7; --red-dark: #9B2C2C;
+  --blue: #3182CE; --blue-bg: #BEE3F8; --blue-dark: #2A4365;
+  --purple: #805AD5; --purple-bg: #E9D8FD; --purple-dark: #44337A;
+  --orange: #DD6B20; --orange-bg: #FEEBC8;
+  --yellow-bg: #FEFCBF; --yellow-dark: #744210;
+  --teal: #319795; --teal-bg: #B2F5EA;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+.app { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* Header */
+.header { margin-bottom: 24px; }
+.header h1 { font-size: 26px; font-weight: 800; color: #1a365d; }
+.header .sub { color: var(--muted); font-size: 13px; }
+
+/* Summary Cards */
+.summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+.s-card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); cursor: pointer; transition: transform .15s, box-shadow .15s; border-top: 4px solid transparent; }
+.s-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+.s-card.active { border-top-color: var(--blue); }
+.s-card[data-tab="1"] { border-top-color: var(--blue); }
+.s-card[data-tab="2"] { border-top-color: var(--teal); }
+.s-card[data-tab="3"] { border-top-color: var(--purple); }
+.s-card .label { font-size: 13px; color: var(--muted); font-weight: 500; }
+.s-card .value { font-size: 30px; font-weight: 800; margin: 4px 0; }
+.s-card .detail { font-size: 12px; color: var(--light); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--card); border-radius: 10px; padding: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.tab-btn { flex: 1; padding: 10px; border: none; background: transparent; cursor: pointer; border-radius: 8px; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--muted); transition: all .2s; }
+.tab-btn.active { background: #1a365d; color: #fff; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Sections */
+.section { background: var(--card); border-radius: 12px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.section h2 { font-size: 17px; font-weight: 700; color: #2D3748; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.section h3 { font-size: 14px; font-weight: 600; color: var(--muted); margin: 16px 0 8px; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #EDF2F7; padding: 10px 12px; text-align: right; font-weight: 600; color: #4A5568; font-size: 12px; position: sticky; top: 0; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:hover td { background: var(--hover); }
+
+/* Status badges */
+.badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; display: inline-block; }
+.badge-green { background: var(--green-bg); color: var(--green-dark); }
+.badge-yellow { background: var(--yellow-bg); color: var(--yellow-dark); }
+.badge-red { background: var(--red-bg); color: var(--red-dark); }
+.badge-blue { background: var(--blue-bg); color: var(--blue-dark); }
+
+/* Progress bar */
+.progress { background: #E2E8F0; border-radius: 8px; height: 28px; position: relative; overflow: hidden; margin: 8px 0; }
+.progress-fill { height: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; }
+
+/* Forms */
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.form-group input, .form-group select, .form-group textarea { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 13px; direction: rtl; }
+.form-group input:focus, .form-group select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(49,130,206,.15); }
+.btn { padding: 8px 20px; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.btn-primary { background: #1a365d; color: #fff; }
+.btn-primary:hover { background: #2B6CB0; }
+.btn-success { background: var(--green); color: #fff; }
+.btn-danger { background: var(--red); color: #fff; font-size: 11px; padding: 4px 10px; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.btn-outline:hover { background: var(--hover); }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* Bottom line */
+.bottom-line { background: linear-gradient(135deg, #1a365d, #2B6CB0); color: #fff; border-radius: 12px; padding: 24px; margin-top: 20px; }
+.bottom-line h2 { color: #fff; }
+.bl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+.bl-item { background: rgba(255,255,255,.1); border-radius: 8px; padding: 16px; text-align: center; }
+.bl-item .bl-label { font-size: 13px; opacity: .8; }
+.bl-item .bl-value { font-size: 26px; font-weight: 800; }
+.bl-item .bl-sub { font-size: 11px; opacity: .6; }
+
+/* Actions row */
+.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+
+/* Toolbar */
+.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .summary-cards { grid-template-columns: 1fr; }
+  .bl-grid { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .tabs { flex-wrap: wrap; }
+}
+@media print { body { background: #fff; } .btn, .form-row, .actions { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- Header -->
+<div class="header">
+  <h1>מערכת תקציבית — אורט בית הערבה</h1>
+  <div class="sub">שנת הלימודים תשפ"ו | 1 ש"ש = 6,000 ש"ח | עדכון: <span id="lastUpdate"></span></div>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+  <div class="s-card" data-tab="1" onclick="switchTab(1)">
+    <div class="label">תקציב 1 — שעות תפעול/מערכת</div>
+    <div class="value" style="color:var(--blue)" id="sum1-balance">—</div>
+    <div class="detail" id="sum1-detail"></div>
+  </div>
+  <div class="s-card" data-tab="2" onclick="switchTab(2)">
+    <div class="label">תקציב 2 — פעילויות נוספות</div>
+    <div class="value" style="color:var(--teal)" id="sum2-balance">—</div>
+    <div class="detail" id="sum2-detail"></div>
+  </div>
+  <div class="s-card" data-tab="3" onclick="switchTab(3)">
+    <div class="label">תקציב 3 — סל חינוך מיוחד</div>
+    <div class="value" style="color:var(--purple)" id="sum3-balance">—</div>
+    <div class="detail" id="sum3-detail"></div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab(1)">שעות תפעול</button>
+  <button class="tab-btn" onclick="switchTab(2)">פעילויות נוספות</button>
+  <button class="tab-btn" onclick="switchTab(3)">סל חינוך מיוחד</button>
+</div>
+
+<!-- ==================== TAB 1: OPERATIONAL HOURS ==================== -->
+<div class="tab-content active" id="tab1">
+  <div class="section">
+    <h2>שעות תפעול/מערכת — תקציב מול ביצוע</h2>
+    <table>
+      <thead><tr><th>סוג</th><th>תקציב</th><th>ביצוע</th><th>יתרה</th><th>הערות</th></tr></thead>
+      <tbody id="tab1-table"></tbody>
+    </table>
+    <h3>ניצול שעות תקן</h3>
+    <div class="progress"><div class="progress-fill" id="tab1-progress" style="background:var(--blue)"></div></div>
+    <div style="font-size:12px;color:var(--muted)" id="tab1-progress-text"></div>
+  </div>
+
+  <div class="section">
+    <h2>היסטוריית שינויים</h2>
+    <table>
+      <thead><tr><th>תאריך</th><th>פעולה</th><th>שעות</th><th>מקור</th></tr></thead>
+      <tbody id="tab1-history"></tbody>
+    </table>
+    <div style="margin-top:16px">
+      <h3>הוספת שינוי</h3>
+      <div class="form-row">
+        <div class="form-group"><label>תאריך</label><input type="date" id="t1-date"></div>
+        <div class="form-group"><label>פעולה</label><select id="t1-action"><option value="הקצאה">הקצאה</option><option value="גריעה">גריעה</option><option value="תוספת">תוספת</option></select></div>
+        <div class="form-group"><label>שעות</label><input type="number" id="t1-hours" placeholder="ש&quot;ש"></div>
+        <div class="form-group"><label>מקור/הערה</label><input type="text" id="t1-source" placeholder="מי אישר / סיבה"></div>
+        <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="addT1Change()">הוסף</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB 2: ADDITIONAL ACTIVITIES ==================== -->
+<div class="tab-content" id="tab2">
+  <div class="section">
+    <div class="toolbar">
+      <h2>המרות — פעילויות נוספות</h2>
+      <div class="actions">
+        <span style="font-size:12px;color:var(--muted)" id="tab2-summary"></span>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>תאריך</th><th>ש"ש</th><th>ש"ח</th><th>ייעוד</th><th>סעיף</th><th>סטטוס</th><th>מייל מקור</th><th>פעולות</th></tr></thead>
+      <tbody id="tab2-table"></tbody>
+      <tfoot id="tab2-footer"></tfoot>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>הוספת המרה חדשה</h2>
+    <div class="form-row">
+      <div class="form-group"><label>תאריך</label><input type="date" id="t2-date"></div>
+      <div class="form-group"><label>שעות (ש"ש)</label><input type="number" id="t2-hours" placeholder="ש&quot;ש" oninput="document.getElementById('t2-amount').value=this.value*6000"></div>
+      <div class="form-group"><label>סכום (ש"ח) — אוטומטי</label><input type="number" id="t2-amount" placeholder="חישוב אוטומטי"></div>
+      <div class="form-group"><label>ייעוד</label><input type="text" id="t2-purpose" placeholder="למה? (הצטיידות, טיולים...)"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>סעיף (מ→ל)</label><input type="text" id="t2-from" placeholder="51113→61101/1750"></div>
+      <div class="form-group"><label>סטטוס</label><select id="t2-status"><option value="ממתין">ממתין</option><option value="אושר">אושר</option><option value="בוצע">בוצע</option><option value="נדחה">נדחה</option></select></div>
+      <div class="form-group"><label>מייל מקור</label><input type="text" id="t2-email" placeholder="נושא המייל מתקציבים"></div>
+      <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="addConversion()">הוסף המרה</button></div>
+    </div>
+  </div>
+
+  <div class="section" style="border-right: 4px solid var(--blue)">
+    <h2>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      שליחת בקשת המרה במייל
+    </h2>
+    <div class="form-row">
+      <div class="form-group"><label>כמות שעות</label><input type="number" id="mail-hours" placeholder='ש"ש'></div>
+      <div class="form-group"><label>מסעיף</label><input type="text" id="mail-from" placeholder="למשל: 51113/1750"></div>
+      <div class="form-group"><label>לסעיף</label><input type="text" id="mail-to" placeholder="למשל: 61101/1750"></div>
+      <div class="form-group"><label>עבור</label><input type="text" id="mail-purpose" placeholder="למשל: הצטיידות מגמות"></div>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-primary" onclick="sendConversionEmail()" style="padding:10px 28px;font-size:14px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:6px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        פתח מייל ב-Gmail
+      </button>
+      <span style="font-size:12px;color:var(--muted);margin-right:12px">נמען: שלומית | העתק: אפרת, ענת</span>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TAB 3: SPECIAL EDUCATION ==================== -->
+<div class="tab-content" id="tab3">
+  <div class="section">
+    <h2>סל חינוך מיוחד / שילוב</h2>
+    <div class="summary-cards" style="grid-template-columns: repeat(3,1fr); margin-bottom:16px">
+      <div class="s-card" style="border-top-color:var(--purple)"><div class="label">סה"כ סל</div><div class="value" style="color:var(--purple);font-size:24px" id="t3-total">—</div></div>
+      <div class="s-card" style="border-top-color:var(--orange)"><div class="label">ניצול</div><div class="value" style="color:var(--orange);font-size:24px" id="t3-used">—</div></div>
+      <div class="s-card" style="border-top-color:var(--green)"><div class="label">יתרה</div><div class="value" style="color:var(--green);font-size:24px" id="t3-remain">—</div></div>
+    </div>
+    <table>
+      <thead><tr><th>סוג</th><th>שעות</th><th>עובדים</th><th>מקור</th><th>הערות</th><th>פעולות</th></tr></thead>
+      <tbody id="tab3-table"></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>הוספת שורה לסל</h2>
+    <div class="form-row">
+      <div class="form-group"><label>סוג</label><select id="t3-type"><option value="הקצאה">הקצאה</option><option value="ניצול">ניצול</option><option value="העברה">העברה מתקן</option></select></div>
+      <div class="form-group"><label>שעות</label><input type="number" id="t3-hours"></div>
+      <div class="form-group"><label>עובדים</label><input type="text" id="t3-workers" placeholder="שמות"></div>
+      <div class="form-group"><label>מקור</label><input type="text" id="t3-source" placeholder="סל 103, תקן..."></div>
+      <div class="form-group"><label>הערות</label><input type="text" id="t3-notes"></div>
+      <div class="form-group"><label>&nbsp;</label><button class="btn btn-primary" onclick="addSpecEd()">הוסף</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== BOTTOM LINE ==================== -->
+<div class="bottom-line">
+  <h2>שורה תחתונה — שלושת התקציבים</h2>
+  <div class="bl-grid">
+    <div class="bl-item"><div class="bl-label">תפעול — יתרה</div><div class="bl-value" id="bl-t1">—</div><div class="bl-sub">ש"ש</div></div>
+    <div class="bl-item"><div class="bl-label">פעילויות — יתרה</div><div class="bl-value" id="bl-t2">—</div><div class="bl-sub">ש"ש</div></div>
+    <div class="bl-item"><div class="bl-label">סל חנ"מ — יתרה</div><div class="bl-value" id="bl-t3">—</div><div class="bl-sub">ש"ש</div></div>
+  </div>
+  <div style="margin-top:14px;text-align:center;font-size:13px;opacity:.75">* 44 ש"ש חינוך מיוחד (14 לרדן+אדיר+תלמידים + 30 קוסקס+בנימין+רובבשי+שאזו) — הועברו מתקציב תפעול לסל חנ"מ</div>
+  <div style="margin-top:20px;text-align:center">
+    <button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-left:8px" onclick="exportExcel()">ייצוא Excel</button>
+    <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="if(confirm('לאפס את כל הנתונים לברירת מחדל?')){localStorage.removeItem('budgetData');location.reload()}">איפוס נתונים</button>
+  </div>
+</div>
+
+<p style="text-align:center;color:var(--light);font-size:11px;margin-top:16px">מערכת תקציבית — אורט בית הערבה | נוצר ע"י Claude Code | מרץ 2026</p>
+</div>
+
+<script>
+// ===== DATA MODEL =====
+const DEFAULT_DATA = {
+  // Tab 1: Operational hours — based on אפרת כהן דוח 8.2.26 + גריעה + העברה לחנ"מ
+  operational: {
+    rows: [
+      { type: 'שעות תקן', budget: 624, used: 511, notes: 'דוח משא"ב 8.2.26 — אפרת כהן' },
+      { type: 'גריעת תלמידים', budget: -60, used: 0, notes: '205→185 מאושרים (שלומית 9.2 + אפרת 10.2)' },
+      { type: 'ש"ב אפקטיביות', budget: 10, used: 0, notes: '600 ש"ב = 10 ש"ש' },
+      { type: 'ש"ש תוספתיות', budget: 34, used: 6, notes: '28 ש"ש ביתרה מיועדות לחנ"מ סמל 103' },
+      { type: 'ש"ב תוספתיות', budget: 3, used: 0, notes: '180 ש"ב = 3 ש"ש' },
+      { type: 'התאמת תקציבים', budget: -23, used: 0, notes: 'פער בין חישוב שורות (94) לדוח אפרת 10.2.26 (71 שש). ייתכן עקב ביצועים נוספים או התאמות בתקציבים' },
+      { type: 'העברה לחנ"מ', budget: -30, used: 0, notes: 'קוסקס 12 + בנימין 8 + רובבשי 6 + שאזו 4 (מרץ 2026)' },
+    ],
+    history: [
+      { date: '2025-10-19', action: 'דוח', hours: 0, source: 'שלומית: חלוקת 164 ש"ש תוספתיות — 114 סל 103 שילוב + 50 פעילות תוספתית' },
+      { date: '2025-10-20', action: 'דוח', hours: 0, source: 'רויטל אמיר למשרד: לתת מלוא ש"ש בסיסי (אוגדן), הוצאות מפעילויות נוספות. תקן 520→634, תוספתיות 164→72' },
+      { date: '2025-12-24', action: 'דוח', hours: 0, source: 'אפרת: דוח 30200 מעודכן — תקן 634/ביצוע 522/יתרה 112. תוספתיות 72/ביצוע 0. שילוב 1767: ביצוע 27/יתרה -27' },
+      { date: '2025-12-24', action: 'דוח', hours: 0, source: 'אפרת: "אין לך יתרת שעות להמרה" — בוצעו עדכוני תקציב לבתי ספר תעשייתיים' },
+      { date: '2025-12-30', action: 'דוח', hours: 0, source: 'ענת דובר: מאשרת המרת 83 שעות הוראה לתרגום כספי — החזר שעות תוספתיות שנלקחו בגין שכירות (סיכום מול תימורה)' },
+      { date: '2026-01-28', action: 'דוח', hours: 0, source: 'רויטל אמיר: מאשרת המרה חריגה 80 ש"ש תקן לתרגום כספי — שעות תוספתיות שנבלעו בשכירות ~960K ש"ח/שנה' },
+      { date: '2026-02-08', action: 'דוח', hours: 0, source: 'אפרת כהן — דוח משא"ב: תקן 624, ביצוע 511, יתרה 113. תוספתיות 37 (ביצוע 6). כבר הומרו 99 שש פעילויות + 80 שש חנ"מ' },
+      { date: '2026-02-09', action: 'גריעה', hours: -60, source: 'שלומית: התקציב נבנה לפי 205 תלמידים, בפועל 185 מאושרים. גריעת 60 שש. יתרה במשא"ב 70 שש בלבד' },
+      { date: '2026-02-10', action: 'גריעה', hours: 0, source: 'אפרת: נגרעו 60 שש במשא"ב. יתרה כוללת (כולל תוספתיות משה"ע וחנ"מ) = 71 שש. זהו התקציב עד סוף השנה' },
+      { date: '2026-02-26', action: 'דוח', hours: 0, source: 'מייטל ביקשה 60 שש המרה → אפרת: "לא ניתן לפרוט את כולו בשלב זה". ענת — נא בדיקה ואישור לפריטה בשלבים' },
+      { date: '2026-03-01', action: 'העברה', hours: -30, source: 'העברת 30 ש"ש מתקן לחנ"מ: קוסקס 12, בנימין 8, רובבשי 6, שאזו 4. יתרה ירדה מ-71 ל-~41' },
+    ]
+  },
+
+  // Tab 2: Conversions — "בוצע" = אושר ובוצע ע"י תקציבים | "אושר" = אושר אך לא בוצע עדיין
+  conversions: [
+    { date: '2025-10-21', hours: 52, amount: 306700, purpose: 'תוספתיות — העשרה מקצועית, ציוד מגמות, טיולים, שיווק, סדנאות, כיבוד', from: 'תוספתיות 1750 → סעיפים שונים', status: 'בוצע', email: 'RE: המרת שעות - אורט בית הערבה 1860' },
+    { date: '2025-10-22', hours: 55, amount: 330000, purpose: 'סלי שילוב — שכר מטפלים מינהל (אדלר, חרירי, אסרף, דרעי, טננבאום, גולן)', from: 'סל 103 → 53313/1750', status: 'בוצע', email: 'RE: שכר מטפלים -סלי שילוב' },
+    { date: '2025-10-22', hours: 20, amount: 120000, purpose: 'סלי שילוב — חשבוניות מטפלים (קליין מאי, מגדלור, אלון רז)', from: 'סל 103 → 51120/1750', status: 'בוצע', email: 'RE: שכר מטפלים -סלי שילוב' },
+    { date: '2025-10-23', hours: 0, amount: 30787, purpose: 'העברת כספי רשויות לסעיף גמישות', from: '43102 → 61101', status: 'בוצע', email: 'RE: תקציבים- ביה"ס אורט בית הערבה' },
+    { date: '2025-10-29', hours: 14, amount: 84655, purpose: 'סלי שילוב — לרדן 3 + אדיר 8 + תלמידים 3 + ש"ב (295+360)', from: 'תוספתיות 1750 → 53313/1750 (סל 103)', status: 'בוצע', email: 'RE: שכר מטפלים -סלי שילוב' },
+    { date: '2026-01-19', hours: 33, amount: 198000, purpose: 'תוספתיות — פרויקטים חינוכיים, הזנה ותרבות, גמישות (אישור מפקחת)', from: 'תוספתיות 1750 → 61122+61140+61101', status: 'בוצע', email: 'RE: תכנון תקציבי 33 ש"ש ינואר תשפו' },
+    { date: '2026-02-08', hours: 5, amount: 30000, purpose: 'הגדלת משרה לינוי בנג\'י — רכזת חינוך תעסוקה ל-100%', from: '1750 → 53313/1750 (סל 103)', status: 'בוצע', email: 'RE: בנג\'י לינוי - הגדלת משרה' },
+    { date: '2026-02-12', hours: 0, amount: 14235, purpose: 'העברת כספי תורמים (12,164) + הכנסות גורמי חוץ (2,071) לגמישות', from: '43206+43213 → 61101', status: 'בוצע', email: 'RE: העברת תקציב' },
+  ],
+  availableHours: 216, // אפרת 8.2.26: הומרו 179 (99 פעילויות + 80 חנ"מ) + 37 ביתרה = 216
+
+  // Tab 3: Special education basket
+  specEd: [
+    { type: 'הקצאה', hours: 114, workers: '—', source: 'סל 103 שילוב', notes: 'קוד 1750' },
+    { type: 'הקצאה', hours: 50, workers: '—', source: 'תוספתיות', notes: 'פעילות תוספתית' },
+    { type: 'הקצאה', hours: 45, workers: '—', source: 'חנ"מ', notes: 'שעות חינוך מיוחד' },
+    { type: 'העברה', hours: 30, workers: 'קוסקס 12, בנימין 8, רובבשי 6, שאזו 4', source: 'תקן → חנ"מ', notes: 'טיוטה פבר\' 2026' },
+    { type: 'ניצול', hours: 55, workers: 'אדלר, חרירי, אסרף, דרעי, טננבאום, גולן', source: 'סל 103', notes: 'מינהל + אפקטיביים' },
+    { type: 'ניצול', hours: 20, workers: 'קליין מאי, מגדלור, אלון רז', source: 'סל 103', notes: 'חשבוניות / פרויקטים 51120' },
+    { type: 'ניצול', hours: 27, workers: 'שמעון כהן', source: 'סל 103', notes: '135% משרה — הוראה פרטנית' },
+    { type: 'ניצול', hours: 12, workers: '—', source: 'שכר הוראה', notes: '' },
+  ]
+};
+
+// ===== STATE =====
+let data;
+function loadData() {
+  const saved = localStorage.getItem('budgetData');
+  data = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+function saveData() {
+  localStorage.setItem('budgetData', JSON.stringify(data));
+  document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('he-IL') + ' ' + new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ===== TAB SWITCHING =====
+function switchTab(n) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab'+n).classList.add('active');
+  document.querySelectorAll('.tab-btn')[n-1].classList.add('active');
+}
+
+// ===== RENDER =====
+function render() {
+  renderTab1();
+  renderTab2();
+  renderTab3();
+  renderSummary();
+}
+
+function renderTab1() {
+  const tb = document.getElementById('tab1-table');
+
+  let totalBudget = 0, totalUsed = 0;
+  tb.innerHTML = data.operational.rows.map(r => {
+    totalBudget += r.budget; totalUsed += r.used;
+    const remain = r.budget - r.used;
+    const isNeg = r.budget < 0;
+    const rowStyle = isNeg ? 'background:var(--red-bg)' : '';
+    return `<tr style="${rowStyle}"><td><strong>${r.type}</strong></td><td>${r.budget}</td><td>${r.used}</td><td style="color:${remain>=0?'var(--green)':'var(--red)'}">${remain}</td><td style="font-size:12px;color:var(--muted)">${r.notes}</td></tr>`;
+  }).join('');
+
+  const totalRemain = totalBudget - totalUsed;
+
+  // Total row
+  tb.innerHTML += `<tr style="background:#EDF2F7;font-weight:700"><td>סה"כ בפועל</td><td>${totalBudget}</td><td>${totalUsed}</td><td style="color:${totalRemain>=0?'var(--green)':'var(--red)'}">${totalRemain}</td><td style="font-size:11px;color:var(--muted)">אפרת 10.2.26: יתרה כוללת 71 שש</td></tr>`;
+
+  // Progress bar
+  const pct = Math.min(100, Math.round(totalUsed / totalBudget * 100));
+  document.getElementById('tab1-progress').style.width = pct + '%';
+  document.getElementById('tab1-progress').textContent = pct + '% ניצול';
+  document.getElementById('tab1-progress-text').textContent = `${totalUsed} מתוך ${totalBudget} ש"ש — יתרה ${totalRemain} ש"ש`;
+
+  // History
+  const hb = document.getElementById('tab1-history');
+  hb.innerHTML = data.operational.history.map((h,i) => {
+    const badgeClass = h.action==='גריעה'?'badge-red':h.action==='דוח'?'badge-blue':'badge-green';
+    return `<tr><td>${formatDate(h.date)}</td><td><span class="badge ${badgeClass}">${h.action}</span></td><td style="color:${h.hours>=0?'var(--green)':'var(--red)'}"><strong>${h.hours!==0?(h.hours>0?'+':'')+h.hours:'—'}</strong></td><td style="font-size:12px">${h.source} <button class="btn btn-danger btn-sm" style="margin-right:8px" onclick="deleteT1(${i})">X</button></td></tr>`;
+  }).join('');
+}
+
+function renderTab2() {
+  const tb = document.getElementById('tab2-table');
+  let execH = 0, execA = 0, pendH = 0, pendA = 0;
+
+  // Sort: בוצע first, then rest
+  const sorted = data.conversions.map((c,i) => ({...c, _i: i}));
+  sorted.sort((a,b) => {
+    if(a.status === 'בוצע' && b.status !== 'בוצע') return -1;
+    if(a.status !== 'בוצע' && b.status === 'בוצע') return 1;
+    return a.date.localeCompare(b.date);
+  });
+
+  let lastWasExecuted = true;
+  tb.innerHTML = sorted.map((c, idx) => {
+    const isExec = c.status === 'בוצע';
+    if(isExec) { execH += c.hours; execA += c.amount; }
+    else { pendH += c.hours; pendA += c.amount; }
+
+    const statusClass = isExec ? 'badge-green' : c.status==='אושר'?'badge-blue' : c.status==='ממתין'||c.status==='בבדיקה'?'badge-yellow':'badge-red';
+    const rowStyle = isExec ? '' : 'opacity:.55;';
+
+    // Separator between executed and pending
+    let separator = '';
+    if(lastWasExecuted && !isExec) {
+      separator = `<tr><td colspan="9" style="background:#EDF2F7;padding:8px 12px;font-weight:700;font-size:13px;color:var(--muted);border-top:2px solid var(--border)">
+        סה"כ בוצע: ${execH} ש"ש | ${execA.toLocaleString()} ש"ח
+      </td></tr>
+      <tr><td colspan="9" style="background:var(--yellow-bg);padding:6px 12px;font-size:12px;font-weight:600;color:var(--yellow-dark)">
+        בקשות / אישורים שטרם בוצעו — לא נספרים בתקציב
+      </td></tr>`;
+      lastWasExecuted = false;
+    }
+
+    return separator + `<tr style="${rowStyle}">
+      <td>${idx+1}</td>
+      <td>${formatDate(c.date)}</td>
+      <td><strong>${c.hours || '—'}</strong></td>
+      <td>${c.amount.toLocaleString()}</td>
+      <td style="font-size:12px;max-width:250px">${c.purpose}</td>
+      <td style="font-size:11px">${c.from}</td>
+      <td><select class="badge ${statusClass}" style="border:none;cursor:pointer;font-family:inherit" onchange="updateStatus(${c._i},this.value)">
+        <option ${c.status==='ממתין'?'selected':''}>ממתין</option>
+        <option ${c.status==='אושר'?'selected':''}>אושר</option>
+        <option ${c.status==='בוצע'?'selected':''}>בוצע</option>
+        <option ${c.status==='בבדיקה'?'selected':''}>בבדיקה</option>
+        <option ${c.status==='נדחה'?'selected':''}>נדחה</option>
+      </select></td>
+      <td style="font-size:11px;color:var(--blue)">${c.email || ''}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteConversion(${c._i})">X</button></td>
+    </tr>`;
+  }).join('');
+
+  // Footer
+  document.getElementById('tab2-footer').innerHTML = `<tr style="background:#EDF2F7;font-weight:700">
+    <td></td><td>סה"כ בוצע</td><td>${execH}</td><td>${execA.toLocaleString()}</td>
+    <td colspan="5" style="font-size:12px;color:var(--green-dark)">רק שורות "בוצע" נספרות בתקציב | ממתינות: ${pendH} ש"ש (${pendA.toLocaleString()} ש"ח)</td>
+  </tr>`;
+
+  document.getElementById('tab2-summary').textContent = `בוצע: ${execH} ש"ש (${execA.toLocaleString()} ש"ח) | ממתין: ${pendH} ש"ש`;
+}
+
+function renderTab3() {
+  const tb = document.getElementById('tab3-table');
+  let totalAlloc = 0, totalUsed = 0;
+  tb.innerHTML = data.specEd.map((s,i) => {
+    if(s.type === 'הקצאה' || s.type === 'העברה') totalAlloc += s.hours;
+    if(s.type === 'ניצול') totalUsed += s.hours;
+    const color = s.type==='ניצול'?'var(--orange)':s.type==='העברה'?'var(--teal)':'var(--green)';
+    return `<tr>
+      <td><span class="badge" style="background:${s.type==='ניצול'?'var(--orange-bg)':s.type==='העברה'?'var(--teal-bg)':'var(--green-bg)'}; color:${s.type==='ניצול'?'var(--orange)':'var(--green-dark)'}">${s.type}</span></td>
+      <td style="color:${color}"><strong>${s.type==='ניצול'?'-':''}${s.hours}</strong></td>
+      <td style="font-size:12px">${s.workers}</td>
+      <td style="font-size:12px">${s.source}</td>
+      <td style="font-size:12px">${s.notes}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteSpecEd(${i})">X</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('t3-total').textContent = totalAlloc + ' ש"ש';
+  document.getElementById('t3-used').textContent = totalUsed + ' ש"ש';
+  document.getElementById('t3-remain').textContent = (totalAlloc - totalUsed) + ' ש"ש';
+}
+
+function renderSummary() {
+  // Tab 1 summary — budget rows already include the -60 גריעה
+  let t1Budget = 0, t1Used = 0;
+  data.operational.rows.forEach(r => { t1Budget += r.budget; t1Used += r.used; });
+  const t1Balance = t1Budget - t1Used;
+  document.getElementById('sum1-balance').textContent = t1Balance + ' ש"ש';
+  document.getElementById('sum1-detail').textContent = `תקציב ${t1Budget} (624-60 גריעה+47 תוספתיות) | ביצוע ${t1Used}`;
+
+  // Tab 2 summary — in hours, only count "בוצע" (actually executed)
+  let t2TotalH = 0, t2ExecH = 0;
+  data.conversions.forEach(c => {
+    t2TotalH += c.hours;
+    if(c.status==='בוצע') t2ExecH += c.hours;
+  });
+  const t2BalanceH = data.availableHours - t2ExecH;
+  document.getElementById('sum2-balance').textContent = t2BalanceH + ' ש"ש';
+  document.getElementById('sum2-detail').textContent = `מתוך ${data.availableHours} ש"ש | בוצע ${t2ExecH} | ממתין ${t2TotalH - t2ExecH}`;
+
+  // Tab 3 summary
+  let t3Alloc = 0, t3Used = 0;
+  data.specEd.forEach(s => {
+    if(s.type==='הקצאה'||s.type==='העברה') t3Alloc += s.hours;
+    if(s.type==='ניצול') t3Used += s.hours;
+  });
+  document.getElementById('sum3-balance').textContent = (t3Alloc - t3Used) + ' ש"ש';
+  document.getElementById('sum3-detail').textContent = `סל ${t3Alloc} | ניצול ${t3Used}`;
+
+  // Bottom line
+  document.getElementById('bl-t1').textContent = t1Balance;
+  document.getElementById('bl-t2').textContent = t2BalanceH;
+  document.getElementById('bl-t3').textContent = t3Alloc - t3Used;
+}
+
+// ===== ACTIONS =====
+function addConversion() {
+  const d = document.getElementById('t2-date').value;
+  const h = parseFloat(document.getElementById('t2-hours').value);
+  const a = parseFloat(document.getElementById('t2-amount').value) || h * 6000;
+  const p = document.getElementById('t2-purpose').value;
+  const f = document.getElementById('t2-from').value;
+  const s = document.getElementById('t2-status').value;
+  if(!d || !p) return alert('נא למלא תאריך וייעוד');
+  const e = document.getElementById('t2-email').value;
+  data.conversions.push({ date: d, hours: h, amount: a, purpose: p, from: f, status: s, email: e });
+  data.conversions.sort((a,b) => a.date.localeCompare(b.date));
+  saveData(); render();
+  ['t2-date','t2-hours','t2-amount','t2-purpose','t2-from','t2-email'].forEach(id => document.getElementById(id).value = '');
+}
+
+function updateStatus(i, val) {
+  data.conversions[i].status = val;
+  saveData(); render();
+}
+
+function deleteConversion(i) {
+  if(!confirm('למחוק את ההמרה?')) return;
+  data.conversions.splice(i, 1);
+  saveData(); render();
+}
+
+function addT1Change() {
+  const d = document.getElementById('t1-date').value;
+  const a = document.getElementById('t1-action').value;
+  const h = parseFloat(document.getElementById('t1-hours').value);
+  const s = document.getElementById('t1-source').value;
+  if(!d || !h) return alert('נא למלא תאריך ושעות');
+  const hours = a === 'גריעה' ? -Math.abs(h) : Math.abs(h);
+  data.operational.history.push({ date: d, action: a, hours: hours, source: s });
+  data.operational.history.sort((a,b) => a.date.localeCompare(b.date));
+  saveData(); render();
+  ['t1-date','t1-hours','t1-source'].forEach(id => document.getElementById(id).value = '');
+}
+
+function deleteT1(i) {
+  if(!confirm('למחוק?')) return;
+  data.operational.history.splice(i, 1);
+  saveData(); render();
+}
+
+function addSpecEd() {
+  const t = document.getElementById('t3-type').value;
+  const h = parseFloat(document.getElementById('t3-hours').value);
+  const w = document.getElementById('t3-workers').value || '—';
+  const s = document.getElementById('t3-source').value;
+  const n = document.getElementById('t3-notes').value;
+  if(!h) return alert('נא למלא שעות');
+  data.specEd.push({ type: t, hours: h, workers: w, source: s, notes: n });
+  saveData(); render();
+  ['t3-hours','t3-workers','t3-source','t3-notes'].forEach(id => document.getElementById(id).value = '');
+}
+
+function deleteSpecEd(i) {
+  if(!confirm('למחוק?')) return;
+  data.specEd.splice(i, 1);
+  saveData(); render();
+}
+
+// ===== SEND EMAIL =====
+function sendConversionEmail() {
+  const hours = document.getElementById('mail-hours').value;
+  const fromSection = document.getElementById('mail-from').value;
+  const toSection = document.getElementById('mail-to').value;
+  const purpose = document.getElementById('mail-purpose').value;
+
+  if(!hours || !fromSection || !toSection || !purpose) {
+    alert('נא למלא את כל השדות');
+    return;
+  }
+
+  const to = 'shlomito@admin.ort.org.il';
+  const cc = 'EfratC2@admin.ort.org.il,AnatD3@admin.ort.org.il';
+  const subject = 'המרת שעות אורט בית הערבה 1860';
+  const body = `שלום רב,
+
+מהות הבקשה:
+אני רוצה להמיר ${hours} שעות מסעיף ${fromSection} לסעיף ${toSection} עבור ${purpose}.
+
+תודה,
+מיטל פלג
+מנהלת אורט בית הערבה`;
+
+  const gmailUrl = 'https://mail.google.com/mail/?view=cm'
+    + '&to=' + encodeURIComponent(to)
+    + '&cc=' + encodeURIComponent(cc)
+    + '&su=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+
+  window.open(gmailUrl, '_blank');
+
+  // רישום אוטומטי במערכת בסטטוס "ממתין"
+  const today = new Date().toISOString().slice(0, 10);
+  data.conversions.push({
+    date: today,
+    hours: parseFloat(hours),
+    amount: parseFloat(hours) * 6000,
+    purpose: purpose,
+    from: fromSection + ' → ' + toSection,
+    status: 'ממתין',
+    email: 'המרת שעות אורט בית הערבה 1860'
+  });
+  data.conversions.sort((a,b) => a.date.localeCompare(b.date));
+  saveData();
+  render();
+
+  // ניקוי שדות
+  ['mail-hours','mail-from','mail-to','mail-purpose'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ===== EXPORT EXCEL =====
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Operational
+  const ws1Data = [['סוג','תקציב','ביצוע','יתרה','הערות']];
+  data.operational.rows.forEach(r => ws1Data.push([r.type, r.budget, r.used, r.budget-r.used, r.notes]));
+  ws1Data.push([]);
+  ws1Data.push(['תאריך','פעולה','שעות','מקור']);
+  data.operational.history.forEach(h => ws1Data.push([formatDate(h.date), h.action, h.hours, h.source]));
+  const ws1 = XLSX.utils.aoa_to_sheet(ws1Data);
+  ws1['!cols'] = [{wch:18},{wch:10},{wch:10},{wch:10},{wch:40}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'שעות תפעול');
+
+  // Sheet 2: Conversions
+  const ws2Data = [['#','תאריך','ש"ש','ש"ח','ייעוד','מסעיף','סטטוס']];
+  data.conversions.forEach((c,i) => ws2Data.push([i+1, formatDate(c.date), c.hours, c.amount, c.purpose, c.from, c.status]));
+  let totalH = 0, totalA = 0;
+  data.conversions.forEach(c => { totalH += c.hours; totalA += c.amount; });
+  ws2Data.push(['','סה"כ', totalH, totalA, '', '', '']);
+  const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
+  ws2['!cols'] = [{wch:4},{wch:12},{wch:8},{wch:12},{wch:55},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'פעילויות נוספות');
+
+  // Sheet 3: Special Ed
+  const ws3Data = [['סוג','שעות','עובדים','מקור','הערות']];
+  data.specEd.forEach(s => ws3Data.push([s.type, (s.type==='ניצול'?-1:1)*s.hours, s.workers, s.source, s.notes]));
+  const ws3 = XLSX.utils.aoa_to_sheet(ws3Data);
+  ws3['!cols'] = [{wch:12},{wch:8},{wch:40},{wch:16},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'סל חינוך מיוחד');
+
+  XLSX.writeFile(wb, 'תקציב_אורט_בית_הערבה_תשפו.xlsx');
+}
+
+// ===== UTILS =====
+function formatDate(d) {
+  if(!d) return '';
+  const parts = d.split('-');
+  if(parts.length === 3) return parts[2]+'.'+parts[1]+'.'+parts[0].slice(2);
+  return d;
+}
+
+// ===== INIT =====
+loadData();
+saveData();
+render();
+</script>
+</body>
+</html>
