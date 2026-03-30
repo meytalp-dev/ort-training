@@ -1147,7 +1147,36 @@ showSlide(0);
 
 // ===== CHATBOT =====
 (function() {
-  const GEMINI_KEY = 'AIzaSyBrKmbFKUcLK5rzEfmI1EEC1syNrqoqsu4';
+  // --- Gemini Chatbot Proxy ---
+  // The API key is stored ONLY in the Google Apps Script, never in client code.
+  // To set up the proxy:
+  //   1. Go to https://script.google.com and create a new project
+  //   2. Paste the following code in Code.gs:
+  //
+  //      const GEMINI_KEY = 'YOUR_GEMINI_API_KEY_HERE';
+  //      const SYSTEM_PROMPT = '...'; // paste the system prompt below
+  //
+  //      function doPost(e) {
+  //        const body = JSON.parse(e.postData.contents);
+  //        const res = UrlFetchApp.fetch(
+  //          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY,
+  //          { method: 'post', contentType: 'application/json',
+  //            payload: JSON.stringify({
+  //              system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+  //              contents: body.contents,
+  //              generationConfig: { temperature: 0.3, maxOutputTokens: 300 }
+  //            })
+  //          });
+  //        return ContentService.createTextOutput(res.getContentText())
+  //          .setMimeType(ContentService.MimeType.JSON);
+  //      }
+  //
+  //   3. Deploy > New deployment > Web app > Anyone can access > Deploy
+  //   4. Copy the URL and paste it below as PROXY_URL
+  //
+  const PROXY_URL = 'https://script.google.com/macros/s/GEMINI_PROXY_ID/exec';
+  // TODO: Meytal — replace GEMINI_PROXY_ID with the real deployment ID from Apps Script
+
   const SYSTEM_PROMPT = `אתה עוזר התקנה של Claude Code. התפקיד שלך הוא לעזור למשתמשים שנתקעים בהתקנה.
 
 ענה רק על שאלות שקשורות להתקנה של:
@@ -1242,14 +1271,10 @@ showSlide(0);
     chatHistory.push({ role: 'user', parts: [{ text: msg }] });
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+      const res = await fetch(PROXY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: chatHistory,
-          generationConfig: { temperature: 0.3, maxOutputTokens: 300 }
-        })
+        body: JSON.stringify({ contents: chatHistory })
       });
       const data = await res.json();
       const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'סליחה, לא הצלחתי לענות. נסו שוב או פנו למדריכה.';

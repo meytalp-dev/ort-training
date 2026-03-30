@@ -19,7 +19,7 @@
 var CONFIG = {
   SPREADSHEET_ID: '1LXy0Eh7eNMXPb4nuGf99U5jYYQZ4HHpSBhwkRO00VK8',
   ADMIN_EMAIL: 'meytalp@bethaarava.ort.org.il',
-  SITE_URL: 'https://meytalp-dev.github.io/ort-presentation-builder',
+  SITE_URL: 'https://meytalp-dev.github.io/ort-training',
   BRAND_NAME: 'מיטל פלג — הדרכות AI למורים',
   WHATSAPP_LINK: 'https://wa.me/972536256653'
 };
@@ -417,6 +417,8 @@ function doPost(e) {
       try { notifyNewLead(data); } catch(mailErr) { Logger.log('Notify email failed: ' + mailErr); }
     } else if (action === 'unsubscribe') {
       unsubscribeLead(data.email);
+    } else if (action === 'aiDigest') {
+      sendAIDigest(data);
     }
 
     return ContentService
@@ -566,7 +568,7 @@ function buildEmailTemplate(opts) {
     '<html dir="rtl" lang="he">',
     '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="x-apple-disable-message-reformatting">',
     '<title>' + (opts.title || '') + '</title></head>',
-    '<body style="margin:0;padding:0;background:#F3F4F6;font-family:Arial,Helvetica,sans-serif">',
+    '<body style="margin:0;padding:0;background:#F3F4F6;font-family:Arial,Helvetica,sans-serif;direction:rtl;text-align:right">',
     '<!-- Preheader -->',
     '<div style="display:none;max-height:0;overflow:hidden">' + (opts.preheader || '') + '</div>',
     '<div style="max-width:580px;margin:20px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1)">',
@@ -575,7 +577,7 @@ function buildEmailTemplate(opts) {
     '<h1 style="margin:0;color:#fff;font-size:22px;line-height:1.4">' + (opts.title || '') + '</h1>',
     '</div>',
     // Body
-    '<div style="padding:28px;line-height:1.7;color:#374151;font-size:15px">',
+    '<div style="padding:28px;line-height:1.7;color:#374151;font-size:15px;text-align:right;direction:rtl">',
     opts.body || '',
     '</div>',
     // CTA
@@ -647,6 +649,53 @@ function sendNewsletterReminder() {
 }
 
 // ============================================
+// 8. AI Digest — מייל סיכום יומי
+// ============================================
+
+/**
+ * שליחת מייל AI Digest — נקראת מסקריפט Python
+ * מקבלת סיכום + קישורים ושולחת מייל מעוצב
+ */
+function sendAIDigest(data) {
+  var today = data.date || new Date().toLocaleDateString('he-IL');
+
+  // בניית תוכן מהסיכום
+  var summaryHtml = (data.summary || '').replace(/\n/g, '<br>');
+
+  // קישורים לארטיפקטים
+  var linksHtml = '';
+
+  if (data.notebook_url) {
+    linksHtml += '<a href="' + data.notebook_url + '" style="display:inline-block;background:#7C3AED;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;margin:4px;font-size:14px">NotebookLM</a> ';
+  }
+  if (data.infographic_url) {
+    linksHtml += '<a href="' + data.infographic_url + '" style="display:inline-block;background:#8B5CF6;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;margin:4px;font-size:14px">Infographic</a> ';
+  }
+  if (data.slides_url) {
+    linksHtml += '<a href="' + data.slides_url + '" style="display:inline-block;background:#6D28D9;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;margin:4px;font-size:14px">Slides</a> ';
+  }
+
+  var html = buildEmailTemplate({
+    preheader: 'AI Digest — ' + today,
+    title: 'AI Digest — ' + today,
+    body: '<div style="line-height:1.8;font-size:15px">' + summaryHtml + '</div>' +
+      (linksHtml ? '<div style="margin-top:24px;text-align:center">' + linksHtml + '</div>' : ''),
+    ctaText: '',
+    ctaUrl: '',
+    footer: 'AI Digest — נוצר אוטומטית ע"י NotebookLM + Claude Code'
+  });
+
+  MailApp.sendEmail({
+    to: CONFIG.ADMIN_EMAIL,
+    subject: 'AI Digest — ' + today,
+    htmlBody: html,
+    name: 'AI Digest'
+  });
+
+  return { result: 'success', message: 'AI Digest sent' };
+}
+
+// ============================================
 // הגדרת טריגרים — להריץ פעם אחת!
 // ============================================
 
@@ -656,11 +705,12 @@ function setupAllTriggers() {
     ScriptApp.deleteTrigger(t);
   });
 
-  // תזכורת פרסום יומית — 08:00 (ראשון-חמישי)
+  // תזכורת פרסום יומית — 05:30 (ראשון-חמישי)
   ScriptApp.newTrigger('sendPublishingReminder')
     .timeBased()
     .everyDays(1)
-    .atHour(8)
+    .atHour(5)
+    .nearMinute(30)
     .create();
 
   // מייל מעקב — 10:00 כל יום
@@ -692,7 +742,7 @@ function setupAllTriggers() {
     .create();
 
   Logger.log('כל הטריגרים הוגדרו בהצלחה!');
-  Logger.log('- תזכורת פרסום: כל יום 08:00');
+  Logger.log('- תזכורת פרסום: כל יום 05:30');
   Logger.log('- מעקב לידים: כל יום 10:00');
   Logger.log('- ניוזלטר: ראשון 09:00');
   Logger.log('- דוח שבועי: שישי 12:00');
