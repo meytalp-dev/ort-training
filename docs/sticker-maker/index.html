@@ -725,6 +725,16 @@ textarea.form-input { resize: vertical; min-height: 60px; }
               <span class="slider-value" id="imageSizeVal">200</span>
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label">סיבוב תמונה</label>
+            <div class="slider-row">
+              <input type="range" min="-180" max="180" value="0" id="imageRotation" oninput="updateSliderVal(this); renderCanvas()">
+              <span class="slider-value" id="imageRotationVal">0</span>°
+            </div>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-bottom: 8px;">
+            גררו את התמונה על הקנבס להזזה
+          </div>
           <button class="btn btn-danger" onclick="removeImage()" style="width:100%; justify-content: center; margin-top: 8px;">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
             הסר תמונה
@@ -750,6 +760,15 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         </div>
         <div class="elements-grid" id="elementsGrid">
           <!-- Filled dynamically -->
+        </div>
+        <div id="elemRotationControl" style="display:none; margin-top: 10px;">
+          <div class="form-group">
+            <label class="form-label">סיבוב אלמנט נבחר</label>
+            <div class="slider-row">
+              <input type="range" min="-180" max="180" value="0" id="elemRotation" oninput="rotateSelectedElement(this.value)">
+              <span class="slider-value" id="elemRotationVal">0</span>°
+            </div>
+          </div>
         </div>
         <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
           לחצו על אלמנט כדי להוסיף לקנבס. גררו למיקום הרצוי.
@@ -1109,6 +1128,7 @@ function addElement(svgKey) {
     y: 180 + Math.random() * 100,
     size: 64,
     color,
+    rotation: 0,
   };
   state.elements.push(elem);
   createElementDOM(elem);
@@ -1180,11 +1200,36 @@ function selectElement(id) {
   document.querySelectorAll('.canvas-element').forEach(el => {
     el.classList.toggle('selected', el.id === id);
   });
+  // Show rotation control for selected element
+  const ctrl = document.getElementById('elemRotationControl');
+  const slider = document.getElementById('elemRotation');
+  const valSpan = document.getElementById('elemRotationVal');
+  const elem = state.elements.find(e => e.id === id);
+  if (elem) {
+    ctrl.style.display = 'block';
+    slider.value = elem.rotation || 0;
+    valSpan.textContent = elem.rotation || 0;
+  }
 }
 
 function deselectAll() {
   state.selectedElement = null;
   document.querySelectorAll('.canvas-element').forEach(el => el.classList.remove('selected'));
+  document.getElementById('elemRotationControl').style.display = 'none';
+}
+
+function rotateSelectedElement(val) {
+  document.getElementById('elemRotationVal').textContent = val;
+  const elem = state.elements.find(e => e.id === state.selectedElement);
+  if (elem) {
+    elem.rotation = parseInt(val);
+    // Update DOM rotation
+    const container = getCanvasContainer();
+    const scale = container.clientWidth / CANVAS_SIZE;
+    const div = document.getElementById(elem.id);
+    if (div) div.style.transform = `rotate(${val}deg)`;
+    renderCanvas();
+  }
 }
 
 function removeElement(id) {
@@ -1427,13 +1472,22 @@ function drawBackground(ctx) {
 function drawImage(ctx) {
   const img = state.uploadedImage;
   const size = parseInt(document.getElementById('imageSize').value);
+  const rotation = parseInt(document.getElementById('imageRotation').value) * Math.PI / 180;
   const x = state.imagePos.x;
   const y = state.imagePos.y;
+  const cx = x + size / 2;
+  const cy = y + size / 2;
 
   ctx.save();
+
+  // Apply rotation around center
+  ctx.translate(cx, cy);
+  ctx.rotate(rotation);
+  ctx.translate(-cx, -cy);
+
   if (state.cropMode === 'circle') {
     ctx.beginPath();
-    ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+    ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
     ctx.closePath();
     ctx.clip();
   }
@@ -1456,12 +1510,17 @@ function drawElements(ctx) {
   // Render each SVG element to canvas using an offscreen approach
   state.elements.forEach(elem => {
     const svgStr = SVG_ELEMENTS[elem.svgKey](elem.color);
-    // Create temporary image from SVG
     const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
     const img = new Image();
     img.onload = () => {
-      ctx.drawImage(img, elem.x, elem.y, elem.size, elem.size);
+      ctx.save();
+      const cx = elem.x + elem.size / 2;
+      const cy = elem.y + elem.size / 2;
+      ctx.translate(cx, cy);
+      ctx.rotate((elem.rotation || 0) * Math.PI / 180);
+      ctx.drawImage(img, -elem.size / 2, -elem.size / 2, elem.size, elem.size);
+      ctx.restore();
       URL.revokeObjectURL(url);
     };
     img.src = url;
