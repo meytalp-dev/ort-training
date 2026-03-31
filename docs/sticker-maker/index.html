@@ -673,6 +673,13 @@ textarea.form-input { resize: vertical; min-height: 60px; }
           </label>
         </div>
         <div class="form-group">
+          <label class="form-label">סיבוב טקסט</label>
+          <div class="slider-row">
+            <input type="range" min="-45" max="45" value="0" id="textRotation" oninput="document.getElementById('textRotationVal').textContent=this.value; renderCanvas()">
+            <span class="slider-value" id="textRotationVal">0</span>°
+          </div>
+        </div>
+        <div class="form-group">
           <label class="form-label">מיקום טקסט</label>
           <div class="pos-grid">
             <button class="pos-btn" onclick="setTextPos('top-right')">למעלה ימין</button>
@@ -717,6 +724,13 @@ textarea.form-input { resize: vertical; min-height: 60px; }
               <span class="slider-value" id="imageSizeVal">200</span>
             </div>
           </div>
+          <div class="form-group">
+            <label class="form-label">סיבוב תמונה</label>
+            <div class="slider-row">
+              <input type="range" min="-180" max="180" value="0" id="imageRotation" oninput="document.getElementById('imageRotationVal').textContent=this.value; renderCanvas()">
+              <span class="slider-value" id="imageRotationVal">0</span>°
+            </div>
+          </div>
           <div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; margin-bottom: 8px;">
             גררו את התמונה על הקנבס להזזה
           </div>
@@ -745,6 +759,15 @@ textarea.form-input { resize: vertical; min-height: 60px; }
         </div>
         <div class="elements-grid" id="elementsGrid">
           <!-- Filled dynamically -->
+        </div>
+        <div id="elemRotationControl" style="display:none; margin-top: 10px;">
+          <div class="form-group">
+            <label class="form-label">סיבוב אלמנט נבחר</label>
+            <div class="slider-row">
+              <input type="range" min="-180" max="180" value="0" id="elemRotation" oninput="rotateSelectedElement(parseInt(this.value))">
+              <span class="slider-value" id="elemRotationVal">0</span>°
+            </div>
+          </div>
         </div>
         <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary); text-align: center;">
           לחצו על אלמנט כדי להוסיף לקנבס. גררו למיקום הרצוי.
@@ -1436,10 +1459,19 @@ function drawBackground(ctx) {
 function drawImage(ctx) {
   const img = state.uploadedImage;
   const size = parseInt(document.getElementById('imageSize').value);
+  const rotEl = document.getElementById('imageRotation');
+  const rotation = rotEl ? parseInt(rotEl.value) * Math.PI / 180 : 0;
   const x = state.imagePos.x;
   const y = state.imagePos.y;
+  const centerX = x + size / 2;
+  const centerY = y + size / 2;
 
   ctx.save();
+  if (rotation !== 0) {
+    ctx.translate(centerX, centerY);
+    ctx.rotate(rotation);
+    ctx.translate(-centerX, -centerY);
+  }
   if (state.cropMode === 'circle') {
     ctx.beginPath();
     ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
@@ -1518,6 +1550,16 @@ function drawText(ctx) {
 
   [x, y] = posMap[state.textPos] || posMap['mid-center'];
 
+  // Apply text rotation
+  const textRotEl = document.getElementById('textRotation');
+  const textRotation = textRotEl ? parseInt(textRotEl.value) * Math.PI / 180 : 0;
+  if (textRotation !== 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(textRotation);
+    ctx.translate(-x, -y);
+  }
+
   // Word wrap
   const lines = wrapText(ctx, text, CANVAS_SIZE - padding * 2);
   const totalHeight = lines.length * fontSize * 1.3;
@@ -1555,6 +1597,10 @@ function drawText(ctx) {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
   });
+
+  if (textRotation !== 0) {
+    ctx.restore();
+  }
 }
 
 function wrapText(ctx, text, maxWidth) {
