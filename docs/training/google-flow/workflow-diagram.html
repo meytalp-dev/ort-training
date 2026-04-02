@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תרשים זרימה — העבודה שלנו ב-Google Flow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: #f8f9fa;
+            color: #1a1a2e;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+            padding: 40px 20px;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .header h1 {
+            font-size: 2.4rem;
+            font-weight: 900;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        .flow-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 60px;
+            position: relative;
+        }
+
+        /* The vertical line connecting steps */
+        .flow-container::before {
+            content: '';
+            position: absolute;
+            right: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #4285f4, #34a853, #fbbc05, #ea4335);
+            border-radius: 2px;
+            transform: translateX(50%);
+        }
+
+        .step {
+            position: relative;
+            margin-bottom: 40px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .step:nth-child(1) { animation-delay: 0.1s; }
+        .step:nth-child(2) { animation-delay: 0.3s; }
+        .step:nth-child(3) { animation-delay: 0.5s; }
+        .step:nth-child(4) { animation-delay: 0.7s; }
+        .step:nth-child(5) { animation-delay: 0.9s; }
+        .step:nth-child(6) { animation-delay: 1.1s; }
+        .step:nth-child(7) { animation-delay: 1.3s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Step number circle */
+        .step-number {
+            position: absolute;
+            right: 50%;
+            transform: translateX(50%);
+            top: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: white;
+            z-index: 2;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .step:nth-child(1) .step-number { background: #4285f4; }
+        .step:nth-child(2) .step-number { background: #34a853; }
+        .step:nth-child(3) .step-number { background: #fbbc05; color: #333; }
+        .step:nth-child(4) .step-number { background: #ea4335; }
+        .step:nth-child(5) .step-number { background: #8e24aa; }
+        .step:nth-child(6) .step-number { background: #00897b; }
+        .step:nth-child(7) .step-number { background: #e65100; }
+
+        .step-card {
+            width: 380px;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .step-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+
+        /* Alternate sides */
+        .step:nth-child(odd) .step-card {
+            margin-right: calc(50% + 45px);
+        }
+
+        .step:nth-child(even) .step-card {
+            margin-left: calc(50% + 45px);
+        }
+
+        .step-media {
+            width: 100%;
+            height: 220px;
+            overflow: hidden;
+            position: relative;
+            background: #f0f0f0;
+        }
+
+        .step-media img,
+        .step-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .media-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white;
+            backdrop-filter: blur(8px);
+        }
+
+        .badge-image { background: rgba(66, 133, 244, 0.85); }
+        .badge-video { background: rgba(234, 67, 53, 0.85); }
+
+        .step-content {
+            padding: 20px;
+        }
+
+        .tool-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .step:nth-child(1) .tool-name { color: #4285f4; }
+        .step:nth-child(2) .tool-name { color: #34a853; }
+        .step:nth-child(3) .tool-name { color: #d4a017; }
+        .step:nth-child(4) .tool-name { color: #ea4335; }
+        .step:nth-child(5) .tool-name { color: #8e24aa; }
+        .step:nth-child(6) .tool-name { color: #00897b; }
+        .step:nth-child(7) .tool-name { color: #e65100; }
+
+        .step-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .step-desc {
+            font-size: 0.95rem;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .step-prompt {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-right: 3px solid #ddd;
+            font-size: 0.85rem;
+            color: #666;
+            direction: ltr;
+            text-align: left;
+            font-family: monospace;
+        }
+
+        .step-prompt.hebrew {
+            direction: rtl;
+            text-align: right;
+            font-family: 'Heebo', sans-serif;
+        }
+
+        .arrow-label {
+            text-align: center;
+            padding: 8px 0;
+            font-size: 0.85rem;
+            color: #888;
+            font-weight: 500;
+        }
+
+        .arrow-label svg {
+            display: block;
+            margin: 0 auto 4px;
+        }
+
+        .summary-section {
+            max-width: 900px;
+            margin: 0 auto 60px;
+            padding: 0 20px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .summary-card h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            text-align: center;
+        }
+
+        .tool-item {
+            padding: 16px 8px;
+            border-radius: 12px;
+            background: #f8f9fa;
+            transition: transform 0.2s;
+        }
+
+        .tool-item:hover {
+            transform: scale(1.05);
+        }
+
+        .tool-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 8px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tool-item-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .tool-item-role {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: #999;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .flow-container::before {
+                right: 30px;
+                transform: none;
+            }
+
+            .step-number {
+                right: 5px;
+                transform: none;
+            }
+
+            .step:nth-child(odd) .step-card,
+            .step:nth-child(even) .step-card {
+                margin-right: 70px;
+                margin-left: 0;
+                width: calc(100% - 80px);
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>פלו העבודה שלנו ב-Google Flow</h1>
+        <p>מתמונה אחת לסרטון שלם — שלב אחרי שלב</p>
+    </div>
+
+    <div class="flow-container">
+
+        <!-- Step 1: Nano Banana -->
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-card">
+                <div class="step-media">
+                    <img src="assets/nano-banana-lightbulb.jpeg" alt="נורה זוהרת — Nano Banana">
+                    <span class="media-badge badge-image">תמונה</span>
+                </div>
+                <div class="step-content">
+                    <div class="tool-name">Nano Banana</div>
+                    <div class="step-title">יצירת תמונה מפרומפט</div>
+                    <div class="step-desc">
+                        התחלנו ביצירת תמונה מאפס — נורה זוהרת שמתפרקת לחלקיקים צבעוניים. כתבנו את הפרומפט בעברית וקיבלנו תוצאה מרשימה.
+                    </div>
+                    <div class="step-prompt hebrew">
+                        "נורה זוהרת מתפרקת לחלקיקים צבעוניים"
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="arrow-label">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+            התמונה עוברת ל...
+        </div>
+
+        <!-- Step 2: Imagen 4 -->
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-card">
+                <div class="step-media">
+                    <img src="assets/imagen-lightbulb-classroom.jpeg" alt="נורה בכיתה — Imagen 4">
+                    <span class="media-badge badge-image">תמונה</span>
+                </div>
+                <div class="step-content">
+                    <div class="tool-name">Imagen 4</div>
+                    <div class="step-title">שינוי רקע עם שמירה על עקביות</div>
+                    <div class="step-desc">
+                        לקחנו את אותה נורה והעברנו אותה לסצנה חדשה — כיתת לימוד. Imagen 4 שומר על הדמות המקורית ומשנה רק את הסביבה.
+                    </div>
+                    <div class="step-prompt">
+                        "What do you want to change?" → classroom setting
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="arrow-label">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+            במקביל, שינוי סגנון...
+        </div>
+
+        <!-- Step 3: Whisk -->
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-card">
+                <div class="step-media">
+                    <img src="assets/whisk-lightbulb-flat.png" alt="נורה flat — Whisk">
+                    <span class="media-badge badge-image">תמונה</span>
+                </div>
+                <div class="step-content">
+                    <div class="tool-name">Whisk</div>
+                    <div class="step-title">שינוי סגנון — מריאליסטי לאיור</div>
+                    <div class="step-desc">
+                        העלינו את התמונה המקורית ל-Whisk והפכנו אותה לאיור flat מינימליסטי. הפרומפט באנגלית עבד הרבה יותר טוב.
+                    </div>
+                    <div class="step-prompt">
+                        "flat vector illustration, minimalist style, light beige background"
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="arrow-label">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+            עכשיו מחיים את התמונות...
+        </div>
+
+        <!-- Step 4: Animate (from original) -->
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-card">
+                <div class="step-media">
+                    <video src="assets/animate-lightbulb.mp4" autoplay muted loop playsinline></video>
+                    <span class="media-badge badge-video">סרטון</span>
+                </div>
+                <div class="step-content">
+                    <div class="tool-name">Animate (Veo)</div>
+                    <div class="step-title">הפיכת התמונה המקורית לסרטון</div>
+                    <div class="step-desc">
+                        בלחיצה אחת על Animate (תפריט 3 נקודות), התמונה הריאליסטית הפכה לסרטון של 8 שניות עם תנועה ואור.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="arrow-label">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+            גם האיור הפך לסרטון...
+        </div>
+
+        <!-- Step 5: Whisk Animate -->
+        <div class="step">
+            <div class="step-number">5</div>
+            <div class="step-card">
+                <div class="step-media">
+                    <video src="assets/whisk-animate-lightbulb.mp4" autoplay muted loop playsinline></video>
+                    <span class="media-badge badge-video">סרטון</span>
+                </div>
+                <div class="step-content">
+                    <div class="tool-name">Whisk Animate</div>
+                    <div class="step-title">הפיכת האיור לסרטון אנימציה</div>
+                    <div class="step-desc">
+                        גם את איור ה-flat הפכנו לסרטון — האנימציה שומרת על הסגנון המינימליסטי ומוסיפה תנועה עדינה.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="arrow-label">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+            חיבור הכל לסיפור...
+        </div>
+
+        <!-- Step 6: Scene Maker -->
+        <div class="step">
+            <div class="step-number">6</div>
+            <div class="step-card">
+                <div class="step-media">
+                    <video src="assets/final-scene-maker.mp4" autoplay muted loop playsinline></video>
+                    <span class="media-badge badge-video">סרטון סופי</span>
+                </div>
+                <div class="step-content">
+                    <div class="tool-name">Scene Maker</div>
+                    <div class="step-title">חיבור כל הסצנות לסרטון אחד</div>
+                    <div class="step-desc">
+                        Scene Maker חיבר את כל הקליפים לסיפור שלם. בחרנו Start ו-End לכל מעבר, ו-Flow יצר מעברים חלקים ביניהם.
+                    </div>
+                    <div class="step-prompt hebrew">
+                        "הכל נעלם לאט, רקע לבן נקי עם נקודת אור זהובה קטנה במרכז שדועכת"
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-section">
+        <div class="summary-card">
+            <h2>הכלים שהשתמשנו בהם</h2>
+            <div class="tools-grid">
+                <div class="tool-item">
+                    <div class="tool-icon" style="background: #e8f0fe;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="#4285f4"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    </div>
+                    <div class="tool-item-name">Nano Banana</div>
+                    <div class="tool-item-role">יצירת תמונה</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-icon" style="background: #e6f4ea;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="#34a853"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    </div>
+                    <div class="tool-item-name">Imagen 4</div>
+                    <div class="tool-item-role">עקביות + רקע</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-icon" style="background: #fef7e0;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="#fbbc05"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1-.01-.83.67-1.5 1.49-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/></svg>
+                    </div>
+                    <div class="tool-item-name">Whisk</div>
+                    <div class="tool-item-role">שינוי סגנון</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-icon" style="background: #fce8e6;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="#ea4335"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                    <div class="tool-item-name">Animate</div>
+                    <div class="tool-item-role">תמונה לסרטון</div>
+                </div>
+                <div class="tool-item">
+                    <div class="tool-icon" style="background: #f3e5f5;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="#8e24aa"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>
+                    </div>
+                    <div class="tool-item-name">Scene Maker</div>
+                    <div class="tool-item-role">חיבור סצנות</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 24px; padding: 16px; background: #f0f7ff; border-radius: 12px; text-align: center;">
+                <div style="font-weight: 700; margin-bottom: 4px;">מתמונה אחת → 3 תמונות + 3 סרטונים</div>
+                <div style="font-size: 0.9rem; color: #666;">הכל בחינם עם 50 קרדיטים ביום</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        תרשים זרימה — Google Flow Workshop | מיטל פלג | לרני
+    </div>
+
+</body>
+</html>
