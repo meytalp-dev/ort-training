@@ -10,14 +10,15 @@
 body{
   display:flex;align-items:center;justify-content:center;
   min-height:100vh;background:#111;font-family:'Heebo',sans-serif;
+  overflow:hidden;margin:0;
 }
 
 .reel{
   width:1080px;height:1920px;
-  transform:scale(0.45);transform-origin:center center;
   position:relative;overflow:hidden;
   border-radius:48px;
   box-shadow:0 0 80px rgba(219,112,147,.2);
+  transform-origin:center center;
 }
 
 .frame{
@@ -420,14 +421,28 @@ body{
 
 <script>
 try {
+  var reel = document.getElementById('reel');
   var spBox = document.getElementById('spBox');
   var allFrames = document.querySelectorAll('.frame');
   var pBar = document.getElementById('pBar');
   var currentIdx = 0;
   var autoTimer = null;
   var isPaused = false;
+  var started = false;
 
+  // Responsive scaling — fit reel to viewport
+  function scaleReel(){
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var sx = vw / 1080, sy = vh / 1920;
+    var s = Math.min(sx, sy) * 0.95;
+    reel.style.transform = 'scale(' + s + ')';
+  }
+  scaleReel();
+  window.addEventListener('resize', scaleReel);
+
+  // Sparkle system
   var spColors = ['#fff','#F5C6D0','#E8A0B8','#DB7093'];
+  var spInterval1, spInterval2;
   function addSparkle(){
     var s = document.createElement('div');
     s.className = 'sp';
@@ -435,8 +450,7 @@ try {
     var sz = (2+Math.random()*4)+'px';
     s.style.left = Math.random()*100+'%';
     s.style.top = Math.random()*100+'%';
-    s.style.width = sz;
-    s.style.height = sz;
+    s.style.width = sz; s.style.height = sz;
     s.style.background = col;
     s.style.boxShadow = '0 0 6px '+col;
     s.style.animationDuration = (2+Math.random()*3)+'s';
@@ -457,8 +471,10 @@ try {
     spBox.appendChild(s);
     setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 4000);
   }
-  setInterval(addSparkle, 400);
-  setInterval(addStar, 900);
+  function startSparkles(){
+    spInterval1 = setInterval(addSparkle, 400);
+    spInterval2 = setInterval(addStar, 900);
+  }
 
   function showFrame(idx){
     for(var j=0; j<allFrames.length; j++) allFrames[j].classList.remove('active');
@@ -471,8 +487,8 @@ try {
     }
   }
 
-  function goNext(){ if(currentIdx < allFrames.length-1) showFrame(currentIdx+1); }
-  function goPrev(){ if(currentIdx > 0) showFrame(currentIdx-1); }
+  function goNext(){ if(currentIdx < allFrames.length-1){ showFrame(currentIdx+1); scheduleNext(); } }
+  function goPrev(){ if(currentIdx > 0){ showFrame(currentIdx-1); scheduleNext(); } }
 
   function scheduleNext(){
     clearTimeout(autoTimer);
@@ -483,22 +499,35 @@ try {
     }, dur);
   }
 
-  function startPlay(){ isPaused = false; showFrame(0); scheduleNext(); }
-  function togglePause(){ isPaused = !isPaused; if(!isPaused) scheduleNext(); }
+  function startPlay(){
+    started = true;
+    isPaused = false;
+    startSparkles();
+    showFrame(0);
+    scheduleNext();
+  }
+
+  function togglePause(){
+    isPaused = !isPaused;
+    if(!isPaused) scheduleNext();
+  }
 
   document.addEventListener('keydown', function(e){
+    if(!started) return;
     if(e.key === 'ArrowLeft') goNext();
     else if(e.key === 'ArrowRight') goPrev();
     else if(e.key === ' '){ e.preventDefault(); togglePause(); }
     else if(e.key === 'r') startPlay();
   });
 
-  document.getElementById('startOverlay').addEventListener('click', function(){
+  document.getElementById('startOverlay').addEventListener('click', function(e){
+    e.stopPropagation();
     this.style.display = 'none';
     startPlay();
   });
 
-  document.getElementById('reel').addEventListener('click', function(e){
+  reel.addEventListener('click', function(e){
+    if(!started) return;
     if(e.target.closest('.start-overlay')) return;
     goNext();
   });
