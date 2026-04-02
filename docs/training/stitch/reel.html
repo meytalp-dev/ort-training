@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel – Google Stitch | Lerani</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&family=Rubik:wght@500;600;700;800;900&family=Secular+One&family=Poppins:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;background:#111;font-family:'Heebo',sans-serif;
+}
+
+.reel{
+  width:1080px;height:1920px;
+  transform:scale(0.45);transform-origin:center center;
+  position:relative;overflow:hidden;
+  border-radius:48px;
+  box-shadow:0 0 80px rgba(0,200,180,.2);
+}
+
+.frame{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:100px 60px;
+  opacity:0;pointer-events:none;
+  transition:opacity .4s ease;
+}
+.frame.active{opacity:1;z-index:10;pointer-events:auto}
+
+/* ===== SPARKLES ===== */
+.sparkle-box{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:50;overflow:hidden}
+.sp{position:absolute;border-radius:50%;animation:spFloat 3s ease-in-out infinite}
+@keyframes spFloat{
+  0%{opacity:0;transform:translateY(0) scale(0)}
+  20%{opacity:1;transform:translateY(-20px) scale(1)}
+  80%{opacity:.8;transform:translateY(-80px) scale(.8)}
+  100%{opacity:0;transform:translateY(-120px) scale(0)}
+}
+.star{position:absolute;pointer-events:none;animation:starPulse 2s ease-in-out infinite}
+@keyframes starPulse{
+  0%,100%{opacity:.3;transform:scale(.6) rotate(0deg)}
+  50%{opacity:1;transform:scale(1.2) rotate(180deg)}
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeUp{from{opacity:0;transform:translateY(60px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{0%{opacity:0;transform:scale(.3)}60%{opacity:1;transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes slideDown{from{opacity:0;transform:translateY(-60px)}to{opacity:1;transform:translateY(0)}}
+@keyframes swoopIn{0%{opacity:0;transform:translateX(80px)}100%{opacity:1;transform:translateX(0)}}
+@keyframes revealUp{0%{clip-path:inset(100% 0 0 0);opacity:0}100%{clip-path:inset(0% 0 0 0);opacity:1}}
+@keyframes countPop{0%{opacity:0;transform:scale(0) rotate(-10deg)}60%{transform:scale(1.15) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+@keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+@keyframes float3d{0%,100%{transform:translateY(0) rotateX(0)}50%{transform:translateY(-12px) rotateX(3deg)}}
+@keyframes slideRight{0%{opacity:0;transform:translateX(-80px)}100%{opacity:1;transform:translateX(0)}}
+
+.frame.active .a-fu{animation:fadeUp .7s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-fi{animation:fadeIn .5s ease both}
+.frame.active .a-si{animation:scaleIn .6s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-sd{animation:slideDown .6s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-sw{animation:swoopIn .7s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-rv{animation:revealUp .8s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-cp{animation:countPop .6s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-p{animation:pulse 2s ease infinite}
+.frame.active .a-sr{animation:slideRight .7s cubic-bezier(.22,1,.36,1) both}
+.frame.active .a-3d{animation:float3d 3s ease-in-out infinite}
+
+.d1{animation-delay:.1s!important}.d2{animation-delay:.2s!important}
+.d3{animation-delay:.3s!important}.d4{animation-delay:.4s!important}
+.d5{animation-delay:.5s!important}.d6{animation-delay:.6s!important}
+.d7{animation-delay:.7s!important}.d8{animation-delay:.8s!important}
+.d9{animation-delay:.9s!important}.d10{animation-delay:1s!important}
+
+/* ===== PROGRESS ===== */
+.progress{position:absolute;top:0;left:0;right:0;height:5px;background:rgba(255,255,255,.08);z-index:100}
+.progress-fill{
+  height:100%;border-radius:0 3px 3px 0;
+  background:linear-gradient(90deg,#00C9B7,#4ECDC4,#96E6A1);
+  background-size:200% 100%;animation:gradShift 3s ease infinite;
+  transition:width .3s ease;width:10%;
+}
+
+/* ===== HELPERS ===== */
+.grad-text{background:linear-gradient(135deg,#00C9B7,#4ECDC4,#96E6A1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.grad-magic{
+  background:linear-gradient(90deg,#00C9B7,#A8E6CF,#4ECDC4,#96E6A1,#00C9B7);
+  background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:shimmer 4s ease infinite;
+}
+
+/* ===== GLASSMORPHISM CARD ===== */
+.glass{
+  background:rgba(255,255,255,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1.5px solid rgba(255,255,255,.5);border-radius:28px;
+  box-shadow:0 8px 32px rgba(0,201,183,.08);
+}
+
+/* ===== FRAME STYLES ===== */
+
+.f-intro{background:linear-gradient(160deg,#f0faf9,#e4f8f5 40%,#daf0ed)}
+.logo-area{display:flex;flex-direction:column;align-items:center}
+.logo-circles{position:relative;width:280px;height:180px;margin-bottom:20px}
+.logo-c{position:absolute;width:150px;height:150px;border-radius:50%;top:15px}
+.logo-c.bl{left:15px;background:radial-gradient(circle at 40% 40%,#a8c8f0,#7babd4,#5a93c0);opacity:.75}
+.logo-c.gr{left:115px;background:radial-gradient(circle at 60% 40%,#a8e6cf,#7dd4ac,#5abf92);opacity:.75}
+.logo-name{font-family:'Poppins',sans-serif;font-size:68px;font-weight:800;color:#1e3a5f;letter-spacing:2px}
+.logo-tag{font-size:28px;color:#4a6a8a;margin-top:8px;letter-spacing:1px}
+.intro-sub{font-family:'Secular One',sans-serif;font-size:34px;margin-top:36px;padding:14px 44px;border-radius:50px;background:rgba(0,201,183,.08);border:2px solid rgba(0,201,183,.15)}
+
+.f-hook{background:linear-gradient(160deg,#f2f9f8,#e6f6f3 50%,#d8f0ec)}
+.hook-badge{padding:12px 32px;border-radius:50px;font-size:26px;color:#1a6b5f;font-weight:500;background:linear-gradient(135deg,rgba(0,201,183,.1),rgba(150,230,161,.1));border:1px solid rgba(0,201,183,.2);margin-bottom:50px}
+.hook-q{font-family:'Secular One',sans-serif;font-size:72px;color:#1e3a5f;text-align:center;line-height:1.35}
+.hook-big{font-size:84px}
+.hook-ans{font-family:'Rubik',sans-serif;font-size:84px;font-weight:800;margin-top:50px}
+
+.f-what{background:linear-gradient(150deg,#f4faf8,#e8f8f4 40%,#dcf2ee)}
+.tool-badge{display:flex;align-items:center;gap:18px;padding:18px 44px;background:rgba(255,255,255,.7);border-radius:100px;border:2px solid rgba(0,201,183,.2);margin-bottom:44px}
+.tool-icon{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#00C9B7,#4ECDC4);display:flex;align-items:center;justify-content:center}
+.tool-icon svg{width:32px;height:32px;fill:#fff}
+.tool-name{font-family:'Poppins',sans-serif;font-size:36px;font-weight:700;color:#1e3a5f}
+.what-hero{font-family:'Secular One',sans-serif;font-size:56px;color:#1e3a5f;text-align:center;line-height:1.4;margin-bottom:36px}
+.what-hl{font-size:48px;font-weight:800;text-align:center;margin-bottom:20px}
+.what-chips{display:flex;gap:18px;margin-top:24px;flex-wrap:wrap;justify-content:center}
+.what-chip{padding:14px 26px;border-radius:18px;font-size:26px;font-weight:600;color:#1a6b5f;background:rgba(255,255,255,.8);border:1.5px solid rgba(0,201,183,.2)}
+
+.f-feat{background:linear-gradient(150deg,#fafcfb,#f0f8f6 50%,#e6f4f0);padding:80px 50px}
+.feat-grid{display:flex;flex-direction:column;gap:28px;width:100%;max-width:920px}
+.feat-card{display:flex;align-items:center;gap:24px;padding:36px 40px;border-radius:24px}
+.feat-icon{width:80px;height:80px;border-radius:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.feat-icon svg{width:40px;height:40px;fill:#fff}
+.feat-icon.c1{background:linear-gradient(135deg,#00C9B7,#4ECDC4)}
+.feat-icon.c2{background:linear-gradient(135deg,#4ECDC4,#96E6A1)}
+.feat-icon.c3{background:linear-gradient(135deg,#96E6A1,#2ECC71)}
+.feat-icon.c4{background:linear-gradient(135deg,#00B4D8,#00C9B7)}
+.feat-text h3{font-family:'Secular One',sans-serif;font-size:36px;color:#1e3a5f;margin-bottom:6px}
+.feat-text p{font-size:28px;color:#4a6a8a;font-weight:400}
+
+.f-flow{background:linear-gradient(150deg,#faf8fc,#f0f2f8 50%,#eaeff5);padding:80px 50px}
+.flow-title{font-family:'Secular One',sans-serif;font-size:50px;color:#1e3a5f;margin-bottom:44px;text-align:center}
+.flow-steps{display:flex;flex-direction:column;gap:20px;width:100%;max-width:900px}
+.flow-step{display:flex;align-items:center;gap:20px;padding:30px 36px;border-radius:22px}
+.flow-num{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:32px;font-weight:800;color:#fff;flex-shrink:0}
+.flow-num.n1{background:linear-gradient(135deg,#D97757,#E8956A)}
+.flow-num.n2{background:linear-gradient(135deg,#00C9B7,#4ECDC4)}
+.flow-num.n3{background:linear-gradient(135deg,#D97757,#E8956A)}
+.flow-arrow{display:flex;justify-content:center}
+.flow-arrow svg{width:32px;height:32px;fill:#00C9B7;opacity:.5}
+.flow-label{font-family:'Secular One',sans-serif;font-size:34px;color:#1e3a5f}
+.flow-sub{font-size:26px;color:#4a6a8a;margin-top:4px}
+
+.f-cmp{background:linear-gradient(150deg,#fafbfc,#f2f5f8)}
+.cmp-title{font-family:'Secular One',sans-serif;font-size:50px;color:#1e3a5f;margin-bottom:40px;text-align:center}
+.cmp-vs{display:flex;flex-direction:column;align-items:center;gap:24px;width:100%;max-width:900px}
+.cmp-card{width:100%;border-radius:26px;padding:40px;text-align:center;position:relative;overflow:hidden}
+.cmp-card.before{background:#fff;border:2px solid rgba(200,80,80,.15)}
+.cmp-card.before::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#E76F7A,#f0a0a0)}
+.cmp-card.after{background:linear-gradient(135deg,rgba(0,201,183,.04),rgba(150,230,161,.06));border:2px solid rgba(0,201,183,.2)}
+.cmp-card.after::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#00C9B7,#4ECDC4,#96E6A1)}
+.cmp-label{font-size:28px;font-weight:600;margin-bottom:8px}
+.cmp-label.red{color:#c06060}.cmp-label.grn{color:#00A89D}
+.cmp-num{font-family:'Poppins',sans-serif;font-size:96px;font-weight:900;line-height:1}
+.cmp-num.red{color:#E76F7A}.cmp-num.grn{color:#00C9B7}
+.cmp-unit{font-size:30px;color:#64748B;font-weight:500;margin-top:6px}
+.cmp-arrow{display:flex;align-items:center;gap:14px}
+.cmp-line{width:3px;height:36px;background:linear-gradient(180deg,#E76F7A,#00C9B7);border-radius:2px}
+
+.f-tip{background:linear-gradient(160deg,#f0faf9,#e0f6f2 50%,#d4f0ea)}
+.tip-icon{width:130px;height:130px;border-radius:50%;background:linear-gradient(135deg,#00C9B7,#4ECDC4);display:flex;align-items:center;justify-content:center;margin-bottom:44px;box-shadow:0 14px 44px rgba(0,201,183,.3)}
+.tip-icon svg{width:60px;height:60px;fill:#fff}
+.tip-main{font-family:'Secular One',sans-serif;font-size:50px;color:#1a4a44;text-align:center;line-height:1.5}
+.tip-res{font-family:'Rubik',sans-serif;font-size:52px;font-weight:800;color:#00A89D;margin-top:28px;text-align:center}
+
+.f-cta{background:linear-gradient(160deg,#e8f8f5,#d0f0ea 40%,#c0ece4)}
+.cta-hero{font-family:'Secular One',sans-serif;font-size:64px;color:#1e3a5f;margin-bottom:36px;text-align:center}
+.cta-btn{background:linear-gradient(135deg,#00C9B7,#4ECDC4);color:#fff;padding:28px 60px;border-radius:60px;font-family:'Rubik',sans-serif;font-size:38px;font-weight:700;box-shadow:0 14px 44px rgba(0,201,183,.3);margin-bottom:20px;position:relative;overflow:hidden}
+.cta-btn::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);animation:shimmer 2.5s ease infinite}
+.cta-sub{font-size:30px;color:#4a6a8a;font-weight:500;margin-top:18px}
+.cta-link{display:flex;align-items:center;gap:10px;margin-top:26px;padding:12px 32px;background:rgba(255,255,255,.6);border-radius:50px;border:1px solid rgba(0,201,183,.2);font-size:26px;color:#00A89D;font-weight:600}
+
+.f-outro{background:linear-gradient(160deg,#f4faf8,#eaf4ee 40%,#e4f0ec)}
+.outro-cta{font-family:'Secular One',sans-serif;font-size:44px;color:#1e3a5f;margin-top:36px;text-align:center}
+.outro-social{display:flex;gap:18px;margin-top:26px}
+.social-chip{padding:12px 26px;border-radius:50px;font-size:24px;font-weight:600;background:rgba(0,201,183,.1);color:#1a6b5f;border:1px solid rgba(0,201,183,.15)}
+
+.start-overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;z-index:200;
+  background:linear-gradient(160deg,#f0faf9,#e4f8f5 40%,#daf0ed);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;
+}
+.start-overlay .start-logo{font-family:'Poppins',sans-serif;font-size:58px;font-weight:800;color:#1e3a5f;margin-bottom:30px}
+.start-overlay .start-txt{font-family:'Secular One',sans-serif;font-size:36px;color:#4a6a8a;animation:pulse 2s ease infinite}
+
+/* Accent circles */
+.accent-circle{position:absolute;border-radius:50%;opacity:.06;pointer-events:none}
+.ac1{width:400px;height:400px;background:#00C9B7;top:-100px;right:-100px}
+.ac2{width:300px;height:300px;background:#96E6A1;bottom:-80px;left:-80px}
+</style>
+</head>
+<body>
+
+<div class="reel" id="reel">
+  <div class="start-overlay" id="startOverlay">
+    <div class="start-logo">Lerani</div>
+    <div class="start-txt">לחצו להתחיל</div>
+  </div>
+  <div class="progress"><div class="progress-fill" id="pBar"></div></div>
+  <div class="sparkle-box" id="spBox"></div>
+
+  <!-- 1: INTRO -->
+  <div class="frame f-intro active" data-duration="2500">
+    <div class="accent-circle ac1"></div>
+    <div class="accent-circle ac2"></div>
+    <div class="logo-area a-si">
+      <div class="logo-circles"><div class="logo-c bl"></div><div class="logo-c gr"></div></div>
+      <div class="logo-name">Lerani</div>
+    </div>
+    <div class="logo-tag a-fi d5">חינוך &middot; בינה מלאכותית &middot; יצירה</div>
+    <div class="intro-sub grad-text a-fu d8">Google Stitch</div>
+  </div>
+
+  <!-- 2: HOOK -->
+  <div class="frame f-hook" data-duration="3500">
+    <div class="accent-circle ac1"></div>
+    <div class="hook-badge a-sd">
+      <svg width="20" height="20" viewBox="0 0 24 24" style="vertical-align:middle;fill:#00C9B7;margin-left:8px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+      רגע, מה?!
+    </div>
+    <div class="hook-q a-fu d2">אתר מקצועי<br><span class="hook-big">מפרומפט אחד?!</span></div>
+    <div class="hook-ans grad-magic a-cp d7">Google Stitch עושה את זה</div>
+  </div>
+
+  <!-- 3: WHAT IS STITCH -->
+  <div class="frame f-what" data-duration="4000">
+    <div class="accent-circle ac2"></div>
+    <div class="tool-badge a-sd">
+      <div class="tool-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="tool-name">Google Stitch</div>
+    </div>
+    <div class="what-hero a-fu d2">AI שבונה אתרים<br>מתיאור בטקסט</div>
+    <div class="what-hl grad-text a-cp d5">עיצוב + קוד + אינטראקציה</div>
+    <div class="what-chips a-fu d7">
+      <div class="what-chip">
+        <svg width="18" height="18" viewBox="0 0 24 24" style="fill:#00C9B7;vertical-align:middle;margin-left:6px"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/></svg>
+        עיצוב
+      </div>
+      <div class="what-chip">
+        <svg width="18" height="18" viewBox="0 0 24 24" style="fill:#00C9B7;vertical-align:middle;margin-left:6px"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6z"/></svg>
+        קוד
+      </div>
+      <div class="what-chip">
+        <svg width="18" height="18" viewBox="0 0 24 24" style="fill:#00C9B7;vertical-align:middle;margin-left:6px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z"/></svg>
+        חינמי
+      </div>
+    </div>
+  </div>
+
+  <!-- 4: FEATURES -->
+  <div class="frame f-feat" data-duration="5000">
+    <div class="accent-circle ac1"></div>
+    <div style="font-family:'Secular One',sans-serif;font-size:50px;color:#1e3a5f;margin-bottom:36px;text-align:center" class="a-sd">מה Stitch יודע לעשות?</div>
+    <div class="feat-grid">
+      <div class="feat-card glass a-sr d1">
+        <div class="feat-icon c1">
+          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10z"/></svg>
+        </div>
+        <div class="feat-text"><h3>עיצוב מלא מפרומפט</h3><p>כותבים מה רוצים ← מקבלים אתר</p></div>
+      </div>
+      <div class="feat-card glass a-sr d3">
+        <div class="feat-icon c2">
+          <svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+        </div>
+        <div class="feat-text"><h3>רספונסיבי אוטומטית</h3><p>עובד על מובייל, טאבלט ומחשב</p></div>
+      </div>
+      <div class="feat-card glass a-sr d5">
+        <div class="feat-icon c3">
+          <svg viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z"/></svg>
+        </div>
+        <div class="feat-text"><h3>ייצוא קוד / Figma</h3><p>מוציאים את הקוד או שולחים ל-Figma</p></div>
+      </div>
+      <div class="feat-card glass a-sr d7">
+        <div class="feat-icon c4">
+          <svg viewBox="0 0 24 24"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>
+        </div>
+        <div class="feat-text"><h3>עריכה בצ'אט</h3><p>משנים עיצוב בשיחה טבעית</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5: THE RIGHT FLOW -->
+  <div class="frame f-flow" data-duration="5000">
+    <div class="accent-circle ac2"></div>
+    <div class="flow-title a-sd">ה-Flow הנכון</div>
+    <div class="flow-steps">
+      <div class="flow-step glass a-fu d1">
+        <div class="flow-num n1">1</div>
+        <div>
+          <div class="flow-label">Claude Code</div>
+          <div class="flow-sub">בונים את התוכן והמבנה</div>
+        </div>
+      </div>
+      <div class="flow-arrow a-fi d3">
+        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </div>
+      <div class="flow-step glass a-fu d4">
+        <div class="flow-num n2">2</div>
+        <div>
+          <div class="flow-label">Stitch</div>
+          <div class="flow-sub">השראה ויזואלית לעיצוב</div>
+        </div>
+      </div>
+      <div class="flow-arrow a-fi d5">
+        <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>
+      </div>
+      <div class="flow-step glass a-fu d6">
+        <div class="flow-num n3">3</div>
+        <div>
+          <div class="flow-label">Claude Code</div>
+          <div class="flow-sub">מעדנים ומשלימים את הקוד</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6: BEFORE/AFTER -->
+  <div class="frame f-cmp" data-duration="4000">
+    <div class="cmp-title a-sd">לפני ואחרי</div>
+    <div class="cmp-vs">
+      <div class="cmp-card before a-sw d1">
+        <div class="cmp-label red">Stitch לבד</div>
+        <div class="cmp-num red" style="font-size:72px">עברית שבורה</div>
+        <div class="cmp-unit">טקסט הפוך + עיצוב גנרי</div>
+      </div>
+      <div class="cmp-arrow a-si d5">
+        <div class="cmp-line"></div>
+        <svg width="32" height="32" viewBox="0 0 24 24" style="fill:#00C9B7"><path d="M13 5.08A7 7 0 0 1 18.92 11H22l-4 4-4-4h3.08A5 5 0 0 0 13 7.08V5.08zM11 18.92A7 7 0 0 1 5.08 13H2l4-4 4 4H6.92A5 5 0 0 0 11 16.92v2z"/></svg>
+        <div class="cmp-line"></div>
+      </div>
+      <div class="cmp-card after a-sw d7">
+        <div class="cmp-label grn">Stitch + Claude Code</div>
+        <div class="cmp-num grn" style="font-size:72px">מושלם</div>
+        <div class="cmp-unit">עברית מלאה + עיצוב מותאם</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7: TIP -->
+  <div class="frame f-tip" data-duration="3500">
+    <div class="tip-icon a-si a-p">
+      <svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+    </div>
+    <div class="tip-main a-fu d3">לא מתחילים מ-Stitch!<br>קודם בונים תוכן</div>
+    <div class="tip-res a-cp d8">Stitch = השראה ויזואלית בלבד</div>
+  </div>
+
+  <!-- 8: CTA -->
+  <div class="frame f-cta" data-duration="3600">
+    <div class="accent-circle ac1"></div>
+    <div class="cta-hero a-fu">עכשיו תורכם<br>לנסות!</div>
+    <div class="cta-btn a-si d3 a-p">stitch.withgoogle.com</div>
+    <div class="cta-sub a-fi d6">חינמי &middot; פשוט &middot; מדהים</div>
+    <div class="cta-link a-fu d9">
+      <svg width="20" height="20" viewBox="0 0 24 24" style="fill:#00A89D"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+      <span>קישור בביו</span>
+    </div>
+  </div>
+
+  <!-- 9: OUTRO -->
+  <div class="frame f-outro" data-duration="2800">
+    <div class="logo-area a-si">
+      <div class="logo-circles"><div class="logo-c bl"></div><div class="logo-c gr"></div></div>
+      <div class="logo-name">Lerani</div>
+    </div>
+    <div class="outro-cta a-fu d5">עקבו ל-<span class="grad-text">Lerani</span><br>לעוד כלים שישנו לכם את העבודה!</div>
+    <div class="outro-social a-fi d9">
+      <div class="social-chip">
+        <svg width="16" height="16" viewBox="0 0 24 24" style="fill:#1a6b5f;vertical-align:middle;margin-left:4px"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        לייק
+      </div>
+      <div class="social-chip">
+        <svg width="16" height="16" viewBox="0 0 24 24" style="fill:#1a6b5f;vertical-align:middle;margin-left:4px"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+        שמרו
+      </div>
+      <div class="social-chip">
+        <svg width="16" height="16" viewBox="0 0 24 24" style="fill:#1a6b5f;vertical-align:middle;margin-left:4px"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>
+        שתפו
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+try {
+  var spBox = document.getElementById('spBox');
+  var allFrames = document.querySelectorAll('.frame');
+  var pBar = document.getElementById('pBar');
+  var currentIdx = 0;
+  var autoTimer = null;
+  var isPaused = false;
+
+  var spColors = ['#fff','#96E6A1','#4ECDC4','#00C9B7'];
+  function addSparkle(){
+    var s = document.createElement('div');
+    s.className = 'sp';
+    var col = spColors[Math.floor(Math.random()*spColors.length)];
+    var sz = (2+Math.random()*4)+'px';
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*100+'%';
+    s.style.width = sz;
+    s.style.height = sz;
+    s.style.background = col;
+    s.style.boxShadow = '0 0 6px '+col;
+    s.style.animationDuration = (2+Math.random()*3)+'s';
+    s.style.animationDelay = Math.random()*2+'s';
+    spBox.appendChild(s);
+    setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 5000);
+  }
+  function addStar(){
+    var s = document.createElement('div');
+    s.className = 'star';
+    var sz = 12+Math.random()*14;
+    var col = spColors[Math.floor(Math.random()*spColors.length)];
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*100+'%';
+    s.style.animationDuration = (1.5+Math.random()*2)+'s';
+    s.style.animationDelay = Math.random()+'s';
+    s.innerHTML = '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24"><path d="M12 2 L14 9 L21 9 L15.5 14 L17.5 21 L12 17 L6.5 21 L8.5 14 L3 9 L10 9 Z" fill="'+col+'" opacity="0.7"></path></svg>';
+    spBox.appendChild(s);
+    setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 4000);
+  }
+  setInterval(addSparkle, 400);
+  setInterval(addStar, 900);
+
+  function showFrame(idx){
+    for(var j=0; j<allFrames.length; j++) allFrames[j].classList.remove('active');
+    allFrames[idx].classList.add('active');
+    currentIdx = idx;
+    pBar.style.width = ((idx+1)/allFrames.length*100)+'%';
+    for(var k=0;k<5;k++){
+      setTimeout(addSparkle, k*50);
+      setTimeout(addStar, k*70);
+    }
+  }
+
+  function goNext(){ if(currentIdx < allFrames.length-1) showFrame(currentIdx+1); }
+  function goPrev(){ if(currentIdx > 0) showFrame(currentIdx-1); }
+
+  function scheduleNext(){
+    clearTimeout(autoTimer);
+    if(isPaused) return;
+    var dur = parseInt(allFrames[currentIdx].getAttribute('data-duration')) || 3000;
+    autoTimer = setTimeout(function(){
+      if(currentIdx < allFrames.length-1){ showFrame(currentIdx+1); scheduleNext(); }
+    }, dur);
+  }
+
+  function startPlay(){ isPaused = false; showFrame(0); scheduleNext(); }
+  function togglePause(){ isPaused = !isPaused; if(!isPaused) scheduleNext(); }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowLeft') goNext();
+    else if(e.key === 'ArrowRight') goPrev();
+    else if(e.key === ' '){ e.preventDefault(); togglePause(); }
+    else if(e.key === 'r') startPlay();
+  });
+
+  document.getElementById('startOverlay').addEventListener('click', function(){
+    this.style.display = 'none';
+    startPlay();
+  });
+
+  // Click on reel to advance
+  document.getElementById('reel').addEventListener('click', function(e){
+    if(e.target.closest('.start-overlay')) return;
+    goNext();
+  });
+
+} catch(err) { console.error('Reel error:', err); }
+</script>
+</body>
+</html>
