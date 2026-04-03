@@ -1,0 +1,1865 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NotebookLM — המחברת החכמה של Google | Learni</title>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@400;700&family=Heebo:wght@300;400;500;600;700;800;900&family=Karantina:wght@400;700&family=Rubik:wght@400;500;600;700;800&family=Assistant:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #FAF8F5;
+  --bg-warm:     #F0FAF7;
+  --bg-card:     #ffffff;
+  --teal-900:    #1a5c54;
+  --teal-800:    #1f7268;
+  --teal-700:    #23877b;
+  --teal:        #2A9D8F;
+  --teal-400:    #48BFB2;
+  --teal-300:    #6DD3C7;
+  --teal-200:    #A8E6DD;
+  --teal-100:    #D4F3EF;
+  --teal-50:     #EDF9F7;
+  --cyan:        #45B7C5;
+  --green:       #52B788;
+  --green-light: #D8F3DC;
+  --amber:       #E9A319;
+  --amber-light: #FEF3C7;
+  --rose:        #E76F7A;
+  --rose-light:  #FDE8EA;
+  --peach:       #F3D5C0;
+  --peach-light: #FBE9DA;
+  --mint:        #C9EDE4;
+  --purple:      #7E57C2;
+  --purple-light: #EDE7F6;
+  --orange:      #E8784D;
+  --orange-light:#FEE8DE;
+  /* ===== TOOL BRAND COLORS — NotebookLM ===== */
+  --tool:        #43EF69;
+  --tool-light:  #F0FDF4;
+  --tool-dark:   #1A8A3A;
+  /* ============================================= */
+  --lerani-blue: #7babd4;
+  --lerani-green:#5abf92;
+  --lavender:    #9b7ed8;
+  --slate:       #E2E0DC;
+  --white:       #ffffff;
+  --text:        #2D3436;
+  --text-mid:    #4A5568;
+  --text-muted:  #536475;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:   0 4px 16px rgba(0,0,0,.06), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg:   0 12px 40px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  --shadow-xl:   0 20px 60px rgba(0,0,0,.1), 0 8px 20px rgba(0,0,0,.06);
+  --r:           20px;
+  --r-lg:        28px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Heebo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== SLIDE SYSTEM ===== */
+.slide-container { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+
+.slide {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  padding: 40px 40px 80px;
+  opacity: 0; transform: scale(.97);
+  transition: opacity .5s cubic-bezier(.4,0,.2,1), transform .5s cubic-bezier(.4,0,.2,1);
+  pointer-events: none; overflow-y: auto; overflow-x: hidden;
+  background: linear-gradient(160deg, #FAF8F5 0%, #F0FAF7 40%, #F5F9F7 100%);
+}
+.slide::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 80% 20%, color-mix(in srgb, var(--tool) 6%, transparent), transparent),
+    radial-gradient(ellipse 500px 400px at 10% 80%, rgba(232,120,77,.05), transparent),
+    radial-gradient(ellipse 400px 300px at 50% 50%, rgba(233,196,106,.03), transparent);
+}
+.slide::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--tool) 4%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+.slide.exit-left { opacity: 0; transform: scale(.97); }
+.slide::-webkit-scrollbar { width: 6px; }
+.slide::-webkit-scrollbar-track { background: transparent; }
+.slide::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 3px; }
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar { position: fixed; top: 0; left: 0; right: 0; height: 4px; background: rgba(0,0,0,.04); z-index: 300; }
+.progress-fill {
+  height: 100%; position: relative;
+  background: linear-gradient(90deg, var(--tool-dark), var(--tool), #FFB347, var(--tool-dark), var(--tool));
+  background-size: 300% 100%; animation: gradient-shift 4s ease infinite;
+  border-radius: 0 2px 2px 0; transition: width 0.5s cubic-bezier(.4,0,.2,1);
+}
+.progress-fill::after {
+  content: ''; position: absolute; right: -4px; top: 50%; transform: translateY(-50%);
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--tool);
+  box-shadow: 0 0 12px var(--tool), 0 0 24px color-mix(in srgb, var(--tool) 30%, transparent);
+  animation: progressPulse 2s ease-in-out infinite;
+}
+
+/* ===== TITLE SLIDE ===== */
+.title-slide { text-align: center; justify-content: center; }
+.title-slide::before { content: ''; position: absolute; inset: 0; background: linear-gradient(160deg, #FAF8F5 0%, #F0FAF7 40%, #F5F9F7 100%); }
+
+.title-slide .logo-icon {
+  width: 80px; height: 80px; border-radius: 20px;
+  background: linear-gradient(135deg, var(--tool-light), color-mix(in srgb, var(--tool) 15%, white), #FFDAB9);
+  background-size: 300% 300%; animation: float 5s ease-in-out infinite, gradient-shift 6s ease infinite;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 28px;
+  font-size: 36px; box-shadow: 0 8px 32px color-mix(in srgb, var(--tool) 25%, transparent), 0 0 0 4px color-mix(in srgb, var(--tool) 8%, transparent);
+  position: relative; z-index: 2;
+}
+
+.title-slide h1 {
+  font-family: 'Karantina', 'Heebo', sans-serif;
+  font-size: clamp(32px, 5vw, 52px); font-weight: 700;
+  color: var(--tool-dark); margin-bottom: 16px; line-height: 1.35;
+  position: relative; z-index: 2;
+  background: linear-gradient(90deg, var(--tool-dark), var(--tool), #FFB347, var(--tool-dark));
+  background-size: 200% 100%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; animation: shimmer 4s ease-in-out infinite;
+}
+.title-slide h1 .brand-word { -webkit-text-fill-color: var(--tool); }
+
+.title-slide .subtitle {
+  font-size: clamp(14px, 2vw, 18px); color: var(--text-muted);
+  font-weight: 400; margin-bottom: 24px; position: relative; z-index: 2; line-height: 1.6;
+}
+
+.title-slide .badge {
+  display: inline-block;
+  background: rgba(240,253,244,.75);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, var(--tool) 20%, transparent);
+  border-radius: 30px; padding: 8px 20px; font-size: 14px; font-weight: 600;
+  color: var(--tool-dark); position: relative; z-index: 2;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--tool) 10%, transparent);
+}
+
+.title-slide .topics-preview {
+  display: flex; justify-content: center; gap: 20px; margin-top: 36px;
+  position: relative; z-index: 2; flex-wrap: wrap;
+}
+.topic-item {
+  background: rgba(255,255,255,.82);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: 16px; padding: 18px 16px 14px; text-align: center; font-size: 14px;
+  font-weight: 500; color: var(--text-mid);
+  transition: all .4s cubic-bezier(.4,0,.2,1);
+  box-shadow: var(--shadow-sm); min-width: 100px;
+}
+.topic-item:hover { transform: translateY(-5px) scale(1.02); box-shadow: var(--shadow-lg); }
+.topic-num {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%;
+  font-size: 15px; font-weight: 700; margin: 0 auto 8px;
+  font-family: 'Rubik', sans-serif; border: 2px solid;
+}
+.topic-item:nth-child(1) .topic-num { color: var(--tool); border-color: color-mix(in srgb, var(--tool) 30%, transparent); }
+.topic-item:nth-child(2) .topic-num { color: var(--green); border-color: rgba(82,183,136,.3); }
+.topic-item:nth-child(3) .topic-num { color: var(--amber); border-color: rgba(233,163,25,.3); }
+.topic-item:nth-child(4) .topic-num { color: var(--orange); border-color: rgba(232,120,77,.3); }
+
+/* ===== DIVIDER SLIDES ===== */
+.divider-slide { justify-content: center; text-align: center; }
+.divider-slide::before { content: ''; position: absolute; inset: 0; background: linear-gradient(160deg, #FAF8F5 0%, #F0FAF7 40%, #F5F9F7 100%); }
+.divider-inner { position: relative; z-index: 2; text-align: center; }
+.divider-circle {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 800; font-family: 'Rubik', sans-serif;
+  margin: 0 auto 28px; border: 2.5px solid;
+  animation: pulse-glow 3s ease-in-out infinite, scaleIn .5s ease backwards;
+}
+.divider-circle.violet { color: var(--tool); border-color: color-mix(in srgb, var(--tool) 30%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--tool) 8%, transparent), rgba(240,253,244,.2)); }
+.divider-circle.green { color: var(--green); border-color: rgba(82,183,136,.3); background: linear-gradient(135deg, rgba(82,183,136,.08), rgba(216,243,220,.2)); }
+.divider-circle.orange { color: var(--orange); border-color: rgba(232,120,77,.3); background: linear-gradient(135deg, rgba(232,120,77,.08), rgba(254,232,222,.2)); }
+.divider-circle.purple { color: var(--purple); border-color: rgba(126,87,194,.25); background: linear-gradient(135deg, rgba(126,87,194,.08), rgba(237,231,246,.2)); }
+.divider-title {
+  font-family: 'Karantina', 'Heebo', sans-serif;
+  font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 700;
+  margin-bottom: 10px; color: var(--text);
+}
+.divider-desc { font-size: 17px; color: var(--text-muted); max-width: 450px; margin: 0 auto; line-height: 1.6; }
+
+/* ===== CONTENT SLIDES ===== */
+.slide-inner {
+  max-width: 880px; width: 100%; padding: 32px 40px;
+  flex-shrink: 0; position: relative; z-index: 2;
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,.6);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md); animation: fadeUp 0.6s ease-out;
+}
+
+.section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.section-icon {
+  width: 52px; height: 52px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.section-icon:hover { transform: scale(1.1) rotate(-3deg); }
+.section-icon.violet { background: var(--tool-light); color: var(--tool-dark); }
+.section-icon.green { background: var(--green-light); color: #2D7A54; }
+.section-icon.orange { background: var(--orange-light); color: #b8562e; }
+.section-icon.purple { background: var(--purple-light); color: var(--purple); }
+.section-icon.amber { background: var(--amber-light); color: #9A6D0B; }
+.section-icon.blue { background: var(--mint); color: #1a7a6d; }
+
+.section-title {
+  font-family: 'Karantina', 'Heebo', sans-serif;
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem); font-weight: 700;
+  line-height: 1.3; color: var(--text);
+}
+.section-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+/* ===== GRID ===== */
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 16px; }
+
+.g-card {
+  background: rgba(255,255,255,.75);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: 18px; padding: 24px 18px 20px; text-align: center;
+  transition: all .4s cubic-bezier(.4,0,.2,1);
+  position: relative; overflow: hidden;
+}
+.g-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--tool), #FFB347, var(--tool-dark));
+  opacity: 0; transition: opacity .3s;
+}
+.g-card::after {
+  content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
+  transition: left .5s ease;
+}
+.g-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: var(--shadow-lg); }
+.g-card:hover::before { opacity: 1; }
+.g-card:hover::after { left: 100%; }
+.g-card .g-icon { font-size: 32px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; }
+.g-card .g-title {
+  font-family: 'Karantina', 'Heebo', sans-serif;
+  font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px;
+}
+.g-card .g-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+/* ===== STEP CARDS ===== */
+.step-card {
+  background: rgba(255,255,255,.7);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: 16px; padding: 16px 20px; margin-bottom: 10px;
+  display: flex; align-items: flex-start; gap: 14px;
+  transition: all .4s cubic-bezier(.4,0,.2,1);
+}
+.step-card:hover {
+  background: rgba(240,253,244,.85); border-color: color-mix(in srgb, var(--tool) 20%, transparent);
+  transform: translateY(-3px); box-shadow: var(--shadow-md);
+}
+.step-number {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  font-weight: 700; font-size: 14px; color: white; flex-shrink: 0;
+}
+.step-number.violet { background: var(--tool); }
+.step-number.green { background: var(--green); }
+.step-number.orange { background: var(--orange); }
+.step-number.purple { background: var(--purple); }
+.step-title { font-weight: 600; font-size: 16px; margin-bottom: 4px; color: var(--text); }
+.step-desc { font-size: 14px; color: var(--text-mid); line-height: 1.7; }
+
+/* ===== TIP BOXES ===== */
+.tip-box {
+  background: rgba(240,253,244,.8); border: 1px solid color-mix(in srgb, var(--tool) 20%, transparent);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border-radius: 14px; padding: 14px 18px; margin-top: 12px;
+  display: flex; gap: 12px; align-items: flex-start;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+}
+.tip-box:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.tip-box.warning { background: rgba(254,243,199,.8); border-color: rgba(233,163,25,.25); }
+.tip-box.purple { background: rgba(237,231,246,.8); border-color: rgba(126,87,194,.2); }
+.tip-box.green { background: rgba(216,243,220,.8); border-color: rgba(82,183,136,.25); }
+.tip-box.orange { background: rgba(254,232,222,.8); border-color: rgba(232,120,77,.25); }
+.tip-box.rose { background: rgba(253,232,234,.8); border-color: rgba(231,111,122,.25); }
+.tip-icon-sm { font-size: 16px; flex-shrink: 0; display: flex; align-items: center; }
+.tip-text { font-size: 14px; color: var(--text-mid); line-height: 1.6; }
+.tip-text strong { color: var(--text); }
+
+/* ===== HIGHLIGHTS ===== */
+.highlight { background: var(--tool-light); padding: 2px 8px; border-radius: 6px; font-weight: 500; color: var(--tool-dark); }
+.highlight.green { background: var(--green-light); color: #2D7A54; }
+.highlight.orange { background: var(--orange-light); color: #b8562e; }
+.highlight.purple { background: var(--purple-light); color: var(--purple); }
+.highlight.rose { background: var(--rose-light); color: #c0424e; }
+
+/* ===== COMPARE COLUMNS ===== */
+.compare-wrap {
+  max-width: 860px; width: 92%; display: flex; flex-direction: column;
+  gap: 16px; position: relative; z-index: 2;
+}
+.compare-title {
+  font-family: 'Karantina', 'Heebo', sans-serif;
+  font-size: clamp(1.3rem, 3vw, 1.8rem); font-weight: 700;
+  color: var(--text); text-align: center;
+}
+.compare-cols { display: flex; gap: 16px; }
+.compare-col {
+  flex: 1; background: rgba(255,255,255,.88);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.5);
+  border-radius: var(--r); padding: 32px 28px; box-shadow: var(--shadow-sm);
+  transition: all .4s cubic-bezier(.4,0,.2,1);
+}
+.compare-col:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.compare-col.bad { border-top: 4px solid var(--rose); }
+.compare-col.good { border-top: 4px solid var(--green); }
+.compare-col h3 {
+  font-family: 'Karantina', 'Heebo', sans-serif;
+  font-size: 22px; margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+}
+.compare-col.bad h3 { color: var(--rose); }
+.compare-col.good h3 { color: var(--green); }
+.compare-item {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px;
+  font-size: 16px; line-height: 1.7; color: var(--text-mid);
+}
+.compare-item .icon { flex-shrink: 0; font-size: 16px; margin-top: 2px; }
+
+/* ===== SCREENSHOT FRAME ===== */
+.screenshot-frame {
+  border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-md);
+  border: 1px solid rgba(0,0,0,.06); transition: all .3s; margin: 12px 0;
+}
+.screenshot-frame:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+.screenshot-frame img { width: 100%; height: auto; display: block; transition: transform .4s cubic-bezier(.4,0,.2,1); }
+.screenshot-frame:hover img { transform: scale(1.03); }
+.screenshot-frame.small { max-width: 420px; margin: 8px auto; }
+.screenshot-frame.medium { max-width: 600px; margin: 12px auto; }
+
+/* ===== FLOW CHART ===== */
+.flow-container {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px;
+  align-items: start; margin: 8px 0;
+}
+.flow-col { display: flex; flex-direction: column; gap: 10px; }
+.flow-col-header {
+  text-align: center; padding: 8px 16px; border-radius: 12px;
+  font-family: 'Karantina', sans-serif; font-size: 1.2rem; font-weight: 700;
+}
+.flow-col-header.cc { background: linear-gradient(135deg, #fff3e0, #ffe0b2); color: #e65100; }
+.flow-col-header.tool { background: linear-gradient(135deg, var(--tool-light), color-mix(in srgb, var(--tool) 15%, transparent)); color: var(--tool-dark); }
+.flow-step {
+  background: rgba(255,255,255,.8); border-radius: 14px; padding: 14px 16px;
+  border: 1px solid rgba(0,0,0,.06); display: flex; align-items: flex-start; gap: 10px;
+  transition: all .3s;
+}
+.flow-step:hover { transform: translateY(-2px); border-color: var(--tool); box-shadow: var(--shadow-sm), 0 4px 16px color-mix(in srgb, var(--tool) 12%, transparent); }
+.flow-num {
+  width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-weight: 700; font-size: 13px; color: #fff; flex-shrink: 0;
+}
+.flow-num.cc { background: var(--orange); }
+.flow-num.tool { background: var(--tool); }
+.flow-arrow {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: var(--text-muted); padding-top: 60px;
+}
+
+/* ===== H-FLOW (INFOGRAPHIC SUMMARY) ===== */
+.h-flow {
+  display: flex; align-items: stretch; justify-content: center;
+  gap: 0; direction: rtl;
+}
+.h-flow-step {
+  flex: 1; max-width: 160px; min-height: 180px;
+  background: rgba(255,255,255,.85); backdrop-filter: blur(8px);
+  border-radius: 16px; border: 1.5px solid rgba(0,0,0,.06);
+  padding: 20px 14px 16px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; position: relative; transition: all .3s ease;
+}
+.h-flow-step:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.08); border-color: var(--tool); }
+.h-flow-step.result { border: 2px solid var(--green); background: rgba(216,243,220,.2); }
+.h-flow-num {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 15px; color: #fff; margin-bottom: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--tool), var(--tool-dark));
+}
+.h-flow-step.result .h-flow-num { background: linear-gradient(135deg, var(--green), #2D9F6F) !important; }
+.h-flow-step.result .h-flow-icon { background: var(--green-light); color: var(--green); }
+.h-flow-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px; background: var(--tool-light); color: var(--tool-dark);
+}
+.h-flow-title { font-family: 'Assistant', sans-serif; font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 6px; line-height: 1.3; }
+.h-flow-desc { font-family: 'Assistant', sans-serif; font-size: 12.5px; color: var(--text-muted); line-height: 1.4; }
+.h-flow-arrow { display: flex; align-items: center; justify-content: center; padding: 0 6px; opacity: .5; flex-shrink: 0; }
+.slide.active .h-flow-step { animation: fadeInUp .4s ease backwards; }
+.slide.active .h-flow-step:nth-child(1) { animation-delay: .05s; }
+.slide.active .h-flow-step:nth-child(3) { animation-delay: .15s; }
+.slide.active .h-flow-step:nth-child(5) { animation-delay: .25s; }
+.slide.active .h-flow-step:nth-child(7) { animation-delay: .35s; }
+.slide.active .h-flow-step:nth-child(9) { animation-delay: .45s; }
+.slide.active .h-flow-num { animation: bounceIn .4s ease backwards; }
+
+/* ===== BRAND WORD ===== */
+.brand-word {
+  font-family: 'Playpen Sans Hebrew', cursive;
+  color: var(--tool); font-size: 1.3em;
+  position: relative; display: inline-block;
+}
+
+/* ===== PROS / LIMITS ===== */
+.pros-list, .limit-list { display: flex; flex-direction: column; gap: 8px; }
+.pros-item { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-mid); line-height: 1.6; }
+.pros-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.limit-item { background: rgba(255,255,255,.6); border-radius: 10px; padding: 8px 12px; }
+.limit-problem { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--rose); font-weight: 500; margin-bottom: 3px; }
+.limit-solution { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #2D7A54; padding-right: 20px; }
+
+/* ===== SCENARIO CARDS ===== */
+.scenario-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 12px 0; }
+.scenario-card {
+  background: var(--tool-light); border-radius: 18px; padding: 24px 18px 20px;
+  text-align: center; transition: all .4s cubic-bezier(.4,0,.2,1);
+  border: 1.5px solid color-mix(in srgb, var(--tool) 15%, transparent);
+}
+.scenario-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--tool); }
+.scenario-icon { margin-bottom: 12px; display: flex; align-items: center; justify-content: center; }
+.scenario-title { font-weight: 600; font-size: 15px; color: var(--text); margin-bottom: 8px; line-height: 1.5; }
+.scenario-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 8px; }
+.scenario-time { font-size: 13px; font-weight: 600; color: var(--tool-dark); }
+
+/* ===== TIPS GRID ===== */
+.tips-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 12px 0; }
+.tip-card {
+  background: var(--tool-light); border-radius: 16px; padding: 20px 16px;
+  border-right: 4px solid var(--tool); transition: all .3s;
+}
+.tip-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.tip-card-icon { margin-bottom: 8px; display: flex; align-items: center; }
+.tip-card-title { font-weight: 600; font-size: 15px; color: var(--text); margin-bottom: 6px; }
+.tip-card-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+/* ===== FAQ ACCORDION ===== */
+.faq-accordion { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.faq-item { background: rgba(255,255,255,.7); border-radius: 14px; border: 1px solid rgba(0,0,0,.06); overflow: hidden; transition: all .3s; }
+.faq-item:hover { border-color: color-mix(in srgb, var(--tool) 30%, transparent); }
+.faq-question {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; cursor: pointer; min-height: 44px;
+  font-weight: 600; font-size: 15px; color: var(--text);
+  background: none; border: none; width: 100%; text-align: right; font-family: 'Heebo', sans-serif;
+}
+.faq-question:hover { background: rgba(240,253,244,.5); }
+.faq-arrow { transition: transform .3s; flex-shrink: 0; }
+.faq-item.open .faq-arrow { transform: rotate(180deg); }
+.faq-answer { padding: 0 20px 16px; font-size: 14px; color: var(--text-mid); line-height: 1.7; display: none; }
+.faq-item.open .faq-answer { display: block; animation: fadeInUp .3s ease; }
+
+/* ===== PRACTICE BLOCK ===== */
+.practice-block {
+  background: linear-gradient(135deg, var(--tool-light), color-mix(in srgb, var(--tool) 8%, transparent));
+  border: 2px solid var(--tool); border-radius: 20px; padding: 28px 24px; margin: 12px 0;
+}
+.practice-title {
+  font-family: 'Karantina', sans-serif; font-size: clamp(22px, 3vw, 30px);
+  color: var(--tool-dark); margin-bottom: 16px; text-align: center;
+}
+.practice-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.practice-step {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(255,255,255,.7); border-radius: 12px; padding: 12px 16px;
+}
+.practice-num {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--tool);
+  color: white; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px; flex-shrink: 0;
+}
+.practice-text { font-size: 14px; color: var(--text-mid); line-height: 1.6; }
+.practice-result {
+  text-align: center; padding: 14px; background: rgba(255,255,255,.6);
+  border-radius: 14px; margin-top: 12px;
+}
+.practice-result-label { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+.practice-result-value { font-weight: 700; font-size: 16px; color: var(--tool-dark); }
+
+/* ===== PRODUCT CAROUSEL ===== */
+.product-carousel { position: relative; margin: 12px 0; }
+.product-track {
+  display: flex; gap: 14px; overflow-x: auto; scroll-behavior: smooth;
+  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 8px 0;
+}
+.product-track::-webkit-scrollbar { height: 4px; }
+.product-track::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--tool) 20%, transparent); border-radius: 2px; }
+.product-item {
+  flex: 0 0 calc(50% - 7px); scroll-snap-align: start;
+  background: rgba(255,255,255,.8); border-radius: 16px; overflow: hidden;
+  border: 1.5px solid rgba(0,0,0,.06); transition: all .3s;
+}
+.product-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--tool); }
+.product-placeholder {
+  width: 100%; aspect-ratio: 16/10; background: linear-gradient(135deg, var(--tool-light), color-mix(in srgb, var(--tool) 10%, white));
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  color: var(--tool-dark); font-size: 14px; cursor: pointer;
+}
+.product-info { padding: 14px 16px; }
+.product-title { font-weight: 600; font-size: 15px; color: var(--text); margin-bottom: 4px; }
+.product-meta { font-size: 13px; color: var(--tool-dark); font-weight: 500; }
+.product-dots { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+.product-dot { width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--tool) 25%, transparent); }
+.product-dot.active { background: var(--tool); }
+
+/* ===== LIGHTBOX ===== */
+.lightbox-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.85); backdrop-filter: blur(8px);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .3s; cursor: pointer;
+}
+.lightbox-overlay.active { opacity: 1; pointer-events: all; }
+.lightbox-overlay img { max-width: 90vw; max-height: 85vh; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.4); animation: scaleIn .3s ease; }
+.lightbox-close {
+  position: absolute; top: 20px; left: 20px; width: 44px; height: 44px;
+  border-radius: 50%; border: none; background: rgba(255,255,255,.2);
+  color: white; font-size: 24px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; transition: all .2s;
+}
+.lightbox-close:hover { background: rgba(255,255,255,.35); }
+
+/* ===== COPY PROMPT ===== */
+.copy-prompt { position: relative; cursor: pointer; transition: all .3s cubic-bezier(.4,0,.2,1); }
+.copy-prompt:hover { transform: translateY(-2px); box-shadow: 0 4px 16px color-mix(in srgb, var(--tool) 15%, transparent); }
+.copy-prompt:active { transform: scale(.98); }
+.copy-btn {
+  position: absolute; top: 10px; left: 10px;
+  width: 44px; height: 44px; border-radius: 8px;
+  background: var(--tool-light); border: 1px solid color-mix(in srgb, var(--tool) 20%, transparent);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0; transition: opacity .2s;
+}
+.copy-prompt:hover .copy-btn { opacity: 1; }
+@media (max-width: 768px) { .copy-btn { opacity: .7; } }
+.copy-btn.copied { background: var(--green); border-color: var(--green); animation: copyPop .4s cubic-bezier(.4,0,.2,1); }
+.copy-btn.copied svg { stroke: white; }
+
+.copy-toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--tool-dark); color: white; padding: 10px 24px;
+  border-radius: 30px; font-size: 14px; font-weight: 600;
+  opacity: 0; transition: all .3s; z-index: 400; pointer-events: none;
+}
+.copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== TOOL LINK CARDS ===== */
+.tool-link-card {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.85); backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(0,0,0,.06); border-radius: 18px;
+  padding: 24px 16px; text-decoration: none; color: var(--text);
+  transition: all .4s cubic-bezier(.4,0,.2,1); box-shadow: var(--shadow-sm);
+}
+.tool-link-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--tool); }
+
+/* ===== NAVIGATION ===== */
+.nav-bar {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px; z-index: 300;
+  background: rgba(255,255,255,.8); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,.6); border-radius: 60px;
+  padding: 8px 12px 8px 18px; box-shadow: var(--shadow-lg);
+  user-select: none; transition: box-shadow .3s;
+  animation: glowPulse 4s ease-in-out infinite;
+}
+.nav-bar:hover { box-shadow: var(--shadow-xl); }
+.nav-drag-handle {
+  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  cursor: grab; opacity: .35; transition: opacity .2s; flex-shrink: 0;
+}
+.nav-drag-handle:hover { opacity: .65; }
+.nav-drag-handle:active { cursor: grabbing; }
+.nav-drag-handle svg { pointer-events: none; }
+.nav-btn {
+  background: transparent; border: 1.5px solid color-mix(in srgb, var(--tool) 30%, transparent); color: var(--tool-dark);
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  font-size: 14px; font-family: 'Heebo', sans-serif; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s; padding: 0;
+}
+.nav-btn:hover { background: var(--tool-light); border-color: var(--tool); color: var(--tool-dark); }
+.nav-btn:disabled { opacity: .3; cursor: not-allowed; }
+.slide-counter {
+  font-size: 13px; font-weight: 600; color: var(--text-muted);
+  min-width: 60px; text-align: center; font-family: 'Rubik', sans-serif;
+}
+
+/* ===== SPARKLES ===== */
+#sparkles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.sparkle {
+  position: absolute; bottom: -10px; background: color-mix(in srgb, var(--tool) 30%, transparent);
+  border-radius: 50%; opacity: 0;
+  animation: sparkleUp linear infinite, sparklePulse ease-in-out infinite;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: scale(1); } }
+@keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--tool) 30%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes bounceIn { 0% { opacity: 0; transform: scale(.3); } 50% { opacity: 1; transform: scale(1.05); } 70% { transform: scale(.95); } 100% { transform: scale(1); } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes glowPulse { 0%, 100% { box-shadow: 0 0 5px color-mix(in srgb, var(--tool) 20%, transparent); } 50% { box-shadow: 0 0 25px color-mix(in srgb, var(--tool) 35%, transparent), 0 0 50px color-mix(in srgb, var(--tool) 10%, transparent); } }
+@keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-8px); opacity: 1; } }
+@keyframes copyPop { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+@keyframes progressPulse { 0%, 100% { box-shadow: 0 0 6px var(--tool); transform: translateY(-50%) scale(1); } 50% { box-shadow: 0 0 20px var(--tool), 0 0 40px color-mix(in srgb, var(--tool) 20%, transparent); transform: translateY(-50%) scale(1.3); } }
+@keyframes sparkleUp { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 0.6; } 90% { opacity: 0.3; } 100% { transform: translateY(-100vh); opacity: 0; } }
+@keyframes sparklePulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.5); } }
+
+/* ===== STAGGERED ENTRY ===== */
+.slide.active .g-card, .slide.active .step-card, .slide.active .compare-col,
+.slide.active .topic-item, .slide.active .chat-bubble, .slide.active .tip-box,
+.slide.active .flow-step, .slide.active .scenario-card, .slide.active .tip-card,
+.slide.active .faq-item { animation: fadeInUp .5s cubic-bezier(.4,0,.2,1) backwards; }
+.slide.active :nth-child(1) { animation-delay: .05s; }
+.slide.active :nth-child(2) { animation-delay: .1s; }
+.slide.active :nth-child(3) { animation-delay: .15s; }
+.slide.active :nth-child(4) { animation-delay: .2s; }
+.slide.active :nth-child(5) { animation-delay: .25s; }
+.slide.active :nth-child(6) { animation-delay: .3s; }
+.slide.active :nth-child(7) { animation-delay: .35s; }
+
+.slide.active .divider-circle { animation: bounceIn .6s cubic-bezier(.4,0,.2,1), glowPulse 3s ease-in-out infinite .6s; }
+.slide.active .compare-col:first-child { animation: slideInRight .5s cubic-bezier(.4,0,.2,1) backwards; animation-delay: .15s; }
+.slide.active .compare-col:last-child { animation: slideInLeft .5s cubic-bezier(.4,0,.2,1) backwards; animation-delay: .25s; }
+.slide.active .step-number { animation: bounceIn .4s cubic-bezier(.4,0,.2,1) backwards; }
+.slide.active .step-card:nth-child(1) .step-number { animation-delay: .1s; }
+.slide.active .step-card:nth-child(2) .step-number { animation-delay: .2s; }
+.slide.active .step-card:nth-child(3) .step-number { animation-delay: .3s; }
+.slide.active .step-card:nth-child(4) .step-number { animation-delay: .4s; }
+.slide.active .big-quote { animation: fadeUp .8s cubic-bezier(.4,0,.2,1) backwards; animation-delay: .2s; }
+
+/* ===== ACCESSIBILITY ===== */
+:focus-visible { outline: 2px solid var(--tool); outline-offset: 2px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+::selection { background: color-mix(in srgb, var(--tool) 15%, transparent); color: var(--text); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--tool) 20%, transparent); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--tool) 35%, transparent); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .slide { padding: 24px 16px 80px; }
+  .slide-inner { padding: 22px 18px; }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .compare-cols { flex-direction: column; }
+  .title-slide .topics-preview { gap: 10px; }
+  .topic-item { min-width: 80px; padding: 14px 12px 10px; }
+  .flow-container { grid-template-columns: 1fr; }
+  .flow-arrow { padding-top: 0; transform: rotate(90deg); }
+  .scenario-cards { grid-template-columns: 1fr; }
+  .tips-grid { grid-template-columns: 1fr; }
+  .product-item { flex: 0 0 calc(80% - 7px); }
+  .h-flow { flex-direction: column; align-items: center; }
+  .h-flow-arrow { transform: rotate(90deg); padding: 6px 0; }
+  .pros-limits-grid { grid-template-columns: 1fr !important; }
+  .slide-inner [style*="grid-template-columns: 1fr auto"] { grid-template-columns: 1fr !important; }
+  .slide-inner [style*="min-width:180px"] { display: none; }
+  [style*="grid-template-columns:repeat(3"] { grid-template-columns: 1fr !important; }
+  [style*="grid-template-columns:repeat(2"] { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  .slide { padding: 16px 12px 70px; }
+  .slide-inner { padding: 16px 12px; }
+  h2 { font-size: clamp(1.2rem, 5vw, 1.6rem); }
+  .step-card, .g-card { padding: 14px; }
+  .scenario-cards { grid-template-columns: 1fr; }
+  .tips-grid { grid-template-columns: 1fr; }
+  .product-item { flex: 0 0 100%; }
+  body { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== PROGRESS BAR ===== -->
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:5%"></div></div>
+
+<!-- ===== SPARKLES ===== -->
+<div id="sparkles"></div>
+
+<!-- ===== SLIDES ===== -->
+<div class="slide-container">
+
+<!-- ==================== SLIDE 1: TITLE ==================== -->
+<div class="slide title-slide active">
+  <div class="logo-icon">
+    <svg viewBox="0 0 24 24" width="44" height="44" fill="var(--tool)"><path d="M11.999 3.201C5.372 3.201 0 8.528 0 15.101V20.8h2.212v-.568c0-2.666 2.178-4.827 4.866-4.827 2.688 0 4.866 2.16 4.866 4.827v.568h2.212v-.568c0-3.877-3.17-7.019-7.078-7.019A7.075 7.075 0 0 0 2.992 14.5a7.355 7.355 0 0 1 6.568-4.016c4.057 0 7.347 3.264 7.347 7.287V20.8h2.212V17.77c0-5.235-4.28-9.481-9.56-9.481a9.563 9.563 0 0 0-6.217 2.28A9.795 9.795 0 0 1 12 5.393c5.406 0 9.788 4.346 9.788 9.707V20.8H24V15.1c-.001-6.573-5.373-11.9-12.001-11.9Z"/></svg>
+  </div>
+  <h1><span class="brand-word">NotebookLM</span></h1>
+  <div class="subtitle">
+    המחברת החכמה של Google שהופכת מסמכים לידע פעיל<br>
+    סיכומים, פודקאסטים, אינפוגרפיקות ומצגות — בלחיצה
+  </div>
+  <div class="badge">Learni | הדרכה קצרה שתשנה לכם את העבודה</div>
+  <div class="topics-preview">
+    <div class="topic-item"><div class="topic-num">1</div>מה זה NotebookLM</div>
+    <div class="topic-item"><div class="topic-num">2</div>איך עובדים</div>
+    <div class="topic-item"><div class="topic-num">3</div>יתרונות ומגבלות</div>
+    <div class="topic-item"><div class="topic-num">4</div>התהליך הנכון</div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 2: WHAT IS NOTEBOOKLM ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon violet">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M8 7h8M8 12h6"/></svg>
+      </div>
+      <div>
+        <div class="section-title">מה זה <span class="brand-word">NotebookLM</span>?</div>
+        <div class="section-subtitle">יש לכם 50 מסמכים ואין זמן לקרוא — NotebookLM קורא בשבילכם.</div>
+      </div>
+    </div>
+    <div class="grid-3">
+      <div class="g-card">
+        <div class="g-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>
+        </div>
+        <div class="g-title">Deep Research (מחקר עמוק)</div>
+        <div class="g-desc">מנוע שמנתח את המסמכים שלכם ומחפש תשובות מדויקות</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        </div>
+        <div class="g-title">המודל החכם של Google</div>
+        <div class="g-desc">רץ על Gemini, המודל המתקדם של Google, עם יכולת לעבד מאות אלפי מילים בבת אחת</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="g-title">תוצרים מוכנים</div>
+        <div class="g-desc">אינפוגרפיקות, מצגות, פודקאסטים, טבלאות וכרטיסיות לימוד — מהמסמכים שלכם</div>
+      </div>
+    </div>
+    <div class="tip-box">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="tip-text"><strong>חינמי לגמרי!</strong> NotebookLM זמין בחינם עם חשבון Google. יש גם מנוי Plus ו-AI Ultra עם יכולות נוספות.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 3: HOW TO START ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon green">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      </div>
+      <div>
+        <div class="section-title">איך מתחילים?</div>
+        <div class="section-subtitle">3 שלבים ואתם בפנים</div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-number violet">1</div>
+      <div><div class="step-title">נכנסים ל-NotebookLM</div><div class="step-desc">גולשים ל-<a href="https://notebooklm.google.com" target="_blank" style="color:var(--tool-dark);font-weight:600;">notebooklm.google.com</a> ומתחברים עם חשבון Google</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number green">2</div>
+      <div><div class="step-title">יוצרים מחברת חדשה</div><div class="step-desc">לוחצים על "New Notebook" ונותנים שם — למשל "סיכום מאמרים לפרויקט"</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number orange">3</div>
+      <div><div class="step-title">מעלים מקורות</div><div class="step-desc">PDF, Google Docs, אתרים, YouTube, EPUB, Sheets ואפילו תמונות — הכל נכנס</div></div>
+    </div>
+    <div class="tip-box green">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></div>
+      <div class="tip-text"><strong>אפשר לחבר Google Drive</strong> — המסמכים מסתנכרנים אוטומטית ותמיד מעודכנים.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 4: DIVIDER ==================== -->
+<div class="slide divider-slide">
+  <div class="divider-inner">
+    <div class="divider-circle violet">2</div>
+    <div class="divider-title">איך עובדים עם <span class="brand-word">NotebookLM</span>?</div>
+    <div class="divider-desc">4 דרכים להפוך מסמכים לידע שימושי</div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 5: HOW IT WORKS — ASK QUESTIONS ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon violet">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </div>
+      <div>
+        <div class="section-title">שאלו שאלות — קבלו תשובות עם מקורות</div>
+        <div class="section-subtitle">כמו עוזר אישי שקרא את כל המסמכים שלכם</div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-number violet">1</div>
+      <div><div class="step-title">שאלה בשפה חופשית</div><div class="step-desc">כותבים שאלה כמו "מה הממצאים העיקריים בדוח?" — בעברית או באנגלית</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number green">2</div>
+      <div><div class="step-title">תשובה עם ציטוטים</div><div class="step-desc">NotebookLM מחזיר תשובה מדויקת עם הפניה למקור — לוחצים ורואים בדיוק מאיפה המידע</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number orange">3</div>
+      <div><div class="step-title">מחקר עמוק (Deep Research)</div><div class="step-desc">מנוע שמחפש חיבורים בין מקורות שונים ובונה תמונה שלמה</div></div>
+    </div>
+    <div class="tip-box">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></div>
+      <div class="tip-text"><strong>שליטה ברמת הפירוט:</strong> בוחרים Concise (קצר) / Standard (רגיל) / Detailed (מפורט) — או כותבים הוראה חופשית.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 6: HOW IT WORKS — CREATE OUTPUTS ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon green">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div>
+        <div class="section-title">יצירת תוצרים — מהמסמכים שלכם לתוצר מוכן</div>
+        <div class="section-subtitle">NotebookLM הופך מסמכים למגוון פורמטים — ללמידה, להצגה ולעבודה</div>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr auto; gap:20px; align-items:start;">
+      <!-- Left: content cards -->
+      <div>
+        <div class="grid-2" style="margin-bottom:10px;">
+          <div class="g-card" style="padding:16px 14px;">
+            <div class="g-icon" style="margin-bottom:6px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M7 21h10"/><path d="M12 17v4"/></svg>
+            </div>
+            <div class="g-title">מצגות PPTX</div>
+            <div class="g-desc">ייצוא מצגת לעריכה + תיקון שקף-שקף</div>
+          </div>
+          <div class="g-card" style="padding:16px 14px;">
+            <div class="g-icon" style="margin-bottom:6px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+            </div>
+            <div class="g-title">אינפוגרפיקה</div>
+            <div class="g-desc">10 סגנונות — סקיצה, מקצועי, אנימה ועוד</div>
+          </div>
+          <div class="g-card" style="padding:16px 14px;">
+            <div class="g-icon" style="margin-bottom:6px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/></svg>
+            </div>
+            <div class="g-title">סקירה קולית</div>
+            <div class="g-desc">פודקאסט עם שני מגישים מהמסמכים</div>
+          </div>
+          <div class="g-card" style="padding:16px 14px;">
+            <div class="g-icon" style="margin-bottom:6px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><path d="M16 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V8z"/><path d="M15 3v4a2 2 0 002 2h4"/><path d="M9 13h6"/><path d="M9 17h3"/></svg>
+            </div>
+            <div class="g-title">כרטיסי עזר ובוחן</div>
+            <div class="g-desc">Flashcards וחידונים עם מעקב התקדמות</div>
+          </div>
+          <div class="g-card" style="padding:16px 14px;">
+            <div class="g-icon" style="margin-bottom:6px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+            </div>
+            <div class="g-title">דוחות וסיכומים</div>
+            <div class="g-desc">סיכום מסודר בפורמט מסמך מוכן</div>
+          </div>
+          <div class="g-card" style="padding:16px 14px;">
+            <div class="g-icon" style="margin-bottom:6px;">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+            </div>
+            <div class="g-title">טבלת נתונים ומפת חשיבה</div>
+            <div class="g-desc">פלט טבלאי + מפה ויזואלית של קשרים</div>
+          </div>
+        </div>
+      </div>
+      <!-- Right: Studio mockup -->
+      <div style="background:rgba(255,255,255,.92); border-radius:16px; border:1.5px solid rgba(0,0,0,.08); padding:14px; min-width:180px; max-width:200px; box-shadow:var(--shadow-md); flex-shrink:0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid rgba(0,0,0,.06);">
+          <span style="font-family:'Karantina',sans-serif; font-size:16px; font-weight:700; color:var(--text);">סטודיו</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><rect x="2" y="3" width="20" height="14" rx="2"/></svg>
+            מצגת
+          </div>
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/></svg>
+            סקירה קולית
+          </div>
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6"/></svg>
+            מפת חשיבה
+          </div>
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            סרטון סקירה
+          </div>
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 10h10"/></svg>
+            כרטיסי עזר
+          </div>
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+            דוחות
+          </div>
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+            אינפוגרפיקה
+          </div>
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            בוחן
+          </div>
+          <div style="background:#f5f5f5; border-radius:8px; padding:8px 6px; text-align:center; font-size:10px; color:var(--text-mid); line-height:1.3; grid-column:span 2;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="display:block;margin:0 auto 3px;"><path d="M3 3h18v18H3z"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+            טבלת נתונים
+          </div>
+        </div>
+        <div style="text-align:center; margin-top:8px; font-size:10px; color:var(--tool-dark); font-weight:600;">9 סוגי תוצרים בלחיצה</div>
+      </div>
+    </div>
+    <div class="tip-box">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></div>
+      <div class="tip-text"><strong>אינפוגרפיקות בשלושה כיוונים:</strong> לרוחב (Landscape), לגובה (Portrait) או ריבוע (Square) — בוחרים לפי הצורך.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 7: HOW IT WORKS — AUDIO OVERVIEW ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon orange">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </div>
+      <div>
+        <div class="section-title">למידה חכמה — פודקאסט, שיחה והנוטבוק כמקור ידע</div>
+        <div class="section-subtitle">NotebookLM לא רק עונה — הוא מלמד אתכם את החומר</div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-number violet">1</div>
+      <div><div class="step-title">פודקאסט אוטומטי</div><div class="step-desc">NotebookLM יוצר שיחה טבעית בין שני מגישים שמסבירים את המסמכים שלכם — מושלם להאזנה בנסיעה</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number green">2</div>
+      <div><div class="step-title">הצטרפות לשיחה בלייב</div><div class="step-desc">אפשר להיכנס לשיחה בזמן אמת — לשאול שאלות ולכוון את הדיון לנושאים שמעניינים אתכם</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number orange">3</div>
+      <div><div class="step-title">המחברת כמקור למידה אישי</div><div class="step-desc">הנוטבוק הופך לבסיס ידע חי — שואלים שאלות, מקבלים סיכומים, כרטיסיות וחידונים. כאילו מורה פרטי שקרא הכל</div></div>
+    </div>
+    <div class="tip-box purple">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.4 5.7 21l2.3-7L2 9.4h7.6z"/></svg></div>
+      <div class="tip-text"><strong>AI Ultra (249$/חודש):</strong> סרטונים קולנועיים (Cinematic Video Overviews) עם Veo 3 — כרגע באנגלית בלבד.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 8: HOW IT WORKS — INTEGRATIONS ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon purple">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      </div>
+      <div>
+        <div class="section-title">חיבורים ואינטגרציות</div>
+        <div class="section-subtitle">NotebookLM עובד יחד עם הכלים שכבר מכירים</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="g-card">
+        <div class="g-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="g-title">Google Drive</div>
+        <div class="g-desc">חיבור ישיר — מסמכים מסונכרנים ותמיד מעודכנים</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div class="g-title">שיתוף עם צוות</div>
+        <div class="g-desc">שיתוף מחברות עם עמיתים, Google Classroom לכיתות, או קישור ישיר</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        </div>
+        <div class="g-title">נוטבוק כמקור ב-Gemini</div>
+        <div class="g-desc">שואלים את Gemini שאלה ומקבלים תשובות מהנוטבוק שלכם</div>
+      </div>
+      <div class="g-card">
+        <div class="g-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="g-title">מקורות מגוונים</div>
+        <div class="g-desc">PDF, EPUB, Google Sheets, YouTube, תמונות ואתרים — הכל נכנס למחברת</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 9: WHAT'S NEW 2026 ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon violet">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.4 5.7 21l2.3-7L2 9.4h7.6z"/></svg>
+      </div>
+      <div>
+        <div class="section-title">מה חדש ב-NotebookLM? שדרוגים של 2026</div>
+        <div class="section-subtitle">הכלי השתדרג משמעותית — הנה מה שהתווסף לאחרונה</div>
+      </div>
+    </div>
+    <!-- Timeline -->
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <!-- March 2026 — biggest update -->
+      <div style="background:linear-gradient(135deg, var(--tool-light), color-mix(in srgb, var(--tool) 8%, transparent)); border:1.5px solid color-mix(in srgb, var(--tool) 25%, transparent); border-radius:16px; padding:16px 20px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+          <span style="background:var(--tool); color:white; border-radius:20px; padding:4px 14px; font-size:13px; font-weight:700; white-space:nowrap;">מרץ 2026</span>
+          <span style="font-weight:700; font-size:15px; color:var(--text);">העדכון הגדול</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+          <div style="background:rgba(255,255,255,.7); border-radius:10px; padding:10px; font-size:13px; color:var(--text-mid); line-height:1.5;">
+            <strong style="color:var(--text);">10 סגנונות אינפוגרפיקה</strong><br>סקיצה, מקצועי, אנימה, רשת ועוד
+          </div>
+          <div style="background:rgba(255,255,255,.7); border-radius:10px; padding:10px; font-size:13px; color:var(--text-mid); line-height:1.5;">
+            <strong style="color:var(--text);">ייצוא מצגות PPTX</strong><br>מצגות שאפשר לערוך + תיקון שקף-שקף
+          </div>
+          <div style="background:rgba(255,255,255,.7); border-radius:10px; padding:10px; font-size:13px; color:var(--text-mid); line-height:1.5;">
+            <strong style="color:var(--text);">סרטונים קולנועיים</strong><br>Video Overviews עם Veo 3 (AI Ultra)
+          </div>
+        </div>
+      </div>
+      <!-- January 2026 -->
+      <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
+        <div style="background:rgba(255,255,255,.7); border-radius:14px; border:1px solid rgba(0,0,0,.06); padding:14px 16px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <span style="background:var(--amber); color:white; border-radius:20px; padding:3px 12px; font-size:12px; font-weight:700;">ינואר 2026</span>
+          </div>
+          <div style="font-size:13px; color:var(--text-mid); line-height:1.6;">
+            <strong style="color:var(--text);">נוטבוק כמקור ב-Gemini</strong> — שואלים את Gemini ומקבלים תשובות מהמחברת שלכם
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,.7); border-radius:14px; border:1px solid rgba(0,0,0,.06); padding:14px 16px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <span style="background:var(--purple); color:white; border-radius:20px; padding:3px 12px; font-size:12px; font-weight:700;">פברואר 2026</span>
+          </div>
+          <div style="font-size:13px; color:var(--text-mid); line-height:1.6;">
+            <strong style="color:var(--text);">התאמה אישית במובייל</strong> — ממשק חדש, עריכה ישירה מהטלפון
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tip-box green" style="margin-top:10px;">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.4 5.7 21l2.3-7L2 9.4h7.6z"/></svg></div>
+      <div class="tip-text"><strong>חלון הקשר גדל פי 8!</strong> מיליון טוקנים (מאות אלפי מילים) — עכשיו אפשר להעלות ספרים שלמים ומסמכים ענקיים.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 10: DIVIDER — PROS & LIMITS ==================== -->
+<div class="slide divider-slide">
+  <div class="divider-inner">
+    <div class="divider-circle green">3</div>
+    <div class="divider-title">יתרונות ומגבלות</div>
+    <div class="divider-desc">מה מעולה ומה כדאי לדעת לפני שמתחילים</div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 10: PROS + LIMITS ==================== -->
+<div class="slide">
+  <div class="slide-inner" style="max-width:920px;">
+    <div class="section-header" style="justify-content:center; text-align:center;">
+      <div>
+        <div class="section-title">יתרונות ומגבלות של <span class="brand-word">NotebookLM</span></div>
+        <div class="section-subtitle">מה מעולה ומה צריך לדעת</div>
+      </div>
+    </div>
+    <div class="pros-limits-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <!-- Advantages -->
+      <div style="background:linear-gradient(135deg, rgba(216,243,220,.6), rgba(82,183,136,.08)); border:1.5px solid rgba(82,183,136,.25); border-radius:20px; padding:20px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; font-family:'Karantina',sans-serif; font-size:22px; font-weight:700; color:#2D7A54;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2D7A54" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          יתרונות
+        </div>
+        <div class="pros-list">
+          <div class="pros-item">
+            <div class="pros-icon" style="background:var(--green-light); color:#2D7A54;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <span><strong>חינמי לגמרי</strong> — עם חשבון Google, בלי כרטיס אשראי</span>
+          </div>
+          <div class="pros-item">
+            <div class="pros-icon" style="background:var(--green-light); color:#2D7A54;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg></div>
+            <span><strong>מקורות מדויקים</strong> — כל תשובה מפנה לציטוט המדויק במסמך</span>
+          </div>
+          <div class="pros-item">
+            <div class="pros-icon" style="background:var(--green-light); color:#2D7A54;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M12 17v4"/></svg></div>
+            <span><strong>תוצרים מגוונים</strong> — מצגות, אינפוגרפיקות, פודקאסטים, כרטיסיות</span>
+          </div>
+          <div class="pros-item">
+            <div class="pros-icon" style="background:var(--green-light); color:#2D7A54;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+            <span><strong>קל לשימוש</strong> — אין צורך בידע טכני, ממשק פשוט ואינטואיטיבי</span>
+          </div>
+          <div class="pros-item">
+            <div class="pros-icon" style="background:var(--green-light); color:#2D7A54;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+            <span><strong>חוסך זמן</strong> — סיכום 50 עמודים ב-30 שניות</span>
+          </div>
+        </div>
+      </div>
+      <!-- Limitations -->
+      <div style="background:linear-gradient(135deg, rgba(254,243,199,.5), rgba(233,163,25,.06)); border:1.5px solid rgba(233,163,25,.25); border-radius:20px; padding:20px;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px; font-family:'Karantina',sans-serif; font-size:22px; font-weight:700; color:#9A6D0B;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9A6D0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          מגבלות ופתרונות
+        </div>
+        <div class="limit-list">
+          <div class="limit-item">
+            <div class="limit-problem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> עברית חלקית בפודקאסטים</div>
+            <div class="limit-solution"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> אינפוגרפיקות ומצגות עובדות מעולה בעברית</div>
+          </div>
+          <div class="limit-item">
+            <div class="limit-problem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> לא יוצר תוכן מאפס</div>
+            <div class="limit-solution"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> צריך מקורות — הכלי מעבד, לא ממציא</div>
+          </div>
+          <div class="limit-item">
+            <div class="limit-problem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> מצגות PPTX בסיסיות בעיצוב</div>
+            <div class="limit-solution"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> מייצאים ומשפרים ב-PowerPoint / Canva</div>
+          </div>
+          <div class="limit-item">
+            <div class="limit-problem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> סרטונים רק ב-AI Ultra (249$/חודש)</div>
+            <div class="limit-solution"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> כל שאר הפיצ'רים זמינים בחינם</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 11: COMPARISON ==================== -->
+<div class="slide">
+  <div class="compare-wrap">
+    <div class="compare-title">מתי NotebookLM ומתי ChatGPT?</div>
+    <div class="compare-cols">
+      <div class="compare-col" style="border-top: 4px solid var(--purple);">
+        <h3 style="color: var(--purple);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          ChatGPT / Gemini Chat
+        </h3>
+        <div class="compare-item"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span> יצירת תוכן מאפס — מאמרים, מיילים, קופי</div>
+        <div class="compare-item"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span> brainstorming ורעיונות חדשים</div>
+        <div class="compare-item"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span> ידע כללי ומענה על שאלות כלליות</div>
+        <div class="compare-item"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span> לא מצטט מקורות מדויקים מהמסמכים שלכם</div>
+      </div>
+      <div class="compare-col good">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          NotebookLM
+        </h3>
+        <div class="compare-item"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span> עונה רק מהמסמכים שלכם — מדויק ואמין</div>
+        <div class="compare-item"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span> כל תשובה עם ציטוט מדויק מהמקור</div>
+        <div class="compare-item"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span> מקורות קבועים במחברת מסודרת</div>
+        <div class="compare-item"><span class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span> פודקאסטים, אינפוגרפיקות, מצגות וכרטיסיות</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 12: CC CONNECTION (merged) ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon orange">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      </div>
+      <div>
+        <div class="section-title">Claude Code + NotebookLM — שליטה מלאה מהטרמינל</div>
+        <div class="section-subtitle">חיבור דרך NotebookLM-py — כל היכולות של NotebookLM, ישר מ-Claude Code</div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-number violet">1</div>
+      <div><div class="step-title">חיבור דרך NotebookLM-py</div><div class="step-desc">Claude Code מתחבר ל-NotebookLM דרך ספריית Python קהילתית (לא רשמית של Google) — יוצר מחברות, מעלה מקורות ומבקש תוצרים</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number green">2</div>
+      <div><div class="step-title">מבקשים מ-Claude Code כל מה ש-NotebookLM יודע לעשות</div><div class="step-desc">"תיצור אינפוגרפיקה מ-5 המאמרים", "תייצר פודקאסט מהדוחות", "תעשה סיכום טבלאי" — הכל בפקודה אחת</div></div>
+    </div>
+    <div class="step-card">
+      <div class="step-number orange">3</div>
+      <div><div class="step-title">תוצרים מוכנים בלי לפתוח דפדפן</div><div class="step-desc">אינפוגרפיקות, מצגות, סיכומים ופודקאסטים נוצרים אוטומטית — Claude Code מטפל בכל התהליך</div></div>
+    </div>
+    <div class="flow-container" style="margin-top:12px;">
+      <div class="flow-col">
+        <div class="flow-col-header cc">Claude Code</div>
+        <div class="flow-step">
+          <div class="flow-num cc">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </div>
+          <div><div class="step-desc" style="font-size:13px;">"תיצור מחברת עם המאמרים האלה ותעשה אינפוגרפיקה"</div></div>
+        </div>
+      </div>
+      <div class="flow-arrow">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+      </div>
+      <div class="flow-col">
+        <div class="flow-col-header tool">NotebookLM</div>
+        <div class="flow-step">
+          <div class="flow-num tool">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div><div class="step-desc" style="font-size:13px;">מעבד, מסכם, יוצר תוצרים — הכל אוטומטי</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tip-box green" style="margin-top:12px;">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></div>
+      <div class="tip-text"><strong>אין לכם Claude Code?</strong> אפשר לעשות הכל ידנית דרך אתר NotebookLM — אותן תוצאות, רק בלחיצות במקום פקודות. <br>רוצים ללמוד על Claude Code? <a href="../../claude-code/intro.html" style="color:var(--tool-dark); font-weight:600;">למצגת ההדרכה</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 14: SCENARIOS ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon amber">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+      </div>
+      <div>
+        <div class="section-title">תרחישים מהחיים</div>
+        <div class="section-subtitle">מצבים שכולם מכירים — ואיך NotebookLM פותר אותם</div>
+      </div>
+    </div>
+    <div class="scenario-cards">
+      <div class="scenario-card">
+        <div class="scenario-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--tool-dark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="scenario-title">30 דוחות על השולחן ואין זמן לקרוא</div>
+        <div class="scenario-desc">מעלים את כל הדוחות ומקבלים סיכום מדויק עם הממצאים העיקריים ומה שדורש התייחסות</div>
+        <div class="scenario-time">3 דקות</div>
+      </div>
+      <div class="scenario-card">
+        <div class="scenario-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--tool-dark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="scenario-title">צריך מחקר שוק לפני פגישה עם משקיע</div>
+        <div class="scenario-desc">מעלים 5 דוחות על השוק, NotebookLM בונה סיכום ממוקד עם נתונים מדויקים + מצגת draft</div>
+        <div class="scenario-time">5 דקות</div>
+      </div>
+      <div class="scenario-card">
+        <div class="scenario-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--tool-dark)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div class="scenario-title">הצוות רוצה סיכום של כל מה שנעשה</div>
+        <div class="scenario-desc">מעלים פרוטוקולים ומסמכי עבודה, יוצרים אינפוגרפיקה מסכמת או טבלת השוואה מסודרת</div>
+        <div class="scenario-time">4 דקות</div>
+      </div>
+    </div>
+    <div class="tip-box" style="margin-top:10px;">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></div>
+      <div class="tip-text"><strong>גם לשיווק:</strong> מעלים 10 דוחות מתחרים, מקבלים ניתוח השוואתי מסודר עם הממצאים העיקריים — ב-5 דקות במקום יומיים.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 15: PRODUCT GALLERY ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon violet">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      </div>
+      <div>
+        <div class="section-title">דוגמאות תוצרים</div>
+        <div class="section-subtitle">תוצרים שנוצרו ב-NotebookLM — ישר מהמסמכים</div>
+      </div>
+    </div>
+    <div style="position:relative;">
+      <div id="productTrack" style="display:flex; gap:14px; overflow-x:auto; scroll-behavior:smooth; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; padding:8px 0;">
+        <div style="flex:0 0 calc(33.333% - 10px); scroll-snap-align:start; background:rgba(255,255,255,.8); border-radius:16px; overflow:hidden; border:1.5px solid rgba(0,0,0,.06); cursor:pointer;" onclick="openLightbox(this.querySelector('img'))">
+          <div style="width:100%; height:200px; overflow:hidden;"><img src="screenshots/infographic-professional.png" alt="אינפוגרפיקה NotebookLM 2026" style="width:100%; height:100%; object-fit:cover; object-position:top;"></div>
+          <div class="product-info">
+            <div class="product-title">אינפוגרפיקה — Professional</div>
+            <div class="product-meta">לחצו להגדלה</div>
+          </div>
+        </div>
+        <div style="flex:0 0 calc(33.333% - 10px); scroll-snap-align:start; background:rgba(255,255,255,.8); border-radius:16px; overflow:hidden; border:1.5px solid rgba(0,0,0,.06); cursor:pointer;" onclick="openLightbox(this.querySelector('img'))">
+          <div style="width:100%; height:200px; overflow:hidden;"><img src="screenshots/infographic-brain.png" alt="אינפוגרפיקה NotebookLM — המוח השני" style="width:100%; height:100%; object-fit:cover; object-position:top;"></div>
+          <div class="product-info">
+            <div class="product-title">אינפוגרפיקה — ויזואלי AI</div>
+            <div class="product-meta">לחצו להגדלה</div>
+          </div>
+        </div>
+        <div style="flex:0 0 calc(33.333% - 10px); scroll-snap-align:start; background:rgba(255,255,255,.8); border-radius:16px; overflow:hidden; border:1.5px solid rgba(0,0,0,.06); cursor:pointer;" onclick="openLightbox(this.querySelector('img'))">
+          <div style="width:100%; height:200px; overflow:hidden;"><img src="screenshots/mind-map.png" alt="מפת חשיבה NotebookLM" style="width:100%; height:100%; object-fit:cover; object-position:center;"></div>
+          <div class="product-info">
+            <div class="product-title">מפת חשיבה — Mind Map</div>
+            <div class="product-meta">לחצו להגדלה</div>
+          </div>
+        </div>
+        <div style="flex:0 0 calc(33.333% - 10px); scroll-snap-align:start; background:rgba(255,255,255,.8); border-radius:16px; overflow:hidden; border:1.5px solid rgba(0,0,0,.06); cursor:pointer;" onclick="openLightbox(this.querySelector('img'))">
+          <div style="width:100%; height:200px; overflow:hidden;"><img src="screenshots/pptx-slide.png" alt="מצגת PPTX שנוצרה ב-NotebookLM" style="width:100%; height:100%; object-fit:cover; object-position:top;"></div>
+          <div class="product-info">
+            <div class="product-title">מצגת PPTX — 12 שקפים</div>
+            <div class="product-meta">לחצו להגדלה</div>
+          </div>
+        </div>
+        <div style="flex:0 0 calc(33.333% - 10px); scroll-snap-align:start; background:rgba(255,255,255,.8); border-radius:16px; overflow:hidden; border:1.5px solid rgba(0,0,0,.06);">
+          <div style="width:100%; height:200px; overflow:hidden; border-radius:14px 14px 0 0;">
+            <video src="screenshots/cinematic-video-overview.mp4" controls playsinline preload="metadata" style="width:100%; height:100%; object-fit:cover;"></video>
+          </div>
+          <div class="product-info">
+            <div class="product-title">סרטון קולנועי</div>
+            <div class="product-meta">באנגלית | AI Ultra</div>
+          </div>
+        </div>
+      </div>
+      <!-- Navigation arrows -->
+      <button onclick="document.getElementById('productTrack').scrollBy({left:-250,behavior:'smooth'})" style="position:absolute; top:100px; right:-10px; width:36px; height:36px; border-radius:50%; border:1.5px solid color-mix(in srgb, var(--tool) 30%, transparent); background:rgba(255,255,255,.9); color:var(--tool-dark); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:5; backdrop-filter:blur(8px);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+      <button onclick="document.getElementById('productTrack').scrollBy({left:250,behavior:'smooth'})" style="position:absolute; top:100px; left:-10px; width:36px; height:36px; border-radius:50%; border:1.5px solid color-mix(in srgb, var(--tool) 30%, transparent); background:rgba(255,255,255,.9); color:var(--tool-dark); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:5; backdrop-filter:blur(8px);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+    </div>
+    <div class="tip-box green" style="margin-top:12px;">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="tip-text"><strong>כל התוצרים האלה נוצרו אוטומטית</strong> — מתוך אותם מסמכים, בלחיצה אחת בסטודיו של NotebookLM.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 16: TIPS ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon amber">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>
+      </div>
+      <div>
+        <div class="section-title">טיפים לשימוש חכם</div>
+        <div class="section-subtitle">הדברים שהופכים אתכם מלמתחילים למשתמשים מנוסים</div>
+      </div>
+    </div>
+    <div class="tips-grid">
+      <div class="tip-card">
+        <div class="tip-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tool-dark)" stroke-width="1.5"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></div>
+        <div class="tip-card-title">מקורות איכותיים = תוצרים איכותיים</div>
+        <div class="tip-card-desc">NotebookLM טוב כמו המסמכים שמעלים לו. העלו מקורות מקצועיים ומפורטים — לא רק כותרות.</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tool-dark)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg></div>
+        <div class="tip-card-title">נסו את סגנון הסקיצה (Sketch Note)</div>
+        <div class="tip-card-desc">מבין 10 הסגנונות, סקיצה ותצוגת רשת (Bento Grid) ה��י מתאימים להצגה בפני קהל.</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tool-dark)" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <div class="tip-card-title">חברו את Google Drive</div>
+        <div class="tip-card-desc">במקום להעלות קבצים ידנית — חברו Drive ותמיד יהיו לכם המסמכים המעודכנים.</div>
+      </div>
+      <div class="tip-card">
+        <div class="tip-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tool-dark)" stroke-width="1.5"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.4 5.7 21l2.3-7L2 9.4h7.6z"/></svg></div>
+        <div class="tip-card-title">מניסיון: הפודקאסט שינה לי את ההתכוננות</div>
+        <div class="tip-card-desc">אחרי חודש שימוש — הדבר הכי שווה הוא Audio Overview בנסיעה. מגיעים מוכנים בלי לשבת לקרוא.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 17: FAQ ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon blue">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <div class="section-title">שאלות ותשובות</div>
+        <div class="section-subtitle">השאלות שכולם שואלים לפני שמתחילים</div>
+      </div>
+    </div>
+    <div class="faq-accordion">
+      <div class="faq-item open">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          זה באמת חינמי?
+          <svg class="faq-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">כן! NotebookLM חינמי עם חשבון Google וכולל את כל הפיצ'רים המרכזיים. יש מנוי Plus (דרך Google AI Pro, כ-20$/חודש) עם יותר שימושים, ו-AI Ultra (249$/חודש) עם סרטונים קולנועיים. רוב המשתמשים לא צריכים יותר מהחינמי.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          זה עובד בעברית?
+          <svg class="faq-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">בחלק גדול כן. שאלות ותשובות, אינפוגרפיקות ומצגות עובדים מצוין בעברית. הפודקאסטים (Audio Overview) כרגע בעיקר באנגלית.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          כמה זמן לוקח ללמוד?
+          <svg class="faq-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">5 דקות להתחלה. מעלים קובץ, שואלים שאלה — וזהו. ככל שמשתמשים יותר, מגלים עוד אפשרויות. אין עקומת למידה תלולה.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          זה מחליף את ChatGPT?
+          <svg class="faq-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">לא מחליף — משלים. ChatGPT טוב ליצירת תוכן מאפס. NotebookLM טוב לעבודה עם מסמכים קיימים. הם עובדים מצוין יחד.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          מה עם אבטחת מידע? המסמכים שלי בטוחים?
+          <svg class="faq-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">Google מצהירה שהמסמכים שלכם לא משמשים לאימון מודלים. הנתונים נשארים בחשבון Google שלכם. לארגונים יש גם אפשרות לגרסת Workspace עם הגנות נוספות.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-question" onclick="toggleFaq(this)">
+          אפשר לשתף מחברת עם צוות או עם תלמידים?
+          <svg class="faq-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="faq-answer">כן! אפשר לשתף מחברת עם עמיתים בקישור, לשלב עם Google Classroom לכיתות, או פשוט לייצא את התוצרים ולשלוח.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 18: PRACTICE ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon green">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+      </div>
+      <div>
+        <div class="section-title">תורכם לנסות!</div>
+        <div class="section-subtitle">5 דקות ויש לכם תוצר ראשון</div>
+      </div>
+    </div>
+    <div class="practice-block">
+      <div class="practice-title">המשימה שלכם</div>
+      <div class="practice-steps">
+        <div class="practice-step">
+          <div class="practice-num">1</div>
+          <div class="practice-text">היכנסו ל-<a href="https://notebooklm.google.com" target="_blank" style="color:var(--tool-dark);font-weight:600;">notebooklm.google.com</a></div>
+        </div>
+        <div class="practice-step">
+          <div class="practice-num">2</div>
+          <div class="practice-text">צרו מחברת חדשה ותנו שם — למשל "ניסיון ראשון"</div>
+        </div>
+        <div class="practice-step">
+          <div class="practice-num">3</div>
+          <div class="practice-text">העלו 2-3 מסמכים שיש לכם — דוחות עבודה, מאמרים, פרוטוקולים, או הדביקו קישור לאתר</div>
+        </div>
+        <div class="practice-step">
+          <div class="practice-num">4</div>
+          <div class="practice-text">שאלו שאלה על המסמכים — ותראו איך NotebookLM עונה עם מקורות</div>
+        </div>
+        <div class="practice-step">
+          <div class="practice-num">5</div>
+          <div class="practice-text">נסו ליצור אינפוגרפיקה או Audio Overview — בחרו סגנון שמתאים לכם</div>
+        </div>
+      </div>
+      <div class="practice-result">
+        <div class="practice-result-label">התוצר שיהיה לכם בסוף</div>
+        <div class="practice-result-value">מחברת חכמה עם אינפוגרפיקה או פודקאסט מוכן</div>
+      </div>
+    </div>
+    <div class="tip-box green" style="margin-top:12px;">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <div class="tip-text"><strong>נתקעתם?</strong> רוצים עזרה? שלחו הודעה בקבוצת הוואטסאפ.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 19: INFOGRAPHIC SUMMARY (H-FLOW) ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header" style="justify-content:center; text-align:center;">
+      <div>
+        <div class="section-title" style="font-family:'Playpen Sans Hebrew',cursive;">ראיתם מה אפשר — ככה עושים את זה</div>
+        <div class="section-subtitle">5 שלבים ויש לכם תוצר מוכן</div>
+      </div>
+    </div>
+    <div class="h-flow">
+      <div class="h-flow-step">
+        <div class="h-flow-num">1</div>
+        <div class="h-flow-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        </div>
+        <div class="h-flow-title">נכנסים</div>
+        <div class="h-flow-desc">notebooklm.google.com</div>
+      </div>
+      <div class="h-flow-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 5 5 12 12 19"/></svg>
+      </div>
+      <div class="h-flow-step">
+        <div class="h-flow-num">2</div>
+        <div class="h-flow-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="h-flow-title">מעלים מקורות</div>
+        <div class="h-flow-desc">PDF, Docs, YouTube, אתרים</div>
+      </div>
+      <div class="h-flow-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 5 5 12 12 19"/></svg>
+      </div>
+      <div class="h-flow-step">
+        <div class="h-flow-num">3</div>
+        <div class="h-flow-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <div class="h-flow-title">שואלים</div>
+        <div class="h-flow-desc">שאלות בשפה חופשית</div>
+      </div>
+      <div class="h-flow-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 5 5 12 12 19"/></svg>
+      </div>
+      <div class="h-flow-step">
+        <div class="h-flow-num">4</div>
+        <div class="h-flow-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+        </div>
+        <div class="h-flow-title">יוצרים תוצר</div>
+        <div class="h-flow-desc">אינפוגרפיקה, מצגת, פודקאסט</div>
+      </div>
+      <div class="h-flow-arrow">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 5 5 12 12 19"/></svg>
+      </div>
+      <div class="h-flow-step result">
+        <div class="h-flow-num">5</div>
+        <div class="h-flow-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="h-flow-title">משתפים</div>
+        <div class="h-flow-desc">מוכן לשליחה ושיתוף</div>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:16px; font-size:14px; color:var(--text-muted);">
+      לא מכירים את Claude Code? <a href="../../claude-code/intro.html" style="color:var(--tool-dark); font-weight:600;">לחצו כאן</a> — כלי שעוזר לאסוף מקורות ולהעלות אותם אוטומטית. אין לכם? אפשר גם ידנית.
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 20: DIVIDER — SUMMARY ==================== -->
+<div class="slide divider-slide">
+  <div class="divider-inner">
+    <div class="divider-circle orange">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.4 5.7 21l2.3-7L2 9.4h7.6z"/></svg>
+    </div>
+    <div class="divider-title">סיכום</div>
+    <div class="divider-desc">3 דברים לזכור מההדרכה</div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 21: SUMMARY ==================== -->
+<div class="slide">
+  <div class="slide-inner">
+    <div class="section-header">
+      <div class="section-icon violet">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7L12 16.4 5.7 21l2.3-7L2 9.4h7.6z"/></svg>
+      </div>
+      <div><div class="section-title">3 דברים לזכור</div></div>
+    </div>
+    <div class="grid-3">
+      <div class="g-card" style="border-top:3px solid var(--tool); padding:28px 22px;">
+        <div class="g-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--tool)" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="g-title" style="font-size:19px;">חינמי ומדויק</div>
+        <div class="g-desc" style="font-size:15px; margin-top:8px;">NotebookLM חינמי, עונה רק מהמסמכים שלכם, ותמיד מפנה למקור</div>
+      </div>
+      <div class="g-card" style="border-top:3px solid var(--orange); padding:28px 22px;">
+        <div class="g-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M12 17v4"/><path d="M7 21h10"/></svg></div>
+        <div class="g-title" style="font-size:19px;">תוצרים מוכנים</div>
+        <div class="g-desc" style="font-size:15px; margin-top:8px;">מצגות, אינפוגרפיקות, פודקאסטים וכרטיסיות — ישר מהמסמכים</div>
+      </div>
+      <div class="g-card" style="border-top:3px solid var(--green); padding:28px 22px;">
+        <div class="g-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+        <div class="g-title" style="font-size:19px;">חוסך שעות</div>
+        <div class="g-desc" style="font-size:15px; margin-top:8px;">מה שלקח שעתיים — לוקח 5 דקות. ומה שלא היה קורה בכלל — עכשיו קורה</div>
+      </div>
+    </div>
+    <div class="tip-box green" style="margin-top:12px;">
+      <div class="tip-icon-sm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="tip-text"><strong>התחילו קטן.</strong> מחברת אחת עם 2-3 מסמכים — תגלו כמה זה חוסך.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SLIDE 22: CTA ==================== -->
+<div class="slide">
+  <div class="slide-inner" style="text-align:center; max-width:700px;">
+    <div class="section-header" style="justify-content:center;">
+      <div class="section-icon green">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+      </div>
+      <div><div class="section-title">נסו בעצמכם</div></div>
+    </div>
+    <div style="text-align:right; margin-bottom:16px;">
+      <div class="step-card">
+        <div class="step-number violet">1</div>
+        <div><div class="step-title">היכנסו ל-NotebookLM</div><div class="step-desc"><a href="https://notebooklm.google.com" target="_blank" style="color:var(--tool-dark);font-weight:600;">notebooklm.google.com</a> — חשבון Google ואתם בפנים</div></div>
+      </div>
+      <div class="step-card">
+        <div class="step-number green">2</div>
+        <div><div class="step-title">העלו מסמך ושאלו שאלה</div><div class="step-desc">תראו בעצמכם כמה זה מהיר ומדויק</div></div>
+      </div>
+    </div>
+    <div style="background:linear-gradient(135deg, var(--tool-light), color-mix(in srgb, var(--tool) 8%, transparent)); border:2px solid var(--tool); border-radius:18px; padding:24px; text-align:center;">
+      <div style="font-family:'Karantina',sans-serif; font-size:clamp(20px,3vw,28px); color:var(--tool-dark); margin-bottom:8px;">
+        <span class="brand-word">נסו עכשיו</span> — פשוט וקל
+      </div>
+      <div style="font-size:16px; color:var(--text-mid); line-height:1.7;">
+        צרו מחברת, העלו 2-3 מסמכים, וצרו אינפוגרפיקה אחת.<br>
+        <strong>רוצים עזרה? שלחו הודעה בקבוצה.</strong>
+      </div>
+    </div>
+    <!-- Email signup form -->
+    <div style="background:rgba(255,255,255,.7); border:1.5px solid color-mix(in srgb, var(--tool) 20%, transparent); border-radius:18px; padding:20px; margin-top:16px; text-align:center;">
+      <div style="font-family:'Karantina',sans-serif; font-size:20px; font-weight:700; color:var(--text); margin-bottom:4px;">רוצים לקבל טיפים והדרכות למייל?</div>
+      <div style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">הירשמו לתפוצה — עדכונים, כלים חדשים ורעיונות ליישום</div>
+      <form id="ctaSignupForm" onsubmit="return handleCtaSignup(event)" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <input type="text" id="ctaName" placeholder="שם מלא" required style="padding:10px 16px; border-radius:12px; border:1.5px solid rgba(0,0,0,.1); font-family:'Heebo',sans-serif; font-size:14px; width:140px; min-height:44px;">
+        <input type="email" id="ctaEmail" placeholder="your@email.com" required dir="ltr" style="padding:10px 16px; border-radius:12px; border:1.5px solid rgba(0,0,0,.1); font-family:'Heebo',sans-serif; font-size:14px; width:200px; text-align:right; min-height:44px;">
+        <button type="submit" id="ctaSubmitBtn" style="padding:10px 24px; border-radius:12px; border:none; background:var(--tool); color:white; font-family:'Heebo',sans-serif; font-size:14px; font-weight:600; cursor:pointer; min-height:44px; transition:all .2s;">
+          הרשמה
+        </button>
+      </form>
+      <div id="ctaSuccess" style="display:none; padding:12px; color:var(--tool-dark); font-weight:600; font-size:14px;">נרשמתם בהצלחה!</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:8px;">לא נשתף את המייל שלכם. תוכלו להסיר בכל עת.</div>
+    </div>
+    <!-- Social links -->
+    <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:14px;">
+      <a href="https://chat.whatsapp.com/HhAL8L2I2jCH1CW1Iehr4J" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:30px; background:#25D366; color:white; text-decoration:none; font-weight:600; font-size:14px; min-height:44px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.611.611l4.458-1.495A11.952 11.952 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.325 0-4.47-.744-6.227-2.01l-.148-.107-3.064 1.027 1.027-3.064-.107-.148A9.953 9.953 0 012 12C2 6.486 6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/></svg>
+        וואטסאפ
+      </a>
+      <a href="https://www.facebook.com/profile.php?id=61576498498498" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:30px; background:#1877F2; color:white; text-decoration:none; font-weight:600; font-size:14px; min-height:44px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        פייסבוק
+      </a>
+      <a href="https://www.instagram.com/learni.ai/" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:30px; background:linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color:white; text-decoration:none; font-weight:600; font-size:14px; min-height:44px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+        אינסטגרם
+      </a>
+      <a href="mailto:meytalp@bethaarava.ort.org.il" style="display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:30px; background:rgba(0,0,0,.06); color:var(--text-mid); text-decoration:none; font-weight:600; font-size:14px; min-height:44px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        מייל
+      </a>
+    </div>
+  </div>
+</div>
+
+</div><!-- end slide-container -->
+
+<!-- ===== LIGHTBOX ===== -->
+<div class="lightbox-overlay" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- ===== LEARNI LOGO ===== -->
+<div style="position:fixed;bottom:18px;right:20px;z-index:200;opacity:.45;pointer-events:none">
+  <img src="../../logo.svg" alt="Learni" style="height:32px;width:auto">
+</div>
+
+<!-- ===== NAVIGATION ===== -->
+<div class="nav-bar" id="navBar">
+  <div class="nav-drag-handle" id="dragHandle" title="גרור להזזה">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><circle cx="4" cy="3" r="1.2"/><circle cx="10" cy="3" r="1.2"/><circle cx="4" cy="7" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="4" cy="11" r="1.2"/><circle cx="10" cy="11" r="1.2"/></svg>
+  </div>
+  <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)" title="שקף קודם"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+  <span class="slide-counter" id="slideCounter">1 / 22</span>
+  <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)" title="שקף הבא"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+</div>
+
+<!-- ===== COPY TOAST ===== -->
+<div class="copy-toast" id="copyToast">הפרומפט הועתק ללוח!</div>
+
+<script>
+// ===== FAQ TOGGLE =====
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const wasOpen = item.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  // Toggle clicked
+  if (!wasOpen) item.classList.add('open');
+}
+
+// ===== SLIDE NAVIGATION =====
+let currentSlide = 0;
+const slides = document.querySelectorAll('.slide');
+const totalSlides = slides.length;
+
+function showSlide(index) {
+  slides.forEach((slide, i) => {
+    slide.classList.remove('active', 'exit-left');
+    if (i === index) slide.classList.add('active');
+    else if (i < index) slide.classList.add('exit-left');
+  });
+  document.getElementById('slideCounter').textContent = `${index + 1} / ${totalSlides}`;
+  document.getElementById('prevBtn').disabled = (index === 0);
+  document.getElementById('nextBtn').disabled = (index === totalSlides - 1);
+  document.getElementById('progressFill').style.width = ((index + 1) / totalSlides * 100) + '%';
+}
+
+function changeSlide(direction) {
+  const newIndex = currentSlide + direction;
+  if (newIndex >= 0 && newIndex < totalSlides) { currentSlide = newIndex; showSlide(currentSlide); }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') changeSlide(-1);
+  if (e.key === 'ArrowLeft') changeSlide(1);
+  if (e.key === 'Escape') closeLightbox();
+});
+
+let touchStartX = 0, swipeBlocked = false;
+document.addEventListener('touchstart', (e) => {
+  swipeBlocked = e.target.closest('.nav-bar') || e.target.closest('.product-track');
+  touchStartX = e.changedTouches[0].screenX;
+});
+document.addEventListener('touchend', (e) => {
+  if (swipeBlocked) return;
+  const diff = e.changedTouches[0].screenX - touchStartX;
+  if (Math.abs(diff) > 50) { diff > 0 ? changeSlide(-1) : changeSlide(1); }
+});
+
+showSlide(0);
+
+// ===== DRAGGABLE NAV =====
+(function() {
+  const nav = document.getElementById('navBar');
+  const handle = document.getElementById('dragHandle');
+  let isDragging = false, startX, startY, navX, navY;
+  function initPos() {
+    const rect = nav.getBoundingClientRect();
+    navX = rect.left; navY = rect.top;
+    nav.style.left = navX+'px'; nav.style.top = navY+'px';
+    nav.style.transform = 'none'; nav.style.bottom = 'auto';
+  }
+  handle.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    if (!nav.style.transform || nav.style.transform === 'translateX(-50%)') initPos();
+    isDragging = true; startX = e.clientX - navX; startY = e.clientY - navY;
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    navX = Math.max(0, Math.min(window.innerWidth - nav.offsetWidth, e.clientX - startX));
+    navY = Math.max(0, Math.min(window.innerHeight - nav.offsetHeight, e.clientY - startY));
+    nav.style.left = navX+'px'; nav.style.top = navY+'px';
+  });
+  document.addEventListener('mouseup', function() { isDragging = false; });
+  handle.addEventListener('touchstart', function(e) {
+    e.stopPropagation();
+    if (!nav.style.transform || nav.style.transform === 'translateX(-50%)') initPos();
+    isDragging = true;
+    const t = e.touches[0]; startX = t.clientX - navX; startY = t.clientY - navY;
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    if (!isDragging) return;
+    const t = e.touches[0];
+    navX = Math.max(0, Math.min(window.innerWidth - nav.offsetWidth, t.clientX - startX));
+    navY = Math.max(0, Math.min(window.innerHeight - nav.offsetHeight, t.clientY - startY));
+    nav.style.left = navX+'px'; nav.style.top = navY+'px';
+  }, { passive: true });
+  document.addEventListener('touchend', function() { isDragging = false; });
+})();
+
+// ===== EMAIL SIGNUP =====
+function handleCtaSignup(e) {
+  e.preventDefault();
+  const name = document.getElementById('ctaName').value.trim();
+  const email = document.getElementById('ctaEmail').value.trim();
+  if (!name || !email) return false;
+  const btn = document.getElementById('ctaSubmitBtn');
+  btn.textContent = 'שולח...';
+  btn.disabled = true;
+  fetch('https://script.google.com/macros/s/AKfycbwvVdvxrkYcXQatqlYFQas4pit1VBvhiyoCYUZFXH2BBLE-7U5VZCgr2gEbKTDsLiMS8w/exec', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'name=' + encodeURIComponent(name) + '&email=' + encodeURIComponent(email) + '&source=notebooklm-presentation'
+  }).then(() => {
+    document.getElementById('ctaSignupForm').style.display = 'none';
+    document.getElementById('ctaSuccess').style.display = 'block';
+  }).catch(() => {
+    document.getElementById('ctaSignupForm').style.display = 'none';
+    document.getElementById('ctaSuccess').style.display = 'block';
+  });
+  return false;
+}
+
+// ===== LIGHTBOX =====
+function openLightbox(img) {
+  const overlay = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lightboxImg');
+  lbImg.src = img.src; lbImg.alt = img.alt;
+  overlay.classList.add('active');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+
+// ===== SPARKLES =====
+(function() {
+  const container = document.getElementById('sparkles');
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    const size = 2 + Math.random() * 5;
+    s.style.width = size+'px'; s.style.height = size+'px';
+    s.style.left = Math.random()*100+'%';
+    s.style.animationDuration = (12+Math.random()*20)+'s, '+(2+Math.random()*3)+'s';
+    s.style.animationDelay = (Math.random()*15)+'s, '+(Math.random()*2)+'s';
+    container.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>
