@@ -1822,12 +1822,116 @@ function renderStudentDocs(leadId) {
 }
 
 // ============================================================
+// APPS SCRIPT SYNC LAYER
+// ============================================================
+// When APPS_SCRIPT_URL is set, data syncs to Google Sheets.
+// Otherwise, localStorage is used as fallback.
+
+function syncToSheet(action, data, callback) {
+  if (!APPS_SCRIPT_URL) { if (callback) callback(null); return; }
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(Object.assign({ action: action }, data))
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) { if (callback) callback(res); })
+  .catch(function(err) { console.warn('Sync error:', err); if (callback) callback(null); });
+}
+
+function syncFromSheet(action, params, callback) {
+  if (!APPS_SCRIPT_URL) { if (callback) callback(null); return; }
+  var url = APPS_SCRIPT_URL + '?action=' + action;
+  for (var k in params) { url += '&' + k + '=' + encodeURIComponent(params[k]); }
+  // JSONP for CORS
+  var cbName = 'cb_' + Date.now();
+  url += '&callback=' + cbName;
+  window[cbName] = function(data) {
+    delete window[cbName];
+    document.body.removeChild(script);
+    if (callback) callback(data);
+  };
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() { delete window[cbName]; document.body.removeChild(script); if (callback) callback(null); };
+  document.body.appendChild(script);
+}
+
+// Wrap saveLead to also sync
+var _origSaveLead = saveLead;
+saveLead = function() {
+  _origSaveLead();
+  // After local save, sync to Sheet
+  var leads = getLeads();
+  if (leads.length > 0) {
+    syncToSheet('saveLead', { lead: leads[leads.length - 1] });
+  }
+};
+
+// Wrap saveInterview to also sync
+var _origSaveInterview = saveInterview;
+saveInterview = function() {
+  _origSaveInterview();
+  var interviews = getInterviews();
+  if (interviews.length > 0) {
+    syncToSheet('saveInterview', { interview: interviews[interviews.length - 1] });
+  }
+};
+
+// Wrap saveIntroForm to also sync
+var _origSaveIntro = saveIntroForm;
+saveIntroForm = function() {
+  _origSaveIntro();
+  try {
+    var intros = JSON.parse(localStorage.getItem('ort_intros') || '[]');
+    if (intros.length > 0) {
+      syncToSheet('saveIntro', { intro: intros[intros.length - 1] });
+    }
+  } catch(e) {}
+};
+
+// Wrap addStudentNote to also sync
+var _origAddNote = addStudentNote;
+addStudentNote = function() {
+  var leadId = document.getElementById('fileStudentSelect').value;
+  _origAddNote();
+  var notes = getStudentNotes(leadId);
+  if (notes.length > 0) {
+    syncToSheet('saveNote', { leadId: leadId, note: notes[notes.length - 1] });
+  }
+};
+
+// Load from Sheet on init (if connected)
+function loadFromSheetOnInit() {
+  if (!APPS_SCRIPT_URL) return;
+
+  syncFromSheet('getLeads', {}, function(data) {
+    if (data && data.result === 'success' && data.leads && data.leads.length > 0) {
+      // Merge: Sheet data wins over local
+      var localLeads = getLeads();
+      var localIds = {};
+      localLeads.forEach(function(l) { localIds[l.id] = true; });
+
+      data.leads.forEach(function(l) {
+        if (!localIds[l.id]) localLeads.push(l);
+      });
+      saveLeads(localLeads);
+      renderLeads();
+      refreshLeadDropdown();
+      refreshChecklistDropdown();
+      refreshFileDropdown();
+    }
+  });
+}
+
+// ============================================================
 // INIT
 // ============================================================
 renderLeads();
 refreshLeadDropdown();
 refreshChecklistDropdown();
 refreshFileDropdown();
+loadFromSheetOnInit();
 
 // Refresh dropdowns when switching tabs
 document.querySelectorAll('.nav button').forEach(function(btn) {
