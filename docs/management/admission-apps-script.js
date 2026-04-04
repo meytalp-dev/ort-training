@@ -11,7 +11,7 @@
  * 7. העתיקי את ה-URL ושימי אותו ב-APPS_SCRIPT_URL בקובץ student-admission.html
  */
 
-var SHEET_ID = 'PASTE_YOUR_SHEET_ID_HERE';
+var SHEET_ID = '1FZO-uQplURi_6rYzvkUJ9mrZBC0kAlX89ziokn3VOW8';
 
 // ============================================
 // Web App Entry Points
