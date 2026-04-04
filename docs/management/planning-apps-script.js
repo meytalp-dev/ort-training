@@ -13,13 +13,16 @@
 
 var SHEET_ID = '1WO9MsWIUwdBUu0TkpbhUXHeqE_rMgauJP7Z-ybQ7b0U';
 
-var ROLES = ['ravit', 'yaakov', 'counselor', 'ofira', 'homeroom'];
+var ROLES = ['ravit', 'yaakov', 'counselor', 'ofira', 'homeroom', 'mano', 'yiska', 'dorit'];
 var ROLE_LABELS = {
   ravit: 'רוית — סגנית/פדגוגית',
   yaakov: 'יעקב — רכז חברתי',
   counselor: 'יועצת',
   ofira: 'אופירה — שורשי ישראל',
-  homeroom: 'מחנכת'
+  homeroom: 'מחנכת',
+  mano: 'מנו — רכז מוגנות',
+  yiska: 'יסכה — רכזת טיפול',
+  dorit: 'דורית — רכזת יועצות'
 };
 
 // ============================================
