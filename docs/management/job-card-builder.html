@@ -410,10 +410,33 @@ function copyText() {
   });
 }
 
+async function embedFonts() {
+  // Fetch and embed Google Fonts as base64 so dom-to-image preserves them
+  if (window._fontsEmbedded) return;
+  try {
+    const urls = [
+      'https://fonts.gstatic.com/s/playpensanshebrew/v1/k3kIo84SPe9dzQ1UGiiGlaMedrq4EMiAMSZBGYsPLmk.woff2',
+      'https://fonts.gstatic.com/s/assistant/v19/2sDPZGJYnIjSi6H75xkZZE1I0yCmYzzQtuZnEGGf3qGuvM4.woff2'
+    ];
+    const names = ['Playpen Sans Hebrew', 'Assistant'];
+    for (let i = 0; i < urls.length; i++) {
+      const resp = await fetch(urls[i]);
+      const buf = await resp.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const style = document.createElement('style');
+      style.textContent = `@font-face { font-family: '${names[i]}'; src: url(data:font/woff2;base64,${b64}) format('woff2'); font-weight: 100 900; }`;
+      document.head.appendChild(style);
+    }
+    window._fontsEmbedded = true;
+  } catch(e) { console.warn('Font embed failed:', e); }
+}
+
 async function captureImage() {
   const btn = event.target;
   btn.textContent = 'מכין תמונה...'; btn.disabled = true;
-  // Load dom-to-image-more (better CSS support)
+  // Embed fonts for export
+  await embedFonts();
+  // Load dom-to-image-more
   if (typeof domtoimage === 'undefined') {
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/dom-to-image-more/3.4.5/dom-to-image-more.min.js';
