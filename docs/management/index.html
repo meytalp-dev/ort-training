@@ -3886,7 +3886,8 @@ async function generateJobImage(id){
     const fBold=new FontFace('HeeboImg','url(https://fonts.gstatic.com/s/heebo/v26/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiS2ccCeh.woff2)',{weight:'700'});
     const fBlack=new FontFace('HeeboImg','url(https://fonts.gstatic.com/s/heebo/v26/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiS2ccCeh.woff2)',{weight:'900'});
     const fReg=new FontFace('HeeboImg','url(https://fonts.gstatic.com/s/heebo/v26/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiS2ccCeh.woff2)',{weight:'400'});
-    await Promise.allSettled([fBold.load(),fBlack.load(),fReg.load()].map(f=>f.then(x=>{document.fonts.add(x)})));
+    const fPlaypen=new FontFace('PlaypenImg','url(https://fonts.gstatic.com/s/playpensanshebrew/v1/k3kIo84SPe9dzQ1UGiiGlaMedrq4EMiAMSZBGYsPLmk.woff2)',{weight:'700'});
+    await Promise.allSettled([fBold.load(),fBlack.load(),fReg.load(),fPlaypen.load()].map(f=>f.then(x=>{document.fonts.add(x)})));
   }catch(e){}
 
   // Load ORT logo + school photo
@@ -3895,135 +3896,122 @@ async function generateJobImage(id){
     new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='school-photo.png'})
   ]);
 
-  const W=1080,H=1350;
+  const W=1080,H=1080;
   const canvas=document.createElement('canvas');
   canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.direction='rtl';
   ctx.textBaseline='alphabetic';
+  const P=60; // padding
 
-  // --- School photo at top ---
-  const photoH=380;
+  // === FULL BACKGROUND: school photo with heavy overlay ===
   if(schoolPhoto){
     const sr=schoolPhoto.naturalWidth/schoolPhoto.naturalHeight;
-    const dw=W,dh=Math.max(photoH,W/sr);
-    const dy=(photoH-dh)/2;
-    ctx.save();ctx.beginPath();ctx.rect(0,0,W,photoH);ctx.clip();
-    ctx.drawImage(schoolPhoto,(W-dw)/2,dy,dw,dh);
-    // Dark overlay gradient for readability
-    const ov=ctx.createLinearGradient(0,0,0,photoH);
-    ov.addColorStop(0,'rgba(30,40,35,.35)');ov.addColorStop(0.5,'rgba(30,40,35,.5)');ov.addColorStop(1,'rgba(30,40,35,.75)');
-    ctx.fillStyle=ov;ctx.fillRect(0,0,W,photoH);
-    ctx.restore();
+    const dw=Math.max(W,H*sr),dh=Math.max(H,W/sr);
+    ctx.drawImage(schoolPhoto,(W-dw)/2,(H-dh)/2,dw,dh);
+    ctx.fillStyle='rgba(255,252,245,.88)';ctx.fillRect(0,0,W,H);
   }else{
-    ctx.fillStyle='#2D3B35';ctx.fillRect(0,0,W,photoH);
+    ctx.fillStyle='#FFFCF5';ctx.fillRect(0,0,W,H);
   }
 
-  // Logo on photo
+  // === TOP ACCENT BAR ===
+  const topG=ctx.createLinearGradient(0,0,W,0);
+  topG.addColorStop(0,'#5E9191');topG.addColorStop(0.5,'#0EA5E9');topG.addColorStop(1,'#D4A574');
+  ctx.fillStyle=topG;ctx.fillRect(0,0,W,14);
+
+  // === LOGO top-right ===
   if(ortLogo){
-    const lw=180,lh=Math.round(180*(ortLogo.naturalHeight/ortLogo.naturalWidth));
-    ctx.drawImage(ortLogo,W-50-lw,20,lw,lh);
+    const lw=200,lh=Math.round(200*(ortLogo.naturalHeight/ortLogo.naturalWidth));
+    ctx.drawImage(ortLogo,W-P-lw,30,lw,lh);
   }
 
-  // Intro text on photo
+  // === INTRO TEXT — Playpen font, emotional ===
   ctx.textAlign='right';
-  ctx.font='700 30px HeeboImg,Heebo,Arial';ctx.fillStyle='rgba(255,255,255,.85)';
-  ctx.fillText('מחפש/ת מקום עבודה שבו תרגיש/י משמעותי/ת וחלק מקהילה?',W-50,photoH-150);
-  ctx.font='400 24px HeeboImg,Heebo,Arial';ctx.fillStyle='rgba(255,255,255,.7)';
-  ctx.fillText('אורט בית הערבה ירושלים — בית ספר מקצועי-טכנולוגי — מגייס/ת לצוות',W-50,photoH-110);
+  ctx.font='700 34px PlaypenImg,Heebo,Arial';ctx.fillStyle='#4A3F35';
+  jigWrapText(ctx,'מחפש/ת מקום עבודה שבו תרגיש/י',W-P,195,W-P*2,42,1);
+  ctx.font='700 34px PlaypenImg,Heebo,Arial';ctx.fillStyle='#0EA5E9';
+  ctx.fillText('משמעותי/ת וחלק מקהילה?',W-P,240);
 
-  // "דרוש/ה" badge on photo
-  ctx.fillStyle='#0EA5E9';
-  jigRoundRect(ctx,W-230,photoH-80,180,50,25);ctx.fill();
-  ctx.font='900 28px HeeboImg,Heebo,Arial';ctx.fillStyle='#fff';ctx.textAlign='center';
-  ctx.fillText('דרוש/ה',W-140,photoH-47);
+  // === "דרוש/ה" + JOB TITLE ===
+  ctx.fillStyle='#0EA5E9';jigRoundRect(ctx,W-P-150,270,150,46,23);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='700 24px PlaypenImg,Heebo,Arial';ctx.textAlign='center';
+  ctx.fillText('דרוש/ה',W-P-75,300);
 
-  // --- White content area ---
-  ctx.fillStyle='#FFFCF5';ctx.fillRect(0,photoH,W,H-photoH);
-
-  // Job title
   ctx.textAlign='right';
-  ctx.font='900 64px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';
-  let titleY=photoH+80;
-  if(ctx.measureText(j.title).width>W-120){ctx.font='900 50px HeeboImg,Heebo,Arial';titleY=photoH+75}
-  if(ctx.measureText(j.title).width>W-120){ctx.font='900 42px HeeboImg,Heebo,Arial';titleY=photoH+72}
-  jigWrapText(ctx,j.title,W-50,titleY,W-100,68,2);
+  ctx.font='700 68px PlaypenImg,Heebo,Arial';ctx.fillStyle='#4A3F35';
+  let titleFS=68;
+  if(ctx.measureText(j.title).width>W-P*2){titleFS=54;ctx.font='700 54px PlaypenImg,Heebo,Arial'}
+  if(ctx.measureText(j.title).width>W-P*2){titleFS=44;ctx.font='700 44px PlaypenImg,Heebo,Arial'}
+  jigWrapText(ctx,j.title,W-P,370,W-P*2,titleFS+10,2);
 
-  // Tags
-  const tags=[{t:j.dept,bg:'rgba(14,165,233,.1)',c:'#0284C7'},{t:j.type,bg:'rgba(94,145,145,.1)',c:'#5E9191'},{t:j.scope,bg:'rgba(212,165,116,.12)',c:'#B8885A'}];
-  let tagX=W-50;
-  ctx.font='700 20px HeeboImg,Heebo,Arial';
-  const tagY=photoH+110;
+  // === TAGS ===
+  const tags=[{t:j.dept,bg:'#0EA5E9',c:'#fff'},{t:j.type,bg:'#5E9191',c:'#fff'},{t:j.scope,bg:'#D4A574',c:'#fff'}];
+  let tagX=W-P;
+  ctx.font='700 22px HeeboImg,Heebo,Arial';
   tags.forEach(tag=>{
-    const tw=ctx.measureText(tag.t).width+30;
-    tagX-=tw+8;
-    ctx.fillStyle=tag.bg;jigRoundRect(ctx,tagX,tagY,tw,34,17);ctx.fill();
-    ctx.fillStyle=tag.c;ctx.textAlign='center';ctx.fillText(tag.t,tagX+tw/2,tagY+24);
+    const tw=ctx.measureText(tag.t).width+36;
+    tagX-=tw+10;
+    ctx.fillStyle=tag.bg;jigRoundRect(ctx,tagX,410,tw,40,20);ctx.fill();
+    ctx.fillStyle=tag.c;ctx.textAlign='center';ctx.fillText(tag.t,tagX+tw/2,437);
   });
 
-  // Divider
-  const divG=ctx.createLinearGradient(50,0,W-50,0);
-  divG.addColorStop(0,'rgba(122,173,173,0)');divG.addColorStop(0.15,'rgba(122,173,173,.3)');
-  divG.addColorStop(0.85,'rgba(122,173,173,.3)');divG.addColorStop(1,'rgba(122,173,173,0)');
-  ctx.strokeStyle=divG;ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(50,photoH+155);ctx.lineTo(W-50,photoH+155);ctx.stroke();
+  // === "למה שווה לעבוד אצלנו" — MAIN CARD ===
+  const cardY=475,cardH=310;
+  ctx.fillStyle='rgba(94,145,145,.08)';
+  jigRoundRect(ctx,P-10,cardY,W-P*2+20,cardH,20);ctx.fill();
+  ctx.strokeStyle='rgba(94,145,145,.18)';ctx.lineWidth=2;
+  jigRoundRect(ctx,P-10,cardY,W-P*2+20,cardH,20);ctx.stroke();
 
-  // --- "למה שווה לעבוד אצלנו" ---
-  const whyY=photoH+175;
-  ctx.fillStyle='rgba(94,145,145,.05)';
-  jigRoundRect(ctx,40,whyY,W-80,270,16);ctx.fill();
-  ctx.strokeStyle='rgba(94,145,145,.12)';ctx.lineWidth=1;
-  jigRoundRect(ctx,40,whyY,W-80,270,16);ctx.stroke();
-
-  ctx.font='700 24px HeeboImg,Heebo,Arial';ctx.fillStyle='#5E9191';ctx.textAlign='right';
-  ctx.fillText('למה שווה לעבוד אצלנו?',W-70,whyY+36);
+  // Section title with colored bar
+  ctx.fillStyle='#0EA5E9';jigRoundRect(ctx,W-P-8,cardY+20,6,30,3);ctx.fill();
+  ctx.font='700 30px PlaypenImg,Heebo,Arial';ctx.fillStyle='#4A3F35';ctx.textAlign='right';
+  ctx.fillText('למה שווה לעבוד אצלנו?',W-P-24,cardY+48);
 
   const whyItems=[
-    'תחושת שליחות אמיתית — כאן את/ה משנה חיים',
-    'מבוגר עוגן — את/ה האדם שמאמין בתלמיד',
-    'צוות שהוא משפחה — חם, תומך, לא לבד',
-    'חדשנות בשטח — AI, טכנולוגיה, פדגוגיה מותאמת',
-    'מקצוע אמיתי — התלמידים יוצאים עם תעודה ועם ערך'
+    {icon:'\u2764\uFE0F',t:'תחושת שליחות אמיתית — כאן את/ה משנה חיים'},
+    {icon:'\uD83E\uDDD1\u200D\uD83C\uDFEB',t:'מבוגר עוגן — את/ה האדם שמאמין בתלמיד'},
+    {icon:'\uD83E\uDD1D',t:'צוות שהוא משפחה — חם, תומך, לא לבד'},
+    {icon:'\uD83D\uDE80',t:'חדשנות בשטח — AI, טכנולוגיה, פדגוגיה מותאמת'},
+    {icon:'\uD83C\uDF93',t:'מקצוע אמיתי — התלמידים יוצאים עם תעודה ועם ערך'}
   ];
-  ctx.font='400 21px HeeboImg,Heebo,Arial';
+  ctx.font='400 26px HeeboImg,Heebo,Arial';
   whyItems.forEach((item,i)=>{
-    const y=whyY+76+i*40;
-    ctx.fillStyle='#0EA5E9';ctx.textAlign='right';
-    ctx.fillText('\u25CF',W-70,y);
-    ctx.fillStyle='#4A3F35';
-    ctx.fillText(item,W-92,y);
+    const y=cardY+98+i*46;
+    ctx.fillStyle='#4A3F35';ctx.textAlign='right';
+    ctx.fillText(item.t,W-P-24,y);
   });
 
-  // --- Requirements ---
+  // === REQUIREMENTS ===
   if(j.req){
-    const reqY=photoH+465;
-    ctx.font='700 23px HeeboImg,Heebo,Arial';ctx.fillStyle='#B8885A';ctx.textAlign='right';
-    ctx.fillText('דרישות:',W-50,reqY);
-    ctx.font='400 21px HeeboImg,Heebo,Arial';ctx.fillStyle='#5A4F45';
-    const reqLines=j.req.split('\n').filter(Boolean).slice(0,4);
+    const reqY=810;
+    ctx.fillStyle='#B8885A';jigRoundRect(ctx,W-P-8,reqY-2,6,26,3);ctx.fill();
+    ctx.font='900 28px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';ctx.textAlign='right';
+    ctx.fillText('דרישות:',W-P-24,reqY+22);
+    ctx.font='400 25px HeeboImg,Heebo,Arial';ctx.fillStyle='#5A4F45';
+    const reqLines=j.req.split(/[,\n]/).map(s=>s.trim()).filter(Boolean).slice(0,3);
     reqLines.forEach((line,i)=>{
-      ctx.fillText(line.replace(/^[-•]\s*/,''),W-50,reqY+36+i*32);
+      ctx.fillText(line.replace(/^[-•]\s*/,''),W-P-24,reqY+62+i*38);
     });
   }
 
-  // Divider above contact
-  ctx.strokeStyle=divG;ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(50,H-130);ctx.lineTo(W-50,H-130);ctx.stroke();
-
-  // Contact
-  ctx.font='700 22px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';ctx.textAlign='right';
-  ctx.fillText('לפרטים ופנייה:',W-50,H-95);
-  ctx.font='400 21px HeeboImg,Heebo,Arial';ctx.fillStyle='#6B5F55';
+  // === CONTACT BAR at bottom ===
+  ctx.fillStyle='rgba(14,165,233,.08)';
+  jigRoundRect(ctx,P-10,H-110,W-P*2+20,70,16);ctx.fill();
+  ctx.font='700 24px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';ctx.textAlign='right';
+  ctx.fillText('לפרטים ופנייה:',W-P,H-67);
+  ctx.font='400 23px HeeboImg,Heebo,Arial';ctx.fillStyle='#5E9191';
   const contactParts=[];
   if(j.contact)contactParts.push(j.contact);
   if(j.email)contactParts.push(j.email);
   if(j.phone)contactParts.push(j.phone);
-  ctx.fillText(contactParts.join('  |  '),W-50,H-62);
+  const contactStr=contactParts.join('  \u00B7  ');
+  const ctw=ctx.measureText('לפרטים ופנייה:').width;
+  ctx.fillText(contactStr,W-P-ctw-20,H-67);
 
-  // Bottom accent stripe
+  // === BOTTOM ACCENT BAR ===
   const botG=ctx.createLinearGradient(0,0,W,0);
-  botG.addColorStop(0,'#5E9191');botG.addColorStop(0.5,'#0EA5E9');botG.addColorStop(1,'#D4A574');
-  ctx.fillStyle=botG;ctx.fillRect(0,H-16,W,16);
+  botG.addColorStop(0,'#D4A574');botG.addColorStop(0.5,'#0EA5E9');botG.addColorStop(1,'#5E9191');
+  ctx.fillStyle=botG;ctx.fillRect(0,H-14,W,14);
 
   // Download
   try{
