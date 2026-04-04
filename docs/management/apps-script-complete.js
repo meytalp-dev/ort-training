@@ -14,8 +14,42 @@
 // =============================================================
 
 const SPREADSHEET_ID = '1LwEQg4OWZbd06A6mFMDG7MTw_R70GSjMOO3KrncoxKw';
+const GEMINI_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
+
+// ===== Gemini Proxy — עוקף הגבלת referrer =====
+function geminiProxy(prompt) {
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + GEMINI_KEY;
+  var response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 400 }
+    }),
+    muteHttpExceptions: true
+  });
+  var data = JSON.parse(response.getContentText());
+  var text = (data.candidates || [])[0]?.content?.parts?.[0]?.text || '';
+  return text;
+}
 
 function doGet(e) {
+  var params = (e && e.parameter) ? e.parameter : {};
+
+  // === Gemini Proxy ===
+  if (params.action === 'geminiProxy' && params.prompt) {
+    var cb = (params.callback || 'cb').replace(/[^a-zA-Z0-9_]/g, '');
+    try {
+      var text = geminiProxy(decodeURIComponent(params.prompt));
+      return ContentService.createTextOutput(cb + '(' + JSON.stringify({ result: 'success', text: text }) + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    } catch(err) {
+      return ContentService.createTextOutput(cb + '(' + JSON.stringify({ result: 'error', error: err.toString() }) + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+  }
+
+
   var params = (e && e.parameter) ? e.parameter : {};
 
   // === שליחת ציונים מהשאלון ===
