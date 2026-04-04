@@ -934,6 +934,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     <div><h2>פרסום משרות</h2><p>יצירה וניהול מודעות גיוס — עם דף ציבורי ממוצרן</p></div>
   </div>
   <div id="jbDefaults"></div>
+  <div id="jbAdmin"></div>
   <div class="stats-row" id="jbStats" style="margin-bottom:20px"></div>
   <div class="card">
     <div class="card-header">
@@ -3440,6 +3441,14 @@ const JB_INP='width:100%;padding:10px 12px;border:1px solid var(--border);border
 const JB_LBL='display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-top:12px';
 const JB_DEFAULT_EMAIL='meytalp@bethaarava.ort.org.il';
 
+const JB_CONFIG_DEFAULTS={
+  depts:['כללי','עברית ולשון','מתמטיקה','היסטוריה ואזרחות','אנגלית','מדעים','מחשבים','חשמל ואלקטרוניקה','מכונאות רכב','עיצוב שיער','מנהלתי','אחר'],
+  types:['מורה','מחנך','יועץ חינוכי','מפקח פדגוגי','סייע','מנהלתי','טכנאי','אחר'],
+  scopes:['100%','75%','50%','25%','שעתי']
+};
+function loadJobConfig(){return JSON.parse(localStorage.getItem('ort-jobs-config')||JSON.stringify(JB_CONFIG_DEFAULTS))}
+function saveJobConfig(cfg){localStorage.setItem('ort-jobs-config',JSON.stringify(cfg))}
+
 function loadJobDefaults(){return JSON.parse(localStorage.getItem('ort-jobs-defaults')||JSON.stringify({contact:'מיטל פלג',email:JB_DEFAULT_EMAIL,phone:''}))}
 function saveJobDefaults(){
   const d={contact:document.getElementById('jbd_contact')?.value.trim()||'',email:document.getElementById('jbd_email')?.value.trim()||'',phone:document.getElementById('jbd_phone')?.value.trim()||''};
@@ -3452,6 +3461,7 @@ function initJobBoard(){
   renderJbStats();
   renderJobs();
   renderJbDefaults();
+  renderJbAdmin();
 }
 
 function renderJbDefaults(){
@@ -3475,6 +3485,71 @@ function renderJbDefaults(){
       </div>
     </details>
   `;
+}
+
+function renderJbAdmin(){
+  const el=document.getElementById('jbAdmin');
+  if(!el)return;
+  const cfg=loadJobConfig();
+  const tagList=(arr,key)=>arr.map((v,i)=>`<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;background:var(--card);border:1px solid var(--border);border-radius:20px;font-size:.82rem;margin:3px">${v}<button onclick="removeJbCfgItem('${key}',${i})" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:1rem;line-height:1;padding:0 0 0 4px" title="הסר">&times;</button></span>`).join('');
+  el.innerHTML=`
+    <details style="margin-bottom:16px">
+      <summary style="cursor:pointer;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;font-family:Heebo;font-size:.88rem;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        הגדרות אדמין — מגמות, סוגי משרה, היקפים
+      </summary>
+      <div style="padding:20px;background:rgba(139,92,246,.03);border:1px solid rgba(139,92,246,.12);border-radius:0 0 14px 14px;border-top:none">
+        <div style="margin-bottom:18px">
+          <label style="${JB_LBL};margin-top:0;font-size:.85rem;color:var(--text)">מגמות / מחלקות</label>
+          <div id="jbCfgDepts" style="margin:8px 0;display:flex;flex-wrap:wrap">${tagList(cfg.depts,'depts')}</div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input id="jbNewDept" placeholder="+ מגמה חדשה" style="${JB_INP};flex:1;margin-top:0">
+            <button onclick="addJbCfgItem('depts','jbNewDept')" class="btn btn-primary btn-sm" style="white-space:nowrap">הוסף</button>
+          </div>
+        </div>
+        <div style="margin-bottom:18px">
+          <label style="${JB_LBL};margin-top:0;font-size:.85rem;color:var(--text)">סוגי משרה</label>
+          <div id="jbCfgTypes" style="margin:8px 0;display:flex;flex-wrap:wrap">${tagList(cfg.types,'types')}</div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input id="jbNewType" placeholder="+ סוג משרה חדש" style="${JB_INP};flex:1;margin-top:0">
+            <button onclick="addJbCfgItem('types','jbNewType')" class="btn btn-primary btn-sm" style="white-space:nowrap">הוסף</button>
+          </div>
+        </div>
+        <div style="margin-bottom:8px">
+          <label style="${JB_LBL};margin-top:0;font-size:.85rem;color:var(--text)">היקפי משרה</label>
+          <div id="jbCfgScopes" style="margin:8px 0;display:flex;flex-wrap:wrap">${tagList(cfg.scopes,'scopes')}</div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <input id="jbNewScope" placeholder="+ היקף חדש (לדוג' 60%)" style="${JB_INP};flex:1;margin-top:0">
+            <button onclick="addJbCfgItem('scopes','jbNewScope')" class="btn btn-primary btn-sm" style="white-space:nowrap">הוסף</button>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button onclick="if(confirm('לאפס את כל ההגדרות לברירת מחדל?')){localStorage.removeItem('ort-jobs-config');renderJbAdmin()}" class="btn btn-sm btn-ghost" style="font-size:.78rem;color:var(--danger)">איפוס לברירת מחדל</button>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function addJbCfgItem(key,inputId){
+  const inp=document.getElementById(inputId);
+  const val=inp?.value.trim();
+  if(!val)return;
+  const cfg=loadJobConfig();
+  if(cfg[key].includes(val)){alert('כבר קיים ברשימה');return}
+  cfg[key].push(val);
+  saveJobConfig(cfg);
+  inp.value='';
+  renderJbAdmin();
+}
+
+function removeJbCfgItem(key,idx){
+  const cfg=loadJobConfig();
+  const removed=cfg[key][idx];
+  if(!confirm(`להסיר "${removed}" מהרשימה?`))return;
+  cfg[key].splice(idx,1);
+  saveJobConfig(cfg);
+  renderJbAdmin();
 }
 
 function renderJbStats(){
@@ -3535,9 +3610,10 @@ function showJobForm(){
   const j=editingJob;
   const fEl=document.getElementById('jbForm');
   fEl.style.display='';
-  const depts=['כללי','עברית ולשון','מתמטיקה','היסטוריה ואזרחות','אנגלית','מדעים','מחשבים','חשמל ואלקטרוניקה','מכונאות','מנהלתי','אחר'];
-  const types=['מורה','מחנך','יועץ חינוכי','מפקח פדגוגי','סייע','מנהלתי','טכנאי','אחר'];
-  const scopes=['100%','75%','50%','25%','שעתי'];
+  const cfg=loadJobConfig();
+  const depts=cfg.depts||JB_CONFIG_DEFAULTS.depts;
+  const types=cfg.types||JB_CONFIG_DEFAULTS.types;
+  const scopes=cfg.scopes||JB_CONFIG_DEFAULTS.scopes;
   const statuses=['טיוטה','פתוחה','סגורה'];
   const sel=(id,opts,val)=>`<select id="${id}" style="${JB_INP}">${opts.map(o=>`<option${o===val?' selected':''}>${o}</option>`).join('')}</select>`;
   fEl.innerHTML=`
