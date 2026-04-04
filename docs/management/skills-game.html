@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>מסע המיומנויות — אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0F1923;--card:#1A2736;--card2:#223344;--text:#E8E4DF;--muted:#8899AA;
+  --gold:#FFD700;--xp:#00E5FF;--hp:#FF4D6A;
+  --comm:#5B9BD5;--resp:#7AB648;--time:#E8A838;--tikun:#E06090;--create:#A07DE0;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;position:relative}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,.06),transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(160,125,224,.06),transparent 50%);pointer-events:none;z-index:0}
+
+/* ===== SCREENS ===== */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;z-index:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.screen.active{display:flex}
+.screen-scroll{flex:1;overflow-y:auto;padding:16px 16px 100px}
+
+/* ===== WELCOME SCREEN ===== */
+#welcomeScreen{align-items:center;justify-content:center;text-align:center;padding:32px}
+.welcome-logo{width:80px;height:80px;margin-bottom:24px;position:relative}
+.welcome-logo svg{width:100%;height:100%;filter:drop-shadow(0 0 20px rgba(0,229,255,.3))}
+#welcomeScreen h1{font-size:1.8rem;font-weight:900;margin-bottom:8px;background:linear-gradient(135deg,var(--xp),var(--create));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+#welcomeScreen p{color:var(--muted);font-size:.9rem;margin-bottom:32px;max-width:300px}
+.name-input{
+  width:260px;padding:14px 20px;border-radius:14px;border:2px solid #334455;
+  background:var(--card);color:var(--text);font-family:Heebo;font-size:1rem;
+  text-align:center;outline:none;transition:border-color .3s;
+}
+.name-input:focus{border-color:var(--xp)}
+.name-input::placeholder{color:var(--muted)}
+.start-btn{
+  margin-top:20px;padding:14px 48px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,var(--xp),var(--create));color:var(--bg);
+  font-family:Heebo;font-size:1.05rem;font-weight:800;cursor:pointer;
+  box-shadow:0 4px 20px rgba(0,229,255,.3);transition:transform .2s,box-shadow .2s;
+}
+.start-btn:active{transform:scale(.96)}
+
+/* ===== TOP BAR ===== */
+.topbar{
+  display:flex;align-items:center;padding:12px 16px;gap:10px;
+  background:rgba(15,25,35,.9);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,.06);z-index:10;flex-shrink:0;
+}
+.topbar-avatar{
+  width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--xp),var(--create));
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.85rem;color:var(--bg);
+}
+.topbar-info{flex:1}
+.topbar-name{font-size:.85rem;font-weight:700}
+.topbar-level{font-size:.7rem;color:var(--gold);font-weight:600}
+.topbar-xp{display:flex;align-items:center;gap:6px}
+.xp-bar{width:80px;height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+.xp-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--xp),var(--create));transition:width .6s ease}
+.xp-text{font-size:.7rem;color:var(--xp);font-weight:700;min-width:50px;text-align:left}
+.topbar-coins{display:flex;align-items:center;gap:4px;font-size:.85rem;font-weight:800;color:var(--gold)}
+.topbar-coins svg{width:18px;height:18px}
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;display:flex;
+  background:rgba(15,25,35,.95);backdrop-filter:blur(12px);
+  border-top:1px solid rgba(255,255,255,.06);z-index:20;
+  padding:6px 0 env(safe-area-inset-bottom,8px);
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:8px 4px;cursor:pointer;transition:color .2s;color:var(--muted);
+}
+.nav-item.active{color:var(--xp)}
+.nav-item svg{width:22px;height:22px}
+.nav-item span{font-size:.65rem;font-weight:600}
+
+/* ===== MAP SCREEN ===== */
+.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-bottom:16px}
+.world-card{
+  position:relative;border-radius:18px;padding:20px 16px;cursor:pointer;
+  overflow:hidden;transition:transform .2s;min-height:140px;
+  display:flex;flex-direction:column;justify-content:flex-end;
+}
+.world-card:active{transform:scale(.97)}
+.world-card::before{content:'';position:absolute;inset:0;opacity:.15;border-radius:18px}
+.world-card[data-world="comm"]{background:linear-gradient(145deg,rgba(91,155,213,.2),rgba(91,155,213,.05));border:1.5px solid rgba(91,155,213,.3)}
+.world-card[data-world="resp"]{background:linear-gradient(145deg,rgba(122,182,72,.2),rgba(122,182,72,.05));border:1.5px solid rgba(122,182,72,.3)}
+.world-card[data-world="time"]{background:linear-gradient(145deg,rgba(232,168,56,.2),rgba(232,168,56,.05));border:1.5px solid rgba(232,168,56,.3)}
+.world-card[data-world="tikun"]{background:linear-gradient(145deg,rgba(224,96,144,.2),rgba(224,96,144,.05));border:1.5px solid rgba(224,96,144,.3)}
+.world-card[data-world="create"]{background:linear-gradient(145deg,rgba(160,125,224,.2),rgba(160,125,224,.05));border:1.5px solid rgba(160,125,224,.3);grid-column:1/3}
+.world-icon{width:40px;height:40px;margin-bottom:10px;opacity:.9}
+.world-card h3{font-size:.95rem;font-weight:800;margin-bottom:2px}
+.world-card p{font-size:.72rem;color:var(--muted);margin-bottom:8px}
+.world-progress{display:flex;align-items:center;gap:8px}
+.world-prog-bar{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+.world-prog-fill{height:100%;border-radius:3px;transition:width .6s}
+.world-card[data-world="comm"] .world-prog-fill{background:var(--comm)}
+.world-card[data-world="resp"] .world-prog-fill{background:var(--resp)}
+.world-card[data-world="time"] .world-prog-fill{background:var(--time)}
+.world-card[data-world="tikun"] .world-prog-fill{background:var(--tikun)}
+.world-card[data-world="create"] .world-prog-fill{background:var(--create)}
+.world-prog-text{font-size:.7rem;color:var(--muted);font-weight:600}
+.world-lock{position:absolute;top:12px;left:12px;opacity:.4}
+.world-stars{display:flex;gap:3px;margin-bottom:6px}
+.world-stars svg{width:14px;height:14px}
+
+/* ===== QUEST SCREEN ===== */
+.quest-header{
+  padding:24px 20px;border-radius:0 0 24px 24px;margin:-16px -16px 16px;
+  position:relative;overflow:hidden;
+}
+.quest-header[data-world="comm"]{background:linear-gradient(145deg,rgba(91,155,213,.25),rgba(91,155,213,.08))}
+.quest-header[data-world="resp"]{background:linear-gradient(145deg,rgba(122,182,72,.25),rgba(122,182,72,.08))}
+.quest-header[data-world="time"]{background:linear-gradient(145deg,rgba(232,168,56,.25),rgba(232,168,56,.08))}
+.quest-header[data-world="tikun"]{background:linear-gradient(145deg,rgba(224,96,144,.25),rgba(224,96,144,.08))}
+.quest-header[data-world="create"]{background:linear-gradient(145deg,rgba(160,125,224,.25),rgba(160,125,224,.08))}
+.quest-back{background:none;border:none;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;font-family:Heebo;font-size:.85rem;margin-bottom:12px;padding:0}
+.quest-header h2{font-size:1.3rem;font-weight:900;margin-bottom:4px}
+.quest-header p{font-size:.82rem;color:var(--muted)}
+.quest-dim{font-size:.75rem;padding:4px 12px;border-radius:8px;background:rgba(255,255,255,.08);display:inline-block;margin-top:8px;color:var(--muted)}
+
+.quest-list{display:flex;flex-direction:column;gap:12px}
+.quest-card{
+  background:var(--card);border-radius:16px;padding:16px 18px;border:1px solid rgba(255,255,255,.06);
+  cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
+}
+.quest-card:active{transform:scale(.98)}
+.quest-card.completed{opacity:.6}
+.quest-card.completed::after{
+  content:'';position:absolute;top:12px;left:12px;width:24px;height:24px;
+  border-radius:50%;background:var(--resp);
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-size:14px;background-repeat:no-repeat;background-position:center;
+}
+.quest-card.locked{opacity:.35;pointer-events:none}
+.quest-difficulty{font-size:.68rem;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-block;margin-bottom:8px}
+.diff-easy{background:rgba(122,182,72,.15);color:var(--resp)}
+.diff-medium{background:rgba(232,168,56,.15);color:var(--time)}
+.diff-hard{background:rgba(224,96,144,.15);color:var(--tikun)}
+.quest-card h4{font-size:.92rem;font-weight:700;margin-bottom:4px}
+.quest-card p{font-size:.8rem;color:var(--muted);line-height:1.4}
+.quest-reward{display:flex;align-items:center;gap:12px;margin-top:10px;font-size:.75rem}
+.quest-reward .xp-reward{color:var(--xp);font-weight:700;display:flex;align-items:center;gap:3px}
+.quest-reward .coin-reward{color:var(--gold);font-weight:700;display:flex;align-items:center;gap:3px}
+.quest-reward .badge-reward{color:var(--create);font-weight:600}
+
+/* ===== QUEST DETAIL MODAL ===== */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:none;
+  align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);
+}
+.modal-overlay.open{display:flex}
+.modal-sheet{
+  background:var(--card);border-radius:24px 24px 0 0;width:100%;max-width:500px;
+  max-height:85vh;overflow-y:auto;padding:24px 20px 40px;
+  animation:slideUp .3s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.15);margin:0 auto 20px}
+.modal-sheet h3{font-size:1.15rem;font-weight:800;margin-bottom:6px}
+.modal-sheet .quest-desc{font-size:.88rem;color:var(--muted);line-height:1.6;margin-bottom:16px}
+.modal-steps{list-style:none;margin-bottom:20px}
+.modal-steps li{
+  display:flex;align-items:flex-start;gap:10px;padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.04);font-size:.85rem;
+}
+.modal-steps li:last-child{border-bottom:none}
+.step-num{
+  width:24px;height:24px;border-radius:50%;background:rgba(0,229,255,.1);
+  color:var(--xp);font-size:.75rem;font-weight:800;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;margin-top:1px;
+}
+.complete-btn{
+  width:100%;padding:16px;border-radius:16px;border:none;
+  background:linear-gradient(135deg,var(--resp),#5A9F3A);color:#fff;
+  font-family:Heebo;font-size:1.05rem;font-weight:800;cursor:pointer;
+  box-shadow:0 4px 20px rgba(122,182,72,.3);transition:transform .2s;
+}
+.complete-btn:active{transform:scale(.97)}
+.complete-btn:disabled{opacity:.4;cursor:default}
+
+/* ===== BADGES SCREEN ===== */
+.badges-section{margin-bottom:24px}
+.badges-section h3{font-size:.95rem;font-weight:700;margin-bottom:12px;color:var(--muted)}
+.badges-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.badge-item{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;
+  border-radius:14px;background:var(--card);border:1px solid rgba(255,255,255,.04);
+  text-align:center;
+}
+.badge-item.locked{opacity:.25}
+.badge-icon{
+  width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;
+}
+.badge-item span{font-size:.68rem;font-weight:600;color:var(--muted)}
+.badge-item.earned span{color:var(--text)}
+
+/* ===== PROFILE SCREEN ===== */
+.profile-card{
+  background:var(--card);border-radius:20px;padding:24px;text-align:center;
+  margin-bottom:16px;border:1px solid rgba(255,255,255,.06);
+}
+.profile-avatar{
+  width:72px;height:72px;border-radius:50%;margin:0 auto 12px;
+  background:linear-gradient(135deg,var(--xp),var(--create));
+  display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:var(--bg);
+  box-shadow:0 4px 24px rgba(0,229,255,.2);
+}
+.profile-card h2{font-size:1.2rem;font-weight:900;margin-bottom:2px}
+.profile-card .profile-title{color:var(--gold);font-size:.85rem;font-weight:700}
+.profile-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.profile-stat{text-align:center}
+.profile-stat .ps-num{font-size:1.3rem;font-weight:800}
+.profile-stat .ps-label{font-size:.68rem;color:var(--muted)}
+.skills-radar{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.radar-row{display:flex;align-items:center;gap:10px}
+.radar-label{font-size:.78rem;font-weight:600;min-width:90px;text-align:left}
+.radar-bar{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+.radar-fill{height:100%;border-radius:4px;transition:width .6s}
+
+/* ===== LEVEL UP ANIMATION ===== */
+.levelup-overlay{
+  position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.85);backdrop-filter:blur(10px);
+}
+.levelup-overlay.show{display:flex}
+.levelup-content{text-align:center;animation:levelPop .5s ease}
+@keyframes levelPop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+.levelup-content h2{font-size:1.8rem;font-weight:900;color:var(--gold);margin-bottom:4px}
+.levelup-content p{color:var(--muted);font-size:.9rem;margin-bottom:24px}
+.levelup-content .levelup-icon{font-size:3rem;margin-bottom:12px}
+.levelup-close{padding:12px 40px;border-radius:14px;border:2px solid var(--gold);background:transparent;color:var(--gold);font-family:Heebo;font-size:1rem;font-weight:700;cursor:pointer}
+
+/* XP popup */
+.xp-popup{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:2rem;font-weight:900;color:var(--xp);z-index:90;pointer-events:none;
+  animation:xpFloat 1.5s ease forwards;display:none;
+}
+.xp-popup.show{display:block}
+@keyframes xpFloat{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-120%) scale(1.5)}}
+
+/* Particles */
+.particles{position:fixed;inset:0;pointer-events:none;z-index:95;overflow:hidden}
+.particle{position:absolute;border-radius:50%;animation:particleFall 1s ease forwards}
+@keyframes particleFall{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(100px) scale(0)}}
+</style>
+</head>
+<body>
+
+<!-- ===== WELCOME SCREEN ===== -->
+<div class="screen active" id="welcomeScreen">
+  <div class="welcome-logo">
+    <svg viewBox="0 0 80 80" fill="none">
+      <circle cx="40" cy="40" r="36" stroke="url(#g1)" stroke-width="3"/>
+      <path d="M40 18L26 48h28L40 18z" fill="url(#g1)" opacity=".7"/>
+      <circle cx="40" cy="52" r="8" fill="url(#g1)"/>
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="80" y2="80"><stop stop-color="#00E5FF"/><stop offset="1" stop-color="#A07DE0"/></linearGradient></defs>
+    </svg>
+  </div>
+  <h1>מסע המיומנויות</h1>
+  <p>5 עולמות. 15 משימות. מסע אחד שיהפוך אותך למוביל.</p>
+  <input type="text" class="name-input" id="playerName" placeholder="מה השם שלך?">
+  <select class="name-input" id="playerClass" style="margin-top:12px;appearance:auto">
+    <option value="">— כיתה —</option>
+    <option>ט1</option><option>ט2</option><option>י1</option><option>י2</option><option>י3</option>
+    <option>יא1</option><option>יא2</option><option>יא3</option><option>יב1</option><option>יב2</option><option>יב3</option>
+  </select>
+  <button class="start-btn" onclick="startGame()">יוצאים למסע</button>
+</div>
+
+<!-- ===== MAP SCREEN ===== -->
+<div class="screen" id="mapScreen">
+  <div class="topbar">
+    <div class="topbar-avatar" id="tbAvatar">?</div>
+    <div class="topbar-info">
+      <div class="topbar-name" id="tbName">—</div>
+      <div class="topbar-level" id="tbLevel">רמה 1 — חניך</div>
+    </div>
+    <div class="topbar-xp">
+      <div class="xp-bar"><div class="xp-bar-fill" id="tbXpFill" style="width:0%"></div></div>
+      <div class="xp-text" id="tbXpText">0 XP</div>
+    </div>
+    <div class="topbar-coins">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="12" font-weight="900" fill="#1A2736">$</text></svg>
+      <span id="tbCoins">0</span>
+    </div>
+  </div>
+
+  <div class="screen-scroll">
+    <!-- Streak -->
+    <div id="streakBar" style="display:none;background:linear-gradient(135deg,rgba(255,215,0,.12),rgba(255,215,0,.04));border:1px solid rgba(255,215,0,.2);border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      <span id="streakText" style="font-size:.88rem;font-weight:700;color:var(--gold)"></span>
+    </div>
+
+    <!-- Weekly Challenge -->
+    <div id="weeklyCard" style="background:linear-gradient(145deg,rgba(0,229,255,.1),rgba(160,125,224,.06));border:1.5px solid rgba(0,229,255,.2);border-radius:18px;padding:18px 20px;margin-bottom:18px;cursor:pointer" onclick="openWeeklyChallenge()">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:.72rem;font-weight:700;color:var(--xp);padding:3px 10px;border-radius:6px;background:rgba(0,229,255,.12)">אתגר שבועי</span>
+        <span id="weeklyReward" style="font-size:.75rem;color:var(--gold);font-weight:700"></span>
+      </div>
+      <h3 id="weeklyTitle" style="font-size:.92rem;font-weight:800;margin-bottom:4px"></h3>
+      <p id="weeklyDesc" style="font-size:.8rem;color:var(--muted);line-height:1.4"></p>
+    </div>
+
+    <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:16px">מפת העולמות</h2>
+    <div class="map-grid" id="mapGrid"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="showScreen('map')" data-nav="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span>מפה</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('leaderboard')" data-nav="leaderboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>דירוג</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('badges')" data-nav="badges">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+      <span>באדג'ים</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('profile')" data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>פרופיל</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== QUESTS SCREEN ===== -->
+<div class="screen" id="questScreen">
+  <div class="topbar">
+    <div class="topbar-avatar" id="tbAvatar2">?</div>
+    <div class="topbar-info">
+      <div class="topbar-name" id="tbName2">—</div>
+      <div class="topbar-level" id="tbLevel2">רמה 1</div>
+    </div>
+    <div class="topbar-xp">
+      <div class="xp-bar"><div class="xp-bar-fill" id="tbXpFill2" style="width:0%"></div></div>
+      <div class="xp-text" id="tbXpText2">0 XP</div>
+    </div>
+    <div class="topbar-coins">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="12" font-weight="900" fill="#1A2736">$</text></svg>
+      <span id="tbCoins2">0</span>
+    </div>
+  </div>
+  <div class="screen-scroll" id="questContent"></div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="showScreen('map')" data-nav="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span>מפה</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('leaderboard')" data-nav="leaderboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>דירוג</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('badges')" data-nav="badges">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+      <span>באדג'ים</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('profile')" data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>פרופיל</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== BADGES SCREEN ===== -->
+<div class="screen" id="badgesScreen">
+  <div class="topbar">
+    <div class="topbar-avatar" id="tbAvatar3">?</div>
+    <div class="topbar-info">
+      <div class="topbar-name" id="tbName3">—</div>
+      <div class="topbar-level" id="tbLevel3">רמה 1</div>
+    </div>
+    <div class="topbar-xp">
+      <div class="xp-bar"><div class="xp-bar-fill" id="tbXpFill3" style="width:0%"></div></div>
+      <div class="xp-text" id="tbXpText3">0 XP</div>
+    </div>
+    <div class="topbar-coins">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="12" font-weight="900" fill="#1A2736">$</text></svg>
+      <span id="tbCoins3">0</span>
+    </div>
+  </div>
+  <div class="screen-scroll" id="badgesContent"></div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="showScreen('map')" data-nav="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span>מפה</span>
+    </div>
+    <div class="nav-item active" onclick="showScreen('badges')" data-nav="badges">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+      <span>באדג'ים</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('profile')" data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>פרופיל</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROFILE SCREEN ===== -->
+<div class="screen" id="profileScreen">
+  <div class="topbar">
+    <div class="topbar-avatar" id="tbAvatar4">?</div>
+    <div class="topbar-info">
+      <div class="topbar-name" id="tbName4">—</div>
+      <div class="topbar-level" id="tbLevel4">רמה 1</div>
+    </div>
+    <div class="topbar-xp">
+      <div class="xp-bar"><div class="xp-bar-fill" id="tbXpFill4" style="width:0%"></div></div>
+      <div class="xp-text" id="tbXpText4">0 XP</div>
+    </div>
+    <div class="topbar-coins">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="12" font-weight="900" fill="#1A2736">$</text></svg>
+      <span id="tbCoins4">0</span>
+    </div>
+  </div>
+  <div class="screen-scroll" id="profileContent"></div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="showScreen('map')" data-nav="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span>מפה</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('leaderboard')" data-nav="leaderboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>דירוג</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('badges')" data-nav="badges">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+      <span>באדג'ים</span>
+    </div>
+    <div class="nav-item active" onclick="showScreen('profile')" data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>פרופיל</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LEADERBOARD SCREEN ===== -->
+<div class="screen" id="leaderboardScreen">
+  <div class="topbar">
+    <div class="topbar-avatar" id="tbAvatar5">?</div>
+    <div class="topbar-info">
+      <div class="topbar-name" id="tbName5">—</div>
+      <div class="topbar-level" id="tbLevel5">רמה 1</div>
+    </div>
+    <div class="topbar-xp">
+      <div class="xp-bar"><div class="xp-bar-fill" id="tbXpFill5" style="width:0%"></div></div>
+      <div class="xp-text" id="tbXpText5">0 XP</div>
+    </div>
+    <div class="topbar-coins">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" font-size="12" font-weight="900" fill="#1A2736">$</text></svg>
+      <span id="tbCoins5">0</span>
+    </div>
+  </div>
+  <div class="screen-scroll" id="leaderboardContent"></div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="showScreen('map')" data-nav="map">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span>מפה</span>
+    </div>
+    <div class="nav-item active" onclick="showScreen('leaderboard')" data-nav="leaderboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>דירוג</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('badges')" data-nav="badges">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+      <span>באדג'ים</span>
+    </div>
+    <div class="nav-item" onclick="showScreen('profile')" data-nav="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>פרופיל</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== WEEKLY CHALLENGE MODAL ===== -->
+<div class="modal-overlay" id="weeklyModal">
+  <div class="modal-sheet" id="weeklyModalContent"></div>
+</div>
+
+<!-- ===== QUEST DETAIL MODAL ===== -->
+<div class="modal-overlay" id="questModal">
+  <div class="modal-sheet" id="questModalContent"></div>
+</div>
+
+<!-- ===== LEVEL UP OVERLAY ===== -->
+<div class="levelup-overlay" id="levelUpOverlay">
+  <div class="levelup-content">
+    <div class="levelup-icon" id="levelUpIcon"></div>
+    <h2 id="levelUpTitle">עלית רמה!</h2>
+    <p id="levelUpDesc"></p>
+    <button class="levelup-close" onclick="closeLevelUp()">המשך מסע</button>
+  </div>
+</div>
+
+<!-- XP Popup -->
+<div class="xp-popup" id="xpPopup"></div>
+
+<!-- Particles container -->
+<div class="particles" id="particles"></div>
+
+<script>
+// ============================================
+// GAME DATA
+// ============================================
+
+const WORLDS = [
+  { id:'comm', name:'מגדל התקשורת', desc:'דבר, הקשב, שכנע', dim:'כבוד', color:'#5B9BD5',
+    icon:'<svg viewBox="0 0 40 40" fill="none"><rect x="4" y="18" width="32" height="18" rx="3" fill="currentColor" opacity=".2"/><rect x="10" y="8" width="20" height="28" rx="3" fill="currentColor" opacity=".3"/><rect x="15" y="2" width="10" height="34" rx="2" fill="currentColor" opacity=".5"/></svg>' },
+  { id:'resp', name:'הר האחריות', desc:'קח יוזמה, תעשה הבדל', dim:'אוטונומיה', color:'#7AB648',
+    icon:'<svg viewBox="0 0 40 40" fill="none"><polygon points="20,2 38,38 2,38" fill="currentColor" opacity=".3"/><polygon points="20,12 30,34 10,34" fill="currentColor" opacity=".5"/></svg>' },
+  { id:'time', name:'מבוך הזמן', desc:'נהל, תעדף, שלוט', dim:'מוטיבציה פנימית', color:'#E8A838',
+    icon:'<svg viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="17" fill="currentColor" opacity=".2"/><circle cx="20" cy="20" r="12" fill="currentColor" opacity=".3"/><path d="M20 10V20L27 24" stroke="currentColor" stroke-width="2.5" opacity=".8"/></svg>' },
+  { id:'tikun', name:'יער התיקון', desc:'תרום, חבר, שנה', dim:'שייכות', color:'#E06090',
+    icon:'<svg viewBox="0 0 40 40" fill="none"><path d="M20 36c-8-6-16-12-16-20a8 8 0 0116 0 8 8 0 0116 0c0 8-8 14-16 20z" fill="currentColor" opacity=".4"/></svg>' },
+  { id:'create', name:'מעבדת היצירה', desc:'חדש, המצא, הפתע', dim:'מסוגלות ומימוש עצמי', color:'#A07DE0',
+    icon:'<svg viewBox="0 0 40 40" fill="none"><circle cx="14" cy="18" r="8" fill="currentColor" opacity=".2"/><circle cx="26" cy="18" r="8" fill="currentColor" opacity=".2"/><circle cx="20" cy="26" r="8" fill="currentColor" opacity=".3"/><circle cx="20" cy="20" r="5" fill="currentColor" opacity=".5"/></svg>' }
+];
+
+const QUESTS = {
+  comm: [
+    { id:'comm1', title:'ראיון חבר', desc:'ראיין חבר בכיתה — שאל 5 שאלות אישיות, הקשב באמת, והצג אותו לכיתה ב-60 שניות.',
+      steps:['בחר חבר/ה שאת/ה פחות מכיר/ה','הכן 5 שאלות מעניינות','ראיין — הקשב בלי לקטוע','הצג את החבר/ה לכיתה ב-60 שניות'],
+      diff:'easy', xp:30, coins:5, badge:'interviewer' },
+    { id:'comm2', title:'60 שניות על נושא', desc:'קבל מושג מהשיעור — הסבר אותו לכיתה ב-60 שניות בדיוק. ברור, קצר, מדויק.',
+      steps:['בחר מושג מהשיעור האחרון','תרגל הסבר של 60 שניות בדיוק','עמוד מול הכיתה והסבר','קבל פידבק — האם הבינו?'],
+      diff:'medium', xp:50, coins:10, badge:'speaker' },
+    { id:'comm3', title:'מתווך שלום', desc:'כשיש ויכוח בכיתה — תהיה המתווך. הקשב לשני הצדדים, סכם, הצע פתרון.',
+      steps:['זהה מצב של חילוקי דעות','בקש לשמוע את שני הצדדים','סכם — "אתה אומר X, את אומרת Y"','הצע פתרון שמכבד את שניהם'],
+      diff:'hard', xp:80, coins:20, badge:'peacemaker' }
+  ],
+  resp: [
+    { id:'resp1', title:'תפקיד שבועי', desc:'קח על עצמך תפקיד בכיתה לשבוע שלם — ותמלא אותו בלי תזכורות.',
+      steps:['בחר תפקיד: אחראי ניקיון / סדר / לוח','הודע למחנך שלקחת את התפקיד','מלא אותו כל יום — בלי שיבקשו','בסוף השבוע דווח: מה למדת?'],
+      diff:'easy', xp:30, coins:5, badge:'responsible' },
+    { id:'resp2', title:'הרגל של שבוע', desc:'בחר הרגל חדש ותחזיק בו שבוע שלם. תעד כל יום.',
+      steps:['בחר הרגל: לקום בזמן / לסדר חדר / לקרוא 10 דקות','רשום כל יום: עשיתי / לא עשיתי','שתף את הכיתה בסיכום','מה למדת על עצמך?'],
+      diff:'medium', xp:50, coins:10, badge:'habitbuilder' },
+    { id:'resp3', title:'יוזמה אישית', desc:'זהה בעיה אמיתית בבית הספר — הצע פתרון — ותבצע אותו.',
+      steps:['זהה בעיה אמיתית (לכלוך, חוסר, תקלה)','כתוב הצעת פתרון ב-3 משפטים','קבל אישור ממורה ותבצע','תעד לפני/אחרי — מה השתנה?'],
+      diff:'hard', xp:80, coins:20, badge:'initiator' }
+  ],
+  time: [
+    { id:'time1', title:'מטריצת עדיפויות', desc:'מפה את כל המשימות שלך לפי דחוף/חשוב — ותפעל לפי זה.',
+      steps:['רשום 10 משימות שעומדות בפניך','מיין: דחוף+חשוב / חשוב / דחוף / לא','תעשה קודם את הדחוף+חשוב','בסוף היום: הצלחת? מה שינית?'],
+      diff:'easy', xp:30, coins:5, badge:'prioritizer' },
+    { id:'time2', title:'אתגר פומודורו', desc:'25 דקות עבודה + 5 דקות הפסקה. 3 סבבים. ספור כמה הספקת.',
+      steps:['הכן טיימר של 25 דקות','עבוד בלי הפרעות (בלי טלפון!)','5 דקות הפסקה — קום, שתה, נשום','חזור על זה 3 פעמים — כמה הספקת?'],
+      diff:'medium', xp:50, coins:10, badge:'focused' },
+    { id:'time3', title:'חוזה עם עצמי', desc:'כתוב חוזה אישי: מה אתה מתחייב לעשות השבוע? חתום ובדוק.',
+      steps:['כתוב 3 התחייבויות לשבוע','חתום על החוזה','בדוק כל יום: עמדתי? לא?','בסוף השבוע: ציון עצמי 1-10'],
+      diff:'hard', xp:80, coins:20, badge:'selfmanager' }
+  ],
+  tikun: [
+    { id:'tikun1', title:'מפת צרכים', desc:'צא לשטח ומפה צרכים של הקהילה — מה חסר? מה שבור? מה אפשר לשפר?',
+      steps:['צא עם חבר לסיור בסביבת בית הספר','רשום 5 דברים שאפשר לשפר','דרג: מה הכי דחוף? מה הכי קל?','הצג את המפה לכיתה'],
+      diff:'easy', xp:30, coins:5, badge:'mapper' },
+    { id:'tikun2', title:'שעה של תיקון', desc:'שעה אחת של פעולה קהילתית אמיתית — ניקיון, עזרה, שיפוץ.',
+      steps:['בחר פעולה: ניקיון פארק / עזרה לקשיש / סידור','הקדש שעה שלמה לפעולה','צלם לפני ואחרי','שתף את הכיתה: מה הרגשת?'],
+      diff:'medium', xp:50, coins:10, badge:'fixer' },
+    { id:'tikun3', title:'פרויקט קהילתי', desc:'הוביל פרויקט קהילתי: תכנן, גייס חברים, בצע, תעד.',
+      steps:['זהה צורך אמיתי בקהילה','כתוב תוכנית: מה, מי, מתי, כמה','גייס לפחות 3 חברים','בצע את הפרויקט ותעד בתמונות'],
+      diff:'hard', xp:80, coins:20, badge:'leader' }
+  ],
+  create: [
+    { id:'create1', title:'שדרג מוצר', desc:'קח דבר רגיל — ותעשה אותו יותר טוב. עיצוב מחדש, פיצ\'ר חדש, שימוש אחר.',
+      steps:['בחר מוצר יומיומי (כיסא, תיק, אפליקציה)','מצא 3 בעיות בו','עצב פתרון לבעיה אחת','הצג: לפני ← אחרי'],
+      diff:'easy', xp:30, coins:5, badge:'improver' },
+    { id:'create2', title:'פיץ\' ב-3 שקפים', desc:'רעיון עסקי שלך — בעיה, פתרון, למה אתה — ב-3 שקפים.',
+      steps:['חשוב על בעיה שמפריעה לך','מצא רעיון לפתרון','בנה 3 שקפים: בעיה → פתרון → למה אני','הצג ל-60 שניות בדיוק'],
+      diff:'medium', xp:50, coins:10, badge:'entrepreneur' },
+    { id:'create3', title:'Design Thinking', desc:'5 שלבים, בעיה אמיתית, פתרון יצירתי. הדרך של חדשנים.',
+      steps:['הזדהות: ראיין מישהו שסובל מהבעיה','הגדרה: נסח את הבעיה במשפט אחד','רעיונות: כתוב 10 פתרונות אפשריים','אב-טיפוס: בנה מודל פשוט + בדוק'],
+      diff:'hard', xp:80, coins:20, badge:'designer' }
+  ]
+};
+
+const BADGES = {
+  interviewer: { name:'מראיין', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>', world:'comm' },
+  speaker: { name:'נואם', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>', world:'comm' },
+  peacemaker: { name:'שגריר שלום', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>', world:'comm' },
+  responsible: { name:'אחראי', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', world:'resp' },
+  habitbuilder: { name:'בונה הרגלים', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>', world:'resp' },
+  initiator: { name:'יוזם', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>', world:'resp' },
+  prioritizer: { name:'סדר עדיפויות', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>', world:'time' },
+  focused: { name:'ממוקד', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', world:'time' },
+  selfmanager: { name:'מנהל עצמי', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>', world:'time' },
+  mapper: { name:'חוקר קהילה', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>', world:'tikun' },
+  fixer: { name:'מתקן עולם', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>', world:'tikun' },
+  leader: { name:'מוביל', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>', world:'tikun' },
+  improver: { name:'משפר', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>', world:'create' },
+  entrepreneur: { name:'יזם', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>', world:'create' },
+  designer: { name:'מעצב חדשנות', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', world:'create' },
+};
+
+const LEVELS = [
+  { level:1, title:'טירון', xp:0 },
+  { level:2, title:'חניך', xp:50 },
+  { level:3, title:'לוחם', xp:120 },
+  { level:4, title:'זייף', xp:200 },
+  { level:5, title:'שומר', xp:300 },
+  { level:6, title:'מפקד', xp:420 },
+  { level:7, title:'אלוף', xp:560 },
+  { level:8, title:'גיבור', xp:720 },
+  { level:9, title:'מאסטר', xp:900 },
+  { level:10, title:'אגדה', xp:1100 }
+];
+
+// Weekly challenges — rotates each week
+const WEEKLY_CHALLENGES = [
+  { title:'אתגר השבוע: הקשבה אמיתית', desc:'במהלך השבוע — בכל שיחה, תן לצד השני לסיים לפני שאתה מגיב. ספור כמה פעמים הצלחת.', xp:40, coins:8 },
+  { title:'אתגר השבוע: בלי טלפון', desc:'שעה אחת ביום — טלפון על שקט בתיק. 5 ימים ברצף. מי מחזיק?', xp:40, coins:8 },
+  { title:'אתגר השבוע: תגיד תודה', desc:'כל יום — תגיד תודה אמיתית למישהו אחר. 5 אנשים שונים בשבוע.', xp:40, coins:8 },
+  { title:'אתגר השבוע: 3 דקות סדר', desc:'כל יום — 3 דקות סידור (שולחן, תיק, חדר). שבוע שלם.', xp:40, coins:8 },
+  { title:'אתגר השבוע: למד מישהו', desc:'מצא מישהו שמתקשה במשהו שאתה טוב בו — ולמד אותו. תעד.', xp:40, coins:8 },
+];
+
+// ============================================
+// GAME STATE (localStorage)
+// ============================================
+
+const SAVE_KEY = 'ort_skills_game';
+
+let state = {
+  name: '',
+  cls: '',         // class
+  xp: 0,
+  coins: 0,
+  completed: [],   // quest IDs
+  badges: [],      // badge IDs
+  streak: 0,       // consecutive quests
+  lastQuestDate: '',
+  weeklyDone: [],  // weekly challenge indices completed
+};
+
+// Fake leaderboard data (simulates classmates)
+function generateLeaderboard(playerName, playerXp, playerCls) {
+  const names = ['אור','דנה','יוסי','נועם','תמר','איתי','שירה','עומר','מאיה','רון','יעל','אדם','ליאור','הילה','דביר','נעמה','טל','עדי','רותם','שי'];
+  const board = names.filter(n => n !== playerName).slice(0, 12).map(n => ({
+    name: n, xp: Math.floor(Math.random() * 400), streak: Math.floor(Math.random() * 5)
+  }));
+  board.push({ name: playerName, xp: playerXp, streak: state.streak, isPlayer: true });
+  board.sort((a, b) => b.xp - a.xp);
+  return board;
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(SAVE_KEY);
+    if (saved) state = JSON.parse(saved);
+  } catch(e) {}
+}
+
+function saveState() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function getLevel() {
+  let lvl = LEVELS[0];
+  for (const l of LEVELS) {
+    if (state.xp >= l.xp) lvl = l;
+  }
+  return lvl;
+}
+
+function getNextLevel() {
+  const curr = getLevel();
+  const idx = LEVELS.findIndex(l => l.level === curr.level);
+  return idx < LEVELS.length - 1 ? LEVELS[idx + 1] : null;
+}
+
+function getXpProgress() {
+  const curr = getLevel();
+  const next = getNextLevel();
+  if (!next) return 100;
+  return Math.min(100, Math.round(((state.xp - curr.xp) / (next.xp - curr.xp)) * 100));
+}
+
+// ============================================
+// SCREENS
+// ============================================
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const screenMap = { map:'mapScreen', badges:'badgesScreen', profile:'profileScreen', quest:'questScreen', welcome:'welcomeScreen', leaderboard:'leaderboardScreen' };
+  const el = document.getElementById(screenMap[name]);
+  if (el) el.classList.add('active');
+
+  // Update nav
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.nav === name);
+  });
+
+  updateTopBars();
+  if (name === 'map') { renderMap(); renderWeekly(); renderStreak(); }
+  if (name === 'badges') renderBadges();
+  if (name === 'profile') renderProfile();
+  if (name === 'leaderboard') renderLeaderboard();
+}
+
+// ============================================
+// START GAME
+// ============================================
+
+function startGame() {
+  const name = document.getElementById('playerName').value.trim();
+  const cls = document.getElementById('playerClass').value;
+  if (!name) { document.getElementById('playerName').style.borderColor = 'var(--hp)'; return; }
+  if (!cls) { document.getElementById('playerClass').style.borderColor = 'var(--hp)'; return; }
+  state.name = name;
+  state.cls = cls;
+  saveState();
+  showScreen('map');
+}
+
+// ============================================
+// TOP BAR UPDATE
+// ============================================
+
+function updateTopBars() {
+  const lvl = getLevel();
+  const next = getNextLevel();
+  const pct = getXpProgress();
+  const initial = state.name ? state.name.charAt(0) : '?';
+
+  for (let i = 1; i <= 5; i++) {
+    const suffix = i === 1 ? '' : String(i);
+    const av = document.getElementById('tbAvatar' + suffix);
+    const nm = document.getElementById('tbName' + suffix);
+    const lv = document.getElementById('tbLevel' + suffix);
+    const xf = document.getElementById('tbXpFill' + suffix);
+    const xt = document.getElementById('tbXpText' + suffix);
+    const cn = document.getElementById('tbCoins' + suffix);
+    if (av) av.textContent = initial;
+    if (nm) nm.textContent = state.name || '—';
+    if (lv) lv.textContent = `רמה ${lvl.level} — ${lvl.title}`;
+    if (xf) xf.style.width = pct + '%';
+    if (xt) xt.textContent = state.xp + ' XP';
+    if (cn) cn.textContent = state.coins;
+  }
+}
+
+// ============================================
+// MAP
+// ============================================
+
+function renderMap() {
+  const grid = document.getElementById('mapGrid');
+  grid.innerHTML = WORLDS.map(w => {
+    const quests = QUESTS[w.id];
+    const done = quests.filter(q => state.completed.includes(q.id)).length;
+    const total = quests.length;
+    const pct = Math.round((done / total) * 100);
+    const stars = Array.from({length:3}, (_,i) => {
+      const filled = i < done;
+      return `<svg viewBox="0 0 24 24" fill="${filled ? 'var(--gold)' : 'none'}" stroke="${filled ? 'var(--gold)' : 'rgba(255,255,255,.15)'}" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+    }).join('');
+    return `
+      <div class="world-card" data-world="${w.id}" onclick="openWorld('${w.id}')" style="color:${w.color}">
+        <div class="world-icon">${w.icon}</div>
+        <div class="world-stars">${stars}</div>
+        <h3 style="color:var(--text)">${w.name}</h3>
+        <p>${w.desc}</p>
+        <div class="world-progress">
+          <div class="world-prog-bar"><div class="world-prog-fill" style="width:${pct}%"></div></div>
+          <span class="world-prog-text">${done}/${total}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================
+// QUESTS
+// ============================================
+
+function openWorld(worldId) {
+  const world = WORLDS.find(w => w.id === worldId);
+  const quests = QUESTS[worldId];
+  const content = document.getElementById('questContent');
+
+  content.innerHTML = `
+    <div class="quest-header" data-world="${worldId}">
+      <button class="quest-back" onclick="showScreen('map')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        חזרה למפה
+      </button>
+      <h2 style="color:${world.color}">${world.name}</h2>
+      <p>${world.desc}</p>
+      <div class="quest-dim">ממד: ${world.dim} — ${world.id === 'comm' ? 'הכבוד הוא הערך, התקשורת היא הדרך' : world.id === 'resp' ? 'הבחירה היא הערך, האחריות היא מה שעושים' : world.id === 'time' ? 'הרצון הפנימי הוא הערך, ניהול הזמן הוא הדרך' : world.id === 'tikun' ? 'השייכות היא הערך, תיקון העולם הוא הדרך לחוש אותה' : 'המסוגלות היא הערך, היצירתיות היא ההוכחה'}</div>
+    </div>
+    <div class="quest-list">
+      ${quests.map((q, i) => {
+        const done = state.completed.includes(q.id);
+        const locked = i > 0 && !state.completed.includes(quests[i-1].id);
+        return `
+          <div class="quest-card${done ? ' completed' : ''}${locked ? ' locked' : ''}" onclick="${!done && !locked ? `openQuest('${worldId}','${q.id}')` : ''}">
+            <span class="quest-difficulty diff-${q.diff}">${q.diff === 'easy' ? 'קל' : q.diff === 'medium' ? 'בינוני' : 'מאתגר'}</span>
+            <h4>${q.title}</h4>
+            <p>${q.desc.substring(0, 80)}${q.desc.length > 80 ? '...' : ''}</p>
+            <div class="quest-reward">
+              <span class="xp-reward">+${q.xp} XP</span>
+              <span class="coin-reward">+${q.coins} מטבעות</span>
+              <span class="badge-reward">${BADGES[q.badge]?.name || ''}</span>
+            </div>
+            ${locked ? '<div class="world-lock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' : ''}
+          </div>`;
+      }).join('')}
+    </div>`;
+
+  showScreen('quest');
+}
+
+function openQuest(worldId, questId) {
+  const world = WORLDS.find(w => w.id === worldId);
+  const quest = QUESTS[worldId].find(q => q.id === questId);
+  if (!quest || state.completed.includes(questId)) return;
+
+  const badge = BADGES[quest.badge];
+  const modal = document.getElementById('questModal');
+  const content = document.getElementById('questModalContent');
+
+  content.innerHTML = `
+    <div class="modal-handle"></div>
+    <span class="quest-difficulty diff-${quest.diff}" style="margin-bottom:12px">${quest.diff === 'easy' ? 'קל' : quest.diff === 'medium' ? 'בינוני' : 'מאתגר'}</span>
+    <h3>${quest.title}</h3>
+    <p class="quest-desc">${quest.desc}</p>
+    <h4 style="font-size:.85rem;font-weight:700;margin-bottom:8px;color:var(--xp)">שלבי המשימה:</h4>
+    <ol class="modal-steps">
+      ${quest.steps.map((s, i) => `<li><span class="step-num">${i+1}</span><span>${s}</span></li>`).join('')}
+    </ol>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;padding:14px;border-radius:14px;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15)">
+      <span style="font-size:.85rem;font-weight:700;color:var(--gold)">פרס:</span>
+      <span style="color:var(--xp);font-weight:700;font-size:.85rem">+${quest.xp} XP</span>
+      <span style="color:var(--gold);font-weight:700;font-size:.85rem">+${quest.coins} מטבעות</span>
+      ${badge ? `<span style="color:var(--create);font-size:.85rem">באדג׳ "${badge.name}"</span>` : ''}
+    </div>
+    <button class="complete-btn" onclick="completeQuest('${worldId}','${questId}')">
+      סיימתי את המשימה!
+    </button>
+    <button style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--muted);font-family:Heebo;font-size:.88rem;margin-top:10px;cursor:pointer" onclick="closeQuestModal()">עוד לא — אחזור</button>
+  `;
+
+  modal.classList.add('open');
+}
+
+function closeQuestModal() {
+  document.getElementById('questModal').classList.remove('open');
+}
+
+function completeQuest(worldId, questId) {
+  const quest = QUESTS[worldId].find(q => q.id === questId);
+  if (!quest || state.completed.includes(questId)) return;
+
+  const prevLevel = getLevel().level;
+
+  state.completed.push(questId);
+  state.xp += quest.xp;
+  state.coins += quest.coins;
+  if (quest.badge && !state.badges.includes(quest.badge)) {
+    state.badges.push(quest.badge);
+  }
+  // Streak
+  const today = new Date().toISOString().slice(0,10);
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if (state.lastQuestDate === today) {
+    // same day, streak stays
+  } else if (state.lastQuestDate === yesterday || !state.lastQuestDate) {
+    state.streak++;
+  } else {
+    state.streak = 1; // reset
+  }
+  state.lastQuestDate = today;
+  saveState();
+
+  closeQuestModal();
+  showXpPopup('+' + quest.xp + ' XP');
+  spawnParticles(WORLDS.find(w => w.id === worldId).color);
+
+  const newLevel = getLevel().level;
+  if (newLevel > prevLevel) {
+    setTimeout(() => showLevelUp(getLevel()), 1200);
+  }
+
+  // Re-render quest list
+  setTimeout(() => openWorld(worldId), 600);
+}
+
+// ============================================
+// BADGES
+// ============================================
+
+function renderBadges() {
+  const content = document.getElementById('badgesContent');
+  const groups = {};
+  WORLDS.forEach(w => { groups[w.id] = []; });
+
+  Object.entries(BADGES).forEach(([id, b]) => {
+    groups[b.world].push({ ...b, id, earned: state.badges.includes(id) });
+  });
+
+  content.innerHTML = `<h2 style="font-size:1.1rem;font-weight:800;margin-bottom:16px">באדג'ים שלי</h2>
+    <p style="color:var(--muted);font-size:.85rem;margin-bottom:20px">${state.badges.length} מתוך ${Object.keys(BADGES).length} באדג'ים</p>
+    ${WORLDS.map(w => `
+      <div class="badges-section">
+        <h3 style="color:${w.color}">${w.name}</h3>
+        <div class="badges-grid">
+          ${groups[w.id].map(b => `
+            <div class="badge-item ${b.earned ? 'earned' : 'locked'}">
+              <div class="badge-icon" style="background:${b.earned ? w.color + '22' : 'rgba(255,255,255,.04)'};color:${b.earned ? w.color : 'var(--muted)'}">
+                ${b.icon}
+              </div>
+              <span>${b.name}</span>
+            </div>`).join('')}
+        </div>
+      </div>`).join('')}`;
+}
+
+// ============================================
+// PROFILE
+// ============================================
+
+function renderProfile() {
+  const content = document.getElementById('profileContent');
+  const lvl = getLevel();
+  const initial = state.name ? state.name.charAt(0) : '?';
+  const totalQuests = Object.values(QUESTS).flat().length;
+
+  content.innerHTML = `
+    <div class="profile-card">
+      <div class="profile-avatar">${initial}</div>
+      <h2>${state.name}</h2>
+      <div class="profile-title">רמה ${lvl.level} — ${lvl.title}</div>
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="ps-num" style="color:var(--xp)">${state.xp}</div><div class="ps-label">XP</div></div>
+        <div class="profile-stat"><div class="ps-num" style="color:var(--gold)">${state.coins}</div><div class="ps-label">מטבעות</div></div>
+        <div class="profile-stat"><div class="ps-num" style="color:var(--resp)">${state.completed.length}/${totalQuests}</div><div class="ps-label">משימות</div></div>
+      </div>
+    </div>
+    <div class="profile-card">
+      <h3 style="font-size:.95rem;font-weight:700;margin-bottom:16px;text-align:right">מפת מיומנויות</h3>
+      <div class="skills-radar">
+        ${WORLDS.map(w => {
+          const quests = QUESTS[w.id];
+          const done = quests.filter(q => state.completed.includes(q.id)).length;
+          const pct = Math.round((done / quests.length) * 100);
+          return `
+            <div class="radar-row">
+              <span class="radar-label" style="color:${w.color}">${w.name.split(' ').pop()}</span>
+              <div class="radar-bar"><div class="radar-fill" style="width:${pct}%;background:${w.color}"></div></div>
+              <span style="font-size:.75rem;color:var(--muted);min-width:35px;text-align:left">${done}/${quests.length}</span>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <button style="width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:var(--card);color:var(--hp);font-family:Heebo;font-size:.88rem;font-weight:600;cursor:pointer;margin-top:8px" onclick="resetGame()">
+      איפוס משחק
+    </button>`;
+}
+
+function resetGame() {
+  if (!confirm('בטוח? כל ההתקדמות תימחק.')) return;
+  state = { name:'', xp:0, coins:0, completed:[], badges:[] };
+  saveState();
+  showScreen('welcome');
+  document.getElementById('welcomeScreen').classList.add('active');
+}
+
+// ============================================
+// EFFECTS
+// ============================================
+
+function showXpPopup(text) {
+  const el = document.getElementById('xpPopup');
+  el.textContent = text;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+function spawnParticles(color) {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = (30 + Math.random() * 40) + '%';
+    p.style.top = (30 + Math.random() * 30) + '%';
+    p.style.width = p.style.height = (4 + Math.random() * 8) + 'px';
+    p.style.background = color;
+    p.style.animationDelay = (Math.random() * .3) + 's';
+    p.style.animationDuration = (.5 + Math.random() * .8) + 's';
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 1500);
+  }
+}
+
+function showLevelUp(lvl) {
+  const overlay = document.getElementById('levelUpOverlay');
+  document.getElementById('levelUpIcon').innerHTML = '<svg width="60" height="60" viewBox="0 0 24 24" fill="var(--gold)" stroke="var(--gold)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+  document.getElementById('levelUpTitle').textContent = `רמה ${lvl.level}!`;
+  document.getElementById('levelUpDesc').textContent = `הגעת לדרגת "${lvl.title}" — כל הכבוד!`;
+  overlay.classList.add('show');
+  spawnParticles('#FFD700');
+}
+
+function closeLevelUp() {
+  document.getElementById('levelUpOverlay').classList.remove('show');
+}
+
+// Close modals on overlay click
+document.getElementById('questModal').addEventListener('click', function(e) {
+  if (e.target === this) closeQuestModal();
+});
+document.getElementById('weeklyModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+// ============================================
+// STREAK
+// ============================================
+
+function renderStreak() {
+  const bar = document.getElementById('streakBar');
+  const text = document.getElementById('streakText');
+  if (state.streak > 0) {
+    bar.style.display = 'flex';
+    const flames = state.streak >= 7 ? ' — אש!' : state.streak >= 3 ? ' — חזק!' : '';
+    text.textContent = state.streak + ' משימות ברצף' + flames;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+// ============================================
+// WEEKLY CHALLENGE
+// ============================================
+
+function getWeeklyIndex() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const week = Math.floor((now - start) / (7 * 86400000));
+  return week % WEEKLY_CHALLENGES.length;
+}
+
+function renderWeekly() {
+  const idx = getWeeklyIndex();
+  const ch = WEEKLY_CHALLENGES[idx];
+  const done = state.weeklyDone.includes(idx);
+  document.getElementById('weeklyTitle').textContent = ch.title;
+  document.getElementById('weeklyDesc').textContent = ch.desc;
+  document.getElementById('weeklyReward').textContent = '+' + ch.xp + ' XP  +' + ch.coins + ' מטבעות';
+  const card = document.getElementById('weeklyCard');
+  if (done) {
+    card.style.opacity = '.5';
+    card.style.pointerEvents = 'none';
+    document.getElementById('weeklyTitle').textContent += ' (הושלם!)';
+  }
+}
+
+function openWeeklyChallenge() {
+  const idx = getWeeklyIndex();
+  const ch = WEEKLY_CHALLENGES[idx];
+  if (state.weeklyDone.includes(idx)) return;
+  const modal = document.getElementById('weeklyModal');
+  document.getElementById('weeklyModalContent').innerHTML = `
+    <div class="modal-handle"></div>
+    <span style="font-size:.72rem;font-weight:700;color:var(--xp);padding:3px 10px;border-radius:6px;background:rgba(0,229,255,.12);display:inline-block;margin-bottom:12px">אתגר שבועי</span>
+    <h3>${ch.title}</h3>
+    <p class="quest-desc">${ch.desc}</p>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;padding:14px;border-radius:14px;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15)">
+      <span style="font-size:.85rem;font-weight:700;color:var(--gold)">פרס:</span>
+      <span style="color:var(--xp);font-weight:700;font-size:.85rem">+${ch.xp} XP</span>
+      <span style="color:var(--gold);font-weight:700;font-size:.85rem">+${ch.coins} מטבעות</span>
+    </div>
+    <button class="complete-btn" onclick="completeWeekly()">סיימתי את האתגר!</button>
+    <button style="width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:transparent;color:var(--muted);font-family:Heebo;font-size:.88rem;margin-top:10px;cursor:pointer" onclick="document.getElementById('weeklyModal').classList.remove('open')">עוד לא</button>
+  `;
+  modal.classList.add('open');
+}
+
+function completeWeekly() {
+  const idx = getWeeklyIndex();
+  const ch = WEEKLY_CHALLENGES[idx];
+  if (state.weeklyDone.includes(idx)) return;
+
+  const prevLevel = getLevel().level;
+  state.weeklyDone.push(idx);
+  state.xp += ch.xp;
+  state.coins += ch.coins;
+  saveState();
+
+  document.getElementById('weeklyModal').classList.remove('open');
+  showXpPopup('+' + ch.xp + ' XP');
+  spawnParticles('#00E5FF');
+  updateTopBars();
+  renderWeekly();
+
+  const newLevel = getLevel().level;
+  if (newLevel > prevLevel) {
+    setTimeout(() => showLevelUp(getLevel()), 1200);
+  }
+}
+
+// ============================================
+// LEADERBOARD
+// ============================================
+
+function renderLeaderboard() {
+  const content = document.getElementById('leaderboardContent');
+  const board = generateLeaderboard(state.name, state.xp, state.cls);
+  const playerRank = board.findIndex(b => b.isPlayer) + 1;
+
+  content.innerHTML = `
+    <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:4px">דירוג כיתה ${state.cls || ''}</h2>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:16px">המקום שלך: #${playerRank}</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${board.map((p, i) => {
+        const rank = i + 1;
+        const isMe = p.isPlayer;
+        const medal = rank === 1 ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="#FFD700" stroke="#FFD700" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+          : rank === 2 ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="#C0C0C0" stroke="#C0C0C0" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+          : rank === 3 ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="#CD7F32" stroke="#CD7F32" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+          : '<span style="width:18px;text-align:center;font-size:.8rem;color:var(--muted);font-weight:700">' + rank + '</span>';
+
+        return \`<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:\${isMe ? 'linear-gradient(135deg,rgba(0,229,255,.1),rgba(160,125,224,.06))' : 'var(--card)'};border:1px solid \${isMe ? 'rgba(0,229,255,.25)' : 'rgba(255,255,255,.04)'}">
+          \${medal}
+          <div style="width:32px;height:32px;border-radius:50%;background:\${isMe ? 'linear-gradient(135deg,var(--xp),var(--create))' : 'var(--card2)'};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;color:\${isMe ? 'var(--bg)' : 'var(--muted)'}">\${p.name.charAt(0)}</div>
+          <div style="flex:1">
+            <div style="font-size:.85rem;font-weight:\${isMe ? '800' : '600'}">\${p.name}\${isMe ? ' (את/ה)' : ''}</div>
+            <div style="font-size:.72rem;color:var(--muted)">\${p.streak > 0 ? p.streak + ' ברצף' : ''}</div>
+          </div>
+          <div style="text-align:left">
+            <div style="font-size:.9rem;font-weight:800;color:var(--xp)">\${p.xp}</div>
+            <div style="font-size:.65rem;color:var(--muted)">XP</div>
+          </div>
+        </div>\`;
+      }).join('')}
+    </div>
+  `;
+}
+
+// ============================================
+// INIT
+// ============================================
+
+loadState();
+if (state.name) {
+  showScreen('map');
+} else {
+  document.getElementById('welcomeScreen').classList.add('active');
+}
+</script>
+</body>
+</html>
