@@ -245,7 +245,7 @@ body { display: flex; flex-direction: column; align-items: center; min-height: 1
     <button class="btn action-btn" style="background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff" onclick="copyText()">העתק טקסט ללוח</button>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
-    <button class="btn action-btn" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff" onclick="captureImage()">הורד תמונה PNG</button>
+    <button class="btn action-btn" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff" onclick="prepareScreenshot()">הכן לצילום מסך</button>
     <button class="btn action-btn" style="background:linear-gradient(135deg,#D4A574,#B8885A);color:#fff" onclick="copyText();window.open('https://jobs.shatil.org.il/advertising-jobs','_blank')">שתיל — העתק + פתח</button>
     <button class="btn action-btn" style="background:linear-gradient(135deg,#6A9F6A,#4A7A4A);color:#fff" onclick="copyText();window.open('https://www.igm.org.il/site/pg/igm_wanted_teacher','_blank')">ארגון המורים — העתק + פתח</button>
   </div>
@@ -410,52 +410,34 @@ function copyText() {
   });
 }
 
-async function embedFonts() {
-  // Fetch and embed Google Fonts as base64 so dom-to-image preserves them
-  if (window._fontsEmbedded) return;
-  try {
-    const urls = [
-      'https://fonts.gstatic.com/s/playpensanshebrew/v1/k3kIo84SPe9dzQ1UGiiGlaMedrq4EMiAMSZBGYsPLmk.woff2',
-      'https://fonts.gstatic.com/s/assistant/v19/2sDPZGJYnIjSi6H75xkZZE1I0yCmYzzQtuZnEGGf3qGuvM4.woff2'
-    ];
-    const names = ['Playpen Sans Hebrew', 'Assistant'];
-    for (let i = 0; i < urls.length; i++) {
-      const resp = await fetch(urls[i]);
-      const buf = await resp.arrayBuffer();
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-      const style = document.createElement('style');
-      style.textContent = `@font-face { font-family: '${names[i]}'; src: url(data:font/woff2;base64,${b64}) format('woff2'); font-weight: 100 900; }`;
-      document.head.appendChild(style);
-    }
-    window._fontsEmbedded = true;
-  } catch(e) { console.warn('Font embed failed:', e); }
+function prepareScreenshot() {
+  // Hide editor, show only the card for screenshot
+  const editor = document.querySelector('.editor');
+  const canvas = document.getElementById('canvas');
+  editor.style.display = 'none';
+  document.body.style.padding = '0';
+  document.body.style.background = 'transparent';
+  canvas.style.borderRadius = '0';
+  canvas.style.boxShadow = 'none';
+  // Show instructions overlay
+  const hint = document.createElement('div');
+  hint.id = 'screenshotHint';
+  hint.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:999;background:#1a1a1a;color:#fff;padding:16px 32px;border-radius:16px;font-family:Assistant;font-size:18px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3)';
+  hint.innerHTML = 'לחצי <b>Ctrl+Shift+S</b> ← בחרי "בחירת אזור" ← סמני את הכרטיס<br><br><button onclick="exitScreenshot()" style="background:#0EA5E9;color:#fff;border:none;padding:10px 28px;border-radius:12px;font-family:Playpen Sans Hebrew;font-size:16px;font-weight:700;cursor:pointer">חזרה לעורך</button>';
+  document.body.appendChild(hint);
+  window.scrollTo(0, 0);
 }
 
-async function captureImage() {
-  const btn = event.target;
-  btn.textContent = 'מכין תמונה...'; btn.disabled = true;
-  // Embed fonts for export
-  await embedFonts();
-  // Load dom-to-image-more
-  if (typeof domtoimage === 'undefined') {
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/dom-to-image-more/3.4.5/dom-to-image-more.min.js';
-    await new Promise(r => { s.onload = r; document.head.appendChild(s); });
-  }
-  try {
-    const el = document.getElementById('canvas');
-    const blob = await domtoimage.toBlob(el, {
-      width: el.scrollWidth,
-      height: el.scrollHeight,
-      style: { transform: 'none', margin: '0' }
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'דרושים-אורט-בית-הערבה.png';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch(e) { alert('שגיאה: ' + e.message); }
-  btn.textContent = 'הורד תמונה PNG'; btn.disabled = false;
+function exitScreenshot() {
+  const editor = document.querySelector('.editor');
+  const canvas = document.getElementById('canvas');
+  editor.style.display = '';
+  document.body.style.padding = '30px';
+  document.body.style.background = '#ddd';
+  canvas.style.borderRadius = '12px';
+  canvas.style.boxShadow = '0 20px 60px rgba(0,0,0,.15)';
+  const hint = document.getElementById('screenshotHint');
+  if (hint) hint.remove();
 }
 
 // Init
