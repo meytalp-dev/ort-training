@@ -39,6 +39,12 @@ function doGet(e) {
       case 'getIntros':
         result = getIntros_();
         break;
+      case 'getDocuments':
+        result = getDocuments_(e.parameter.leadId);
+        break;
+      case 'getDocumentsByName':
+        result = getDocumentsByName_(e.parameter.studentName);
+        break;
       default:
         result = { result: 'ok', message: 'admission API active' };
     }
@@ -76,6 +82,9 @@ function doPost(e) {
         break;
       case 'saveIntro':
         result = saveIntro_(data.intro);
+        break;
+      case 'uploadDocument':
+        result = uploadDocument_(data);
         break;
       default:
         result = { result: 'error', message: 'unknown action' };
@@ -396,6 +405,115 @@ function saveNote_(leadId, note) {
 
   logAction_(ss, 'note', leadId, 'add', note.text.substring(0, 50));
   return { result: 'success', message: 'Note saved' };
+}
+
+// ============================================
+// DOCUMENTS — upload to Drive + track in Sheet
+// ============================================
+
+var DRIVE_FOLDER_NAME = 'קבלת תלמידים — מסמכים';
+
+function getDriveFolder_() {
+  var folders = DriveApp.getFoldersByName(DRIVE_FOLDER_NAME);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(DRIVE_FOLDER_NAME);
+}
+
+function getStudentFolder_(studentName) {
+  var parent = getDriveFolder_();
+  var folders = parent.getFoldersByName(studentName);
+  if (folders.hasNext()) return folders.next();
+  return parent.createFolder(studentName);
+}
+
+function uploadDocument_(data) {
+  if (!data || !data.fileName || !data.base64 || !data.studentName) {
+    return { result: 'error', message: 'missing file data' };
+  }
+
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var folder = getStudentFolder_(data.studentName);
+
+  // Decode base64
+  var base64Data = data.base64;
+  // Remove data URL prefix if present
+  if (base64Data.indexOf(',') > -1) {
+    base64Data = base64Data.split(',')[1];
+  }
+  var decoded = Utilities.base64Decode(base64Data);
+  var blob = Utilities.newBlob(decoded, data.mimeType || 'image/jpeg', data.fileName);
+
+  // Save to Drive
+  var file = folder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  var fileUrl = file.getUrl();
+  var fileId = file.getId();
+
+  // Track in Sheet
+  var sheet = ss.getSheetByName('מסמכים');
+  if (!sheet) {
+    sheet = ss.insertSheet('מסמכים');
+    sheet.appendRow(['מזהה ליד', 'שם תלמיד', 'סוג מסמך', 'שם קובץ', 'קישור', 'מזהה קובץ', 'תאריך']);
+    sheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+
+  sheet.appendRow([
+    data.leadId || '',
+    data.studentName,
+    data.docType || '',
+    data.fileName,
+    fileUrl,
+    fileId,
+    new Date()
+  ]);
+
+  logAction_(ss, 'document', data.leadId || '', 'upload', data.docType + ': ' + data.fileName);
+
+  return { result: 'success', fileUrl: fileUrl, fileId: fileId, message: 'Document uploaded' };
+}
+
+function getDocuments_(leadId) {
+  if (!leadId) return { result: 'error', message: 'no leadId' };
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('מסמכים');
+  if (!sheet || sheet.getLastRow() < 2) return { result: 'success', documents: [] };
+
+  var data = sheet.getDataRange().getValues();
+  var docs = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === leadId) {
+      docs.push({
+        studentName: data[i][1] || '',
+        docType: data[i][2] || '',
+        fileName: data[i][3] || '',
+        fileUrl: data[i][4] || '',
+        fileId: data[i][5] || '',
+        uploadedAt: data[i][6] || ''
+      });
+    }
+  }
+  return { result: 'success', documents: docs };
+}
+
+function getDocumentsByName_(studentName) {
+  if (!studentName) return { result: 'error', message: 'no studentName' };
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('מסמכים');
+  if (!sheet || sheet.getLastRow() < 2) return { result: 'success', documents: [] };
+
+  var data = sheet.getDataRange().getValues();
+  var docs = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][1] === studentName) {
+      docs.push({
+        docType: data[i][2] || '',
+        fileName: data[i][3] || '',
+        fileUrl: data[i][4] || '',
+        fileId: data[i][5] || '',
+        uploadedAt: data[i][6] || ''
+      });
+    }
+  }
+  return { result: 'success', documents: docs };
 }
 
 // ============================================

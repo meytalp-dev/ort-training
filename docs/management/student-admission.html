@@ -158,6 +158,8 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
   .leads-table{font-size:.8rem}
 }
 
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
 /* ===== Doc Upload Cards ===== */
 .doc-upload-card{background:var(--card);border:1.5px dashed var(--border);border-radius:14px;padding:16px;text-align:center;transition:border-color .2s}
 .doc-upload-card:hover{border-color:var(--primary)}
@@ -1885,9 +1887,15 @@ function updateProgressBar() {
 }
 
 // ============================================================
-// DOCUMENT UPLOADS (photos/scans)
+// DOCUMENT UPLOADS — Drive + Sheet + localStorage fallback
 // ============================================================
 var DOC_FIELDS = ['docStudentId', 'docParentId', 'docCertificate', 'docOther'];
+var DOC_LABELS = {
+  docStudentId: 'ת.ז. תלמיד',
+  docParentId: 'ת.ז. הורה',
+  docCertificate: 'תעודה מביה"ס קודם',
+  docOther: 'אבחון / מסמך נוסף'
+};
 
 function handleDocUpload(input, docId) {
   var file = input.files[0];
@@ -1895,45 +1903,88 @@ function handleDocUpload(input, docId) {
 
   var preview = document.getElementById(docId + '_preview');
 
-  // Check size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
     alert('הקובץ גדול מדי (מקסימום 5MB). נסי לצלם שוב.');
     return;
   }
 
+  // Show loading state
+  preview.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:.82rem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-left:6px"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg> מעלה...</div>';
+
   var reader = new FileReader();
   reader.onload = function(e) {
     var dataUrl = e.target.result;
-
-    // Show preview
-    if (file.type.startsWith('image/')) {
-      preview.innerHTML = '<img src="' + dataUrl + '" alt="' + esc(file.name) + '">' +
-        '<div class="doc-name">' + esc(file.name) + '</div>' +
-        '<button class="doc-remove" onclick="removeDoc(\'' + docId + '\')">הסרה</button>';
-    } else {
-      preview.innerHTML = '<div style="padding:12px;background:rgba(0,0,0,.03);border-radius:8px">' +
-        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
-        '<div class="doc-name">' + esc(file.name) + '</div></div>' +
-        '<button class="doc-remove" onclick="removeDoc(\'' + docId + '\')">הסרה</button>';
-    }
-
-    // Save to localStorage (per interview, keyed by student name)
     var firstName = document.getElementById('intFirstName').value.trim();
     var lastName = document.getElementById('intLastName').value.trim();
-    if (firstName || lastName) {
-      var key = 'ort_docs_' + (firstName + '_' + lastName).replace(/\s/g, '_');
-      var docs = {};
-      try { docs = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
-      docs[docId] = { name: file.name, type: file.type, data: dataUrl, uploadedAt: new Date().toISOString() };
-      try {
-        localStorage.setItem(key, JSON.stringify(docs));
-      } catch(e) {
-        // localStorage full — warn
-        alert('אין מספיק מקום לשמירה מקומית. הקובץ יישמר רק בזמן הנוכחי.');
-      }
+    var studentName = firstName + ' ' + lastName;
+
+    // Find lead ID
+    var leadId = document.getElementById('interviewLeadSelect').value || '';
+
+    // Show preview immediately
+    showDocPreview_(preview, docId, file, dataUrl, null);
+
+    // Save locally as fallback
+    saveDocLocal_(firstName, lastName, docId, file, dataUrl);
+
+    // Upload to Drive via Apps Script
+    if (APPS_SCRIPT_URL) {
+      fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'uploadDocument',
+          leadId: leadId,
+          studentName: studentName.trim(),
+          docType: DOC_LABELS[docId] || docId,
+          fileName: file.name,
+          mimeType: file.type,
+          base64: dataUrl
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.result === 'success' && res.fileUrl) {
+          // Update preview with Drive link
+          showDocPreview_(preview, docId, file, dataUrl, res.fileUrl);
+          // Save URL locally too
+          saveDocLocal_(firstName, lastName, docId, file, dataUrl, res.fileUrl);
+        }
+      })
+      .catch(function(err) {
+        console.warn('Drive upload failed, saved locally:', err);
+      });
     }
   };
   reader.readAsDataURL(file);
+}
+
+function showDocPreview_(preview, docId, file, dataUrl, driveUrl) {
+  var html = '';
+  if (file.type.startsWith('image/')) {
+    html += '<img src="' + dataUrl + '" alt="' + esc(file.name) + '">';
+  } else {
+    html += '<div style="padding:8px;background:rgba(0,0,0,.03);border-radius:8px;margin-bottom:4px">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" style="vertical-align:middle"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+      ' <span style="font-size:.82rem">' + esc(file.name) + '</span></div>';
+  }
+  html += '<div class="doc-name">' + esc(file.name) + '</div>';
+  if (driveUrl) {
+    html += '<a href="' + driveUrl + '" target="_blank" style="font-size:.72rem;color:var(--primary);display:inline-flex;align-items:center;gap:3px;margin-top:2px">' +
+      '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+      'פתח ב-Drive</a>';
+  }
+  html += '<br><button class="doc-remove" onclick="removeDoc(\'' + docId + '\')">הסרה</button>';
+  preview.innerHTML = html;
+}
+
+function saveDocLocal_(firstName, lastName, docId, file, dataUrl, driveUrl) {
+  if (!firstName && !lastName) return;
+  var key = 'ort_docs_' + (firstName + '_' + lastName).replace(/\s/g, '_');
+  var docs = {};
+  try { docs = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+  docs[docId] = { name: file.name, type: file.type, data: dataUrl, driveUrl: driveUrl || '', uploadedAt: new Date().toISOString() };
+  try { localStorage.setItem(key, JSON.stringify(docs)); } catch(e) {}
 }
 
 function removeDoc(docId) {
@@ -1942,7 +1993,6 @@ function removeDoc(docId) {
   var input = document.getElementById(docId);
   if (input) input.value = '';
 
-  // Remove from localStorage
   var firstName = document.getElementById('intFirstName').value.trim();
   var lastName = document.getElementById('intLastName').value.trim();
   if (firstName || lastName) {
@@ -1959,24 +2009,59 @@ function loadDocPreviews() {
   var firstName = document.getElementById('intFirstName').value.trim();
   var lastName = document.getElementById('intLastName').value.trim();
   if (!firstName && !lastName) return;
+
+  // First try localStorage
   var key = 'ort_docs_' + (firstName + '_' + lastName).replace(/\s/g, '_');
-  var docs = {};
-  try { docs = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+  var localDocs = {};
+  try { localDocs = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+
   DOC_FIELDS.forEach(function(docId) {
     var preview = document.getElementById(docId + '_preview');
-    if (docs[docId] && docs[docId].data) {
-      if (docs[docId].type && docs[docId].type.startsWith('image/')) {
-        preview.innerHTML = '<img src="' + docs[docId].data + '" alt="' + esc(docs[docId].name) + '">' +
-          '<div class="doc-name">' + esc(docs[docId].name) + '</div>' +
-          '<button class="doc-remove" onclick="removeDoc(\'' + docId + '\')">הסרה</button>';
-      } else {
-        preview.innerHTML = '<div class="doc-name">' + esc(docs[docId].name) + '</div>' +
-          '<button class="doc-remove" onclick="removeDoc(\'' + docId + '\')">הסרה</button>';
+    var doc = localDocs[docId];
+    if (doc && (doc.data || doc.driveUrl)) {
+      var html = '';
+      if (doc.data && doc.type && doc.type.startsWith('image/')) {
+        html += '<img src="' + doc.data + '" alt="' + esc(doc.name) + '">';
       }
+      html += '<div class="doc-name">' + esc(doc.name || '') + '</div>';
+      if (doc.driveUrl) {
+        html += '<a href="' + doc.driveUrl + '" target="_blank" style="font-size:.72rem;color:var(--primary);display:inline-flex;align-items:center;gap:3px;margin-top:2px">' +
+          '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+          'פתח ב-Drive</a>';
+      }
+      html += '<br><button class="doc-remove" onclick="removeDoc(\'' + docId + '\')">הסרה</button>';
+      preview.innerHTML = html;
     } else {
       preview.innerHTML = '';
     }
   });
+
+  // Also try loading from Sheet (for docs uploaded from other devices)
+  if (APPS_SCRIPT_URL) {
+    var studentName = (firstName + ' ' + lastName).trim();
+    syncFromSheet('getDocumentsByName', { studentName: studentName }, function(data) {
+      if (data && data.result === 'success' && data.documents && data.documents.length > 0) {
+        // Map doc types to fields
+        var typeToField = {};
+        for (var f in DOC_LABELS) { typeToField[DOC_LABELS[f]] = f; }
+
+        data.documents.forEach(function(doc) {
+          var fieldId = typeToField[doc.docType];
+          if (!fieldId) return;
+          var preview = document.getElementById(fieldId + '_preview');
+          if (preview && !preview.innerHTML) {
+            var html = '<div class="doc-name">' + esc(doc.fileName) + '</div>';
+            if (doc.fileUrl) {
+              html += '<a href="' + doc.fileUrl + '" target="_blank" style="font-size:.72rem;color:var(--primary);display:inline-flex;align-items:center;gap:3px;margin-top:2px">' +
+                '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+                'פתח ב-Drive</a>';
+            }
+            preview.innerHTML = html;
+          }
+        });
+      }
+    });
+  }
 }
 
 // ============================================================
