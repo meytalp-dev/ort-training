@@ -1112,7 +1112,7 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
 <!-- MODAL: Lead Details / Actions                                 -->
 <!-- ============================================================ -->
 <div class="modal-overlay" id="leadDetailModal">
-  <div class="modal" style="max-width:480px">
+  <div class="modal" style="max-width:620px">
     <div class="modal-header">
       <h3 id="detailName">פרטי ליד</h3>
       <button class="modal-close" onclick="closeDetailModal()">
@@ -1494,50 +1494,7 @@ function saveLead() {
 // ============================================================
 // LEAD DETAIL MODAL
 // ============================================================
-function openDetailModal(id) {
-  var leads = getLeads();
-  var lead = leads.find(function(l) { return l.id === id; });
-  if (!lead) return;
-
-  var modal = document.getElementById('leadDetailModal');
-  document.getElementById('detailName').textContent = lead.firstName + ' ' + lead.lastName;
-
-  var trackLabels = { hair: 'עיצוב שיער', auto: 'אוטוטרוניקה', computers: 'מחשבים' };
-  var created = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('he-IL') : '';
-
-  document.getElementById('detailBody').innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">' +
-      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">טלפון</div><div style="font-weight:600">' + esc(lead.phone || 'לא צוין') + '</div></div>' +
-      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">טלפון נוסף</div><div style="font-weight:600">' + esc(lead.phone2 || '—') + '</div></div>' +
-      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">ערוץ גיוס</div><div style="font-weight:600">' + esc(SOURCE_LABELS[lead.source] || '—') + '</div></div>' +
-      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">מגמה מועדפת</div><div style="font-weight:600">' + esc(trackLabels[lead.track] || 'לא ידוע') + '</div></div>' +
-      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">תאריך כניסה</div><div style="font-weight:600">' + created + '</div></div>' +
-      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">מי טיפל/ה</div><div style="font-weight:600">' + esc(lead.handler || '—') + '</div></div>' +
-    '</div>' +
-    '<div style="margin-bottom:12px"><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">סטטוס</div>' +
-      '<span class="status-badge ' + (STATUS_CLASSES[lead.status] || '') + '">' + esc(STATUS_LABELS[lead.status] || lead.status) + '</span></div>' +
-    (lead.notes ? '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">הערות</div><div style="background:rgba(0,0,0,.02);padding:10px 14px;border-radius:10px;font-size:.85rem;line-height:1.6">' + esc(lead.notes) + '</div></div>' : '');
-
-  document.getElementById('detailEditBtn').onclick = function() { closeDetailModal(); openLeadModal(id); };
-  document.getElementById('detailInterviewBtn').onclick = function() {
-    closeDetailModal();
-    // Switch to interview tab and pre-fill
-    document.querySelectorAll('.nav button').forEach(function(b) { b.classList.remove('active'); });
-    document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
-    document.querySelector('[data-tab="interview"]').classList.add('active');
-    document.getElementById('tab-interview').classList.add('active');
-  };
-  document.getElementById('detailDeleteBtn').onclick = function() {
-    if (confirm('למחוק את הליד של ' + lead.firstName + ' ' + lead.lastName + '?')) {
-      var newLeads = leads.filter(function(l) { return l.id !== id; });
-      saveLeads(newLeads);
-      closeDetailModal();
-      renderLeads();
-    }
-  };
-
-  modal.classList.add('show');
-}
+// openDetailModal is overridden in INIT section with full interview+docs view
 
 function closeDetailModal() {
   document.getElementById('leadDetailModal').classList.remove('show');
@@ -2456,6 +2413,166 @@ function loadFromSheetOnInit() {
 }
 
 // ============================================================
+// ROLE-BASED VIEW — Secretary sees accepted students with full details
+// ============================================================
+document.getElementById('roleSelect').addEventListener('change', function() {
+  var role = this.value;
+  if (role === 'meytal_secretary') {
+    // Auto-filter to accepted students
+    document.getElementById('leadsFilter').value = 'accepted';
+    renderLeads();
+    updateSecretaryBadge();
+  } else {
+    // Reset filter
+    document.getElementById('leadsFilter').value = 'all';
+    renderLeads();
+  }
+});
+
+// Enhanced detail modal — shows interview data + documents for secretary
+var _origOpenDetail = openDetailModal;
+openDetailModal = function(id) {
+  var leads = getLeads();
+  var lead = leads.find(function(l) { return l.id === id; });
+  if (!lead) return;
+
+  var modal = document.getElementById('leadDetailModal');
+  document.getElementById('detailName').textContent = lead.firstName + ' ' + lead.lastName;
+
+  var trackLabels = { hair: 'עיצוב שיער', auto: 'אוטוטרוניקה', computers: 'מחשבים' };
+  var created = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('he-IL') : '';
+
+  // Basic lead info
+  var html =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">' +
+      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">טלפון</div><div style="font-weight:600">' + esc(lead.phone || 'לא צוין') + '</div></div>' +
+      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">טלפון נוסף</div><div style="font-weight:600">' + esc(lead.phone2 || '—') + '</div></div>' +
+      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">ערוץ גיוס</div><div style="font-weight:600">' + esc(SOURCE_LABELS[lead.source] || '—') + '</div></div>' +
+      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">מגמה מועדפת</div><div style="font-weight:600">' + esc(trackLabels[lead.track] || 'לא ידוע') + '</div></div>' +
+      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">תאריך כניסה</div><div style="font-weight:600">' + created + '</div></div>' +
+      '<div><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">מי טיפל/ה</div><div style="font-weight:600">' + esc(lead.handler || '—') + '</div></div>' +
+    '</div>' +
+    '<div style="margin-bottom:12px"><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">סטטוס</div>' +
+      '<span class="status-badge ' + (STATUS_CLASSES[lead.status] || '') + '">' + esc(STATUS_LABELS[lead.status] || lead.status) + '</span></div>';
+
+  if (lead.notes) {
+    html += '<div style="margin-bottom:14px"><div style="font-size:.72rem;color:var(--muted);margin-bottom:2px">הערות</div><div style="background:rgba(0,0,0,.02);padding:10px 14px;border-radius:10px;font-size:.85rem;line-height:1.6">' + esc(lead.notes) + '</div></div>';
+  }
+
+  // Find interview data
+  var interviews = getInterviews();
+  var interview = interviews.find(function(iv) {
+    return iv.intFirstName === lead.firstName && iv.intLastName === lead.lastName;
+  });
+
+  if (interview) {
+    html += '<hr style="border:none;border-top:2px solid var(--border);margin:16px 0">';
+    html += '<div style="font-size:.88rem;font-weight:700;margin-bottom:12px;font-family:Heebo;color:var(--primary-dark);display:flex;align-items:center;gap:6px">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+      'פרטים מטופס הראיון</div>';
+
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.83rem">';
+    var fields = [
+      ['ת.ז.', interview.intIdNum],
+      ['גיל', interview.intAge],
+      ['תאריך לידה', interview.intBirthDate],
+      ['כתובת', [interview.intCity, interview.intStreet, interview.intApt].filter(Boolean).join(', ')],
+      ['נייד', interview.intMobile],
+      ['טלפון בית', interview.intHomePhone],
+      ['ביה"ס קודם', interview.intLastSchool],
+      ['מגמה', trackLabels[interview.intTrack] || interview.intTrack || '']
+    ];
+    fields.forEach(function(f) {
+      if (f[1]) html += '<div><span style="color:var(--muted);font-size:.72rem">' + f[0] + '</span><br><strong>' + esc(String(f[1])) + '</strong></div>';
+    });
+    html += '</div>';
+
+    // Parents
+    if (interview.intFatherName || interview.intMotherName) {
+      html += '<div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:.83rem">';
+      if (interview.intFatherName) {
+        html += '<div style="background:rgba(122,173,173,.04);padding:10px 12px;border-radius:10px;border:1px solid rgba(122,173,173,.12)">' +
+          '<div style="font-weight:700;font-size:.78rem;color:var(--primary-dark);margin-bottom:4px">אב</div>' +
+          '<div>' + esc(interview.intFatherName) + '</div>' +
+          (interview.intFatherPhone ? '<div style="font-size:.78rem;color:var(--muted)">' + esc(interview.intFatherPhone) + '</div>' : '') +
+          (interview.intFatherEmail ? '<div style="font-size:.78rem;color:var(--muted)">' + esc(interview.intFatherEmail) + '</div>' : '') +
+          '</div>';
+      }
+      if (interview.intMotherName) {
+        html += '<div style="background:rgba(201,160,160,.05);padding:10px 12px;border-radius:10px;border:1px solid rgba(201,160,160,.12)">' +
+          '<div style="font-weight:700;font-size:.78rem;color:var(--dusty-rose);margin-bottom:4px">אם</div>' +
+          '<div>' + esc(interview.intMotherName) + '</div>' +
+          (interview.intMotherPhone ? '<div style="font-size:.78rem;color:var(--muted)">' + esc(interview.intMotherPhone) + '</div>' : '') +
+          (interview.intMotherEmail ? '<div style="font-size:.78rem;color:var(--muted)">' + esc(interview.intMotherEmail) + '</div>' : '') +
+          '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Decision + impression
+    if (interview.intImpression) {
+      html += '<div style="margin-top:12px"><span style="color:var(--muted);font-size:.72rem">התרשמות המראיין/ת</span><div style="background:rgba(0,0,0,.02);padding:8px 12px;border-radius:8px;font-size:.83rem;margin-top:3px;line-height:1.5">' + esc(interview.intImpression) + '</div></div>';
+    }
+  }
+
+  // Documents from Drive
+  var docKey = 'ort_docs_' + (lead.firstName + '_' + lead.lastName).replace(/\s/g, '_');
+  var localDocs = {};
+  try { localDocs = JSON.parse(localStorage.getItem(docKey) || '{}'); } catch(e) {}
+  var hasDocs = Object.keys(localDocs).some(function(k) { return localDocs[k] && (localDocs[k].data || localDocs[k].driveUrl); });
+
+  if (hasDocs) {
+    html += '<hr style="border:none;border-top:2px solid var(--border);margin:16px 0">';
+    html += '<div style="font-size:.88rem;font-weight:700;margin-bottom:10px;font-family:Heebo;color:var(--warm-gold);display:flex;align-items:center;gap:6px">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="2"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>' +
+      'מסמכים</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+    DOC_FIELDS.forEach(function(docId) {
+      var doc = localDocs[docId];
+      if (!doc || (!doc.data && !doc.driveUrl)) return;
+      html += '<div style="background:rgba(245,240,232,.5);padding:10px 12px;border-radius:10px;font-size:.82rem">';
+      html += '<div style="font-weight:600;margin-bottom:4px">' + esc(DOC_LABELS[docId]) + '</div>';
+      html += '<div style="color:var(--muted);font-size:.75rem">' + esc(doc.name || '') + '</div>';
+      if (doc.driveUrl) {
+        html += '<a href="' + doc.driveUrl + '" target="_blank" style="font-size:.75rem;color:var(--primary);display:inline-flex;align-items:center;gap:3px;margin-top:4px">' +
+          '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+          'פתח ב-Drive</a>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('detailBody').innerHTML = html;
+
+  // Buttons
+  document.getElementById('detailEditBtn').onclick = function() { closeDetailModal(); openLeadModal(id); };
+  document.getElementById('detailInterviewBtn').onclick = function() {
+    closeDetailModal();
+    document.querySelectorAll('.nav button').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelector('[data-tab="interview"]').classList.add('active');
+    document.getElementById('tab-interview').classList.add('active');
+    // Select this lead in interview dropdown
+    refreshLeadDropdown();
+    setTimeout(function() {
+      document.getElementById('interviewLeadSelect').value = id;
+      loadLeadToInterview();
+    }, 100);
+  };
+  document.getElementById('detailDeleteBtn').onclick = function() {
+    if (confirm('למחוק את הליד של ' + lead.firstName + ' ' + lead.lastName + '?')) {
+      var newLeads = leads.filter(function(l) { return l.id !== id; });
+      saveLeads(newLeads);
+      closeDetailModal();
+      renderLeads();
+    }
+  };
+
+  modal.classList.add('show');
+};
+
+// ============================================================
 // INIT
 // ============================================================
 renderLeads();
@@ -2464,6 +2581,13 @@ refreshChecklistDropdown();
 refreshFileDropdown();
 loadFromSheetOnInit();
 updateSecretaryBadge();
+
+// Auto-set view based on role
+var initRole = document.getElementById('roleSelect').value;
+if (initRole === 'meytal_secretary') {
+  document.getElementById('leadsFilter').value = 'accepted';
+  renderLeads();
+}
 
 // Refresh dropdowns when switching tabs
 document.querySelectorAll('.nav button').forEach(function(btn) {
