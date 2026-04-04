@@ -376,6 +376,8 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
   <input type="text" id="editSubject" placeholder="לדוגמה: מתמטיקה">
   <label>מורה</label>
   <input type="text" id="editTeacher" placeholder="לדוגמה: נעמה">
+  <label>חדר</label>
+  <select id="editRoom"><option value="">ללא</option></select>
   <input type="hidden" id="editDay">
   <input type="hidden" id="editClass">
   <input type="hidden" id="editLesson">
@@ -577,9 +579,21 @@ function getSubject(cellText) {
 function getTeacherLabel(cellText) {
   if (!cellText) return '';
   const dashIdx = cellText.indexOf(' — ');
-  if (dashIdx > 0) return cellText.substring(dashIdx + 3);
+  if (dashIdx < 0) return '';
+  let teacher = cellText.substring(dashIdx + 3);
+  const pipeIdx = teacher.indexOf(' | ');
+  if (pipeIdx > 0) teacher = teacher.substring(0, pipeIdx);
+  return teacher;
+}
+
+function getRoom(cellText) {
+  if (!cellText) return '';
+  const pipeIdx = cellText.indexOf(' | ');
+  if (pipeIdx > 0) return cellText.substring(pipeIdx + 3);
   return '';
 }
+
+const ROOMS = ['1','2','3','4','5','6','7','8','9','10','11','סדנת עיצוב שיער','סדנת מחשבים','סדנת אוטוטרוניקה','חדר יזמות'];
 
 // ============================================================
 // CONFIG
@@ -855,6 +869,7 @@ function renderTable() {
         <div class="cell-inner">
           ${isMegamot ? '<span class="cell-megamot">מגמות מקצועיות</span>' : `<span class="cell-subject">${subject}</span>`}
           <div>${teacherBadges}${subBadge}</div>
+          ${getRoom(cellText) ? `<span style="font-size:.72rem;color:var(--muted);display:block;margin-top:1px">${getRoom(cellText)}</span>` : ''}
           ${needsSub ? '<span class="free-badge">דרוש מחליפ/ה</span>' : ''}
         </div>
         <div class="cell-tooltip">${cellText}</div>
@@ -1269,9 +1284,18 @@ function openEditPopover(day, cls, lesson, cellText, cellEl) {
   if (!editMode || !adminSession) return;
   const subject = getSubject(cellText);
   const teacher = getTeacherLabel(cellText);
+  const room = getRoom(cellText);
 
   document.getElementById('editSubject').value = subject === 'מגמות' ? 'מגמות' : subject;
   document.getElementById('editTeacher').value = teacher;
+
+  // Populate room dropdown
+  const roomSel = document.getElementById('editRoom');
+  if (roomSel.options.length <= 1) {
+    ROOMS.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; roomSel.appendChild(o); });
+  }
+  roomSel.value = room;
+
   document.getElementById('editDay').value = day;
   document.getElementById('editClass').value = cls;
   document.getElementById('editLesson').value = lesson;
@@ -1294,10 +1318,12 @@ function saveEditCell() {
   const lesson = document.getElementById('editLesson').value;
   const subject = document.getElementById('editSubject').value.trim();
   const teacher = document.getElementById('editTeacher').value.trim();
+  const room = document.getElementById('editRoom').value;
 
   let value = '';
   if (subject && teacher) value = subject + ' — ' + teacher;
   else if (subject) value = subject;
+  if (value && room) value += ' | ' + room;
 
   // Update local data
   if (!TIMETABLE[day]) TIMETABLE[day] = {};
@@ -1545,10 +1571,11 @@ function downloadFullImage() {
         teacherBadges += `<span style="display:inline-block;background:${sc};color:#fff;padding:2px 8px;border-radius:8px;font-size:.78rem;font-weight:700;margin:2px">${subEntry.subTeacher}</span>`;
       }
 
-      const bgStyle = '';
-      cells += `<td style="padding:10px 8px;border-bottom:1px solid #EEE;vertical-align:top;${bgStyle}">
+      const cellRoom = getRoom(cellText);
+      cells += `<td style="padding:10px 8px;border-bottom:1px solid #EEE;vertical-align:top">
         <div style="font-size:.88rem;font-weight:600;color:#4A3F35;line-height:1.3">${isMegamot ? '<em style="color:#8B7E74">מגמות</em>' : subject}</div>
         <div style="margin-top:3px">${teacherBadges}</div>
+        ${cellRoom ? '<div style="font-size:.72rem;color:#8B7E74;margin-top:2px">' + cellRoom + '</div>' : ''}
       </td>`;
     });
     bodyRows += `<tr${lesson % 2 === 0 ? ' style="background:#FAFCFC"' : ''}>${cells}</tr>`;
@@ -1654,9 +1681,10 @@ function downloadClassImage(cls) {
       const sc = getTeacherColor(subEntry.subTeacher);
       teacherHTML += `<span style="display:inline-block;background:${sc};color:#fff;padding:3px 12px;border-radius:10px;font-size:.95rem;font-weight:700;margin:2px">${subEntry.subTeacher}</span>`;
     }
+    const room = getRoom(cellText);
     rows += `<tr>
       <td style="padding:12px 16px;border-bottom:1px solid #E8DDD0;text-align:center;font-weight:800;font-size:1.2rem;color:#5E9191;width:70px">${lesson}</td>
-      <td style="padding:12px 16px;border-bottom:1px solid #E8DDD0;font-size:1.05rem;font-weight:600">${isMegamot ? 'מגמות מקצועיות' : subject}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid #E8DDD0;font-size:1.05rem;font-weight:600">${isMegamot ? 'מגמות מקצועיות' : subject}${room ? '<br><span style="font-size:.8rem;color:#8B7E74">' + room + '</span>' : ''}</td>
       <td style="padding:12px 16px;border-bottom:1px solid #E8DDD0">${teacherHTML || (isMegamot ? '<span style="color:#8B7E74">מגמות</span>' : '')}</td>
     </tr>`;
   }
