@@ -544,6 +544,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
     <button onclick="showPage('strategy')">אסטרטגיה</button>
     <button onclick="showPage('stratreport')">דוח אסטרטגי</button>
     <button onclick="showPage('handbook')">ספר בית הספר</button>
+    <button onclick="showPage('jobboard')">פרסום משרות</button>
   </div>
 </div>
 
@@ -915,11 +916,52 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
   <div id="handbookChapters"></div>
 </div>
 
+<!-- PUBLISH MODAL -->
+<div id="publishOverlay" style="display:none;position:fixed;inset:0;background:rgba(74,63,53,.55);backdrop-filter:blur(4px);z-index:200;padding:24px;overflow-y:auto;align-items:flex-start;justify-content:center" onclick="if(event.target===this)closePublishPanel()">
+  <div style="background:var(--card);border-radius:24px;max-width:620px;width:100%;margin:auto;box-shadow:0 24px 80px rgba(74,63,53,.18);overflow:hidden;animation:fadeInUp .3s ease">
+    <div style="height:5px;background:linear-gradient(90deg,#0EA5E9,var(--primary),var(--accent))"></div>
+    <div style="padding:28px;position:relative" id="publishContent"></div>
+  </div>
+</div>
+
+<!-- JOBBOARD -->
+<div id="page-jobboard" style="display:none">
+  <div class="section-header">
+    <div class="section-icon" style="background:linear-gradient(135deg,#0EA5E9,#0284C7)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+    <div><h2>פרסום משרות</h2><p>יצירה וניהול מודעות גיוס — עם דף ציבורי ממוצרן</p></div>
+  </div>
+  <div id="jbDefaults"></div>
+  <div class="stats-row" id="jbStats" style="margin-bottom:20px"></div>
+  <div class="card">
+    <div class="card-header">
+      <h3>ניהול משרות</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="jbFilter" onchange="renderJobs()" style="padding:7px 12px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.85rem;background:var(--card);color:var(--text)">
+          <option value="">כל הסטטוסים</option>
+          <option value="פתוחה">פתוחה</option>
+          <option value="טיוטה">טיוטה</option>
+          <option value="סגורה">סגורה</option>
+        </select>
+        <a href="job-postings.html" target="_blank" class="btn btn-sm btn-ghost" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          דף ציבורי
+        </a>
+        <button class="btn btn-primary btn-sm" onclick="startAddJob()">+ משרה חדשה</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div id="jbForm" style="display:none;padding:20px;border-bottom:1px solid var(--border);background:rgba(14,165,233,.04)"></div>
+      <div id="jbList"></div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /container -->
 
 <script>
 // ===================== CONFIG =====================
 const APPS_SCRIPT='https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';
+const GEMINI_PROXY='https://script.google.com/macros/s/AKfycbwtMSEzieSFBVOTIfxTZBHHtKlR3UHGhtjcBaxQRnIJs_CVKtk1iF4bHZQI8-zBraKu/exec';
 const GEMINI_MODEL='gemini-2.5-flash';
 const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -932,6 +974,8 @@ let calYear,calMonth,selectedDate=null;
 let chatHistory={positions:[],calendar:[],curriculum:[]};
 let tasks=JSON.parse(localStorage.getItem('mgmt-tasks')||'[]');
 let editingTaskId=null;
+let jobs=JSON.parse(localStorage.getItem('ort-jobs')||'[]');
+let editingJob=null;
 
 // ===================== AGENTS CONFIG =====================
 const _s=(d,c='var(--primary)')=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -946,6 +990,7 @@ const agents=[
   {id:'handbook',title:'ספר בית הספר',desc:'נהלים, כללים ומענה לשאלות',icon:_s('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>','#14B8A6'),ready:true},
   {id:'alerts',title:'תלמידים בסיכון',desc:'זיהוי והתראות על תלמידים בסיכון',icon:_s('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>','var(--danger)'),ready:false},
   {id:'marketing',title:'שיווק',desc:'תוכן שיווקי וגיוס תלמידים',icon:_s('<path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>','#F97316'),ready:false},
+  {id:'jobboard',title:'פרסום משרות',desc:'מודעות גיוס, ניהול משרות פתוחות ודף ציבורי',icon:_s('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>','#0EA5E9'),ready:true},
 ];
 
 // ===================== INIT =====================
@@ -959,7 +1004,7 @@ function showPage(id){
   document.querySelectorAll('[id^="page-"]').forEach(p=>p.style.display='none');
   document.getElementById('page-'+id).style.display='';
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  const labels={dashboard:'דשבורד',positions:'תכנון משרות',calendar:'תכנון שנתי',curriculum:'תכנון פדגוגי',tasks:'משימות',strategy:'אסטרטגיה',stratreport:'דוח אסטרטגי',handbook:'ספר בית הספר'};
+  const labels={dashboard:'דשבורד',positions:'תכנון משרות',calendar:'תכנון שנתי',curriculum:'תכנון פדגוגי',tasks:'משימות',strategy:'אסטרטגיה',stratreport:'דוח אסטרטגי',handbook:'ספר בית הספר',jobboard:'פרסום משרות'};
   const target=labels[id]||'';
   document.querySelectorAll('.nav button').forEach(b=>{if(b.textContent.trim()===target)b.classList.add('active')});
   if(id==='positions')initPositions();
@@ -969,6 +1014,7 @@ function showPage(id){
   if(id==='strategy')initStrategy();
   if(id==='stratreport')initStratReport();
   if(id==='handbook')initHandbook();
+  if(id==='jobboard')initJobBoard();
 }
 
 // ===================== DASHBOARD =====================
@@ -3378,6 +3424,546 @@ function filterHandbook(){
 function printHandbook(){
   expandAllChapters();
   setTimeout(()=>window.print(),300);
+}
+
+// ===================== JOB BOARD =====================
+const JB_INP='width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.9rem;margin-top:4px;box-sizing:border-box;background:var(--card);color:var(--text)';
+const JB_LBL='display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-top:12px';
+const JB_DEFAULT_EMAIL='meytalp@bethaarava.ort.org.il';
+
+function loadJobDefaults(){return JSON.parse(localStorage.getItem('ort-jobs-defaults')||JSON.stringify({contact:'מיטל פלג',email:JB_DEFAULT_EMAIL,phone:''}))}
+function saveJobDefaults(){
+  const d={contact:document.getElementById('jbd_contact')?.value.trim()||'',email:document.getElementById('jbd_email')?.value.trim()||'',phone:document.getElementById('jbd_phone')?.value.trim()||''};
+  localStorage.setItem('ort-jobs-defaults',JSON.stringify(d));
+  document.getElementById('jbDefaultsSaved').style.display='';
+  setTimeout(()=>{const el=document.getElementById('jbDefaultsSaved');if(el)el.style.display='none'},2000);
+}
+
+function initJobBoard(){
+  renderJbStats();
+  renderJobs();
+  renderJbDefaults();
+}
+
+function renderJbDefaults(){
+  const el=document.getElementById('jbDefaults');
+  if(!el)return;
+  const d=loadJobDefaults();
+  el.innerHTML=`
+    <details style="margin-bottom:16px">
+      <summary style="cursor:pointer;padding:12px 16px;background:var(--card);border:1px solid var(--border);border-radius:14px;font-family:Heebo;font-size:.88rem;font-weight:600;color:var(--muted);list-style:none;display:flex;align-items:center;gap:8px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+        פרטי קשר ברירת מחדל — נשמרים אוטומטית בכל משרה חדשה
+      </summary>
+      <div style="padding:16px;background:rgba(14,165,233,.04);border:1px solid rgba(14,165,233,.12);border-radius:0 0 14px 14px;border-top:none;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end">
+        <div><label style="${JB_LBL}">שם איש קשר</label><input id="jbd_contact" value="${d.contact}" style="${JB_INP}" placeholder="שם מלא"></div>
+        <div><label style="${JB_LBL}">מייל ברירת מחדל</label><input id="jbd_email" value="${d.email}" dir="ltr" style="${JB_INP}" placeholder="school@ort.org.il"></div>
+        <div><label style="${JB_LBL}">טלפון ברירת מחדל</label><input id="jbd_phone" value="${d.phone}" dir="ltr" style="${JB_INP}" placeholder="050-0000000"></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button onclick="saveJobDefaults()" class="btn btn-primary btn-sm" style="white-space:nowrap">שמור</button>
+          <span id="jbDefaultsSaved" style="display:none;font-size:.75rem;color:var(--success);text-align:center">נשמר!</span>
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderJbStats(){
+  const open=jobs.filter(j=>j.status==='פתוחה').length;
+  const draft=jobs.filter(j=>j.status==='טיוטה').length;
+  const closed=jobs.filter(j=>j.status==='סגורה').length;
+  const ic=(p,c)=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2">${p}</svg>`;
+  document.getElementById('jbStats').innerHTML=`
+    <div class="hero-stat"><div class="hero-stat-icon blue">${ic('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>','#0EA5E9')}</div><div><div class="h-num">${open}</div><div class="h-label">פתוחות</div></div></div>
+    <div class="hero-stat"><div class="hero-stat-icon amber">${ic('<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>','#D4A574')}</div><div><div class="h-num">${draft}</div><div class="h-label">טיוטות</div></div></div>
+    <div class="hero-stat"><div class="hero-stat-icon green">${ic('<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>','#6A9F6A')}</div><div><div class="h-num">${closed}</div><div class="h-label">סגורות</div></div></div>
+    <div class="hero-stat"><div class="hero-stat-icon purple">${ic('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>','var(--dusty-rose)')}</div><div><div class="h-num">${jobs.length}</div><div class="h-label">סה"כ</div></div></div>
+  `;
+}
+
+function renderJobs(){
+  const filter=document.getElementById('jbFilter')?.value||'';
+  const list=filter?jobs.filter(j=>j.status===filter):[...jobs];
+  const el=document.getElementById('jbList');
+  if(!el)return;
+  if(!list.length){
+    el.innerHTML=`<div style="padding:52px;text-align:center;color:var(--muted)"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.25;margin-bottom:12px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg><p style="font-size:.95rem">אין משרות${filter?' בסטטוס '+filter:''}</p><button class="btn btn-primary btn-sm" style="margin-top:14px" onclick="startAddJob()">+ פרסם משרה ראשונה</button></div>`;
+    return;
+  }
+  const sColor={פתוחה:'background:#D1FAE5;color:#065F46',טיוטה:'background:#FEF3C7;color:#92400E',סגורה:'background:#F3F4F6;color:#6B7280'};
+  el.innerHTML=`<table class="tbl"><thead><tr>
+    <th>כותרת המשרה</th><th>מגמה</th><th>סוג</th><th>היקף</th><th>סטטוס</th><th>איש קשר</th><th style="width:100px"></th>
+  </tr></thead><tbody>
+  ${list.map(j=>`<tr>
+    <td><strong>${j.title}</strong></td>
+    <td style="font-size:.83rem">${j.dept}</td>
+    <td style="font-size:.83rem">${j.type}</td>
+    <td style="font-size:.83rem">${j.scope}</td>
+    <td><span style="padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:600;${sColor[j.status]||sColor['סגורה']}">${j.status}</span></td>
+
+    <td style="font-size:.83rem">${j.contact||'—'}</td>
+    <td style="white-space:nowrap">
+      ${j.status==='פתוחה'?`<button onclick="openPublishPanel('${j.id}')" style="background:linear-gradient(135deg,#0EA5E9,#0284C7);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:Heebo;font-size:.8rem;font-weight:700;padding:5px 10px;margin-left:4px">פרסם</button>`:''}
+      <button onclick="editJob('${j.id}')" style="background:none;border:none;cursor:pointer;color:var(--primary-dark);font-family:Heebo;font-size:.82rem;padding:4px 6px;text-decoration:underline">עריכה</button>
+      <button onclick="deleteJob('${j.id}')" style="background:none;border:none;cursor:pointer;color:var(--danger);font-family:Heebo;font-size:.82rem;padding:4px 6px;text-decoration:underline">מחיקה</button>
+    </td>
+  </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function startAddJob(){
+  const d=loadJobDefaults();
+  editingJob={id:'job_'+Date.now(),title:'',dept:'כללי',type:'מורה',scope:'100%',desc:'',req:'',contact:d.contact,email:d.email,phone:d.phone,status:'טיוטה',createdAt:new Date().toISOString()};
+  showJobForm();
+}
+
+function editJob(id){
+  editingJob={...jobs.find(j=>j.id===id)};
+  showJobForm();
+}
+
+function showJobForm(){
+  const j=editingJob;
+  const fEl=document.getElementById('jbForm');
+  fEl.style.display='';
+  const depts=['כללי','עברית ולשון','מתמטיקה','היסטוריה ואזרחות','אנגלית','מדעים','מחשבים','חשמל ואלקטרוניקה','מכונאות','מנהלתי','אחר'];
+  const types=['מורה','מחנך','יועץ חינוכי','מפקח פדגוגי','סייע','מנהלתי','טכנאי','אחר'];
+  const scopes=['100%','75%','50%','25%','שעתי'];
+  const statuses=['טיוטה','פתוחה','סגורה'];
+  const sel=(id,opts,val)=>`<select id="${id}" style="${JB_INP}">${opts.map(o=>`<option${o===val?' selected':''}>${o}</option>`).join('')}</select>`;
+  fEl.innerHTML=`
+    <h3 style="margin-bottom:16px;font-family:Heebo;font-size:1rem;color:var(--text)">${j.createdAt&&jobs.find(x=>x.id===j.id)?'עריכת משרה':'משרה חדשה'}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:960px">
+      <div style="grid-column:1/-1">
+        <label style="${JB_LBL}">כותרת המשרה *</label>
+        <input id="jf_title" value="${j.title||''}" placeholder="לדוג': מורה למתמטיקה, מזכירה בית ספרית..." style="${JB_INP}">
+      </div>
+      <div><label style="${JB_LBL}">מגמה / מחלקה</label>${sel('jf_dept',depts,j.dept||'כללי')}</div>
+      <div><label style="${JB_LBL}">סוג משרה</label>${sel('jf_type',types,j.type||'מורה')}</div>
+      <div><label style="${JB_LBL}">היקף משרה</label>${sel('jf_scope',scopes,j.scope||'100%')}</div>
+      <div><label style="${JB_LBL}">סטטוס</label>${sel('jf_status',statuses,j.status||'טיוטה')}</div>
+      <div><label style="${JB_LBL}">שם איש קשר</label><input id="jf_contact" value="${j.contact||''}" placeholder="שם מלא" style="${JB_INP}"></div>
+      <div><label style="${JB_LBL}">כתובת מייל</label><input type="email" id="jf_email" value="${j.email||''}" dir="ltr" placeholder="school@ort.org.il" style="${JB_INP}"></div>
+      <div><label style="${JB_LBL}">טלפון</label><input type="tel" id="jf_phone" value="${j.phone||''}" dir="ltr" placeholder="050-0000000" style="${JB_INP}"></div>
+      <div style="grid-column:1/-1">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">
+          <label style="${JB_LBL};margin-top:0">תיאור המשרה</label>
+          <button onclick="aiJobDesc()" id="jbAiBtn" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:linear-gradient(135deg,#8B5CF6,#6D28D9);color:#fff;border:none;border-radius:10px;font-family:Heebo;font-size:.8rem;font-weight:600;cursor:pointer">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="m9 15 2 2 4-4"/></svg>
+            AI — כתוב לי תיאור
+          </button>
+        </div>
+        <textarea id="jf_desc" rows="4" placeholder="תאר את תפקיד המשרה, אחריות, ציפיות מהמועמד..." style="${JB_INP}">${j.desc||''}</textarea>
+        <div id="jbAiStatus" style="font-size:.78rem;color:#8B5CF6;margin-top:4px;display:none">כותב תיאור...</div>
+      </div>
+      <div style="grid-column:1/-1"><label style="${JB_LBL}">דרישות</label><textarea id="jf_req" rows="3" placeholder="השכלה נדרשת, ניסיון, תעודות, רישיונות..." style="${JB_INP}">${j.req||''}</textarea></div>
+      <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px;padding-top:14px;border-top:1px solid var(--border)">
+        <button onclick="cancelJobForm()" class="btn btn-sm btn-ghost">ביטול</button>
+        <button onclick="saveJob()" class="btn btn-primary btn-sm">שמור משרה</button>
+      </div>
+    </div>
+  `;
+  fEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function cancelJobForm(){
+  document.getElementById('jbForm').style.display='none';
+  editingJob=null;
+}
+
+function saveJob(){
+  if(!editingJob)return;
+  const g=id=>document.getElementById(id)?.value||'';
+  editingJob.title=g('jf_title').trim();
+  if(!editingJob.title){alert('יש להזין כותרת משרה');return}
+  editingJob.dept=g('jf_dept');
+  editingJob.type=g('jf_type');
+  editingJob.scope=g('jf_scope');
+  editingJob.status=g('jf_status');
+  editingJob.contact=g('jf_contact').trim();
+  editingJob.email=g('jf_email').trim();
+  editingJob.phone=g('jf_phone').trim();
+  editingJob.desc=g('jf_desc').trim();
+  editingJob.req=g('jf_req').trim();
+  editingJob.updatedAt=new Date().toISOString();
+  const idx=jobs.findIndex(x=>x.id===editingJob.id);
+  if(idx>=0)jobs[idx]=editingJob;else jobs.unshift(editingJob);
+  localStorage.setItem('ort-jobs',JSON.stringify(jobs));
+  cancelJobForm();
+  renderJbStats();
+  renderJobs();
+}
+
+function deleteJob(id){
+  if(!confirm('למחוק את המשרה? הפעולה אינה ניתנת לביטול.'))return;
+  jobs=jobs.filter(j=>j.id!==id);
+  localStorage.setItem('ort-jobs',JSON.stringify(jobs));
+  renderJbStats();
+  renderJobs();
+}
+
+// ===================== PUBLISH =====================
+const ORT_PAGE_ID='371383586291107';
+const ORT_PAGE_TOKEN='EAAe6cMp9FlgBREyam0mceAfpZBHsisZB8i1zZC5an6K8LaDIycpbqUMC1fgPe5cFmYkdm7GZB7qAwNEEeiU2bZAZApaZBg2WAzmqvsnAs7lxxBbgNKWpEF5lwoi8bNZCuBshZCVc3UGKyDenuQP5BuCGTjtABjKd5hrDo7s7svLzXZBpaKlwfoO7kFyV9RVYKzoHNrPAZDZD';
+if(!localStorage.getItem('ort-fb-token'))localStorage.setItem('ort-fb-token',ORT_PAGE_TOKEN);
+const FB_GROUPS={
+  'מורה':   [{name:'מורות משקיעות',url:'https://www.facebook.com/groups/morot.mashkiot/'},{name:'דרושים ירושלים והסביבה',url:'https://www.facebook.com/groups/299411198895996/'},{name:'לוח דרושים בחינוך - בשביל החינוך',url:'https://www.facebook.com/groups/be.shvil/'},{name:'דרושים - מורים מהלב',url:'https://www.facebook.com/groups/852268618681479/'},{name:'דרושים מורים סטאז\'רים',url:'https://www.facebook.com/groups/267602001178106/'},{name:'לוח דרושים חינוך - כל ההשמרות',url:'https://www.facebook.com/groups/301137763349269/'}],
+  'יועץ חינוכי': [{name:'יועצ/ץ ליועצ/ת חינוכית',url:'https://www.facebook.com/search/groups/?q=%D7%99%D7%95%D7%A2%D7%A5+%D7%97%D7%99%D7%A0%D7%95%D7%9B%D7%99'}],
+  'חינוך מיוחד': [{name:'פשוט חינוך מיוחד',url:'https://www.facebook.com/groups/1717725418506212/'}]
+};
+
+function jobText(j){
+  return `📢 דרוש/ה: ${j.title}
+🏫 אורט בית הערבה | ${j.dept}
+👤 סוג: ${j.type} | היקף: ${j.scope}
+${j.desc?'\n'+j.desc:''}
+${j.req?'\n✅ דרישות:\n'+j.req:''}
+${j.contact?'\n📞 לפרטים: '+j.contact+(j.phone?' | '+j.phone:'')+(j.email?' | '+j.email:''):''}
+`.trim();
+}
+
+function getGroupsForJob(j){
+  const type=j.type||'מורה';
+  if(type==='יועץ חינוכי')return FB_GROUPS['יועץ חינוכי'];
+  if(type==='חינוך מיוחד')return FB_GROUPS['חינוך מיוחד'];
+  return FB_GROUPS['מורה'];
+}
+
+function openPublishPanel(id){
+  const j=jobs.find(x=>x.id===id);
+  if(!j)return;
+  const fbToken=localStorage.getItem('ort-fb-token')||'';
+  const groups=getGroupsForJob(j);
+  const txt=jobText(j);
+  document.getElementById('publishContent').innerHTML=`
+    <button onclick="closePublishPanel()" style="position:absolute;top:16px;left:16px;background:rgba(74,63,53,.08);border:none;width:32px;height:32px;border-radius:10px;cursor:pointer;font-size:1rem;color:var(--muted);display:flex;align-items:center;justify-content:center">✕</button>
+    <h3 style="font-family:Heebo;font-size:1.1rem;margin-bottom:4px">פרסום משרה</h3>
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:22px">${j.title}</p>
+
+    <!-- Text preview -->
+    <div style="background:rgba(74,63,53,.04);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:.83rem;white-space:pre-line;line-height:1.7;margin-bottom:20px;max-height:140px;overflow-y:auto">${txt}</div>
+    <button onclick="copyJobText('${id}')" style="width:100%;padding:9px;border:1px dashed var(--border);border-radius:10px;background:none;font-family:Heebo;font-size:.85rem;color:var(--muted);cursor:pointer;margin-bottom:22px" id="copyBtn">📋 העתק טקסט ללוח</button>
+
+    <!-- Channel 1: Facebook Page -->
+    <div style="border:2px solid rgba(14,165,233,.2);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:10px;background:#1877F2;display:flex;align-items:center;justify-content:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </div>
+          <div><div style="font-weight:700;font-size:.9rem">דף אורט בית הערבה</div><div style="font-size:.75rem;color:var(--muted)">פרסום אוטומטי ← ואז שיתוף לקבוצות</div></div>
+        </div>
+        <button onclick="postToOrtPage('${id}')" id="fbPageBtn" style="padding:9px 18px;background:#1877F2;color:#fff;border:none;border-radius:10px;font-family:Heebo;font-size:.88rem;font-weight:700;cursor:pointer">
+          פרסם בדף
+        </button>
+      </div>
+      <div id="fbPageStatus" style="margin-top:8px;font-size:.78rem;display:none"></div>
+    </div>
+
+    <!-- WhatsApp Image -->
+    <div style="border:2px solid rgba(37,211,102,.25);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:8px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.997 2C6.477 2 2 6.477 2 12c0 1.99.574 3.842 1.564 5.405L2 22l4.74-1.539A9.95 9.95 0 0 0 12 22c5.523 0 10-4.477 10-10S17.52 2 11.997 2z"/></svg>
+            תמונה לוואטסאפ
+          </div>
+          <div style="font-size:.75rem;color:var(--muted)">כרטיס PNG מעוצב — מוכן לשיתוף</div>
+        </div>
+        <button onclick="generateJobImage('${id}')" id="imgGenBtn" style="padding:9px 18px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;font-family:Heebo;font-size:.88rem;font-weight:700;cursor:pointer">
+          ייצר תמונה
+        </button>
+      </div>
+    </div>
+
+    <!-- Channel 2: Facebook Groups -->
+    <div style="border:2px solid rgba(122,173,173,.2);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="font-weight:700;font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0EA5E9" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        קבוצות פייסבוק — אחרי פרסום בדף, לחצי שיתוף
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${groups.map(g=>`
+          <a href="${g.url}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(14,165,233,.05);border:1px solid rgba(14,165,233,.12);border-radius:8px;text-decoration:none;color:var(--text);font-size:.85rem;transition:background .15s" onmouseover="this.style.background='rgba(14,165,233,.1)'" onmouseout="this.style.background='rgba(14,165,233,.05)'">
+            <span>${g.name}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </a>`).join('')}
+      </div>
+    </div>
+
+    <!-- Channel 3: Shatil -->
+    <div style="border:2px solid rgba(212,165,116,.25);border-radius:14px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-weight:700;font-size:.9rem">שתיל — לוח דרושים</div>
+          <div style="font-size:.75rem;color:var(--muted)">פותח טופס + הטקסט מועתק ללוח</div>
+        </div>
+        <button onclick="openExternal('${id}','https://jobs.shatil.org.il/advertising-jobs')" style="padding:9px 18px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:Heebo;font-size:.88rem;font-weight:700;cursor:pointer">פתח טופס</button>
+      </div>
+    </div>
+
+    <!-- Channel 4: Teachers Union -->
+    <div style="border:2px solid rgba(106,159,106,.25);border-radius:14px;padding:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-weight:700;font-size:.9rem">ארגון המורים — לוח דרושים</div>
+          <div style="font-size:.75rem;color:var(--muted)">פותח טופס + הטקסט מועתק ללוח</div>
+        </div>
+        <button onclick="openExternal('${id}','https://www.igm.org.il/site/pg/igm_wanted_teacher')" style="padding:9px 18px;background:var(--success);color:#fff;border:none;border-radius:10px;font-family:Heebo;font-size:.88rem;font-weight:700;cursor:pointer">פתח טופס</button>
+      </div>
+    </div>
+  `;
+  const overlay=document.getElementById('publishOverlay');
+  overlay.style.display='flex';
+}
+
+function closePublishPanel(){
+  document.getElementById('publishOverlay').style.display='none';
+}
+
+function copyJobText(id){
+  const j=jobs.find(x=>x.id===id);
+  if(!j)return;
+  navigator.clipboard.writeText(jobText(j)).then(()=>{
+    const btn=document.getElementById('copyBtn');
+    if(btn){btn.textContent='✅ הועתק!';setTimeout(()=>{btn.textContent='📋 העתק טקסט ללוח'},2000)}
+  });
+}
+
+function openExternal(id,url){
+  copyJobText(id);
+  window.open(url,'_blank');
+}
+
+function saveFbToken(){
+  const t=document.getElementById('fbTokenInput')?.value.trim();
+  if(!t)return;
+  localStorage.setItem('ort-fb-token',t);
+  document.getElementById('fbTokenInput').closest('div').innerHTML='<span style="font-size:.78rem;color:var(--success)">✅ Token נשמר</span>';
+}
+
+async function postToOrtPage(id){
+  const j=jobs.find(x=>x.id===id);
+  if(!j)return;
+  const token=localStorage.getItem('ort-fb-token');
+  if(!token){alert('יש להזין Facebook Page Token תחילה');return}
+  const btn=document.getElementById('fbPageBtn');
+  const statusEl=document.getElementById('fbPageStatus');
+  btn.disabled=true;btn.textContent='מפרסם...';
+  statusEl.style.display='';statusEl.style.color='var(--muted)';statusEl.textContent='שולח לפייסבוק...';
+  try{
+    const res=await fetch(`https://graph.facebook.com/v19.0/${ORT_PAGE_ID}/feed`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:jobText(j),access_token:token})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    statusEl.style.color='var(--success)';
+    statusEl.textContent='✅ פורסם בהצלחה! עכשיו שתפי לקבוצות מהדף.';
+    btn.textContent='✅ פורסם';
+    window.open(`https://www.facebook.com/${ORT_PAGE_ID}`,'_blank');
+  }catch(e){
+    statusEl.style.color='var(--danger)';
+    statusEl.textContent='שגיאה: '+e.message;
+    btn.disabled=false;btn.textContent='נסי שוב';
+  }
+}
+
+// ===================== IMAGE GENERATOR =====================
+function jigRoundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+function jigWrapText(ctx,text,x,y,maxW,lineH,maxLines){
+  if(!text)return y;
+  const words=text.split(' ');let line='';let lineCount=0;
+  for(let w of words){
+    const test=line?line+' '+w:w;
+    if(ctx.measureText(test).width>maxW&&line){
+      ctx.fillText(line,x,y);y+=lineH;lineCount++;line=w;
+      if(maxLines&&lineCount>=maxLines){ctx.fillText(line+'...',x,y);return y+lineH}
+    }else line=test;
+  }
+  if(line)ctx.fillText(line,x,y);
+  return y+lineH;
+}
+
+async function generateJobImage(id){
+  const j=jobs.find(x=>x.id===id);
+  if(!j)return;
+  const btn=document.getElementById('imgGenBtn');
+  if(btn){btn.textContent='מכין תמונה...';btn.disabled=true}
+
+  // Ensure Heebo font is loaded in canvas
+  try{
+    const fBold=new FontFace('HeeboImg','url(https://fonts.gstatic.com/s/heebo/v26/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiS2ccCeh.woff2)',{weight:'700'});
+    const fBlack=new FontFace('HeeboImg','url(https://fonts.gstatic.com/s/heebo/v26/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiS2ccCeh.woff2)',{weight:'900'});
+    const fReg=new FontFace('HeeboImg','url(https://fonts.gstatic.com/s/heebo/v26/NGSpv5_NC0k9P_v6ZUCbLRAHxK1EiS2ccCeh.woff2)',{weight:'400'});
+    await Promise.allSettled([fBold.load(),fBlack.load(),fReg.load()].map(f=>f.then(x=>{document.fonts.add(x)})));
+  }catch(e){}
+
+  // Load ORT logo
+  const ortLogo=await new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=()=>resolve(null);
+    img.src='logo-ort.png';
+  });
+
+  const W=1080,H=1080;
+  const canvas=document.createElement('canvas');
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.direction='rtl';
+  ctx.textBaseline='alphabetic';
+
+  // Background
+  ctx.fillStyle='#FFFCF5';ctx.fillRect(0,0,W,H);
+
+  // Subtle dot pattern
+  ctx.fillStyle='rgba(74,63,53,.025)';
+  for(let px=0;px<W;px+=28)for(let py=0;py<H;py+=28){ctx.beginPath();ctx.arc(px,py,1.2,0,Math.PI*2);ctx.fill()}
+
+  // Top gradient stripe
+  const topG=ctx.createLinearGradient(0,0,W,0);
+  topG.addColorStop(0,'#5E9191');topG.addColorStop(0.45,'#0EA5E9');topG.addColorStop(1,'#D4A574');
+  ctx.fillStyle=topG;ctx.fillRect(0,0,W,18);
+
+  // Top section bg
+  const headerG=ctx.createLinearGradient(0,18,0,220);
+  headerG.addColorStop(0,'rgba(14,165,233,.07)');headerG.addColorStop(1,'rgba(14,165,233,.0)');
+  ctx.fillStyle=headerG;ctx.fillRect(0,18,W,202);
+
+  // ORT Logo (right side)
+  if(ortLogo){
+    const lw=260,lh=Math.round(260*(ortLogo.naturalHeight/ortLogo.naturalWidth));
+    ctx.drawImage(ortLogo,W-60-lw,28,lw,lh);
+  }
+
+  // School subtitle (only if no logo loaded)
+  if(!ortLogo){
+    ctx.font='900 52px HeeboImg,Heebo,Arial';ctx.textAlign='right';ctx.fillStyle='#4A3F35';
+    ctx.fillText('אורט בית הערבה',W-80,95);
+    ctx.font='400 28px HeeboImg,Heebo,Arial';ctx.fillStyle='#8B7E74';
+    ctx.fillText('בית ספר מקצועי-טכנולוגי | עמק הירדן',W-80,135);
+  }
+
+  // Tag row
+  const tags=[{t:j.dept,bg:'rgba(14,165,233,.12)',c:'#0284C7'},{t:j.type,bg:'rgba(122,173,173,.15)',c:'#5E9191'},{t:j.scope,bg:'rgba(212,165,116,.15)',c:'#B8885A'}];
+  let tagX=W-60;
+  ctx.font='700 22px HeeboImg,Heebo,Arial';
+  tags.forEach(tag=>{
+    const tw=ctx.measureText(tag.t).width+36;
+    tagX-=tw+10;
+    ctx.fillStyle=tag.bg;jigRoundRect(ctx,tagX,168,tw,40,20);ctx.fill();
+    ctx.fillStyle=tag.c;ctx.textAlign='center';ctx.fillText(tag.t,tagX+tw/2,194);
+  });
+
+  // Main divider
+  const divG=ctx.createLinearGradient(60,0,W-60,0);
+  divG.addColorStop(0,'rgba(122,173,173,0)');divG.addColorStop(0.2,'rgba(122,173,173,.4)');
+  divG.addColorStop(0.8,'rgba(122,173,173,.4)');divG.addColorStop(1,'rgba(122,173,173,0)');
+  ctx.strokeStyle=divG;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(60,230);ctx.lineTo(W-60,230);ctx.stroke();
+
+  // "דרוש/ה" label
+  ctx.font='700 26px HeeboImg,Heebo,Arial';ctx.textAlign='right';ctx.fillStyle='#0EA5E9';
+  ctx.fillText('דרוש/ה',W-60,290);
+
+  // Job title
+  ctx.font='900 74px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';
+  let titleY=380;
+  if(ctx.measureText(j.title).width>W-120){
+    ctx.font='900 60px HeeboImg,Heebo,Arial';titleY=370;
+  }
+  if(ctx.measureText(j.title).width>W-120){
+    ctx.font='900 48px HeeboImg,Heebo,Arial';titleY=360;
+  }
+  jigWrapText(ctx,j.title,W-60,titleY,W-120,80,2);
+
+  // Description box
+  if(j.desc){
+    ctx.fillStyle='rgba(122,173,173,.08)';
+    jigRoundRect(ctx,60,460,W-120,200,16);ctx.fill();
+    ctx.strokeStyle='rgba(122,173,173,.2)';ctx.lineWidth=1.5;
+    jigRoundRect(ctx,60,460,W-120,200,16);ctx.stroke();
+    ctx.font='400 26px HeeboImg,Heebo,Arial';ctx.fillStyle='#5A4F45';ctx.textAlign='right';
+    jigWrapText(ctx,j.desc,W-84,504,W-168,36,5);
+  }
+
+  // Divider
+  ctx.strokeStyle=divG;ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(60,690);ctx.lineTo(W-60,690);ctx.stroke();
+
+  // Contact section
+  ctx.font='700 28px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';ctx.textAlign='right';
+  ctx.fillText('לפרטים ופנייה:',W-60,750);
+  ctx.font='400 26px HeeboImg,Heebo,Arial';ctx.fillStyle='#6B5F55';
+  let contactY=800;
+  if(j.contact){ctx.fillText(j.contact,W-60,contactY);contactY+=42}
+  if(j.email){ctx.fillText(j.email,W-60,contactY);contactY+=42}
+  if(j.phone){ctx.fillText(j.phone,W-60,contactY)}
+
+  // Bottom gradient stripe
+  const botG=ctx.createLinearGradient(0,0,W,0);
+  botG.addColorStop(0,'#D4A574');botG.addColorStop(0.55,'#0EA5E9');botG.addColorStop(1,'#5E9191');
+  ctx.fillStyle=botG;ctx.fillRect(0,H-18,W,18);
+
+  // Bottom branding
+  ctx.font='700 22px HeeboImg,Heebo,Arial';ctx.fillStyle='rgba(74,63,53,.35)';ctx.textAlign='left';
+  ctx.fillText('אורט בית הערבה ירושלים | bh.ort.org.il',60,H-38);
+
+  // Download
+  try{
+    canvas.toBlob(blob=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=`משרה-${(j.title||'job').replace(/\s+/g,'-')}.png`;
+      a.click();URL.revokeObjectURL(url);
+    },'image/png');
+  }catch(e){
+    // Fallback
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL();a.download='job.png';a.click();
+  }
+  if(btn){btn.textContent='ייצר תמונה';btn.disabled=false}
+}
+
+async function aiJobDesc(){
+  const title=document.getElementById('jf_title')?.value.trim();
+  const type=document.getElementById('jf_type')?.value||'מורה';
+  const dept=document.getElementById('jf_dept')?.value||'';
+  const scope=document.getElementById('jf_scope')?.value||'100%';
+  if(!title){alert('הזיני קודם כותרת משרה');return}
+  const btn=document.getElementById('jbAiBtn');
+  const status=document.getElementById('jbAiStatus');
+  btn.disabled=true;btn.style.opacity='.6';
+  status.style.display='';
+  const prompt=`כתוב תיאור משרה מקצועי ותמציתי בעברית עבור בית ספר תיכון מקצועי (אורט בית הערבה, עמק הירדן).
+המשרה: ${title}
+סוג: ${type} | מגמה: ${dept} | היקף: ${scope}
+כתוב פסקה אחת של 3-5 משפטים המתארת את התפקיד, האחריות והציפיות.
+שפה חמה ומקצועית. אל תכלול דרישות (אלה ייכתבו בנפרד). אל תכלול כותרת.`;
+  try{
+    const text=await new Promise((resolve,reject)=>{
+      const cbName='_gjp'+Date.now();
+      const s=document.createElement('script');
+      const encoded=encodeURIComponent(prompt);
+      s.src=`${GEMINI_PROXY}?action=geminiProxy&prompt=${encoded}&callback=${cbName}`;
+      window[cbName]=d=>{
+        delete window[cbName];document.head.removeChild(s);
+        if(d.result==='error')reject(new Error(d.error||'שגיאת proxy'));
+        else resolve(d.text||'');
+      };
+      s.onerror=()=>{delete window[cbName];document.head.removeChild(s);reject(new Error('שגיאת חיבור ל-Apps Script'))};
+      document.head.appendChild(s);
+    });
+    document.getElementById('jf_desc').value=text.trim();
+  }catch(e){alert('שגיאה בייצור תיאור: '+e.message)}
+  finally{btn.disabled=false;btn.style.opacity='1';status.style.display='none'}
 }
 </script>
 </body>
