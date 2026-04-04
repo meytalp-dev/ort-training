@@ -8,8 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-@font-face{font-family:'Shuneet3';src:url('fonts/Shuneet3 Medium.ttf') format('truetype');font-weight:400}
-@font-face{font-family:'Shuneet3 Bold';src:url('fonts/Shuneet3 Square Bold.ttf') format('truetype');font-weight:700}
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#F5F0E8;--card:#FFFDF8;--primary:#7AADAD;--primary-dark:#5E9191;
@@ -100,7 +98,7 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 
 /* absent highlight */
 .lesson-cell.has-absent{background:#FFF3F3!important;border-color:#F5C0BC!important}
-.lesson-cell.needs-sub{background:#FFF8E1!important;border-color:#F0C060!important;animation:pulse-warn .8s ease-in-out infinite alternate}
+.lesson-cell.needs-sub{background:#FFF8E1!important;border-color:#F0C060!important;animation:pulse-warn .8s ease-in-out 4 alternate}
 @keyframes pulse-warn{from{background:#FFF8E1}to{background:#FFE59A}}
 
 /* tooltip */
@@ -166,8 +164,17 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 @media(max-width:768px){
   .header{height:auto;padding:10px 16px}
   .day-tabs{overflow-x:auto}
-  .table-wrap{padding:0 12px 16px}
-  .timetable th,.timetable td{font-size:.72rem;padding:4px}
+  .table-wrap{padding:0 8px 16px}
+  .timetable th,.timetable td{font-size:.82rem;padding:6px 5px}
+  .timetable th.class-col{min-width:100px;width:100px}
+  .time-cell{position:sticky;right:0;z-index:10;background:#F9F7F4!important;box-shadow:-2px 0 6px rgba(0,0,0,.08)}
+  .timetable th.time-col{position:sticky;right:0;z-index:11}
+  .btn{padding:6px 10px;font-size:.78rem}
+  .legend-bar{padding:0 12px 8px}
+  .legend-item{font-size:.78rem;padding:3px 8px}
+  .toolbar{padding:8px 12px 6px;gap:6px}
+  .cell-subject{font-size:.8rem}
+  .cell-teacher{font-size:.72rem;padding:1px 6px}
 }
 
 /* STATUS BAR */
@@ -328,14 +335,15 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 <!-- TABLE -->
 <div class="table-wrap">
   <div id="timetableContainer"></div>
+  <div style="text-align:center;font-size:.75rem;color:var(--muted);padding:6px 0" id="lastUpdated"></div>
 </div>
 
 <!-- CLASS IMAGE DOWNLOADS -->
 <div class="links-panel" id="linksPanel">
   <h3>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-    הורד תמונה לפי כיתה
-    <span style="font-size:.78rem;font-weight:400;color:var(--muted)">— לחצי על כיתה להוריד תמונת מערכת שעות לשליחה בווטסאפ</span>
+    הורד תמונה / קישור אישי
+    <span style="font-size:.78rem;font-weight:400;color:var(--muted)">— תמונה לכיתה + קישור אישי למורה</span>
   </h3>
   <div class="links-grid" id="linksGrid"></div>
   <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -628,11 +636,14 @@ function jsonpFetch(params, callback) {
   if (!API_URL) { callback(null); return; }
   const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
   const url = API_URL + '?' + Object.entries(params).map(([k,v]) => k+'='+encodeURIComponent(v||'')).join('&') + '&callback=' + cbName;
-  window[cbName] = function(data) { delete window[cbName]; try{document.head.removeChild(script);}catch(e){} callback(data); };
+  let done = false;
+  window[cbName] = function(data) { if (done) return; done = true; delete window[cbName]; try{document.head.removeChild(script);}catch(e){} callback(data); };
   const script = document.createElement('script');
   script.src = url;
-  script.onerror = function() { delete window[cbName]; try{document.head.removeChild(script);}catch(e){} callback(null); };
+  script.onerror = function() { if (done) return; done = true; delete window[cbName]; try{document.head.removeChild(script);}catch(e){} callback(null); };
   document.head.appendChild(script);
+  // Timeout after 12 seconds
+  setTimeout(function() { if (done) return; done = true; delete window[cbName]; try{document.head.removeChild(script);}catch(e){} callback(null); }, 12000);
 }
 
 // ============================================================
@@ -729,6 +740,9 @@ function loadFromSheet(callback) {
         }));
       }
       if (data.lessonTimes) Object.assign(LESSON_TIMES, data.lessonTimes);
+      // Show last updated
+      const tsEl = document.getElementById('lastUpdated');
+      if (tsEl) tsEl.textContent = 'נטען מ-Google Sheet | ' + new Date().toLocaleString('he-IL');
     }
     callback();
   });
@@ -1226,23 +1240,17 @@ function submitPin() {
   const pin = document.getElementById('pinInput').value;
   if (!pin || pin.length < 4) { document.getElementById('pinErr').textContent = 'הזיני 4 ספרות'; return; }
 
-  if (API_URL) {
-    jsonpFetch({ action: 'verifyPin', pin: pin }, function(data) {
-      if (data && data.result === 'success') {
-        activateAdmin(pin, data.admin);
-      } else {
-        document.getElementById('pinErr').textContent = 'קוד שגוי';
-      }
-    });
-  } else {
-    // Offline fallback — accept 2024/2025
-    const offlinePins = { '2024': 'מיטל', '2025': 'רוית' };
-    if (offlinePins[pin]) {
-      activateAdmin(pin, offlinePins[pin]);
+  if (!API_URL) {
+    document.getElementById('pinErr').textContent = 'המערכת לא מחוברת לשרת';
+    return;
+  }
+  jsonpFetch({ action: 'verifyPin', pin: pin }, function(data) {
+    if (data && data.result === 'success') {
+      activateAdmin(pin, data.admin);
     } else {
       document.getElementById('pinErr').textContent = 'קוד שגוי';
     }
-  }
+  });
 }
 
 function activateAdmin(pin, name) {
@@ -1472,12 +1480,18 @@ document.addEventListener('click', function(e) {
 
 let classViewMode = null; // null = admin, string = class name
 
+let teacherViewMode = null;
+
 function detectClassView() {
   const params = new URLSearchParams(window.location.search);
   const cls = params.get('class');
+  const teacher = params.get('teacher');
   if (cls && CLASSES.includes(cls)) {
     classViewMode = cls;
     enterClassView(cls);
+  } else if (teacher && TEACHER_COLORS[teacher]) {
+    teacherViewMode = teacher;
+    enterTeacherView(teacher);
   }
 }
 
@@ -1496,6 +1510,48 @@ function enterClassView(cls) {
 
   // Update title
   document.title = `מערכת שעות — כיתה ${cls} — אורט בית הערבה`;
+}
+
+function enterTeacherView(teacher) {
+  const color = getTeacherColor(teacher);
+  const banner = document.getElementById('classBanner');
+  banner.style.display = 'flex';
+  banner.style.background = `linear-gradient(135deg, ${color}, ${color}CC)`;
+  document.getElementById('classViewName').textContent = teacher;
+  // Change banner text
+  banner.querySelector('.teacher-view-name').innerHTML =
+    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+     <span id="classViewName" style="font-size:1.4rem">${teacher}</span> — מערכת אישית`;
+  // Update share button
+  banner.querySelector('.btn-whatsapp').setAttribute('onclick', 'shareTeacherViewImg()');
+
+  document.getElementById('absentModeBtn').style.display = 'none';
+  try { document.getElementById('clearAbsentBtn').style.display = 'none'; } catch(e) {}
+  document.getElementById('linksPanel').style.display = 'none';
+  document.querySelector('.log-panel').style.display = 'none';
+  document.getElementById('legendBar').style.display = 'none';
+  try { document.getElementById('editModeBtn').style.display = 'none'; } catch(e) {}
+  try { document.getElementById('absenceBtn').style.display = 'none'; } catch(e) {}
+  try { document.getElementById('loginBtn').style.display = 'none'; } catch(e) {}
+
+  document.title = `מערכת שעות — ${teacher} — אורט בית הערבה`;
+}
+
+function shareTeacherViewImg() {
+  const table = document.getElementById('mainTable');
+  if (!table) return;
+  html2canvas(table, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }).then(canvas => {
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `מערכת-${teacherViewMode}-${currentDay}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      const msg = `מערכת שעות — ${teacherViewMode}\nיום ${currentDay} | אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}`;
+      setTimeout(() => window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank'), 500);
+    }, 'image/png');
+  });
 }
 
 function shareClassView() {
@@ -1647,15 +1703,54 @@ function downloadFullImage() {
 }
 
 function buildClassLinks() {
-  if (classViewMode) return;
+  if (classViewMode || teacherViewMode) return;
   const grid = document.getElementById('linksGrid');
+  const baseUrl = window.location.href.split('?')[0];
+
+  // Class image downloads
+  const classLabel = document.createElement('div');
+  classLabel.style.cssText = 'grid-column:1/-1;font-size:.82rem;font-weight:700;color:var(--muted);margin-top:4px';
+  classLabel.textContent = 'כיתות (הורדת תמונה):';
+  grid.appendChild(classLabel);
 
   CLASSES.forEach(cls => {
     const item = document.createElement('div');
     item.className = 'link-item';
     item.innerHTML = `<div class="ldot" style="background:var(--primary)"></div><strong>${cls}</strong><span class="copy-icon" id="copy-${cls}">הורד תמונה</span>`;
     item.onclick = () => downloadClassImage(cls);
-    item.title = `הורד תמונת מערכת שעות של כיתה ${cls}`;
+    grid.appendChild(item);
+  });
+
+  // Teacher personal links
+  const teacherLabel = document.createElement('div');
+  teacherLabel.style.cssText = 'grid-column:1/-1;font-size:.82rem;font-weight:700;color:var(--muted);margin-top:12px;padding-top:12px;border-top:1px solid var(--border)';
+  teacherLabel.textContent = 'מורים (קישור אישי — העתקה):';
+  grid.appendChild(teacherLabel);
+
+  const activeTeachers = new Set();
+  Object.values(TIMETABLE).forEach(dayData => {
+    Object.values(dayData).forEach(classData => {
+      Object.values(classData).forEach(cell => {
+        extractTeachers(cell).forEach(t => activeTeachers.add(t));
+      });
+    });
+  });
+
+  [...activeTeachers].sort().forEach(teacher => {
+    const color = getTeacherColor(teacher);
+    const url = baseUrl + '?teacher=' + encodeURIComponent(teacher);
+    const item = document.createElement('div');
+    item.className = 'link-item';
+    item.innerHTML = `<div class="ldot" style="background:${color}"></div>${teacher}<span class="copy-icon" id="tcopy-${teacher}">העתק קישור</span>`;
+    item.onclick = () => {
+      navigator.clipboard.writeText(url).then(() => {
+        const el = document.getElementById('tcopy-' + teacher);
+        el.textContent = 'הועתק!';
+        el.classList.add('link-copied');
+        setTimeout(() => { el.textContent = 'העתק קישור'; el.classList.remove('link-copied'); }, 2000);
+      });
+    };
+    item.title = url;
     grid.appendChild(item);
   });
 }
@@ -1758,9 +1853,83 @@ function downloadClassImage(cls) {
 // OVERRIDE RENDER TABLE FOR CLASS VIEW
 // ============================================================
 
+// ============================================================
+// TEACHER VIEW RENDER
+// ============================================================
+
+function renderTeacherView() {
+  const days = ['ראשון','שני','שלישי','רביעי','חמישי'];
+  const color = getTeacherColor(teacherViewMode);
+  let maxLesson = 0;
+  let totalLessons = 0;
+
+  // Collect teacher schedule across all days
+  const schedule = {}; // day -> [{lesson, cls, subject, room}]
+  days.forEach(day => {
+    schedule[day] = [];
+    const dayData = TIMETABLE[day] || {};
+    CLASSES.forEach(cls => {
+      const lessons = dayData[cls] || {};
+      Object.entries(lessons).forEach(([num, text]) => {
+        if (extractTeachers(text).includes(teacherViewMode)) {
+          schedule[day].push({ lesson: +num, cls, text, subject: getSubject(text), room: getRoom(text) });
+          if (+num > maxLesson) maxLesson = +num;
+          totalLessons++;
+        }
+      });
+    });
+    schedule[day].sort((a, b) => a.lesson - b.lesson);
+  });
+  if (maxLesson === 0) maxLesson = 6;
+
+  document.getElementById('statLessons').textContent = totalLessons;
+  document.getElementById('statClasses').textContent = new Set(days.flatMap(d => schedule[d].map(s => s.cls))).size;
+
+  // Build weekly table
+  let html = `<table class="timetable" id="mainTable" style="max-width:800px;margin:0 auto">
+    <thead><tr>
+      <th class="time-col">שעה</th>`;
+  days.forEach(d => {
+    const isToday = d === todayDay;
+    html += `<th style="min-width:130px;${isToday ? 'background:linear-gradient(135deg,#4A3F35,#6B5D52)' : ''}">${d}${isToday ? ' (היום)' : ''}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  for (let lesson = 1; lesson <= maxLesson; lesson++) {
+    html += `<tr>
+      <td class="time-cell">
+        <span class="time-num">${lesson}</span>
+        <div class="time-hours">${LESSON_TIMES[lesson] || ''}</div>
+      </td>`;
+
+    days.forEach(day => {
+      const entries = schedule[day].filter(s => s.lesson === lesson);
+      if (entries.length === 0) {
+        html += `<td class="lesson-cell empty" style="text-align:center;color:#CCC">—</td>`;
+      } else {
+        const e = entries[0];
+        html += `<td class="lesson-cell" style="border-right:3px solid ${color}">
+          <div class="cell-inner" style="min-height:auto">
+            <span class="cell-subject" style="font-size:.95rem">${e.subject}</span>
+            <span style="font-size:.85rem;font-weight:700;color:${color}">${e.cls}</span>
+            ${e.room ? `<span style="font-size:.75rem;color:var(--muted)">${e.room}</span>` : ''}
+          </div>
+        </td>`;
+      }
+    });
+    html += `</tr>`;
+  }
+  html += `</tbody></table>`;
+  document.getElementById('timetableContainer').innerHTML = html;
+}
+
 const _originalRenderTable = renderTable;
 
 renderTable = function() {
+  if (teacherViewMode) {
+    renderTeacherView();
+    return;
+  }
   if (!classViewMode) {
     _originalRenderTable();
     return;
@@ -1806,12 +1975,25 @@ renderTable = function() {
     const teachers = extractTeachers(cellText);
     const color = teachers.length ? getTeacherColor(teachers[0]) : '#888';
 
+    const subEntry = subLog.find(s => s.lesson === lesson && s.cls === classViewMode && s.day === currentDay);
+    const room = getRoom(cellText);
+
     let teacherBadges = '';
     if (teacherLabel) {
       teachers.forEach(t => {
-        const c = getTeacherColor(t);
-        teacherBadges += `<span class="cell-teacher" style="background:${c};font-size:.9rem;padding:3px 12px">${t}</span> `;
+        const isAbsent = absentTeachers.has(t);
+        if (subEntry && subEntry.absentTeacher === t) {
+          // Show as replaced
+          teacherBadges += `<span class="cell-teacher" style="background:#C0605A;font-size:.9rem;padding:3px 12px;text-decoration:line-through;opacity:.6">${t}</span> `;
+        } else {
+          const c = getTeacherColor(t);
+          teacherBadges += `<span class="cell-teacher" style="background:${c};font-size:.9rem;padding:3px 12px">${t}</span> `;
+        }
       });
+    }
+    if (subEntry) {
+      const sc = getTeacherColor(subEntry.subTeacher);
+      teacherBadges += `<span class="cell-teacher" style="background:${sc};font-size:.9rem;padding:3px 12px">${subEntry.subTeacher} (מחליפ/ה)</span> `;
     }
 
     html += `<tr>
@@ -1821,6 +2003,7 @@ renderTable = function() {
       </td>
       <td class="lesson-cell">
         <span class="cell-subject" style="font-size:1.05rem">${isMegamot ? 'מגמות מקצועיות' : subject}</span>
+        ${room ? `<br><span style="font-size:.82rem;color:var(--muted)">${room}</span>` : ''}
       </td>
       <td class="lesson-cell">${teacherBadges || (isMegamot ? '<span style="color:var(--muted);font-size:.9rem">מגמות</span>' : '')}</td>
     </tr>`;
