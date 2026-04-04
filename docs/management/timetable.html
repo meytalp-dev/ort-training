@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>מערכת שעות — אורט בית הערבה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+@font-face{font-family:'Shuneet3';src:url('fonts/Shuneet3 Medium.ttf') format('truetype');font-weight:400}
+@font-face{font-family:'Shuneet3 Bold';src:url('fonts/Shuneet3 Square Bold.ttf') format('truetype');font-weight:700}
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F5F0E8;--card:#FFFDF8;--primary:#7AADAD;--primary-dark:#5E9191;
+  --accent:#D4A574;--text:#4A3F35;--muted:#8B7E74;--border:#E8DDD0;
+  --danger:#C0605A;--danger-bg:#FAE8E6;--warn:#C4944A;
+  --radius:16px;--shadow:0 2px 12px rgba(74,63,53,.08);
+}
+body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:rtl}
+
+/* HEADER */
+.header{
+  background:#FFFDF8;padding:0 24px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100;height:60px;
+  border-bottom:2px solid var(--border);box-shadow:0 2px 12px rgba(74,63,53,.06)
+}
+.header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,#A8B5A0,#7AADAD,#D4A574);pointer-events:none}
+.header-title{display:flex;align-items:center;gap:10px;font-size:1.05rem;font-weight:800;font-family:Heebo}
+.header-logo{width:32px;height:32px;opacity:.85}
+.header-actions{display:flex;gap:8px;align-items:center}
+
+/* TABS */
+.day-tabs{display:flex;gap:4px;background:rgba(122,173,173,.08);border-radius:12px;padding:4px}
+.day-tab{background:transparent;border:none;padding:7px 18px;border-radius:9px;font-family:Heebo;
+  font-size:.9rem;font-weight:600;cursor:pointer;color:var(--muted);transition:all .2s}
+.day-tab:hover{background:rgba(122,173,173,.12);color:var(--text)}
+.day-tab.active{background:#fff;color:var(--primary-dark);box-shadow:0 1px 6px rgba(74,63,53,.1)}
+.day-tab.today{position:relative}
+.day-tab.today::after{content:'•';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);
+  color:var(--primary);font-size:.5rem}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:10px;padding:14px 24px 10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;
+  font-family:Heebo;font-size:.85rem;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-danger{background:#FAE8E6;color:var(--danger);border:1px solid #f0c4c0}
+.btn-danger.active{background:var(--danger);color:#fff}
+.btn-outline{background:#fff;color:var(--text);border:1.5px solid var(--border)}
+.btn-outline:hover{border-color:var(--primary);color:var(--primary-dark)}
+.btn-whatsapp{background:#25D366;color:#fff}
+.btn-whatsapp:hover{background:#1eb356}
+.absent-counter{display:none;background:var(--danger);color:#fff;border-radius:20px;
+  padding:2px 10px;font-size:.78rem;font-weight:700}
+.absent-counter.show{display:inline}
+
+/* LEGEND */
+.legend-bar{display:flex;gap:6px;flex-wrap:wrap;padding:0 24px 12px;align-items:center}
+.legend-item{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;
+  font-size:.88rem;font-weight:600;cursor:pointer;transition:all .18s;border:1.5px solid transparent;
+  background:rgba(255,255,255,.7)}
+.legend-item:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.legend-item.absent{text-decoration:line-through;opacity:.5;border-color:var(--danger)!important;
+  background:var(--danger-bg)!important}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* TABLE WRAPPER */
+.table-wrap{overflow-x:auto;padding:0 24px 24px;-webkit-overflow-scrolling:touch}
+.timetable{border-collapse:collapse;min-width:100%;width:max-content;font-size:1rem;
+  background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);
+  border:1px solid var(--border)}
+.timetable th{background:linear-gradient(135deg,#5E9191,#7AADAD);color:#fff;
+  padding:14px 16px;font-weight:700;font-family:Heebo;white-space:nowrap;text-align:center;
+  border:1px solid rgba(255,255,255,.2);font-size:1.05rem}
+.timetable th.time-col{background:linear-gradient(135deg,#4A3F35,#6B5D52);width:100px;min-width:100px}
+.timetable th.class-col{min-width:148px;width:148px}
+
+/* rows */
+.timetable tr:nth-child(even) td{background:#FAFCFC}
+.timetable tr:hover td{background:#F0F8F8}
+.time-cell{text-align:center;background:#F9F7F4!important;font-weight:700;color:var(--muted);
+  font-size:.92rem;padding:12px 8px;border-left:2px solid var(--border);white-space:nowrap;vertical-align:middle}
+.time-num{font-size:1.5rem;font-weight:900;color:var(--primary-dark);display:block;line-height:1}
+.time-hours{font-size:.8rem;color:var(--muted);margin-top:3px}
+.lesson-cell{padding:10px 12px;vertical-align:top;border:1px solid #EEE;min-height:68px;
+  cursor:default;transition:background .15s;position:relative}
+.lesson-cell.empty{background:#FAFAFA!important;color:#DDD}
+.lesson-cell:hover .cell-tooltip{display:block}
+
+/* cell content */
+.cell-inner{display:flex;flex-direction:column;gap:3px;height:100%;justify-content:center;min-height:58px}
+.cell-subject{font-size:.92rem;font-weight:600;color:var(--text);line-height:1.3}
+.cell-teacher{font-size:.82rem;font-weight:700;display:inline-block;padding:2px 9px;border-radius:10px;
+  color:#fff;margin-top:3px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.cell-teacher.absent{background:#C0605A!important;text-decoration:line-through;opacity:.7}
+.cell-megamot{font-size:.82rem;color:var(--muted);font-style:italic}
+
+/* absent highlight */
+.lesson-cell.has-absent{background:#FFF3F3!important;border-color:#F5C0BC!important}
+.lesson-cell.needs-sub{background:#FFF8E1!important;border-color:#F0C060!important;animation:pulse-warn .8s ease-in-out infinite alternate}
+@keyframes pulse-warn{from{background:#FFF8E1}to{background:#FFE59A}}
+
+/* tooltip */
+.cell-tooltip{display:none;position:absolute;bottom:calc(100% + 4px);right:50%;transform:translateX(50%);
+  background:#333;color:#fff;padding:6px 10px;border-radius:8px;font-size:.75rem;white-space:nowrap;
+  z-index:200;max-width:250px;white-space:normal;text-align:right;line-height:1.4}
+.cell-tooltip::after{content:'';position:absolute;top:100%;right:50%;transform:translateX(50%);
+  border:5px solid transparent;border-top-color:#333}
+
+/* FREE badge */
+.free-badge{display:inline-block;background:#E8F3E8;color:#5A9A5A;border-radius:8px;
+  padding:3px 10px;font-size:.8rem;font-weight:700;border:1px solid #B8DDB8}
+
+/* SUBSTITUTE MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:20px;padding:28px;max-width:480px;width:90%;
+  box-shadow:0 20px 60px rgba(0,0,0,.2);direction:rtl;max-height:80vh;overflow-y:auto}
+.modal h3{font-family:Heebo;font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:8px}
+.modal-desc{color:var(--muted);font-size:.85rem;margin-bottom:18px;line-height:1.5}
+.free-teacher-list{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.free-teacher-btn{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;
+  border:2px solid var(--border);background:#fff;cursor:pointer;font-family:Heebo;
+  font-size:.9rem;font-weight:600;transition:all .2s;text-align:right}
+.free-teacher-btn:hover{border-color:var(--primary);background:#F0F9F9;transform:translateX(-2px)}
+.free-teacher-btn .teacher-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.no-free{text-align:center;color:var(--muted);font-size:.9rem;padding:16px}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.2rem;
+  position:absolute;top:16px;left:16px;padding:4px 8px}
+.materials-section{border-top:1px solid var(--border);padding-top:16px;margin-top:12px}
+.materials-section label{font-size:.82rem;font-weight:700;color:var(--muted);display:block;margin-bottom:6px}
+.materials-input{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;
+  font-family:Heebo;font-size:.85rem;resize:vertical;min-height:70px;direction:rtl;text-align:right}
+.btn-confirm{width:100%;margin-top:12px;padding:12px;font-size:.95rem;background:var(--primary)}
+
+/* LOG PANEL */
+.log-panel{padding:0 24px 24px}
+.log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.log-title{font-family:Heebo;font-size:1rem;font-weight:800}
+.log-list{display:flex;flex-direction:column;gap:8px}
+.log-item{background:#fff;border-radius:12px;padding:12px 16px;box-shadow:var(--shadow);
+  display:flex;align-items:flex-start;gap:12px;border-right:4px solid var(--primary)}
+.log-item-body{flex:1}
+.log-item-title{font-size:.87rem;font-weight:700;margin-bottom:2px}
+.log-item-sub{font-size:.78rem;color:var(--muted)}
+.log-item-time{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.log-empty{text-align:center;color:var(--muted);font-size:.87rem;padding:20px;
+  background:#fff;border-radius:12px}
+
+/* DATE BADGE */
+.date-badge{background:rgba(122,173,173,.12);border:1px solid rgba(122,173,173,.25);
+  border-radius:20px;padding:4px 12px;font-size:.78rem;font-weight:600;color:var(--primary-dark)}
+
+/* PRINT / EXPORT */
+@media print{
+  .header,.toolbar,.legend-bar,.log-panel,.day-tabs,.header-actions{display:none!important}
+  body{background:#fff}
+  .table-wrap{padding:0;overflow:visible}
+  .timetable{box-shadow:none;width:100%}
+}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .header{height:auto;padding:10px 16px}
+  .day-tabs{overflow-x:auto}
+  .table-wrap{padding:0 12px 16px}
+  .timetable th,.timetable td{font-size:.72rem;padding:4px}
+}
+
+/* STATUS BAR */
+.status-bar{display:flex;gap:16px;padding:10px 24px;background:rgba(255,255,255,.6);
+  border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.stat-item{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted)}
+.stat-num{font-weight:800;font-size:.95rem;color:var(--text)}
+.stat-dot{width:8px;height:8px;border-radius:50%}
+
+/* TEACHER VIEW */
+.teacher-view-banner{background:linear-gradient(135deg,#5E9191,#7AADAD);color:#fff;
+  padding:16px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.teacher-view-name{font-size:1.2rem;font-weight:800;font-family:Heebo;display:flex;align-items:center;gap:10px}
+.teacher-view-dot{width:16px;height:16px;border-radius:50%;border:2px solid #fff}
+.teacher-view-actions{display:flex;gap:8px}
+.teacher-highlight{background:rgba(122,173,173,.08)!important;border:2px solid var(--primary)!important}
+
+/* LINKS PANEL */
+.links-panel{background:#fff;border-radius:var(--radius);margin:16px 24px;padding:20px 24px;
+  box-shadow:var(--shadow);border:1px solid var(--border)}
+.links-panel h3{font-family:Heebo;font-size:1rem;font-weight:800;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px}
+.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.link-item{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;
+  border:1.5px solid var(--border);cursor:pointer;font-size:.85rem;font-weight:600;
+  transition:all .15s;background:#FAFAFA}
+.link-item:hover{border-color:var(--primary);background:#F0F9F9}
+.link-item .ldot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.link-item .copy-icon{margin-right:auto;color:var(--muted);font-size:.75rem}
+.link-copied{color:var(--primary)!important;font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-title">
+    <img class="header-logo" src="logo-ort.png" alt="אורט" onerror="this.style.display='none'">
+    מערכת שעות — אורט בית הערבה
+  </div>
+  <div class="header-actions">
+    <span class="date-badge" id="dateBadge"></span>
+    <div class="day-tabs" id="dayTabs"></div>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="btn btn-danger" id="absentModeBtn" onclick="toggleAbsentMode()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    סמן מורה נעדר
+    <span class="absent-counter" id="absentCounter">0</span>
+  </button>
+  <button class="btn btn-outline" onclick="clearAbsent()">נקה נעדרים</button>
+  <button class="btn btn-whatsapp" onclick="shareWhatsApp()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+    שלח לווטסאפ
+  </button>
+  <button class="btn btn-outline" onclick="window.print()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    הדפסה
+  </button>
+</div>
+
+<!-- CLASS VIEW BANNER (hidden by default, shown when ?class=X) -->
+<div class="teacher-view-banner" id="classBanner" style="display:none">
+  <div class="teacher-view-name">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    כיתה <span id="classViewName" style="font-size:1.4rem"></span> — מערכת שעות
+  </div>
+  <div class="teacher-view-actions">
+    <button class="btn btn-whatsapp" onclick="shareClassView()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+      שלח לווטסאפ
+    </button>
+    <a class="btn btn-outline" href="timetable.html" style="text-decoration:none">חזרה למערכת מלאה</a>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar" id="statusBar">
+  <div class="stat-item"><div class="stat-dot" style="background:#7AADAD"></div><span class="stat-num" id="statClasses">11</span> כיתות</div>
+  <div class="stat-item"><div class="stat-dot" style="background:#D4A574"></div><span class="stat-num" id="statLessons">0</span> שעות היום</div>
+  <div class="stat-item"><div class="stat-dot" style="background:#C0605A"></div><span class="stat-num" id="statAbsent">0</span> נעדרים</div>
+  <div class="stat-item"><div class="stat-dot" style="background:#C4944A"></div><span class="stat-num" id="statSubs">0</span> מילויי מקום</div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend-bar" id="legendBar">
+  <span style="font-size:.78rem;color:var(--muted);font-weight:700;margin-left:6px">מורים:</span>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <div id="timetableContainer"></div>
+</div>
+
+<!-- CLASS IMAGE DOWNLOADS -->
+<div class="links-panel" id="linksPanel">
+  <h3>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    הורד תמונה לפי כיתה
+    <span style="font-size:.78rem;font-weight:400;color:var(--muted)">— לחצי על כיתה להוריד תמונת מערכת שעות לשליחה בווטסאפ</span>
+  </h3>
+  <div class="links-grid" id="linksGrid"></div>
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="downloadFullImage()" style="font-size:.9rem">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      הורד מערכת מלאה — כל הכיתות
+    </button>
+    <span style="font-size:.78rem;color:var(--muted)">תמונה אחת גדולה עם כל 11 הכיתות — מתאים לטלוויזיה / מסך בכניסה / קבוצת תלמידים</span>
+  </div>
+</div>
+
+<!-- LOG PANEL -->
+<div class="log-panel">
+  <div class="log-header">
+    <div class="log-title">יומן מילויי מקום</div>
+    <button class="btn btn-outline" style="font-size:.8rem;padding:6px 12px" onclick="clearLog()">נקה יומן</button>
+  </div>
+  <div class="log-list" id="logList"></div>
+</div>
+
+<!-- SUBSTITUTE MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3 id="modalTitle">בחרי מחליפ/ה</h3>
+    <div class="modal-desc" id="modalDesc"></div>
+    <div class="free-teacher-list" id="freeTeacherList"></div>
+    <div class="materials-section">
+      <label>חומרי לימוד / הוראות למחליפ/ה (אופציונלי)</label>
+      <textarea class="materials-input" id="materialsInput" placeholder="לדוגמה: תרגול עמ' 45-47, סרטון YouTube, משימה בכיתה..."></textarea>
+    </div>
+    <button class="btn btn-primary btn-confirm" onclick="confirmSub()">אשרי מילוי מקום</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+
+const LESSON_TIMES = {
+  1: '08:30–09:15',
+  2: '09:20–10:05',
+  3: '10:10–10:55',
+  4: '11:05–11:50',
+  5: '11:55–12:40',
+  6: '12:45–13:30',
+  7: '13:35–14:20',
+  8: '14:25–15:10'
+};
+
+const CLASSES = ['ט1','ט2','י1','י2','י3','יא1','יא2','יא3','יב1','יב2','יב3'];
+
+const TIMETABLE = {
+  'ראשון': {
+    'ט1':  {'1':'חינוך — משה','2':'חינוך — משה','4':'תנ"ך — משה','5':'הבעה עברית — אופירה','6':'הבעה עברית — אופירה'},
+    'ט2':  {'1':'חינוך — אושר','2':'חינוך — אושר','4':'אזרחות — אושר','5':'מתמטיקה — נעמה','6':'מתמטיקה — נעמה'},
+    'י1':  {'1':'חינוך — רעיה','2':'חינוך — רעיה','4':'היסטוריה — רעיה','5':'מתמטיקה — אושר','6':'מתמטיקה — אושר'},
+    'י2':  {'1':'חינוך — אופירה','2':'כישורי חיים — אופירה ודורית','4':'מייקרס — מירב','5':'אזרחות — משה','6':'אזרחות — משה'},
+    'י3':  {'1':'כישורי חיים — פרלה ודורית','2':'חינוך — פרלה','4':'עברית — אפרת','5':'מייקרס — מירב','6':'מייקרס — מירב'},
+    'יא1': {'1':'חינוך — יעקב','2':'כישורי חיים — יעקב וליאת','4':'מגמות','5':'מגמות','6':'מגמות'},
+    'יא2': {'1':'חינוך — נעמה','2':'מייקרס — מירב ונעמה','4':'מגמות','5':'מגמות','6':'מגמות'},
+    'יא3': {'1':'חינוך — גיא','2':'חינוך — גיא','4':'מגמות','5':'מגמות','6':'מגמות'},
+    'יב1': {'1':'כישורי חיים — יוסי וצהי','2':'חינוך — יוסי','4':'מתמטיקה — רווית','5':'ספרות — ויקי','6':'ספרות — ויקי'},
+    'יב2': {'1':'חינוך — יואב','2':'כישורי חיים — יואב וצהי','4':'אזרחות — יואב','5':'עברית — גיא','6':'עברית — גיא'},
+    'יב3': {'1':'מתמטיקה — ויקי','2':'מתמטיקה — ויקי','4':'ספרות — ויקי','5':'תנ"ך — יואב','6':'תנ"ך — יואב'},
+  },
+  'שני': {
+    'ט1':  {'1':'מגמות','2':'מגמות','3':'מתמטיקה — נעמה','4':'מתמטיקה — נעמה ומשה','5':'כישורי חיים — דורית ומשה','6':'חינוך — משה','7':'מתמטיקה — נעמה'},
+    'ט2':  {},
+    'י1':  {'1':'ספרות — רעיה','2':'ספרות — רעיה','3':'מגמות','4':'מגמות','5':'מגמות','6':'מגמות','7':'מבוא לטכנולוגיה — יואב'},
+    'י2':  {'1':'אסטרטגיות למידה — יעל ומשה','2':'אסטרטגיות למידה — יעל ומשה','3':'מגמות','4':'מגמות','5':'מגמות','6':'מגמות','7':'מתמטיקה — שמעון'},
+    'י3':  {'1':'מתמטיקה — אושר','2':'מתמטיקה — אושר','3':'מגמות','4':'מגמות','5':'מגמות','6':'מגמות','7':'מבוא לטכנולוגיה — יואב'},
+    'יא1': {'1':'מתמטיקה — רווית','2':'מתמטיקה — רווית ואושר','3':'תנ"ך — יעקב','4':'לשון — אפרת','5':'מעגלים — יעל ויעקב','6':'לשון — אפרת','7':'מתמטיקה — ויקי'},
+    'יא2': {'1':'יום תעסוקה','5':'כישורי חיים — נעמה וליאת'},
+    'יא3': {'1':'לשון — אפרת ושירה','2':'לשון — אפרת ושירה','3':'היסטוריה — גיא','4':'היסטוריה — גיא','5':'מתמטיקה — ויקי ואושר','6':'מעגלים — גיא','7':'עברית — אפרת'},
+    'יב1': {},
+    'יב2': {},
+    'יב3': {'1':'מתמטיקה — ויקי','2':'מתמטיקה — ויקי','3':'תנ"ך — יואב','4':'תנ"ך — יואב','5':'חינוך — מנו','6':'כישורי חיים — מנו וצהי'},
+  },
+  'שלישי': {
+    'ט1':  {'2':'תנ"ך — משה','3':'היסטוריה — משה','4':'חינוך פיננסי — גיא','5':'אזרחות — משה','6':'אזרחות — משה'},
+    'ט2':  {'2':'תנ"ך — משה','3':'מתמטיקה — נעמה','4':'מתמטיקה — נעמה'},
+    'י1':  {'2':'מגמות','3':'מדעי הטכנולוגיה — יואב','4':'מדעי הטכנולוגיה — יואב','5':'כישורי חיים — רעיה ודורית','6':'חינוך — רעיה'},
+    'י2':  {'2':'מגמות','3':'הבעה עברית — אופירה','4':'הבעה עברית — אופירה','5':'חינוך פיננסי — גיא','6':'חינוך פיננסי — גיא'},
+    'י3':  {'2':'מגמות','3':'ספרות — רעיה','4':'תנ"ך — רעיה','5':'עברית — אושר','6':'עברית — אושר'},
+    'יא1': {'2':'היסטוריה — יעקב','3':'אנגלית — מריאן','4':'אנגלית — יהודית','5':'לשון — אפרת','6':'לשון — אפרת'},
+    'יא2': {'2':'מייקרס — נעמה ומירב','3':'עברית — מירב','4':'עברית — מירב','5':'מעגלים — נעמה ויעל','6':'מדעי הטכנולוגיה — יואב'},
+    'יא3': {'2':'לשון — אפרת','3':'אנגלית — מריאן','4':'אנגלית — יהודית','5':'מתמטיקה — ויקי','6':'מתמטיקה — ויקי'},
+    'יב1': {'2':'אנגלית — מריאן','3':'מגמות','4':'מגמות','5':'מגמות','6':'מגמות'},
+    'יב2': {'2':'מעגלים — יעל ואושר','3':'מגמות','4':'מגמות','5':'מגמות','6':'מגמות'},
+    'יב3': {'2':'אנגלית — מריאן','3':'מגמות','4':'מגמות','5':'מגמות','6':'מגמות'},
+  },
+  'רביעי': {
+    'ט1':  {'1':'סלטה — משה','2':'סלטה — משה','3':'חינוך פיננסי — גיא','4':'חינוך פיננסי — גיא','5':'מתמטיקה — נעמה','6':'מתמטיקה — נעמה'},
+    'ט2':  {'3':'חינוך פיננסי — גיא','4':'חינוך פיננסי — גיא','5':'כישורי חיים — אושר וליאת','6':'תנ"ך — אושר'},
+    'י1':  {'1':'עברית — אפרת','2':'תנ"ך — רעיה','3':'עברית — אופירה','4':'עברית — אופירה','5':'ספרות — רעיה','6':'ספרות — רעיה'},
+    'י2':  {'1':'עברית — אופירה','2':'עברית — אופירה','3':'תנ"ך — רעיה','4':'תנ"ך — רעיה','5':'היסטוריה — פרלה','6':'היסטוריה — פרלה'},
+    'י3':  {'1':'מתמטיקה — אושר','2':'מתמטיקה — אושר','3':'היסטוריה — פרלה','4':'היסטוריה — פרלה','5':'חינוך תעבורתי — מנו','6':'אזרחות — פרלה'},
+    'יא1': {'1':'היסטוריה — יעקב','2':'היסטוריה — יעקב','3':'אנגלית — מריאן','4':'אנגלית — יהודית','5':'מתמטיקה — רווית','6':'מתמטיקה — רווית'},
+    'יא2': {'1':'חינוך — נעמה','2':'חינוך — נעמה','3':'עברית — מירב','4':'עברית — מירב','5':'חינוך פיננסי — גיא','6':'חינוך פיננסי — גיא'},
+    'יא3': {'1':'היסטוריה — גיא','2':'היסטוריה — גיא','3':'אנגלית — מריאן','4':'אנגלית — יהודית','5':'תנ"ך — משה','6':'תנ"ך — משה'},
+    'יב1': {'1':'מתמטיקה — רווית ואפרת','2':'מתמטיקה — רווית ואפרת','3':'מעגלים — יוסי ויעל','4':'אזרחות — אושר','5':'אנגלית — מריאן','6':'אנגלית — יהודית'},
+    'יב2': {'1':'מגמות','2':'מגמות','3':'מגמות','4':'מגמות','5':'מגמות','6':'מגמות'},
+    'יב3': {'1':'מתמטיקה — ויקי','2':'מתמטיקה — ויקי','3':'ספרות — ויקי','4':'מעגלים — מנו ויעל','5':'אנגלית — מריאן','6':'אנגלית — יהודית'},
+  },
+  'חמישי': {
+    'ט1':  {'1':'אזרחות — משה','2':'אזרחות — משה','3':'מייקרס — מירב ומשה','4':'מייקרס — מירב ומשה','5':'מתמטיקה — נעמה','6':'חינוך — משה'},
+    'ט2':  {'1':'אנגלית — מלי','2':'אנגלית — מלי','3':'מתמטיקה — נעמה','4':'חינוך פיננסי — גיא','5':'אזרחות — אושר','6':'חינוך — אושר'},
+    'י1':  {'1':'חינוך פיננסי — גיא','2':'חינוך פיננסי — גיא','3':'אנגלית — מלי','4':'חינוך תעבורתי — מנו','5':'מדעי הטכנולוגיה — יואב','6':'מדעי הטכנולוגיה — יואב'},
+    'י2':  {'1':'מתמטיקה — נעמה','2':'מתמטיקה — נעמה','3':'חינוך תעבורתי — יוסי','4':'אנגלית — מלי','5':'מדעי הטכנולוגיה — יואב','6':'מדעי הטכנולוגיה — יואב'},
+    'י3':  {'1':'מדעי הטכנולוגיה — יואב','2':'מדעי הטכנולוגיה — יואב','3':'חינוך פיננסי — גיא','4':'חינוך תעבורתי — מנו','5':'אנגלית — מלי','6':'אנגלית — מלי'},
+    'יא1': {},
+    'יא2': {'1':'כישורי חיים — אושר וליאת'},
+    'יא3': {},
+    'יב1': {'1':'מגמות'},
+    'יב2': {},
+    'יב3': {},
+  },
+};
+
+// Teacher colors palette (25 colors, warm/muted tones)
+const TEACHER_COLORS = {
+  'משה':   '#5E8DB8',
+  'אפרת':  '#C06090',
+  'אופירה':'#7AA868',
+  'אושר':  '#D47A35',
+  'פרלה':  '#8855CC',
+  'יעקב':  '#3A9999',
+  'נעמה':  '#D45577',
+  'גיא':   '#558844',
+  'רעיה':  '#AA6644',
+  'מירב':  '#CC5588',
+  'מריאן': '#4477AA',
+  'יהודית':'#6699CC',
+  'בת שבע':'#8899DD',
+  'רווית': '#CC7733',
+  'שמוליק':'#667788',
+  'שי':    '#996655',
+  'ויקי':  '#AA4466',
+  'מנו':   '#337766',
+  'יוסי':  '#884499',
+  'יואב':  '#2288AA',
+  'מלי':   '#DD7799',
+  'ליאת':  '#BB9933',
+  'דורית': '#8877AA',
+  'מאיה':  '#CC4444',
+  'יעל':   '#669944',
+  'צהי':   '#AA8833',
+  'אביעד': '#554488',
+  'שירה':  '#DD88AA',
+  'שמעון': '#556677',
+  'אלה':   '#779966',
+  'לינוי': '#BB6677',
+};
+
+function getTeacherColor(name) {
+  if (!name) return '#AAA';
+  for (const [key, color] of Object.entries(TEACHER_COLORS)) {
+    if (name.includes(key)) return color;
+  }
+  // fallback hash
+  let h = 0;
+  for (let c of name) h = (h * 31 + c.charCodeAt(0)) & 0xFFFFFF;
+  return '#' + (h & 0xFFFFFF).toString(16).padStart(6,'0');
+}
+
+function extractTeachers(cellText) {
+  if (!cellText) return [];
+  const known = Object.keys(TEACHER_COLORS);
+  return known.filter(t => cellText.includes(t));
+}
+
+function getSubject(cellText) {
+  if (!cellText) return '';
+  if (cellText === 'מגמות') return 'מגמות';
+  const dashIdx = cellText.indexOf(' — ');
+  if (dashIdx > 0) return cellText.substring(0, dashIdx);
+  return cellText;
+}
+
+function getTeacherLabel(cellText) {
+  if (!cellText) return '';
+  const dashIdx = cellText.indexOf(' — ');
+  if (dashIdx > 0) return cellText.substring(dashIdx + 3);
+  return '';
+}
+
+// ============================================================
+// STATE
+// ============================================================
+
+let currentDay = 'ראשון';
+let absentMode = false;
+let absentTeachers = new Set(); // teacher names absent today
+let subLog = []; // { ts, lesson, cls, absentTeacher, subTeacher, materials }
+let pendingSub = null; // { lesson, cls, absentTeacher }
+let selectedSubTeacher = null;
+
+// Detect today
+const dayMap = {0:'ראשון', 1:'שני', 2:'שלישי', 3:'רביעי', 4:'חמישי'};
+const todayDay = dayMap[new Date().getDay()] || 'ראשון';
+
+// ============================================================
+// INIT
+// ============================================================
+
+function init() {
+  currentDay = todayDay || 'ראשון';
+
+  // Date badge
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('he-IL', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  document.getElementById('dateBadge').textContent = dateStr;
+
+  // Build day tabs
+  const tabsEl = document.getElementById('dayTabs');
+  const days = ['ראשון','שני','שלישי','רביעי','חמישי'];
+  days.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'day-tab' + (d === currentDay ? ' active' : '') + (d === todayDay ? ' today' : '');
+    btn.textContent = d;
+    btn.onclick = () => switchDay(d);
+    tabsEl.appendChild(btn);
+  });
+
+  buildLegend();
+  renderTable();
+  renderLog();
+}
+
+function switchDay(day) {
+  currentDay = day;
+  document.querySelectorAll('.day-tab').forEach((b,i) => {
+    b.classList.toggle('active', ['ראשון','שני','שלישי','רביעי','חמישי'][i] === day);
+  });
+  renderTable();
+}
+
+// ============================================================
+// LEGEND
+// ============================================================
+
+function buildLegend() {
+  const bar = document.getElementById('legendBar');
+  // Remove existing items
+  [...bar.querySelectorAll('.legend-item')].forEach(e => e.remove());
+
+  const allTeachers = new Set();
+  Object.values(TIMETABLE).forEach(dayData => {
+    Object.values(dayData).forEach(classData => {
+      Object.values(classData).forEach(cell => {
+        extractTeachers(cell).forEach(t => allTeachers.add(t));
+      });
+    });
+  });
+
+  [...allTeachers].sort().forEach(teacher => {
+    const color = getTeacherColor(teacher);
+    const item = document.createElement('div');
+    item.className = 'legend-item' + (absentTeachers.has(teacher) ? ' absent' : '');
+    item.style.borderColor = color + '66';
+    item.id = 'legend-' + teacher;
+    item.innerHTML = `<div class="legend-dot" style="background:${color}"></div>${teacher}`;
+    item.onclick = () => toggleTeacherAbsent(teacher, item);
+    item.title = absentMode ? 'לחצי לסמן נעדר' : '';
+    bar.appendChild(item);
+  });
+}
+
+// ============================================================
+// RENDER TABLE
+// ============================================================
+
+function renderTable() {
+  const dayData = TIMETABLE[currentDay] || {};
+
+  // Find max lesson
+  let maxLesson = 0;
+  CLASSES.forEach(cls => {
+    Object.keys(dayData[cls] || {}).forEach(n => { if (+n > maxLesson) maxLesson = +n; });
+  });
+  if (maxLesson === 0) maxLesson = 6;
+
+  // Count stats
+  let totalLessons = 0;
+  CLASSES.forEach(cls => { totalLessons += Object.keys(dayData[cls] || {}).length; });
+  document.getElementById('statLessons').textContent = totalLessons;
+  document.getElementById('statAbsent').textContent = absentTeachers.size;
+  document.getElementById('statSubs').textContent = subLog.filter(s => {
+    const d = new Date(s.ts);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  }).length;
+
+  // Build table
+  let html = `<table class="timetable" id="mainTable">
+    <thead><tr>
+      <th class="time-col">שעה</th>`;
+  CLASSES.forEach(cls => {
+    html += `<th class="class-col">${cls}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  for (let lesson = 1; lesson <= maxLesson; lesson++) {
+    html += `<tr>
+      <td class="time-cell">
+        <span class="time-num">${lesson}</span>
+        <div class="time-hours">${LESSON_TIMES[lesson] || ''}</div>
+      </td>`;
+
+    CLASSES.forEach(cls => {
+      const cellText = (dayData[cls] || {})[lesson] || '';
+      const subject = getSubject(cellText);
+      const teacherLabel = getTeacherLabel(cellText);
+      const isMegamot = cellText === 'מגמות' || subject === 'מגמות';
+      const teachers = extractTeachers(cellText);
+      const hasAbsent = teachers.some(t => absentTeachers.has(t));
+      const isSub = subLog.some(s => s.lesson === lesson && s.cls === cls && s.day === currentDay);
+
+      let cellClass = 'lesson-cell';
+      if (!cellText) cellClass += ' empty';
+      if (hasAbsent && !isSub) cellClass += ' needs-sub';
+      else if (hasAbsent) cellClass += ' has-absent';
+
+      if (!cellText) {
+        // Check if this is a FREE slot - a teacher who's absent has no class here
+        html += `<td class="${cellClass}"></td>`;
+        return;
+      }
+
+      let teacherBadges = '';
+      if (teacherLabel && !isMegamot) {
+        const parts = teacherLabel.split(/\s+ו|,/).map(p => p.trim()).filter(Boolean);
+        parts.forEach(part => {
+          const mainTeacher = extractTeachers(part)[0] || part.split(/\s+/).pop();
+          const color = getTeacherColor(mainTeacher);
+          const isAbsent = absentTeachers.has(mainTeacher);
+          teacherBadges += `<span class="cell-teacher${isAbsent ? ' absent' : ''}"
+            style="background:${isAbsent ? '#C0605A' : color};cursor:${absentMode ? 'pointer' : 'default'}"
+            onclick="if(absentMode) handleTeacherClick('${mainTeacher}', ${lesson}, '${cls}')"
+            title="${mainTeacher}">${mainTeacher}${isAbsent ? ' (נעדר)' : ''}</span>`;
+        });
+        if (teacherBadges === '') {
+          const color = getTeacherColor(teacherLabel);
+          const isAbsent = absentTeachers.has(teacherLabel);
+          teacherBadges = `<span class="cell-teacher${isAbsent ? ' absent' : ''}"
+            style="background:${isAbsent ? '#C0605A' : color};cursor:${absentMode ? 'pointer' : 'default'}"
+            onclick="if(absentMode) handleTeacherClick('${teacherLabel}', ${lesson}, '${cls}')">${teacherLabel}${isAbsent ? ' (נעדר)' : ''}</span>`;
+        }
+      }
+
+      // Check for logged sub
+      const subEntry = subLog.find(s => s.lesson === lesson && s.cls === cls && s.day === currentDay);
+      let subBadge = '';
+      if (subEntry) {
+        const subColor = getTeacherColor(subEntry.subTeacher);
+        subBadge = `<span class="cell-teacher" style="background:${subColor};border:2px solid #FFD700" title="מחליפ/ה: ${subEntry.subTeacher}">↩ ${subEntry.subTeacher}</span>`;
+      }
+
+      const needsSub = hasAbsent && !subEntry;
+
+      html += `<td class="${cellClass}" onclick="handleCellClick(${lesson}, '${cls}', '${cellText.replace(/'/g,'\\\'')}')" title="${cellText}">
+        <div class="cell-inner">
+          ${isMegamot ? '<span class="cell-megamot">מגמות מקצועיות</span>' : `<span class="cell-subject">${subject}</span>`}
+          <div>${teacherBadges}${subBadge}</div>
+          ${needsSub ? '<span class="free-badge">דרוש מחליפ/ה</span>' : ''}
+        </div>
+        <div class="cell-tooltip">${cellText}</div>
+      </td>`;
+    });
+
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table>`;
+  document.getElementById('timetableContainer').innerHTML = html;
+}
+
+// ============================================================
+// ABSENT MODE
+// ============================================================
+
+function toggleAbsentMode() {
+  absentMode = !absentMode;
+  const btn = document.getElementById('absentModeBtn');
+  btn.classList.toggle('active', absentMode);
+  btn.title = absentMode ? 'לחצי על שם מורה בטבלה לסמן נעדר' : '';
+
+  // Update legend tooltips
+  document.querySelectorAll('.legend-item').forEach(el => {
+    el.title = absentMode ? 'לחצי לסמן נעדר' : '';
+  });
+}
+
+function toggleTeacherAbsent(teacher, el) {
+  if (absentTeachers.has(teacher)) {
+    absentTeachers.delete(teacher);
+    el.classList.remove('absent');
+  } else {
+    absentTeachers.add(teacher);
+    el.classList.add('absent');
+  }
+  updateAbsentCounter();
+  renderTable();
+}
+
+function handleTeacherClick(teacher, lesson, cls) {
+  if (!absentMode) return;
+  if (absentTeachers.has(teacher)) {
+    absentTeachers.delete(teacher);
+  } else {
+    absentTeachers.add(teacher);
+  }
+  updateAbsentCounter();
+  buildLegend();
+  renderTable();
+}
+
+function handleCellClick(lesson, cls, cellText) {
+  const teachers = extractTeachers(cellText);
+  const absentHere = teachers.filter(t => absentTeachers.has(t));
+  if (absentHere.length === 0) return;
+
+  const alreadySub = subLog.find(s => s.lesson === lesson && s.cls === cls && s.day === currentDay);
+  if (alreadySub) return;
+
+  // Open substitute modal
+  pendingSub = { lesson, cls, absentTeacher: absentHere[0] };
+  selectedSubTeacher = null;
+  openModal(lesson, cls, absentHere[0]);
+}
+
+function updateAbsentCounter() {
+  const counter = document.getElementById('absentCounter');
+  counter.textContent = absentTeachers.size;
+  counter.classList.toggle('show', absentTeachers.size > 0);
+  document.getElementById('statAbsent').textContent = absentTeachers.size;
+}
+
+function clearAbsent() {
+  absentTeachers.clear();
+  // Also clear today's substitutions
+  subLog = subLog.filter(s => {
+    const d = new Date(s.ts);
+    const today = new Date();
+    return d.toDateString() !== today.toDateString();
+  });
+  saveLog();
+  updateAbsentCounter();
+  buildLegend();
+  renderTable();
+  renderLog();
+}
+
+// ============================================================
+// SUBSTITUTE MODAL
+// ============================================================
+
+function openModal(lesson, cls, absentTeacher) {
+  const color = getTeacherColor(absentTeacher);
+  document.getElementById('modalTitle').textContent = `מחליפ/ה לשעה ${lesson} — כיתה ${cls}`;
+  document.getElementById('modalDesc').innerHTML =
+    `<strong style="color:${color}">${absentTeacher}</strong> נעדר/ת בשעה ${lesson} (${LESSON_TIMES[lesson] || ''})<br>
+     בחרי מחליפ/ה מהרשימה הבאה:`;
+
+  // Find free teachers for this lesson
+  const dayData = TIMETABLE[currentDay] || {};
+  const busyTeachers = new Set();
+  CLASSES.forEach(c => {
+    const cell = (dayData[c] || {})[lesson];
+    if (cell) extractTeachers(cell).forEach(t => busyTeachers.add(t));
+  });
+
+  const allTeachers = new Set(Object.keys(TEACHER_COLORS));
+  const freeTeachers = [...allTeachers].filter(t =>
+    !busyTeachers.has(t) && t !== absentTeacher
+  );
+
+  const listEl = document.getElementById('freeTeacherList');
+  listEl.innerHTML = '';
+
+  if (freeTeachers.length === 0) {
+    listEl.innerHTML = '<div class="no-free">אין מורים פנויים בשעה זו</div>';
+  } else {
+    freeTeachers.forEach(teacher => {
+      const color = getTeacherColor(teacher);
+      const btn = document.createElement('button');
+      btn.className = 'free-teacher-btn';
+      btn.innerHTML = `<div class="teacher-dot" style="background:${color}"></div>${teacher}<span style="margin-right:auto;font-size:.78rem;color:var(--muted)">פנוי/ה</span>`;
+      btn.onclick = () => selectSub(teacher, btn);
+      listEl.appendChild(btn);
+    });
+  }
+
+  document.getElementById('materialsInput').value = '';
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function selectSub(teacher, btn) {
+  selectedSubTeacher = teacher;
+  document.querySelectorAll('.free-teacher-btn').forEach(b => {
+    b.style.borderColor = '';
+    b.style.background = '';
+  });
+  btn.style.borderColor = 'var(--primary)';
+  btn.style.background = '#F0F9F9';
+}
+
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('show');
+  pendingSub = null;
+  selectedSubTeacher = null;
+}
+
+function confirmSub() {
+  if (!pendingSub || !selectedSubTeacher) {
+    alert('אנא בחרי מחליפ/ה');
+    return;
+  }
+  const materials = document.getElementById('materialsInput').value;
+  const entry = {
+    ts: new Date().toISOString(),
+    day: currentDay,
+    lesson: pendingSub.lesson,
+    cls: pendingSub.cls,
+    absentTeacher: pendingSub.absentTeacher,
+    subTeacher: selectedSubTeacher,
+    materials
+  };
+  subLog.unshift(entry);
+  saveLog();
+  closeModal();
+  renderTable();
+  renderLog();
+
+  // WhatsApp notification
+  const timeStr = LESSON_TIMES[pendingSub.lesson] || `שעה ${pendingSub.lesson}`;
+  const msg = `✅ מילוי מקום אושר!\n\n📋 פרטים:\n• יום: ${currentDay}\n• שעה ${pendingSub.lesson} (${timeStr})\n• כיתה: ${pendingSub.cls}\n• מורה נעדר: ${pendingSub.absentTeacher}\n• מחליפ/ה: ${selectedSubTeacher}${materials ? '\n• חומרים: ' + materials : ''}\n\n_נשלח ממערכת שעות — אורט בית הערבה_`;
+
+  if (confirm('לשלוח הודעת WhatsApp למחליפ/ה?')) {
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  }
+}
+
+// ============================================================
+// LOG
+// ============================================================
+
+function renderLog() {
+  const logEl = document.getElementById('logList');
+  if (subLog.length === 0) {
+    logEl.innerHTML = '<div class="log-empty">אין מילויי מקום מתועדים עדיין</div>';
+    return;
+  }
+  logEl.innerHTML = subLog.map(entry => {
+    const ts = new Date(entry.ts);
+    const timeStr = ts.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'});
+    const dateStr = ts.toLocaleDateString('he-IL', {day:'numeric', month:'numeric'});
+    const subColor = getTeacherColor(entry.subTeacher);
+    const abColor = getTeacherColor(entry.absentTeacher);
+    return `<div class="log-item">
+      <div class="log-item-body">
+        <div class="log-item-title">
+          יום ${entry.day} — שעה ${entry.lesson} — כיתה ${entry.cls}
+        </div>
+        <div class="log-item-sub">
+          <span style="color:${abColor};font-weight:700">${entry.absentTeacher}</span>
+          ←
+          <span style="color:${subColor};font-weight:700">${entry.subTeacher}</span>
+          ${entry.materials ? `<br>חומרים: ${entry.materials}` : ''}
+        </div>
+      </div>
+      <div class="log-item-time">${dateStr} ${timeStr}</div>
+    </div>`;
+  }).join('');
+}
+
+function clearLog() {
+  if (!confirm('למחוק את כל הרשומות?')) return;
+  subLog = [];
+  saveLog();
+  renderLog();
+  renderTable();
+}
+
+function saveLog() {
+  try { localStorage.setItem('ortSubLog', JSON.stringify(subLog)); } catch(e) {}
+}
+
+function loadLog() {
+  try {
+    const saved = localStorage.getItem('ortSubLog');
+    if (saved) subLog = JSON.parse(saved);
+  } catch(e) {}
+}
+
+// ============================================================
+// WHATSAPP SHARE
+// ============================================================
+
+function shareWhatsApp() {
+  const table = document.getElementById('mainTable');
+  if (!table) return;
+
+  // Show loading
+  const btn = event.target.closest('button');
+  btn.textContent = 'מכין תמונה...';
+  btn.disabled = true;
+
+  html2canvas(table, {
+    scale: 1.5,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    logging: false
+  }).then(canvas => {
+    canvas.toBlob(blob => {
+      // Download image
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `מערכת-שעות-${currentDay}-${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Open WhatsApp
+      const msg = `📅 מערכת שעות — ${currentDay}\n🏫 אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}\n\nמצורפת תמונת מערכת השעות להיום.`;
+      setTimeout(() => {
+        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+      }, 500);
+
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg> שלח לווטסאפ`;
+      btn.disabled = false;
+    }, 'image/png');
+  }).catch(err => {
+    console.error(err);
+    btn.textContent = 'שגיאה — נסי שנית';
+    btn.disabled = false;
+    setTimeout(() => { btn.innerHTML = `שלח לווטסאפ`; }, 2000);
+  });
+}
+
+// ============================================================
+// FREE PERIODS — who's free per lesson
+// ============================================================
+
+function getFreeTeachersForLesson(lesson) {
+  const dayData = TIMETABLE[currentDay] || {};
+  const busy = new Set();
+  CLASSES.forEach(cls => {
+    const cell = (dayData[cls] || {})[lesson];
+    if (cell) extractTeachers(cell).forEach(t => busy.add(t));
+  });
+  return Object.keys(TEACHER_COLORS).filter(t => !busy.has(t));
+}
+
+// Close modal on background click
+document.getElementById('modalBg').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ============================================================
+// CLASS VIEW — ?class=כיתה
+// ============================================================
+
+let classViewMode = null; // null = admin, string = class name
+
+function detectClassView() {
+  const params = new URLSearchParams(window.location.search);
+  const cls = params.get('class');
+  if (cls && CLASSES.includes(cls)) {
+    classViewMode = cls;
+    enterClassView(cls);
+  }
+}
+
+function enterClassView(cls) {
+  // Show banner
+  const banner = document.getElementById('classBanner');
+  banner.style.display = 'flex';
+  document.getElementById('classViewName').textContent = cls;
+
+  // Hide admin-only elements
+  document.getElementById('absentModeBtn').style.display = 'none';
+  document.querySelector('[onclick="clearAbsent()"]').style.display = 'none';
+  document.getElementById('linksPanel').style.display = 'none';
+  document.querySelector('.log-panel').style.display = 'none';
+  document.getElementById('legendBar').style.display = 'none';
+
+  // Update title
+  document.title = `מערכת שעות — כיתה ${cls} — אורט בית הערבה`;
+}
+
+function shareClassView() {
+  if (!classViewMode) return;
+  const table = document.getElementById('mainTable');
+  if (!table) return;
+
+  const btn = event.target.closest('button');
+  const origHTML = btn.innerHTML;
+  btn.textContent = 'מכין תמונה...';
+  btn.disabled = true;
+
+  html2canvas(table, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    logging: false
+  }).then(canvas => {
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `מערכת-כיתה-${classViewMode}-${currentDay}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      const msg = `מערכת שעות — כיתה ${classViewMode}\nיום ${currentDay} | אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}`;
+      setTimeout(() => {
+        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+      }, 500);
+      btn.innerHTML = origHTML;
+      btn.disabled = false;
+    }, 'image/png');
+  });
+}
+
+// ============================================================
+// BUILD CLASS LINKS
+// ============================================================
+
+function downloadFullImage() {
+  const btn = event.target.closest('button');
+  const origHTML = btn.innerHTML;
+  btn.textContent = 'מכין תמונה...';
+  btn.disabled = true;
+
+  // Build a clean full table for export (no tooltips, no absent badges)
+  const dayData = TIMETABLE[currentDay] || {};
+  let maxLesson = 0;
+  CLASSES.forEach(cls => {
+    Object.keys(dayData[cls] || {}).forEach(n => { if (+n > maxLesson) maxLesson = +n; });
+  });
+  if (maxLesson === 0) maxLesson = 6;
+
+  const dateStr = new Date().toLocaleDateString('he-IL');
+
+  let headerCells = '<th style="padding:14px 10px;background:#4A3F35;color:#fff;font-size:1.1rem;width:90px;text-align:center">שעה</th>';
+  CLASSES.forEach(cls => {
+    headerCells += `<th style="padding:14px 8px;background:linear-gradient(135deg,#5E9191,#7AADAD);color:#fff;font-size:1.1rem;min-width:130px;text-align:center">${cls}</th>`;
+  });
+
+  let bodyRows = '';
+  for (let lesson = 1; lesson <= maxLesson; lesson++) {
+    let cells = `<td style="padding:14px 10px;text-align:center;background:#F9F7F4;border-bottom:1px solid #E8DDD0;font-weight:800">
+      <div style="font-size:1.4rem;color:#5E9191">${lesson}</div>
+      <div style="font-size:.75rem;color:#8B7E74;margin-top:2px">${LESSON_TIMES[lesson] || ''}</div>
+    </td>`;
+
+    CLASSES.forEach(cls => {
+      const cellText = (dayData[cls] || {})[lesson] || '';
+      if (!cellText) {
+        cells += '<td style="padding:12px 8px;border-bottom:1px solid #EEE;background:#FAFAFA"></td>';
+        return;
+      }
+      const subject = getSubject(cellText);
+      const isMegamot = cellText === 'מגמות' || subject === 'מגמות';
+      const teachers = extractTeachers(cellText);
+      const teacherLabel = getTeacherLabel(cellText);
+      const subEntry = subLog.find(s => s.lesson === lesson && s.cls === cls && s.day === currentDay);
+
+      let teacherBadges = '';
+      if (teacherLabel && !isMegamot) {
+        teachers.forEach(t => {
+          if (subEntry && subEntry.absentTeacher === t) return;
+          const c = getTeacherColor(t);
+          teacherBadges += `<span style="display:inline-block;background:${c};color:#fff;padding:2px 8px;border-radius:8px;font-size:.78rem;font-weight:700;margin:2px">${t}</span>`;
+        });
+      }
+      if (subEntry) {
+        const sc = getTeacherColor(subEntry.subTeacher);
+        teacherBadges += `<span style="display:inline-block;background:${sc};color:#fff;padding:2px 8px;border-radius:8px;font-size:.78rem;font-weight:700;margin:2px">${subEntry.subTeacher}</span>`;
+      }
+
+      const bgStyle = '';
+      cells += `<td style="padding:10px 8px;border-bottom:1px solid #EEE;vertical-align:top;${bgStyle}">
+        <div style="font-size:.88rem;font-weight:600;color:#4A3F35;line-height:1.3">${isMegamot ? '<em style="color:#8B7E74">מגמות</em>' : subject}</div>
+        <div style="margin-top:3px">${teacherBadges}</div>
+      </td>`;
+    });
+    bodyRows += `<tr${lesson % 2 === 0 ? ' style="background:#FAFCFC"' : ''}>${cells}</tr>`;
+  }
+
+  const tempDiv = document.createElement('div');
+  tempDiv.style.cssText = 'position:absolute;top:-9999px;right:0;direction:rtl;font-family:Heebo,Arial,sans-serif';
+  tempDiv.innerHTML = `
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)">
+      <div style="background:linear-gradient(135deg,#4A3F35,#6B5D52);padding:20px 28px;color:#fff;display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:1.4rem;font-weight:800">מערכת שעות — אורט בית הערבה</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="font-size:1.1rem;font-weight:700;background:rgba(255,255,255,.15);padding:6px 18px;border-radius:10px">יום ${currentDay}</div>
+          <div style="font-size:.95rem;opacity:.8">${dateStr}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;direction:rtl;text-align:right">
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+      <div style="padding:10px 28px;background:#F5F0E8;text-align:center;font-size:.78rem;color:#8B7E74">
+        אורט בית הערבה — מערכת שעות דיגיטלית
+      </div>
+    </div>`;
+  document.body.appendChild(tempDiv);
+
+  html2canvas(tempDiv.firstElementChild, {
+    scale: 2,
+    backgroundColor: null,
+    useCORS: true,
+    logging: false
+  }).then(canvas => {
+    document.body.removeChild(tempDiv);
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `מערכת-שעות-${currentDay}-${dateStr.replace(/\//g,'-')}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      btn.innerHTML = origHTML;
+      btn.disabled = false;
+    }, 'image/png');
+  }).catch(() => {
+    document.body.removeChild(tempDiv);
+    btn.innerHTML = origHTML;
+    btn.disabled = false;
+  });
+}
+
+function buildClassLinks() {
+  if (classViewMode) return;
+  const grid = document.getElementById('linksGrid');
+
+  CLASSES.forEach(cls => {
+    const item = document.createElement('div');
+    item.className = 'link-item';
+    item.innerHTML = `<div class="ldot" style="background:var(--primary)"></div><strong>${cls}</strong><span class="copy-icon" id="copy-${cls}">הורד תמונה</span>`;
+    item.onclick = () => downloadClassImage(cls);
+    item.title = `הורד תמונת מערכת שעות של כיתה ${cls}`;
+    grid.appendChild(item);
+  });
+}
+
+function downloadClassImage(cls) {
+  const statusEl = document.getElementById('copy-' + cls);
+  statusEl.textContent = 'מכין...';
+  statusEl.classList.add('link-copied');
+
+  // Build a temporary table for this class
+  const dayData = TIMETABLE[currentDay] || {};
+  const classLessons = dayData[cls] || {};
+  let maxLesson = 0;
+  Object.keys(classLessons).forEach(n => { if (+n > maxLesson) maxLesson = +n; });
+  if (maxLesson === 0) maxLesson = 6;
+
+  const dateStr = new Date().toLocaleDateString('he-IL');
+  const dayNames = {'ראשון':'א','שני':'ב','שלישי':'ג','רביעי':'ד','חמישי':'ה'};
+
+  let rows = '';
+  for (let lesson = 1; lesson <= maxLesson; lesson++) {
+    const cellText = classLessons[lesson] || '';
+    if (!cellText) {
+      rows += `<tr><td style="padding:12px 16px;border-bottom:1px solid #E8DDD0;text-align:center;font-weight:800;font-size:1.2rem;color:#5E9191;width:70px">${lesson}</td><td colspan="2" style="padding:12px;border-bottom:1px solid #E8DDD0;color:#CCC;text-align:center">—</td></tr>`;
+      continue;
+    }
+    const subject = getSubject(cellText);
+    const teacherLabel = getTeacherLabel(cellText);
+    const isMegamot = cellText === 'מגמות' || subject === 'מגמות';
+    const teachers = extractTeachers(cellText);
+    const subEntry = subLog.find(s => s.lesson === lesson && s.cls === cls && s.day === currentDay);
+    let teacherHTML = '';
+    if (teacherLabel && !isMegamot) {
+      teachers.forEach(t => {
+        if (subEntry && subEntry.absentTeacher === t) return; // hide absent teacher in student view
+        const c = getTeacherColor(t);
+        teacherHTML += `<span style="display:inline-block;background:${c};color:#fff;padding:3px 12px;border-radius:10px;font-size:.95rem;font-weight:700;margin:2px">${t}</span>`;
+      });
+    }
+    if (subEntry) {
+      const sc = getTeacherColor(subEntry.subTeacher);
+      teacherHTML += `<span style="display:inline-block;background:${sc};color:#fff;padding:3px 12px;border-radius:10px;font-size:.95rem;font-weight:700;margin:2px">${subEntry.subTeacher}</span>`;
+    }
+    rows += `<tr>
+      <td style="padding:12px 16px;border-bottom:1px solid #E8DDD0;text-align:center;font-weight:800;font-size:1.2rem;color:#5E9191;width:70px">${lesson}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid #E8DDD0;font-size:1.05rem;font-weight:600">${isMegamot ? 'מגמות מקצועיות' : subject}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid #E8DDD0">${teacherHTML || (isMegamot ? '<span style="color:#8B7E74">מגמות</span>' : '')}</td>
+    </tr>`;
+  }
+
+  const tempDiv = document.createElement('div');
+  tempDiv.style.cssText = 'position:absolute;top:-9999px;right:0;direction:rtl;font-family:Heebo,Arial,sans-serif';
+  tempDiv.innerHTML = `
+    <div style="background:#fff;width:520px;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)">
+      <div style="background:linear-gradient(135deg,#5E9191,#7AADAD);padding:18px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:1.3rem;font-weight:800">כיתה ${cls}</div>
+        <div style="font-size:.9rem;opacity:.9">יום ${currentDay} | ${dateStr}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;direction:rtl;text-align:right">
+        <thead><tr style="background:#F5F0E8">
+          <th style="padding:10px 16px;font-size:.85rem;color:#8B7E74;font-weight:700;width:70px">שעה</th>
+          <th style="padding:10px 16px;font-size:.85rem;color:#8B7E74;font-weight:700">מקצוע</th>
+          <th style="padding:10px 16px;font-size:.85rem;color:#8B7E74;font-weight:700">מורה</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="padding:10px 24px;background:#F9F7F4;text-align:center;font-size:.78rem;color:#8B7E74">
+        אורט בית הערבה — מערכת שעות דיגיטלית
+      </div>
+    </div>`;
+  document.body.appendChild(tempDiv);
+
+  html2canvas(tempDiv.firstElementChild, {
+    scale: 2,
+    backgroundColor: null,
+    useCORS: true,
+    logging: false
+  }).then(canvas => {
+    document.body.removeChild(tempDiv);
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `מערכת-${cls}-${currentDay}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      statusEl.textContent = 'ירד!';
+      setTimeout(() => { statusEl.textContent = 'הורד תמונה'; statusEl.classList.remove('link-copied'); }, 2500);
+    }, 'image/png');
+  }).catch(() => {
+    document.body.removeChild(tempDiv);
+    statusEl.textContent = 'שגיאה';
+    setTimeout(() => { statusEl.textContent = 'הורד תמונה'; statusEl.classList.remove('link-copied'); }, 2000);
+  });
+}
+
+// ============================================================
+// OVERRIDE RENDER TABLE FOR CLASS VIEW
+// ============================================================
+
+const _originalRenderTable = renderTable;
+
+renderTable = function() {
+  if (!classViewMode) {
+    _originalRenderTable();
+    return;
+  }
+
+  // Class view — show only this class's schedule
+  const dayData = TIMETABLE[currentDay] || {};
+  const classLessons = dayData[classViewMode] || {};
+
+  // Find max lesson
+  let maxLesson = 0;
+  Object.keys(classLessons).forEach(n => { if (+n > maxLesson) maxLesson = +n; });
+  if (maxLesson === 0) maxLesson = 6;
+
+  document.getElementById('statLessons').textContent = Object.keys(classLessons).length;
+  document.getElementById('statClasses').textContent = 1;
+
+  // Build compact table for single class
+  let html = `<table class="timetable" id="mainTable" style="max-width:600px;margin:0 auto">
+    <thead><tr>
+      <th class="time-col">שעה</th>
+      <th style="min-width:160px">מקצוע</th>
+      <th style="min-width:120px">מורה</th>
+    </tr></thead><tbody>`;
+
+  for (let lesson = 1; lesson <= maxLesson; lesson++) {
+    const cellText = classLessons[lesson] || '';
+
+    if (!cellText) {
+      html += `<tr>
+        <td class="time-cell">
+          <span class="time-num">${lesson}</span>
+          <div class="time-hours">${LESSON_TIMES[lesson] || ''}</div>
+        </td>
+        <td class="lesson-cell empty" colspan="2" style="text-align:center;color:#BBB;font-size:1rem">—</td>
+      </tr>`;
+      continue;
+    }
+
+    const subject = getSubject(cellText);
+    const teacherLabel = getTeacherLabel(cellText);
+    const isMegamot = cellText === 'מגמות' || subject === 'מגמות';
+    const teachers = extractTeachers(cellText);
+    const color = teachers.length ? getTeacherColor(teachers[0]) : '#888';
+
+    let teacherBadges = '';
+    if (teacherLabel) {
+      teachers.forEach(t => {
+        const c = getTeacherColor(t);
+        teacherBadges += `<span class="cell-teacher" style="background:${c};font-size:.9rem;padding:3px 12px">${t}</span> `;
+      });
+    }
+
+    html += `<tr>
+      <td class="time-cell">
+        <span class="time-num">${lesson}</span>
+        <div class="time-hours">${LESSON_TIMES[lesson] || ''}</div>
+      </td>
+      <td class="lesson-cell">
+        <span class="cell-subject" style="font-size:1.05rem">${isMegamot ? 'מגמות מקצועיות' : subject}</span>
+      </td>
+      <td class="lesson-cell">${teacherBadges || (isMegamot ? '<span style="color:var(--muted);font-size:.9rem">מגמות</span>' : '')}</td>
+    </tr>`;
+  }
+
+  html += `</tbody></table>`;
+  document.getElementById('timetableContainer').innerHTML = html;
+};
+
+// ============================================================
+// START
+// ============================================================
+loadLog();
+detectClassView();
+init();
+buildClassLinks();
+</script>
+</body>
+</html>
