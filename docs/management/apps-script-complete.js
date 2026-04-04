@@ -732,6 +732,46 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // === סנכרון גאנט — שמירת כל האירועים בבת אחת ===
+    if (data.action === 'syncGanttEvents') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_calendarEvents');
+      if (!sheet) {
+        sheet = ss.insertSheet('_calendarEvents');
+        sheet.appendRow(['ID', 'תאריך', 'תאריך סיום', 'סוג', 'כותרת', 'תיאור', 'שכבה', 'נוצר ע"י', 'עדכון']);
+        sheet.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#D4F3EF');
+      }
+      // מחיקת כל האירועים שהגיעו מהגאנט (מזוהים לפי prefix)
+      var existingData = sheet.getDataRange().getValues();
+      for (var i = existingData.length - 1; i >= 1; i--) {
+        if (String(existingData[i][0]).indexOf('gantt-') === 0) {
+          sheet.deleteRow(i + 1);
+        }
+      }
+      // הוספת כל האירועים החדשים
+      var events = data.events || [];
+      var rows = [];
+      for (var j = 0; j < events.length; j++) {
+        var ev = events[j];
+        var desc = '';
+        if (ev.responsible) desc += 'אחראי: ' + ev.responsible + '\n';
+        if (ev.prep) desc += 'הכנה: ' + ev.prep + '\n';
+        if (ev.cost) desc += 'עלות: ' + ev.cost + '\n';
+        if (ev.notes) desc += 'הערות: ' + ev.notes + '\n';
+        if (ev.target) desc += 'קהל יעד: ' + ev.target;
+        rows.push([
+          'gantt-' + j, ev.date || '', ev.endDate || '', ev.type || 'activity',
+          ev.title || '', desc, (ev.cols || []).join(','),
+          'לוח גאנט', new Date().toLocaleString('he-IL')
+        ]);
+      }
+      if (rows.length > 0) {
+        sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 9).setValues(rows);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', synced: rows.length }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // === שמירת משימות ===
     if (data.action === 'saveTasks') {
       saveTasksToSheet(data.tasks);

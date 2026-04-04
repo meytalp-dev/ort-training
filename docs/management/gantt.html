@@ -410,8 +410,10 @@ tr.trim-row td{background:linear-gradient(90deg,#3D3328,#5C4C40)!important;color
     </div>
     <div class="modal-body">
       <div style="background:#F0F7F7;padding:12px 16px;border-radius:10px;margin-bottom:14px;font-size:13px;line-height:1.6">
-        ייצוא כל האירועים מלוח הגאנט לקובץ <strong>ICS</strong> שניתן לייבא ל-Google Calendar, Outlook או כל יומן אחר.
+        סנכרון כל האירועים מלוח ��גאנט <strong>ישירות</strong> ליומן הפעילויות של בית הספר.<br>
+        האירועים יופיעו גם בדשבורד הניהול.
       </div>
+      <div id="syncLastInfo"></div>
 
       <div style="display:flex;gap:16px;margin-bottom:14px">
         <div style="flex:1;background:var(--bg);padding:10px 14px;border-radius:10px;text-align:center">
@@ -424,9 +426,8 @@ tr.trim-row td{background:linear-gradient(90deg,#3D3328,#5C4C40)!important;color
         </div>
       </div>
 
-      <div class="form-group" style="margin-bottom:12px">
-        <label style="font-size:10px;font-weight:700;color:var(--muted)">שם היומן</label>
-        <input type="text" id="syncCalName" value="אורט בית הערבה — לוח שנה תשפ״ז" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:Heebo;font-size:13px;width:100%;background:var(--card);color:var(--text)">
+      <div style="background:#FFFBEB;padding:10px 14px;border-radius:8px;border:1px solid #FDE68A;font-size:11px;color:#78350F;line-height:1.6;margin-bottom:10px">
+        <strong>שימי לב:</strong> הסנכרון מחליף את כל האירועים שהגיעו מהגאנט ביומן. אירועים שנוספו ידנית בדשבורד לא יימחקו.
       </div>
 
       <div id="syncProgress" style="display:none;margin-bottom:10px"></div>
@@ -434,7 +435,7 @@ tr.trim-row td{background:linear-gradient(90deg,#3D3328,#5C4C40)!important;color
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('syncModal')">ביטול</button>
-      <button class="btn btn-primary" id="syncRunBtn" onclick="runSync()">ייצוא וסנכרון</button>
+      <button class="btn btn-primary" id="syncRunBtn" onclick="runSync()">סנכרון עכשיו</button>
     </div>
   </div>
 </div>
@@ -1245,102 +1246,97 @@ function openAddBlank(){
 }
 
 // ═══════════════════════════════════════════════════
-// SYNC TO GOOGLE CALENDAR
+// SYNC TO SCHOOL CALENDAR (יומן פעילויות)
 // ═══════════════════════════════════════════════════
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';
+
 function syncToCalendar(){
   openModal('syncModal');
   document.getElementById('syncStatus').innerHTML='';
   document.getElementById('syncProgress').style.display='none';
-  // Count events by type
+  document.getElementById('syncRunBtn').disabled=false;
+  document.getElementById('syncRunBtn').textContent='סנכרון עכשיו';
+
   const all=[...EVENTS,...customEvents];
-  const counts={};
-  all.forEach(ev=>{
-    const t=ev.cls||'other';
-    counts[t]=(counts[t]||0)+1;
-  });
   document.getElementById('syncCount').textContent=all.length;
   document.getElementById('syncCustomCount').textContent=customEvents.length;
+
+  // Load current calendar events to show last sync info
+  const cb='syncCheck_'+Date.now();
+  window[cb]=function(data){
+    delete window[cb];
+    const ganttEvents=(data.events||[]).filter(e=>String(e.id).startsWith('gantt-'));
+    if(ganttEvents.length>0){
+      const lastUpdate=ganttEvents[ganttEvents.length-1].updatedAt||'';
+      document.getElementById('syncLastInfo').innerHTML=
+        `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">סנכרון אחרון: ${lastUpdate} (${ganttEvents.length} אירועים ביומן)</div>`;
+    } else {
+      document.getElementById('syncLastInfo').innerHTML=
+        `<div style="font-size:11px;color:var(--muted);margin-bottom:8px">לא בוצע סנכרון קודם</div>`;
+    }
+  };
+  const s=document.createElement('script');
+  s.src=`${APPS_SCRIPT_URL}?action=getCalendarEvents&callback=${cb}`;
+  s.onerror=()=>{delete window[cb]};
+  document.head.appendChild(s);
 }
 
 async function runSync(){
   const btn=document.getElementById('syncRunBtn');
   const status=document.getElementById('syncStatus');
   const progress=document.getElementById('syncProgress');
-  const calName=document.getElementById('syncCalName').value.trim()||'אורט בית הערבה — לוח שנה';
 
   btn.disabled=true;
   btn.textContent='מסנכרן...';
   progress.style.display='block';
+  progress.innerHTML=`<div style="background:var(--border);border-radius:8px;height:8px;overflow:hidden"><div style="background:var(--primary);height:100%;width:30%;transition:width .3s" id="syncBar"></div></div><div style="font-size:11px;color:var(--muted);margin-top:4px">שולח אירועים ליומן...</div>`;
 
   const all=[...EVENTS,...customEvents];
-  let synced=0, errors=0;
 
-  // Export as ICS file for Google Calendar import
-  let ics='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ORT Beit HaArava//Gantt//HE\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:'+calName+'\r\nX-WR-TIMEZONE:Asia/Jerusalem\r\n';
+  // Build events array for the API
+  const eventsData=all.map(ev=>({
+    date:ev.date, endDate:ev.endDate||'', title:ev.title,
+    type:ev.cls?.replace('c-','')||'activity',
+    responsible:ev.responsible||'', prep:ev.prep||'',
+    cost:ev.cost||'', notes:ev.notes||'', target:ev.target||'',
+    cols:ev.cols||[]
+  }));
 
-  all.forEach((ev,i)=>{
-    try{
-      const start=ev.date.replace(/-/g,'');
-      const end=ev.endDate?ev.endDate.replace(/-/g,''):start;
-      // All-day events: end date needs to be day+1 in ICS
-      const endDt=new Date(ev.endDate||ev.date);
-      endDt.setDate(endDt.getDate()+1);
-      const endStr=endDt.getFullYear()+String(endDt.getMonth()+1).padStart(2,'0')+String(endDt.getDate()).padStart(2,'0');
+  try{
+    document.getElementById('syncBar').style.width='60%';
 
-      let desc='';
-      if(ev.responsible) desc+='אחראי: '+ev.responsible+'\\n';
-      if(ev.prep) desc+='הכנה: '+ev.prep+'\\n';
-      if(ev.cost) desc+='עלות: '+ev.cost+'\\n';
-      if(ev.notes) desc+='הערות: '+ev.notes+'\\n';
-      if(ev.target) desc+='קהל יעד: '+ev.target+'\\n';
+    // Send to Apps Script
+    await fetch(APPS_SCRIPT_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'syncGanttEvents',events:eventsData})
+    });
 
-      ics+='BEGIN:VEVENT\r\n';
-      ics+='DTSTART;VALUE=DATE:'+start+'\r\n';
-      ics+='DTEND;VALUE=DATE:'+endStr+'\r\n';
-      ics+='SUMMARY:'+escIcs(ev.title)+'\r\n';
-      if(desc) ics+='DESCRIPTION:'+escIcs(desc)+'\r\n';
-      ics+='UID:ort-gantt-'+i+'-'+start+'@beit-haarava\r\n';
-      ics+='STATUS:CONFIRMED\r\n';
-      ics+='END:VEVENT\r\n';
-      synced++;
-    }catch(e){errors++}
+    document.getElementById('syncBar').style.width='100%';
 
-    // Update progress
-    const pct=Math.round(((i+1)/all.length)*100);
-    progress.innerHTML=`<div style="background:var(--border);border-radius:8px;height:8px;overflow:hidden"><div style="background:var(--primary);height:100%;width:${pct}%;transition:width .2s"></div></div><div style="font-size:11px;color:var(--muted);margin-top:4px">${i+1} / ${all.length}</div>`;
-  });
+    // no-cors means we can't read the response, but we trust the server
+    await new Promise(r=>setTimeout(r,800));
 
-  ics+='END:VCALENDAR\r\n';
+    status.innerHTML=`
+      <div style="background:#D1FAE5;padding:14px 16px;border-radius:10px;margin-top:12px">
+        <div style="font-weight:700;color:#065F46;font-size:14px;margin-bottom:6px">הסנכרון הושלם בהצלחה!</div>
+        <div style="font-size:12px;color:#065F46;line-height:1.7">
+          ${all.length} אירועים סונכרנו ליומן הפעילויות של בית הספר.<br>
+          האירועים מופיעים עכשיו גם בדשבורד הניהול.
+        </div>
+      </div>`;
 
-  // Download the ICS file
-  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=calName.replace(/\s+/g,'-')+'.ics';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-
-  status.innerHTML=`
-    <div style="background:#D1FAE5;padding:12px 16px;border-radius:10px;margin-top:12px">
-      <div style="font-weight:700;color:#065F46;margin-bottom:4px">הסנכרון הושלם!</div>
-      <div style="font-size:12px;color:#065F46">${synced} אירועים יוצאו בהצלחה${errors?' | '+errors+' שגיאות':''}</div>
-      <div style="font-size:11px;color:#065F46;margin-top:8px;line-height:1.6">
-        <strong>הוראות ייבוא ל-Google Calendar:</strong><br>
-        1. פתחי <a href="https://calendar.google.com/calendar/r/settings/export" target="_blank" style="color:#047857;text-decoration:underline">Google Calendar → הגדרות → ייבוא</a><br>
-        2. העלי את הקובץ שהורד<br>
-        3. בחרי את היומן הרצוי ולחצי "ייבוא"
-      </div>
-    </div>`;
-
-  btn.disabled=false;
-  btn.textContent='ייצוא וסנכרון';
-}
-
-function escIcs(str){
-  return String(str).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+    btn.textContent='סונכרן בהצלחה';
+  }catch(err){
+    status.innerHTML=`
+      <div style="background:#FEE2E2;padding:14px 16px;border-radius:10px;margin-top:12px">
+        <div style="font-weight:700;color:#7F1D1D;margin-bottom:4px">שגיאה בסנכרון</div>
+        <div style="font-size:12px;color:#7F1D1D">${err.message||'בדקי חיבור אינטרנט ונסי שוב'}</div>
+      </div>`;
+    btn.disabled=false;
+    btn.textContent='נסי שוב';
+  }
 }
 
 // INIT
