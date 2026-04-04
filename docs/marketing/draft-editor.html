@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>עריכת טיוטה — Learni</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Heebo',Arial,sans-serif;background:#f0f4f8;color:#1e293b;min-height:100vh;padding:24px 16px;direction:rtl}
+.card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,.10);max-width:640px;margin:0 auto;overflow:hidden}
+.top-bar{height:5px;background:linear-gradient(90deg,#00b4d8,#e84393,#00cec9)}
+.header{padding:24px 24px 16px}
+.header h1{font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px}
+.header p{font-size:13px;color:#64748b}
+.draft-block{margin:0 20px 16px;border-radius:14px;border:1px solid rgba(0,0,0,.06);overflow:hidden}
+.draft-label{padding:10px 16px;font-size:11px;font-weight:700;color:#fff;letter-spacing:0.5px}
+.draft-label.post{background:linear-gradient(90deg,#00b4d8,#48cae4)}
+.draft-label.reel{background:linear-gradient(90deg,#e84393,#fd79a8)}
+.draft-label.newsletter{background:linear-gradient(90deg,#00cec9,#55efc4)}
+textarea{width:100%;padding:14px 16px;font-family:'Heebo',Arial,sans-serif;font-size:14px;line-height:1.8;color:#1e293b;border:none;resize:vertical;min-height:120px;background:#f7f8fc;direction:rtl}
+textarea:focus{outline:none;background:#fff}
+.copy-btn{display:block;width:100%;padding:10px;font-family:'Heebo',Arial,sans-serif;font-size:13px;font-weight:700;color:#0096b7;background:#e0f7fc;border:none;cursor:pointer;transition:background .2s}
+.copy-btn:hover{background:#b2ebf2}
+.copy-btn.copied{background:#d1fae5;color:#065f46}
+.actions{padding:16px 20px 24px;display:flex;flex-direction:column;gap:10px}
+.btn-claude{display:block;text-align:center;padding:14px;border-radius:12px;font-size:15px;font-weight:700;color:#fff;background:linear-gradient(135deg,#00b4d8,#0096b7);text-decoration:none;box-shadow:0 4px 15px rgba(0,180,216,.3)}
+.btn-claude:hover{opacity:.9}
+.notice{padding:10px 16px;background:#e0f7fc;border-radius:10px;font-size:12px;color:#0096b7;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top-bar"></div>
+  <div class="header">
+    <h1>עריכת טיוטות</h1>
+    <p id="topic-label">טוען...</p>
+  </div>
+  <div id="drafts-container"></div>
+  <div class="actions">
+    <div class="notice">העתיקי את הטיוטה שרוצה לערוך → פתחי Claude → הדביקי ובקשי שינויים</div>
+    <a href="https://claude.ai/new" target="_blank" class="btn-claude">פתח Claude לעריכה</a>
+  </div>
+</div>
+
+<script>
+function decodeData() {
+  try {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return null;
+    return JSON.parse(decodeURIComponent(hash));
+  } catch(e) {
+    return null;
+  }
+}
+
+function copyText(btn, id) {
+  const ta = document.getElementById(id);
+  navigator.clipboard.writeText(ta.value).then(() => {
+    btn.textContent = 'הועתק!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'העתק';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+const data = decodeData();
+const container = document.getElementById('drafts-container');
+const topicLabel = document.getElementById('topic-label');
+
+if (!data) {
+  container.innerHTML = '<p style="padding:20px;color:#94a3b8;text-align:center">לא נמצאו טיוטות — נסי ללחוץ שוב על הכפתור במייל.</p>';
+} else {
+  topicLabel.textContent = data.title || '';
+
+  const types = [
+    { key: 'post',       label: 'פוסט',          cls: 'post' },
+    { key: 'reel',       label: 'סקריפט רילס',   cls: 'reel' },
+    { key: 'newsletter', label: 'טיפ לניוזלטר',  cls: 'newsletter' },
+  ];
+
+  types.forEach(({ key, label, cls }) => {
+    if (!data[key]) return;
+    const id = 'ta-' + key;
+    container.innerHTML += `
+      <div class="draft-block">
+        <div class="draft-label ${cls}">${label}</div>
+        <textarea id="${id}" rows="6">${data[key].replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+        <button class="copy-btn" onclick="copyText(this,'${id}')">העתק</button>
+      </div>`;
+  });
+}
+</script>
+</body>
+</html>
