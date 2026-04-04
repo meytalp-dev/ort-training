@@ -3890,107 +3890,141 @@ async function generateJobImage(id){
     await Promise.allSettled([fBold.load(),fBlack.load(),fReg.load()].map(f=>f.then(x=>{document.fonts.add(x)})));
   }catch(e){}
 
-  // Load ORT logo
-  const ortLogo=await new Promise(resolve=>{
-    const img=new Image();
-    img.onload=()=>resolve(img);
-    img.onerror=()=>resolve(null);
-    img.src='logo-ort.png';
-  });
+  // Load ORT logo + school photo
+  const [ortLogo,schoolPhoto]=await Promise.all([
+    new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='logo-ort.png'}),
+    new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='school-photo.png'})
+  ]);
 
-  const W=1080,H=1080;
+  const W=1080,H=1350;
   const canvas=document.createElement('canvas');
   canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext('2d');
   ctx.direction='rtl';
   ctx.textBaseline='alphabetic';
 
-  // Background
-  ctx.fillStyle='#FFFCF5';ctx.fillRect(0,0,W,H);
+  // --- School photo at top ---
+  const photoH=380;
+  if(schoolPhoto){
+    const sr=schoolPhoto.naturalWidth/schoolPhoto.naturalHeight;
+    const dw=W,dh=Math.max(photoH,W/sr);
+    const dy=(photoH-dh)/2;
+    ctx.save();ctx.beginPath();ctx.rect(0,0,W,photoH);ctx.clip();
+    ctx.drawImage(schoolPhoto,(W-dw)/2,dy,dw,dh);
+    // Dark overlay gradient for readability
+    const ov=ctx.createLinearGradient(0,0,0,photoH);
+    ov.addColorStop(0,'rgba(30,40,35,.35)');ov.addColorStop(0.5,'rgba(30,40,35,.5)');ov.addColorStop(1,'rgba(30,40,35,.75)');
+    ctx.fillStyle=ov;ctx.fillRect(0,0,W,photoH);
+    ctx.restore();
+  }else{
+    ctx.fillStyle='#2D3B35';ctx.fillRect(0,0,W,photoH);
+  }
 
-  // Subtle dot pattern
-  ctx.fillStyle='rgba(74,63,53,.025)';
-  for(let px=0;px<W;px+=28)for(let py=0;py<H;py+=28){ctx.beginPath();ctx.arc(px,py,1.2,0,Math.PI*2);ctx.fill()}
-
-  // Top gradient stripe
-  const topG=ctx.createLinearGradient(0,0,W,0);
-  topG.addColorStop(0,'#5E9191');topG.addColorStop(0.45,'#0EA5E9');topG.addColorStop(1,'#D4A574');
-  ctx.fillStyle=topG;ctx.fillRect(0,0,W,18);
-
-  // Top section bg
-  const headerG=ctx.createLinearGradient(0,18,0,220);
-  headerG.addColorStop(0,'rgba(14,165,233,.07)');headerG.addColorStop(1,'rgba(14,165,233,.0)');
-  ctx.fillStyle=headerG;ctx.fillRect(0,18,W,202);
-
-  // ORT Logo (right side)
+  // Logo on photo
   if(ortLogo){
-    const lw=260,lh=Math.round(260*(ortLogo.naturalHeight/ortLogo.naturalWidth));
-    ctx.drawImage(ortLogo,W-60-lw,28,lw,lh);
+    const lw=180,lh=Math.round(180*(ortLogo.naturalHeight/ortLogo.naturalWidth));
+    ctx.drawImage(ortLogo,W-50-lw,20,lw,lh);
   }
 
-  // School subtitle (only if no logo loaded)
-  if(!ortLogo){
-    ctx.font='900 52px HeeboImg,Heebo,Arial';ctx.textAlign='right';ctx.fillStyle='#4A3F35';
-    ctx.fillText('אורט בית הערבה',W-80,95);
-    ctx.font='400 28px HeeboImg,Heebo,Arial';ctx.fillStyle='#8B7E74';
-    ctx.fillText('בית ספר מקצועי-טכנולוגי | עמק הירדן',W-80,135);
-  }
+  // Intro text on photo
+  ctx.textAlign='right';
+  ctx.font='700 30px HeeboImg,Heebo,Arial';ctx.fillStyle='rgba(255,255,255,.85)';
+  ctx.fillText('מחפש/ת מקום עבודה שבו תרגיש/י משמעותי/ת וחלק מקהילה?',W-50,photoH-150);
+  ctx.font='400 24px HeeboImg,Heebo,Arial';ctx.fillStyle='rgba(255,255,255,.7)';
+  ctx.fillText('אורט בית הערבה ירושלים — בית ספר מקצועי-טכנולוגי — מגייס/ת לצוות',W-50,photoH-110);
 
-  // Tag row
-  const tags=[{t:j.dept,bg:'rgba(14,165,233,.12)',c:'#0284C7'},{t:j.type,bg:'rgba(122,173,173,.15)',c:'#5E9191'},{t:j.scope,bg:'rgba(212,165,116,.15)',c:'#B8885A'}];
-  let tagX=W-60;
-  ctx.font='700 22px HeeboImg,Heebo,Arial';
-  tags.forEach(tag=>{
-    const tw=ctx.measureText(tag.t).width+36;
-    tagX-=tw+10;
-    ctx.fillStyle=tag.bg;jigRoundRect(ctx,tagX,168,tw,40,20);ctx.fill();
-    ctx.fillStyle=tag.c;ctx.textAlign='center';ctx.fillText(tag.t,tagX+tw/2,194);
-  });
+  // "דרוש/ה" badge on photo
+  ctx.fillStyle='#0EA5E9';
+  jigRoundRect(ctx,W-230,photoH-80,180,50,25);ctx.fill();
+  ctx.font='900 28px HeeboImg,Heebo,Arial';ctx.fillStyle='#fff';ctx.textAlign='center';
+  ctx.fillText('דרוש/ה',W-140,photoH-47);
 
-  // Main divider
-  const divG=ctx.createLinearGradient(60,0,W-60,0);
-  divG.addColorStop(0,'rgba(122,173,173,0)');divG.addColorStop(0.2,'rgba(122,173,173,.4)');
-  divG.addColorStop(0.8,'rgba(122,173,173,.4)');divG.addColorStop(1,'rgba(122,173,173,0)');
-  ctx.strokeStyle=divG;ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(60,230);ctx.lineTo(W-60,230);ctx.stroke();
-
-  // "דרוש/ה" label
-  ctx.font='700 26px HeeboImg,Heebo,Arial';ctx.textAlign='right';ctx.fillStyle='#0EA5E9';
-  ctx.fillText('דרוש/ה',W-60,290);
+  // --- White content area ---
+  ctx.fillStyle='#FFFCF5';ctx.fillRect(0,photoH,W,H-photoH);
 
   // Job title
-  ctx.font='900 74px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';
-  let titleY=380;
-  if(ctx.measureText(j.title).width>W-120){
-    ctx.font='900 60px HeeboImg,Heebo,Arial';titleY=370;
-  }
-  if(ctx.measureText(j.title).width>W-120){
-    ctx.font='900 48px HeeboImg,Heebo,Arial';titleY=360;
-  }
-  jigWrapText(ctx,j.title,W-60,titleY,W-120,80,2);
+  ctx.textAlign='right';
+  ctx.font='900 64px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';
+  let titleY=photoH+80;
+  if(ctx.measureText(j.title).width>W-120){ctx.font='900 50px HeeboImg,Heebo,Arial';titleY=photoH+75}
+  if(ctx.measureText(j.title).width>W-120){ctx.font='900 42px HeeboImg,Heebo,Arial';titleY=photoH+72}
+  jigWrapText(ctx,j.title,W-50,titleY,W-100,68,2);
 
-  // Description box
-  if(j.desc){
-    ctx.fillStyle='rgba(122,173,173,.08)';
-    jigRoundRect(ctx,60,460,W-120,200,16);ctx.fill();
-    ctx.strokeStyle='rgba(122,173,173,.2)';ctx.lineWidth=1.5;
-    jigRoundRect(ctx,60,460,W-120,200,16);ctx.stroke();
-    ctx.font='400 26px HeeboImg,Heebo,Arial';ctx.fillStyle='#5A4F45';ctx.textAlign='right';
-    jigWrapText(ctx,j.desc,W-84,504,W-168,36,5);
-  }
+  // Tags
+  const tags=[{t:j.dept,bg:'rgba(14,165,233,.1)',c:'#0284C7'},{t:j.type,bg:'rgba(94,145,145,.1)',c:'#5E9191'},{t:j.scope,bg:'rgba(212,165,116,.12)',c:'#B8885A'}];
+  let tagX=W-50;
+  ctx.font='700 20px HeeboImg,Heebo,Arial';
+  const tagY=photoH+110;
+  tags.forEach(tag=>{
+    const tw=ctx.measureText(tag.t).width+30;
+    tagX-=tw+8;
+    ctx.fillStyle=tag.bg;jigRoundRect(ctx,tagX,tagY,tw,34,17);ctx.fill();
+    ctx.fillStyle=tag.c;ctx.textAlign='center';ctx.fillText(tag.t,tagX+tw/2,tagY+24);
+  });
 
   // Divider
+  const divG=ctx.createLinearGradient(50,0,W-50,0);
+  divG.addColorStop(0,'rgba(122,173,173,0)');divG.addColorStop(0.15,'rgba(122,173,173,.3)');
+  divG.addColorStop(0.85,'rgba(122,173,173,.3)');divG.addColorStop(1,'rgba(122,173,173,0)');
   ctx.strokeStyle=divG;ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(60,690);ctx.lineTo(W-60,690);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(50,photoH+155);ctx.lineTo(W-50,photoH+155);ctx.stroke();
 
-  // Contact section
-  ctx.font='700 28px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';ctx.textAlign='right';
-  ctx.fillText('לפרטים ופנייה:',W-60,750);
-  ctx.font='400 26px HeeboImg,Heebo,Arial';ctx.fillStyle='#6B5F55';
-  let contactY=800;
-  if(j.contact){ctx.fillText(j.contact,W-60,contactY);contactY+=42}
-  if(j.email){ctx.fillText(j.email,W-60,contactY);contactY+=42}
-  if(j.phone){ctx.fillText(j.phone,W-60,contactY)}
+  // --- "למה שווה לעבוד אצלנו" ---
+  const whyY=photoH+175;
+  ctx.fillStyle='rgba(94,145,145,.05)';
+  jigRoundRect(ctx,40,whyY,W-80,270,16);ctx.fill();
+  ctx.strokeStyle='rgba(94,145,145,.12)';ctx.lineWidth=1;
+  jigRoundRect(ctx,40,whyY,W-80,270,16);ctx.stroke();
+
+  ctx.font='700 24px HeeboImg,Heebo,Arial';ctx.fillStyle='#5E9191';ctx.textAlign='right';
+  ctx.fillText('למה שווה לעבוד אצלנו?',W-70,whyY+36);
+
+  const whyItems=[
+    'תחושת שליחות אמיתית — כאן את/ה משנה חיים',
+    'מבוגר עוגן — את/ה האדם שמאמין בתלמיד',
+    'צוות שהוא משפחה — חם, תומך, לא לבד',
+    'חדשנות בשטח — AI, טכנולוגיה, פדגוגיה מותאמת',
+    'מקצוע אמיתי — התלמידים יוצאים עם תעודה ועם ערך'
+  ];
+  ctx.font='400 21px HeeboImg,Heebo,Arial';
+  whyItems.forEach((item,i)=>{
+    const y=whyY+76+i*40;
+    ctx.fillStyle='#0EA5E9';ctx.textAlign='right';
+    ctx.fillText('\u25CF',W-70,y);
+    ctx.fillStyle='#4A3F35';
+    ctx.fillText(item,W-92,y);
+  });
+
+  // --- Requirements ---
+  if(j.req){
+    const reqY=photoH+465;
+    ctx.font='700 23px HeeboImg,Heebo,Arial';ctx.fillStyle='#B8885A';ctx.textAlign='right';
+    ctx.fillText('דרישות:',W-50,reqY);
+    ctx.font='400 21px HeeboImg,Heebo,Arial';ctx.fillStyle='#5A4F45';
+    const reqLines=j.req.split('\n').filter(Boolean).slice(0,4);
+    reqLines.forEach((line,i)=>{
+      ctx.fillText(line.replace(/^[-•]\s*/,''),W-50,reqY+36+i*32);
+    });
+  }
+
+  // Divider above contact
+  ctx.strokeStyle=divG;ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(50,H-130);ctx.lineTo(W-50,H-130);ctx.stroke();
+
+  // Contact
+  ctx.font='700 22px HeeboImg,Heebo,Arial';ctx.fillStyle='#4A3F35';ctx.textAlign='right';
+  ctx.fillText('לפרטים ופנייה:',W-50,H-95);
+  ctx.font='400 21px HeeboImg,Heebo,Arial';ctx.fillStyle='#6B5F55';
+  const contactParts=[];
+  if(j.contact)contactParts.push(j.contact);
+  if(j.email)contactParts.push(j.email);
+  if(j.phone)contactParts.push(j.phone);
+  ctx.fillText(contactParts.join('  |  '),W-50,H-62);
+
+  // Bottom accent stripe
+  const botG=ctx.createLinearGradient(0,0,W,0);
+  botG.addColorStop(0,'#5E9191');botG.addColorStop(0.5,'#0EA5E9');botG.addColorStop(1,'#D4A574');
+  ctx.fillStyle=botG;ctx.fillRect(0,H-16,W,16);
 
   // Bottom gradient stripe
   const botG=ctx.createLinearGradient(0,0,W,0);
