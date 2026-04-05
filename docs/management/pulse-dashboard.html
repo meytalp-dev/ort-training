@@ -226,6 +226,24 @@ tr:hover{background:rgba(122,173,173,.03)}
       <p>הדשבורד יציג את כל 11 הכיתות ביחד — ממוצעים, היענות, והתראות</p>
     </div>
   </div>
+
+  <!-- Radar section -->
+  <div class="card-section" style="margin-top:32px">
+    <div class="controls" style="margin-bottom:16px">
+      <div class="ctrl-group">
+        <label>פרופיל כיתה — כל 5 הממדים</label>
+        <select id="radarClass">
+          <option value="">בחרי כיתה...</option>
+          <option value="ט1">ט׳1</option><option value="ט2">ט׳2</option><option value="ט3">ט׳3</option>
+          <option value="י1">י׳1</option><option value="י2">י׳2</option><option value="י3">י׳3</option>
+          <option value="יא1">י״א1</option><option value="יא2">י״א2</option><option value="יא3">י״א3</option>
+          <option value="יב1">י״ב1</option><option value="יב2">י״ב2</option>
+        </select>
+      </div>
+      <button class="btn-load" onclick="loadRadar()" style="background:#5E9191">פרופיל ממדים</button>
+    </div>
+    <div id="radarContent"></div>
+  </div>
 </div>
 
 <script>
@@ -523,6 +541,138 @@ function processAndRender(allPulses, dim, type) {
   html += '</tbody></table></div>';
 
   document.getElementById('content').innerHTML = html;
+}
+
+// ============================================
+// RADAR — all 5 dims for one class
+// ============================================
+
+function loadRadar() {
+  const cls = document.getElementById('radarClass').value;
+  if (!cls) { alert('בחרי כיתה'); return; }
+  document.getElementById('radarContent').innerHTML = '<div class="loading">טוען נתונים...</div>';
+
+  const cb = 'radarCb_' + Date.now();
+  window[cb] = function(resp) {
+    delete window[cb];
+    if (resp.result === 'success') renderRadar(resp.pulses, cls);
+    else document.getElementById('radarContent').innerHTML = '<div class="empty"><p>שגיאה</p></div>';
+  };
+  const s = document.createElement('script');
+  s.src = API + '?callback=' + cb + '&action=getAllPulse';
+  s.onerror = () => { delete window[cb]; renderRadar(generateRadarDemo(cls), cls); };
+  document.head.appendChild(s);
+}
+
+function generateRadarDemo(cls) {
+  const dims = ['belong','respect','motiv','capable','auto'];
+  const pulses = [];
+  dims.forEach(dim => {
+    const n = 5 + Math.floor(Math.random() * 20);
+    const qCount = {belong:5,respect:5,motiv:5,capable:5,auto:3}[dim];
+    for (let i = 0; i < n; i++) {
+      const answers = {};
+      for (let q = 0; q < qCount; q++) answers[q] = 1 + Math.floor(Math.random() * 5);
+      pulses.push({ dim, type: 'pre', class: cls, answers, role: 'student' });
+    }
+  });
+  return pulses;
+}
+
+function renderRadar(allPulses, cls) {
+  const dims = ['belong','respect','motiv','capable','auto'];
+  const dimNames = ['שייכות','כבוד','מוטיבציה','מסוגלות','אוטונומיה'];
+  const dimColors = ['#E06090','#5B9BD5','#E8A838','#8B6BC0','#7AB648'];
+
+  const scores = dims.map(dim => {
+    const p = allPulses.filter(x => x.dim === dim && x.type === 'pre' && x.class === cls && x.role !== 'staff');
+    if (p.length === 0) return 0;
+    let total = 0, count = 0;
+    p.forEach(pulse => {
+      const vals = Object.values(pulse.answers).map(Number).filter(v => v > 0);
+      total += vals.reduce((a,b) => a+b, 0);
+      count += vals.length;
+    });
+    return count > 0 ? +(total / count).toFixed(2) : 0;
+  });
+
+  const classLabel = CLASSES.find(c => c.id === cls)?.label || cls;
+
+  // Draw radar with canvas
+  const size = 280, cx = size/2, cy = size/2, r = 100;
+  const n = 5;
+  const angleStep = (2 * Math.PI) / n;
+  const startAngle = -Math.PI / 2;
+
+  function getPoint(i, val) {
+    const angle = startAngle + i * angleStep;
+    const dist = (val / 5) * r;
+    return { x: cx + dist * Math.cos(angle), y: cy + dist * Math.sin(angle) };
+  }
+
+  let svg = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block;margin:0 auto">`;
+
+  // Grid circles
+  for (let ring = 1; ring <= 5; ring++) {
+    const rr = (ring / 5) * r;
+    let path = '';
+    for (let i = 0; i < n; i++) {
+      const angle = startAngle + i * angleStep;
+      const x = cx + rr * Math.cos(angle);
+      const y = cy + rr * Math.sin(angle);
+      path += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    path += 'Z';
+    svg += `<path d="${path}" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="1"/>`;
+  }
+
+  // Axis lines
+  for (let i = 0; i < n; i++) {
+    const p = getPoint(i, 5);
+    svg += `<line x1="${cx}" y1="${cy}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke="rgba(0,0,0,.08)" stroke-width="1"/>`;
+  }
+
+  // Data polygon
+  let dataPath = '';
+  scores.forEach((s, i) => {
+    const p = getPoint(i, s || 0);
+    dataPath += (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+  });
+  dataPath += 'Z';
+  svg += `<path d="${dataPath}" fill="rgba(122,173,173,.2)" stroke="#5E9191" stroke-width="2.5"/>`;
+
+  // Points + labels
+  scores.forEach((s, i) => {
+    const p = getPoint(i, s || 0);
+    svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="${dimColors[i]}" stroke="#fff" stroke-width="2"/>`;
+    // Label
+    const lp = getPoint(i, 5.8);
+    svg += `<text x="${lp.x.toFixed(1)}" y="${lp.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Heebo" font-size="11" font-weight="700" fill="${dimColors[i]}">${dimNames[i]}</text>`;
+    // Score
+    const sp = getPoint(i, s > 0 ? s + 0.7 : 1);
+    if (s > 0) svg += `<text x="${sp.x.toFixed(1)}" y="${sp.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-family="Heebo" font-size="10" font-weight="600" fill="var(--text)">${s.toFixed(1)}</text>`;
+  });
+
+  svg += '</svg>';
+
+  // Stats cards
+  let cards = '<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px">';
+  scores.forEach((s, i) => {
+    const bg = s >= 3.8 ? 'rgba(126,207,160,.12)' : s >= 2.8 ? 'rgba(240,216,122,.12)' : s > 0 ? 'rgba(240,144,144,.12)' : 'rgba(0,0,0,.03)';
+    cards += `<div style="text-align:center;padding:10px 16px;border-radius:12px;background:${bg};min-width:80px">
+      <div style="font-size:1.2rem;font-weight:800;color:${dimColors[i]}">${s > 0 ? s.toFixed(1) : '—'}</div>
+      <div style="font-size:.7rem;color:var(--muted)">${dimNames[i]}</div>
+    </div>`;
+  });
+  cards += '</div>';
+
+  document.getElementById('radarContent').innerHTML = `
+    <div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-sm);padding:24px;text-align:center">
+      <h2 style="font-size:1rem;font-weight:700;margin-bottom:16px">פרופיל ${classLabel} — חמשת הממדים</h2>
+      ${svg}
+      ${cards}
+    </div>
+  `;
 }
 
 // Auto-load on page open
