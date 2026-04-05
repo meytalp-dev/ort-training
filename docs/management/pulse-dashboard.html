@@ -61,7 +61,32 @@ select:focus{outline:none;border-color:var(--primary)}
 .summary-card .val{font-size:2rem;font-weight:900}
 .summary-card .lbl{font-size:.75rem;color:var(--muted);margin-top:2px}
 
-/* Heatmap table */
+/* Class grid — cards */
+.grid-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.grid-header h2{font-size:1.1rem;font-weight:800}
+.grid-header span{font-size:.78rem;color:var(--muted)}
+
+.class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px;margin-bottom:24px}
+.class-card{
+  background:var(--card);border-radius:18px;border:1px solid var(--border);
+  box-shadow:var(--shadow-sm);padding:20px 16px;text-align:center;
+  position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;
+  cursor:pointer;
+}
+.class-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.class-card .card-strip{position:absolute;top:0;left:0;right:0;height:4px;border-radius:0 0 4px 4px}
+.class-card .card-name{font-size:1rem;font-weight:700;margin-bottom:4px}
+.class-card .card-score{font-size:2.4rem;font-weight:900;line-height:1.1}
+.class-card .card-pct{font-size:.78rem;color:var(--muted);margin-top:2px}
+.class-card .card-resp{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+  border-radius:12px;font-size:.68rem;font-weight:600;margin-top:8px;
+}
+.class-card .card-mini-bars{display:flex;gap:3px;justify-content:center;margin-top:10px}
+.class-card .mini-bar{width:8px;border-radius:4px;background:rgba(0,0,0,.06);display:flex;flex-direction:column;justify-content:flex-end}
+.class-card .mini-fill{border-radius:4px;transition:height .8s ease;min-height:2px}
+
+/* Heatmap table (detail) */
 .heatmap-card{
   background:var(--card);border-radius:var(--radius);border:1px solid var(--border);
   box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:24px;
@@ -312,7 +337,42 @@ function processAndRender(allPulses, dim, type) {
     </div>
   `;
 
-  // ---- HEATMAP TABLE ----
+  // ---- CLASS GRID (cards) ----
+  html += `<div class="grid-header"><h2>מבט-על כיתות</h2><span>${new Date().toLocaleDateString('he-IL')}</span></div>`;
+  html += '<div class="class-grid">';
+  classStats.forEach(c => {
+    const stripColor = c.avg >= 3.8 ? 'var(--high)' : c.avg >= 2.8 ? 'var(--mid)' : c.avg > 0 ? 'var(--low)' : 'var(--border)';
+    const scoreColor = c.avg >= 3.8 ? '#3a8a5a' : c.avg >= 2.8 ? '#a09030' : c.avg > 0 ? '#b05050' : 'var(--muted)';
+    const respPct = c.expected > 0 ? Math.round(c.responded / c.expected * 100) : 0;
+    const respClass = respPct >= 80 ? 'resp-good' : respPct >= 50 ? 'resp-ok' : 'resp-low';
+    const pct = c.avg > 0 ? Math.round(c.avg / 5 * 100) : 0;
+
+    // Mini bars for each question
+    let miniBars = '';
+    if (c.qAvgs.length > 0) {
+      miniBars = '<div class="card-mini-bars">';
+      c.qAvgs.forEach(q => {
+        const h = q > 0 ? Math.round(q / 5 * 36) : 0;
+        const fc = q >= 3.8 ? 'var(--high)' : q >= 2.8 ? 'var(--mid)' : q > 0 ? 'var(--low)' : 'var(--border)';
+        miniBars += `<div class="mini-bar" style="height:40px"><div class="mini-fill" style="height:${h}px;background:${fc}"></div></div>`;
+      });
+      miniBars += '</div>';
+    }
+
+    html += `
+      <div class="class-card" onclick="window.open('pulse-story.html?dim=${document.getElementById('selDim').value}&type=${document.getElementById('selType').value}&class=${encodeURIComponent(c.id)}&role=student','_blank')">
+        <div class="card-strip" style="background:${stripColor}"></div>
+        <div class="card-name">${c.label}</div>
+        <div class="card-score" style="color:${scoreColor}">${c.avg > 0 ? c.avg.toFixed(1) : '—'}</div>
+        <div class="card-pct">${pct > 0 ? pct + '% מתוך 5' : 'אין נתונים'}</div>
+        <span class="card-resp ${respClass}">${c.responded}/${c.expected}</span>
+        ${miniBars}
+      </div>
+    `;
+  });
+  html += '</div>';
+
+  // ---- HEATMAP TABLE (detailed) ----
   html += `
     <div class="heatmap-card">
       <div class="heatmap-header">
