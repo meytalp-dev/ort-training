@@ -374,6 +374,78 @@ function processAndRender(allPulses, dim, type) {
     html += '</div>';
   }
 
+  // ---- WEAKEST QUESTIONS (school-wide) ----
+  if (classesWithData.length > 0) {
+    const qCount = classesWithData[0].qAvgs.length;
+    const schoolQAvgs = [];
+    for (let q = 0; q < qCount; q++) {
+      const vals = classesWithData.map(c => c.qAvgs[q]).filter(v => v > 0);
+      schoolQAvgs.push(vals.length > 0 ? +(vals.reduce((a,b) => a+b, 0) / vals.length).toFixed(2) : 0);
+    }
+    const qRanked = schoolQAvgs.map((v, i) => ({v, i})).filter(x => x.v > 0).sort((a,b) => a.v - b.v);
+
+    // Get question texts
+    const STUDENT_Q = {
+      belong:['אני מרגיש שייך לכיתה שלי','אם ישאלו אותי, אמליץ לחברים ללמוד בבית הספר הזה','רוב הזמן טוב לי בבית הספר','ברוב הימים אני יוצא עם תחושה טובה מיום הלימודים','מבחינה לימודית, טוב לי בבית הספר'],
+      respect:['רוב המורים מתייחסים אליי בצורה הוגנת ומכבדת','אני מרגיש שמקשיבים לדעה שלי בכיתה','התלמידים בכיתה מתייחסים זה לזה בכבוד','כשיש חילוקי דעות, אפשר להביע דעה בלי פחד','בכיתה שלנו מדברים על נושאים שחשובים לבני נוער'],
+      motiv:['השיעורים מעניינים ומאפשרים לי להיות מעורב ופעיל','יש לי מטרה שחשוב לי להגשים','אני רוצה להצליח בחיים ובית הספר עוזר לי בזה','אני רוצה ללמוד ולהתקדם גם בלי שמכריחים','יש נושאים בבית הספר שבאמת מעניינים אותי'],
+      capable:['אני יכול לבטא את הכישורים והכישרונות שלי','אני מרגיש שאני יכול להצליח','המורים מכירים את הכישרונות שלי','המורים מאמינים שאני מסוגל','בבית הספר מעודדים יוזמות ומנהיגות'],
+      auto:['ניתנת לי אפשרות להשפיע על החלטות','יש תלמידים במועצת תלמידים ובתכנון','ניתנת לי אפשרות לבחור מגמה ונושאים'],
+      pedagogy:['הלמידה עוזרת להתקדם','המורים מתייחסים לצרכים שלי','השיעורים מעניינים ופעילים','הזדמנויות להשתמש בחוזקות','נהנה להשתתף בשיעורים','מורים מעדכנים על מצב','מקשרים חומר לחיים','משימות לפי יכולת','פעיל בלמידה','תחושה שיכול להצליח','משלבים עיוני ומעשי'],
+      relations:['יש למי לפנות כשקשה','שיחות אישיות עם צוות','יחסים טובים עם מורים','נוח לדבר על נושאים אישיים','פעילות קבוצתית על נושאים חשובים','מורים מתייחסים בהוגנות'],
+      employ:['התנסויות מגוונות','רלוונטי למקצוע','אתגרים אמיתיים','המעסיק מסביר תרומה לעתיד']
+    };
+    const qTexts = STUDENT_Q[dim] || [];
+
+    if (qRanked.length > 0) {
+      html += `<div class="bars-card"><h2>שאלות לפי ציון בית ספרי (מהנמוך לגבוה)</h2>`;
+      qRanked.forEach(({v, i}) => {
+        const pct = Math.round(v / 5 * 100);
+        const barColor = v >= 3.8 ? 'var(--high)' : v >= 2.8 ? 'var(--mid)' : 'var(--low)';
+        const label = qTexts[i] ? (qTexts[i].length > 35 ? qTexts[i].substring(0, 33) + '...' : qTexts[i]) : 'ש' + (i+1);
+        html += `
+          <div class="bar-row">
+            <span class="bar-label" style="min-width:220px;font-size:.78rem">${label}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${barColor}">${v.toFixed(1)}</div></div>
+            <span class="bar-val" style="color:${barColor}">${v.toFixed(1)}</span>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+  }
+
+  // ---- PRE vs POST COMPARISON ----
+  if (type === 'post') {
+    // Load pre data for comparison
+    const preFiltered = allPulses.filter(p => p.dim === dim && p.type === 'pre' && p.role !== 'staff');
+    const preStats = CLASSES.map(c => {
+      const cp = preFiltered.filter(p => p.class === c.id);
+      if (cp.length === 0) return { ...c, avg: 0 };
+      const qCount = Object.keys(cp[0].answers).length || 5;
+      const sums = Array(qCount).fill(0), counts = Array(qCount).fill(0);
+      cp.forEach(p => { for (let i=0;i<qCount;i++){const v=p.answers[i]||p.answers[String(i)];if(v){sums[i]+=Number(v);counts[i]++}} });
+      const qAvgs = sums.map((s,i) => counts[i]>0?+(s/counts[i]).toFixed(2):0);
+      return { ...c, avg: qAvgs.length>0?+(qAvgs.reduce((a,b)=>a+b,0)/qAvgs.length).toFixed(2):0 };
+    });
+
+    const compareData = classStats.filter(c => c.avg > 0).map(c => {
+      const pre = preStats.find(p => p.id === c.id);
+      return { label: c.label, post: c.avg, pre: pre ? pre.avg : 0, delta: pre ? +(c.avg - pre.avg).toFixed(2) : 0 };
+    }).filter(c => c.pre > 0);
+
+    if (compareData.length > 0) {
+      html += `<div class="bars-card"><h2>השוואה: טרום מול סיום</h2>`;
+      html += '<div style="overflow-x:auto"><table><thead><tr><th>כיתה</th><th>טרום</th><th>סיום</th><th>שינוי</th></tr></thead><tbody>';
+      compareData.forEach(c => {
+        const cls = c.delta > 0.1 ? 'cell-high' : c.delta < -0.1 ? 'cell-low' : 'cell-mid';
+        const arrow = c.delta > 0.1 ? '&#8593;' : c.delta < -0.1 ? '&#8595;' : '&#8596;';
+        html += `<tr><td style="text-align:right;font-weight:600">${c.label}</td><td><span class="cell cell-mid">${c.pre.toFixed(1)}</span></td><td><span class="cell ${cls}">${c.post.toFixed(1)}</span></td><td><span class="cell ${cls}">${arrow} ${c.delta > 0 ? '+' : ''}${c.delta.toFixed(1)}</span></td></tr>`;
+      });
+      html += '</tbody></table></div></div>';
+    }
+  }
+
   // ---- CLASS GRID (cards) ----
   html += `<div class="grid-header"><h2>מבט-על כיתות</h2><span>${new Date().toLocaleDateString('he-IL')}</span></div>`;
   html += '<div class="class-grid">';
