@@ -337,6 +337,43 @@ function processAndRender(allPulses, dim, type) {
     </div>
   `;
 
+  // ---- ALERTS ----
+  const alerts = [];
+  classStats.forEach(c => {
+    if (c.responded === 0) alerts.push({ text: `${c.label} — אף תלמיד לא ענה עדיין`, color: 'var(--muted)' });
+    else if (c.responded / c.expected < 0.5) alerts.push({ text: `${c.label} — היענות נמוכה (${c.responded}/${c.expected})`, color: 'var(--mid)' });
+    if (c.avg > 0 && c.avg < 2.8) alerts.push({ text: `${c.label} — ציון נמוך (${c.avg.toFixed(1)}) — מומלץ שיחה עם מחנכת`, color: 'var(--low)' });
+    c.qAvgs.forEach((q, i) => {
+      if (q > 0 && q < 2.5) alerts.push({ text: `${c.label} — שאלה ${i+1} ציון ${q.toFixed(1)} (נמוך במיוחד)`, color: 'var(--low)' });
+    });
+  });
+
+  if (alerts.length > 0) {
+    html += `<div class="alerts-card"><h2>התראות (${alerts.length})</h2>`;
+    alerts.forEach(a => {
+      html += `<div class="alert-item"><div class="alert-dot" style="background:${a.color}"></div><span class="alert-text">${a.text}</span></div>`;
+    });
+    html += '</div>';
+  }
+
+  // ---- BAR CHART (ranking) ----
+  const sorted = [...classStats].filter(c => c.avg > 0).sort((a, b) => b.avg - a.avg);
+  if (sorted.length > 0) {
+    html += `<div class="bars-card"><h2>דירוג כיתות</h2>`;
+    sorted.forEach(c => {
+      const pct = Math.round(c.avg / 5 * 100);
+      const barColor = c.avg >= 3.8 ? 'var(--high)' : c.avg >= 2.8 ? 'var(--mid)' : 'var(--low)';
+      html += `
+        <div class="bar-row">
+          <span class="bar-label">${c.label}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${barColor}">${c.avg.toFixed(1)}</div></div>
+          <span class="bar-val" style="color:${barColor}">${pct}%</span>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+
   // ---- CLASS GRID (cards) ----
   html += `<div class="grid-header"><h2>מבט-על כיתות</h2><span>${new Date().toLocaleDateString('he-IL')}</span></div>`;
   html += '<div class="class-grid">';
@@ -347,7 +384,6 @@ function processAndRender(allPulses, dim, type) {
     const respClass = respPct >= 80 ? 'resp-good' : respPct >= 50 ? 'resp-ok' : 'resp-low';
     const pct = c.avg > 0 ? Math.round(c.avg / 5 * 100) : 0;
 
-    // Mini bars for each question
     let miniBars = '';
     if (c.qAvgs.length > 0) {
       miniBars = '<div class="card-mini-bars">';
@@ -408,42 +444,6 @@ function processAndRender(allPulses, dim, type) {
   });
 
   html += '</tbody></table></div>';
-
-  // ---- BAR CHART ----
-  const sorted = [...classStats].filter(c => c.avg > 0).sort((a, b) => b.avg - a.avg);
-  html += `<div class="bars-card"><h2>דירוג כיתות</h2>`;
-  sorted.forEach(c => {
-    const pct = Math.round(c.avg / 5 * 100);
-    const barColor = c.avg >= 3.8 ? 'var(--high)' : c.avg >= 2.8 ? 'var(--mid)' : 'var(--low)';
-    html += `
-      <div class="bar-row">
-        <span class="bar-label">${c.label}</span>
-        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${barColor}">${c.avg.toFixed(1)}</div></div>
-        <span class="bar-val" style="color:${barColor}">${pct}%</span>
-      </div>
-    `;
-  });
-  html += '</div>';
-
-  // ---- ALERTS ----
-  const alerts = [];
-  classStats.forEach(c => {
-    if (c.responded === 0) alerts.push({ type: 'none', text: `${c.label} — אף תלמיד לא ענה עדיין`, color: 'var(--muted)' });
-    else if (c.responded / c.expected < 0.5) alerts.push({ type: 'low-resp', text: `${c.label} — היענות נמוכה (${c.responded}/${c.expected})`, color: 'var(--mid)' });
-    if (c.avg > 0 && c.avg < 2.8) alerts.push({ type: 'low-score', text: `${c.label} — ציון נמוך (${c.avg.toFixed(1)}) — מומלץ שיחה עם מחנכת`, color: 'var(--low)' });
-    // Per question alerts
-    c.qAvgs.forEach((q, i) => {
-      if (q > 0 && q < 2.5) alerts.push({ type: 'q-alert', text: `${c.label} — שאלה ${i+1} ציון ${q.toFixed(1)} (נמוך במיוחד)`, color: 'var(--low)' });
-    });
-  });
-
-  if (alerts.length > 0) {
-    html += `<div class="alerts-card"><h2>התראות (${alerts.length})</h2>`;
-    alerts.forEach(a => {
-      html += `<div class="alert-item"><div class="alert-dot" style="background:${a.color}"></div><span class="alert-text">${a.text}</span></div>`;
-    });
-    html += '</div>';
-  }
 
   document.getElementById('content').innerHTML = html;
 }
