@@ -86,21 +86,22 @@ description: תהליך פרסום מסודר ברשתות חברתיות — ט
 2. לעדכן את רשימת הפרסומים בזיכרון (`project_published_posts.md`)
 3. לעדכן Link in Bio (`docs/marketing/linkinbio.html`) אם רלוונטי
 4. **אם הפוסט הוא טיפ יומי** — להוסיף כרטיס לעמוד הטיפים באתר Learni:
-   - קובץ: `docs/training/claude-code/tips.html`
-   - להוסיף בלוק `tip-card` חדש **בתחילת** ה-`tips-grid` (הטיפ החדש ביותר למעלה)
+   - קובץ: `docs/index.html` — סקשן `page-tips`, בתוך ה-`div#tipsGrid`
+   - להוסיף בלוק `tip-item` חדש **בתחילת** ה-`tipsGrid` (הטיפ החדש ביותר למעלה)
    - לעדכן: תאריך, כותרת, תמונה (URL מ-GitHub Pages), צבע כלי, שם כלי
    - לדחוף ל-GitHub
    - תבנית בלוק:
      ```html
-     <div class="tip-card" data-tool="TOOL_KEY">
-       <img class="tip-card-img" src="IMAGE_URL" alt="TITLE">
-       <div class="tip-card-body">
-         <div class="tip-card-date">DATE</div>
-         <div class="tip-card-title">TITLE</div>
-         <span class="tip-card-tool" style="background: TOOL_COLOR;">TOOL_NAME</span>
+     <div class="tip-item fade-in-up" data-tool="TOOL_KEY" style="background:var(--bg-card);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-md);transition:transform .3s,box-shadow .3s;cursor:default">
+       <img src="IMAGE_URL" alt="TITLE" style="width:100%;aspect-ratio:1;object-fit:cover;display:block" loading="lazy">
+       <div style="padding:1.2rem">
+         <div style="font-size:.78rem;color:var(--text-lighter);margin-bottom:6px">DATE</div>
+         <div style="font-size:1rem;font-weight:700;line-height:1.5;margin-bottom:10px">TITLE</div>
+         <span style="display:inline-block;padding:3px 12px;border-radius:20px;font-size:.78rem;font-weight:600;color:#fff;background:TOOL_COLOR">TOOL_NAME</span>
        </div>
      </div>
      ```
+   - נתיב תמונה מ-index.html: `marketing/assets/posts/FILENAME` (יחסי ל-docs/)
    - צבעי כלים: Claude=#D97757 | Gemini=#8E75B2 | ChatGPT=#412991 | NotebookLM=#EA4335 | Flow=#4285F4 | Canva=#7D2AE7
 
 ---
