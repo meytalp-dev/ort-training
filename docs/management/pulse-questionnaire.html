@@ -317,16 +317,22 @@ const TOT = {
     { q:'פרויקט בבית ספר —', a:'&#128101; עבודת צוות', b:'&#128100; עבודה עצמאית', ap:55, bp:45 },
   ],
   pedagogy: [
-    { q:'איך עדיף ללמוד?', a:'&#128214; מהספר', b:'&#128187; מסרטונים ופרויקטים', ap:22, bp:78 },
-    { q:'שיעור מוצלח =', a:'&#128172; דיון ושאלות', b:'&#128221; שקט וריכוז', ap:48, bp:52 },
+    { q:'נכון או לא נכון?', a:'&#128218; נכון', b:'&#10060; לא נכון', ap:35, bp:65,
+      mode:'fact', fact:'&#129504; בני נוער זוכרים 90% ממה שהם מלמדים אחרים — ורק 10% ממה שקוראים', answer:'נכון! לכן למידת עמיתים כל כך חזקה.' },
+    { q:'נכון או לא נכון?', a:'&#128218; נכון', b:'&#10060; לא נכון', ap:72, bp:28,
+      mode:'fact', fact:'&#127911; מוזיקה ברקע תמיד עוזרת לריכוז בזמן למידה', answer:'לא נכון! מוזיקה עם מילים דווקא מפריעה לרוב האנשים.' },
   ],
   relations: [
-    { q:'כשיש בעיה —', a:'&#128100; פותר לבד', b:'&#129309; פונה למבוגר', ap:58, bp:42 },
-    { q:'מורה טוב =', a:'&#128218; מלמד מעולה', b:'&#10084;&#65039; מבין אותי', ap:35, bp:65 },
+    { q:'מה הייתם עושים?', a:'&#128172; מספרים לחבר', b:'&#129309; פונים למורה', ap:68, bp:32,
+      mode:'scenario', fact:'&#128148; חבר סיפר לכם שהוא מרגיש לבד בהפסקות' },
+    { q:'מה הייתם עושים?', a:'&#128566; שותקים', b:'&#9995; אומרים למורה', ap:40, bp:60,
+      mode:'scenario', fact:'&#128064; ראיתם שמישהו מציק לתלמיד אחר' },
   ],
   employ: [
-    { q:'מה חשוב בעבודה?', a:'&#128176; משכורת טובה', b:'&#127775; שאוהבים את מה שעושים', ap:30, bp:70 },
-    { q:'איפה עדיף ללמוד מקצוע?', a:'&#127979; בכיתה', b:'&#128736; בשטח', ap:25, bp:75 },
+    { q:'מה לדעתכם?', a:'&#128200; 30%', b:'&#128201; 60%', ap:55, bp:45,
+      mode:'guess', fact:'&#128188; כמה אחוז מבוגרי תיכון מקצועי עובדים בתחום שלמדו?', answer:'כ-45%! כמעט חצי — וזה הרבה יותר מהממוצע.' },
+    { q:'מה לדעתכם?', a:'&#128176; 6,000 ש"ח', b:'&#128176; 10,000 ש"ח', ap:62, bp:38,
+      mode:'guess', fact:'&#128184; מה המשכורת הממוצעת של בוגר מקצועי בשנה הראשונה?', answer:'כ-8,500 ש"ח — תלוי במקצוע ובניסיון.' },
   ]
 };
 
@@ -443,25 +449,89 @@ function init() {
     <div class="tag">${pType==='pre'?'פולס פתיחה':'פולס סיום'}</div>
   </div>`;
 
-  // 1,2 — This or That
+  // 1,2 — Warm-up (different types per topic)
   tots.forEach((t, ti) => {
-    h += `<div class="scr" data-i="${1+ti}">
-      <div class="tot-label">מה אתם מעדיפים? ${ti+1}/${tots.length}</div>
-      <div class="tot-q">${t.q}</div>
-      <div class="tot-vs">
-        <div class="tot-side" onclick="pickTot(${1+ti},'a',this)" style="background:rgba(255,255,255,.05)">
-          <span class="tot-emoji">${t.a.split(' ')[0]}</span>
-          <span class="tot-text">${t.a.split(' ').slice(1).join(' ')}</span>
-          <span class="tot-pct">${t.ap}%</span>
+    const mode = t.mode || 'tot'; // tot, fact, scenario, guess
+
+    if (mode === 'fact') {
+      // True/False with fun fact
+      h += `<div class="scr" data-i="${1+ti}">
+        <div class="tot-label">נכון או לא נכון? ${ti+1}/${tots.length}</div>
+        <div class="tot-q" style="font-size:1.05rem;line-height:1.5;margin-bottom:20px">${t.fact}</div>
+        <div class="tot-vs">
+          <div class="tot-side" onclick="pickTot(${1+ti},'a',this)" style="background:rgba(255,255,255,.05)">
+            <span class="tot-emoji" style="font-size:2rem">&#128077;</span>
+            <span class="tot-text">נכון</span>
+            <span class="tot-pct" style="font-size:1rem">${t.answer ? '' : ''}</span>
+          </div>
+          <div class="tot-divider">?</div>
+          <div class="tot-side" onclick="pickTot(${1+ti},'b',this)" style="background:rgba(255,255,255,.05)">
+            <span class="tot-emoji" style="font-size:2rem">&#128078;</span>
+            <span class="tot-text">לא נכון</span>
+            <span class="tot-pct" style="font-size:1rem"></span>
+          </div>
         </div>
-        <div class="tot-divider">VS</div>
-        <div class="tot-side" onclick="pickTot(${1+ti},'b',this)" style="background:rgba(255,255,255,.05)">
-          <span class="tot-emoji">${t.b.split(' ')[0]}</span>
-          <span class="tot-text">${t.b.split(' ').slice(1).join(' ')}</span>
-          <span class="tot-pct">${t.bp}%</span>
+        <div class="trivia-result" id="totResult${1+ti}" style="margin-top:16px;font-size:.85rem;opacity:0;transition:opacity .4s;line-height:1.5">${t.answer || ''}</div>
+      </div>`;
+    } else if (mode === 'scenario') {
+      // "What would you do?" scenario
+      h += `<div class="scr" data-i="${1+ti}">
+        <div class="tot-label">מה הייתם עושים? ${ti+1}/${tots.length}</div>
+        <div class="tot-q" style="font-size:1.05rem;line-height:1.5;margin-bottom:20px">${t.fact}</div>
+        <div class="tot-vs">
+          <div class="tot-side" onclick="pickTot(${1+ti},'a',this)" style="background:rgba(255,255,255,.05)">
+            <span class="tot-emoji">${t.a.split(' ')[0]}</span>
+            <span class="tot-text">${t.a.split(' ').slice(1).join(' ')}</span>
+            <span class="tot-pct">${t.ap}%</span>
+          </div>
+          <div class="tot-divider">?</div>
+          <div class="tot-side" onclick="pickTot(${1+ti},'b',this)" style="background:rgba(255,255,255,.05)">
+            <span class="tot-emoji">${t.b.split(' ')[0]}</span>
+            <span class="tot-text">${t.b.split(' ').slice(1).join(' ')}</span>
+            <span class="tot-pct">${t.bp}%</span>
+          </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
+    } else if (mode === 'guess') {
+      // Guess the number
+      h += `<div class="scr" data-i="${1+ti}">
+        <div class="tot-label">מה לדעתכם? ${ti+1}/${tots.length}</div>
+        <div class="tot-q" style="font-size:1.05rem;line-height:1.5;margin-bottom:20px">${t.fact}</div>
+        <div class="tot-vs">
+          <div class="tot-side" onclick="pickTot(${1+ti},'a',this)" style="background:rgba(255,255,255,.05)">
+            <span class="tot-emoji" style="font-size:1.8rem">${t.a.split(' ').slice(1).join(' ')}</span>
+            <span class="tot-text"></span>
+            <span class="tot-pct"></span>
+          </div>
+          <div class="tot-divider">?</div>
+          <div class="tot-side" onclick="pickTot(${1+ti},'b',this)" style="background:rgba(255,255,255,.05)">
+            <span class="tot-emoji" style="font-size:1.8rem">${t.b.split(' ').slice(1).join(' ')}</span>
+            <span class="tot-text"></span>
+            <span class="tot-pct"></span>
+          </div>
+        </div>
+        <div class="trivia-result" id="totResult${1+ti}" style="margin-top:16px;font-size:.85rem;opacity:0;transition:opacity .4s;line-height:1.5">${t.answer || ''}</div>
+      </div>`;
+    } else {
+      // Default: This or That
+      h += `<div class="scr" data-i="${1+ti}">
+        <div class="tot-label">מה אתם מעדיפים? ${ti+1}/${tots.length}</div>
+        <div class="tot-q">${t.q}</div>
+        <div class="tot-vs">
+          <div class="tot-side" onclick="pickTot(${1+ti},'a',this)" style="background:rgba(255,255,255,.05)">
+            <span class="tot-emoji">${t.a.split(' ')[0]}</span>
+            <span class="tot-text">${t.a.split(' ').slice(1).join(' ')}</span>
+            <span class="tot-pct">${t.ap}%</span>
+          </div>
+          <div class="tot-divider">VS</div>
+          <div class="tot-side" onclick="pickTot(${1+ti},'b',this)" style="background:rgba(255,255,255,.05)">
+            <span class="tot-emoji">${t.b.split(' ')[0]}</span>
+            <span class="tot-text">${t.b.split(' ').slice(1).join(' ')}</span>
+            <span class="tot-pct">${t.bp}%</span>
+          </div>
+        </div>
+      </div>`;
+    }
   });
 
   // 3 — Class (skip for staff)
@@ -552,9 +622,13 @@ function pickTot(si, side, el) {
     if (s === el) { s.classList.add('picked'); s.classList.remove('not-picked'); }
     else { s.classList.add('not-picked'); s.classList.remove('picked'); }
   });
+  // Show result text if exists (for fact/guess modes)
+  const resultEl = document.getElementById('totResult' + si);
+  if (resultEl) resultEl.style.opacity = '1';
   // Auto advance — skip empty class screen if class already set
   const next = si + 1;
-  setTimeout(() => go((next === 3 && (preClass || isStaff)) ? 4 : next), 1200);
+  const delay = resultEl ? 2500 : 1200; // longer delay when showing fact
+  setTimeout(() => go((next === 3 && (preClass || isStaff)) ? 4 : next), delay);
 }
 
 function pickCls(c, el) {
