@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>פעילות חיה — חמשת הממדים</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Heebo,sans-serif;background:#F5F0E8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.ctn{max-width:700px;width:100%;text-align:center}
+h1{font-size:2rem;font-weight:800;color:#4A3F35;margin-bottom:6px}
+h2{font-size:1.5rem;font-weight:800;color:#4A3F35;margin-bottom:12px}
+.sub{font-size:.95rem;color:#6B5F55;margin-bottom:24px}
+.bdg{display:inline-block;padding:5px 16px;border-radius:20px;font-size:.82rem;font-weight:600;margin-bottom:10px}
+.card{background:#FFFDF8;border-radius:20px;padding:32px;border:2px solid #E8DDD0;margin-bottom:20px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;border-radius:20px 20px 0 0}
+.room-code{font-size:4rem;font-weight:800;letter-spacing:12px;margin:16px 0}
+.room-info{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;margin:20px 0}
+.qr-wrap{background:#fff;padding:12px;border-radius:12px;border:2px solid #E8DDD0}
+.qr-wrap img{display:block;width:180px;height:180px}
+.participants{font-size:1.1rem;font-weight:600;color:#6B5F55}
+.participants span{font-size:2rem;font-weight:800;display:block;margin-top:4px}
+.bar-wrap{margin:10px 0}
+.bar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-weight:600;font-size:.95rem}
+.bar-label .count{font-weight:700}
+.bar-outer{background:#E8DDD0;border-radius:10px;height:36px;overflow:hidden;position:relative}
+.bar-inner{height:100%;border-radius:10px;transition:width .5s ease;display:flex;align-items:center;padding-right:12px}
+.bar-pct{color:#fff;font-weight:700;font-size:.85rem}
+/* word cloud */
+.cloud-area{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;min-height:80px;padding:16px}
+.cloud-word{padding:6px 14px;border-radius:10px;font-weight:600;animation:pop .3s}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.cloud-section{margin-bottom:24px}
+.cloud-section h3{font-size:1.05rem;font-weight:700;margin-bottom:8px}
+/* student */
+.opt-btn{display:block;width:100%;padding:16px;margin:8px 0;border:2px solid #E8DDD0;border-radius:14px;font-family:Heebo;font-size:1.1rem;font-weight:600;cursor:pointer;background:#FFFDF8;text-align:right;transition:all .2s;min-height:52px}
+.opt-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.opt-btn.voted{opacity:.6;cursor:default}
+.input-row{display:flex;gap:10px;margin:8px 0}
+.input-row input{flex:1;padding:14px;border:2px solid #E8DDD0;border-radius:12px;font-family:Heebo;font-size:1rem}
+.input-row button{padding:14px 24px;border:none;border-radius:12px;color:#fff;font-family:Heebo;font-weight:700;cursor:pointer;font-size:1rem}
+.done-msg{font-size:1.3rem;font-weight:700;color:#6A9F6A;margin-top:24px}
+.fs-btn{position:fixed;top:12px;left:12px;padding:8px 16px;background:#FFFDF8;border:2px solid #E8DDD0;border-radius:10px;font-family:Heebo;font-weight:600;cursor:pointer;font-size:.8rem;z-index:100}
+.setup-msg{padding:40px;text-align:center}
+.setup-msg h2{color:#C0605A}
+.setup-msg p{color:#6B5F55;margin:12px 0;line-height:1.7}
+.setup-msg code{background:#E8DDD0;padding:2px 8px;border-radius:6px;font-size:.9rem}
+.scenario{background:#F5F0E8;border-radius:14px;padding:20px;margin-bottom:16px;text-align:right;line-height:1.6}
+.scenario .lbl{font-size:.75rem;font-weight:700;margin-bottom:6px}
+.scenario .txt{font-size:1.1rem;font-weight:600;color:#4A3F35}
+.q-text{font-size:1.2rem;font-weight:700;color:#4A3F35;margin-bottom:16px;line-height:1.5}
+@media(max-width:500px){
+  .room-code{font-size:2.8rem;letter-spacing:8px}
+  .card{padding:20px}
+  .room-info{flex-direction:column}
+  h1{font-size:1.6rem}
+}
+</style>
+</head>
+<body>
+
+<div class="ctn" id="main">
+  <div style="padding:40px;color:#6B5F55">טוען...</div>
+</div>
+
+<script>
+// =============================================
+// הגדרות Firebase — מלאי את הפרטים פעם אחת
+// =============================================
+// הוראות:
+// 1. היכנסי ל-https://console.firebase.google.com
+// 2. צרי פרויקט חדש (שם: "five-dimensions" למשל)
+// 3. בהגדרות הפרויקט → General → Your apps → Web app → Add
+// 4. העתיקי את ה-config object לכאן
+// 5. לכי ל-Realtime Database → Create Database → Start in test mode
+// 6. זהו! הכל עובד.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBFp-xdmOUV_QlkENkrbjvOoMFhcXmALFs",
+  authDomain: "five-dimensions-d77cf.firebaseapp.com",
+  databaseURL: "https://five-dimensions-d77cf-default-rtdb.firebaseio.com",
+  projectId: "five-dimensions-d77cf",
+  storageBucket: "five-dimensions-d77cf.firebasestorage.app",
+  messagingSenderId: "864664344083",
+  appId: "1:864664344083:web:2def420ed8ccf2bc6a51e6"
+};
+
+// =============================================
+// DIMS config (same as main page)
+// =============================================
+const DIMS = {
+  belong:{name:'שייכות',skill:'תיקון עולם',color:'#E06090'},
+  respect:{name:'כבוד',skill:'תקשורת אפקטיבית',color:'#5B9BD5'},
+  motiv:{name:'מוטיבציה פנימית',skill:'ניהול זמן ועצמי',color:'#E8A838'},
+  capable:{name:'מסוגלות ומימוש עצמי',skill:'יצירתיות וחדשנות',color:'#8B6BC0'},
+  auto:{name:'אוטונומיה',skill:'אחריות ויוזמה',color:'#7AB648'}
+};
+
+// =============================================
+// Init
+// =============================================
+const params = new URLSearchParams(location.search);
+let db = null;
+let roomRef = null;
+let COLOR = '#5B9BD5';
+
+function initFirebase() {
+  if (!FIREBASE_CONFIG.apiKey) return false;
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    return true;
+  } catch(e) { return false; }
+}
+
+function generateRoomCode() {
+  return String(1000 + Math.floor(Math.random() * 9000));
+}
+
+function getBaseURL() {
+  return location.href.split('?')[0];
+}
+
+function getQRUrl(url) {
+  return 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(url);
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// =============================================
+// ROUTER
+// =============================================
+(function init() {
+  const main = document.getElementById('main');
+
+  if (!initFirebase()) {
+    main.innerHTML = '<div class="setup-msg"><h2>Firebase לא מוגדר</h2><p>כדי להפעיל פעילויות חיות, צריך להגדיר Firebase פעם אחת.</p><p>פתחי את הקובץ <code>activity-live.html</code> ועקבי אחרי ההוראות בראש הקוד.</p><p>זה לוקח 5 דקות ואחרי זה הכל עובד לתמיד.</p></div>';
+    return;
+  }
+
+  if (params.has('room')) {
+    initStudent(params.get('room'));
+  } else if (params.has('type')) {
+    initTeacher();
+  } else {
+    main.innerHTML = '<div class="setup-msg"><h2>חסרים פרמטרים</h2><p>הדף הזה נפתח מתוך מערכת חמשת הממדים.</p></div>';
+  }
+})();
+
+// =============================================
+// TEACHER MODE
+// =============================================
+function initTeacher() {
+  const type = params.get('type'); // poll or cloud
+  const dim = params.get('dim') || 'belong';
+  const grade = params.get('grade') || 'ט';
+  const topic = params.get('topic') || '';
+  const dimInfo = DIMS[dim] || DIMS.belong;
+  COLOR = dimInfo.color;
+  document.title = (type === 'poll' ? 'סקר' : 'ענן מילים') + ' — ' + topic;
+
+  // Parse activity data from URL
+  let activityData = {};
+  try { activityData = JSON.parse(decodeURIComponent(params.get('data') || '{}')); } catch(e){}
+
+  const code = generateRoomCode();
+  const studentURL = getBaseURL() + '?room=' + code;
+
+  // Create room in Firebase
+  roomRef = db.ref('rooms/' + code);
+  const roomData = {
+    config: { type, dim, grade, topic, color: dimInfo.color, dimName: dimInfo.name, createdAt: Date.now() },
+    activity: activityData,
+    participants: 0
+  };
+
+  if (type === 'poll') {
+    roomData.votes = { opt0: 0, opt1: 0, opt2: 0, opt3: 0 };
+  } else {
+    roomData.words1 = {};
+    roomData.words2 = {};
+  }
+
+  roomRef.set(roomData);
+
+  // Auto-delete room after 3 hours
+  roomRef.onDisconnect().remove();
+  setTimeout(function(){ roomRef.remove(); }, 3 * 60 * 60 * 1000);
+
+  // Render teacher UI
+  const main = document.getElementById('main');
+  main.innerHTML =
+    '<div class="bdg" style="background:' + COLOR + '22;color:' + COLOR + '">' + dimInfo.name + ' — ' + dimInfo.skill + '</div>' +
+    '<h1>' + esc(topic) + '</h1>' +
+    '<div class="sub">שכבת ' + esc(grade) + ' — ' + (type === 'poll' ? 'סקר כיתתי' : 'ענן מילים') + '</div>' +
+
+    '<div class="card" style="border-color:' + COLOR + '40"><div style="position:absolute;top:0;left:0;right:0;height:4px;background:' + COLOR + ';border-radius:20px 20px 0 0"></div>' +
+    '<div style="font-size:.85rem;font-weight:600;color:' + COLOR + ';margin-bottom:8px">קוד כניסה לתלמידים</div>' +
+    '<div class="room-code" style="color:' + COLOR + '">' + code + '</div>' +
+    '<div class="room-info">' +
+      '<div class="qr-wrap"><img src="' + getQRUrl(studentURL) + '" alt="QR Code"></div>' +
+      '<div style="text-align:center"><div class="participants">משתתפים<span id="pCount">0</span></div>' +
+      '<button onclick="copyLink()" style="margin-top:12px;padding:10px 20px;background:' + COLOR + ';color:#fff;border:none;border-radius:10px;font-family:Heebo;font-weight:600;cursor:pointer;font-size:.85rem" id="copyBtn">העתק קישור</button></div>' +
+    '</div></div>' +
+
+    '<div class="card" id="liveArea"><div style="position:absolute;top:0;left:0;right:0;height:4px;background:' + COLOR + ';border-radius:20px 20px 0 0"></div><div id="results">ממתין לתשובות...</div></div>';
+
+  // Fullscreen button
+  document.body.insertAdjacentHTML('afterbegin',
+    '<button class="fs-btn" onclick="toggleFS()">מסך מלא</button>');
+
+  // Copy link function
+  window.copyLink = function() {
+    navigator.clipboard.writeText(studentURL).then(function() {
+      document.getElementById('copyBtn').textContent = 'הועתק!';
+      setTimeout(function(){ document.getElementById('copyBtn').textContent = 'העתק קישור'; }, 2000);
+    });
+  };
+
+  // Fullscreen
+  window.toggleFS = function() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(function(){});
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  // Listen for real-time updates
+  if (type === 'poll') {
+    renderTeacherPoll(activityData);
+    listenPollVotes();
+  } else {
+    renderTeacherCloud(activityData);
+    listenCloudWords();
+  }
+
+  // Listen for participants
+  roomRef.child('participants').on('value', function(snap) {
+    document.getElementById('pCount').textContent = snap.val() || 0;
+  });
+}
+
+// ── Teacher Poll ──
+function renderTeacherPoll(data) {
+  const el = document.getElementById('results');
+  const opts = data.options || ['אפשרות 1','אפשרות 2','אפשרות 3','אפשרות 4'];
+  let html = '';
+  if (data.scenario) {
+    html += '<div class="scenario"><div class="lbl" style="color:' + COLOR + '">תרחיש</div><div class="txt">' + data.scenario + '</div></div>';
+  }
+  if (data.question) {
+    html += '<div class="q-text">' + data.question + '</div>';
+  }
+  html += '<div id="pollBars">';
+  opts.forEach(function(o, i) {
+    html += '<div class="bar-wrap"><div class="bar-label"><span>' + o + '</span><span class="count" id="cnt' + i + '">0</span></div><div class="bar-outer"><div class="bar-inner" id="bar' + i + '" style="width:0%;background:' + COLOR + '"><span class="bar-pct" id="pct' + i + '"></span></div></div></div>';
+  });
+  html += '</div><div style="margin-top:16px;font-size:.9rem;color:#6B5F55" id="totalVotes">0 הצבעות</div>';
+  el.innerHTML = html;
+}
+
+function listenPollVotes() {
+  roomRef.child('votes').on('value', function(snap) {
+    const v = snap.val() || {};
+    const vals = [v.opt0||0, v.opt1||0, v.opt2||0, v.opt3||0];
+    const total = vals.reduce(function(a,b){return a+b}, 0);
+    vals.forEach(function(count, i) {
+      const pct = total ? Math.round(count / total * 100) : 0;
+      var bar = document.getElementById('bar' + i);
+      var cnt = document.getElementById('cnt' + i);
+      var pctEl = document.getElementById('pct' + i);
+      if (bar) bar.style.width = Math.max(pct, 2) + '%';
+      if (cnt) cnt.textContent = count;
+      if (pctEl) pctEl.textContent = pct > 5 ? pct + '%' : '';
+    });
+    var tv = document.getElementById('totalVotes');
+    if (tv) tv.textContent = total + ' הצבעות';
+  });
+}
+
+// ── Teacher Cloud ──
+function renderTeacherCloud(data) {
+  const el = document.getElementById('results');
+  el.innerHTML =
+    '<div class="cloud-section"><h3 style="color:' + COLOR + '">' + (data.p1 || 'מילים חיוביות') + '</h3><div class="cloud-area" id="cloud1"></div></div>' +
+    '<div class="cloud-section"><h3 style="color:#C0605A">' + (data.p2 || 'מילים שליליות') + '</h3><div class="cloud-area" id="cloud2"></div></div>' +
+    '<div style="font-size:.9rem;color:#6B5F55" id="wordCount">0 מילים</div>';
+}
+
+function listenCloudWords() {
+  var sizes = ['1rem','1.3rem','1.6rem','2rem','1.1rem','1.8rem','1.4rem'];
+  var colors1 = [COLOR,'#E8A838','#7AB648','#5B9BD5'];
+  var colors2 = ['#C0605A','#E06090','#8B6BC0','#D4A574'];
+  var totalWords = 0;
+
+  roomRef.child('words1').on('child_added', function(snap) {
+    var w = snap.val();
+    addWordToCloud('cloud1', w, sizes, colors1);
+    totalWords++;
+    var wc = document.getElementById('wordCount');
+    if (wc) wc.textContent = totalWords + ' מילים';
+  });
+  roomRef.child('words2').on('child_added', function(snap) {
+    var w = snap.val();
+    addWordToCloud('cloud2', w, sizes, colors2);
+    totalWords++;
+    var wc = document.getElementById('wordCount');
+    if (wc) wc.textContent = totalWords + ' מילים';
+  });
+}
+
+function addWordToCloud(containerId, word, sizes, colors) {
+  var area = document.getElementById(containerId);
+  if (!area) return;
+  var n = area.children.length;
+  var s = document.createElement('span');
+  s.className = 'cloud-word';
+  s.style.fontSize = sizes[n % sizes.length];
+  s.style.color = colors[n % colors.length];
+  s.style.background = colors[n % colors.length] + '18';
+  s.textContent = word;
+  area.appendChild(s);
+}
+
+// =============================================
+// STUDENT MODE
+// =============================================
+function initStudent(code) {
+  roomRef = db.ref('rooms/' + code);
+
+  roomRef.child('config').once('value', function(snap) {
+    const config = snap.val();
+    if (!config) {
+      document.getElementById('main').innerHTML = '<div class="setup-msg"><h2>חדר לא נמצא</h2><p>ייתכן שהקוד שגוי או שהפעילות הסתיימה.</p></div>';
+      return;
+    }
+
+    COLOR = config.color || '#5B9BD5';
+    document.title = config.topic + ' — ' + config.dimName;
+
+    // Increment participants using set with serverValue
+    var pRef = roomRef.child('participants');
+    pRef.once('value', function(s) {
+      var n = (s.val() || 0) + 1;
+      pRef.set(n);
+      pRef.onDisconnect().set(Math.max(n - 1, 0));
+    });
+
+    // Get activity data
+    roomRef.child('activity').once('value', function(actSnap) {
+      const activity = actSnap.val() || {};
+
+      if (config.type === 'poll') {
+        renderStudentPoll(config, activity);
+      } else {
+        renderStudentCloud(config, activity);
+      }
+    });
+  });
+}
+
+// ── Student Poll ──
+function renderStudentPoll(config, data) {
+  const main = document.getElementById('main');
+  const opts = data.options || ['1','2','3','4'];
+  let html =
+    '<div class="bdg" style="background:' + COLOR + '22;color:' + COLOR + '">' + config.dimName + '</div>' +
+    '<h2>' + esc(config.topic) + '</h2>';
+  if (data.scenario) {
+    html += '<div class="scenario"><div class="lbl" style="color:' + COLOR + '">תרחיש</div><div class="txt">' + data.scenario + '</div></div>';
+  }
+  if (data.question) {
+    html += '<div class="q-text">' + data.question + '</div>';
+  }
+  html += '<div id="pollOpts">';
+  opts.forEach(function(o, i) {
+    html += '<button class="opt-btn" onclick="castVote(' + i + ',this)" style="border-color:#E8DDD0">' + o + '</button>';
+  });
+  html += '</div><div id="voteDone"></div>';
+  main.innerHTML = html;
+
+  window.castVote = function(idx, btn) {
+    // Disable all buttons
+    document.querySelectorAll('.opt-btn').forEach(function(b) {
+      b.classList.add('voted');
+      b.onclick = null;
+    });
+    btn.style.borderColor = COLOR;
+    btn.style.background = COLOR + '15';
+    btn.classList.remove('voted');
+
+    // Write to Firebase
+    roomRef.child('votes/opt' + idx).transaction(function(current) {
+      return (current || 0) + 1;
+    });
+
+    document.getElementById('voteDone').innerHTML = '<div class="done-msg">ההצבעה נרשמה!</div>';
+  };
+}
+
+// ── Student Cloud ──
+function renderStudentCloud(config, data) {
+  const main = document.getElementById('main');
+  let html =
+    '<div class="bdg" style="background:' + COLOR + '22;color:' + COLOR + '">' + config.dimName + '</div>' +
+    '<h2>' + esc(config.topic) + '</h2>';
+
+  html += '<div style="margin:16px 0;text-align:right"><h3 style="font-size:1rem;font-weight:700;color:' + COLOR + ';margin-bottom:8px">' + (data.p1 || 'חיובי') + '</h3>';
+  html += '<div class="input-row"><input id="w1" placeholder="כתבו מילה..." maxlength="30"><button onclick="addWord(1)" style="background:' + COLOR + '">שלח</button></div></div>';
+
+  html += '<div style="margin:16px 0;text-align:right"><h3 style="font-size:1rem;font-weight:700;color:#C0605A;margin-bottom:8px">' + (data.p2 || 'שלילי') + '</h3>';
+  html += '<div class="input-row"><input id="w2" placeholder="כתבו מילה..." maxlength="30"><button onclick="addWord(2)" style="background:#C0605A">שלח</button></div></div>';
+
+  html += '<div id="myWords" style="margin-top:16px;font-size:.85rem;color:#6B5F55"></div>';
+  main.innerHTML = html;
+
+  // Enter key support
+  document.getElementById('w1').onkeydown = function(e){ if(e.key==='Enter') addWord(1); };
+  document.getElementById('w2').onkeydown = function(e){ if(e.key==='Enter') addWord(2); };
+
+  var myCount = 0;
+  window.addWord = function(group) {
+    var input = document.getElementById('w' + group);
+    var word = input.value.trim();
+    if (!word || word.length > 30) return;
+    if (myCount >= 10) { input.value = ''; input.placeholder = 'מגבלה: עד 10 מילים'; return; }
+
+    roomRef.child('words' + group).push(word);
+    input.value = '';
+    input.focus();
+    myCount++;
+    document.getElementById('myWords').textContent = myCount + '/10 מילים נשלחו';
+  };
+}
+</script>
+</body>
+</html>
