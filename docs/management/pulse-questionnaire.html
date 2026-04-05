@@ -124,13 +124,15 @@ h1{font-size:1.6rem;font-weight:900;margin-bottom:8px}
 .slider-input::-webkit-slider-thumb{
   -webkit-appearance:none;width:32px;height:32px;border-radius:50%;
   background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:grab;
-  border:3px solid rgba(255,255,255,.8);
+  border:3px solid rgba(255,255,255,.8);opacity:.2;transition:opacity .3s;
 }
+.slider-input.touched::-webkit-slider-thumb{opacity:1}
 .slider-input::-moz-range-thumb{
   width:32px;height:32px;border-radius:50%;
   background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:grab;
-  border:3px solid rgba(255,255,255,.8);
+  border:3px solid rgba(255,255,255,.8);opacity:.2;transition:opacity .3s;
 }
+.slider-input.touched::-moz-range-thumb{opacity:1}
 .slider-labels{display:flex;justify-content:space-between;margin-top:10px}
 .slider-labels span{font-size:.7rem;opacity:.4;font-weight:500}
 .slider-val{
@@ -184,6 +186,9 @@ h1{font-size:1.6rem;font-weight:900;margin-bottom:8px}
   100%{transform:translateY(100vh) rotate(720deg);opacity:0}
 }
 
+/* Shake */
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
 /* Blobs */
 .blob{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none;z-index:0}
 </style>
@@ -202,7 +207,7 @@ h1{font-size:1.6rem;font-weight:900;margin-bottom:8px}
 // CONFIG
 // ============================================
 
-const API = '';
+const API = 'https://script.google.com/macros/s/AKfycbxrL5JUNobh0zSa30mghlBwgTJuzgbz78sfpcUtwPCFrn419bmT4rUzDDzcB1dTKAH4kQ/exec';
 
 const D = {
   belong: { n:'שייכות', c:'#E06090', g:'linear-gradient(135deg,#E06090,#a03868)',
@@ -218,11 +223,39 @@ const D = {
 };
 
 const Q = {
-  belong: ['יש לי חברים טובים בכיתה','אכפת למישהו פה ממני','אני חלק מהכיתה','כשאני לא פה — חסר לי','יש לי למי לפנות כשקשה','אני מרגיש/ה בבית פה'],
-  respect: ['מתייחסים אלי בכבוד','אני יודע/ת להקשיב','אני פונה לאחרים בכבוד','המורים מקשיבים לי','אני מכבד/ת שונות','כשפוגעים בי — אני יודע/ת לדבר'],
-  motiv: ['אני רוצה ללמוד גם בלי שמכריחים','יש פה נושאים שמעניינים אותי','מה שלומדים — רלוונטי לחיים','אני שמח/ה כשפותר/ת בעיה','אני מציב/ה לעצמי מטרות','אני מוכן/ה להתאמץ'],
-  capable: ['אני מאמין/ה שאני יכול/ה','כשמתאמצים — מצליחים','יש לי חוזקה ייחודית','אני לא מוותר/ת בקלות','אני גאה במה שאני','אני יכול/ה ליצור דברים חדשים'],
-  auto: ['יש לי בחירה בבית הספר','אני מקבל/ת החלטות לבד','אני לוקח/ת אחריות','אני חופשי/ה להביע דעה','אני יודע/ת לנהל זמן','אני יוזם/ת דברים']
+  belong: [
+    'אני מרגיש שייך לכיתה שלי',
+    'אם ישאלו אותי, אמליץ לחברים ללמוד בבית הספר הזה',
+    'רוב הזמן טוב לי בבית הספר',
+    'ברוב הימים אני יוצא עם תחושה טובה מיום הלימודים',
+    'מבחינה לימודית, טוב לי בבית הספר'
+  ],
+  respect: [
+    'רוב המורים מתייחסים אליי בצורה הוגנת ומכבדת',
+    'אני מרגיש שמקשיבים לדעה שלי בכיתה',
+    'התלמידים בכיתה מתייחסים זה לזה בכבוד',
+    'כשיש חילוקי דעות, אפשר להביע דעה בלי פחד',
+    'בכיתה שלנו מדברים על נושאים שחשובים לבני נוער'
+  ],
+  motiv: [
+    'השיעורים מעניינים ומאפשרים לי להיות מעורב ופעיל',
+    'יש לי מטרה שחשוב לי להגשים',
+    'אני רוצה להצליח בחיים ובית הספר עוזר לי בזה',
+    'אני רוצה ללמוד ולהתקדם גם בלי שמכריחים',
+    'יש נושאים בבית הספר שבאמת מעניינים אותי'
+  ],
+  capable: [
+    'אני יכול לבטא את הכישורים והכישרונות שלי בבית הספר',
+    'אני מרגיש שאני יכול להצליח בבית הספר',
+    'המורים מכירים את הכישרונות והיכולות שלי',
+    'המורים מאמינים שאני מסוגל ללמוד ולהתקדם',
+    'בבית הספר מעודדים אותי לגלות יוזמות ומנהיגות'
+  ],
+  auto: [
+    'ניתנת לי אפשרות להשפיע על החלטות כמו תלבושת, מה ימכרו במזנון, או בקשות שישפרו את ההרגשה שלי',
+    'יש תלמידים שמשתתפים במועצת תלמידים, בתכנון טיולים, טקסים ואירועים',
+    'ניתנת לי אפשרות לבחור מגמה, מסלול, שיעורים או נושאים שמעניינים אותי'
+  ]
 };
 
 const FACES = ['&#128549;','&#128533;','&#128528;','&#128578;','&#129321;'];
@@ -252,12 +285,21 @@ const TOT = {
   ]
 };
 
+// Alertness — smarter questions that require reading
 const ALERT = {
-  belong: { q:'מה הצבע של השמיים ביום בהיר?', o:['&#128994; ירוק','&#128309; כחול','&#128308; אדום','&#128992; צהוב'], c:1 },
-  respect: { q:'כמה ימים יש בשבוע?', o:['5','6','7','8'], c:2 },
-  motiv: { q:'מה בא אחרי יום שלישי?', o:['שני','רביעי','חמישי','שישי'], c:1 },
-  capable: { q:'2 + 2 = ?', o:['3','4','5','22'], c:1 },
-  auto: { q:'באיזו עונה הכי חם?', o:['חורף','אביב','קיץ','סתיו'], c:2 }
+  belong: { q:'סמנו את התשובה שכתוב בה "ירוק"', o:['כחול','אדום','ירוק','צהוב'], c:2 },
+  respect: { q:'איזו מילה הכי ארוכה?', o:['כן','שלום','אחריות','לב'], c:2 },
+  motiv: { q:'סמנו את המספר הכי קטן', o:['17','8','23','41'], c:1 },
+  capable: { q:'איזו מילה לא שייכת לקבוצה?', o:['כלב','חתול','שולחן','דג'], c:2 },
+  auto: { q:'סמנו את התשובה השלישית מלמעלה', o:['ראשונה','שנייה','שלישית','רביעית'], c:2 }
+};
+
+// Class labels — single source of truth
+const CLASS_LABELS = {
+  'ט1':"ט׳1", 'ט2':"ט׳2", 'ט3':"ט׳3",
+  'י1':"י׳1", 'י2':"י׳2", 'י3':"י׳3",
+  'יא1':"י״א1", 'יא2':"י״א2", 'יא3':"י״א3",
+  'יב1':"י״ב1", 'יב2':"י״ב2"
 };
 
 // ---- STAFF DATA ----
@@ -316,9 +358,30 @@ function init() {
   document.getElementById('b1').style.background = d.c;
   document.getElementById('b2').style.background = d.c;
 
-  // Screens: intro, tot1, tot2, class, q1, q2, q3, alert, q4, q5, q6, done
-  // indices: 0,     1,    2,    3,     4,  5,  6,  7,     8,  9,  10, 11
-  total = 12;
+  // Dynamic screen layout based on question count
+  // intro(0), tot1(1), tot2(2), class(3), questions..., alertness, more questions..., done
+  const qCount = qs.length;
+  const alertAfter = Math.ceil(qCount / 2); // alertness after half the questions
+  // total screens: 4 fixed (intro, tot1, tot2, class) + qCount questions + 1 alertness + 1 done
+  total = 4 + qCount + 1 + 1;
+  const alertScreenIdx = 4 + alertAfter;
+  const doneScreenIdx = total - 1;
+
+  // Store for navigation logic
+  window._alertIdx = alertScreenIdx;
+  window._doneIdx = doneScreenIdx;
+  window._alertAfter = alertAfter;
+  window._qCount = qCount;
+
+  // Map: qi → screen index, and qi → what to do after ("next screen" or "alert" or "finish")
+  window._qScreens = {};
+  let tmpSi = 4;
+  for (let i = 0; i < qCount; i++) {
+    if (i === alertAfter) tmpSi++; // skip alertness screen
+    window._qScreens[i] = tmpSi;
+    tmpSi++;
+  }
+
   document.getElementById('bars').innerHTML = Array(total).fill('<div class="bar"><div class="fill"></div></div>').join('');
 
   let h = '';
@@ -327,7 +390,7 @@ function init() {
   h += `<div class="scr on" data-i="0">
     <div class="intro-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">${d.ic}</svg></div>
     <h1>פולס ${d.n}</h1>
-    <p class="sub">${isStaff ? 'קודם כל — שאלה קצרה<br>ואז 6 היגדים על איך אתם מרגישים בצוות<br>אנונימי לחלוטין. 2 דקות.' : 'קודם כל — משחק קצר<br>ואז 6 משפטים על איך אתם מרגישים<br>אנונימי. בלי ציונים. 2 דקות.'}</p>
+    <p class="sub">${isStaff ? 'קודם כל — שאלה קצרה<br>ואז כמה היגדים על איך אתם מרגישים בצוות<br>אנונימי לחלוטין. 2 דקות.' : 'קודם כל — משחק קצר<br>ואז כמה משפטים על איך אתם מרגישים<br>אנונימי. בלי ציונים. 2 דקות.'}</p>
     <button class="pill" onclick="go(1)">יאללה</button>
     <div class="tag">${pType==='pre'?'פולס פתיחה':'פולס סיום'}</div>
   </div>`;
@@ -358,8 +421,8 @@ function init() {
     h += `<div class="scr" data-i="3">
       <h1 style="font-size:1.3rem;margin-bottom:20px">מאיזו כיתה?</h1>
       <div class="cls-grid">
-        ${['ט1','ט2','ט3','י1','י2','י3','יא1','יא2','יא3','יב1','יב2','יב3'].map(c =>
-          `<button class="cls-btn" onclick="pickCls('${c}',this)">${c.replace('יא','י״א').replace('יב','י״ב').replace('ט','ט׳').replace('י','י׳')}</button>`
+        ${Object.entries(CLASS_LABELS).map(([id, label]) =>
+          `<button class="cls-btn" onclick="pickCls('${id}',this)">${label}</button>`
         ).join('')}
       </div>
     </div>`;
@@ -367,11 +430,15 @@ function init() {
     h += `<div class="scr" data-i="3"></div>`;
   }
 
-  // 4,5,6 — Q1-Q3
-  for (let i=0;i<3;i++) h += sliderScreen(i, 4+i, qs[i], qs.length);
+  // Questions before alertness (first half)
+  let si = 4;
+  for (let i = 0; i < alertAfter; i++) {
+    h += sliderScreen(i, si, qs[i], qCount);
+    si++;
+  }
 
-  // 7 — Alertness
-  h += `<div class="scr" data-i="7">
+  // Alertness check
+  h += `<div class="scr" data-i="${si}">
     <div class="alert-icon">&#9889;</div>
     <div class="alert-q">${al.q}</div>
     <div class="alert-sub">רגע, רק בודקים שאתם איתנו</div>
@@ -379,21 +446,25 @@ function init() {
       ${al.o.map((o,i) => `<button class="alert-btn" onclick="checkAl(${i},this)">${o}</button>`).join('')}
     </div>
   </div>`;
+  si++;
 
-  // 8,9,10 — Q4-Q6
-  for (let i=3;i<6;i++) h += sliderScreen(i, 5+i, qs[i], qs.length);
+  // Questions after alertness (second half)
+  for (let i = alertAfter; i < qCount; i++) {
+    h += sliderScreen(i, si, qs[i], qCount);
+    si++;
+  }
 
-  // 11 — Done
-  h += `<div class="scr" data-i="11">
+  // Done
+  h += `<div class="scr" data-i="${si}">
     <div class="confetti-box" id="cft"></div>
     <div class="done-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3"/></svg></div>
     <h1 style="font-size:1.4rem">סיימתם!</h1>
     <p class="sub">${isStaff ? 'תודה על ההשתתפות<br>ביחד אנחנו בונים צוות חזק יותר' : 'תודה שהשתתפתם<br>ביחד אנחנו עושים את זה טוב יותר'}</p>
     <div class="done-stats">
-      <div class="done-stat"><div class="v">6</div><div class="l">שאלות</div></div>
+      <div class="done-stat"><div class="v">${qCount}</div><div class="l">שאלות</div></div>
       <div class="done-stat"><div class="v" id="avg">—</div><div class="l">ממוצע</div></div>
     </div>
-    <button class="pill" onclick="window.close()" style="font-size:.85rem;padding:10px 32px">סגירה</button>
+    <button class="pill" onclick="try{window.close()}catch(e){}" style="font-size:.85rem;padding:10px 32px">אפשר לסגור את הטאב</button>
   </div>`;
 
   document.getElementById('screens').innerHTML = h;
@@ -405,16 +476,17 @@ function sliderScreen(qi, si, txt, total) {
     <div class="q-num">${qi+1} / ${total}</div>
     <div class="q-text">${txt}</div>
     <div class="slider-wrap">
-      <div class="slider-face" id="face${si}">&#128528;</div>
+      <div class="slider-face" id="face${si}" style="opacity:.3">&#128528;</div>
+      <div style="font-size:.75rem;opacity:.4;margin-bottom:8px">גררו את העיגול</div>
       <div class="slider-track">
         <input type="range" class="slider-input" id="sl${si}" min="1" max="5" step="1" value="3"
           oninput="onSlide(${si},${qi},this.value)"
           onchange="onSlide(${si},${qi},this.value)">
       </div>
       <div class="slider-labels"><span>ממש לא</span><span>לגמרי!</span></div>
-      <div class="slider-val" id="val${si}">ככה ככה</div>
+      <div class="slider-val" id="val${si}"></div>
       <button class="btn-next" id="btn${si}" onclick="confirmQ(${si},${qi})">
-        ${qi===5 ? 'סיום' : 'הבא'}
+        ${qi===total-1 ? 'סיום' : 'הבא'}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
     </div>
@@ -432,8 +504,9 @@ function pickTot(si, side, el) {
     if (s === el) { s.classList.add('picked'); s.classList.remove('not-picked'); }
     else { s.classList.add('not-picked'); s.classList.remove('picked'); }
   });
-  // Auto advance
-  setTimeout(() => go(si + 1), 1200);
+  // Auto advance — skip empty class screen if class already set
+  const next = si + 1;
+  setTimeout(() => go((next === 3 && (preClass || isStaff)) ? 4 : next), 1200);
 }
 
 function pickCls(c, el) {
@@ -446,42 +519,54 @@ function pickCls(c, el) {
 let sliderTouched = {};
 function onSlide(si, qi, val) {
   val = parseInt(val);
-  document.getElementById('face' + si).innerHTML = FACES[val - 1];
+  const face = document.getElementById('face' + si);
+  face.innerHTML = FACES[val - 1];
+  face.style.opacity = '1';
   document.getElementById('val' + si).textContent = FACE_LABELS[val - 1];
   document.getElementById('val' + si).classList.add('show');
   document.getElementById('btn' + si).classList.add('show');
   sliderTouched[si] = true;
   ans[qi] = val;
+  document.getElementById('sl' + si).classList.add('touched');
 
   // Animate face
-  const face = document.getElementById('face' + si);
   face.style.transform = 'scale(1.2)';
   setTimeout(() => face.style.transform = 'scale(1)', 150);
 }
 
 function confirmQ(si, qi) {
   if (!sliderTouched[si]) {
-    // Default to 3 if they didn't touch it
-    ans[qi] = 3;
+    const wrap = document.getElementById('face' + si).parentElement;
+    wrap.style.animation = 'none'; wrap.offsetHeight;
+    wrap.style.animation = 'shake .4s ease';
+    return;
   }
-  if (qi === 5) {
+  // Last question → finish
+  if (qi === window._qCount - 1) {
     finish();
-  } else if (qi === 2) {
-    // After Q3 → alertness
-    go(7);
-  } else {
-    go(si + 1);
+  }
+  // Last question before alertness → go to alertness
+  else if (qi === window._alertAfter - 1) {
+    go(window._alertIdx);
+  }
+  // Otherwise → next question's screen
+  else {
+    const nextQi = qi + 1;
+    go(window._qScreens[nextQi]);
   }
 }
 
 function checkAl(i, el) {
   const correct = ALERT[dim].c;
   alertOk = (i === correct);
-  document.querySelectorAll('#alOpts .alert-btn').forEach((b, bi) => {
+  const btns = el.closest('.alert-opts').querySelectorAll('.alert-btn');
+  btns.forEach((b, bi) => {
     b.style.pointerEvents = 'none';
-    b.classList.add(bi === correct ? 'yes' : (bi === i && i !== correct ? 'no' : ''));
+    if (bi === correct) b.classList.add('yes');
+    else if (bi === i && i !== correct) b.classList.add('no');
   });
-  setTimeout(() => go(8), 1000);
+  const nextScreen = window._alertIdx + 1;
+  setTimeout(() => go(nextScreen), 1000);
 }
 
 // ============================================
@@ -513,7 +598,7 @@ function finish() {
   const a = v.length ? (v.reduce((a,b)=>a+b,0)/v.length).toFixed(1) : '—';
   setTimeout(() => {
     document.getElementById('avg').textContent = a;
-    go(11);
+    go(window._doneIdx);
     confetti();
     save();
   }, 400);
@@ -524,7 +609,7 @@ function save() {
   fetch(API, {
     method:'POST',
     body:JSON.stringify({action:'savePulse',pulse:{dim,type:pType,class:cls,answers:ans,role:role,alertness:alertOk}}),
-    headers:{'Content-Type':'application/json'}
+    headers:{'Content-Type':'text/plain'}
   }).catch(()=>{});
 }
 
@@ -545,11 +630,17 @@ function confetti() {
   }
 }
 
-// Touch
+// Touch — block back on intro, trivia, alertness, done (dynamic)
+const noBack = new Set([0, 1, 2, 3, window._alertIdx, window._doneIdx]);
 let tx=0;
 document.addEventListener('touchstart',e=>tx=e.touches[0].clientX);
-document.addEventListener('touchend',e=>{if(e.changedTouches[0].clientX-tx<-60&&cur>3)go(cur-1)});
-document.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'&&cur>0)go(cur-1)});
+document.addEventListener('touchend',e=>{
+  const delta = e.changedTouches[0].clientX - tx;
+  if (delta > 60 && !noBack.has(cur) && cur > 3) go(cur-1); // RTL: swipe right = back
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'&&!noBack.has(cur)&&cur>3)go(cur-1); // RTL: right arrow = back
+});
 
 init();
 </script>
