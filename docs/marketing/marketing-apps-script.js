@@ -659,37 +659,32 @@ function sendNewsletterReminder() {
 function sendAIDigest(data) {
   var today = data.date || new Date().toLocaleDateString('he-IL');
 
-  // בניית תוכן מהסיכום
-  var summaryHtml = (data.summary || '').replace(/\n/g, '<br>');
-
-  // קישורים לארטיפקטים
-  var linksHtml = '';
-
-  if (data.notebook_url) {
-    linksHtml += '<a href="' + data.notebook_url + '" style="display:inline-block;background:#7C3AED;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;margin:4px;font-size:14px">NotebookLM</a> ';
+  // Use pre-built HTML from Python if provided, otherwise fall back to generic template
+  var html;
+  if (data.html_body && data.html_body.length > 100) {
+    html = data.html_body;
+  } else {
+    var summaryHtml = (data.summary || '').replace(/\n/g, '<br>');
+    var linksHtml = '';
+    if (data.notebook_url) {
+      linksHtml += '<a href="' + data.notebook_url + '" style="display:inline-block;background:#7C3AED;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;margin:4px;font-size:14px">NotebookLM</a> ';
+    }
+    html = buildEmailTemplate({
+      preheader: 'סקירת בוקר Learni — ' + today,
+      title: 'סקירת בוקר — ' + today,
+      body: '<div style="line-height:1.8;font-size:15px">' + summaryHtml + '</div>' +
+        (linksHtml ? '<div style="margin-top:24px;text-align:center">' + linksHtml + '</div>' : ''),
+      ctaText: '',
+      ctaUrl: '',
+      footer: 'סקירת בוקר — נוצר אוטומטית ע"י NotebookLM + Claude Code'
+    });
   }
-  if (data.infographic_url) {
-    linksHtml += '<a href="' + data.infographic_url + '" style="display:inline-block;background:#8B5CF6;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;margin:4px;font-size:14px">Infographic</a> ';
-  }
-  if (data.slides_url) {
-    linksHtml += '<a href="' + data.slides_url + '" style="display:inline-block;background:#6D28D9;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;margin:4px;font-size:14px">Slides</a> ';
-  }
-
-  var html = buildEmailTemplate({
-    preheader: 'AI Digest — ' + today,
-    title: 'AI Digest — ' + today,
-    body: '<div style="line-height:1.8;font-size:15px">' + summaryHtml + '</div>' +
-      (linksHtml ? '<div style="margin-top:24px;text-align:center">' + linksHtml + '</div>' : ''),
-    ctaText: '',
-    ctaUrl: '',
-    footer: 'AI Digest — נוצר אוטומטית ע"י NotebookLM + Claude Code'
-  });
 
   MailApp.sendEmail({
     to: CONFIG.ADMIN_EMAIL,
-    subject: 'AI Digest — ' + today,
+    subject: 'סקירת בוקר Learni — ' + today,
     htmlBody: html,
-    name: 'AI Digest'
+    name: 'Learni'
   });
 
   return { result: 'success', message: 'AI Digest sent' };
