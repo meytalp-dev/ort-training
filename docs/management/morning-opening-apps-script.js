@@ -122,59 +122,129 @@ function saveDocToSheet(ss, entry) {
 
 /**
  * רץ כל יום ב-14:30
- * שולח תזכורת WhatsApp למורה שהיה בתורנות היום
+ * שולח תזכורת WhatsApp למורה שמעביר/ה פתיחת בוקר מחר
  */
 function sendDailyReminder() {
-  const today = getTodayString();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tomorrow = getNextSchoolDay();
 
-  // מצא מי בתורנות היום
+  if (!tomorrow) {
+    Logger.log('אין יום לימודים מחר');
+    return;
+  }
+
+  // מצא מי בתורנות מחר
+  const tomorrowStr = Utilities.formatDate(tomorrow, 'Asia/Jerusalem', 'yyyy-MM-dd');
   const scheduleSheet = ss.getSheetByName('שיבוצים');
   const scheduleData = scheduleSheet.getDataRange().getValues();
 
-  let todayTeacher = null;
+  let tomorrowTeacher = null;
   for (let i = 1; i < scheduleData.length; i++) {
     const rowDate = Utilities.formatDate(new Date(scheduleData[i][0]), 'Asia/Jerusalem', 'yyyy-MM-dd');
-    if (rowDate === today) {
-      todayTeacher = scheduleData[i][1];
+    if (rowDate === tomorrowStr) {
+      tomorrowTeacher = scheduleData[i][1];
       break;
     }
   }
 
-  if (!todayTeacher) {
-    Logger.log('אין שיבוץ להיום: ' + today);
-    return;
-  }
-
-  // בדוק אם כבר מילא
-  if (hasDocForToday(ss, todayTeacher, today)) {
-    Logger.log(todayTeacher + ' כבר מילא/ה היום');
+  if (!tomorrowTeacher) {
+    Logger.log('אין שיבוץ למחר: ' + tomorrowStr);
     return;
   }
 
   // מצא פרטי טלפון
-  const staffSheet = ss.getSheetByName('צוות');
-  const staffData = staffSheet.getDataRange().getValues();
-
-  let phone = null;
-  let apiKey = null;
-  for (let i = 1; i < staffData.length; i++) {
-    if (staffData[i][0] === todayTeacher) {
-      phone = String(staffData[i][1]);
-      apiKey = String(staffData[i][2]);
-      break;
-    }
-  }
-
-  if (!phone || !apiKey) {
-    Logger.log('חסרים פרטי טלפון/apiKey עבור: ' + todayTeacher);
+  const staffInfo = getStaffInfo(ss, tomorrowTeacher);
+  if (!staffInfo) {
+    Logger.log('חסרים פרטי טלפון/apiKey עבור: ' + tomorrowTeacher);
     return;
   }
 
+  // מצא את הממד הנוכחי לפי תאריך
+  const dimText = getDimensionForDate(tomorrow);
+
   // שלח תזכורת
-  const message = `שלום ${todayTeacher} 👋\n\nתזכורת: היום העברת פתיחת בוקר.\nנא למלא את טופס התיעוד:\n${FORM_URL}\n\nתודה!`;
-  sendWhatsApp(phone, apiKey, message);
-  Logger.log('תזכורת נשלחה ל: ' + todayTeacher);
+  const dayName = formatDateHebrew(tomorrowStr);
+  const message = `שלום ${tomorrowTeacher},\n\nתזכורת: מחר (${dayName}) את/ה מעביר/ה פתיחת בוקר.\n${dimText ? 'הממד: ' + dimText + '\n' : ''}\nרעיונות והשראה:\n${FORM_URL}#ideas\n\nבהצלחה!`;
+  sendWhatsApp(staffInfo.phone, staffInfo.apiKey, message);
+  Logger.log('תזכורת נשלחה ל: ' + tomorrowTeacher + ' (מחר ' + tomorrowStr + ')');
+}
+
+/**
+ * מחזיר את יום הלימודים הבא (מחר, או ראשון אם היום חמישי)
+ */
+function getNextSchoolDay() {
+  const now = new Date();
+  const today = now.getDay(); // 0=Sun...6=Sat
+
+  let daysToAdd = 1;
+  if (today === 4) daysToAdd = 3; // חמישי → ראשון
+  if (today === 5) daysToAdd = 2; // שישי → ראשון
+  if (today === 6) daysToAdd = 1; // שבת → ראשון
+
+  const next = new Date(now);
+  next.setDate(next.getDate() + daysToAdd);
+
+  // בדוק שלא חופשה (פסח, יום העצמאות וכו')
+  const holidays = getHolidays();
+  const nextStr = Utilities.formatDate(next, 'Asia/Jerusalem', 'yyyy-MM-dd');
+  if (holidays.includes(nextStr)) {
+    // חפש את היום הבא אחרי החופשה
+    for (let i = 0; i < 30; i++) {
+      next.setDate(next.getDate() + 1);
+      const checkStr = Utilities.formatDate(next, 'Asia/Jerusalem', 'yyyy-MM-dd');
+      const checkDay = next.getDay();
+      if (checkDay >= 0 && checkDay <= 4 && !holidays.includes(checkStr)) {
+        return next;
+      }
+    }
+    return null;
+  }
+
+  return next;
+}
+
+/**
+ * רשימת ימי חופשה (לעדכון ידני כל שנה)
+ */
+function getHolidays() {
+  return [
+    // פסח 2026
+    '2026-04-14','2026-04-15','2026-04-16','2026-04-17','2026-04-18',
+    '2026-04-19','2026-04-20','2026-04-21','2026-04-22','2026-04-23',
+    '2026-04-24','2026-04-25','2026-04-26','2026-04-27','2026-04-28',
+    // יום העצמאות
+    '2026-05-06',
+  ];
+}
+
+/**
+ * מחזיר את שם הממד לפי תאריך
+ */
+function getDimensionForDate(date) {
+  const month = date.getMonth(); // 0=Jan
+  if (month === 8 || month === 9) return 'שייכות';       // ספט-אוקט
+  if (month === 10 || month === 11) return 'כבוד';       // נוב-דצ
+  if (month === 0 || month === 1) return 'מוטיבציה פנימית'; // ינו-פבר
+  if (month === 2 || month === 3) return 'מסוגלות ומימוש עצמי'; // מרץ-אפר
+  if (month === 4 || month === 5) return 'אוטונומיה';     // מאי-יוני
+  return '';
+}
+
+/**
+ * מחזיר פרטי צוות (טלפון + apiKey)
+ */
+function getStaffInfo(ss, name) {
+  const staffSheet = ss.getSheetByName('צוות');
+  const staffData = staffSheet.getDataRange().getValues();
+  for (let i = 1; i < staffData.length; i++) {
+    if (staffData[i][0] === name) {
+      const phone = String(staffData[i][1]);
+      const apiKey = String(staffData[i][2]);
+      if (phone && apiKey) return { phone, apiKey };
+      return null;
+    }
+  }
+  return null;
 }
 
 /**
@@ -182,43 +252,47 @@ function sendDailyReminder() {
  * בודק אם המורה מילא את הטופס, אם לא — שולח עדכון למיטל
  */
 function checkAndNotifyManager() {
+  // לא רץ בסוף שבוע
+  const dayOfWeek = new Date().getDay();
+  if (dayOfWeek === 5 || dayOfWeek === 6) return; // שישי/שבת
+
   const today = getTodayString();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
+  // בדוק שלא חופשה
+  if (getHolidays().includes(today)) return;
+
   // מצא מי בתורנות היום
-  const scheduleSheet = ss.getSheetByName('שיבוצים');
-  const scheduleData = scheduleSheet.getDataRange().getValues();
-
-  let todayTeacher = null;
-  for (let i = 1; i < scheduleData.length; i++) {
-    const rowDate = Utilities.formatDate(new Date(scheduleData[i][0]), 'Asia/Jerusalem', 'yyyy-MM-dd');
-    if (rowDate === today) {
-      todayTeacher = scheduleData[i][1];
-      break;
-    }
-  }
-
+  const todayTeacher = getTeacherForDate(ss, today);
   if (!todayTeacher) return;
 
   // בדוק אם מילא
   if (hasDocForToday(ss, todayTeacher, today)) {
     Logger.log(todayTeacher + ' מילא/ה — הכל בסדר');
-    // אפשר לשלוח למיטל עדכון חיובי
-    if (MEYTAL_PHONE && MEYTAL_API_KEY) {
-      const msg = `✅ ${todayTeacher} מילא/ה את טופס פתיחת הבוקר להיום.`;
-      sendWhatsApp(MEYTAL_PHONE, MEYTAL_API_KEY, msg);
-    }
     return;
   }
 
   // לא מילא — שלח למיטל
   if (MEYTAL_PHONE && MEYTAL_API_KEY) {
-    const msg = `⚠️ ${todayTeacher} לא מילא/ה את טופס פתיחת הבוקר להיום (${formatDateHebrew(today)}).\n\nקישור לטופס: ${FORM_URL}`;
+    const msg = `${todayTeacher} לא מילא/ה את טופס פתיחת הבוקר של היום (${formatDateHebrew(today)}).\n\nקישור לטופס:\n${FORM_URL}`;
     sendWhatsApp(MEYTAL_PHONE, MEYTAL_API_KEY, msg);
     Logger.log('עדכון נשלח למיטל: ' + todayTeacher + ' לא מילא/ה');
   } else {
     Logger.log('חסרים פרטי WhatsApp של מיטל');
   }
+}
+
+/**
+ * מחזיר את שם המורה המשובץ לתאריך נתון
+ */
+function getTeacherForDate(ss, dateStr) {
+  const scheduleSheet = ss.getSheetByName('שיבוצים');
+  const scheduleData = scheduleSheet.getDataRange().getValues();
+  for (let i = 1; i < scheduleData.length; i++) {
+    const rowDate = Utilities.formatDate(new Date(scheduleData[i][0]), 'Asia/Jerusalem', 'yyyy-MM-dd');
+    if (rowDate === dateStr) return scheduleData[i][1];
+  }
+  return null;
 }
 
 // ==================== עזר ====================
