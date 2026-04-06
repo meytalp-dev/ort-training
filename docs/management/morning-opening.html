@@ -632,6 +632,22 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 <script>
+// ==================== GOOGLE SHEETS SYNC ====================
+// הדביקי כאן את ה-URL של Apps Script Web App אחרי ה-Deploy
+const APPS_SCRIPT_URL = '';
+
+async function syncToSheet(action, payload) {
+  if (!APPS_SCRIPT_URL) return;
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...payload })
+    });
+  } catch(e) { console.log('Sync error:', e); }
+}
+
 // ==================== DATA ====================
 const STAFF = [
   { id: 1, name: 'משה צברי', daysOff: [] },
@@ -806,6 +822,13 @@ function generateSchedule() {
 
   saveSchedule();
   renderSchedule();
+
+  // סנכרון ל-Google Sheets
+  const scheduleForSheet = schedule.map(s => {
+    const staff = getStaffById(s.staffId);
+    return { date: s.date, name: staff ? staff.name : '' };
+  });
+  syncToSheet('syncSchedule', { schedule: scheduleForSheet });
 }
 
 function clearSchedule() {
@@ -1026,6 +1049,15 @@ function finishSave(entry) {
   }
 
   saveDocs();
+
+  // סנכרון ל-Google Sheets (בלי קבצים/תמונות — רק מטה-דאטה)
+  const staff = getStaffById(entry.teacherId);
+  syncToSheet('saveDoc', { entry: {
+    id: entry.id, date: entry.date, teacher: staff ? staff.name : '',
+    topic: entry.topic, type: entry.type, dim: entry.dim,
+    skill: entry.skill, goal: entry.goal, notes: entry.notes, link: entry.link
+  }});
+
   document.getElementById('docForm').reset();
   document.getElementById('docDate').valueAsDate = new Date();
   document.getElementById('imagePreview').style.display = 'none';
