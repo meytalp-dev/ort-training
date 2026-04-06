@@ -321,7 +321,12 @@ function setupTriggers() {
     .timeBased().atHour(16).nearMinute(0).everyDays(1)
     .inTimezone('Asia/Jerusalem').create();
 
-  Logger.log('טריגרים הוגדרו: 14:30 תזכורת למורה של מחר, 16:00 בדיקה על מורה של היום');
+  // טריגר למערכת תזכורות מרכזית — כל יום ב-7:00
+  ScriptApp.newTrigger('checkAndSendReminders')
+    .timeBased().atHour(7).nearMinute(0).everyDays(1)
+    .inTimezone('Asia/Jerusalem').create();
+
+  Logger.log('טריגרים הוגדרו: 07:00 תזכורות מרכזיות, 14:30 תזכורת למורה של מחר, 16:00 בדיקה על מורה של היום');
 }
 
 // ==================== בדיקות ====================
@@ -483,3 +488,351 @@ function initialSetup() {
   Logger.log('ההתקנה הושלמה! ' + schedRows.length + ' שיבוצים נוצרו.');
   SpreadsheetApp.getUi().alert('ההתקנה הושלמה!\n\n' + staffData.length + ' אנשי צוות\n' + schedRows.length + ' שיבוצים (אפריל-יוני)\n\nעכשיו הריצי setupTriggers()');
 }
+
+// =====================================================================
+// ==================== מערכת תזכורות מרכזית ==========================
+// =====================================================================
+
+/**
+ * בדיקה ושליחת תזכורות — רץ כל יום ב-07:00
+ * קורא את גיליון "תזכורות", בודק אילו תזכורות רלוונטיות להיום,
+ * ושולח הודעות WhatsApp לחברי הקבוצה המתאימה
+ */
+function checkAndSendReminders() {
+  const today = new Date();
+  const todayStr = getTodayString();
+  const dayOfWeek = today.getDay();
+
+  // דילוג על סופי שבוע
+  if (dayOfWeek === 5 || dayOfWeek === 6) {
+    Logger.log('סוף שבוע — לא שולחים תזכורות');
+    return;
+  }
+
+  // דילוג על חגים
+  if (getHolidays().includes(todayStr)) {
+    Logger.log('חג — לא שולחים תזכורות');
+    return;
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('תזכורות');
+  if (!sheet) {
+    Logger.log('גיליון "תזכורות" לא נמצא — הריצי setupReminderSheet()');
+    return;
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) {
+    Logger.log('אין תזכורות בגיליון');
+    return;
+  }
+
+  const todayDay = today.getDate();
+  const todayMonth = today.getMonth();
+  const todayYear = today.getFullYear();
+  let sentCount = 0;
+
+  // עובר על כל שורה בגיליון (מדלג על כותרת)
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const type = String(row[1]).trim();           // סוג
+    const dayInMonth = Number(row[2]);             // יום_בחודש
+    const specificDate = row[3];                   // תאריך
+    const daysBefore = Number(row[4]);             // ימים_לפני
+    const groupName = String(row[5]).trim();       // קבוצה
+    const messageTemplate = String(row[6]).trim(); // הודעה
+    const active = String(row[7]).trim();          // פעיל
+    const lastSent = row[8];                       // נשלח_לאחרונה
+
+    // דילוג על תזכורות לא פעילות
+    if (active !== 'כן') continue;
+
+    let shouldSend = false;
+
+    if (type === 'חודשית') {
+      // שולח אם היום בחודש תואם, ולא נשלח החודש הזה
+      if (todayDay === dayInMonth) {
+        if (!lastSent || !isSameMonth(lastSent, today)) {
+          shouldSend = true;
+        }
+      }
+    } else if (type === 'לפני_אירוע') {
+      // שולח אם היום = תאריך האירוע פחות X ימים
+      if (specificDate) {
+        const eventDate = new Date(specificDate);
+        const targetDate = new Date(eventDate);
+        targetDate.setDate(targetDate.getDate() - (daysBefore || 0));
+        const targetStr = Utilities.formatDate(targetDate, 'Asia/Jerusalem', 'yyyy-MM-dd');
+        if (todayStr === targetStr) {
+          const lastSentStr = lastSent ? Utilities.formatDate(new Date(lastSent), 'Asia/Jerusalem', 'yyyy-MM-dd') : '';
+          if (lastSentStr !== todayStr) {
+            shouldSend = true;
+          }
+        }
+      }
+    } else if (type === 'חד_פעמית') {
+      // שולח אם היום = התאריך, ולא נשלח בכלל
+      if (specificDate) {
+        const eventStr = Utilities.formatDate(new Date(specificDate), 'Asia/Jerusalem', 'yyyy-MM-dd');
+        if (todayStr === eventStr && !lastSent) {
+          shouldSend = true;
+        }
+      }
+    }
+
+    if (!shouldSend) continue;
+
+    // שליפת חברי הקבוצה ושליחת הודעות
+    const members = getGroupMembers(groupName);
+    if (members.length === 0) {
+      Logger.log('קבוצה ריקה או לא נמצאה: ' + groupName);
+      continue;
+    }
+
+    let groupSentOk = false;
+    for (const member of members) {
+      const firstName = member.name.split(' ')[0];
+      const personalMessage = messageTemplate.replace(/\{שם\}/g, firstName);
+
+      const ok = sendWhatsApp(member.phone, personalMessage);
+      if (ok) {
+        groupSentOk = true;
+        sentCount++;
+        Logger.log('תזכורת נשלחה ל: ' + member.name + ' (' + member.phone + ')');
+      } else {
+        Logger.log('שליחה נכשלה ל: ' + member.name + ' (' + member.phone + ')');
+      }
+
+      // השהיה קצרה בין הודעות כדי לא לחסום
+      Utilities.sleep(1000);
+    }
+
+    // עדכון תאריך שליחה אחרונה
+    if (groupSentOk) {
+      sheet.getRange(i + 1, 9).setValue(new Date()); // עמודה I = נשלח_לאחרונה
+    }
+  }
+
+  Logger.log('סיום — נשלחו ' + sentCount + ' הודעות תזכורת');
+}
+
+/**
+ * בדיקה אם תאריך נתון באותו חודש ושנה כמו תאריך ייחוס
+ */
+function isSameMonth(dateValue, referenceDate) {
+  const d = new Date(dateValue);
+  return d.getMonth() === referenceDate.getMonth() && d.getFullYear() === referenceDate.getFullYear();
+}
+
+// ==================== קבוצות ====================
+
+/**
+ * שליפת חברי קבוצה מגיליון "קבוצות"
+ * @param {string} groupName - שם הקבוצה (מחנכות / יועצות / הנהלה / כל_הצוות / בעלי_תפקידים / שם מותאם)
+ * @returns {Array<{name: string, phone: string}>} רשימת חברי הקבוצה
+ */
+function getGroupMembers(groupName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('קבוצות');
+  if (!sheet) {
+    Logger.log('גיליון "קבוצות" לא נמצא — הריצי setupReminderSheet()');
+    return [];
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const members = [];
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === groupName) {
+      members.push({
+        name: String(data[i][1]).trim(),
+        phone: String(data[i][2]).trim()
+      });
+    }
+  }
+
+  return members;
+}
+
+// ==================== הקמת גיליונות תזכורות ====================
+
+/**
+ * הריצי פעם אחת — יוצר את גיליונות "קבוצות" ו"תזכורות" וממלא נתוני ברירת מחדל
+ */
+function setupReminderSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // === גיליון קבוצות ===
+  let groupSheet = ss.getSheetByName('קבוצות');
+  if (!groupSheet) {
+    groupSheet = ss.insertSheet('קבוצות');
+  } else {
+    groupSheet.clear();
+  }
+
+  // כותרות
+  const groupHeaders = ['שם_קבוצה', 'שם', 'טלפון'];
+  groupSheet.getRange(1, 1, 1, 3).setValues([groupHeaders]);
+  groupSheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#B7E1CD');
+
+  // נתוני קבוצות
+  const groupData = [
+    // מחנכות
+    ['מחנכות', 'אושר אהרוני', '972508882402'],
+    ['מחנכות', 'משה צברי', '972547195033'],
+    ['מחנכות', 'רעיה יצחקי', '972504726066'],
+    ['מחנכות', 'אופירה מלכה', '972534438414'],
+    ['מחנכות', 'פרלה שאזו', '972525115337'],
+    ['מחנכות', 'יעקב גרונספלד', '972546995254'],
+    ['מחנכות', 'נעמה קוסטן', '972524295181'],
+    ['מחנכות', 'גיא נתנאל', '972542007155'],
+    ['מחנכות', 'עמנואל דהאן', '972505852852'],
+    ['מחנכות', 'יוסף רבבשי', '972506563344'],
+    ['מחנכות', 'יואב רוט', '972527218003'],
+    // יועצות
+    ['יועצות', 'ליאת רוזנר', '972528980191'],
+    ['יועצות', 'דורית ויגדור', '972523464235'],
+    ['יועצות', 'צהיי גטהון', '972527783903'],
+    // הנהלה
+    ['הנהלה', 'מיטל פלג', '972536256653'],
+    ['הנהלה', 'רווית גל', '972503993021'],
+    // בעלי_תפקידים
+    ['בעלי_תפקידים', 'יסכה הגר', '972526995309'],
+    ['בעלי_תפקידים', 'יעקב גרונספלד', '972546995254'],
+    ['בעלי_תפקידים', 'רווית גל', '972503993021'],
+    ['בעלי_תפקידים', 'אופירה מלכה', '972534438414'],
+    // כל_הצוות
+    ['כל_הצוות', 'אושר אהרוני', '972508882402'],
+    ['כל_הצוות', 'שי בגלר', '972522285773'],
+    ['כל_הצוות', 'מירב בטיטו', '972584807906'],
+    ['כל_הצוות', 'ליאת רוזנר', '972528980191'],
+    ['כל_הצוות', 'אפרת בר אשר', '972522460684'],
+    ['כל_הצוות', 'רווית גל', '972503993021'],
+    ['כל_הצוות', 'יעקב גרונספלד', '972546995254'],
+    ['כל_הצוות', 'עמנואל דהאן', '972505852852'],
+    ['כל_הצוות', 'יסכה הגר', '972526995309'],
+    ['כל_הצוות', 'דורית ויגדור', '972523464235'],
+    ['כל_הצוות', 'מריאן זרצקי', '972507596570'],
+    ['כל_הצוות', 'יעל טטנבאום', '972527078485'],
+    ['כל_הצוות', 'רעיה יצחקי', '972504726066'],
+    ['כל_הצוות', 'מיטל לאלום', '972506239018'],
+    ['כל_הצוות', 'אופירה מלכה', '972534438414'],
+    ['כל_הצוות', 'צהיי גטהון', '972527783903'],
+    ['כל_הצוות', 'גיא נתנאל', '972542007155'],
+    ['כל_הצוות', 'משה צברי', '972547195033'],
+    ['כל_הצוות', 'נעמה קוסטן', '972524295181'],
+    ['כל_הצוות', 'ויקטוריה קלדרון', '972586528820'],
+    ['כל_הצוות', 'יוסף רבבשי', '972506563344'],
+    ['כל_הצוות', 'יואב רוט', '972527218003'],
+    ['כל_הצוות', 'פרלה שאזו', '972525115337'],
+  ];
+
+  groupSheet.getRange(2, 1, groupData.length, 3).setValues(groupData);
+
+  // עיצוב RTL
+  groupSheet.setRightToLeft(true);
+  groupSheet.setColumnWidth(1, 140);
+  groupSheet.setColumnWidth(2, 180);
+  groupSheet.setColumnWidth(3, 150);
+
+  // === גיליון תזכורות ===
+  let reminderSheet = ss.getSheetByName('תזכורות');
+  if (!reminderSheet) {
+    reminderSheet = ss.insertSheet('תזכורות');
+  } else {
+    reminderSheet.clear();
+  }
+
+  // כותרות
+  const reminderHeaders = ['id', 'סוג', 'יום_בחודש', 'תאריך', 'ימים_לפני', 'קבוצה', 'הודעה', 'פעיל', 'נשלח_לאחרונה'];
+  reminderSheet.getRange(1, 1, 1, 9).setValues([reminderHeaders]);
+  reminderSheet.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#D9D2E9');
+
+  // תזכורות ברירת מחדל
+  const reminderData = [
+    [1, 'חודשית', 28, '', '', 'מחנכות', 'שלום {שם}, תזכורת: יש למלא דוח מחנך חודשי עד סוף החודש.\nקישור: https://meytalp-dev.github.io/ort-training/management/monthly-reports.html', 'כן', ''],
+    [2, 'חודשית', 28, '', '', 'יועצות', 'שלום {שם}, תזכורת: יש למלא דוח יועצת חודשי עד סוף החודש.\nקישור: https://meytalp-dev.github.io/ort-training/management/monthly-reports.html', 'כן', ''],
+    [3, 'חודשית', 25, '', '', 'מחנכות', 'שלום {שם}, תזכורת: יש לעדכן ציונים במערכת עד סוף החודש.', 'כן', ''],
+    [4, 'חודשית', 1, '', '', 'הנהלה', 'שלום {שם}, תחילת חודש חדש. סיכום חודש קודם זמין בדשבורד הדוחות.', 'כן', ''],
+  ];
+
+  reminderSheet.getRange(2, 1, reminderData.length, 9).setValues(reminderData);
+
+  // עיצוב RTL
+  reminderSheet.setRightToLeft(true);
+  reminderSheet.setColumnWidth(1, 40);   // id
+  reminderSheet.setColumnWidth(2, 100);  // סוג
+  reminderSheet.setColumnWidth(3, 90);   // יום_בחודש
+  reminderSheet.setColumnWidth(4, 110);  // תאריך
+  reminderSheet.setColumnWidth(5, 80);   // ימים_לפני
+  reminderSheet.setColumnWidth(6, 110);  // קבוצה
+  reminderSheet.setColumnWidth(7, 400);  // הודעה
+  reminderSheet.setColumnWidth(8, 60);   // פעיל
+  reminderSheet.setColumnWidth(9, 130);  // נשלח_לאחרונה
+
+  Logger.log('גיליונות תזכורות וקבוצות נוצרו בהצלחה!');
+  SpreadsheetApp.getUi().alert('מערכת תזכורות הוקמה!\n\n' + groupData.length + ' חברי קבוצות\n' + reminderData.length + ' תזכורות ברירת מחדל\n\nעכשיו הריצי setupTriggers() מחדש');
+}
+
+// ==================== שליחת תזכורת ידנית ====================
+
+/**
+ * שליחת תזכורת ספציפית ידנית לפי מספר שורה
+ * @param {number} rowIndex - מספר השורה בגיליון (1 = שורה ראשונה של נתונים, לא כותרת)
+ */
+function sendReminderNow(rowIndex) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('תזכורות');
+  if (!sheet) {
+    Logger.log('גיליון "תזכורות" לא נמצא');
+    return;
+  }
+
+  // שורה בגיליון = rowIndex + 1 (כי יש כותרת)
+  const actualRow = rowIndex + 1;
+  if (actualRow > sheet.getLastRow()) {
+    Logger.log('שורה ' + rowIndex + ' לא קיימת');
+    return;
+  }
+
+  const row = sheet.getRange(actualRow, 1, 1, 9).getValues()[0];
+  const groupName = String(row[5]).trim();
+  const messageTemplate = String(row[6]).trim();
+
+  if (!messageTemplate) {
+    Logger.log('אין הודעה בשורה ' + rowIndex);
+    return;
+  }
+
+  const members = getGroupMembers(groupName);
+  if (members.length === 0) {
+    Logger.log('קבוצה ריקה או לא נמצאה: ' + groupName);
+    return;
+  }
+
+  let sentCount = 0;
+  for (const member of members) {
+    const firstName = member.name.split(' ')[0];
+    const personalMessage = messageTemplate.replace(/\{שם\}/g, firstName);
+
+    const ok = sendWhatsApp(member.phone, personalMessage);
+    if (ok) {
+      sentCount++;
+      Logger.log('נשלח ל: ' + member.name);
+    }
+    Utilities.sleep(1000);
+  }
+
+  // עדכון תאריך שליחה
+  sheet.getRange(actualRow, 9).setValue(new Date());
+  Logger.log('תזכורת ידנית — נשלחו ' + sentCount + '/' + members.length + ' הודעות לקבוצה ' + groupName);
+}
+
+// ==================== בדיקות — תזכורות ====================
+
+/** בדיקת מערכת תזכורות */
+function testReminders() { checkAndSendReminders(); }
+
+/** הקמת גיליונות תזכורות */
+function testSetupReminders() { setupReminderSheet(); }
