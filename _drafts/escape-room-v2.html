@@ -1,0 +1,2361 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>העיר האבודה — חדר בריחה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   LOST CITY ESCAPE ROOM v2
+   ============================================================ */
+:root {
+  --bg-deepest: #06080e;
+  --bg-deep: #0a0e18;
+  --bg-dark: #10141f;
+  --bg-card: #161b2a;
+  --bg-surface: #1c2235;
+  --bg-elevated: #242a40;
+  --cyan: #00e5ff;
+  --cyan-dim: #00a0b3;
+  --cyan-glow: rgba(0, 229, 255, 0.3);
+  --purple: #a07de0;
+  --purple-dim: #7a5db8;
+  --purple-glow: rgba(160, 125, 224, 0.3);
+  --pink: #e06090;
+  --pink-dim: #b84870;
+  --pink-glow: rgba(224, 96, 144, 0.3);
+  --gold: #ffd700;
+  --gold-glow: rgba(255, 215, 0, 0.3);
+  --orange: #ff8c00;
+  --orange-glow: rgba(255, 140, 0, 0.3);
+  --green: #20e870;
+  --green-glow: rgba(32, 232, 112, 0.3);
+  --text-primary: #e8ecf4;
+  --text-secondary: #8a92a8;
+  --text-dim: #505870;
+  --font: 'Heebo', sans-serif;
+  --touch-min: 44px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--bg-deepest);
+  color: var(--text-primary);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ============================================================
+   SCREENS — only one visible at a time
+   ============================================================ */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.screen.active { display: flex; }
+
+/* ============================================================
+   SPLASH SCREEN
+   ============================================================ */
+#splash {
+  background: var(--bg-deepest);
+  cursor: pointer;
+}
+
+/* Orb / Moon */
+.splash-orb {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #e0d8ff 0%, var(--purple) 40%, var(--purple-dim) 80%, transparent 100%);
+  box-shadow: 0 0 60px var(--purple-glow), 0 0 120px var(--purple-glow), 0 0 200px rgba(160, 125, 224, 0.15);
+  animation: orbPulse 4s ease-in-out infinite;
+  z-index: 1;
+}
+@keyframes orbPulse {
+  0%, 100% { box-shadow: 0 0 60px var(--purple-glow), 0 0 120px var(--purple-glow); transform: translateX(-50%) scale(1); }
+  50% { box-shadow: 0 0 80px var(--purple-glow), 0 0 160px var(--purple-glow), 0 0 240px rgba(160,125,224,0.1); transform: translateX(-50%) scale(1.05); }
+}
+
+/* Parallax City */
+.splash-city {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 55%;
+  pointer-events: none;
+  z-index: 2;
+}
+.city-layer {
+  position: absolute;
+  bottom: 0;
+  left: -5%;
+  width: 110%;
+}
+.city-layer--far { opacity: 0.2; animation: cityFar 30s ease-in-out infinite alternate; }
+.city-layer--mid { opacity: 0.4; animation: cityMid 24s ease-in-out infinite alternate; }
+.city-layer--near { opacity: 0.65; animation: cityNear 18s ease-in-out infinite alternate; }
+@keyframes cityFar { to { transform: translateX(-15px); } }
+@keyframes cityMid { to { transform: translateX(10px); } }
+@keyframes cityNear { to { transform: translateX(-8px); } }
+
+/* Fog */
+.splash-fog {
+  position: absolute;
+  bottom: 0;
+  left: -10%;
+  right: -10%;
+  height: 35%;
+  background: linear-gradient(to top, rgba(6,8,14,0.95) 0%, rgba(10,14,24,0.5) 40%, transparent 100%);
+  animation: fogDrift 12s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 3;
+}
+@keyframes fogDrift { to { transform: translateX(20px) scaleY(1.05); } }
+
+/* Particles */
+.splash-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: particleFloat linear infinite;
+  opacity: 0;
+}
+.particle--cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan), 0 0 12px var(--cyan-glow); }
+.particle--purple { background: var(--purple); box-shadow: 0 0 6px var(--purple), 0 0 12px var(--purple-glow); }
+.particle--pink { background: var(--pink); box-shadow: 0 0 6px var(--pink), 0 0 12px var(--pink-glow); }
+@keyframes particleFloat {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.6; }
+  100% { opacity: 0; transform: translateY(-100vh) scale(1.2); }
+}
+
+/* Title */
+.splash-title {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  margin-top: -40px;
+}
+.splash-title h1 {
+  font-size: clamp(2.2rem, 8vw, 4.5rem);
+  font-weight: 900;
+  color: var(--text-primary);
+  text-shadow: 0 0 20px var(--cyan-glow), 0 0 40px var(--cyan-glow), 0 0 80px rgba(0,229,255,0.1);
+  letter-spacing: 2px;
+  animation: glitchTitle 8s ease-in-out infinite;
+  position: relative;
+}
+.splash-title h1::before, .splash-title h1::after {
+  content: 'העיר האבודה';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  overflow: hidden;
+}
+.splash-title h1::before {
+  color: var(--cyan);
+  opacity: 0.5;
+  animation: glitchTop 8s ease-in-out infinite;
+  clip-path: inset(0 0 65% 0);
+}
+.splash-title h1::after {
+  color: var(--pink);
+  opacity: 0.5;
+  animation: glitchBottom 8s ease-in-out infinite;
+  clip-path: inset(65% 0 0 0);
+}
+@keyframes glitchTitle {
+  0%, 92%, 100% { transform: none; }
+  93% { transform: translateX(3px) skewX(-1deg); }
+  94% { transform: translateX(-3px) skewX(1deg); }
+  95% { transform: none; }
+  96% { transform: translateX(2px); }
+  97% { transform: none; }
+}
+@keyframes glitchTop {
+  0%, 92%, 100% { transform: none; }
+  93% { transform: translateX(8px); }
+  94% { transform: translateX(-5px); }
+  95%, 100% { transform: none; }
+}
+@keyframes glitchBottom {
+  0%, 92%, 100% { transform: none; }
+  93% { transform: translateX(-8px); }
+  94% { transform: translateX(5px); }
+  95%, 100% { transform: none; }
+}
+
+.splash-subtitle {
+  font-size: clamp(0.9rem, 3vw, 1.3rem);
+  color: var(--text-secondary);
+  margin-top: 12px;
+  font-weight: 400;
+  letter-spacing: 4px;
+  opacity: 0.7;
+}
+
+.splash-enter {
+  position: relative;
+  z-index: 10;
+  margin-top: 48px;
+  padding: 14px 48px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-family: var(--font);
+  color: var(--bg-deepest);
+  background: var(--cyan);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 0 20px var(--cyan-glow), 0 0 40px var(--cyan-glow);
+  animation: enterPulse 2s ease-in-out infinite;
+  transition: transform 0.2s;
+}
+.splash-enter:hover { transform: scale(1.05); }
+.splash-enter:active { transform: scale(0.97); }
+@keyframes enterPulse {
+  0%, 100% { box-shadow: 0 0 20px var(--cyan-glow), 0 0 40px var(--cyan-glow); }
+  50% { box-shadow: 0 0 30px var(--cyan-glow), 0 0 60px var(--cyan-glow), 0 0 80px rgba(0,229,255,0.15); }
+}
+
+.splash-hint {
+  position: absolute;
+  bottom: 24px;
+  z-index: 10;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  animation: fadeInOut 3s ease-in-out infinite;
+}
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* ============================================================
+   NAME INPUT SCREEN
+   ============================================================ */
+#nameScreen {
+  background: var(--bg-deepest);
+}
+.name-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(0,229,255,0.15);
+  border-radius: var(--radius-lg);
+  padding: 40px 32px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+}
+.name-card h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--cyan);
+  margin-bottom: 8px;
+}
+.name-card p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+}
+.name-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 1.1rem;
+  font-family: var(--font);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-deep);
+  border: 2px solid rgba(0,229,255,0.2);
+  border-radius: var(--radius-md);
+  outline: none;
+  text-align: center;
+  direction: rtl;
+  transition: border-color 0.3s;
+}
+.name-input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan-glow);
+}
+.name-submit {
+  margin-top: 20px;
+  padding: 12px 40px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-family: var(--font);
+  color: var(--bg-deepest);
+  background: var(--cyan);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.3s;
+}
+.name-submit:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--cyan-glow); }
+
+/* ============================================================
+   INTRO SCREEN
+   ============================================================ */
+#introScreen {
+  background: var(--bg-deepest);
+}
+.intro-text {
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  padding: 20px;
+}
+.intro-text p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  opacity: 0;
+  transform: translateY(10px);
+}
+.intro-text p.visible {
+  animation: introFade 0.8s ease forwards;
+}
+@keyframes introFade {
+  to { opacity: 1; transform: translateY(0); }
+}
+.intro-skip {
+  margin-top: 32px;
+  padding: 12px 36px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font);
+  color: var(--cyan);
+  background: transparent;
+  border: 2px solid var(--cyan);
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.3s;
+}
+.intro-skip.visible { opacity: 1; }
+.intro-skip:hover { background: var(--cyan); color: var(--bg-deepest); }
+
+/* ============================================================
+   MAP SCREEN
+   ============================================================ */
+#mapScreen {
+  background: var(--bg-deep);
+}
+.map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Top HUD */
+.hud-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(6,8,14,0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(0,229,255,0.1);
+  z-index: 20;
+}
+.hud-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+}
+.hud-timer svg { width: 20px; height: 20px; }
+.hud-timer.warning { color: var(--orange); animation: timerPulse 1s ease-in-out infinite; }
+.hud-timer.critical { color: var(--pink); animation: timerPulse 0.5s ease-in-out infinite; }
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Fragment display in HUD */
+.hud-fragments {
+  display: flex;
+  gap: 6px;
+}
+.hud-frag {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 2px solid var(--text-dim);
+  background: rgba(255,255,255,0.03);
+  transition: all 0.5s;
+  position: relative;
+  overflow: hidden;
+}
+.hud-frag.collected {
+  border-color: var(--gold);
+  box-shadow: 0 0 10px var(--gold-glow);
+  background: rgba(255,215,0,0.15);
+}
+.hud-frag svg { width: 100%; height: 100%; opacity: 0.3; }
+.hud-frag.collected svg { opacity: 1; }
+
+/* HUD buttons */
+.hud-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.hud-btn:hover { background: rgba(0,229,255,0.1); border-color: var(--cyan-glow); color: var(--cyan); }
+.hud-btn svg { width: 20px; height: 20px; }
+.hud-btns { display: flex; gap: 8px; }
+
+/* Map title */
+.map-title {
+  font-size: clamp(1.3rem, 5vw, 2rem);
+  font-weight: 800;
+  color: var(--text-primary);
+  text-shadow: 0 0 20px var(--cyan-glow);
+  margin-bottom: 32px;
+  z-index: 5;
+}
+
+/* Room cards on map */
+.map-rooms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  max-width: 600px;
+  padding: 0 16px;
+  z-index: 5;
+}
+.room-card {
+  width: calc(50% - 8px);
+  max-width: 180px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  border: 2px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.room-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 70%);
+}
+.room-card.locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+.room-card.unlocked {
+  border-color: var(--cyan-glow);
+  box-shadow: 0 0 20px rgba(0,229,255,0.1);
+}
+.room-card.unlocked:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 30px var(--cyan-glow);
+  border-color: var(--cyan);
+}
+.room-card.completed {
+  border-color: var(--gold);
+  box-shadow: 0 0 15px var(--gold-glow);
+  opacity: 0.7;
+}
+.room-card .room-icon {
+  font-size: 2.5rem;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.room-card .room-icon svg { width: 48px; height: 48px; }
+.room-card .room-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.room-card .room-status {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.room-card.completed .room-status { color: var(--gold); }
+.room-card .lock-icon {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+.room-card .lock-icon svg { width: 18px; height: 18px; color: var(--text-dim); }
+
+/* ============================================================
+   ROOM SCREEN (shared layout)
+   ============================================================ */
+#roomScreen {
+  background: var(--bg-deepest);
+}
+.room-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Back button */
+.room-back {
+  position: absolute;
+  top: 60px;
+  right: 12px;
+  z-index: 25;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(6,8,14,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.room-back:hover { border-color: var(--cyan-glow); color: var(--cyan); }
+.room-back svg { width: 20px; height: 20px; }
+
+/* Room hint button */
+.room-hint-btn {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 25;
+  padding: 8px 16px;
+  background: rgba(160,125,224,0.15);
+  border: 1px solid var(--purple-glow);
+  border-radius: 999px;
+  color: var(--purple);
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s;
+  opacity: 0;
+  pointer-events: none;
+}
+.room-hint-btn.visible { opacity: 1; pointer-events: auto; }
+.room-hint-btn:hover { background: rgba(160,125,224,0.25); }
+
+/* NPC hint bubble */
+.npc-hint {
+  position: absolute;
+  bottom: 60px;
+  left: 16px;
+  right: 16px;
+  max-width: 400px;
+  z-index: 30;
+  background: var(--bg-card);
+  border: 1px solid var(--purple-glow);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: none;
+  animation: hintSlide 0.4s ease;
+}
+.npc-hint.visible { display: block; }
+@keyframes hintSlide {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.npc-hint .npc-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--purple);
+  margin-bottom: 6px;
+}
+.npc-hint .npc-msg {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   ROOM 1 — Connection (Mural Puzzle)
+   ============================================================ */
+.room1-scene {
+  position: absolute;
+  inset: 0;
+  top: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+
+.room1-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px var(--cyan-glow);
+}
+.room1-instruction {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Mural target area */
+.mural-area {
+  position: relative;
+  width: min(90vw, 360px);
+  height: min(90vw, 360px);
+  max-width: 360px;
+  max-height: 360px;
+  background: var(--bg-card);
+  border: 2px solid rgba(0,229,255,0.15);
+  border-radius: var(--radius-md);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 3px;
+  padding: 3px;
+  flex-shrink: 0;
+}
+.mural-slot {
+  border-radius: 4px;
+  border: 2px dashed rgba(0,229,255,0.15);
+  background: rgba(0,229,255,0.03);
+  transition: all 0.3s;
+  position: relative;
+}
+.mural-slot.highlight {
+  border-color: var(--cyan);
+  background: rgba(0,229,255,0.1);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+.mural-slot.filled {
+  border: none;
+  background: transparent;
+}
+
+/* Puzzle pieces tray */
+.pieces-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 12px;
+  max-width: 380px;
+}
+.puzzle-piece {
+  width: 70px;
+  height: 70px;
+  border-radius: 6px;
+  cursor: grab;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 2px solid rgba(0,229,255,0.2);
+  touch-action: none;
+  position: relative;
+  background-size: 300% 300%;
+}
+.puzzle-piece:active { cursor: grabbing; transform: scale(1.1); }
+.puzzle-piece:hover { box-shadow: 0 0 12px var(--cyan-glow); border-color: var(--cyan); }
+.puzzle-piece.placed { display: none; }
+.puzzle-piece.dragging {
+  position: fixed;
+  z-index: 100;
+  transform: scale(1.15);
+  box-shadow: 0 0 20px var(--cyan-glow);
+  pointer-events: none;
+}
+
+/* Mural SVG patterns */
+.mural-pattern {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   ROOM 2 — Listening (Sound Sequence)
+   ============================================================ */
+.room2-scene {
+  position: absolute;
+  inset: 0;
+  top: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+.room2-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px var(--green-glow);
+}
+.room2-instruction {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* Room objects grid */
+.sound-objects {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 360px;
+  width: 90%;
+  margin-bottom: 16px;
+}
+.sound-object {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 2px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+.sound-object:hover { border-color: var(--green-glow); background: rgba(32,232,112,0.05); }
+.sound-object:active { transform: scale(0.95); }
+.sound-object.playing {
+  border-color: var(--green);
+  box-shadow: 0 0 15px var(--green-glow);
+  animation: soundPulse 0.6s ease-in-out;
+}
+@keyframes soundPulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.sound-object svg { width: 36px; height: 36px; color: var(--text-secondary); transition: color 0.3s; }
+.sound-object.playing svg { color: var(--green); }
+.sound-object .obj-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* Sequence slots */
+.sequence-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 90%;
+  max-width: 360px;
+}
+.sequence-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.sequence-slots {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.seq-slot {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-sm);
+  border: 2px dashed var(--text-dim);
+  background: rgba(255,255,255,0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  transition: all 0.3s;
+}
+.seq-slot.filled {
+  border-style: solid;
+  border-color: var(--green);
+  background: rgba(32,232,112,0.08);
+  color: var(--green);
+}
+.seq-slot.wrong {
+  border-color: var(--pink);
+  background: rgba(224,96,144,0.08);
+  animation: wrongShake 0.4s ease;
+}
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.seq-controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+.seq-btn {
+  padding: 8px 20px;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.seq-btn--clear {
+  background: transparent;
+  border: 1px solid var(--text-dim);
+  color: var(--text-secondary);
+}
+.seq-btn--clear:hover { border-color: var(--pink); color: var(--pink); }
+.seq-btn--check {
+  background: var(--green);
+  border: none;
+  color: var(--bg-deepest);
+}
+.seq-btn--check:hover { box-shadow: 0 0 15px var(--green-glow); }
+.seq-btn--check:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ============================================================
+   FRAGMENT COLLECTED OVERLAY
+   ============================================================ */
+.fragment-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6,8,14,0.9);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.fragment-overlay.visible { display: flex; }
+.fragment-shard {
+  width: 120px;
+  height: 120px;
+  animation: shardFloat 2s ease-in-out infinite;
+}
+@keyframes shardFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+.fragment-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-top: 20px;
+  animation: fragGlow 2s ease-in-out infinite;
+}
+@keyframes fragGlow {
+  0%, 100% { text-shadow: 0 0 10px currentColor; }
+  50% { text-shadow: 0 0 30px currentColor, 0 0 50px currentColor; }
+}
+.fragment-desc {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  text-align: center;
+  max-width: 300px;
+}
+.fragment-continue {
+  margin-top: 32px;
+  padding: 12px 36px;
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.fragment-continue:hover { transform: scale(1.05); }
+
+/* ============================================================
+   QUIET GARDEN
+   ============================================================ */
+#gardenScreen {
+  background: linear-gradient(135deg, #0a1628 0%, #0e1a2a 50%, #0a1520 100%);
+}
+.garden-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+}
+.garden-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--green);
+  text-shadow: 0 0 15px var(--green-glow);
+}
+.garden-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.breath-circle {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(32,232,112,0.15) 0%, transparent 70%);
+  border: 2px solid var(--green);
+  box-shadow: 0 0 30px var(--green-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--green);
+  animation: breathe 8s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(0.8); opacity: 0.6; }
+  25% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1); opacity: 1; }
+  75% { transform: scale(0.8); opacity: 0.6; }
+}
+.breath-label {
+  position: absolute;
+  font-size: 1rem;
+  color: var(--green);
+  font-weight: 600;
+  animation: breathLabel 8s ease-in-out infinite;
+}
+@keyframes breathLabel {
+  0%, 5% { content: 'נשימה פנימה...'; opacity: 1; }
+  25%, 45% { opacity: 1; }
+  50%, 55% { opacity: 0; }
+  75%, 95% { opacity: 1; }
+}
+.garden-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.garden-back {
+  padding: 10px 28px;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.garden-back:hover { border-color: var(--green-glow); color: var(--green); }
+
+/* ============================================================
+   CONFETTI OVERLAY
+   ============================================================ */
+.confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg) scale(0.3); opacity: 0; }
+}
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+.toast {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--purple-glow);
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--purple);
+  z-index: 150;
+  animation: toastIn 0.4s ease, toastOut 0.4s ease 2.6s forwards;
+  white-space: nowrap;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 400px) {
+  .mural-area { width: 85vw; height: 85vw; }
+  .puzzle-piece { width: 55px; height: 55px; }
+  .sound-object svg { width: 28px; height: 28px; }
+  .seq-slot { width: 50px; height: 50px; }
+  .room-card { max-width: 150px; }
+}
+@media (min-width: 768px) {
+  .map-rooms { max-width: 700px; gap: 20px; }
+  .room-card { max-width: 200px; }
+}
+
+/* Screen shake */
+@keyframes screenShake {
+  0%, 100% { transform: translate(0); }
+  10% { transform: translate(-3px, 2px); }
+  20% { transform: translate(3px, -2px); }
+  30% { transform: translate(-2px, 3px); }
+  40% { transform: translate(2px, -3px); }
+  50% { transform: translate(-3px, -2px); }
+  60% { transform: translate(3px, 2px); }
+  70% { transform: translate(-2px, -3px); }
+  80% { transform: translate(2px, 3px); }
+  90% { transform: translate(-3px, 2px); }
+}
+.shake { animation: screenShake 0.4s ease; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SPLASH SCREEN
+     ============================================================ -->
+<div id="splash" class="screen active" onclick="startGame()">
+  <div class="splash-orb"></div>
+
+  <div class="splash-city">
+    <!-- Far layer -->
+    <svg class="city-layer city-layer--far" viewBox="0 0 800 250" preserveAspectRatio="xMidYMax slice">
+      <rect x="20" y="80" width="35" height="170" fill="#1a1f35" rx="2"/>
+      <rect x="70" y="40" width="25" height="210" fill="#181d30" rx="1"/>
+      <rect x="130" y="100" width="50" height="150" fill="#1c2138" rx="2"/>
+      <rect x="200" y="60" width="30" height="190" fill="#191e32" rx="1"/>
+      <rect x="260" y="90" width="40" height="160" fill="#1b2036" rx="2"/>
+      <rect x="320" y="50" width="28" height="200" fill="#181c30" rx="1"/>
+      <rect x="380" y="110" width="55" height="140" fill="#1d2239" rx="2"/>
+      <rect x="460" y="70" width="32" height="180" fill="#1a1f34" rx="1"/>
+      <rect x="520" y="95" width="45" height="155" fill="#1c2137" rx="2"/>
+      <rect x="590" y="55" width="28" height="195" fill="#191d31" rx="1"/>
+      <rect x="650" y="85" width="38" height="165" fill="#1b2035" rx="2"/>
+      <rect x="710" y="65" width="30" height="185" fill="#181c30" rx="1"/>
+      <rect x="760" y="100" width="40" height="150" fill="#1a1f34" rx="2"/>
+    </svg>
+    <!-- Mid layer -->
+    <svg class="city-layer city-layer--mid" viewBox="0 0 800 220" preserveAspectRatio="xMidYMax slice">
+      <rect x="10" y="60" width="55" height="160" fill="#1e2540" rx="3"/>
+      <rect x="10" y="60" width="55" height="4" fill="#00e5ff" opacity="0.15" rx="1"/>
+      <rect x="80" y="30" width="35" height="190" fill="#1c2238" rx="2"/>
+      <rect x="90" y="50" width="3" height="8" fill="#00e5ff" opacity="0.3"/>
+      <rect x="90" y="70" width="3" height="8" fill="#00e5ff" opacity="0.3"/>
+      <rect x="90" y="90" width="3" height="8" fill="#00e5ff" opacity="0.3"/>
+      <rect x="150" y="80" width="65" height="140" fill="#202845" rx="3"/>
+      <rect x="155" y="85" width="8" height="6" fill="#a07de0" opacity="0.2"/>
+      <rect x="175" y="85" width="8" height="6" fill="#00e5ff" opacity="0.2"/>
+      <rect x="195" y="85" width="8" height="6" fill="#e06090" opacity="0.15"/>
+      <rect x="240" y="50" width="40" height="170" fill="#1d2440" rx="2"/>
+      <polygon points="240,50 260,20 280,50" fill="#1d2440"/>
+      <rect x="310" y="70" width="50" height="150" fill="#1f2643" rx="3"/>
+      <rect x="390" y="40" width="30" height="180" fill="#1c2238" rx="2"/>
+      <rect x="440" y="90" width="60" height="130" fill="#212948" rx="3"/>
+      <rect x="530" y="55" width="35" height="165" fill="#1e2540" rx="2"/>
+      <rect x="590" y="75" width="50" height="145" fill="#202845" rx="3"/>
+      <rect x="670" y="45" width="38" height="175" fill="#1d2440" rx="2"/>
+      <rect x="730" y="85" width="55" height="135" fill="#1f2643" rx="3"/>
+    </svg>
+    <!-- Near layer -->
+    <svg class="city-layer city-layer--near" viewBox="0 0 800 180" preserveAspectRatio="xMidYMax slice">
+      <rect x="0" y="40" width="70" height="140" fill="#242c4a" rx="3"/>
+      <rect x="5" y="50" width="10" height="8" fill="#00e5ff" opacity="0.4"/>
+      <rect x="25" y="50" width="10" height="8" fill="#a07de0" opacity="0.3"/>
+      <rect x="45" y="50" width="10" height="8" fill="#00e5ff" opacity="0.4"/>
+      <rect x="5" y="70" width="10" height="8" fill="#e06090" opacity="0.2"/>
+      <rect x="25" y="70" width="10" height="8" fill="#00e5ff" opacity="0.4"/>
+      <rect x="90" y="20" width="45" height="160" fill="#222a48" rx="2"/>
+      <rect x="95" y="30" width="8" height="6" fill="#00e5ff" opacity="0.5"/>
+      <rect x="110" y="30" width="8" height="6" fill="#00e5ff" opacity="0.5"/>
+      <rect x="95" y="50" width="8" height="6" fill="#a07de0" opacity="0.3"/>
+      <rect x="170" y="60" width="80" height="120" fill="#262e4d" rx="4"/>
+      <rect x="175" y="65" width="12" height="8" fill="#00e5ff" opacity="0.4"/>
+      <rect x="200" y="65" width="12" height="8" fill="#e06090" opacity="0.2"/>
+      <rect x="225" y="65" width="12" height="8" fill="#00e5ff" opacity="0.4"/>
+      <rect x="280" y="30" width="50" height="150" fill="#242c4a" rx="3"/>
+      <polygon points="280,30 305,5 330,30" fill="#262e4d"/>
+      <circle cx="305" cy="15" r="3" fill="#00e5ff" opacity="0.6"/>
+      <rect x="360" y="50" width="65" height="130" fill="#222a48" rx="3"/>
+      <rect x="460" y="35" width="40" height="145" fill="#262e4d" rx="2"/>
+      <rect x="530" y="65" width="70" height="115" fill="#242c4a" rx="3"/>
+      <rect x="630" y="25" width="45" height="155" fill="#222a48" rx="2"/>
+      <rect x="700" y="55" width="60" height="125" fill="#262e4d" rx="3"/>
+      <rect x="770" y="40" width="40" height="140" fill="#242c4a" rx="2"/>
+    </svg>
+  </div>
+
+  <div class="splash-fog"></div>
+  <div class="splash-particles" id="splashParticles"></div>
+
+  <div class="splash-title">
+    <h1>העיר האבודה</h1>
+    <div class="splash-subtitle">חדר בריחה</div>
+  </div>
+
+  <button class="splash-enter" onclick="event.stopPropagation(); startGame()">כניסה לעיר</button>
+  <div class="splash-hint">לחצו בכל מקום להתחלה</div>
+</div>
+
+<!-- ============================================================
+     NAME INPUT
+     ============================================================ -->
+<div id="nameScreen" class="screen">
+  <div class="name-card">
+    <h2>מי את/ה?</h2>
+    <p>הכנס/י שם. יכול להיות אמיתי, יכול להיות בדוי.</p>
+    <input type="text" class="name-input" id="playerNameInput" placeholder="השם שלך..." maxlength="20" autocomplete="off">
+    <br>
+    <button class="name-submit" onclick="submitName()">יאללה</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     INTRO
+     ============================================================ -->
+<div id="introScreen" class="screen">
+  <div class="intro-text" id="introText">
+    <p>עיר מסתורית. פעם היא היתה מלאה באנשים.</p>
+    <p>יום אחד — שתקו. העיר נשארה, האנשים נעלמו.</p>
+    <p>את/ה פשוט הגעת. בלי סיבה. בלי שליחות.</p>
+    <p>אבל העיר נעולה. 5 חדרים מסתירים 5 שברים מויטראז' עתיק.</p>
+    <p>אספו את כולם — ותפתחו את העיר.</p>
+    <button class="intro-skip" onclick="goToMap()">קדימה למפה</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     MAP
+     ============================================================ -->
+<div id="mapScreen" class="screen">
+  <div class="map-container">
+    <!-- HUD -->
+    <div class="hud-bar">
+      <div class="hud-timer" id="hudTimer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="timerDisplay">05:00</span>
+      </div>
+      <div class="hud-fragments" id="hudFragments">
+        <!-- filled by JS -->
+      </div>
+      <div class="hud-btns">
+        <button class="hud-btn" onclick="toggleGarden()" title="גינה שקטה">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c-4-3-8-6-8-10a8 8 0 0116 0c0 4-4 7-8 10z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="hud-btn" id="muteBtn" onclick="toggleMute()" title="השתק/הפעל קול">
+          <svg id="soundOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+          <svg id="soundOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="map-title" id="mapTitle">מפת העיר</div>
+    <div class="map-rooms" id="mapRooms">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ROOM SCREEN (dynamic content)
+     ============================================================ -->
+<div id="roomScreen" class="screen">
+  <div class="room-container" id="roomContainer">
+    <!-- HUD (reused) -->
+    <div class="hud-bar">
+      <div class="hud-timer" id="roomTimer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="roomTimerDisplay">05:00</span>
+      </div>
+      <div class="hud-fragments" id="roomFragments"></div>
+      <div class="hud-btns">
+        <button class="hud-btn" onclick="toggleGarden()" title="גינה שקטה">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c-4-3-8-6-8-10a8 8 0 0116 0c0 4-4 7-8 10z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="hud-btn" onclick="toggleMute()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <button class="room-back" onclick="backToMap()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+
+    <div id="roomContent">
+      <!-- Room-specific content injected here -->
+    </div>
+
+    <button class="room-hint-btn" id="hintBtn" onclick="showHint()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      רמז מנועה
+    </button>
+
+    <div class="npc-hint" id="npcHint">
+      <div class="npc-name">נועה</div>
+      <div class="npc-msg" id="npcHintText"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     QUIET GARDEN
+     ============================================================ -->
+<div id="gardenScreen" class="screen">
+  <div class="garden-particles" id="gardenParticles"></div>
+  <div class="garden-container">
+    <div class="garden-title">הגינה השקטה</div>
+    <div class="garden-subtitle">מקום בטוח. בלי שעון. בלי אתגרים.</div>
+    <div style="position:relative; display:flex; align-items:center; justify-content:center;">
+      <div class="breath-circle" id="breathCircle">
+        <span id="breathText">נשמו...</span>
+      </div>
+    </div>
+    <button class="garden-back" onclick="exitGarden()">חזרה למשחק</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     FRAGMENT OVERLAY
+     ============================================================ -->
+<div class="fragment-overlay" id="fragmentOverlay">
+  <div class="fragment-shard" id="fragmentShard"></div>
+  <div class="fragment-name" id="fragmentName"></div>
+  <div class="fragment-desc" id="fragmentDesc"></div>
+  <button class="fragment-continue" id="fragmentBtn" onclick="closeFragment()">המשך למפה</button>
+</div>
+
+<!-- ============================================================
+     CONFETTI
+     ============================================================ -->
+<div class="confetti-container" id="confettiContainer"></div>
+
+<!-- ============================================================
+     JAVASCRIPT — GAME ENGINE
+     ============================================================ -->
+<script>
+// ================================================================
+// GAME STATE
+// ================================================================
+const state = {
+  playerName: '',
+  currentScreen: 'splash',
+  previousScreen: null,
+  currentRoom: null,
+  timerSeconds: 300, // 5 minutes
+  timerInterval: null,
+  timerPaused: false,
+  rooms: [
+    { id: 1, name: 'חדר החיבור', fragment: 'שבר חיבור', color: '#00e5ff', status: 'unlocked', hints: 0 },
+    { id: 2, name: 'חדר ההקשבה', fragment: 'שבר הקשבה', color: '#20e870', status: 'locked', hints: 0 },
+    { id: 3, name: 'החדר שלא נגמר', fragment: 'שבר דחף', color: '#ff8c00', status: 'locked', hints: 0 },
+    { id: 4, name: 'חדר הכלים', fragment: 'שבר כוח', color: '#a07de0', status: 'locked', hints: 0 },
+    { id: 5, name: 'חדר המראות', fragment: 'שבר בחירה', color: '#e06090', status: 'locked', hints: 0 },
+  ],
+  fragments: [false, false, false, false, false],
+  hintTimer: null,
+  room1: { placedPieces: 0, totalPieces: 9 },
+  room2: { sequence: [], correctOrder: [], attempts: 0 },
+};
+
+// ================================================================
+// AUDIO MANAGER (embedded, procedural)
+// ================================================================
+class AudioManager {
+  constructor() {
+    this._ctx = null;
+    this._master = null;
+    this._ambientBus = null;
+    this._sfxBus = null;
+    this._activeAmbient = null;
+    this._ambientNodes = [];
+    this._muted = false;
+    this._initialized = false;
+    this._disposed = false;
+    this._noiseBuffer = null;
+    try { this._muted = localStorage.getItem('lostcity_muted') === '1'; } catch(_){}
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!this._ctx) return;
+        document.hidden ? this._ctx.suspend().catch(()=>{}) : this._ctx.resume().catch(()=>{});
+      });
+    }
+  }
+
+  init() {
+    if (this._initialized) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { this._initialized = true; return; }
+    this._ctx = new AC({ latencyHint: 'playback' });
+    if (this._ctx.state === 'suspended') this._ctx.resume();
+
+    this._master = this._ctx.createGain();
+    this._master.gain.value = this._muted ? 0 : 1;
+    this._master.connect(this._ctx.destination);
+
+    this._ambientBus = this._ctx.createGain();
+    this._ambientBus.gain.value = 0.3;
+    this._ambientBus.connect(this._master);
+
+    this._sfxBus = this._ctx.createGain();
+    this._sfxBus.gain.value = 0.5;
+    this._sfxBus.connect(this._master);
+
+    this._initialized = true;
+  }
+
+  _createNoise() {
+    if (!this._noiseBuffer) {
+      const len = this._ctx.sampleRate * 2;
+      const buf = this._ctx.createBuffer(1, len, this._ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this._noiseBuffer = buf;
+    }
+    const src = this._ctx.createBufferSource();
+    src.buffer = this._noiseBuffer;
+    src.loop = true;
+    return src;
+  }
+
+  playAmbient(scene) {
+    if (!this._ctx || this._activeAmbient === scene) return;
+    this._ambientNodes.forEach(n => { try { n.stop?.(); n.disconnect(); } catch(_){} });
+    this._ambientNodes = [];
+    this._activeAmbient = scene;
+    const ctx = this._ctx;
+    const nodes = [];
+
+    if (scene === 'city' || scene === 'room') {
+      const drone1 = ctx.createOscillator(); drone1.type = 'sine'; drone1.frequency.value = 55;
+      const dg1 = ctx.createGain(); dg1.gain.value = 0.3;
+      drone1.connect(dg1).connect(this._ambientBus); drone1.start(); nodes.push(drone1);
+      const drone2 = ctx.createOscillator(); drone2.type = 'sine'; drone2.frequency.value = 55.8;
+      const dg2 = ctx.createGain(); dg2.gain.value = 0.25;
+      drone2.connect(dg2).connect(this._ambientBus); drone2.start(); nodes.push(drone2);
+      const wind = this._createNoise();
+      const wlpf = ctx.createBiquadFilter(); wlpf.type = 'lowpass'; wlpf.frequency.value = 400;
+      const wg = ctx.createGain(); wg.gain.value = 0.08;
+      wind.connect(wlpf).connect(wg).connect(this._ambientBus); wind.start(); nodes.push(wind);
+    } else if (scene === 'garden') {
+      [130.81, 164.81, 196].forEach(f => {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+        const g = ctx.createGain(); g.gain.value = 0.06;
+        o.connect(g).connect(this._ambientBus); o.start(); nodes.push(o);
+      });
+      const n = this._createNoise();
+      const lpf = ctx.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 500;
+      const ng = ctx.createGain(); ng.gain.value = 0.04;
+      n.connect(lpf).connect(ng).connect(this._ambientBus); n.start(); nodes.push(n);
+    }
+    this._ambientNodes = nodes;
+  }
+
+  playEffect(name) {
+    if (!this._ctx) return;
+    const ctx = this._ctx;
+    const now = ctx.currentTime;
+    const bus = this._sfxBus;
+
+    switch (name) {
+      case 'click': {
+        const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 800;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.3, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        o.connect(g).connect(bus); o.start(now); o.stop(now + 0.06);
+        break;
+      }
+      case 'place': {
+        const o = ctx.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(600, now); o.frequency.setValueAtTime(900, now + 0.05);
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.25, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        o.connect(g).connect(bus); o.start(now); o.stop(now + 0.15);
+        break;
+      }
+      case 'success': {
+        [523.25, 659.25, 783.99].forEach((f, i) => {
+          const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+          const g = ctx.createGain();
+          const onset = i * 0.15;
+          g.gain.setValueAtTime(0, now + onset);
+          g.gain.linearRampToValueAtTime(0.2, now + onset + 0.05);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+          o.connect(g).connect(bus); o.start(now + onset); o.stop(now + 0.8);
+        });
+        break;
+      }
+      case 'shard': {
+        [1400, 1800, 2200, 2800].forEach((f, i) => {
+          const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+          const g = ctx.createGain();
+          const off = i * 0.07;
+          g.gain.setValueAtTime(0, now + off);
+          g.gain.linearRampToValueAtTime(0.15, now + off + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, now + off + 0.25);
+          o.connect(g).connect(bus); o.start(now + off); o.stop(now + off + 0.3);
+        });
+        break;
+      }
+      case 'wrong': {
+        const o = ctx.createOscillator(); o.type = 'sawtooth';
+        o.frequency.setValueAtTime(300, now); o.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.15, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        const lpf = ctx.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 800;
+        o.connect(lpf).connect(g).connect(bus); o.start(now); o.stop(now + 0.3);
+        break;
+      }
+      case 'hint': {
+        [1200, 1200 * 2.4].forEach((f, i) => {
+          const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+          const g = ctx.createGain();
+          const v = i === 0 ? 0.15 : 0.06;
+          g.gain.setValueAtTime(v, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          o.connect(g).connect(bus); o.start(now); o.stop(now + 0.35);
+        });
+        break;
+      }
+      case 'soundObj': {
+        // Unique per-object sounds handled in room2
+        break;
+      }
+    }
+  }
+
+  // Play a unique tone for room2 sound objects
+  playTone(frequency, duration, type = 'sine') {
+    if (!this._ctx) return;
+    const ctx = this._ctx;
+    const now = ctx.currentTime;
+    const o = ctx.createOscillator(); o.type = type; o.frequency.value = frequency;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.3, now);
+    g.gain.setValueAtTime(0.3, now + duration * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    o.connect(g).connect(this._sfxBus); o.start(now); o.stop(now + duration + 0.05);
+  }
+
+  // Play a sequence of tones
+  playMelody(notes, noteLen = 0.4) {
+    if (!this._ctx) return;
+    const ctx = this._ctx;
+    const now = ctx.currentTime;
+    notes.forEach((n, i) => {
+      const o = ctx.createOscillator(); o.type = n.type || 'sine'; o.frequency.value = n.freq;
+      const g = ctx.createGain();
+      const start = now + i * noteLen;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.25, start + 0.03);
+      g.gain.setValueAtTime(0.25, start + noteLen * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.001, start + noteLen);
+      o.connect(g).connect(this._sfxBus); o.start(start); o.stop(start + noteLen + 0.05);
+    });
+  }
+
+  mute() { this._muted = true; if (this._master) this._master.gain.value = 0; try{localStorage.setItem('lostcity_muted','1')}catch(_){} }
+  unmute() { this._muted = false; if (this._master) this._master.gain.value = 1; try{localStorage.setItem('lostcity_muted','0')}catch(_){} }
+  toggleMute() { this._muted ? this.unmute() : this.mute(); return this._muted; }
+  get isMuted() { return this._muted; }
+}
+
+const audio = new AudioManager();
+
+// ================================================================
+// SCREEN MANAGEMENT
+// ================================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  state.previousScreen = state.currentScreen;
+  state.currentScreen = id;
+}
+
+// ================================================================
+// SPLASH
+// ================================================================
+function initSplashParticles() {
+  const container = document.getElementById('splashParticles');
+  const colors = ['cyan', 'purple', 'pink'];
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = `particle particle--${colors[i % 3]}`;
+    const size = 2 + Math.random() * 4;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.bottom = -20 + 'px';
+    p.style.animationDuration = (8 + Math.random() * 12) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    container.appendChild(p);
+  }
+}
+
+function startGame() {
+  audio.init();
+  audio.playAmbient('city');
+  audio.playEffect('click');
+  showScreen('nameScreen');
+  document.getElementById('playerNameInput').focus();
+}
+
+// ================================================================
+// NAME
+// ================================================================
+function submitName() {
+  const name = document.getElementById('playerNameInput').value.trim();
+  if (!name) {
+    document.getElementById('playerNameInput').style.borderColor = 'var(--pink)';
+    return;
+  }
+  state.playerName = name;
+  audio.playEffect('click');
+  showScreen('introScreen');
+  playIntro();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && state.currentScreen === 'nameScreen') submitName();
+});
+
+// ================================================================
+// INTRO
+// ================================================================
+function playIntro() {
+  const paragraphs = document.querySelectorAll('#introText p');
+  const btn = document.querySelector('.intro-skip');
+  paragraphs.forEach((p, i) => {
+    setTimeout(() => p.classList.add('visible'), 600 + i * 1200);
+  });
+  setTimeout(() => btn.classList.add('visible'), 600 + paragraphs.length * 1200);
+}
+
+function goToMap() {
+  audio.playEffect('click');
+  showScreen('mapScreen');
+  renderMap();
+  startTimer();
+}
+
+// ================================================================
+// TIMER
+// ================================================================
+function startTimer() {
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    if (state.timerPaused) return;
+    state.timerSeconds--;
+    if (state.timerSeconds <= 0) {
+      state.timerSeconds = 0;
+      clearInterval(state.timerInterval);
+      // Time's up — gentle message
+      showToast('הזמן נגמר. אבל אפשר לנסות שוב!');
+    }
+    updateTimerDisplays();
+  }, 1000);
+}
+
+function updateTimerDisplays() {
+  const m = Math.floor(state.timerSeconds / 60);
+  const s = state.timerSeconds % 60;
+  const str = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  ['timerDisplay', 'roomTimerDisplay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = str;
+  });
+  // Timer warning states
+  ['hudTimer', 'roomTimer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('warning', 'critical');
+    if (state.timerSeconds <= 30) el.classList.add('critical');
+    else if (state.timerSeconds <= 60) el.classList.add('warning');
+  });
+}
+
+// ================================================================
+// MAP
+// ================================================================
+const roomIcons = [
+  // Room 1: Connection — puzzle piece
+  `<svg viewBox="0 0 48 48" fill="none" stroke="#00e5ff" stroke-width="2"><path d="M8 16h8v-4a4 4 0 018 0v4h8v8h-4a4 4 0 000 8h4v8H8V16z"/></svg>`,
+  // Room 2: Listening — ear/wave
+  `<svg viewBox="0 0 48 48" fill="none" stroke="#20e870" stroke-width="2"><path d="M16 36c0-6 8-8 8-16a8 8 0 10-16 0"/><path d="M32 16a12 12 0 00-24 0"/><circle cx="16" cy="36" r="2" fill="#20e870"/><path d="M36 12a16 16 0 00-32 0" opacity="0.3"/></svg>`,
+  // Room 3: Drive — flame
+  `<svg viewBox="0 0 48 48" fill="none" stroke="#ff8c00" stroke-width="2"><path d="M24 4c0 12-12 16-12 28a12 12 0 0024 0c0-12-12-16-12-28z"/><path d="M20 32a4 4 0 008 0c0-4-4-6-4-10-0 4-4 6-4 10z" fill="#ff8c00" opacity="0.3"/></svg>`,
+  // Room 4: Power — star
+  `<svg viewBox="0 0 48 48" fill="none" stroke="#a07de0" stroke-width="2"><path d="M24 4l6 14h14l-11 9 4 15-13-9-13 9 4-15L4 18h14z"/></svg>`,
+  // Room 5: Choice — diamond
+  `<svg viewBox="0 0 48 48" fill="none" stroke="#e06090" stroke-width="2"><path d="M24 4L44 24L24 44L4 24z"/><path d="M24 12L36 24L24 36L12 24z" opacity="0.3"/></svg>`,
+];
+
+function renderMap() {
+  const container = document.getElementById('mapRooms');
+  container.innerHTML = '';
+  renderFragmentsHUD('hudFragments');
+
+  state.rooms.forEach((room, i) => {
+    const card = document.createElement('div');
+    card.className = `room-card ${room.status}`;
+    card.innerHTML = `
+      ${room.status === 'locked' ? `<div class="lock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>` : ''}
+      <div class="room-icon">${roomIcons[i]}</div>
+      <div class="room-name">${room.name}</div>
+      <div class="room-status">${room.status === 'completed' ? 'הושלם' : room.status === 'locked' ? 'נעול' : 'פתוח'}</div>
+    `;
+    if (room.status === 'unlocked') {
+      card.onclick = () => enterRoom(room.id);
+    }
+    container.appendChild(card);
+  });
+}
+
+function renderFragmentsHUD(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  const colors = ['#00e5ff', '#20e870', '#ff8c00', '#a07de0', '#e06090'];
+  const shapes = [
+    `<svg viewBox="0 0 28 28"><path d="M4 10h6V7a4 4 0 018 0v3h6v6h-3a4 4 0 000 6h3v6H4V10z" fill="${colors[0]}" opacity="0.8"/></svg>`,
+    `<svg viewBox="0 0 28 28"><path d="M14 4c4 4 10 8 10 14a10 10 0 01-20 0c0-6 6-10 10-14z" fill="${colors[1]}" opacity="0.8"/></svg>`,
+    `<svg viewBox="0 0 28 28"><path d="M14 2c0 8-8 10-8 18a8 8 0 0016 0c0-8-8-10-8-18z" fill="${colors[2]}" opacity="0.8"/></svg>`,
+    `<svg viewBox="0 0 28 28"><path d="M14 2l4 9h9l-7 6 3 10-9-6-9 6 3-10-7-6h9z" fill="${colors[3]}" opacity="0.8"/></svg>`,
+    `<svg viewBox="0 0 28 28"><path d="M14 2L26 14L14 26L2 14z" fill="${colors[4]}" opacity="0.8"/></svg>`,
+  ];
+  for (let i = 0; i < 5; i++) {
+    const frag = document.createElement('div');
+    frag.className = `hud-frag ${state.fragments[i] ? 'collected' : ''}`;
+    frag.innerHTML = shapes[i];
+    container.appendChild(frag);
+  }
+}
+
+// ================================================================
+// ENTER ROOM
+// ================================================================
+function enterRoom(roomId) {
+  audio.playEffect('click');
+  state.currentRoom = roomId;
+  showScreen('roomScreen');
+  renderFragmentsHUD('roomFragments');
+
+  // Clear previous hint timer
+  if (state.hintTimer) clearTimeout(state.hintTimer);
+  document.getElementById('hintBtn').classList.remove('visible');
+  document.getElementById('npcHint').classList.remove('visible');
+
+  // Start hint timer — show hint button after 30 seconds
+  state.hintTimer = setTimeout(() => {
+    document.getElementById('hintBtn').classList.add('visible');
+  }, 30000);
+
+  const content = document.getElementById('roomContent');
+  if (roomId === 1) buildRoom1(content);
+  else if (roomId === 2) buildRoom2(content);
+
+  audio.playAmbient('room');
+}
+
+function backToMap() {
+  audio.playEffect('click');
+  if (state.hintTimer) clearTimeout(state.hintTimer);
+  showScreen('mapScreen');
+  renderMap();
+  audio.playAmbient('city');
+}
+
+// ================================================================
+// HINT SYSTEM
+// ================================================================
+const hints = {
+  1: [
+    'נסי לגרור את החלקים למקומם. תסתכלי על הצבעים — הם רמזים.',
+    'שימו לב לדוגמאות בכל חלק — הם ממשיכים אחד את השני.',
+    'התחילו מהפינות! קל יותר כשיודעים איפה הקצוות.',
+  ],
+  2: [
+    'לחצו על כל חפץ ושמעו בקשב. יש סדר מסוים...',
+    'שימו לב לגובה הצליל — הם עולים בסדר מסוים.',
+    'נסו מהצליל הנמוך ביותר לגבוה ביותר. מלודיה עולה.',
+  ],
+};
+
+function showHint() {
+  const room = state.rooms[state.currentRoom - 1];
+  const roomHints = hints[state.currentRoom];
+  if (!roomHints) return;
+
+  const hintIndex = Math.min(room.hints, roomHints.length - 1);
+  document.getElementById('npcHintText').textContent = roomHints[hintIndex];
+  document.getElementById('npcHint').classList.add('visible');
+  room.hints++;
+
+  audio.playEffect('hint');
+
+  setTimeout(() => {
+    document.getElementById('npcHint').classList.remove('visible');
+  }, 5000);
+}
+
+// ================================================================
+// ROOM 1 — CONNECTION (Mural Puzzle)
+// ================================================================
+// Mural colors — a mosaic pattern
+const muralColors = [
+  ['#0a3d6b', '#1a6fb5', '#00e5ff'],
+  ['#1a6fb5', '#a07de0', '#7a5db8'],
+  ['#00e5ff', '#7a5db8', '#0a3d6b'],
+];
+
+// Each piece is a gradient tile of the mural mosaic
+const piecePatterns = [];
+for (let r = 0; r < 3; r++) {
+  for (let c = 0; c < 3; c++) {
+    piecePatterns.push({
+      row: r,
+      col: c,
+      bg: muralColors[r][c],
+      // Create SVG pattern for each tile
+      svg: createMuralTileSVG(r, c, muralColors[r][c]),
+    });
+  }
+}
+
+function createMuralTileSVG(row, col, color) {
+  // Each tile has a unique geometric pattern that together forms a city/bridge mural
+  const patterns = [
+    // Row 0: Sky
+    `<rect width="100" height="100" fill="#0a1628"/><circle cx="30" cy="40" r="20" fill="${color}" opacity="0.6"/><circle cx="70" cy="30" r="12" fill="#00e5ff" opacity="0.3"/>`,
+    `<rect width="100" height="100" fill="#0a1628"/><path d="M0 60 Q50 20 100 60" stroke="${color}" fill="none" stroke-width="3"/><circle cx="50" cy="25" r="15" fill="#a07de0" opacity="0.4"/>`,
+    `<rect width="100" height="100" fill="#0a1628"/><circle cx="60" cy="35" r="18" fill="${color}" opacity="0.5"/><path d="M80 20 L90 40 L70 40 Z" fill="#00e5ff" opacity="0.4"/>`,
+    // Row 1: Bridge
+    `<rect width="100" height="100" fill="#101830"/><rect x="10" y="50" width="20" height="50" fill="${color}" rx="2"/><rect x="40" y="30" width="15" height="70" fill="${color}" opacity="0.7" rx="1"/>`,
+    `<rect width="100" height="100" fill="#101830"/><path d="M0 50 Q25 30 50 50 Q75 30 100 50" stroke="${color}" fill="none" stroke-width="4"/><rect x="35" y="50" width="30" height="50" fill="${color}" opacity="0.5" rx="2"/>`,
+    `<rect width="100" height="100" fill="#101830"/><rect x="30" y="40" width="20" height="60" fill="${color}" rx="2"/><rect x="60" y="55" width="25" height="45" fill="${color}" opacity="0.7" rx="1"/>`,
+    // Row 2: Foundation
+    `<rect width="100" height="100" fill="#161b2a"/><rect x="0" y="20" width="100" height="80" fill="${color}" opacity="0.3" rx="3"/><rect x="10" y="30" width="15" height="10" fill="#00e5ff" opacity="0.5"/>`,
+    `<rect width="100" height="100" fill="#161b2a"/><rect x="0" y="30" width="100" height="70" fill="${color}" opacity="0.3" rx="3"/><path d="M20 50 L50 30 L80 50" stroke="#a07de0" fill="none" stroke-width="2"/>`,
+    `<rect width="100" height="100" fill="#161b2a"/><rect x="0" y="25" width="100" height="75" fill="${color}" opacity="0.3" rx="3"/><rect x="60" y="35" width="15" height="10" fill="#e06090" opacity="0.4"/>`,
+  ];
+  const idx = row * 3 + col;
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="mural-pattern">${patterns[idx]}</svg>`;
+}
+
+function buildRoom1(container) {
+  state.room1.placedPieces = 0;
+
+  // Shuffle pieces
+  const shuffled = [...Array(9).keys()];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  container.innerHTML = `
+    <div class="room1-scene">
+      <div class="room1-title">חדר החיבור</div>
+      <div class="room1-instruction">גררו את החלקים למקומם בתמונה. חברו את הפסיפס.</div>
+      <div class="mural-area" id="muralArea">
+        ${Array.from({length: 9}, (_, i) => `<div class="mural-slot" data-slot="${i}" id="slot${i}"></div>`).join('')}
+      </div>
+      <div class="pieces-tray" id="piecesTray">
+        ${shuffled.map(idx => `
+          <div class="puzzle-piece" data-piece="${idx}" id="piece${idx}"
+               style="border-color: ${piecePatterns[idx].bg}40;">
+            ${piecePatterns[idx].svg}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  setupDragAndDrop();
+}
+
+function setupDragAndDrop() {
+  const pieces = document.querySelectorAll('.puzzle-piece');
+  const slots = document.querySelectorAll('.mural-slot');
+  let draggedPiece = null;
+  let dragOffsetX = 0, dragOffsetY = 0;
+  let originalParent = null;
+
+  // TOUCH / MOUSE drag
+  pieces.forEach(piece => {
+    const startDrag = (clientX, clientY) => {
+      draggedPiece = piece;
+      originalParent = piece.parentElement;
+      const rect = piece.getBoundingClientRect();
+      dragOffsetX = clientX - rect.left;
+      dragOffsetY = clientY - rect.top;
+      piece.classList.add('dragging');
+      piece.style.left = (clientX - dragOffsetX) + 'px';
+      piece.style.top = (clientY - dragOffsetY) + 'px';
+      document.body.appendChild(piece);
+      audio.playEffect('click');
+    };
+
+    const moveDrag = (clientX, clientY) => {
+      if (!draggedPiece) return;
+      piece.style.left = (clientX - dragOffsetX) + 'px';
+      piece.style.top = (clientY - dragOffsetY) + 'px';
+
+      // Highlight nearest slot
+      slots.forEach(s => s.classList.remove('highlight'));
+      const nearest = getNearestSlot(clientX, clientY);
+      if (nearest && !nearest.classList.contains('filled')) {
+        nearest.classList.add('highlight');
+      }
+    };
+
+    const endDrag = (clientX, clientY) => {
+      if (!draggedPiece) return;
+      piece.classList.remove('dragging');
+      piece.style.position = '';
+      piece.style.left = '';
+      piece.style.top = '';
+      piece.style.zIndex = '';
+
+      const nearest = getNearestSlot(clientX, clientY);
+      const pieceIdx = parseInt(piece.dataset.piece);
+
+      if (nearest && !nearest.classList.contains('filled')) {
+        const slotIdx = parseInt(nearest.dataset.slot);
+        if (slotIdx === pieceIdx) {
+          // Correct placement
+          nearest.innerHTML = piecePatterns[pieceIdx].svg;
+          nearest.classList.add('filled');
+          piece.classList.add('placed');
+          state.room1.placedPieces++;
+          audio.playEffect('place');
+
+          // Screen shake
+          document.getElementById('roomScreen').classList.add('shake');
+          setTimeout(() => document.getElementById('roomScreen').classList.remove('shake'), 400);
+
+          if (state.room1.placedPieces === 9) {
+            // PUZZLE COMPLETE!
+            setTimeout(() => completeRoom(1), 600);
+          }
+        } else {
+          // Wrong slot
+          nearest.classList.add('highlight');
+          setTimeout(() => nearest.classList.remove('highlight'), 300);
+          audio.playEffect('wrong');
+          originalParent.appendChild(piece);
+        }
+      } else {
+        originalParent.appendChild(piece);
+      }
+
+      slots.forEach(s => s.classList.remove('highlight'));
+      draggedPiece = null;
+    };
+
+    // Mouse events
+    piece.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startDrag(e.clientX, e.clientY);
+    });
+
+    // Touch events
+    piece.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      startDrag(t.clientX, t.clientY);
+    });
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (draggedPiece) {
+      e.preventDefault();
+      const piece = draggedPiece;
+      piece.style.left = (e.clientX - dragOffsetX) + 'px';
+      piece.style.top = (e.clientY - dragOffsetY) + 'px';
+
+      document.querySelectorAll('.mural-slot').forEach(s => s.classList.remove('highlight'));
+      const nearest = getNearestSlot(e.clientX, e.clientY);
+      if (nearest && !nearest.classList.contains('filled')) nearest.classList.add('highlight');
+    }
+  });
+
+  document.addEventListener('mouseup', (e) => {
+    if (draggedPiece) {
+      const piece = draggedPiece;
+      piece.classList.remove('dragging');
+      piece.style.position = '';
+      piece.style.left = '';
+      piece.style.top = '';
+
+      const nearest = getNearestSlot(e.clientX, e.clientY);
+      const pieceIdx = parseInt(piece.dataset.piece);
+
+      if (nearest && !nearest.classList.contains('filled')) {
+        const slotIdx = parseInt(nearest.dataset.slot);
+        if (slotIdx === pieceIdx) {
+          nearest.innerHTML = piecePatterns[pieceIdx].svg;
+          nearest.classList.add('filled');
+          piece.classList.add('placed');
+          state.room1.placedPieces++;
+          audio.playEffect('place');
+          document.getElementById('roomScreen').classList.add('shake');
+          setTimeout(() => document.getElementById('roomScreen').classList.remove('shake'), 400);
+          if (state.room1.placedPieces === 9) setTimeout(() => completeRoom(1), 600);
+        } else {
+          audio.playEffect('wrong');
+          originalParent.appendChild(piece);
+        }
+      } else {
+        originalParent.appendChild(piece);
+      }
+      document.querySelectorAll('.mural-slot').forEach(s => s.classList.remove('highlight'));
+      draggedPiece = null;
+    }
+  });
+
+  document.addEventListener('touchmove', (e) => {
+    if (draggedPiece) {
+      e.preventDefault();
+      const t = e.touches[0];
+      draggedPiece.style.left = (t.clientX - dragOffsetX) + 'px';
+      draggedPiece.style.top = (t.clientY - dragOffsetY) + 'px';
+
+      document.querySelectorAll('.mural-slot').forEach(s => s.classList.remove('highlight'));
+      const nearest = getNearestSlot(t.clientX, t.clientY);
+      if (nearest && !nearest.classList.contains('filled')) nearest.classList.add('highlight');
+    }
+  }, { passive: false });
+
+  document.addEventListener('touchend', (e) => {
+    if (draggedPiece) {
+      const piece = draggedPiece;
+      const t = e.changedTouches[0];
+      piece.classList.remove('dragging');
+      piece.style.position = '';
+      piece.style.left = '';
+      piece.style.top = '';
+
+      const nearest = getNearestSlot(t.clientX, t.clientY);
+      const pieceIdx = parseInt(piece.dataset.piece);
+
+      if (nearest && !nearest.classList.contains('filled')) {
+        const slotIdx = parseInt(nearest.dataset.slot);
+        if (slotIdx === pieceIdx) {
+          nearest.innerHTML = piecePatterns[pieceIdx].svg;
+          nearest.classList.add('filled');
+          piece.classList.add('placed');
+          state.room1.placedPieces++;
+          audio.playEffect('place');
+          document.getElementById('roomScreen').classList.add('shake');
+          setTimeout(() => document.getElementById('roomScreen').classList.remove('shake'), 400);
+          if (state.room1.placedPieces === 9) setTimeout(() => completeRoom(1), 600);
+        } else {
+          audio.playEffect('wrong');
+          originalParent.appendChild(piece);
+        }
+      } else {
+        originalParent.appendChild(piece);
+      }
+      document.querySelectorAll('.mural-slot').forEach(s => s.classList.remove('highlight'));
+      draggedPiece = null;
+    }
+  });
+}
+
+function getNearestSlot(x, y) {
+  const slots = document.querySelectorAll('.mural-slot');
+  let nearest = null;
+  let minDist = Infinity;
+  slots.forEach(slot => {
+    const rect = slot.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
+    const threshold = Math.max(rect.width, rect.height) * 0.8;
+    if (dist < threshold && dist < minDist) {
+      minDist = dist;
+      nearest = slot;
+    }
+  });
+  return nearest;
+}
+
+// ================================================================
+// ROOM 2 — LISTENING (Sound Sequence)
+// ================================================================
+const soundObjects = [
+  { id: 'bell', label: 'פעמון', freq: 880, type: 'sine', icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 36h12M12 28c0-7 5-12 12-12s12 5 12 12v4H12v-4z"/><path d="M24 8v-4"/><circle cx="24" cy="4" r="2"/></svg>` },
+  { id: 'drum', label: 'תוף', freq: 120, type: 'triangle', icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="24" cy="20" rx="16" ry="6"/><path d="M8 20v12c0 3.3 7.2 6 16 6s16-2.7 16-6V20"/><line x1="12" y1="22" x2="20" y2="36"/><line x1="36" y1="22" x2="28" y2="36"/></svg>` },
+  { id: 'flute', label: 'חליל', freq: 660, type: 'sine', icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="20" width="32" height="8" rx="4"/><circle cx="16" cy="24" r="2" fill="currentColor"/><circle cx="24" cy="24" r="2" fill="currentColor"/><circle cx="32" cy="24" r="2" fill="currentColor"/></svg>` },
+  { id: 'crystal', label: 'גביש', freq: 1200, type: 'sine', icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="M24 4L36 18L24 44L12 18z"/><path d="M12 18h24" opacity="0.5"/></svg>` },
+  { id: 'wind', label: 'רוח', freq: 320, type: 'sawtooth', icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 24h20c4 0 6-4 2-6"/><path d="M4 18h16c3 0 5-3 2-5"/><path d="M4 30h24c5 0 7-5 2-7"/></svg>` },
+  { id: 'harp', label: 'נבל', freq: 520, type: 'sine', icon: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8c0 0 0 28 0 32"/><path d="M16 8c8-4 16 0 16 16"/><line x1="20" y1="10" x2="20" y2="36"/><line x1="24" y1="12" x2="24" y2="34"/><line x1="28" y1="14" x2="28" y2="30"/></svg>` },
+];
+
+// Correct order: ascending frequency = drum(120), wind(320), harp(520), flute(660), bell(880), crystal(1200)
+const correctSoundOrder = ['drum', 'wind', 'harp', 'flute', 'bell', 'crystal'];
+
+function buildRoom2(container) {
+  state.room2.sequence = [];
+  state.room2.attempts = 0;
+
+  container.innerHTML = `
+    <div class="room2-scene">
+      <div class="room2-title">חדר ההקשבה</div>
+      <div class="room2-instruction">לחצו על החפצים, שמעו את הצלילים. סדרו אותם מהנמוך לגבוה.</div>
+      <div class="sound-objects" id="soundObjects">
+        ${soundObjects.map(obj => `
+          <div class="sound-object" data-id="${obj.id}" onclick="playSoundObject('${obj.id}')">
+            ${obj.icon}
+            <span class="obj-label">${obj.label}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="sequence-area">
+        <div class="sequence-label">סדר הצלילים (מהנמוך לגבוה):</div>
+        <div class="sequence-slots" id="seqSlots">
+          ${correctSoundOrder.map((_, i) => `<div class="seq-slot" data-index="${i}" id="seqSlot${i}">${i + 1}</div>`).join('')}
+        </div>
+        <div class="seq-controls">
+          <button class="seq-btn seq-btn--clear" onclick="clearSequence()">נקה</button>
+          <button class="seq-btn seq-btn--check" id="checkSeqBtn" onclick="checkSequence()" disabled>בדוק</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function playSoundObject(id) {
+  const obj = soundObjects.find(o => o.id === id);
+  if (!obj) return;
+
+  // Visual feedback
+  const el = document.querySelector(`.sound-object[data-id="${id}"]`);
+  el.classList.add('playing');
+  setTimeout(() => el.classList.remove('playing'), 600);
+
+  // Play tone
+  audio.playTone(obj.freq, 0.8, obj.type);
+
+  // Add to sequence if not already full
+  if (state.room2.sequence.length < 6 && !state.room2.sequence.includes(id)) {
+    state.room2.sequence.push(id);
+    const slotIdx = state.room2.sequence.length - 1;
+    const slot = document.getElementById(`seqSlot${slotIdx}`);
+    slot.textContent = obj.label;
+    slot.classList.add('filled');
+
+    if (state.room2.sequence.length === 6) {
+      document.getElementById('checkSeqBtn').disabled = false;
+    }
+  }
+}
+
+function clearSequence() {
+  state.room2.sequence = [];
+  for (let i = 0; i < 6; i++) {
+    const slot = document.getElementById(`seqSlot${i}`);
+    slot.textContent = (i + 1).toString();
+    slot.classList.remove('filled', 'wrong');
+  }
+  document.getElementById('checkSeqBtn').disabled = true;
+  audio.playEffect('click');
+}
+
+function checkSequence() {
+  state.room2.attempts++;
+  let allCorrect = true;
+
+  for (let i = 0; i < 6; i++) {
+    const slot = document.getElementById(`seqSlot${i}`);
+    if (state.room2.sequence[i] !== correctSoundOrder[i]) {
+      slot.classList.add('wrong');
+      allCorrect = false;
+    }
+  }
+
+  if (allCorrect) {
+    audio.playEffect('success');
+    setTimeout(() => completeRoom(2), 600);
+  } else {
+    audio.playEffect('wrong');
+    document.getElementById('roomScreen').classList.add('shake');
+    setTimeout(() => document.getElementById('roomScreen').classList.remove('shake'), 400);
+
+    showToast(`ניסיון ${state.room2.attempts} — נסו שוב!`);
+
+    // Clear after showing wrong
+    setTimeout(() => clearSequence(), 1200);
+
+    // If stuck, play the correct melody as a hint after 3 attempts
+    if (state.room2.attempts === 3) {
+      setTimeout(() => {
+        showToast('רמז: שמעו את המנגינה הנכונה...');
+        audio.playMelody(correctSoundOrder.map(id => {
+          const obj = soundObjects.find(o => o.id === id);
+          return { freq: obj.freq, type: obj.type };
+        }), 0.6);
+      }, 2000);
+    }
+  }
+}
+
+// ================================================================
+// ROOM COMPLETION
+// ================================================================
+function completeRoom(roomId) {
+  const room = state.rooms[roomId - 1];
+  room.status = 'completed';
+  state.fragments[roomId - 1] = true;
+
+  // Unlock next room
+  if (roomId < 5) {
+    state.rooms[roomId].status = 'unlocked';
+  }
+
+  // Add bonus time
+  state.timerSeconds = Math.min(state.timerSeconds + 120, 600); // +2 min, max 10
+
+  // Confetti!
+  spawnConfetti();
+
+  // Sound
+  audio.playEffect('shard');
+
+  // Show fragment overlay
+  setTimeout(() => showFragmentOverlay(roomId), 800);
+}
+
+function showFragmentOverlay(roomId) {
+  const room = state.rooms[roomId - 1];
+  const colors = ['#00e5ff', '#20e870', '#ff8c00', '#a07de0', '#e06090'];
+  const color = colors[roomId - 1];
+
+  const shardSVGs = [
+    `<svg viewBox="0 0 120 120"><path d="M20 40h30v-15a20 20 0 0140 0v15h30v30h-15a20 20 0 000 30h15v30H20V40z" fill="${color}" opacity="0.9"/></svg>`,
+    `<svg viewBox="0 0 120 120"><path d="M60 10c20 20 50 30 50 60a50 50 0 01-100 0c0-30 30-40 50-60z" fill="${color}" opacity="0.9"/></svg>`,
+    `<svg viewBox="0 0 120 120"><path d="M60 5c0 30-30 40-30 70a30 30 0 0060 0c0-30-30-40-30-70z" fill="${color}" opacity="0.9"/></svg>`,
+    `<svg viewBox="0 0 120 120"><path d="M60 5l18 40h42l-34 26 12 42-38-26-38 26 12-42L0 45h42z" fill="${color}" opacity="0.9"/></svg>`,
+    `<svg viewBox="0 0 120 120"><path d="M60 5L115 60L60 115L5 60z" fill="${color}" opacity="0.9"/></svg>`,
+  ];
+
+  document.getElementById('fragmentShard').innerHTML = shardSVGs[roomId - 1];
+  document.getElementById('fragmentName').textContent = room.fragment;
+  document.getElementById('fragmentName').style.color = color;
+  document.getElementById('fragmentDesc').textContent = `שבר ${roomId} מתוך 5 נאסף. ${5 - state.fragments.filter(Boolean).length === 0 ? 'כל השברים נאספו!' : `נותרו ${5 - state.fragments.filter(Boolean).length} שברים.`}`;
+  document.getElementById('fragmentBtn').style.background = color;
+  document.getElementById('fragmentBtn').style.color = '#06080e';
+  document.getElementById('fragmentOverlay').classList.add('visible');
+}
+
+function closeFragment() {
+  document.getElementById('fragmentOverlay').classList.remove('visible');
+  audio.playEffect('click');
+
+  // Check if all fragments collected
+  if (state.fragments.every(Boolean)) {
+    showFinalScreen();
+  } else {
+    backToMap();
+  }
+}
+
+// ================================================================
+// FINAL SCREEN
+// ================================================================
+function showFinalScreen() {
+  // For now, go to map with a celebration
+  showScreen('mapScreen');
+  renderMap();
+  document.getElementById('mapTitle').textContent = 'כל השברים נאספו!';
+  document.getElementById('mapTitle').style.color = 'var(--gold)';
+  spawnConfetti();
+  spawnConfetti();
+  audio.playEffect('success');
+  setTimeout(() => audio.playEffect('shard'), 500);
+}
+
+// ================================================================
+// QUIET GARDEN
+// ================================================================
+function toggleGarden() {
+  if (state.currentScreen === 'gardenScreen') {
+    exitGarden();
+    return;
+  }
+  state.timerPaused = true;
+  audio.playAmbient('garden');
+  audio.playEffect('click');
+  showScreen('gardenScreen');
+  startBreathing();
+  initGardenParticles();
+}
+
+function exitGarden() {
+  state.timerPaused = false;
+  audio.playEffect('click');
+  audio.playAmbient(state.previousScreen === 'roomScreen' ? 'room' : 'city');
+
+  if (state.previousScreen === 'roomScreen') {
+    showScreen('roomScreen');
+  } else {
+    showScreen('mapScreen');
+    renderMap();
+  }
+}
+
+function startBreathing() {
+  const text = document.getElementById('breathText');
+  const phases = ['נשמו פנימה...', 'החזיקו...', 'נשמו החוצה...', 'החזיקו...'];
+  let phase = 0;
+  const cycle = () => {
+    text.textContent = phases[phase % 4];
+    phase++;
+  };
+  cycle();
+  setInterval(cycle, 2000);
+}
+
+function initGardenParticles() {
+  const container = document.getElementById('gardenParticles');
+  container.innerHTML = '';
+  for (let i = 0; i < 15; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle particle--cyan';
+    p.style.opacity = '0';
+    const size = 2 + Math.random() * 3;
+    p.style.width = size + 'px';
+    p.style.height = size + 'px';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.bottom = '-10px';
+    p.style.animationDuration = (10 + Math.random() * 15) + 's';
+    p.style.animationDelay = (Math.random() * 8) + 's';
+    p.style.background = '#20e870';
+    p.style.boxShadow = '0 0 6px rgba(32,232,112,0.5)';
+    container.appendChild(p);
+  }
+}
+
+// ================================================================
+// CONFETTI
+// ================================================================
+function spawnConfetti() {
+  const container = document.getElementById('confettiContainer');
+  const colors = ['#00e5ff', '#a07de0', '#e06090', '#ffd700', '#20e870', '#ff8c00'];
+  for (let i = 0; i < 50; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.top = '-10px';
+    piece.style.width = (4 + Math.random() * 6) + 'px';
+    piece.style.height = (4 + Math.random() * 6) + 'px';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    piece.style.animationDuration = (1 + Math.random() * 2) + 's';
+    piece.style.animationDelay = (Math.random() * 0.5) + 's';
+    container.appendChild(piece);
+    setTimeout(() => piece.remove(), 3500);
+  }
+}
+
+// ================================================================
+// TOAST
+// ================================================================
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3200);
+}
+
+// ================================================================
+// MUTE
+// ================================================================
+function toggleMute() {
+  const muted = audio.toggleMute();
+  document.getElementById('soundOn').style.display = muted ? 'none' : 'block';
+  document.getElementById('soundOff').style.display = muted ? 'block' : 'none';
+}
+
+// ================================================================
+// INIT
+// ================================================================
+initSplashParticles();
+
+// Update mute UI on load
+if (audio.isMuted) {
+  document.getElementById('soundOn').style.display = 'none';
+  document.getElementById('soundOff').style.display = 'block';
+}
+</script>
+</body>
+</html>
