@@ -147,20 +147,40 @@
 
   .card .tag.urgent   { background: #fff5f5; color: #c53030; }
   .card .tag.done     { background: #f0fff4; color: #276749; }
+  .card .tag.completed { background: #c6f6d5; color: #22543d; font-weight: 700; }
   .card .tag.waiting  { background: #f7fafc; color: #718096; border: 1px solid #e2e8f0; }
-  .card .tag.building { background: #ebf8ff; color: #2b6cb0; }
-
-  /* Checkbox */
-  .card-check {
+  .card .tag.building { background: #fff3e0; color: #e65100; font-weight: 700; border: 1.5px solid #ffb74d; position: relative; overflow: hidden; }
+  .card .tag.building::before {
+    content: '';
     position: absolute;
-    top: 12px;
-    left: 12px;
-    width: 22px;
-    height: 22px;
-    accent-color: #276749;
+    top: 0; left: -100%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,183,77,0.3), transparent);
+    animation: shimmer 2.5s infinite;
+  }
+  @keyframes shimmer { to { left: 100%; } }
+
+  /* Status selector */
+  .status-select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 8px;
+    border: 1.5px solid #cbd5e0;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #fff;
     cursor: pointer;
     z-index: 10;
+    font-family: inherit;
+    color: #4a5568;
+    transition: border-color 0.2s;
+    -webkit-appearance: menulist;
+    appearance: menulist;
+    min-width: 70px;
   }
+  .status-select:hover { border-color: #7AADAD; background: #f7fafc; }
+  .status-select:focus { outline: none; border-color: #7AADAD; }
   .card { position: relative; }
 
   /* Done section */
@@ -557,6 +577,7 @@
     <!-- Legend -->
     <div class="legend">
       <span style="font-weight:700; color:#2d3748;">סטטוס:</span>
+      <span class="legend-item"><span class="tag completed" style="margin:0">בוצע</span> — הושלם ופעיל</span>
       <span class="legend-item"><span class="tag building" style="margin:0">בתהליך</span> — עובדים עליו עכשיו</span>
       <span class="legend-item"><span class="tag done" style="margin:0">תוכנן</span> — תוכנן, יש פרומפט מוכן</span>
       <span class="legend-item"><span class="tag waiting" style="margin:0">ממתין</span> — טרם דנו, לשיחה עתידית</span>
@@ -680,7 +701,7 @@
           <div class="card-num">16</div>
           <h3>גיוס משאבים ושיתופי פעולה</h3>
           <p>קולות קוראים, מענקים, שותפויות עם חברות, תחרויות ופרסים</p>
-          <span class="tag progress">בתהליך</span>
+          <span class="tag building">בתהליך</span>
         </div>
         <div class="card low" onclick="openModal('tracks')">
           <div class="card-num">17</div>
@@ -710,14 +731,14 @@
           <div class="card-num">21</div>
           <h3>מערכת תעסוקה</h3>
           <p>מעסיקים, שיבוצי תלמידים יא-יב, נוכחות, ביקורים, טפסים, מכתבי תודה</p>
-          <span class="tag done">בוצע</span>
+          <span class="tag completed">בוצע</span>
           <a href="employment.html" style="font-size:.75rem;color:#7AADAD;display:block;margin-top:6px">פתח מערכת</a>
         </div>
         <div class="card low" onclick="window.location.href='bnot-sherut.html'" style="border-color:var(--success,#6A9F6A);cursor:pointer">
           <div class="card-num">21b</div>
           <h3>בנות שירות</h3>
           <p>שיבוץ, מעקב נוכחות, הערכות ותיעוד</p>
-          <span class="tag done">בוצע</span>
+          <span class="tag completed">בוצע</span>
           <a href="bnot-sherut.html" style="font-size:.75rem;color:#7AADAD;display:block;margin-top:6px">פתח מערכת</a>
         </div>
         <div class="card low" onclick="openModal('branding')">
@@ -1623,46 +1644,92 @@ function showSection(name) {
 
 // ---- Checkboxes & Done ----
 
-function getDoneSet() {
-  try { return new Set(JSON.parse(localStorage.getItem('hub-done') || '[]')); }
-  catch(e) { return new Set(); }
+const STATUS_OPTIONS = [
+  { value: 'waiting',   label: 'ממתין',   cls: 'waiting' },
+  { value: 'done',      label: 'תוכנן',   cls: 'done' },
+  { value: 'building',  label: 'בתהליך',  cls: 'building' },
+  { value: 'completed', label: 'בוצע',    cls: 'completed' }
+];
+
+function getStatusMap() {
+  try { return JSON.parse(localStorage.getItem('hub-status') || '{}'); }
+  catch(e) { return {}; }
 }
 
-function saveDoneSet(set) {
-  localStorage.setItem('hub-done', JSON.stringify([...set]));
+function saveStatusMap(map) {
+  localStorage.setItem('hub-status', JSON.stringify(map));
 }
 
-function initCheckboxes() {
-  const done = getDoneSet();
-  document.querySelectorAll('#section-priorities .card[onclick]').forEach(card => {
-    const match = card.getAttribute('onclick').match(/openModal\('([^']+)'\)/);
-    if (!match) return;
-    const key = match[1];
+function detectCurrentStatus(card) {
+  const tag = card.querySelector('.tag');
+  if (!tag) return 'waiting';
+  for (const opt of STATUS_OPTIONS) {
+    if (tag.classList.contains(opt.cls)) return opt.value;
+  }
+  return 'waiting';
+}
+
+function applyStatus(card, status) {
+  const tag = card.querySelector('.tag');
+  if (!tag) return;
+  const opt = STATUS_OPTIONS.find(o => o.value === status);
+  if (!opt) return;
+  tag.className = 'tag ' + opt.cls;
+  tag.textContent = opt.label;
+}
+
+function initStatusSelectors() {
+  const statusMap = getStatusMap();
+
+  document.querySelectorAll('#section-priorities .card').forEach(card => {
+    const onclick = card.getAttribute('onclick') || '';
+    const modalMatch = onclick.match(/openModal\('([^']+)'\)/);
+    const numEl = card.querySelector('.card-num');
+    const key = modalMatch ? modalMatch[1] : numEl ? 'card-' + numEl.textContent.trim() : null;
+    if (!key) return;
     card.dataset.key = key;
 
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'card-check';
-    cb.title = 'סמן כבוצע';
-    cb.checked = done.has(key);
-    cb.addEventListener('click', e => { e.stopPropagation(); toggleDone(key, card, cb); });
-    card.appendChild(cb);
+    // Track original parent grid for restoring from done
+    card.dataset.originalParent = Array.from(
+      document.querySelectorAll('#section-priorities .cards-grid')
+    ).indexOf(card.closest('.cards-grid'));
 
-    if (done.has(key)) moveToDone(card);
+    // Apply saved status (localStorage overrides HTML)
+    const saved = statusMap[key];
+    const current = saved || detectCurrentStatus(card);
+    applyStatus(card, current);
+
+    // Create dropdown
+    const select = document.createElement('select');
+    select.className = 'status-select';
+    select.title = 'שנה סטטוס';
+    STATUS_OPTIONS.forEach(opt => {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.label;
+      select.appendChild(o);
+    });
+    select.value = current;
+    select.addEventListener('click', e => e.stopPropagation());
+    select.addEventListener('change', e => {
+      e.stopPropagation();
+      const newStatus = select.value;
+      const map = getStatusMap();
+      map[key] = newStatus;
+      saveStatusMap(map);
+      applyStatus(card, newStatus);
+      if (newStatus === 'completed') {
+        setTimeout(() => moveToDone(card), 300);
+      } else {
+        moveFromDone(card);
+      }
+      refreshDoneSection();
+    });
+    card.appendChild(select);
+
+    // Move completed cards to done section
+    if (current === 'completed') moveToDone(card);
   });
-  refreshDoneSection();
-}
-
-function toggleDone(key, card, cb) {
-  const done = getDoneSet();
-  if (cb.checked) {
-    done.add(key);
-    setTimeout(() => moveToDone(card), 300);
-  } else {
-    done.delete(key);
-    moveFromDone(card);
-  }
-  saveDoneSet(done);
   refreshDoneSection();
 }
 
@@ -1671,9 +1738,12 @@ function moveToDone(card) {
 }
 
 function moveFromDone(card) {
-  // move back to priorities section (append to last priority-section grid)
+  const doneGrid = document.getElementById('done-grid');
+  if (card.parentElement !== doneGrid) return;
   const grids = document.querySelectorAll('#section-priorities .priority-section .cards-grid');
-  if (grids.length) grids[grids.length - 1].appendChild(card);
+  const idx = parseInt(card.dataset.originalParent);
+  const target = grids[idx] || grids[grids.length - 1];
+  if (target) target.appendChild(card);
 }
 
 function refreshDoneSection() {
@@ -1682,7 +1752,7 @@ function refreshDoneSection() {
   doneSection.style.display = doneGrid.children.length > 0 ? 'block' : 'none';
 }
 
-document.addEventListener('DOMContentLoaded', initCheckboxes);
+document.addEventListener('DOMContentLoaded', initStatusSelectors);
 
 function closeModal() {
   document.getElementById('modal').classList.remove('open');
