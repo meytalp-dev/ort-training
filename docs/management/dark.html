@@ -1255,8 +1255,9 @@ const HOMEROOMS=[
 const CLASS_LIST=['ט1','י1','י2','י3','יא1','יא2','יא3','יב1','יב2','יב3'];
 const GRADE_CLASSES={'ט':['ט1'],'י':['י1','י2','י3'],'יא':['יא1','יא2','יא3'],'יב':['יב1','יב2','יב3']};
 const GRADE_LIST=['ט','י','יא','יב'];
-const DEFAULT_SUBJECTS=['עיצוב שיער עיוני','עיצוב שיער מעשי','מחשבים','אוטוטרוניקה','מתמטיקה','אנגלית','הבעה, הבנה ולשון','אזרחות','היסטוריה','תנ"ך','ספרות','פרט, קבוצה וחברה','הכנה לעולם התעסוקה','ספורט'];
-const TEACHER_LIST=['אופירה מלכה','אליאל קוסקאס','אפרת בר אשר','אושר אהרוני','אביעד לרדן','אשר','בת שבע אדלר','גיא נתנאל','דורית ויגדור','ויקי קלדרון','יהודית בן גיגי','יואב רוט','יעל טננבאום','יעקב גרונספלד','ליאת בנג\'ו','לינוי בנג\'י','מירב בטיטו','מלי נמיר','מנו דהאן','מוריס חרירי','מריאן','משה צברי','נעמה קוסטן','פרלה שאזו','רעיה יצחקי','צהיי','שי בגלר','שירלי דרעי'];
+const DEFAULT_SUBJECTS=['עיצוב שיער עיוני','עיצוב שיער מעשי','מחשבים','אוטוטרוניקה','מתמטיקה','אנגלית 3 יח"ל','אנגלית 4 יח"ל','אנגלית 5 יח"ל','הבעה, הבנה ולשון','אזרחות','היסטוריה','תנ"ך','ספרות','פרט, קבוצה וחברה','שעת חינוך','הכנה לעולם התעסוקה','ספורט'];
+const HOMEROOM_TEACHERS={'ט1':'משה צברי','י1':'מנו דהאן','י2':'יואב רוט','י3':'אליאל קוסקאס','יא1':'רעיה יצחקי','יא2':'אופירה מלכה','יא3':'פרלה שאזו','יב1':'יעקב גרונספלד','יב2':'נעמה קוסטן','יב3':'גיא נתנאל'};
+const TEACHER_LIST=['אופירה מלכה','אליאל קוסקאס','אפרת בר אשר','אושר אהרוני','אביעד לרדן','אשר','בת שבע אדלר','גיא נתנאל','דורית ויגדור','ויקי קלדרון','יהודית בן גיגי','יואב רוט','יוסי','יעל טננבאום','יעקב גרונספלד','ליאת בנג\'ו','לינוי בנג\'י','מאיה','מירב בטיטו','מלי נמיר','מנו דהאן','מוריס חרירי','מריאן','משה צברי','נעמה קוסטן','פרלה שאזו','רוית','רעיה יצחקי','שמעון','צהיי','שי בגלר','שירלי דרעי'];
 // Teacher birthdates (DD/MM/YYYY) for age-based position calculation
 const TEACHER_BIRTH={
   'אופירה מלכה':'12/11/1970','אליאל קוסקאס':'26/03/1997','אפרת בר אשר':'20/07/1992',
@@ -1317,10 +1318,10 @@ const TRACK_45={
 // Which track each class uses
 const CLASS_TRACK={'ט1':55,'י1':45,'י2':45,'י3':45,'יא1':45,'יא2':55,'יא3':45,'יב1':45,'יב2':55,'יב3':45};
 // מגמות רוחביות – מתקיימות במקביל, נספרות פעם אחת בסיכום שעות כיתה
-const PARALLEL_SUBJECTS=['עיצוב שיער עיוני','עיצוב שיער מעשי','מחשבים','אוטוטרוניקה'];
+const PARALLEL_SUBJECTS=['עיצוב שיער עיוני','עיצוב שיער מעשי','מחשבים','אוטוטרוניקה','אנגלית 3 יח"ל','אנגלית 4 יח"ל','אנגלית 5 יח"ל'];
 const PARALLEL_GROUPS=[
   {subjects:['עיצוב שיער עיוני','עיצוב שיער מעשי','מחשבים','אוטוטרוניקה']},
-  {subjects:['אנגלית'],grades:['יא','יב']}
+  {subjects:['אנגלית 3 יח"ל','אנגלית 4 יח"ל','אנגלית 5 יח"ל']}
 ];
 function classEffectiveHours(cls){
   const grade=cls.replace(/\d+/,'');
@@ -1343,8 +1344,17 @@ let classSchedule=JSON.parse(localStorage.getItem('mgmt-class-schedule')||'null'
 CLASS_LIST.forEach(cls=>{
   if(!classSchedule[cls])classSchedule[cls]=DEFAULT_SUBJECTS.map(subj=>({subject:subj,hours:'',teacher:''}));
   // Remove 'עברית' (replaced by הבעה, הבנה ולשון) + old empty subjects
-  const OLD_SUBJ=['עברית','לשון','חינוך גופני','מגמת עיצוב שיער','מגמת מחשבים','מגמת אוטוטרוניקה','מגמה','עיצוב שיער'];
+  const OLD_SUBJ=['עברית','לשון','חינוך גופני','מגמת עיצוב שיער','מגמת מחשבים','מגמת אוטוטרוניקה','מגמה','עיצוב שיער','אנגלית'];
   classSchedule[cls]=classSchedule[cls].filter(r=>r.subject==='עברית'?false:OLD_SUBJ.includes(r.subject)&&!num(r.hours)&&!r.teacher?false:true);
+  // Ensure שעת חינוך exists and auto-fill homeroom teacher
+  const hrt=HOMEROOM_TEACHERS[cls];
+  if(hrt){
+    ['שעת חינוך','פרט, קבוצה וחברה'].forEach(subj=>{
+      let row=classSchedule[cls].find(r=>r.subject===subj);
+      if(!row){classSchedule[cls].push({subject:subj,hours:'1',teacher:hrt});row=classSchedule[cls][classSchedule[cls].length-1]}
+      if(!row.teacher)row.teacher=hrt;
+    });
+  }
 });
 
 function getTeacherAge(name){
@@ -1368,14 +1378,25 @@ function getOzRow(frontalHours,age){
 function getTeacherHoursMap(){
   const m={};
   TEACHER_LIST.forEach(t=>{m[t]={frontal:0,individual:0,classes:[],subjects:{}}});
+  // Track parallel subjects already counted per teacher+grade
+  const parallelCounted={}; // key: teacher|grade|subject
   CLASS_LIST.forEach(cls=>{
+    const grade=cls.replace(/\d+/,'');
     (classSchedule[cls]||[]).forEach(r=>{
       if(!r.teacher)return;
       const fh=num(r.hours),ih=num(r.indivHours);
       if(!fh&&!ih)return;
       if(!m[r.teacher])m[r.teacher]={frontal:0,individual:0,classes:[],subjects:{}};
-      m[r.teacher].frontal+=fh;
-      m[r.teacher].individual+=ih;
+      // For parallel/horizontal subjects — count hours once per grade
+      const isParallel=PARALLEL_SUBJECTS.includes(r.subject);
+      const pKey=r.teacher+'|'+grade+'|'+r.subject;
+      if(isParallel&&parallelCounted[pKey]){
+        // Already counted for this grade — don't add to frontal/individual totals
+      } else {
+        m[r.teacher].frontal+=fh;
+        m[r.teacher].individual+=ih;
+        if(isParallel)parallelCounted[pKey]=true;
+      }
       if(!m[r.teacher].classes.includes(cls))m[r.teacher].classes.push(cls);
       if(!m[r.teacher].subjects[r.subject])m[r.teacher].subjects[r.subject]=[];
       m[r.teacher].subjects[r.subject].push({cls,hours:fh,indivHours:ih});
