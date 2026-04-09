@@ -227,9 +227,10 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     טופס ראיון
   </button>
-  <button data-tab="checklist">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-    צ'ק-ליסט קליטה
+  <button data-tab="registration">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    רישום במנב"ס
+    <span id="regBadge" style="display:none;background:var(--danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:800;display:none;align-items:center;justify-content:center;margin-right:4px"></span>
   </button>
   <button data-tab="student-file">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -811,9 +812,46 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
     <div class="form-group">
       <label>החלטה לגבי התלמיד/ה</label>
       <div class="radio-group">
-        <label style="border-color:rgba(106,159,106,.3)"><input type="radio" name="intDecision" value="accepted"><span style="color:var(--success)">התקבל/ה</span></label>
-        <label style="border-color:rgba(192,96,90,.3)"><input type="radio" name="intDecision" value="rejected"><span style="color:var(--danger)">לא התקבל/ה</span></label>
-        <label style="border-color:rgba(196,148,74,.3)"><input type="radio" name="intDecision" value="pending"><span style="color:var(--warn)">ממתין/ה</span></label>
+        <label style="border-color:rgba(106,159,106,.3)"><input type="radio" name="intDecision" value="accepted" onchange="toggleAcceptedFields()"><span style="color:var(--success)">התקבל/ה</span></label>
+        <label style="border-color:rgba(192,96,90,.3)"><input type="radio" name="intDecision" value="rejected" onchange="toggleAcceptedFields()"><span style="color:var(--danger)">לא התקבל/ה</span></label>
+        <label style="border-color:rgba(196,148,74,.3)"><input type="radio" name="intDecision" value="pending" onchange="toggleAcceptedFields()"><span style="color:var(--warn)">ממתין/ה</span></label>
+      </div>
+    </div>
+
+    <!-- Accepted fields — class + track -->
+    <div id="acceptedFields" style="display:none;margin-top:14px;background:var(--success-bg);border:1.5px solid rgba(106,159,106,.25);border-radius:14px;padding:18px 20px;animation:fadeInUp .3s ease">
+      <h4 style="font-size:.88rem;font-weight:700;color:var(--success);margin-bottom:12px;font-family:Heebo;display:flex;align-items:center;gap:6px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>
+        שיבוץ התלמיד/ה
+      </h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>כיתה</label>
+          <select class="form-input" id="intClass">
+            <option value="">בחרי כיתה...</option>
+            <option value="ט1">ט'1</option>
+            <option value="ט2">ט'2</option>
+            <option value="ט3">ט'3</option>
+            <option value="י1">י'1</option>
+            <option value="י2">י'2</option>
+            <option value="י3">י'3</option>
+            <option value="יא1">יא'1</option>
+            <option value="יא2">יא'2</option>
+            <option value="יא3">יא'3</option>
+            <option value="יב1">יב'1</option>
+            <option value="יב2">יב'2</option>
+            <option value="יב3">יב'3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>מגמה סופית</label>
+          <select class="form-input" id="intFinalTrack">
+            <option value="">בחרי מגמה...</option>
+            <option value="hair">עיצוב שיער</option>
+            <option value="auto">אוטוטרוניקה</option>
+            <option value="computers">מחשבים</option>
+          </select>
+        </div>
       </div>
     </div>
   </div>
@@ -834,81 +872,67 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
 </div>
 
 <!-- ============================================================ -->
-<!-- TAB 4: ONBOARDING CHECKLIST                                   -->
+<!-- TAB 4: REGISTRATION IN MANB"S                                 -->
 <!-- ============================================================ -->
-<div class="tab-content" id="tab-checklist">
-<div class="container" style="max-width:900px">
+<div class="tab-content" id="tab-registration">
+<div class="container" style="max-width:1000px">
 
-  <!-- Student selector -->
-  <div class="toolbar">
-    <select class="filter-select" id="checklistStudentSelect" style="min-width:250px" onchange="loadChecklist()">
-      <option value="">בחרי תלמיד/ה...</option>
-    </select>
-    <div style="flex:1"></div>
-    <div id="checklistProgress" style="display:none;align-items:center;gap:10px">
-      <div style="background:var(--border);border-radius:10px;height:10px;width:200px;overflow:hidden">
-        <div id="progressBar" style="height:100%;background:linear-gradient(90deg,var(--primary),var(--success));border-radius:10px;transition:width .4s;width:0"></div>
-      </div>
-      <span id="progressText" style="font-size:.82rem;font-weight:700;color:var(--primary-dark)">0%</span>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+    <div style="width:44px;height:44px;border-radius:12px;background:rgba(122,173,173,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(122,173,173,.12)">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    </div>
+    <div>
+      <h2 style="font-size:1.15rem;font-weight:900;font-family:Heebo;margin-bottom:2px">רישום במנב"ס</h2>
+      <p style="font-size:.82rem;color:var(--muted)">תלמידים שהתקבלו וממתינים לרישום במערכת</p>
     </div>
   </div>
 
-  <!-- Checklist Card -->
-  <div id="checklistCard" style="display:none">
-    <div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-sm);overflow:hidden">
-      <div style="padding:16px 24px;border-bottom:1px solid var(--border);background:rgba(245,240,232,.4);display:flex;align-items:center;gap:10px">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-        <h3 style="font-size:1rem;font-weight:700;font-family:Heebo" id="checklistTitle">צ'ק-ליסט קליטה</h3>
-      </div>
-      <div style="padding:8px 0" id="checklistItems"></div>
-    </div>
-
-    <!-- Tour Form Button -->
-    <div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-sm);padding:20px 24px;margin-top:16px;display:flex;align-items:center;gap:14px">
-      <div style="width:44px;height:44px;border-radius:12px;background:rgba(122,173,173,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(122,173,173,.12)">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 10-16 0c0 3 2.7 7 8 11.7z"/></svg>
-      </div>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:.92rem;font-family:Heebo">טופס טיול היכרות</div>
-        <div style="font-size:.78rem;color:var(--muted)">סיור תחנות עם אנשי צוות — להדפסה או מילוי דיגיטלי</div>
-      </div>
-      <button class="btn btn-primary btn-sm" onclick="openTourForm()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        פתיחה
-      </button>
-    </div>
-
-    <div style="text-align:center;padding:20px 0">
-      <button class="btn btn-primary" onclick="saveChecklist()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-        שמירה
-      </button>
-    </div>
-  </div>
+  <!-- Registration queue -->
+  <div id="regQueue"></div>
 
   <!-- Empty state -->
-  <div id="checklistEmpty">
+  <div id="regEmpty" style="display:none">
     <div class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-      <h3>בחרי תלמיד/ה שהתקבל/ה</h3>
-      <p>צ'ק-ליסט הקליטה מופיע לאחר בחירת תלמיד/ה</p>
+      <h3>אין תלמידים ממתינים לרישום</h3>
+      <p>כשיסכה תאשר קבלת תלמיד/ה, הפרטים יופיעו כאן</p>
     </div>
+  </div>
+
+  <!-- Already registered -->
+  <div id="regDone" style="margin-top:24px;display:none">
+    <h3 style="font-size:.95rem;font-weight:700;font-family:Heebo;margin-bottom:12px;color:var(--muted);display:flex;align-items:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>
+      נרשמו במנב"ס
+    </h3>
+    <div id="regDoneList"></div>
   </div>
 
 </div>
 </div>
 
 <style>
-.cl-item{display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid rgba(232,221,208,.5);transition:background .15s}
-.cl-item:last-child{border-bottom:none}
-.cl-item:hover{background:rgba(122,173,173,.03)}
-.cl-item.done{background:rgba(106,159,106,.04)}
-.cl-item input[type="checkbox"]{width:18px;height:18px;accent-color:var(--success);flex-shrink:0;cursor:pointer}
-.cl-item .cl-text{flex:1;font-size:.88rem}
-.cl-item.done .cl-text{text-decoration:line-through;color:var(--muted)}
-.cl-item .cl-meta{display:flex;align-items:center;gap:8px}
-.cl-item select{padding:3px 8px;border:1px solid var(--border);border-radius:6px;font-family:Heebo;font-size:.75rem;background:var(--card)}
-.cl-item .cl-date{font-size:.72rem;color:var(--muted);min-width:70px;text-align:center}
+.reg-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-sm);margin-bottom:14px;overflow:hidden;animation:fadeInUp .4s ease}
+.reg-card-header{padding:16px 22px;border-bottom:1px solid var(--border);background:rgba(245,240,232,.4);display:flex;align-items:center;gap:14px}
+.reg-card-header .reg-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary-light),var(--primary));display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.reg-card-header .reg-avatar svg{width:22px;height:22px;stroke:#fff}
+.reg-card-header .reg-info{flex:1}
+.reg-card-header .reg-name{font-size:1.05rem;font-weight:800;font-family:Heebo}
+.reg-card-header .reg-meta{font-size:.78rem;color:var(--muted);display:flex;gap:12px;margin-top:2px}
+.reg-card-body{padding:18px 22px}
+.reg-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:.83rem}
+.reg-grid .reg-field{background:rgba(245,240,232,.5);padding:8px 12px;border-radius:10px}
+.reg-grid .reg-label{font-size:.7rem;color:var(--muted);margin-bottom:2px}
+.reg-grid .reg-value{font-weight:600}
+.reg-parents{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.reg-parent-card{background:rgba(245,240,232,.5);padding:12px 14px;border-radius:12px;border:1px solid rgba(232,221,208,.5)}
+.reg-parent-card h5{font-size:.78rem;font-weight:700;margin-bottom:6px;font-family:Heebo}
+.reg-parent-row{display:flex;justify-content:space-between;font-size:.8rem;padding:2px 0}
+.reg-parent-row .reg-label{color:var(--muted);font-size:.72rem}
+.reg-actions{display:flex;gap:8px;padding:14px 22px;border-top:1px solid var(--border);background:rgba(245,240,232,.3)}
+.reg-done-card{background:var(--card);border-radius:14px;border:1px solid rgba(106,159,106,.2);padding:12px 18px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.reg-done-card .reg-done-check{width:28px;height:28px;border-radius:50%;background:var(--success-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+@media(max-width:768px){.reg-grid{grid-template-columns:1fr 1fr}.reg-parents{grid-template-columns:1fr}}
 </style>
 
 <!-- ============================================================ -->
@@ -1124,6 +1148,10 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
     <div class="modal-footer">
       <button class="btn btn-primary btn-sm" id="detailEditBtn">עריכה</button>
       <button class="btn btn-success btn-sm" id="detailInterviewBtn">מעבר לטופס ראיון</button>
+      <button class="btn btn-sm" id="detailFileBtn" style="display:none;background:var(--primary);color:#fff">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        פתח תיק תלמיד
+      </button>
       <button class="btn btn-danger btn-sm" id="detailDeleteBtn">מחיקה</button>
     </div>
   </div>
@@ -1546,10 +1574,27 @@ var INT_FIELDS = [
   'intPrevOpinion','intReferrerName','intReferrerPhone','intKabsPhone','intKabsNotes',
   'intAcademic','intTherapy','intSocial','intFamily','intHealth',
   'intMotivation','intDream','intParentView',
-  'intRecommendations','intPresent','intImpression'
+  'intRecommendations','intPresent','intImpression',
+  'intClass','intFinalTrack'
 ];
 var INT_RADIOS = ['intFamilyStatus','intHousing','intCertificate','intClassType','intMeds','intDiagnosis','intPlacement','intKabs','intDecision'];
 var INT_CHECKS = ['chkBounds','chkRegistrar','chkHomeroom','chkCoordination','chkGradual'];
+
+// Toggle accepted fields (class + track) when decision changes
+function toggleAcceptedFields() {
+  var decision = document.querySelector('input[name="intDecision"]:checked');
+  var fields = document.getElementById('acceptedFields');
+  if (decision && decision.value === 'accepted') {
+    fields.style.display = 'block';
+    // Pre-fill track from interview form
+    var track = document.getElementById('intTrack').value;
+    if (track && !document.getElementById('intFinalTrack').value) {
+      document.getElementById('intFinalTrack').value = track;
+    }
+  } else {
+    fields.style.display = 'none';
+  }
+}
 
 function getInterviews() {
   try { return JSON.parse(localStorage.getItem('ort_interviews') || '[]'); } catch(e) { return []; }
@@ -1604,17 +1649,30 @@ function saveInterview() {
       return (l.firstName === firstName && l.lastName === lastName);
     });
     if (lead) {
-      if (decision === 'accepted') lead.status = 'accepted';
+      var wasAccepted = lead.status !== 'accepted' && decision === 'accepted';
+      if (decision === 'accepted') {
+        lead.status = 'accepted';
+        lead.assignedClass = data.intClass || '';
+        lead.finalTrack = data.intFinalTrack || lead.track || '';
+        lead.acceptedAt = new Date().toISOString();
+      }
       else if (decision === 'rejected') lead.status = 'rejected';
       else if (decision === 'pending') lead.status = 'pending';
       saveLeads(leads);
       renderLeads();
+
+      // Notify secretary when newly accepted
+      if (wasAccepted) {
+        notifySecretary(lead, data);
+      }
     }
   }
 
   alert('טופס הראיון נשמר בהצלחה!');
   updateSecretaryBadge();
+  updateRegBadge();
   refreshLeadDropdown();
+  renderRegistrationQueue();
 }
 
 function loadLeadToInterview() {
@@ -1653,6 +1711,10 @@ function loadLeadToInterview() {
     if (existing.intMeds === 'yes') document.getElementById('intMedsType').parentElement.classList.add('show');
     if (existing.intDiagnosis === 'yes') document.getElementById('intDiagType').parentElement.classList.add('show');
     if (existing.intKabs === 'yes') document.getElementById('intKabsPhone').parentElement.classList.add('show');
+    // Show accepted fields if decision is accepted
+    if (existing.intDecision === 'accepted') {
+      document.getElementById('acceptedFields').style.display = 'block';
+    }
   } else {
     // Pre-fill from lead
     document.getElementById('intFirstName').value = lead.firstName || '';
@@ -1714,134 +1776,236 @@ function saveIntroForm() {
 }
 
 // ============================================================
-// TAB 4: ONBOARDING CHECKLIST
+// TAB 4: REGISTRATION IN MANB"S
 // ============================================================
-var CHECKLIST_ITEMS = [
-  'קבלת דוחות מביה"ס קודם',
-  'קבלת דוחות הנהלה',
-  'קבלת דוחות מנהל',
-  'אבחונים דידקטיים',
-  'דוחות ביקטוריות',
-  'בדיקות פסיכודידקטיות',
-  'בדיקות התפתחותיות',
-  'דיווח לרשויות (אם נדרש)',
-  'חתימת הצהרת הורים',
-  'חתימת הסכמה לטיפול',
-  'הרשמה במערכת בית הספר',
-  'שיבוץ לכיתה',
-  'שיחת קליטה עם יועצת',
-  'שיחת קליטה עם מחנכת',
-  'שיחה עם מיטל המנהלת',
-  'טופס טיול היכרות — הושלם'
-];
+var SECRETARY_PHONE = '972506239018'; // מיטל המזכירה
 
-function refreshChecklistDropdown() {
-  var sel = document.getElementById('checklistStudentSelect');
+function getRegistrations() {
+  try { return JSON.parse(localStorage.getItem('ort_registrations') || '{}'); } catch(e) { return {}; }
+}
+
+function renderRegistrationQueue() {
   var leads = getLeads().filter(function(l) { return l.status === 'accepted'; });
-  sel.innerHTML = '<option value="">בחרי תלמיד/ה...</option>';
-  leads.forEach(function(l) {
-    var opt = document.createElement('option');
-    opt.value = l.id;
-    opt.textContent = l.firstName + ' ' + l.lastName;
-    sel.appendChild(opt);
-  });
-}
+  var regs = getRegistrations();
 
-function getChecklists() {
-  try { return JSON.parse(localStorage.getItem('ort_checklists') || '{}'); } catch(e) { return {}; }
-}
+  var pending = leads.filter(function(l) { return !regs[l.id] || !regs[l.id].done; });
+  var done = leads.filter(function(l) { return regs[l.id] && regs[l.id].done; });
 
-function loadChecklist() {
-  var leadId = document.getElementById('checklistStudentSelect').value;
-  if (!leadId) {
-    document.getElementById('checklistCard').style.display = 'none';
-    document.getElementById('checklistEmpty').style.display = 'block';
-    document.getElementById('checklistProgress').style.display = 'none';
-    return;
+  var queueEl = document.getElementById('regQueue');
+  var emptyEl = document.getElementById('regEmpty');
+  var doneEl = document.getElementById('regDone');
+  var doneListEl = document.getElementById('regDoneList');
+
+  if (pending.length === 0) {
+    queueEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+  } else {
+    emptyEl.style.display = 'none';
+    queueEl.innerHTML = pending.map(function(lead) {
+      var interviews = getInterviews();
+      var iv = interviews.find(function(i) { return i.intFirstName === lead.firstName && i.intLastName === lead.lastName; });
+      var trackLabels = { hair: 'עיצוב שיער', auto: 'אוטוטרוניקה', computers: 'מחשבים' };
+      var classVal = (iv && iv.intClass) || lead.assignedClass || '';
+      var trackVal = (iv && iv.intFinalTrack) || lead.finalTrack || lead.track || '';
+      var acceptDate = lead.acceptedAt ? new Date(lead.acceptedAt).toLocaleDateString('he-IL') : '';
+
+      var html = '<div class="reg-card" id="reg-' + lead.id + '">';
+      html += '<div class="reg-card-header">';
+      html += '<div class="reg-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg></div>';
+      html += '<div class="reg-info"><div class="reg-name">' + esc(lead.firstName) + ' ' + esc(lead.lastName) + '</div>';
+      html += '<div class="reg-meta"><span>כיתה: <strong>' + esc(classVal || 'טרם נקבע') + '</strong></span>';
+      html += '<span>מגמה: <strong>' + esc(trackLabels[trackVal] || 'טרם נקבע') + '</strong></span>';
+      html += '<span>תאריך קבלה: ' + acceptDate + '</span></div></div>';
+      html += '<span class="status-badge status-accepted">ממתין לרישום</span>';
+      html += '</div>';
+
+      // Body — student details for Manb"s
+      html += '<div class="reg-card-body">';
+      html += '<div class="reg-grid">';
+      if (iv) {
+        html += regField('שם פרטי', iv.intFirstName);
+        html += regField('שם משפחה', iv.intLastName);
+        html += regField('ת.ז.', iv.intIdNum);
+        html += regField('תאריך לידה', iv.intBirthDate);
+        html += regField('כתובת', [iv.intCity, iv.intStreet, iv.intApt].filter(Boolean).join(', '));
+        html += regField('טלפון נייד', iv.intMobile);
+        html += regField('טלפון בית', iv.intHomePhone);
+        html += regField('ביה"ס קודם', iv.intLastSchool);
+        html += regField('מגמה', trackLabels[trackVal] || '');
+      } else {
+        html += regField('שם', lead.firstName + ' ' + lead.lastName);
+        html += regField('טלפון', lead.phone);
+        html += regField('מגמה', trackLabels[trackVal] || '');
+      }
+      html += '</div>';
+
+      // Parents
+      if (iv && (iv.intFatherName || iv.intMotherName)) {
+        html += '<div class="reg-parents">';
+        if (iv.intFatherName) {
+          html += '<div class="reg-parent-card"><h5 style="color:var(--primary-dark)">אב</h5>';
+          html += regParentRow('שם', iv.intFatherName);
+          html += regParentRow('ת.ז.', iv.intFatherId);
+          html += regParentRow('נייד', iv.intFatherPhone);
+          html += regParentRow('אימייל', iv.intFatherEmail);
+          html += '</div>';
+        }
+        if (iv.intMotherName) {
+          html += '<div class="reg-parent-card"><h5 style="color:var(--dusty-rose)">אם</h5>';
+          html += regParentRow('שם', iv.intMotherName);
+          html += regParentRow('ת.ז.', iv.intMotherId);
+          html += regParentRow('נייד', iv.intMotherPhone);
+          html += regParentRow('אימייל', iv.intMotherEmail);
+          html += '</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+
+      // Actions
+      html += '<div class="reg-actions">';
+      html += '<button class="btn btn-success" onclick="markRegistered(\'' + lead.id + '\')">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>';
+      html += 'נרשם/ה במנב"ס</button>';
+      html += '<button class="btn btn-outline" onclick="openWhatsAppSecretary(\'' + lead.id + '\')">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>';
+      html += 'שלח וואטסאפ</button>';
+      html += '<button class="btn btn-outline" onclick="openStudentFileFromReg(\'' + lead.id + '\')">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>';
+      html += 'פתח תיק תלמיד</button>';
+      html += '</div>';
+      html += '</div>';
+      return html;
+    }).join('');
   }
 
+  // Done list
+  if (done.length > 0) {
+    doneEl.style.display = 'block';
+    doneListEl.innerHTML = done.map(function(lead) {
+      var reg = regs[lead.id];
+      var dateStr = reg.doneAt ? new Date(reg.doneAt).toLocaleDateString('he-IL') : '';
+      return '<div class="reg-done-card">' +
+        '<div class="reg-done-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg></div>' +
+        '<div style="flex:1"><strong style="font-size:.88rem">' + esc(lead.firstName) + ' ' + esc(lead.lastName) + '</strong>' +
+        '<div style="font-size:.75rem;color:var(--muted)">נרשם במנב"ס ' + dateStr + '</div></div>' +
+        '<button class="btn btn-outline btn-sm" onclick="openStudentFileFromReg(\'' + lead.id + '\')">תיק תלמיד</button>' +
+        '</div>';
+    }).join('');
+  } else {
+    doneEl.style.display = 'none';
+  }
+
+  updateRegBadge();
+}
+
+function regField(label, value) {
+  return '<div class="reg-field"><div class="reg-label">' + esc(label) + '</div><div class="reg-value">' + esc(value || '—') + '</div></div>';
+}
+
+function regParentRow(label, value) {
+  return '<div class="reg-parent-row"><span class="reg-label">' + esc(label) + '</span><span style="font-weight:600">' + esc(value || '—') + '</span></div>';
+}
+
+function markRegistered(leadId) {
+  if (!confirm('לסמן כנרשם/ה במנב"ס?')) return;
+
+  var regs = getRegistrations();
+  regs[leadId] = { done: true, doneAt: new Date().toISOString() };
+  localStorage.setItem('ort_registrations', JSON.stringify(regs));
+
+  // Export to student file
+  var leads = getLeads();
+  var lead = leads.find(function(l) { return l.id === leadId; });
+  if (lead) {
+    exportLeadToStudentFile(lead);
+  }
+
+  // Sync to Sheet
+  syncToSheet('markRegistered', { leadId: leadId, doneAt: regs[leadId].doneAt });
+
+  renderRegistrationQueue();
+  refreshFileDropdown();
+}
+
+function openWhatsAppSecretary(leadId) {
   var leads = getLeads();
   var lead = leads.find(function(l) { return l.id === leadId; });
   if (!lead) return;
 
-  document.getElementById('checklistCard').style.display = 'block';
-  document.getElementById('checklistEmpty').style.display = 'none';
-  document.getElementById('checklistProgress').style.display = 'flex';
-  document.getElementById('checklistTitle').textContent = 'צ\'ק-ליסט קליטה — ' + lead.firstName + ' ' + lead.lastName;
+  var trackLabels = { hair: 'עיצוב שיער', auto: 'אוטוטרוניקה', computers: 'מחשבים' };
+  var classVal = lead.assignedClass || '';
+  var trackVal = trackLabels[lead.finalTrack || lead.track] || '';
 
-  var checklists = getChecklists();
-  var studentCl = checklists[leadId] || {};
+  var msg = 'שלום מיטל,\n';
+  msg += 'תלמיד/ה חדש/ה התקבל/ה לבית הספר:\n\n';
+  msg += 'שם: ' + lead.firstName + ' ' + lead.lastName + '\n';
+  if (classVal) msg += 'כיתה: ' + classVal + '\n';
+  if (trackVal) msg += 'מגמה: ' + trackVal + '\n';
+  msg += '\nיש לרשום במנב"ס.\n';
+  msg += 'קישור למערכת: ' + window.location.href;
 
-  var container = document.getElementById('checklistItems');
-  container.innerHTML = CHECKLIST_ITEMS.map(function(item, i) {
-    var itemData = studentCl[i] || {};
-    var done = itemData.done || false;
-    var responsible = itemData.responsible || '';
-    var date = itemData.date || '';
-    return '<div class="cl-item ' + (done ? 'done' : '') + '">' +
-      '<input type="checkbox" ' + (done ? 'checked' : '') + ' data-idx="' + i + '" onchange="toggleCheckItem(this)">' +
-      '<div class="cl-text">' + esc(item) + '</div>' +
-      '<div class="cl-meta">' +
-        '<select data-idx="' + i + '" data-field="responsible" onchange="updateCheckField(this)">' +
-          '<option value="">אחראי/ת...</option>' +
-          '<option value="yiska"' + (responsible === 'yiska' ? ' selected' : '') + '>יסכה</option>' +
-          '<option value="counselor"' + (responsible === 'counselor' ? ' selected' : '') + '>יועצת</option>' +
-          '<option value="homeroom"' + (responsible === 'homeroom' ? ' selected' : '') + '>מחנכת</option>' +
-          '<option value="meytal"' + (responsible === 'meytal' ? ' selected' : '') + '>מיטל המנהלת</option>' +
-          '<option value="secretary"' + (responsible === 'secretary' ? ' selected' : '') + '>מיטל המזכירה</option>' +
-        '</select>' +
-        '<div class="cl-date">' + (date || '') + '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-
-  updateProgressBar();
+  var url = 'https://wa.me/' + SECRETARY_PHONE + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
 }
 
-function toggleCheckItem(cb) {
-  var leadId = document.getElementById('checklistStudentSelect').value;
-  if (!leadId) return;
-  var idx = cb.dataset.idx;
-  var checklists = getChecklists();
-  if (!checklists[leadId]) checklists[leadId] = {};
-  if (!checklists[leadId][idx]) checklists[leadId][idx] = {};
-  checklists[leadId][idx].done = cb.checked;
-  checklists[leadId][idx].date = cb.checked ? new Date().toLocaleDateString('he-IL') : '';
-  localStorage.setItem('ort_checklists', JSON.stringify(checklists));
-
-  var row = cb.closest('.cl-item');
-  if (cb.checked) row.classList.add('done'); else row.classList.remove('done');
-  row.querySelector('.cl-date').textContent = checklists[leadId][idx].date;
-  updateProgressBar();
+function openStudentFileFromReg(leadId) {
+  // Switch to student file tab
+  document.querySelectorAll('.nav button').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelector('[data-tab="student-file"]').classList.add('active');
+  document.getElementById('tab-student-file').classList.add('active');
+  refreshFileDropdown();
+  setTimeout(function() {
+    document.getElementById('fileStudentSelect').value = leadId;
+    loadStudentFile();
+  }, 100);
 }
 
-function updateCheckField(sel) {
-  var leadId = document.getElementById('checklistStudentSelect').value;
-  if (!leadId) return;
-  var idx = sel.dataset.idx;
-  var checklists = getChecklists();
-  if (!checklists[leadId]) checklists[leadId] = {};
-  if (!checklists[leadId][idx]) checklists[leadId][idx] = {};
-  checklists[leadId][idx][sel.dataset.field] = sel.value;
-  localStorage.setItem('ort_checklists', JSON.stringify(checklists));
-}
-
-function saveChecklist() {
-  alert('הצ\'ק-ליסט נשמר!');
-}
-
-function updateProgressBar() {
-  var leadId = document.getElementById('checklistStudentSelect').value;
-  if (!leadId) return;
-  var checklists = getChecklists();
-  var studentCl = checklists[leadId] || {};
-  var done = 0;
-  for (var i = 0; i < CHECKLIST_ITEMS.length; i++) {
-    if (studentCl[i] && studentCl[i].done) done++;
+function updateRegBadge() {
+  var badge = document.getElementById('regBadge');
+  if (!badge) return;
+  var leads = getLeads().filter(function(l) { return l.status === 'accepted'; });
+  var regs = getRegistrations();
+  var pending = leads.filter(function(l) { return !regs[l.id] || !regs[l.id].done; });
+  if (pending.length > 0) {
+    badge.style.display = 'inline-flex';
+    badge.textContent = pending.length;
+  } else {
+    badge.style.display = 'none';
   }
-  var pct = Math.round((done / CHECKLIST_ITEMS.length) * 100);
-  document.getElementById('progressBar').style.width = pct + '%';
-  document.getElementById('progressText').textContent = pct + '%';
+}
+
+// ============================================================
+// SECRETARY NOTIFICATION — Email + WhatsApp
+// ============================================================
+function notifySecretary(lead, interviewData) {
+  var trackLabels = { hair: 'עיצוב שיער', auto: 'אוטוטרוניקה', computers: 'מחשבים' };
+  var classVal = interviewData.intClass || lead.assignedClass || '';
+  var trackVal = trackLabels[interviewData.intFinalTrack || lead.finalTrack || lead.track] || '';
+  var fullName = lead.firstName + ' ' + lead.lastName;
+
+  // 1. Send email via Apps Script
+  if (APPS_SCRIPT_URL) {
+    syncToSheet('notifySecretary', {
+      studentName: fullName,
+      studentClass: classVal,
+      studentTrack: trackVal,
+      secretaryEmail: '', // Apps Script will use the configured email
+      leadId: lead.id
+    });
+  }
+
+  // 2. Prompt WhatsApp
+  var sendWA = confirm(
+    fullName + ' התקבל/ה!\n\n' +
+    'כיתה: ' + (classVal || 'טרם נקבע') + '\n' +
+    'מגמה: ' + (trackVal || 'טרם נקבע') + '\n\n' +
+    'לשלוח הודעת וואטסאפ למיטל המזכירה?'
+  );
+  if (sendWA) {
+    openWhatsAppSecretary(lead.id);
+  }
 }
 
 // ============================================================
@@ -2045,8 +2209,7 @@ function updateSecretaryBadge() {
 // ============================================================
 // TOUR FORM (טופס טיול היכרות)
 // ============================================================
-function openTourForm() {
-  var leadId = document.getElementById('checklistStudentSelect').value;
+function openTourForm(leadId) {
   if (!leadId) { alert('בחרי תלמיד/ה קודם'); return; }
   var leads = getLeads();
   var lead = leads.find(function(l) { return l.id === leadId; });
@@ -2077,8 +2240,7 @@ function closeTourModal() {
   document.getElementById('tourModal').classList.remove('show');
 }
 
-function saveTourForm() {
-  var leadId = document.getElementById('checklistStudentSelect').value;
+function saveTourForm(leadId) {
   if (!leadId) return;
 
   var data = {};
@@ -2153,7 +2315,9 @@ function loadStudentFile() {
 
   // Header
   document.getElementById('fileName').textContent = lead.firstName + ' ' + lead.lastName;
-  document.getElementById('fileTrack').textContent = TRACK_LABELS[lead.track] || 'לא נבחרה מגמה';
+  var finalTrack = lead.finalTrack || lead.track || '';
+  var classInfo = lead.assignedClass ? ' — כיתה ' + lead.assignedClass : '';
+  document.getElementById('fileTrack').textContent = (TRACK_LABELS[finalTrack] || 'לא נבחרה מגמה') + classInfo;
   var statusEl = document.getElementById('fileStatus');
   statusEl.textContent = STATUS_LABELS[lead.status] || lead.status;
   statusEl.className = 'status-badge ' + (STATUS_CLASSES[lead.status] || '');
@@ -2221,13 +2385,10 @@ function loadStudentFile() {
     if (interview.intDecision === 'rejected') events.push({ date: interview.updatedAt || interview.createdAt, text: 'לא התקבל/ה', type: 'rejected' });
   }
 
-  // Add checklist completion events
-  var checklists = getChecklists();
-  var studentCl = checklists[leadId] || {};
-  for (var ci = 0; ci < CHECKLIST_ITEMS.length; ci++) {
-    if (studentCl[ci] && studentCl[ci].done) {
-      events.push({ date: null, text: CHECKLIST_ITEMS[ci] + ' — בוצע', type: '' });
-    }
+  // Add registration event
+  var regs = getRegistrations();
+  if (regs[leadId] && regs[leadId].done) {
+    events.push({ date: regs[leadId].doneAt, text: 'נרשם/ה במנב"ס', type: 'accepted' });
   }
 
   // Add notes
@@ -2296,18 +2457,31 @@ function renderStudentNotes(leadId) {
 
 function renderStudentDocs(leadId) {
   var container = document.getElementById('fileDocs');
-  var checklists = getChecklists();
-  var studentCl = checklists[leadId] || {};
-  var docItems = CHECKLIST_ITEMS.slice(0, 10); // First 10 are document-related
+  var leads = getLeads();
+  var lead = leads.find(function(l) { return l.id === leadId; });
+  if (!lead) { container.innerHTML = ''; return; }
 
-  container.innerHTML = docItems.map(function(item, i) {
-    var done = studentCl[i] && studentCl[i].done;
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(232,221,208,.3)">' +
-      (done ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>' :
-              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>') +
-      '<span style="font-size:.85rem;' + (done ? 'color:var(--success)' : 'color:var(--muted)') + '">' + esc(item) + '</span>' +
-    '</div>';
-  }).join('');
+  var docKey = 'ort_docs_' + (lead.firstName + '_' + lead.lastName).replace(/\s/g, '_');
+  var localDocs = {};
+  try { localDocs = JSON.parse(localStorage.getItem(docKey) || '{}'); } catch(e) {}
+
+  var hasAny = false;
+  var html = '';
+  DOC_FIELDS.forEach(function(docId) {
+    var doc = localDocs[docId];
+    var hasThat = doc && (doc.data || doc.driveUrl);
+    if (hasThat) hasAny = true;
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(232,221,208,.3)">' +
+      (hasThat ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>' :
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>') +
+      '<span style="font-size:.85rem;' + (hasThat ? 'color:var(--success)' : 'color:var(--muted)') + '">' + esc(DOC_LABELS[docId]) + '</span>';
+    if (hasThat && doc.driveUrl) {
+      html += ' <a href="' + doc.driveUrl + '" target="_blank" style="font-size:.72rem;color:var(--primary)">Drive</a>';
+    }
+    html += '</div>';
+  });
+
+  container.innerHTML = html || '<div style="font-size:.82rem;color:var(--muted);padding:8px 0">אין מסמכים</div>';
 }
 
 // ============================================================
@@ -2407,7 +2581,7 @@ function loadFromSheetOnInit() {
       saveLeads(localLeads);
       renderLeads();
       refreshLeadDropdown();
-      refreshChecklistDropdown();
+      renderRegistrationQueue();
       refreshFileDropdown();
     }
   });
@@ -2547,6 +2721,19 @@ openDetailModal = function(id) {
   document.getElementById('detailBody').innerHTML = html;
 
   // Buttons
+  // Show "open student file" button for accepted or registered students
+  var fileBtn = document.getElementById('detailFileBtn');
+  var regs = getRegistrations();
+  var isRegistered = lead.status === 'accepted' || (regs[lead.id] && regs[lead.id].done);
+  if (isRegistered) {
+    fileBtn.style.display = 'inline-flex';
+    fileBtn.onclick = function() {
+      window.open('student-file.html', '_blank');
+    };
+  } else {
+    fileBtn.style.display = 'none';
+  }
+
   document.getElementById('detailEditBtn').onclick = function() { closeDetailModal(); openLeadModal(id); };
   document.getElementById('detailInterviewBtn').onclick = function() {
     closeDetailModal();
@@ -2578,10 +2765,11 @@ openDetailModal = function(id) {
 // ============================================================
 renderLeads();
 refreshLeadDropdown();
-refreshChecklistDropdown();
+renderRegistrationQueue();
 refreshFileDropdown();
 loadFromSheetOnInit();
 updateSecretaryBadge();
+updateRegBadge();
 
 // Auto-set view based on role
 var initRole = document.getElementById('roleSelect').value;
@@ -2590,11 +2778,44 @@ if (initRole === 'meytal_secretary') {
   renderLeads();
 }
 
+// ============================================================
+// EXPORT LEAD TO STUDENT FILE
+// ============================================================
+function exportLeadToStudentFile(lead) {
+  // Find interview data
+  var interviews = getInterviews();
+  var interview = interviews.find(function(iv) {
+    return iv.intFirstName === lead.firstName && iv.intLastName === lead.lastName;
+  });
+
+  // Build admission data package for student-file to read
+  var pkg = {
+    leadId: lead.id,
+    firstName: lead.firstName,
+    lastName: lead.lastName,
+    phone: lead.phone || '',
+    phone2: lead.phone2 || '',
+    source: lead.source || '',
+    track: lead.track || '',
+    status: lead.status,
+    handler: lead.handler || '',
+    notes: lead.notes || '',
+    createdAt: lead.createdAt,
+    interview: interview || null
+  };
+
+  // Save to shared localStorage key
+  var exported = {};
+  try { exported = JSON.parse(localStorage.getItem('ort_admission_exports') || '{}'); } catch(e) {}
+  exported[lead.id] = pkg;
+  localStorage.setItem('ort_admission_exports', JSON.stringify(exported));
+}
+
 // Refresh dropdowns when switching tabs
 document.querySelectorAll('.nav button').forEach(function(btn) {
   btn.addEventListener('click', function() {
     if (btn.dataset.tab === 'interview') refreshLeadDropdown();
-    if (btn.dataset.tab === 'checklist') refreshChecklistDropdown();
+    if (btn.dataset.tab === 'registration') renderRegistrationQueue();
     if (btn.dataset.tab === 'student-file') refreshFileDropdown();
   });
 });
