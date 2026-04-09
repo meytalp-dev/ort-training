@@ -9,7 +9,7 @@
  * 5. העתיקי את ה-URL ל-APPS_SCRIPT_URL בקובץ personal-conversations.html
  */
 
-const SHEET_ID = ''; // ← מזהה ה-Google Sheet
+const SHEET_ID = '1CWQMWcr7P0lQkQzmSqQXWoV5HrZkguGXkm9Q0mJ5CSI';
 
 function doGet(e) {
   const action = e.parameter.action;
