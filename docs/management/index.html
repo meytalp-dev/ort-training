@@ -973,7 +973,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 
 <script>
 // ===================== CONFIG =====================
-const APPS_SCRIPT='https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';const GEMINI_MODEL='gemini-2.5-flash';
+const APPS_SCRIPT='https://script.google.com/macros/s/AKfycbzUo5BxWuAuqSwo8YTwt-PXnjAyh3yf4t5HcGuJSScRnAMhFOg6wkfZvdS9wTm1M6hG/exec';const GEMINI_MODEL='gemini-2.5-flash';
 const GEMINI_URL=`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 // ===================== STATE =====================
@@ -2508,8 +2508,21 @@ function checkTaskReminders(){
 }
 
 // ===================== REMOTE DATA =====================
+function showSaveStatus(ok){
+  let el=document.getElementById('saveStatusToast');
+  if(!el){el=document.createElement('div');el.id='saveStatusToast';el.style.cssText='position:fixed;bottom:24px;left:24px;padding:10px 20px;border-radius:10px;font-family:Heebo,sans-serif;font-size:14px;font-weight:600;z-index:9999;transition:opacity .3s;box-shadow:0 4px 16px rgba(0,0,0,.15)';document.body.appendChild(el)}
+  el.style.background=ok?'#27AE60':'#C0392B';el.style.color='#fff';el.textContent=ok?'נשמר בהצלחה':'שגיאה בשמירה — נסי שוב';el.style.opacity='1';
+  clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0'},ok?2000:5000);
+}
 function remoteSave(action,data){
-  fetch(APPS_SCRIPT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})}).catch(()=>{});
+  fetch(APPS_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})})
+    .then(r=>{if(r.ok)return r.text();throw new Error('HTTP '+r.status)})
+    .then(()=>showSaveStatus(true))
+    .catch(()=>{
+      // Fallback: try no-cors (fire-and-forget) + warn user
+      fetch(APPS_SCRIPT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})}).catch(()=>{});
+      showSaveStatus(false);
+    });
 }
 function loadRemoteData(){
   // Load positions
@@ -2522,7 +2535,7 @@ function loadRemoteData(){
   const s2=document.createElement('script');s2.src=`${APPS_SCRIPT}?action=getCalendarEvents&callback=${cb2}`;s2.onerror=()=>delete window[cb2];document.head.appendChild(s2);
   // Load class schedule
   const cb3='cb3_'+Date.now();
-  window[cb3]=function(d){delete window[cb3];if(d.classSchedule){classSchedule=d.classSchedule;localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));if(document.getElementById('page-curriculum').style.display!=='none')renderCurriculum()}};
+  window[cb3]=function(d){delete window[cb3];if(d.classSchedule&&Object.keys(d.classSchedule).length){classSchedule=d.classSchedule;localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));if(document.getElementById('page-curriculum').style.display!=='none')renderCurriculum()}};
   const s3=document.createElement('script');s3.src=`${APPS_SCRIPT}?action=getClassSchedule&callback=${cb3}`;s3.onerror=()=>delete window[cb3];document.head.appendChild(s3);
   // Load tasks
   const cb4='cb4_'+Date.now();
