@@ -159,9 +159,9 @@ tr:hover{background:rgba(122,173,173,.03)}
   </div>
 
   <div class="info">
-    <strong>איך זה עובד?</strong> בחרו ממד וסוג פולס — ותקבלו קישור ייחודי לכל כיתה.
-    המחנכת שולחת את הקישור לתלמידים בוואטסאפ, הם פותחים ועונים מהפלאפון.
-    הכיתה כבר מוגדרת בקישור — בלי שהתלמידים צריכים לבחור.
+    <strong>איך זה עובד?</strong> בחרו ממד וסוג פולס — ותקבלו לכל כיתה שני קישורים:<br>
+    <strong>שאלון</strong> — המחנכת שולחת לתלמידים בוואטסאפ, הם עונים מהפלאפון (הכיתה מוגדרת מראש).<br>
+    <strong>תוצאות למחנכ/ת</strong> — קישור ישיר לדוח הכיתה עם תרשימים, ניתוח והמלצות פעולה.
   </div>
 
   <div class="config">
@@ -224,14 +224,12 @@ const CLASSES = [
   { id: 'יב2', label: 'י״ב2', grade: 'יב' },
 ];
 
-// Base URL — auto-detect
+// Base URLs — auto-detect
 function getBase() {
-  const loc = window.location;
-  if (loc.hostname === 'localhost' || loc.protocol === 'file:') {
-    return loc.href.replace(/[^/]*$/, '') + 'pulse-questionnaire.html';
-  }
-  // GitHub Pages
-  return loc.href.replace(/[^/]*$/, '') + 'pulse-questionnaire.html';
+  return window.location.href.replace(/[^/]*$/, '') + 'pulse-questionnaire.html';
+}
+function getResultsBase() {
+  return window.location.href.replace(/[^/]*$/, '') + 'pulse-story.html';
 }
 
 // Update button color
@@ -267,12 +265,15 @@ function generate() {
       </button>
     </div>
     <table>
-      <thead><tr><th>כיתה</th><th>קישור</th><th>פעולות</th></tr></thead>
+      <thead><tr><th>כיתה</th><th>קישור לתלמידים</th><th>פעולות</th><th>תוצאות למחנכ/ת</th></tr></thead>
       <tbody>
   `;
 
+  const resultsBase = getResultsBase();
+
   CLASSES.forEach(c => {
     const url = `${base}?dim=${dim}&type=${type}&class=${encodeURIComponent(c.id)}`;
+    const resultsUrl = `${resultsBase}?dim=${dim}&type=${type}&class=${encodeURIComponent(c.id)}&role=student`;
     const whatsappText = encodeURIComponent(`היי! ענו על הפולס הזה, לוקח דקה:\n${url}`);
     const whatsappUrl = `https://wa.me/?text=${whatsappText}`;
 
@@ -297,6 +298,18 @@ function generate() {
               <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
               וואטסאפ
             </a>
+          </div>
+        </td>
+        <td>
+          <div class="actions">
+            <a class="btn-sm" href="${resultsUrl}" target="_blank" style="text-decoration:none;color:${dimInfo.color};border-color:${dimInfo.color}40">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              צפייה
+            </a>
+            <button class="btn-sm" onclick="copyLink(this,'${resultsUrl}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתקה
+            </button>
           </div>
         </td>
       </tr>
@@ -354,16 +367,18 @@ function copyLink(btn, url) {
 
 function copyAll(type) {
   const dim = document.getElementById('selDim').value;
-  const dimName = {belong:'שייכות',respect:'כבוד',motiv:'מוטיבציה',capable:'מסוגלות',auto:'אוטונומיה'}[dim];
+  const dimName = {belong:'שייכות',respect:'כבוד',motiv:'מוטיבציה',capable:'מסוגלות',auto:'אוטונומיה',pedagogy:'חוויית הלמידה',relations:'יחסים עם מבוגרים',employ:'תעסוקה'}[dim] || dim;
   const pulseType = document.getElementById('selType').value;
   const typeName = pulseType === 'pre' ? 'פולס פתיחה' : 'פולס סיום';
   const base = getBase();
+  const rBase = getResultsBase();
 
   let text = `קישורי פולס — ${dimName} (${typeName})\n\n`;
 
   CLASSES.forEach(c => {
     const url = `${base}?dim=${dim}&type=${pulseType}&class=${encodeURIComponent(c.id)}`;
-    text += `${c.label}: ${url}\n`;
+    const rUrl = `${rBase}?dim=${dim}&type=${pulseType}&class=${encodeURIComponent(c.id)}&role=student`;
+    text += `${c.label}:\n  שאלון: ${url}\n  תוצאות: ${rUrl}\n\n`;
   });
 
   navigator.clipboard.writeText(text).then(() => {
