@@ -210,6 +210,10 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
       <option value="meytal_secretary">מיטל — מזכירה</option>
     </select>
     <span class="secretary-badge" id="secretaryBadge" style="display:none"></span>
+    <button id="restoreBtn" class="btn btn-outline btn-sm" onclick="restoreFromSheet()" style="font-size:.72rem;padding:4px 10px;border-color:var(--sage);color:var(--sage)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+      שחזור מ-Sheet
+    </button>
     <a href="index.html" class="back-link">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       חזרה למערכת
@@ -268,6 +272,22 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
     </div>
   </div>
 
+  <!-- Stale leads banner (7+ days without action) -->
+  <div id="staleLeadsBanner" style="display:none;background:var(--danger-bg);border:1.5px solid rgba(192,96,90,.25);border-radius:14px;padding:14px 20px;margin-bottom:16px;animation:fadeInUp .4s ease;cursor:pointer" onclick="document.getElementById('leadsFilter').value='new';renderLeads();">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:36px;height:36px;border-radius:50%;background:rgba(192,96,90,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.9rem;font-family:Heebo;color:var(--danger)">
+          <span id="staleLeadsCount">0</span> לידים ממתינים שבוע ומעלה ללא טיפול
+        </div>
+        <div style="font-size:.78rem;color:var(--muted)">לחצי כאן לסנן לידים חדשים</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    </div>
+  </div>
+
   <!-- Stats -->
   <div class="stats-row" id="leadsStats">
     <div class="stat-box"><div class="num" id="stat-total">0</div><div class="label">סה"כ לידים</div></div>
@@ -301,6 +321,10 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
       <option value="other">אחר</option>
     </select>
     <div style="flex:1"></div>
+    <button class="btn btn-outline" onclick="exportLeadsCSV()" title="ייצוא לאקסל">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      ייצוא
+    </button>
     <button class="btn btn-primary" onclick="openLeadModal()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       ליד חדש
@@ -381,28 +405,99 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
     </div>
   </div>
 
+  <!-- Accordion Style -->
+  <style>
+    .track-acc{border:1.5px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+    .track-acc-head{display:flex;align-items:center;gap:10px;padding:14px 20px;cursor:pointer;background:var(--card);transition:background .2s;user-select:none}
+    .track-acc-head:hover{background:rgba(122,173,173,.03)}
+    .track-acc-arrow{width:18px;height:18px;transition:transform .3s;flex-shrink:0;margin-right:auto;color:var(--muted)}
+    .track-acc.open .track-acc-arrow{transform:rotate(180deg)}
+    .track-acc-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
+    .track-acc.open .track-acc-body{max-height:500px}
+    .track-acc-inner{padding:0 20px 18px}
+  </style>
+
   <!-- Tracks Section -->
   <div style="background:var(--card);border-radius:var(--radius);padding:24px 28px;margin-bottom:20px;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
     <h3 style="font-size:1.05rem;font-weight:700;font-family:Heebo;margin-bottom:6px;display:flex;align-items:center;gap:8px">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c6 3 12 0 12 0v-5"/></svg>
       שלוש מגמות — שלוש דרכים להוביל
     </h3>
-    <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px;line-height:1.5">בכל מגמה: לימודים עיוניים + הכשרה מעשית + עבודה אמיתית בתעשייה</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-      <div style="background:rgba(122,173,173,.06);border:1.5px solid rgba(122,173,173,.2);border-radius:14px;padding:16px;text-align:center">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" style="margin-bottom:8px"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        <div style="font-weight:700;margin-bottom:4px">ביוטי-טק ועיצוב שיער</div>
-        <div style="font-size:.75rem;color:var(--muted);line-height:1.4">עיצוב, איפור, ציפורניים<br>שיתוף פעולה עם L'Oreal ו-Indola</div>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px;line-height:1.5">בכל מגמה: לימודים עיוניים + הכשרה מעשית + עבודה אמיתית בתעשייה. לחצו לפירוט.</p>
+
+    <!-- ביוטי-טק -->
+    <div class="track-acc" onclick="this.classList.toggle('open')">
+      <div class="track-acc-head">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--dusty-rose)" stroke-width="1.5" style="flex-shrink:0"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <div><div style="font-size:.92rem;font-weight:700">ביוטי-טק ועיצוב שיער</div><div style="font-size:.72rem;color:var(--muted)">עיצוב, איפור, ציפורניים | L'Oreal ו-Indola</div></div>
+        <span style="background:rgba(201,160,160,.15);color:#9A7070;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:600;white-space:nowrap">יצירתיות + מקצוע</span>
+        <svg class="track-acc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
-      <div style="background:rgba(168,181,160,.08);border:1.5px solid rgba(168,181,160,.25);border-radius:14px;padding:16px;text-align:center">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="1.5" style="margin-bottom:8px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 00-8 0v2"/></svg>
-        <div style="font-weight:700;margin-bottom:4px">אוטוטרוניקה</div>
-        <div style="font-size:.75rem;color:var(--muted);line-height:1.4">מכונאות, אלקטרוניקה, אבחון<br>עבודה במוסכים מובילים</div>
+      <div class="track-acc-body"><div class="track-acc-inner">
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:12px">מגמה יצירתית ומעשית — התלמידים עובדים עם לקוחות אמיתיים במספרה בית ספרית ומתפתחים בעולם היופי.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><div style="font-size:.76rem;font-weight:700;margin-bottom:4px">מה לומדים:</div><ul style="list-style:none;padding:0;margin:0;font-size:.76rem;color:var(--muted);line-height:1.7"><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--dusty-rose)">&#8226;</span>עיצוב שיער מקצועי</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--dusty-rose)">&#8226;</span>איפור במה, ערב ופנטזיה</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--dusty-rose)">&#8226;</span>בניית ציפורניים ולק ג'ל</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--dusty-rose)">&#8226;</span>כימיה וביולוגיה של השיער</li></ul></div>
+          <div><div style="font-size:.76rem;font-weight:700;margin-bottom:4px">מה מקבלים בסיום:</div><ul style="list-style:none;padding:0;margin:0;font-size:.76rem;color:var(--muted);line-height:1.7"><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>5 יח' בגרות בעיצוב שיער</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>תעודת מקצוע מוכרת</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>ניסיון עבודה בשכר</li></ul></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- אוטוטרוניקה -->
+    <div class="track-acc" onclick="this.classList.toggle('open')">
+      <div class="track-acc-head">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="1.5" style="flex-shrink:0"><path d="M14 16H9m10.7-6.7L18 7.5C17.5 6 16.3 5 15 5H9C7.7 5 6.5 6 6 7.5L4.3 9.3C3.5 10.1 3 11.3 3 12.5V17a2 2 0 002 2h1a2 2 0 002-2v-1h8v1a2 2 0 002 2h1a2 2 0 002-2v-4.5c0-1.2-.5-2.4-1.3-3.2z"/><circle cx="7.5" cy="15.5" r="1.5"/><circle cx="16.5" cy="15.5" r="1.5"/></svg>
+        <div><div style="font-size:.92rem;font-weight:700">אוטוטרוניקה (אוטו-טק)</div><div style="font-size:.72rem;color:var(--muted)">מכונאות, אלקטרוניקה, אבחון | מנועי יונדאי וטויוטה</div></div>
+        <span style="background:rgba(168,181,160,.15);color:#6B7F63;padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:600;white-space:nowrap">טכנולוגיה + עתיד</span>
+        <svg class="track-acc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
-      <div style="background:rgba(212,165,116,.08);border:1.5px solid rgba(212,165,116,.25);border-radius:14px;padding:16px;text-align:center">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="1.5" style="margin-bottom:8px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        <div style="font-weight:700;margin-bottom:4px">מחשבים וטכנולוגיה</div>
-        <div style="font-size:.75rem;color:var(--muted);line-height:1.4">תחזוקה, רשתות, תמיכה טכנית<br>מעבדת מחשבים קהילתית</div>
+      <div class="track-acc-body"><div class="track-acc-inner">
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:12px">שילוב של מכונאות וטכנולוגיה — מקצוע עם ביקוש גבוה. ציוד מתקדם, אבחון ממוחשב, עבודה אמיתית במוסכים.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><div style="font-size:.76rem;font-weight:700;margin-bottom:4px">מה לומדים:</div><ul style="list-style:none;padding:0;margin:0;font-size:.76rem;color:var(--muted);line-height:1.7"><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--sage)">&#8226;</span>מכונאות רכב מתקדמת</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--sage)">&#8226;</span>חשמל ואלקטרוניקה ברכב</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--sage)">&#8226;</span>אבחון תקלות ממוחשב</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--sage)">&#8226;</span>מיזוג אוויר ודיאגנוסטיקה</li></ul></div>
+          <div><div style="font-size:.76rem;font-weight:700;margin-bottom:4px">מה מקבלים בסיום:</div><ul style="list-style:none;padding:0;margin:0;font-size:.76rem;color:var(--muted);line-height:1.7"><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>תעודת מקצוע — מכונאות + חשמל רכב</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>זכאות לבגרות (עד 14 יח"ל)</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>עבודה: אגד, משטרת ישראל</li></ul></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- מחשבים -->
+    <div class="track-acc" onclick="this.classList.toggle('open')">
+      <div class="track-acc-head">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="1.5" style="flex-shrink:0"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <div><div style="font-size:.92rem;font-weight:700">מחשבים וטכנולוגיה מתקדמת</div><div style="font-size:.72rem;color:var(--muted)">חומרה, רשתות, AI | מעבדת מחשבים קהילתית</div></div>
+        <span style="background:rgba(212,165,116,.15);color:var(--accent-dark);padding:3px 10px;border-radius:20px;font-size:.68rem;font-weight:600;white-space:nowrap">הייטק + קריירה</span>
+        <svg class="track-acc-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="track-acc-body"><div class="track-acc-inner">
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.6;margin-bottom:12px">תחזוקה, רשתות, תמיכה טכנית, בינה מלאכותית וסוכנים חכמים. מעבדת מחשבים חברתית — עסק אמיתי שמשרת את הקהילה.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><div style="font-size:.76rem;font-weight:700;margin-bottom:4px">מה לומדים:</div><ul style="list-style:none;padding:0;margin:0;font-size:.76rem;color:var(--muted);line-height:1.7"><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--warm-gold)">&#8226;</span>תחזוקה ותיקון מחשבים</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--warm-gold)">&#8226;</span>הקמה וניהול רשתות</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--warm-gold)">&#8226;</span>בינה מלאכותית וסוכנים חכמים</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--warm-gold)">&#8226;</span>VR, מדפסות תלת-ממד</li></ul></div>
+          <div><div style="font-size:.76rem;font-weight:700;margin-bottom:4px">מה מקבלים בסיום:</div><ul style="list-style:none;padding:0;margin:0;font-size:.76rem;color:var(--muted);line-height:1.7"><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>תעודת מקצוע בתחום המחשבים</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>זכאות לבגרות מלאה</li><li style="padding-right:12px;position:relative"><span style="position:absolute;right:0;color:var(--success)">&#10003;</span>עבודה: משטרה, האוניברסיטה העברית</li></ul></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- What You Get — Practical Benefits -->
+  <div style="background:var(--card);border-radius:var(--radius);padding:24px 28px;margin-bottom:20px;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    <h3 style="font-size:1.05rem;font-weight:700;font-family:Heebo;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="2"><path d="M20 12V8H6a2 2 0 01-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 00-2 2c0 1.1.9 2 2 2h4v-4h-4z"/></svg>
+      מה עוד מקבלים אצלנו
+    </h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div style="text-align:center;padding:16px 12px;background:rgba(122,173,173,.05);border-radius:14px;border:1.5px solid rgba(122,173,173,.12)">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" style="margin-bottom:8px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">כיתות קטנות</div>
+        <div style="font-size:.74rem;color:var(--muted);line-height:1.4">עד 20 תלמידים בכיתה.<br>יחס אישי וליווי צמוד.</div>
+      </div>
+      <div style="text-align:center;padding:16px 12px;background:rgba(168,181,160,.05);border-radius:14px;border:1.5px solid rgba(168,181,160,.12)">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="1.5" style="margin-bottom:8px"><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-4l2-3h6l2 3h4l2 2v2h-2"/><path d="M9 17h6"/><path d="M5 10V6h4"/></svg>
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">הסעות ללא עלות</div>
+        <div style="font-size:.74rem;color:var(--muted);line-height:1.4">מאזורים נרחבים בירושלים<br>ובסביבה — ישירות לבית הספר.</div>
+      </div>
+      <div style="text-align:center;padding:16px 12px;background:rgba(212,165,116,.05);border-radius:14px;border:1.5px solid rgba(212,165,116,.12)">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="1.5" style="margin-bottom:8px"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <div style="font-size:.88rem;font-weight:700;margin-bottom:4px">ארוחות בוקר + צהריים</div>
+        <div style="font-size:.74rem;color:var(--muted);line-height:1.4">הזנה מלאה בבית הספר —<br>שתי ארוחות ביום, ללא עלות.</div>
       </div>
     </div>
   </div>
@@ -416,41 +511,62 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:rgba(122,173,173,.05);border-radius:12px">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="flex-shrink:0;margin-top:2px"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <div>
-          <div style="font-size:.84rem;font-weight:700;margin-bottom:2px">קודם כל — רואים את התלמיד</div>
-          <div style="font-size:.76rem;color:var(--muted);line-height:1.4">יחס אישי, כיתות קטנות, ליווי צמוד</div>
-        </div>
+        <div><div style="font-size:.84rem;font-weight:700;margin-bottom:2px">קודם כל — רואים את התלמיד</div><div style="font-size:.76rem;color:var(--muted);line-height:1.4">יחס אישי, ליווי צמוד, תפיסה הוליסטית</div></div>
       </div>
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:rgba(168,181,160,.06);border-radius:12px">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="2" style="flex-shrink:0;margin-top:2px"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
-        <div>
-          <div style="font-size:.84rem;font-weight:700;margin-bottom:2px">לא רק לומדים — עושים</div>
-          <div style="font-size:.76rem;color:var(--muted);line-height:1.4">תלמידים עובדים, מרוויחים ומנהלים פרויקטים אמיתיים</div>
-        </div>
+        <div><div style="font-size:.84rem;font-weight:700;margin-bottom:2px">לא רק לומדים — עושים</div><div style="font-size:.76rem;color:var(--muted);line-height:1.4">עבודה, הכנסה ופרויקטים אמיתיים</div></div>
       </div>
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:rgba(212,165,116,.05);border-radius:12px">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="2" style="flex-shrink:0;margin-top:2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        <div>
-          <div style="font-size:.84rem;font-weight:700;margin-bottom:2px">חמישה ממדים לצמיחה</div>
-          <div style="font-size:.76rem;color:var(--muted);line-height:1.4">שייכות, כבוד, מוטיבציה, מסוגלות ואוטונומיה</div>
-        </div>
+        <div><div style="font-size:.84rem;font-weight:700;margin-bottom:2px">חמישה ממדים לצמיחה</div><div style="font-size:.76rem;color:var(--muted);line-height:1.4">שייכות, כבוד, מוטיבציה, מסוגלות ואוטונומיה</div></div>
       </div>
       <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:rgba(106,159,106,.05);border-radius:12px">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" style="flex-shrink:0;margin-top:2px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <div>
-          <div style="font-size:.84rem;font-weight:700;margin-bottom:2px">סביבה בטוחה ומכילה</div>
-          <div style="font-size:.76rem;color:var(--muted);line-height:1.4">צוות חינוכי, יועצות ורכזת טיפול — תמיד לצד התלמיד</div>
-        </div>
+        <div><div style="font-size:.84rem;font-weight:700;margin-bottom:2px">סביבה בטוחה ומכילה</div><div style="font-size:.76rem;color:var(--muted);line-height:1.4">צוות חינוכי, יועצות ורכזת טיפול</div></div>
       </div>
     </div>
   </div>
 
-  <!-- Link to Landing Page -->
-  <div style="text-align:center;margin-bottom:24px">
+  <!-- Parent Testimonials -->
+  <div style="background:var(--card);border-radius:var(--radius);padding:24px 28px;margin-bottom:20px;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    <h3 style="font-size:1.05rem;font-weight:700;font-family:Heebo;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      הורים מספרים
+    </h3>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="background:rgba(122,173,173,.04);border-right:3px solid var(--primary);border-radius:0 12px 12px 0;padding:14px 18px">
+        <p style="font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:6px">"מכל בתי הספר העל-יסודיים זה המקום שבו הרגשתי שבאמת רואים את הילד שלי. תפיסת חינוך הוליסטית שבוחרת לתת מקום לחוזקות של הילד."</p>
+        <span style="font-size:.74rem;color:var(--muted);font-weight:600">— ליאת, הורה</span>
+      </div>
+      <div style="background:rgba(168,181,160,.04);border-right:3px solid var(--sage);border-radius:0 12px 12px 0;padding:14px 18px">
+        <p style="font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:6px">"תודה לתיכון אורט בית הערבה — הפכתם לבני את החיים. אחרי שנות הקורונה הוא איבד כל עניין בלמידה. היום הוא חדור מוטיבציה, יכולות וביטחון עצמי."</p>
+        <span style="font-size:.74rem;color:var(--muted);font-weight:600">— עינת, הורה</span>
+      </div>
+      <div style="background:rgba(212,165,116,.04);border-right:3px solid var(--warm-gold);border-radius:0 12px 12px 0;padding:14px 18px">
+        <p style="font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:6px">"פשוט אין דברים כאלה! אנשי חינוך בכל רמ"ח אבריהם. השילוב של עבודה, ניסיון והתפתחות מקצועית במקביל ללימודים הוא שילוב מנצח!"</p>
+        <span style="font-size:.74rem;color:var(--muted);font-weight:600">— רוחמה, הורה</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Links: Landing Page + Social -->
+  <div style="text-align:center;margin-bottom:24px;display:flex;flex-direction:column;align-items:center;gap:12px">
     <a href="landing-recruitment.html" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:rgba(122,173,173,.08);border:1.5px solid rgba(122,173,173,.2);border-radius:14px;color:var(--primary-dark);font-size:.88rem;font-weight:600;text-decoration:none;transition:all .2s;font-family:Heebo">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
       רוצים לדעת עוד? היכנסו לעמוד המלא שלנו
     </a>
+    <div style="display:flex;align-items:center;gap:14px">
+      <span style="font-size:.78rem;color:var(--muted);font-family:Heebo">עקבו אחרינו:</span>
+      <a href="https://www.facebook.com/ortbeithaarava" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(66,103,178,.06);border:1.5px solid rgba(66,103,178,.15);border-radius:10px;color:#4267B2;font-size:.8rem;font-weight:600;text-decoration:none;transition:all .2s;font-family:Heebo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#4267B2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        פייסבוק
+      </a>
+      <a href="https://www.instagram.com/ort.bethaarava" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(225,48,108,.06);border:1.5px solid rgba(225,48,108,.15);border-radius:10px;color:#E1306C;font-size:.8rem;font-weight:600;text-decoration:none;transition:all .2s;font-family:Heebo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#E1306C"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+        אינסטגרם
+      </a>
+    </div>
   </div>
 
   <!-- Student Questions -->
@@ -543,7 +659,7 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
       <option value="">טופס חדש (ללא ליד)</option>
     </select>
     <div style="flex:1"></div>
-    <button class="btn btn-outline btn-sm" onclick="window.print()" title="הדפסה">
+    <button class="btn btn-outline btn-sm" onclick="printInterview()" title="הדפסה">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
       הדפסה
     </button>
@@ -560,7 +676,17 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
     .int-section h3 .sec-num{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;flex-shrink:0}
     .cond-field{display:none;margin-top:8px}
     .cond-field.show{display:block}
-    @media print{.int-section{break-inside:avoid;box-shadow:none;border:1px solid #ddd;margin-bottom:12px;padding:16px 20px}}
+    @media print{
+      .int-section{break-inside:avoid;box-shadow:none;border:1px solid #ddd;margin-bottom:12px;padding:16px 20px}
+      .cond-field:not(.show){display:none!important}
+      .cond-field.show{display:block!important}
+      .print-radio-text{display:inline!important;font-weight:600;color:#333}
+      .print-check-text{display:inline!important;font-weight:600;color:#333}
+      input[type="radio"],input[type="checkbox"]{display:none!important}
+      .radio-group label, .form-group label span.radio-label{display:none!important}
+      .toolbar{display:none!important}
+      textarea{border:1px solid #ccc!important;min-height:auto!important}
+    }
   </style>
 
   <!-- ===== חלק א — פרטים אישיים ===== -->
@@ -571,7 +697,7 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
       <div class="form-group"><label>שם משפחה</label><input type="text" class="form-input" id="intLastName"></div>
     </div>
     <div class="form-row-3">
-      <div class="form-group"><label>ת.ז.</label><input type="text" class="form-input" id="intIdNum" maxlength="9"></div>
+      <div class="form-group"><label>ת.ז.</label><input type="text" class="form-input" id="intIdNum" maxlength="9" oninput="validateIdField(this)"><div id="idValidationMsg" style="font-size:.72rem;margin-top:3px;display:none"></div></div>
       <div class="form-group"><label>גיל</label><input type="number" class="form-input" id="intAge" min="12" max="20"></div>
       <div class="form-group"><label>תאריך לידה</label><input type="date" class="form-input" id="intBirthDate"></div>
     </div>
@@ -1069,9 +1195,15 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
           <span id="fileStatus" class="status-badge"></span>
         </div>
       </div>
-      <div style="text-align:left">
-        <div style="font-size:.72rem;color:var(--muted)">תאריך כניסה</div>
-        <div style="font-weight:700;font-size:.9rem" id="fileDate"></div>
+      <div style="text-align:left;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div>
+          <div style="font-size:.72rem;color:var(--muted)">תאריך כניסה</div>
+          <div style="font-weight:700;font-size:.9rem" id="fileDate"></div>
+        </div>
+        <button class="btn btn-outline btn-sm" id="fileWhatsAppBtn" onclick="openWhatsAppParent(document.getElementById('fileStudentSelect').value)" style="font-size:.72rem;color:var(--success);border-color:var(--success);display:none">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 013.07 4.18 2 2 0 015.11 2h3a2 2 0 012 1.72c.13.81.36 1.6.7 2.36a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.76.34 1.55.57 2.36.7A2 2 0 0122 16.92z"/></svg>
+          WhatsApp להורה
+        </button>
       </div>
     </div>
 
@@ -1102,12 +1234,22 @@ input[type="radio"],input[type="checkbox"]{accent-color:var(--primary)}
     </div>
 
     <!-- Documents Section -->
-    <div style="background:var(--card);border-radius:var(--radius);padding:20px 24px;border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+    <div style="background:var(--card);border-radius:var(--radius);padding:20px 24px;border:1px solid var(--border);box-shadow:var(--shadow-sm);margin-bottom:18px">
       <h3 style="font-size:.95rem;font-weight:700;font-family:Heebo;margin-bottom:14px;display:flex;align-items:center;gap:8px">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="2"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
         מסמכים שנאספו
       </h3>
       <div id="fileDocs"></div>
+    </div>
+
+    <!-- Link to full student portfolio -->
+    <div style="background:linear-gradient(135deg,rgba(122,173,173,.08),rgba(168,181,160,.08));border:1.5px solid rgba(122,173,173,.2);border-radius:var(--radius);padding:18px 24px;text-align:center">
+      <a href="student-portfolio.html" target="_blank" style="text-decoration:none;color:var(--primary-dark);font-family:Heebo;font-weight:700;font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        מעבר לתיק תלמיד מלא (פורטפוליו, ציונים, דוחות)
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </a>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:6px">198 תלמידים, ציונים, דוחות יועצות, תח"י</div>
     </div>
 
   </div>
@@ -1585,6 +1727,34 @@ function generateId() {
   return 'L' + Date.now() + Math.random().toString(36).substr(2, 4);
 }
 
+// Israeli ID validation UI
+function validateIdField(el) {
+  var msg = document.getElementById('idValidationMsg');
+  var val = el.value.trim();
+  if (!val) { msg.style.display = 'none'; el.style.borderColor = ''; return; }
+  if (isValidIsraeliId(val)) {
+    msg.style.display = 'block'; msg.style.color = 'var(--success)'; msg.textContent = 'ת.ז. תקינה';
+    el.style.borderColor = 'var(--success)';
+  } else {
+    msg.style.display = 'block'; msg.style.color = 'var(--danger)'; msg.textContent = val.length < 5 ? 'ת.ז. חייבת להכיל 5-9 ספרות' : 'ספרת ביקורת שגויה';
+    el.style.borderColor = 'var(--danger)';
+  }
+}
+
+// Israeli ID validation (Luhn mod 10)
+function isValidIsraeliId(id) {
+  id = String(id).trim();
+  if (!/^\d{5,9}$/.test(id)) return false;
+  id = id.padStart(9, '0');
+  var sum = 0;
+  for (var i = 0; i < 9; i++) {
+    var digit = parseInt(id[i]) * ((i % 2) + 1);
+    if (digit > 9) digit -= 9;
+    sum += digit;
+  }
+  return sum % 10 === 0;
+}
+
 // ============================================================
 // RENDER LEADS TABLE
 // ============================================================
@@ -1632,9 +1802,14 @@ function renderLeads() {
         '<td>' + date + '</td>' +
         '<td>' + esc(l.handler || '') + '</td>' +
         '<td><span class="status-badge ' + (STATUS_CLASSES[l.status] || '') + '">' + esc(STATUS_LABELS[l.status] || l.status) + '</span></td>' +
-        '<td><button class="action-dots" onclick="event.stopPropagation();openLeadModal(\'' + l.id + '\')" title="עריכה">' +
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
-        '</button></td>' +
+        '<td style="white-space:nowrap">' +
+          (l.phone ? '<button class="action-dots" onclick="event.stopPropagation();openWhatsAppParent(\'' + l.id + '\')" title="WhatsApp להורה" style="color:var(--success)">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 013.07 4.18 2 2 0 015.11 2h3a2 2 0 012 1.72c.13.81.36 1.6.7 2.36a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.76.34 1.55.57 2.36.7A2 2 0 0122 16.92z"/></svg>' +
+          '</button> ' : '') +
+          '<button class="action-dots" onclick="event.stopPropagation();openLeadModal(\'' + l.id + '\')" title="עריכה">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+          '</button>' +
+        '</td>' +
       '</tr>';
     }).join('');
   }
@@ -1663,6 +1838,23 @@ function updateStats(leads) {
     document.getElementById('noAnswerCount').textContent = noAnswerCount;
   } else {
     banner.style.display = 'none';
+  }
+
+  // Show/hide stale leads banner (7+ days in new/no-answer without update)
+  var now = Date.now();
+  var sevenDays = 7 * 24 * 60 * 60 * 1000;
+  var staleCount = leads.filter(function(l) {
+    if (l.status !== 'new' && l.status !== 'no-answer') return false;
+    var lastDate = l.updatedAt || l.createdAt;
+    if (!lastDate) return false;
+    return (now - new Date(lastDate).getTime()) > sevenDays;
+  }).length;
+  var staleBanner = document.getElementById('staleLeadsBanner');
+  if (staleCount > 0) {
+    staleBanner.style.display = 'block';
+    document.getElementById('staleLeadsCount').textContent = staleCount;
+  } else {
+    staleBanner.style.display = 'none';
   }
 }
 
@@ -1833,6 +2025,11 @@ function saveInterview() {
   var lastName = document.getElementById('intLastName').value.trim();
   if (!firstName && !lastName) { alert('יש להזין שם תלמיד/ה'); return; }
 
+  var idNum = document.getElementById('intIdNum').value.trim();
+  if (idNum && !isValidIsraeliId(idNum)) {
+    if (!confirm('ת.ז. שגויה (ספרת ביקורת לא תקינה). להמשיך בכל זאת?')) return;
+  }
+
   var data = { id: 'INT' + Date.now(), createdAt: new Date().toISOString() };
 
   // Collect text/select fields
@@ -1919,6 +2116,45 @@ function saveInterview() {
   updateRegBadge();
   refreshLeadDropdown();
   renderRegistrationQueue();
+}
+
+function printInterview() {
+  // Inject print-friendly text for radio buttons
+  var printSpans = document.querySelectorAll('.print-radio-text,.print-check-text');
+  printSpans.forEach(function(s) { s.remove(); });
+
+  var radioLabels = {
+    'yes': 'כן', 'no': 'לא', 'sometimes': 'לפעמים',
+    'married': 'נשואים', 'separated': 'פרודים', 'divorced': 'גרושים', 'single-parent': 'חד הורי', 'other': 'אחר',
+    'accepted': 'מתקבל/ת', 'rejected': 'לא מתקבל/ת', 'pending': 'ממתין/ה'
+  };
+
+  INT_RADIOS.forEach(function(name) {
+    var checked = document.querySelector('input[name="' + name + '"]:checked');
+    if (checked) {
+      var span = document.createElement('span');
+      span.className = 'print-radio-text';
+      span.style.display = 'none';
+      span.textContent = ' ' + (radioLabels[checked.value] || checked.value);
+      var group = checked.closest('.form-group') || checked.parentElement;
+      var label = group.querySelector('label');
+      if (label) label.appendChild(span);
+    }
+  });
+
+  INT_CHECKS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      var span = document.createElement('span');
+      span.className = 'print-check-text';
+      span.style.display = 'none';
+      span.textContent = el.checked ? ' כן' : ' לא';
+      var label = el.closest('.form-group') ? el.closest('.form-group').querySelector('label') : null;
+      if (label) label.appendChild(span);
+    }
+  });
+
+  window.print();
 }
 
 function loadLeadToInterview() {
@@ -2255,6 +2491,34 @@ function notifySecretary(lead, interviewData) {
 }
 
 // ============================================================
+// WHATSAPP TO PARENTS
+// ============================================================
+function openWhatsAppParent(leadId) {
+  var leads = getLeads();
+  var lead = leads.find(function(l) { return l.id === leadId; });
+  if (!lead || !lead.phone) { alert('אין מספר טלפון לליד זה'); return; }
+
+  var phone = lead.phone.replace(/\D/g, '');
+  if (phone.startsWith('0')) phone = '972' + phone.slice(1);
+
+  var name = (lead.firstName || '') + ' ' + (lead.lastName || '');
+  var msg = 'שלום,\nפנייתנו בנוגע ל' + name.trim() + ' מאורט בית הערבה.\n';
+
+  var status = lead.status;
+  if (status === 'new' || status === 'no-answer') {
+    msg += 'נשמח לקבוע ראיון היכרות. מתי נוח לכם?';
+  } else if (status === 'interview-set') {
+    msg += 'תזכורת — נקבע ראיון היכרות. נשמח לאשר הגעה.';
+  } else if (status === 'accepted') {
+    msg += 'שמחים לבשר שהתקבל/ה! נשלח בקרוב פרטים על ההרשמה.';
+  } else {
+    msg += 'רצינו לעדכן אתכם לגבי תהליך הקבלה. אפשר לחזור אלינו?';
+  }
+
+  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+// ============================================================
 // DOCUMENT UPLOADS — Drive + Sheet + localStorage fallback
 // ============================================================
 var DOC_FIELDS = ['docStudentId', 'docParentId', 'docCertificate', 'docOther'];
@@ -2568,6 +2832,7 @@ function loadStudentFile() {
   statusEl.textContent = STATUS_LABELS[lead.status] || lead.status;
   statusEl.className = 'status-badge ' + (STATUS_CLASSES[lead.status] || '');
   document.getElementById('fileDate').textContent = lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('he-IL') : '';
+  document.getElementById('fileWhatsAppBtn').style.display = lead.phone ? 'inline-flex' : 'none';
 
   // Find interview data
   var interviews = getInterviews();
@@ -3150,6 +3415,67 @@ function exportLeadToStudentFile(lead) {
   try { exported = JSON.parse(localStorage.getItem('ort_admission_exports') || '{}'); } catch(e) {}
   exported[lead.id] = pkg;
   localStorage.setItem('ort_admission_exports', JSON.stringify(exported));
+}
+
+// ============================================================
+// EXPORT LEADS TO CSV
+// ============================================================
+function exportLeadsCSV() {
+  var leads = getLeads();
+  if (leads.length === 0) { alert('אין לידים לייצוא'); return; }
+
+  var headers = ['שם פרטי', 'שם משפחה', 'טלפון', 'טלפון 2', 'ערוץ גיוס', 'מגמה', 'סטטוס', 'גורם מטפל', 'הערות', 'תאריך יצירה', 'תאריך עדכון'];
+  var rows = leads.map(function(l) {
+    return [
+      l.firstName || '', l.lastName || '', l.phone || '', l.phone2 || '',
+      SOURCE_LABELS[l.source] || l.source || '', l.track || '',
+      STATUS_LABELS[l.status] || l.status || '', l.handler || '',
+      (l.notes || '').replace(/\n/g, ' '),
+      l.createdAt ? new Date(l.createdAt).toLocaleDateString('he-IL') : '',
+      l.updatedAt ? new Date(l.updatedAt).toLocaleDateString('he-IL') : ''
+    ];
+  });
+
+  // BOM for Hebrew Excel compatibility
+  var csvContent = '\uFEFF' + headers.join(',') + '\n' +
+    rows.map(function(r) {
+      return r.map(function(c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\n');
+
+  var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'leads_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// RESTORE FROM GOOGLE SHEET
+// ============================================================
+function restoreFromSheet() {
+  if (!confirm('שחזור מ-Google Sheet יחליף את כל הנתונים המקומיים. להמשיך?')) return;
+
+  var btn = document.getElementById('restoreBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'משחזר...'; }
+
+  syncFromSheet('getLeads', {}, function(data) {
+    if (data && data.leads && data.leads.length > 0) {
+      saveLeads(data.leads);
+      renderLeads();
+      alert('שוחזרו ' + data.leads.length + ' לידים מ-Google Sheet');
+    } else {
+      alert('לא נמצאו נתונים ב-Sheet או שגיאה בחיבור');
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'שחזור מ-Sheet'; }
+  });
+
+  syncFromSheet('getInterviews', {}, function(data) {
+    if (data && data.interviews && data.interviews.length > 0) {
+      localStorage.setItem('ort_interviews', JSON.stringify(data.interviews));
+    }
+  });
 }
 
 // Refresh dropdowns when switching tabs
