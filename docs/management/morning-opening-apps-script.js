@@ -191,7 +191,7 @@ function sendDailyReminder() {
   const dimText = getDimensionForDate(tomorrow);
   const dayName = formatDateHebrew(tomorrowStr);
 
-  const message = `שלום ${tomorrowTeacher},\n\nתזכורת: מחר (${dayName}) את/ה מעביר/ה פתיחת בוקר.${dimText ? '\nהממד: ' + dimText : ''}\n\nרעיונות והשראה:\n${FORM_URL}\n\nבהצלחה!`;
+  const message = `שלום ${tomorrowTeacher},\n\nתזכורת: מחר (${dayName}) את/ה מעביר/ה פתיחת בוקר.${dimText ? '\nהממד: ' + dimText : ''}\n\nמה צריך לעשות?\nלתעד מה תהיה הפתיחה שלך מחר — נושא, סוג פעילות וממד.\nלחצ/י על הקישור, הוא ייפתח ישר בטופס התיעוד:\n${FORM_URL}?tab=form\n\nצריכ/ה רעיונות והשראה?\nיש טאב "בנק רעיונות" ממש ליד טופס התיעוד — שווה להציץ!\n\nבהצלחה!`;
 
   sendWhatsApp(phone, message);
   Logger.log('תזכורת נשלחה ל: ' + tomorrowTeacher + ' (' + phone + ')');
