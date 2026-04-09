@@ -86,6 +86,12 @@ function doPost(e) {
       case 'uploadDocument':
         result = uploadDocument_(data);
         break;
+      case 'notifySecretary':
+        result = notifySecretary_(data);
+        break;
+      case 'markRegistered':
+        result = markRegistered_(data);
+        break;
       default:
         result = { result: 'error', message: 'unknown action' };
     }
@@ -613,4 +619,98 @@ function getOrCreate_(ss, name) {
   var sheet = ss.getSheetByName(name);
   if (sheet) return sheet;
   return ss.insertSheet(name);
+}
+
+// ============================================
+// SECRETARY NOTIFICATION — Email when student accepted
+// ============================================
+
+var SECRETARY_EMAIL = 'iskah@bethaarava.ort.org.il'; // מיטל המזכירה — ישתנה אם צריך
+var YISKA_EMAIL = 'iskah@bethaarava.ort.org.il';
+
+function notifySecretary_(data) {
+  if (!data || !data.studentName) return { result: 'error', message: 'missing data' };
+
+  var subject = 'תלמיד/ה חדש/ה התקבל/ה — ' + data.studentName;
+  var body = 'שלום מיטל,\n\n';
+  body += 'תלמיד/ה חדש/ה התקבל/ה לבית הספר:\n\n';
+  body += 'שם: ' + data.studentName + '\n';
+  if (data.studentClass) body += 'כיתה: ' + data.studentClass + '\n';
+  if (data.studentTrack) body += 'מגמה: ' + data.studentTrack + '\n';
+  body += '\nיש לרשום במנב"ס.\n';
+  body += 'קישור למערכת: https://meytalp-dev.github.io/ort-training/management/student-admission.html\n\n';
+  body += 'בברכה,\nמערכת קבלת תלמידים';
+
+  try {
+    MailApp.sendEmail(SECRETARY_EMAIL, subject, body);
+    return { result: 'success', message: 'Email sent to secretary' };
+  } catch (err) {
+    return { result: 'error', message: err.toString() };
+  }
+}
+
+function markRegistered_(data) {
+  if (!data || !data.leadId) return { result: 'error', message: 'missing leadId' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  logAction_(ss, 'registration', data.leadId, 'registered_in_manbs', data.doneAt || '');
+  return { result: 'success', message: 'Registration logged' };
+}
+
+// ============================================
+// DAILY REMINDER — Unanswered leads email to Yiska
+// ============================================
+
+/**
+ * שלח מייל יומי ליסכה עם רשימת לידים שלא ענו.
+ * להגדרה: הריצי setupDailyReminder() פעם אחת.
+ */
+function sendNoAnswerReminder() {
+  var leadsResult = getLeads_();
+  if (!leadsResult || !leadsResult.leads) return;
+
+  var noAnswer = leadsResult.leads.filter(function(l) { return l.status === 'no-answer'; });
+  if (noAnswer.length === 0) return; // אין לידים שלא ענו — לא שולחים מייל
+
+  var subject = 'תזכורת: ' + noAnswer.length + ' לידים שלא ענו — צריך לחזור אליהם';
+  var body = 'בוקר טוב יסכה,\n\n';
+  body += 'יש ' + noAnswer.length + ' לידים בסטטוס "לא ענה" שצריך לחזור אליהם:\n\n';
+
+  noAnswer.forEach(function(lead, i) {
+    body += (i + 1) + '. ' + lead.firstName + ' ' + lead.lastName;
+    if (lead.phone) body += ' — ' + lead.phone;
+    body += '\n';
+  });
+
+  body += '\nקישור למערכת: https://meytalp-dev.github.io/ort-training/management/student-admission.html\n\n';
+  body += 'בהצלחה!\nמערכת קבלת תלמידים';
+
+  try {
+    MailApp.sendEmail(YISKA_EMAIL, subject, body);
+    Logger.log('Sent no-answer reminder to Yiska: ' + noAnswer.length + ' leads');
+  } catch (err) {
+    Logger.log('Error sending reminder: ' + err);
+  }
+}
+
+/**
+ * הגדרת טריגר יומי — הריצי פעם אחת!
+ * ישלח מייל ליסכה כל בוקר בשעה 8:00.
+ */
+function setupDailyReminder() {
+  // מחיקת טריגרים ישנים
+  var triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'sendNoAnswerReminder') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // טריגר חדש — כל יום בשעה 8:00-9:00
+  ScriptApp.newTrigger('sendNoAnswerReminder')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
+
+  Logger.log('טריגר יומי הוגדר — מייל ישלח ליסכה כל בוקר בשעה 8:00');
 }

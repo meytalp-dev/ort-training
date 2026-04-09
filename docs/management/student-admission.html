@@ -3045,12 +3045,35 @@ function sendIntroToParents(lead) {
 // TAB 2: SUBMITTED INTRO FORMS VIEW
 // ============================================================
 function renderSubmittedIntros() {
-  var intros = [];
-  try { intros = JSON.parse(localStorage.getItem('ort_intros') || '[]'); } catch(e) {}
-
   var container = document.getElementById('introSubmittedList');
   if (!container) return;
 
+  // Show loading
+  container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:.85rem">טוען טפסים...</div>';
+
+  // Start with local data
+  var localIntros = [];
+  try { localIntros = JSON.parse(localStorage.getItem('ort_intros') || '[]'); } catch(e) {}
+
+  // Also fetch from Sheet
+  if (APPS_SCRIPT_URL) {
+    syncFromSheet('getIntros', {}, function(data) {
+      var sheetIntros = (data && data.result === 'success' && data.intros) ? data.intros : [];
+      // Merge: combine local + sheet, deduplicate by id
+      var allIntros = localIntros.slice();
+      var localIds = {};
+      localIntros.forEach(function(i) { localIds[i.id] = true; });
+      sheetIntros.forEach(function(i) {
+        if (!localIds[i.id]) allIntros.push(i);
+      });
+      renderIntroCards_(container, allIntros);
+    });
+  } else {
+    renderIntroCards_(container, localIntros);
+  }
+}
+
+function renderIntroCards_(container, intros) {
   if (intros.length === 0) {
     container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:.85rem">אין טפסים שמולאו עדיין</div>';
     return;
