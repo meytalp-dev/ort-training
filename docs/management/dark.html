@@ -635,6 +635,7 @@ body{font-family:'Space Grotesk',sans-serif;background:#0D1117;background-image:
       <button class="btn btn-primary" onclick="switchCurView('schedule')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> שיבוץ מורים</button>
       <button class="btn btn-ghost" onclick="switchCurView('dashboard')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg> דשבורד</button>
       <button class="btn btn-ghost" onclick="switchCurView('cards')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> כרטיסי מורים</button>
+      <button class="btn btn-ghost" onclick="switchCurView('settings')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> הגדרת שעות</button>
     </div>
 
     <!-- VIEW: Schedule -->
@@ -692,6 +693,14 @@ body{font-family:'Space Grotesk',sans-serif;background:#0D1117;background-image:
     <!-- VIEW: Teacher Cards -->
     <div id="curView-cards" style="display:none">
       <div id="sbTeacherCards"></div>
+    </div>
+
+    <!-- VIEW: Settings (הגדרת שעות + סקירה כללית) -->
+    <div id="curView-settings" style="display:none">
+      <div class="card">
+        <div class="card-header"><h3>הגדרת שעות תקן לפי מקצוע</h3></div>
+        <div class="card-body" style="padding:0" id="settingsContent"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1273,7 +1282,7 @@ const OZ_50=[[23,3,10,36,100],[22,3,9.5,34.5,95.83],[21,3,9,33,91.67],[20,2.5,8.
 const OZ_55=[[21,3,10,34,100],[20,3,9.5,32.5,95.59],[19,3,9,31,91.18],[18,2.5,8.5,29,85.29],[17,2.5,8,27.5,80.88],[16,2.5,8,26.5,77.94],[15,2,7,24,70.59],[14,2,6.5,22.5,66.18],[13,2,6,21,61.76],[12,1.5,5.5,19,55.88],[11,1.5,5,17.5,51.47],[10,1.5,4.5,16,47.06],[9,1.5,4,14.5,42.65],[8,1,4,13,38.24],[7,1,3.5,11.5,33.82],[6,1,3,10,29.41],[5,0.5,2.5,8,23.53],[4,0.5,2,6.5,19.12],[3,0.5,1.5,5,14.71],[2,0.5,1,3.5,10.29],[1,0,1,2,5.88]];
 
 let selectedClass='ט1';
-let selectedCurTab='הגדרת שעות';
+let selectedCurTab='ט1';
 let teacherForms=[];
 // מיפוי שמות טפסים – נשמר ב-localStorage
 const formNameMap=JSON.parse(localStorage.getItem('mgmt-form-name-map')||'{}');
@@ -1405,21 +1414,23 @@ function getTeacherHoursMap(){
   return m;
 }
 
-let curView='schedule'; // schedule | dashboard | cards
+let curView='schedule'; // schedule | dashboard | cards | settings
 
 function switchCurView(view){
   curView=view;
-  ['schedule','dashboard','cards'].forEach(v=>{
+  ['schedule','dashboard','cards','settings'].forEach(v=>{
     const el=document.getElementById('curView-'+v);
     if(el)el.style.display=v===view?'':'none';
   });
   // Update tab buttons
+  const labels={schedule:'שיבוץ',dashboard:'דשבורד',cards:'כרטיסי',settings:'הגדרת'};
   document.querySelectorAll('#curViewTabs button').forEach(b=>{
-    b.className=b.textContent.includes(view==='schedule'?'שיבוץ':view==='dashboard'?'דשבורד':'כרטיסי')?'btn btn-primary':'btn btn-ghost';
+    b.className=b.textContent.includes(labels[view]||'')?'btn btn-primary':'btn btn-ghost';
   });
   // Render view content on switch
   if(view==='dashboard')renderStaffboard();
   if(view==='cards')renderTeacherCards(document.getElementById('sbTeacherCards'));
+  if(view==='settings')renderClassHoursEditor(document.getElementById('settingsContent'));
 }
 
 function initCurriculum(){
@@ -1443,7 +1454,7 @@ function renderCurriculum(){
     HOMEROOMS.map(h=>'<div class="homeroom-card"><strong>'+h.cls+'</strong> – '+h.teacher+'</div>').join('')+'</div>';
 
   // Main tabs – only scheduling (no dashboard/cards/overview – those moved to staffboard)
-  const tabs=['הגדרת שעות',...CLASS_LIST,'סקירה כללית'];
+  const tabs=[...CLASS_LIST,'סקירה כללית'];
   document.getElementById('curMainTabs').innerHTML=tabs.map(t=>
     '<button class="class-tab'+(t===selectedCurTab?' active':'')+'" onclick="selectCurTab(\''+t+'\')">'+t+'</button>'
   ).join('');
