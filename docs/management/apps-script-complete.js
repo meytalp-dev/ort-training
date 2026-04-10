@@ -397,6 +397,43 @@ function doGet(e) {
     }
   }
 
+  // === טעינת שיבוץ מורים ===
+  if (params.action === 'getClassSchedule') {
+    try {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_classSchedule');
+      var classSchedule = {};
+
+      if (sheet && sheet.getLastRow() > 1) {
+        var data = sheet.getDataRange().getValues();
+        for (var i = 1; i < data.length; i++) {
+          var cls = data[i][0];
+          if (!cls) continue;
+          try {
+            var schedData = JSON.parse(data[i][1]);
+            classSchedule[cls] = schedData;
+          } catch(x) {}
+        }
+      }
+
+      var result = JSON.stringify({ classSchedule: classSchedule });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + result + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(result)
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      var errResult = JSON.stringify({ error: err.toString() });
+      if (params.callback) {
+        return ContentService.createTextOutput(params.callback + '(' + errResult + ')')
+          .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      }
+      return ContentService.createTextOutput(errResult)
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // === טעינת משימות ===
   if (params.action === 'getTasks') {
     try {
@@ -769,6 +806,34 @@ function doPost(e) {
         sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 9).setValues(rows);
       }
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', synced: rows.length }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // === שמירת שיבוץ מורים (כיתה בודדת) ===
+    if (data.action === 'saveClassSchedule') {
+      var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      var sheet = ss.getSheetByName('_classSchedule');
+      if (!sheet) {
+        sheet = ss.insertSheet('_classSchedule');
+        sheet.appendRow(['כיתה', 'שיבוץ (JSON)', 'עדכון']);
+        sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#D4F3EF');
+      }
+      var classId = data.classId;
+      var schedJson = JSON.stringify(data.schedule || []);
+      var dataRange = sheet.getDataRange().getValues();
+      var found = false;
+      for (var i = 1; i < dataRange.length; i++) {
+        if (dataRange[i][0] === classId) {
+          sheet.getRange(i + 1, 2).setValue(schedJson);
+          sheet.getRange(i + 1, 3).setValue(new Date().toLocaleString('he-IL'));
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        sheet.appendRow([classId, schedJson, new Date().toLocaleString('he-IL')]);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', classId: classId }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
