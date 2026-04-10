@@ -62,6 +62,12 @@ function doPost(e) {
       case 'deleteLesson':
         result = deleteLesson_(data.lessonId);
         break;
+      case 'saveForm':
+        result = saveForm_(data.sheet, data.fields);
+        break;
+      case 'getForm':
+        result = getForm_(data.sheet);
+        break;
       default:
         result = { result: 'error', message: 'unknown action' };
     }
@@ -220,6 +226,78 @@ function deleteLesson_(lessonId) {
     }
   }
   return { result: 'error', message: 'lesson not found' };
+}
+
+// ============================================
+// GENERIC FORM — saveForm / getForm
+// ============================================
+
+/**
+ * שמירה גנרית — כל טופס חדש שולח שם גיליון + שדות,
+ * והפונקציה יוצרת את הגיליון אוטומטית אם הוא לא קיים.
+ *
+ * payload: { action:'saveForm', sheet:'פולס חזרה', fields:{ name:'...', energy:4, ... } }
+ */
+function saveForm_(sheetName, fields) {
+  if (!sheetName || !fields) return { result: 'error', message: 'missing sheet name or fields' };
+
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
+
+  // הוספת תאריך אוטומטי
+  fields['תאריך'] = new Date();
+
+  var keys = Object.keys(fields);
+
+  // יצירת גיליון חדש עם כותרות אם לא קיים
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(keys);
+    sheet.getRange(1, 1, 1, keys.length).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+
+  // בדיקה שכל העמודות קיימות — הוספת חדשות בסוף
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  keys.forEach(function(key) {
+    if (headers.indexOf(key) === -1) {
+      var newCol = headers.length + 1;
+      sheet.getRange(1, newCol).setValue(key).setFontWeight('bold');
+      headers.push(key);
+    }
+  });
+
+  // כתיבת שורה חדשה לפי סדר הכותרות
+  var row = headers.map(function(h) { return fields[h] !== undefined ? fields[h] : ''; });
+  sheet.appendRow(row);
+
+  logAction_(ss, 'form', sheetName, 'save', JSON.stringify(fields).substring(0, 200));
+  return { result: 'success', message: 'saved to ' + sheetName };
+}
+
+/**
+ * קריאה גנרית — מחזיר את כל השורות מגיליון כלשהו
+ *
+ * payload: { action:'getForm', sheet:'כרטיס סיום שנה' }
+ */
+function getForm_(sheetName) {
+  if (!sheetName) return { result: 'error', message: 'missing sheet name' };
+
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet || sheet.getLastRow() < 2) return { result: 'success', rows: [] };
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var rows = [];
+  for (var i = 1; i < data.length; i++) {
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = data[i][j];
+    }
+    rows.push(obj);
+  }
+  return { result: 'success', rows: rows };
 }
 
 // ============================================
