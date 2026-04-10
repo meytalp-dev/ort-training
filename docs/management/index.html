@@ -2669,6 +2669,17 @@ function remoteSave(action,data,isRetry){
     });
 }
 
+// Heuristics — does the local data contain ACTUAL user content, or just empty scaffolding?
+function isMeaningful(bucket,d){
+  if(!d)return false;
+  if(bucket==='classSchedule'){
+    // Schedule is meaningful only if at least one row has hours>0 or a teacher assigned
+    return Object.values(d).some(rows=>Array.isArray(rows)&&rows.some(r=>(r.hours&&Number(r.hours)>0)||(r.teacher&&r.teacher!=='')));
+  }
+  if(Array.isArray(d))return d.length>0;
+  return Object.keys(d).length>0;
+}
+
 function loadBucketSafely(opts){
   // opts: {bucket, action, storageKey, extractor, applyFn, selfHealFn}
   const cb='cb_'+opts.bucket+'_'+Date.now();
@@ -2679,13 +2690,13 @@ function loadBucketSafely(opts){
     const localRaw=localStorage.getItem(opts.storageKey);
     let localData=null;
     try{localData=localRaw?JSON.parse(localRaw):null}catch(e){localData=null}
-    const localExists=localData&&(Array.isArray(localData)?localData.length>0:Object.keys(localData).length>0);
+    const localExists=isMeaningful(opts.bucket,localData);
 
     // Always migrate server data
     const migrated=MIGRATIONS[opts.bucket](serverData);
 
     if(!localExists){
-      // Cold load: accept server data
+      // Cold load OR local is just empty scaffolding: accept server data
       opts.applyFn(migrated);
       try{localStorage.setItem(opts.storageKey,JSON.stringify(migrated))}catch(e){}
     }
