@@ -1711,7 +1711,7 @@ function initCurriculum(){
   // Auto-load teacher forms
   if(!teacherForms.length){
     const cb='cbAutoForms_'+Date.now();
-    window[cb]=function(d){delete window[cb];if(d.forms){teacherForms=d.forms;applyFormNameMap(teacherForms);renderCurriculum();if(curView==='dashboard')renderStaffboard()}};
+    window[cb]=function(d){delete window[cb];if(d&&Array.isArray(d.forms)){teacherForms=d.forms;applyFormNameMap(teacherForms);renderCurriculum();if(curView==='dashboard')renderStaffboard()}};
     const s=document.createElement('script');s.src=`${APPS_SCRIPT}?action=getTeacherForms&callback=${cb}`;s.onerror=()=>delete window[cb];document.head.appendChild(s);
   }
   renderCurriculum();
@@ -2623,33 +2623,114 @@ function showSaveStatus(ok){
   el.style.background=ok?'#27AE60':'#C0392B';el.style.color='#fff';el.textContent=ok?'נשמר בהצלחה':'שגיאה בשמירה — נסי שוב';el.style.opacity='1';
   clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0'},ok?2000:5000);
 }
-function remoteSave(action,data){
-  fetch(APPS_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})})
+// =================== STATE MANAGEMENT LAYER (v2) ===================
+// Source of truth: localStorage. Server is BACKUP only.
+// Server data is loaded only on cold start (when localStorage is empty for that bucket).
+// This eliminates the "my work disappeared" bug where async server fetches overwrote recent local edits.
+// Failed saves are queued and retried automatically.
+
+const SCHEMA_VERSIONS={classSchedule:2,positions:1,events:1,tasks:1};
+
+// Migration registry — runs on every data entry path
+const MIGRATIONS={
+  classSchedule:(d)=>migrateClassSchedule(d||{}),
+  positions:(d)=>Array.isArray(d)?d:[],
+  events:(d)=>Array.isArray(d)?d:[],
+  tasks:(d)=>Array.isArray(d)?d:[]
+};
+
+// Retry queue for failed saves — survives page reloads
+let retryQueue=[];try{retryQueue=JSON.parse(localStorage.getItem('mgmt-retry-queue')||'[]')}catch(e){retryQueue=[]}
+function queueFailedSave(action,data){
+  retryQueue.push({action,data,ts:Date.now()});
+  // Keep last 100 only
+  if(retryQueue.length>100)retryQueue=retryQueue.slice(-100);
+  try{localStorage.setItem('mgmt-retry-queue',JSON.stringify(retryQueue))}catch(e){}
+}
+function flushRetryQueue(){
+  if(!retryQueue.length||!navigator.onLine)return;
+  const queue=retryQueue.slice();
+  retryQueue=[];
+  try{localStorage.setItem('mgmt-retry-queue','[]')}catch(e){}
+  queue.forEach(q=>remoteSave(q.action,q.data,true));
+}
+window.addEventListener('online',flushRetryQueue);
+setInterval(flushRetryQueue,60000);
+
+function remoteSave(action,data,isRetry){
+  return fetch(APPS_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})})
     .then(r=>{if(r.ok)return r.text();throw new Error('HTTP '+r.status)})
-    .then(()=>showSaveStatus(true))
+    .then(()=>{if(!isRetry)showSaveStatus(true);return true})
     .catch(()=>{
-      // Fallback: try no-cors (fire-and-forget) + warn user
-      fetch(APPS_SCRIPT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})}).catch(()=>{});
-      showSaveStatus(false);
+      // Queue for retry — do NOT fire-and-forget no-cors (which lies about success)
+      queueFailedSave(action,data);
+      if(!isRetry)showSaveStatus(false);
+      return false;
     });
 }
+
+function loadBucketSafely(opts){
+  // opts: {bucket, action, storageKey, extractor, applyFn, selfHealFn}
+  const cb='cb_'+opts.bucket+'_'+Date.now();
+  window[cb]=function(d){
+    delete window[cb];
+    const serverData=opts.extractor(d);
+    if(!serverData)return;
+    const localRaw=localStorage.getItem(opts.storageKey);
+    let localData=null;
+    try{localData=localRaw?JSON.parse(localRaw):null}catch(e){localData=null}
+    const localExists=localData&&(Array.isArray(localData)?localData.length>0:Object.keys(localData).length>0);
+
+    // Always migrate server data
+    const migrated=MIGRATIONS[opts.bucket](serverData);
+
+    if(!localExists){
+      // Cold load: accept server data
+      opts.applyFn(migrated);
+      try{localStorage.setItem(opts.storageKey,JSON.stringify(migrated))}catch(e){}
+    }
+    // Self-heal: if migration changed server data, push the clean version back
+    if(opts.selfHealFn&&JSON.stringify(serverData)!==JSON.stringify(migrated)){
+      opts.selfHealFn(migrated);
+    }
+  };
+  const s=document.createElement('script');
+  s.src=`${APPS_SCRIPT}?action=${opts.action}&callback=${cb}`;
+  s.onerror=()=>delete window[cb];
+  document.head.appendChild(s);
+}
+
 function loadRemoteData(){
-  // Load positions
-  const cb1='cb_'+Date.now();
-  window[cb1]=function(d){delete window[cb1];if(d.positions&&d.positions.length){positions=d.positions;localStorage.setItem('mgmt-positions',JSON.stringify(positions));if(document.getElementById('page-positions').style.display!=='none')renderPositions()}};
-  const s1=document.createElement('script');s1.src=`${APPS_SCRIPT}?action=getPositions&callback=${cb1}`;s1.onerror=()=>delete window[cb1];document.head.appendChild(s1);
-  // Load events
-  const cb2='cb2_'+Date.now();
-  window[cb2]=function(d){delete window[cb2];if(d.events&&d.events.length){calEvents=d.events;localStorage.setItem('mgmt-events',JSON.stringify(calEvents));if(document.getElementById('page-calendar').style.display!=='none')renderCalendar()}};
-  const s2=document.createElement('script');s2.src=`${APPS_SCRIPT}?action=getCalendarEvents&callback=${cb2}`;s2.onerror=()=>delete window[cb2];document.head.appendChild(s2);
-  // Load class schedule
-  const cb3='cb3_'+Date.now();
-  window[cb3]=function(d){delete window[cb3];if(d.classSchedule&&Object.keys(d.classSchedule).length){const before=JSON.stringify(d.classSchedule);classSchedule=migrateClassSchedule(d.classSchedule);const after=JSON.stringify(classSchedule);localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));if(before!==after){/* self-heal: server data was dirty, push cleaned versions back */CLASS_LIST.forEach(cls=>{const grade=cls.replace(/\d+/,'');if(grade==='ט'||grade==='י')remoteSave('saveClassSchedule',{classId:cls,schedule:classSchedule[cls]})})}if(document.getElementById('page-curriculum').style.display!=='none')renderCurriculum()}};
-  const s3=document.createElement('script');s3.src=`${APPS_SCRIPT}?action=getClassSchedule&callback=${cb3}`;s3.onerror=()=>delete window[cb3];document.head.appendChild(s3);
-  // Load tasks
-  const cb4='cb4_'+Date.now();
-  window[cb4]=function(d){delete window[cb4];if(d.tasks&&d.tasks.length){tasks=d.tasks;localStorage.setItem('mgmt-tasks',JSON.stringify(tasks));if(document.getElementById('page-tasks').style.display!=='none')renderTasks();checkTaskReminders()}};
-  const s4=document.createElement('script');s4.src=`${APPS_SCRIPT}?action=getTasks&callback=${cb4}`;s4.onerror=()=>delete window[cb4];document.head.appendChild(s4);
+  // Try to flush any failed saves from previous sessions first
+  flushRetryQueue();
+
+  loadBucketSafely({
+    bucket:'positions',action:'getPositions',storageKey:'mgmt-positions',
+    extractor:(d)=>d.positions,
+    applyFn:(data)=>{positions=data;if(document.getElementById('page-positions').style.display!=='none')renderPositions()}
+  });
+  loadBucketSafely({
+    bucket:'events',action:'getCalendarEvents',storageKey:'mgmt-events',
+    extractor:(d)=>d.events,
+    applyFn:(data)=>{calEvents=data;if(document.getElementById('page-calendar').style.display!=='none')renderCalendar()}
+  });
+  loadBucketSafely({
+    bucket:'classSchedule',action:'getClassSchedule',storageKey:'mgmt-class-schedule',
+    extractor:(d)=>d.classSchedule,
+    applyFn:(data)=>{classSchedule=data;if(document.getElementById('page-curriculum').style.display!=='none')renderCurriculum()},
+    selfHealFn:(cleanData)=>{
+      // Push cleaned class schedule back to server (only ט/י grades — those had English 3/4/5 pollution)
+      CLASS_LIST.forEach(cls=>{
+        const grade=cls.replace(/\d+/,'');
+        if((grade==='ט'||grade==='י')&&cleanData[cls])remoteSave('saveClassSchedule',{classId:cls,schedule:cleanData[cls]});
+      });
+    }
+  });
+  loadBucketSafely({
+    bucket:'tasks',action:'getTasks',storageKey:'mgmt-tasks',
+    extractor:(d)=>d.tasks,
+    applyFn:(data)=>{tasks=data;if(document.getElementById('page-tasks').style.display!=='none'){renderTasks();checkTaskReminders()}}
+  });
 }
 
 // ===================== UTILS =====================
@@ -2667,7 +2748,7 @@ function loadTeacherForms(){
   const cb='cbForms_'+Date.now();
   window[cb]=function(d){
     delete window[cb];
-    if(!d.forms||!d.forms.length){alert('אין תשובות עדיין');return}
+    if(!d||!Array.isArray(d.forms)||!d.forms.length){alert('אין תשובות עדיין');return}
     teacherForms=d.forms;
     applyFormNameMap(teacherForms);
     // Add forms as positions
