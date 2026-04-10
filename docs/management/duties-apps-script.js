@@ -24,6 +24,15 @@ const DUTY_PAGE_URL = 'https://meytalp-dev.github.io/ort-training/management/dut
 
 // ==================== נתוני תורנויות ====================
 
+// ציוד לכל עמדה
+const AREA_EQUIPMENT = {
+  'כדורגל — דשא + פינג פונג': 'כדורגל + מחבטי פינג פונג וכדורים',
+  'כדורסל — פרגולה': 'כדורסל',
+  'דמקה — מספרה': 'לוחות דמקה + כלים',
+  'שש בש — כיתות 1-2-3': 'לוחות שש בש + קוביות',
+  'כדורעף — סדנא + 7-8-9': 'כדורעף + רשת'
+};
+
 // ימים: 0=ראשון, 1=שני, 2=שלישי, 3=רביעי, 4=חמישי
 const RECESS_SCHEDULE = {
   // כדורגל / דשא + פינג פונג
@@ -121,12 +130,15 @@ function sendRecessReminder() {
     }
 
     const areas = teacherDuties[name];
-    const areasText = areas.join('\n• ');
+    const areasText = areas.map(a => `• ${a}`).join('\n');
+    const equipList = areas.map(a => AREA_EQUIPMENT[a]).filter(Boolean);
+    const equipText = [...new Set(equipList)].join(', ');
 
     const message =
       `בוקר טוב ${name},\n\n` +
       `תזכורת: היום (יום ${dayName}) יש לך תורנות הפסקות:\n` +
-      `• ${areasText}\n\n` +
+      `${areasText}\n\n` +
+      `אל תשכח/י לקחת איתך: ${equipText}\n\n` +
       `תודה רבה!\n` +
       `${DUTY_PAGE_URL}`;
 
