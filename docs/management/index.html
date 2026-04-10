@@ -1606,31 +1606,34 @@ function buildDefaultSchedule(){
   });
   return sched;
 }
-let classSchedule=JSON.parse(localStorage.getItem('mgmt-class-schedule')||'null')||buildDefaultSchedule();
-// Ensure all classes exist + remove old 'עברית' subject (replaced by 'הבעה, הבנה ולשון')
-CLASS_LIST.forEach(cls=>{
-  if(!classSchedule[cls])classSchedule[cls]=DEFAULT_SUBJECTS.map(subj=>({subject:subj,hours:'',teacher:''}));
-  // Remove 'עברית' (replaced by הבעה, הבנה ולשון) + old empty subjects
-  const OLD_SUBJ=['עברית','לשון','חינוך גופני','מגמת עיצוב שיער','מגמת מחשבים','מגמת אוטוטרוניקה','מגמה','עיצוב שיער','אנגלית'];
-  classSchedule[cls]=classSchedule[cls].filter(r=>r.subject==='עברית'?false:OLD_SUBJ.includes(r.subject)&&!num(r.hours)&&!r.teacher?false:true);
-  // Migration: אנגלית 3/4/5 יח"ל only for יא-יב. Remove from ט-י, ensure single 'אנגלית' row instead.
-  const grade=cls.replace(/\d+/,'');
-  if(grade==='ט'||grade==='י'){
-    classSchedule[cls]=classSchedule[cls].filter(r=>!/^אנגלית [345] יח"ל$/.test(r.subject));
-    if(!classSchedule[cls].find(r=>r.subject==='אנגלית')){
-      classSchedule[cls].push({subject:'אנגלית',hours:'2',hourType:'frontal',teacher:''});
+function migrateClassSchedule(sched){
+  CLASS_LIST.forEach(cls=>{
+    if(!sched[cls])sched[cls]=DEFAULT_SUBJECTS.map(subj=>({subject:subj,hours:'',teacher:''}));
+    // Remove 'עברית' (replaced by הבעה, הבנה ולשון) + old empty subjects
+    const OLD_SUBJ=['עברית','לשון','חינוך גופני','מגמת עיצוב שיער','מגמת מחשבים','מגמת אוטוטרוניקה','מגמה','עיצוב שיער','אנגלית'];
+    sched[cls]=sched[cls].filter(r=>r.subject==='עברית'?false:OLD_SUBJ.includes(r.subject)&&!num(r.hours)&&!r.teacher?false:true);
+    // Migration: אנגלית 3/4/5 יח"ל only for יא-יב. Remove from ט-י, ensure single 'אנגלית' row instead.
+    const grade=cls.replace(/\d+/,'');
+    if(grade==='ט'||grade==='י'){
+      sched[cls]=sched[cls].filter(r=>!(r.subject&&r.subject.indexOf('אנגלית')===0&&/[345]/.test(r.subject)));
+      if(!sched[cls].find(r=>r.subject==='אנגלית')){
+        sched[cls].push({subject:'אנגלית',hours:'2',hourType:'frontal',teacher:''});
+      }
     }
-  }
-  // Ensure שעת חינוך exists and auto-fill homeroom teacher
-  const hrt=HOMEROOM_TEACHERS[cls];
-  if(hrt){
-    ['שעת חינוך','פרט, קבוצה וחברה'].forEach(subj=>{
-      let row=classSchedule[cls].find(r=>r.subject===subj);
-      if(!row){classSchedule[cls].push({subject:subj,hours:'1',teacher:hrt});row=classSchedule[cls][classSchedule[cls].length-1]}
-      if(!row.teacher)row.teacher=hrt;
-    });
-  }
-});
+    // Ensure שעת חינוך exists and auto-fill homeroom teacher
+    const hrt=HOMEROOM_TEACHERS[cls];
+    if(hrt){
+      ['שעת חינוך','פרט, קבוצה וחברה'].forEach(subj=>{
+        let row=sched[cls].find(r=>r.subject===subj);
+        if(!row){sched[cls].push({subject:subj,hours:'1',teacher:hrt});row=sched[cls][sched[cls].length-1]}
+        if(!row.teacher)row.teacher=hrt;
+      });
+    }
+  });
+  return sched;
+}
+let classSchedule=migrateClassSchedule(JSON.parse(localStorage.getItem('mgmt-class-schedule')||'null')||buildDefaultSchedule());
+localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));
 
 function getTeacherAge(name){
   const b=TEACHER_BIRTH[name];if(!b)return null;
@@ -2641,7 +2644,7 @@ function loadRemoteData(){
   const s2=document.createElement('script');s2.src=`${APPS_SCRIPT}?action=getCalendarEvents&callback=${cb2}`;s2.onerror=()=>delete window[cb2];document.head.appendChild(s2);
   // Load class schedule
   const cb3='cb3_'+Date.now();
-  window[cb3]=function(d){delete window[cb3];if(d.classSchedule&&Object.keys(d.classSchedule).length){classSchedule=d.classSchedule;localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));if(document.getElementById('page-curriculum').style.display!=='none')renderCurriculum()}};
+  window[cb3]=function(d){delete window[cb3];if(d.classSchedule&&Object.keys(d.classSchedule).length){const before=JSON.stringify(d.classSchedule);classSchedule=migrateClassSchedule(d.classSchedule);const after=JSON.stringify(classSchedule);localStorage.setItem('mgmt-class-schedule',JSON.stringify(classSchedule));if(before!==after){/* self-heal: server data was dirty, push cleaned versions back */CLASS_LIST.forEach(cls=>{const grade=cls.replace(/\d+/,'');if(grade==='ט'||grade==='י')remoteSave('saveClassSchedule',{classId:cls,schedule:classSchedule[cls]})})}if(document.getElementById('page-curriculum').style.display!=='none')renderCurriculum()}};
   const s3=document.createElement('script');s3.src=`${APPS_SCRIPT}?action=getClassSchedule&callback=${cb3}`;s3.onerror=()=>delete window[cb3];document.head.appendChild(s3);
   // Load tasks
   const cb4='cb4_'+Date.now();
