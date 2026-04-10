@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>קירות מדברים — אורט בית הערבה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Secular+One&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F5F0E8;--card:#FFFDF8;--text:#4A3F35;--muted:#8B7E74;--border:#E8DDD0;--radius:20px;
+  --primary:#7AADAD;--primary-dark:#5E9191;
+  --dim-belong:#E06090;--dim-respect:#5B9BD5;--dim-motiv:#E8A838;--dim-capable:#8B6BC0;--dim-auto:#7AB648;
+}
+body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:400px;background:linear-gradient(180deg,#FFF8F0,var(--bg));z-index:-1;pointer-events:none}
+
+/* Header */
+.header{
+  background:var(--card);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+  box-shadow:0 2px 12px rgba(74,63,53,.06);position:sticky;top:0;z-index:50;
+}
+.header::before{content:'';position:absolute;bottom:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--dim-belong),var(--dim-respect),var(--dim-motiv),var(--dim-capable),var(--dim-auto))}
+.header h1{font-size:1.15rem;font-weight:800;display:flex;align-items:center;gap:10px}
+.header .back-link{color:var(--muted);text-decoration:none;font-size:.82rem;font-weight:500;display:flex;align-items:center;gap:4px;transition:color .2s}
+.header .back-link:hover{color:var(--primary-dark)}
+
+/* Controls */
+.controls{max-width:1300px;margin:24px auto 0;padding:0 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.filter-btn{
+  padding:8px 18px;border-radius:24px;border:1.5px solid var(--border);background:var(--card);
+  font-family:Heebo;font-size:.82rem;font-weight:600;color:var(--text);cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:6px;
+}
+.filter-btn:hover{border-color:var(--primary);color:var(--primary-dark)}
+.filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.filter-btn[data-dim="belong"].active{background:var(--dim-belong);border-color:var(--dim-belong)}
+.filter-btn[data-dim="respect"].active{background:var(--dim-respect);border-color:var(--dim-respect)}
+.filter-btn[data-dim="motiv"].active{background:var(--dim-motiv);border-color:var(--dim-motiv)}
+.filter-btn[data-dim="capable"].active{background:var(--dim-capable);border-color:var(--dim-capable)}
+.filter-btn[data-dim="auto"].active{background:var(--dim-auto);border-color:var(--dim-auto)}
+.download-all{
+  margin-right:auto;padding:8px 20px;border-radius:12px;border:none;
+  background:var(--primary);color:#fff;font-family:Heebo;font-size:.82rem;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s;
+}
+.download-all:hover{background:var(--primary-dark)}
+
+/* Grid */
+.poster-grid{
+  max-width:1300px;margin:24px auto;padding:0 24px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;
+}
+
+/* Poster Card */
+.poster-wrap{position:relative;border-radius:18px;overflow:hidden;transition:transform .25s,box-shadow .25s}
+.poster-wrap:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.15)}
+.poster{
+  width:100%;aspect-ratio:1/1;position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:40px 36px;overflow:hidden;
+}
+
+/* Poster Text */
+.poster-text{
+  position:relative;z-index:5;text-align:center;max-width:88%;
+}
+.poster-text .quote{
+  font-family:'Secular One',Heebo,sans-serif;font-size:1.55rem;line-height:1.85;color:#fff;
+  text-shadow:0 2px 12px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.15);
+}
+.poster-text .dim-label{
+  display:inline-block;margin-top:14px;padding:5px 16px;border-radius:20px;
+  background:rgba(255,255,255,.2);backdrop-filter:blur(8px);
+  font-size:.72rem;font-weight:700;color:#fff;letter-spacing:.5px;
+}
+
+/* Poster Overlay Actions */
+.poster-overlay{
+  position:absolute;inset:0;z-index:10;display:flex;align-items:flex-end;justify-content:center;
+  background:linear-gradient(transparent 50%,rgba(0,0,0,.4));
+  opacity:0;transition:opacity .25s;padding-bottom:18px;gap:10px;
+}
+.poster-wrap:hover .poster-overlay{opacity:1}
+.poster-btn{
+  padding:8px 18px;border-radius:12px;border:none;font-family:Heebo;font-size:.78rem;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;
+}
+.poster-btn-dl{background:rgba(255,255,255,.92);color:var(--text)}
+.poster-btn-dl:hover{background:#fff}
+
+/* Location badge */
+.poster-loc-badge{
+  position:absolute;top:14px;left:14px;z-index:6;
+  padding:4px 12px;border-radius:16px;background:rgba(0,0,0,.25);backdrop-filter:blur(6px);
+  font-size:.68rem;font-weight:600;color:rgba(255,255,255,.9);display:flex;align-items:center;gap:4px;
+}
+
+/* ===== POSTER DESIGNS — Each with unique visual identity ===== */
+
+/* --- BELONG (Pink/Rose) --- */
+.poster-belong-1{background:linear-gradient(135deg,#E06090,#C8507A,#A0406A)}
+.poster-belong-2{background:linear-gradient(160deg,#D4547E,#E88AAC,#C8507A)}
+.poster-belong-3{background:linear-gradient(145deg,#B84872,#E06090,#F0A0B8)}
+.poster-belong-4{background:linear-gradient(130deg,#C05080,#E87098,#D05878)}
+.poster-belong-5{background:linear-gradient(155deg,#E06090,#D06888,#A84870)}
+.poster-belong-6{background:linear-gradient(140deg,#C85880,#E890B0,#D06888)}
+.poster-belong-7{background:linear-gradient(150deg,#D05878,#E06090,#B04868)}
+.poster-belong-8{background:linear-gradient(135deg,#C04870,#E06898,#D87898)}
+
+/* --- RESPECT (Blue) --- */
+.poster-respect-1{background:linear-gradient(135deg,#5B9BD5,#4080C0,#3068A0)}
+.poster-respect-2{background:linear-gradient(160deg,#4888C0,#6AAAE0,#3878B0)}
+.poster-respect-3{background:linear-gradient(145deg,#3870A8,#5B9BD5,#78B8E8)}
+.poster-respect-4{background:linear-gradient(130deg,#4080B8,#68A8D8,#5090C0)}
+.poster-respect-5{background:linear-gradient(155deg,#5B9BD5,#4888C0,#3068A0)}
+.poster-respect-6{background:linear-gradient(140deg,#5090C0,#78B8E8,#4888C0)}
+.poster-respect-7{background:linear-gradient(150deg,#4080B8,#5B9BD5,#3870A8)}
+.poster-respect-8{background:linear-gradient(135deg,#3878B0,#5898D0,#6AAAE0)}
+
+/* --- MOTIV (Gold/Orange) --- */
+.poster-motiv-1{background:linear-gradient(135deg,#E8A838,#D08820,#B87018)}
+.poster-motiv-2{background:linear-gradient(160deg,#D89828,#F0C060,#C88820)}
+.poster-motiv-3{background:linear-gradient(145deg,#C08020,#E8A838,#F0C868)}
+.poster-motiv-4{background:linear-gradient(130deg,#D09028,#E8B848,#C88820)}
+.poster-motiv-5{background:linear-gradient(155deg,#E8A838,#D09830,#B87820)}
+.poster-motiv-6{background:linear-gradient(140deg,#C88820,#F0C060,#D89828)}
+.poster-motiv-7{background:linear-gradient(150deg,#D08820,#E8A838,#C08020)}
+.poster-motiv-8{background:linear-gradient(135deg,#B87820,#D8A038,#F0B850)}
+
+/* --- CAPABLE (Purple) --- */
+.poster-capable-1{background:linear-gradient(135deg,#8B6BC0,#7050A0,#583888)}
+.poster-capable-2{background:linear-gradient(160deg,#7858A8,#A088D0,#6848A0)}
+.poster-capable-3{background:linear-gradient(145deg,#604090,#8B6BC0,#A890D8)}
+.poster-capable-4{background:linear-gradient(130deg,#7050A0,#9078C0,#8060B0)}
+.poster-capable-5{background:linear-gradient(155deg,#8B6BC0,#7858A8,#583888)}
+.poster-capable-6{background:linear-gradient(140deg,#8060B0,#A890D8,#7858A8)}
+.poster-capable-7{background:linear-gradient(150deg,#7050A0,#8B6BC0,#604090)}
+.poster-capable-8{background:linear-gradient(135deg,#6848A0,#8868B8,#A088D0)}
+
+/* --- AUTO (Green) --- */
+.poster-auto-1{background:linear-gradient(135deg,#7AB648,#5C9830,#488020)}
+.poster-auto-2{background:linear-gradient(160deg,#6AA038,#90D060,#5C9030)}
+.poster-auto-3{background:linear-gradient(145deg,#508828,#7AB648,#98D070)}
+.poster-auto-4{background:linear-gradient(130deg,#5C9030,#80C050,#6CA038)}
+.poster-auto-5{background:linear-gradient(155deg,#7AB648,#6AA038,#488020)}
+.poster-auto-6{background:linear-gradient(140deg,#6CA038,#98D070,#6AA038)}
+.poster-auto-7{background:linear-gradient(150deg,#5C9830,#7AB648,#508828)}
+.poster-auto-8{background:linear-gradient(135deg,#5C9030,#78B040,#90D060)}
+
+/* SVG Decorations */
+.poster svg.deco{position:absolute;pointer-events:none;z-index:1;opacity:.15}
+.poster svg.deco-bright{opacity:.25}
+
+/* Geometric patterns overlay */
+.poster::before{
+  content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+}
+.pattern-dots::before{background-image:radial-gradient(circle,rgba(255,255,255,.1) 1.5px,transparent 1.5px);background-size:20px 20px}
+.pattern-lines::before{background-image:repeating-linear-gradient(45deg,transparent,transparent 14px,rgba(255,255,255,.05) 14px,rgba(255,255,255,.05) 15px)}
+.pattern-cross::before{background-image:repeating-linear-gradient(0deg,transparent,transparent 24px,rgba(255,255,255,.04) 24px,rgba(255,255,255,.04) 25px),repeating-linear-gradient(90deg,transparent,transparent 24px,rgba(255,255,255,.04) 24px,rgba(255,255,255,.04) 25px)}
+.pattern-diag::before{background-image:repeating-linear-gradient(-45deg,transparent,transparent 18px,rgba(255,255,255,.05) 18px,rgba(255,255,255,.05) 19px)}
+.pattern-circles::before{background-image:radial-gradient(circle at 15% 85%,rgba(255,255,255,.08) 0%,transparent 45%),radial-gradient(circle at 85% 15%,rgba(255,255,255,.1) 0%,transparent 35%)}
+.pattern-waves::before{background-image:url("data:image/svg+xml,%3Csvg width='120' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 12Q30 0 60 12Q90 24 120 12' fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='2'/%3E%3C/svg%3E");background-size:120px 24px}
+.pattern-grid::before{background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:32px 32px}
+.pattern-diamond::before{background-image:repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,255,255,.04) 20px,rgba(255,255,255,.04) 21px),repeating-linear-gradient(-45deg,transparent,transparent 20px,rgba(255,255,255,.04) 20px,rgba(255,255,255,.04) 21px)}
+
+/* Corner decorations */
+.corner-tl{position:absolute;top:0;right:0;width:120px;height:120px;z-index:1;pointer-events:none}
+.corner-br{position:absolute;bottom:0;left:0;width:100px;height:100px;z-index:1;pointer-events:none}
+
+/* Decorative shapes */
+.shape-circle{position:absolute;border-radius:50%;pointer-events:none;z-index:1}
+.shape-ring{position:absolute;border-radius:50%;border:3px solid rgba(255,255,255,.12);pointer-events:none;z-index:1}
+
+/* Stats bar */
+.stats-bar{
+  max-width:1300px;margin:8px auto 32px;padding:0 24px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;
+}
+.stat-card{
+  background:var(--card);border-radius:14px;padding:16px;text-align:center;
+  border:1px solid var(--border);box-shadow:0 2px 8px rgba(74,63,53,.04);
+}
+.stat-num{font-size:1.5rem;font-weight:800}
+.stat-label{font-size:.72rem;color:var(--muted);margin-top:2px}
+
+/* Responsive */
+@media(max-width:700px){
+  .poster-grid{grid-template-columns:1fr 1fr;gap:14px}
+  .poster-text .quote{font-size:1.15rem}
+  .poster{padding:24px 20px}
+  .controls{gap:8px}
+  .filter-btn{padding:6px 12px;font-size:.76rem}
+}
+@media(max-width:420px){
+  .poster-grid{grid-template-columns:1fr}
+}
+@media print{
+  .header,.controls,.poster-overlay,.download-all,.back-link{display:none!important}
+  .poster-wrap{break-inside:avoid;margin-bottom:16px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    קירות מדברים
+  </h1>
+  <a href="five-dimensions.html" class="back-link">
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"/></svg>
+    חזרה לחמשת הממדים
+  </a>
+</div>
+
+<div class="controls">
+  <button class="filter-btn active" data-filter="all" onclick="filterPosters('all')">הכל</button>
+  <button class="filter-btn" data-dim="belong" data-filter="belong" onclick="filterPosters('belong')">שייכות</button>
+  <button class="filter-btn" data-dim="respect" data-filter="respect" onclick="filterPosters('respect')">כבוד</button>
+  <button class="filter-btn" data-dim="motiv" data-filter="motiv" onclick="filterPosters('motiv')">מוטיבציה</button>
+  <button class="filter-btn" data-dim="capable" data-filter="capable" onclick="filterPosters('capable')">מסוגלות</button>
+  <button class="filter-btn" data-dim="auto" data-filter="auto" onclick="filterPosters('auto')">אוטונומיה</button>
+  <span style="width:1px;height:24px;background:var(--border)"></span>
+  <button class="filter-btn" data-filter="classroom" onclick="filterPosters('classroom')">כיתות</button>
+  <button class="filter-btn" data-filter="hallway" onclick="filterPosters('hallway')">מסדרונות</button>
+  <button class="filter-btn" data-filter="yard" onclick="filterPosters('yard')">חצר</button>
+  <button class="filter-btn" data-filter="teachers" onclick="filterPosters('teachers')">חדר מורים</button>
+  <button class="download-all" onclick="downloadAll()">
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+    הורדת הכל
+  </button>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-card"><div class="stat-num" style="color:var(--primary-dark)" id="statTotal">40</div><div class="stat-label">סה"כ פוסטרים</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--dim-belong)" id="statBelong">8</div><div class="stat-label">שייכות</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--dim-respect)" id="statRespect">8</div><div class="stat-label">כבוד</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--dim-motiv)" id="statMotiv">8</div><div class="stat-label">מוטיבציה</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--dim-capable)" id="statCapable">8</div><div class="stat-label">מסוגלות</div></div>
+  <div class="stat-card"><div class="stat-num" style="color:var(--dim-auto)" id="statAuto">8</div><div class="stat-label">אוטונומיה</div></div>
+</div>
+
+<div class="poster-grid" id="posterGrid"></div>
+
+<script>
+const POSTERS = [
+  // ===== שייכות =====
+  {dim:'belong',quote:'אנחנו לא רק כיתה\nאנחנו משפחה',loc:'hallway',cls:'poster-belong-1 pattern-dots',
+   decos:[
+     {type:'circle',top:'8%',right:'6%',w:80,color:'rgba(255,255,255,.1)'},
+     {type:'circle',bottom:'12%',left:'8%',w:50,color:'rgba(255,255,255,.08)'},
+     {type:'ring',top:'60%',right:'10%',w:60},
+     {type:'svg',name:'people',bottom:'8%',left:'50%',transform:'translateX(-50%)',w:200,h:60},
+   ]},
+  {dim:'belong',quote:'כל אחד שייך\nכל אחד חשוב',loc:'classroom',cls:'poster-belong-2 pattern-circles',
+   decos:[
+     {type:'ring',top:'10%',left:'10%',w:70},
+     {type:'circle',bottom:'15%',right:'12%',w:40,color:'rgba(255,255,255,.1)'},
+     {type:'svg',name:'hearts',top:'8%',right:'8%',w:80,h:80},
+   ]},
+  {dim:'belong',quote:'בית הספר שלנו\nהבית השני שלי',loc:'yard',cls:'poster-belong-3 pattern-waves',
+   decos:[
+     {type:'svg',name:'home',bottom:'10%',right:'10%',w:90,h:90},
+     {type:'circle',top:'10%',left:'15%',w:60,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'belong',quote:'ביחד\nאנחנו יותר חזקים',loc:'classroom',cls:'poster-belong-4 pattern-cross',
+   decos:[
+     {type:'svg',name:'hands',bottom:'8%',left:'50%',transform:'translateX(-50%)',w:160,h:70},
+     {type:'ring',top:'12%',right:'12%',w:50},
+   ]},
+  {dim:'belong',quote:'תיקון עולם\nמתחיל כאן\nממך, ממני, מאיתנו',loc:'hallway',cls:'poster-belong-5 pattern-lines',
+   decos:[
+     {type:'svg',name:'globe',top:'8%',left:'8%',w:70,h:70},
+     {type:'circle',bottom:'10%',right:'10%',w:50,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'belong',quote:'אנחנו דואגים\nאחד לשני',loc:'yard',cls:'poster-belong-6 pattern-grid',
+   decos:[
+     {type:'svg',name:'shield',bottom:'10%',left:'10%',w:70,h:80},
+     {type:'ring',top:'15%',right:'15%',w:45},
+   ]},
+  {dim:'belong',quote:'המקום הזה שלי\nאני שייך/ת',loc:'classroom',cls:'poster-belong-7 pattern-diamond',
+   decos:[
+     {type:'svg',name:'star',top:'10%',right:'10%',w:60,h:60},
+     {type:'circle',bottom:'15%',left:'12%',w:45,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'belong',quote:'כל תלמיד צריך\nמבוגר אחד\nשמאמין בו',loc:'teachers',cls:'poster-belong-8 pattern-dots',
+   decos:[
+     {type:'svg',name:'lightbulb',bottom:'10%',right:'10%',w:60,h:80},
+     {type:'ring',top:'10%',left:'10%',w:55},
+   ]},
+
+  // ===== כבוד =====
+  {dim:'respect',quote:'דיבור מכבד\nהכוח הכי גדול\nשיש לך',loc:'hallway',cls:'poster-respect-1 pattern-lines',
+   decos:[
+     {type:'svg',name:'chat',top:'8%',right:'8%',w:70,h:70},
+     {type:'circle',bottom:'12%',left:'10%',w:55,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'respect',quote:'אני מקשיב/ה\nגם כשאני\nלא מסכים/ה',loc:'classroom',cls:'poster-respect-2 pattern-dots',
+   decos:[
+     {type:'svg',name:'ear',bottom:'10%',right:'10%',w:70,h:80},
+     {type:'ring',top:'12%',left:'12%',w:50},
+   ]},
+  {dim:'respect',quote:'שונים\nודווקא בגלל זה\nמיוחדים',loc:'yard',cls:'poster-respect-3 pattern-circles',
+   decos:[
+     {type:'svg',name:'rainbow',top:'8%',left:'50%',transform:'translateX(-50%)',w:140,h:50},
+     {type:'circle',bottom:'10%',right:'10%',w:40,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'respect',quote:'מילה טובה\nיכולה לשנות\nיום שלם',loc:'classroom',cls:'poster-respect-4 pattern-waves',
+   decos:[
+     {type:'svg',name:'sun',top:'10%',right:'10%',w:70,h:70},
+     {type:'ring',bottom:'15%',left:'12%',w:45},
+   ]},
+  {dim:'respect',quote:'לפני שאתה מדבר\nתחשוב איך\nהיית מרגיש',loc:'hallway',cls:'poster-respect-5 pattern-cross',
+   decos:[
+     {type:'svg',name:'thought',top:'8%',left:'8%',w:70,h:70},
+     {type:'circle',bottom:'10%',right:'12%',w:50,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'respect',quote:'כאן מדברים בכבוד\nתמיד',loc:'yard',cls:'poster-respect-6 pattern-grid',
+   decos:[
+     {type:'svg',name:'badge',bottom:'12%',left:'50%',transform:'translateX(-50%)',w:80,h:80},
+   ]},
+  {dim:'respect',quote:'הקשבה אמיתית\nלב פתוח\nפה סגור',loc:'classroom',cls:'poster-respect-7 pattern-diamond',
+   decos:[
+     {type:'svg',name:'heart-hand',top:'8%',right:'8%',w:70,h:70},
+     {type:'circle',bottom:'12%',left:'10%',w:40,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'respect',quote:'כבוד זה לא רק מילים\nזה גם איך\nשאנחנו מסתכלים',loc:'teachers',cls:'poster-respect-8 pattern-lines',
+   decos:[
+     {type:'svg',name:'eye',bottom:'10%',right:'10%',w:80,h:50},
+     {type:'ring',top:'12%',left:'12%',w:55},
+   ]},
+
+  // ===== מוטיבציה =====
+  {dim:'motiv',quote:'המוטיבציה\nהכי חזקה\nהיא זו שבאה מבפנים',loc:'hallway',cls:'poster-motiv-1 pattern-circles',
+   decos:[
+     {type:'svg',name:'flame',top:'8%',right:'8%',w:60,h:80},
+     {type:'circle',bottom:'12%',left:'10%',w:50,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'motiv',quote:'אני לומד/ת\nכי זה מעניין אותי\nלא כי מכריחים',loc:'classroom',cls:'poster-motiv-2 pattern-lines',
+   decos:[
+     {type:'svg',name:'book',bottom:'10%',left:'10%',w:70,h:70},
+     {type:'ring',top:'10%',right:'12%',w:50},
+   ]},
+  {dim:'motiv',quote:'ניהול זמן\nיותר זמן\nלדברים שאני אוהב/ת',loc:'classroom',cls:'poster-motiv-3 pattern-dots',
+   decos:[
+     {type:'svg',name:'clock',top:'8%',left:'8%',w:65,h:65},
+     {type:'circle',bottom:'10%',right:'10%',w:45,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'motiv',quote:'סקרנות\nהיא הדלק\nשל ההצלחה',loc:'yard',cls:'poster-motiv-4 pattern-waves',
+   decos:[
+     {type:'svg',name:'rocket',bottom:'8%',right:'8%',w:70,h:90},
+     {type:'ring',top:'12%',left:'12%',w:45},
+   ]},
+  {dim:'motiv',quote:'קודם מתכננים\nאחר כך עושים',loc:'hallway',cls:'poster-motiv-5 pattern-cross',
+   decos:[
+     {type:'svg',name:'target',top:'10%',right:'10%',w:70,h:70},
+     {type:'circle',bottom:'12%',left:'12%',w:50,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'motiv',quote:'כשמתאמצים באמת\nההצלחה\nמרגישה אחרת',loc:'classroom',cls:'poster-motiv-6 pattern-diamond',
+   decos:[
+     {type:'svg',name:'mountain',bottom:'6%',left:'50%',transform:'translateX(-50%)',w:200,h:70},
+   ]},
+  {dim:'motiv',quote:'כל יום\nהזדמנות חדשה\nללמוד משהו',loc:'yard',cls:'poster-motiv-7 pattern-grid',
+   decos:[
+     {type:'svg',name:'sunrise',bottom:'8%',left:'50%',transform:'translateX(-50%)',w:180,h:60},
+     {type:'ring',top:'10%',right:'10%',w:45},
+   ]},
+  {dim:'motiv',quote:'מוטיבציה\nלא נולדים איתה\nמגדלים אותה',loc:'teachers',cls:'poster-motiv-8 pattern-lines',
+   decos:[
+     {type:'svg',name:'plant',bottom:'8%',right:'8%',w:70,h:90},
+     {type:'circle',top:'10%',left:'10%',w:50,color:'rgba(255,255,255,.1)'},
+   ]},
+
+  // ===== מסוגלות =====
+  {dim:'capable',quote:'אני יכול/ה\nואני אוכיח לעצמי',loc:'hallway',cls:'poster-capable-1 pattern-dots',
+   decos:[
+     {type:'svg',name:'muscle',top:'8%',right:'8%',w:70,h:70},
+     {type:'circle',bottom:'12%',left:'10%',w:50,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'capable',quote:'טעות\nזה לא נפילה\nזה צעד קדימה',loc:'classroom',cls:'poster-capable-2 pattern-circles',
+   decos:[
+     {type:'svg',name:'stairs',bottom:'8%',right:'8%',w:80,h:80},
+     {type:'ring',top:'10%',left:'10%',w:50},
+   ]},
+  {dim:'capable',quote:'לכל אחד\nיש כוח על\nצריך רק לגלות אותו',loc:'yard',cls:'poster-capable-3 pattern-waves',
+   decos:[
+     {type:'svg',name:'diamond',top:'8%',left:'50%',transform:'translateX(-50%)',w:60,h:60},
+     {type:'circle',bottom:'10%',right:'10%',w:45,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'capable',quote:'יצירתיות\nלראות דברים\nשאחרים לא רואים',loc:'classroom',cls:'poster-capable-4 pattern-lines',
+   decos:[
+     {type:'svg',name:'palette',bottom:'10%',left:'10%',w:70,h:70},
+     {type:'ring',top:'12%',right:'12%',w:45},
+   ]},
+  {dim:'capable',quote:'לא מוותרים\nמנסים שוב\nאחרת',loc:'hallway',cls:'poster-capable-5 pattern-cross',
+   decos:[
+     {type:'svg',name:'refresh',top:'8%',left:'8%',w:60,h:60},
+     {type:'circle',bottom:'10%',right:'10%',w:50,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'capable',quote:'אני גאה\nבמה שאני\nובמה שאני הולך/ת להיות',loc:'classroom',cls:'poster-capable-6 pattern-grid',
+   decos:[
+     {type:'svg',name:'crown',top:'8%',left:'50%',transform:'translateX(-50%)',w:70,h:50},
+     {type:'ring',bottom:'12%',right:'12%',w:45},
+   ]},
+  {dim:'capable',quote:'חדשנות\nאומץ לנסות\nמשהו שעוד לא עשו',loc:'yard',cls:'poster-capable-7 pattern-diamond',
+   decos:[
+     {type:'svg',name:'sparkle',top:'10%',right:'10%',w:60,h:60},
+     {type:'circle',bottom:'12%',left:'10%',w:40,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'capable',quote:'תאמיני בתלמיד\nגם כשהוא\nלא מאמין בעצמו',loc:'teachers',cls:'poster-capable-8 pattern-dots',
+   decos:[
+     {type:'svg',name:'seedling',bottom:'8%',right:'8%',w:70,h:80},
+     {type:'ring',top:'10%',left:'10%',w:55},
+   ]},
+
+  // ===== אוטונומיה =====
+  {dim:'auto',quote:'אני בוחר/ת\nולוקח/ת אחריות',loc:'hallway',cls:'poster-auto-1 pattern-lines',
+   decos:[
+     {type:'svg',name:'compass',top:'8%',right:'8%',w:70,h:70},
+     {type:'circle',bottom:'12%',left:'10%',w:50,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'auto',quote:'יוזמה\nלראות מה צריך\nולעשות בלי שמבקשים',loc:'classroom',cls:'poster-auto-2 pattern-dots',
+   decos:[
+     {type:'svg',name:'flag',bottom:'8%',left:'8%',w:60,h:80},
+     {type:'ring',top:'10%',right:'12%',w:50},
+   ]},
+  {dim:'auto',quote:'החיים שלי\nהבחירות שלי',loc:'yard',cls:'poster-auto-3 pattern-circles',
+   decos:[
+     {type:'svg',name:'path',bottom:'6%',left:'50%',transform:'translateX(-50%)',w:180,h:50},
+     {type:'circle',top:'10%',right:'10%',w:45,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'auto',quote:'אני אחראי/ת\nעל הלמידה שלי',loc:'classroom',cls:'poster-auto-4 pattern-waves',
+   decos:[
+     {type:'svg',name:'key',top:'8%',left:'8%',w:55,h:70},
+     {type:'ring',bottom:'12%',right:'12%',w:45},
+   ]},
+  {dim:'auto',quote:'לקחת יוזמה\nלהוביל שינוי',loc:'hallway',cls:'poster-auto-5 pattern-cross',
+   decos:[
+     {type:'svg',name:'arrow-up',top:'8%',right:'8%',w:60,h:80},
+     {type:'circle',bottom:'10%',left:'10%',w:50,color:'rgba(255,255,255,.08)'},
+   ]},
+  {dim:'auto',quote:'חופש הבעה\nזכות וגם אחריות',loc:'classroom',cls:'poster-auto-6 pattern-grid',
+   decos:[
+     {type:'svg',name:'megaphone',bottom:'10%',right:'10%',w:70,h:70},
+     {type:'ring',top:'12%',left:'12%',w:45},
+   ]},
+  {dim:'auto',quote:'אם לא אני מי?\nואם לא עכשיו\nמתי?',loc:'yard',cls:'poster-auto-7 pattern-diamond',
+   decos:[
+     {type:'svg',name:'hourglass',top:'8%',left:'8%',w:50,h:70},
+     {type:'circle',bottom:'10%',right:'10%',w:45,color:'rgba(255,255,255,.1)'},
+   ]},
+  {dim:'auto',quote:'תנו להם לבחור\nותראו אותם גדלים',loc:'teachers',cls:'poster-auto-8 pattern-lines',
+   decos:[
+     {type:'svg',name:'tree',bottom:'6%',right:'8%',w:80,h:100},
+     {type:'ring',top:'10%',left:'10%',w:55},
+   ]},
+];
+
+const LOC_NAMES = {classroom:'כיתה',hallway:'מסדרון',yard:'חצר',teachers:'חדר מורים'};
+const DIM_NAMES = {belong:'שייכות',respect:'כבוד',motiv:'מוטיבציה',capable:'מסוגלות',auto:'אוטונומיה'};
+
+// SVG icon library for decorations
+const SVG_ICONS = {
+  people: `<circle cx="40" cy="15" r="10" fill="rgba(255,255,255,.18)"/><circle cx="80" cy="15" r="10" fill="rgba(255,255,255,.18)"/><circle cx="120" cy="15" r="10" fill="rgba(255,255,255,.18)"/><circle cx="160" cy="15" r="10" fill="rgba(255,255,255,.18)"/><path d="M25 55C25 38 55 38 55 55M65 55C65 38 95 38 95 55M105 55C105 38 135 38 135 55M145 55C145 38 175 38 175 55" stroke="rgba(255,255,255,.15)" stroke-width="3" fill="none"/>`,
+  hearts: `<path d="M20 30C20 15 40 10 40 28C40 10 60 15 60 30C60 50 40 65 40 65C40 65 20 50 20 30Z" fill="rgba(255,255,255,.18)"/><path d="M50 50C50 38 65 34 65 48C65 34 80 38 80 50C80 65 65 75 65 75C65 75 50 65 50 50Z" fill="rgba(255,255,255,.12)"/>`,
+  home: `<path d="M45 80V50H25L45 20L65 50H45" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3"/><rect x="30" y="50" width="30" height="30" rx="2" fill="rgba(255,255,255,.1)"/><rect x="38" y="60" width="14" height="20" rx="1" fill="rgba(255,255,255,.12)"/>`,
+  hands: `<path d="M20 50C30 30 50 25 80 25C110 25 130 30 140 50" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="4"/><circle cx="40" cy="20" r="8" fill="rgba(255,255,255,.12)"/><circle cx="80" cy="15" r="8" fill="rgba(255,255,255,.12)"/><circle cx="120" cy="20" r="8" fill="rgba(255,255,255,.12)"/>`,
+  globe: `<circle cx="35" cy="35" r="28" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2.5"/><ellipse cx="35" cy="35" rx="12" ry="28" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/><path d="M7 35H63M10 22H60M10 48H60" stroke="rgba(255,255,255,.1)" stroke-width="1.5"/>`,
+  shield: `<path d="M35 5L60 18V42C60 58 35 72 35 72C35 72 10 58 10 42V18L35 5Z" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.2)" stroke-width="2.5"/>`,
+  star: `<path d="M30 5L37 22L55 22L40 34L46 52L30 40L14 52L20 34L5 22L23 22Z" fill="rgba(255,255,255,.18)"/>`,
+  lightbulb: `<path d="M30 10C16 10 5 21 5 35C5 44 10 52 18 56V65H42V56C50 52 55 44 55 35C55 21 44 10 30 10Z" fill="rgba(255,255,255,.15)"/><rect x="18" y="65" width="24" height="8" rx="2" fill="rgba(255,255,255,.12)"/><path d="M22 75H38" stroke="rgba(255,255,255,.15)" stroke-width="3" stroke-linecap="round"/>`,
+  chat: `<rect x="5" y="5" width="55" height="40" rx="8" fill="rgba(255,255,255,.15)"/><path d="M20 45L12 60L30 45" fill="rgba(255,255,255,.15)"/><circle cx="20" cy="25" r="3" fill="rgba(255,255,255,.2)"/><circle cx="32" cy="25" r="3" fill="rgba(255,255,255,.2)"/><circle cx="44" cy="25" r="3" fill="rgba(255,255,255,.2)"/>`,
+  ear: `<path d="M40 10C55 10 65 25 65 40C65 55 55 70 40 70" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3"/><path d="M40 22C48 22 55 30 55 40C55 50 48 55 40 58" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="2.5"/><path d="M40 34C44 34 47 37 47 40C47 44 44 46 40 48" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/>`,
+  rainbow: `<path d="M10 45C10 20 50 -5 90 10C115 20 130 40 130 45" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="6"/><path d="M20 45C20 25 55 5 85 15C105 22 118 38 118 45" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="5"/><path d="M30 45C30 30 60 15 80 22C95 28 105 38 105 45" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="4"/>`,
+  sun: `<circle cx="35" cy="35" r="16" fill="rgba(255,255,255,.18)"/><g stroke="rgba(255,255,255,.15)" stroke-width="2.5" stroke-linecap="round"><line x1="35" y1="5" x2="35" y2="13"/><line x1="35" y1="57" x2="35" y2="65"/><line x1="5" y1="35" x2="13" y2="35"/><line x1="57" y1="35" x2="65" y2="35"/><line x1="13" y1="13" x2="19" y2="19"/><line x1="51" y1="51" x2="57" y2="57"/><line x1="57" y1="13" x2="51" y2="19"/><line x1="19" y1="51" x2="13" y2="57"/></g>`,
+  thought: `<circle cx="35" cy="28" r="24" fill="rgba(255,255,255,.15)"/><circle cx="18" cy="55" r="6" fill="rgba(255,255,255,.12)"/><circle cx="10" cy="64" r="4" fill="rgba(255,255,255,.1)"/>`,
+  badge: `<circle cx="40" cy="35" r="28" fill="rgba(255,255,255,.12)" stroke="rgba(255,255,255,.2)" stroke-width="3"/><path d="M28 35L36 43L52 27" stroke="rgba(255,255,255,.25)" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'heart-hand': `<path d="M35 25C35 15 50 10 50 25C50 10 65 15 65 25C65 42 50 55 50 55C50 55 35 42 35 25Z" fill="rgba(255,255,255,.18)"/><path d="M15 50C15 40 25 38 30 42L40 52" stroke="rgba(255,255,255,.15)" stroke-width="2.5" fill="none"/>`,
+  eye: `<ellipse cx="40" cy="25" rx="35" ry="20" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2.5"/><circle cx="40" cy="25" r="10" fill="rgba(255,255,255,.18)"/><circle cx="40" cy="25" r="4" fill="rgba(255,255,255,.25)"/>`,
+  flame: `<path d="M30 75C10 55 15 30 30 15C35 30 45 25 40 5C60 20 65 45 55 60C58 55 55 40 50 35C52 50 50 65 30 75Z" fill="rgba(255,255,255,.18)"/>`,
+  book: `<rect x="10" y="10" width="45" height="50" rx="3" fill="rgba(255,255,255,.12)"/><path d="M32 10V60" stroke="rgba(255,255,255,.1)" stroke-width="1.5"/><path d="M18 22H28M18 30H28M18 38H25M38 22H48M38 30H48M38 38H45" stroke="rgba(255,255,255,.15)" stroke-width="1.5" stroke-linecap="round"/>`,
+  clock: `<circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2.5"/><path d="M32 12V32L45 40" stroke="rgba(255,255,255,.2)" stroke-width="2.5" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="rgba(255,255,255,.18)"/>`,
+  rocket: `<path d="M35 5C35 5 50 20 50 50L40 60H30L20 50C20 20 35 5 35 5Z" fill="rgba(255,255,255,.15)"/><path d="M20 50L12 60L22 55M50 50L58 60L48 55" stroke="rgba(255,255,255,.12)" stroke-width="2" fill="rgba(255,255,255,.08)"/><circle cx="35" cy="30" r="5" fill="rgba(255,255,255,.2)"/>`,
+  target: `<circle cx="35" cy="35" r="28" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/><circle cx="35" cy="35" r="18" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="2"/><circle cx="35" cy="35" r="8" fill="rgba(255,255,255,.18)"/>`,
+  mountain: `<path d="M0 65L40 10L60 35L80 15L120 65Z" fill="rgba(255,255,255,.1)"/><path d="M120 65L160 20L200 65Z" fill="rgba(255,255,255,.07)"/><circle cx="160" cy="15" r="10" fill="rgba(255,255,255,.1)"/>`,
+  sunrise: `<path d="M0 55H180" stroke="rgba(255,255,255,.15)" stroke-width="2"/><circle cx="90" cy="35" r="22" fill="rgba(255,255,255,.12)"/><g stroke="rgba(255,255,255,.1)" stroke-width="2" stroke-linecap="round"><line x1="90" y1="5" x2="90" y2="12"/><line x1="55" y1="15" x2="60" y2="20"/><line x1="125" y1="15" x2="120" y2="20"/><line x1="40" y1="35" x2="48" y2="35"/><line x1="132" y1="35" x2="140" y2="35"/></g>`,
+  plant: `<path d="M35 85V40" stroke="rgba(255,255,255,.18)" stroke-width="3"/><path d="M35 60C20 50 18 35 25 25C30 40 35 45 35 60Z" fill="rgba(255,255,255,.15)"/><path d="M35 45C50 35 55 20 48 10C42 25 35 35 35 45Z" fill="rgba(255,255,255,.12)"/><path d="M35 70C25 65 20 55 25 48C30 58 35 62 35 70Z" fill="rgba(255,255,255,.1)"/>`,
+  muscle: `<path d="M15 50C15 35 25 25 35 30C40 32 42 38 40 45C50 35 60 38 58 50C56 60 45 65 35 60C25 55 15 55 15 50Z" fill="rgba(255,255,255,.18)"/>`,
+  stairs: `<path d="M10 70H25V55H40V40H55V25H70V10" stroke="rgba(255,255,255,.2)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="70" cy="10" r="5" fill="rgba(255,255,255,.2)"/>`,
+  diamond: `<path d="M30 5L55 25L30 55L5 25Z" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.2)" stroke-width="2"/><path d="M5 25H55M30 5L20 25L30 55M30 5L40 25L30 55" stroke="rgba(255,255,255,.1)" stroke-width="1"/>`,
+  palette: `<circle cx="35" cy="35" r="28" fill="rgba(255,255,255,.12)"/><circle cx="25" cy="22" r="5" fill="rgba(255,255,255,.2)"/><circle cx="42" cy="18" r="4" fill="rgba(255,255,255,.18)"/><circle cx="50" cy="30" r="4.5" fill="rgba(255,255,255,.15)"/><circle cx="20" cy="38" r="4" fill="rgba(255,255,255,.16)"/>`,
+  refresh: `<path d="M45 15C38 8 25 8 18 15C11 22 11 35 18 42L30 30" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3" stroke-linecap="round"/><path d="M15 45C22 52 35 52 42 45C49 38 49 25 42 18" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="3" stroke-linecap="round"/><path d="M30 30L18 28L20 40" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  crown: `<path d="M5 40L15 15L30 30L45 10L60 30L70 15L65 40Z" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.2)" stroke-width="2"/><rect x="5" y="40" width="60" height="8" rx="2" fill="rgba(255,255,255,.15)"/>`,
+  sparkle: `<path d="M30 5L33 22L50 18L36 28L45 45L30 33L15 45L24 28L10 18L27 22Z" fill="rgba(255,255,255,.2)"/>`,
+  seedling: `<path d="M35 78V45" stroke="rgba(255,255,255,.18)" stroke-width="3"/><path d="M35 55C20 45 15 30 22 18C28 32 35 40 35 55Z" fill="rgba(255,255,255,.15)"/><path d="M35 45C50 35 55 20 48 8C42 22 35 32 35 45Z" fill="rgba(255,255,255,.12)"/>`,
+  compass: `<circle cx="35" cy="35" r="28" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="2.5"/><path d="M35 10V15M35 55V60M10 35H15M55 35H60" stroke="rgba(255,255,255,.15)" stroke-width="2" stroke-linecap="round"/><path d="M35 35L48 22L35 35L22 48Z" fill="rgba(255,255,255,.2)"/><path d="M35 35L22 22L35 35L48 48Z" fill="rgba(255,255,255,.1)"/>`,
+  flag: `<path d="M15 75V10" stroke="rgba(255,255,255,.2)" stroke-width="3" stroke-linecap="round"/><path d="M15 10H55L45 28L55 46H15" fill="rgba(255,255,255,.15)"/>`,
+  path: `<path d="M10 40C30 40 30 15 60 15C90 15 90 40 120 40C150 40 150 15 170 15" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="3" stroke-linecap="round"/><circle cx="170" cy="15" r="5" fill="rgba(255,255,255,.2)"/>`,
+  key: `<circle cx="28" cy="20" r="15" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2.5"/><path d="M28 35V62" stroke="rgba(255,255,255,.18)" stroke-width="3"/><path d="M28 50H40M28 58H36" stroke="rgba(255,255,255,.15)" stroke-width="2.5" stroke-linecap="round"/>`,
+  'arrow-up': `<path d="M30 70V15" stroke="rgba(255,255,255,.2)" stroke-width="3.5" stroke-linecap="round"/><path d="M12 35L30 10L48 35" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+  megaphone: `<path d="M15 25H30L55 10V55L30 40H15Z" fill="rgba(255,255,255,.15)"/><rect x="8" y="25" width="10" height="15" rx="3" fill="rgba(255,255,255,.12)"/><path d="M30 40L35 58H25L22 40" fill="rgba(255,255,255,.1)"/>`,
+  hourglass: `<path d="M12 5H48M12 65H48" stroke="rgba(255,255,255,.18)" stroke-width="2.5" stroke-linecap="round"/><path d="M15 5C15 25 30 30 30 35C30 40 15 45 15 65M45 5C45 25 30 30 30 35C30 40 45 45 45 65" stroke="rgba(255,255,255,.18)" stroke-width="2" fill="rgba(255,255,255,.08)"/>`,
+  tree: `<path d="M40 95V55" stroke="rgba(255,255,255,.18)" stroke-width="4"/><path d="M40 15C20 15 10 30 15 42C8 42 5 55 15 60C12 65 18 78 30 75C28 82 38 90 48 85C55 90 65 82 60 75C70 78 75 65 68 60C78 55 75 42 68 42C72 30 62 15 40 15Z" fill="rgba(255,255,255,.12)"/>`,
+};
+
+function buildPosterHTML(p, i) {
+  const locName = LOC_NAMES[p.loc];
+  const dimName = DIM_NAMES[p.dim];
+  const quoteHTML = p.quote.replace(/\n/g, '<br>');
+
+  let decosHTML = '';
+  (p.decos || []).forEach(d => {
+    const style = Object.entries(d).filter(([k]) => !['type','name','color','w','h','transform'].includes(k))
+      .map(([k,v]) => `${k}:${v}`).join(';');
+    if (d.type === 'circle') {
+      decosHTML += `<div class="shape-circle" style="${style};width:${d.w}px;height:${d.w}px;background:${d.color || 'rgba(255,255,255,.1)'}${d.transform ? ';transform:'+d.transform : ''}"></div>`;
+    } else if (d.type === 'ring') {
+      decosHTML += `<div class="shape-ring" style="${style};width:${d.w}px;height:${d.w}px${d.transform ? ';transform:'+d.transform : ''}"></div>`;
+    } else if (d.type === 'svg' && SVG_ICONS[d.name]) {
+      decosHTML += `<svg class="deco" style="${style};width:${d.w}px;height:${d.h}px${d.transform ? ';transform:'+d.transform : ''}" viewBox="0 0 ${d.w} ${d.h}">${SVG_ICONS[d.name]}</svg>`;
+    }
+  });
+
+  return `<div class="poster-wrap" data-dim="${p.dim}" data-loc="${p.loc}" data-idx="${i}">
+    <div class="poster ${p.cls}" id="poster-${i}">
+      ${decosHTML}
+      <div class="poster-loc-badge">
+        <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+        ${locName}
+      </div>
+      <div class="poster-text">
+        <div class="quote">${quoteHTML}</div>
+        <div class="dim-label">${dimName}</div>
+      </div>
+    </div>
+    <div class="poster-overlay">
+      <button class="poster-btn poster-btn-dl" onclick="downloadPoster(${i},'${p.dim}-${i+1}')">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        הורדה PNG
+      </button>
+    </div>
+  </div>`;
+}
+
+function renderPosters() {
+  const grid = document.getElementById('posterGrid');
+  grid.innerHTML = POSTERS.map((p, i) => buildPosterHTML(p, i)).join('');
+}
+
+function filterPosters(filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.filter-btn[data-filter="${filter}"]`).classList.add('active');
+  document.querySelectorAll('.poster-wrap').forEach(w => {
+    const show = filter === 'all' || w.dataset.dim === filter || w.dataset.loc === filter;
+    w.style.display = show ? '' : 'none';
+  });
+  updateStats();
+}
+
+function updateStats() {
+  const vis = sel => document.querySelectorAll(sel + ':not([style*="display: none"])').length;
+  document.getElementById('statTotal').textContent = vis('.poster-wrap');
+  document.getElementById('statBelong').textContent = vis('.poster-wrap[data-dim="belong"]');
+  document.getElementById('statRespect').textContent = vis('.poster-wrap[data-dim="respect"]');
+  document.getElementById('statMotiv').textContent = vis('.poster-wrap[data-dim="motiv"]');
+  document.getElementById('statCapable').textContent = vis('.poster-wrap[data-dim="capable"]');
+  document.getElementById('statAuto').textContent = vis('.poster-wrap[data-dim="auto"]');
+}
+
+async function downloadPoster(idx, name) {
+  const el = document.getElementById('poster-' + idx);
+  if (!el) return;
+  // Temporarily hide overlay
+  const overlay = el.parentElement.querySelector('.poster-overlay');
+  if (overlay) overlay.style.display = 'none';
+  try {
+    const canvas = await html2canvas(el, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: null,
+      logging: false,
+    });
+    const link = document.createElement('a');
+    link.download = `poster-${name}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch(e) {
+    console.error(e);
+    alert('שגיאה בהורדה — נסי שוב');
+  }
+  if (overlay) overlay.style.display = '';
+}
+
+async function downloadAll() {
+  const visible = document.querySelectorAll('.poster-wrap:not([style*="display: none"])');
+  for (let i = 0; i < visible.length; i++) {
+    const idx = visible[i].dataset.idx;
+    const dim = visible[i].dataset.dim;
+    await downloadPoster(idx, `${dim}-${parseInt(idx)+1}`);
+    await new Promise(r => setTimeout(r, 400));
+  }
+}
+
+// Init
+renderPosters();
+</script>
+</body>
+</html>

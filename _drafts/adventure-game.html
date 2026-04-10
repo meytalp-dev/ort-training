@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>מסע המתקנים — LEVEL UP</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0f16;--bg2:#111921;--card:#182230;--card2:#1e2d3d;
+  --text:#e8e4df;--muted:#7a8a9a;--dim:#4a5a6a;
+  --gold:#ffd700;--xp:#00e5ff;
+  /* 5 value coins */
+  --belong:#5b9bd5;--respect:#7ab648;--motive:#e8a838;--capable:#a07de0;--autonomy:#e06090;
+  /* ui */
+  --accent:#00e5ff;--danger:#ff4d6a;--success:#7ab648;
+  --radius:16px;--radius-sm:10px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --font:'Heebo',sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--text);overscroll-behavior:none}
+
+/* ===== GLOBAL UTILS ===== */
+.screen{position:fixed;inset:0;display:none;flex-direction:column;z-index:1}
+.screen.active{display:flex}
+.btn{border:none;font-family:var(--font);cursor:pointer;border-radius:var(--radius);font-weight:700;transition:transform .15s,box-shadow .15s}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--capable));color:var(--bg);padding:14px 32px;font-size:1rem;font-weight:800;box-shadow:0 4px 20px rgba(0,229,255,.25)}
+.btn-secondary{background:var(--card2);color:var(--text);padding:12px 24px;font-size:.9rem;border:1.5px solid rgba(255,255,255,.08)}
+.btn-choice{background:var(--card);color:var(--text);padding:14px 18px;font-size:.88rem;font-weight:600;border:1.5px solid rgba(255,255,255,.06);text-align:right;width:100%;line-height:1.5;border-radius:14px;transition:all .2s}
+.btn-choice:hover{border-color:var(--accent);background:rgba(0,229,255,.06)}
+.btn-choice.selected{border-color:var(--accent);background:rgba(0,229,255,.1);box-shadow:0 0 16px rgba(0,229,255,.15)}
+.btn-choice.correct{border-color:var(--success);background:rgba(122,182,72,.12);animation:choicePulse .4s ease}
+.btn-choice.wrong{border-color:var(--danger);background:rgba(255,77,106,.08);animation:shake .4s ease}
+@keyframes choicePulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* ===== BACKGROUND EFFECTS ===== */
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 30% 10%,rgba(91,155,213,.06),transparent 50%),radial-gradient(ellipse at 70% 90%,rgba(160,125,224,.05),transparent 50%);pointer-events:none;z-index:0}
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;animation:twinkle var(--d) infinite}
+@keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.8}}
+
+/* ===== WELCOME SCREEN ===== */
+#welcome{align-items:center;justify-content:center;text-align:center;padding:32px;background:var(--bg)}
+.welcome-glow{position:absolute;top:-20%;width:140%;height:60%;background:radial-gradient(ellipse,rgba(0,229,255,.08),transparent 70%);pointer-events:none}
+.welcome-logo{position:relative;width:100px;height:100px;margin-bottom:28px}
+.welcome-logo canvas{width:100%;height:100%}
+#welcome h1{font-size:2rem;font-weight:900;margin-bottom:6px;background:linear-gradient(135deg,var(--accent),var(--capable));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+#welcome .subtitle{color:var(--muted);font-size:.92rem;margin-bottom:36px;max-width:320px;line-height:1.6}
+.welcome-form{display:flex;flex-direction:column;gap:12px;width:280px;position:relative;z-index:2}
+.input{width:100%;padding:14px 18px;border-radius:14px;border:2px solid rgba(255,255,255,.08);background:var(--card);color:var(--text);font-family:var(--font);font-size:1rem;text-align:center;outline:none;transition:border-color .3s}
+.input:focus{border-color:var(--accent)}
+.input::placeholder{color:var(--dim)}
+select.input{appearance:auto;text-align:center}
+
+/* ===== INTRO CINEMATIC ===== */
+#intro{align-items:center;justify-content:center;text-align:center;padding:32px;background:var(--bg)}
+.intro-panel{max-width:380px;position:relative;z-index:2}
+.intro-scene{width:100%;aspect-ratio:16/9;border-radius:20px;overflow:hidden;margin-bottom:24px;position:relative;background:var(--card)}
+.intro-scene canvas{width:100%;height:100%}
+.intro-text{font-size:1rem;line-height:1.8;color:var(--text);margin-bottom:8px;min-height:80px;direction:rtl}
+.intro-text .highlight{color:var(--accent);font-weight:700}
+.intro-dots{display:flex;gap:8px;justify-content:center;margin:16px 0 24px}
+.intro-dot{width:8px;height:8px;border-radius:50%;background:var(--dim);transition:all .3s}
+.intro-dot.active{background:var(--accent);width:24px;border-radius:4px}
+.typing-cursor{display:inline-block;width:2px;height:1em;background:var(--accent);margin-right:2px;animation:blink .8s infinite}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+
+/* ===== HUD (Top Bar) ===== */
+.hud{display:flex;align-items:center;padding:10px 16px;gap:10px;background:rgba(10,15,22,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.04);z-index:10;flex-shrink:0}
+.hud-avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--belong),var(--capable));display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.8rem;color:var(--bg)}
+.hud-info{flex:1}
+.hud-name{font-size:.82rem;font-weight:700}
+.hud-location{font-size:.68rem;color:var(--muted)}
+.hud-coins{display:flex;gap:8px;align-items:center}
+.coin-badge{display:flex;align-items:center;gap:3px;font-size:.75rem;font-weight:700;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.04)}
+.coin-badge svg{width:14px;height:14px}
+
+/* ===== COLONY MAP ===== */
+#colony{background:var(--bg)}
+.colony-scroll{flex:1;overflow-y:auto;padding:16px 16px 100px;-webkit-overflow-scrolling:touch}
+.colony-title{font-size:1.1rem;font-weight:800;margin-bottom:4px}
+.colony-subtitle{font-size:.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5}
+.npc-grid{display:flex;flex-direction:column;gap:12px}
+.npc-card{background:var(--card);border-radius:18px;padding:18px;border:1.5px solid rgba(255,255,255,.04);cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.npc-card:active{transform:scale(.98)}
+.npc-card.talked{border-color:rgba(122,182,72,.3)}
+.npc-card.talked::after{content:'';position:absolute;top:14px;left:14px;width:22px;height:22px;border-radius:50%;background:var(--success);background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");background-size:12px;background-repeat:no-repeat;background-position:center}
+.npc-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.npc-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+.npc-name{font-size:.95rem;font-weight:800}
+.npc-role{font-size:.75rem;color:var(--muted)}
+.npc-desc{font-size:.82rem;color:var(--muted);line-height:1.5}
+.npc-status{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:.75rem;font-weight:600}
+.npc-status svg{width:14px;height:14px}
+
+/* Quest marker */
+.quest-marker{position:absolute;top:14px;right:14px;width:22px;height:22px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;animation:questBounce 1.5s infinite}
+.quest-marker svg{width:12px;height:12px}
+@keyframes questBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* ===== DIALOGUE SCREEN ===== */
+#dialogue{background:var(--bg)}
+.dialogue-scene{flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;min-height:0}
+.dialogue-bg{position:absolute;inset:0;opacity:.15}
+.dialogue-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;z-index:2;padding-bottom:20px;min-height:0;overscroll-behavior:contain}
+.dialogue-speaker{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.dialogue-speaker-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.dialogue-speaker-name{font-size:.82rem;font-weight:700}
+.dialogue-bubble{background:var(--card);border-radius:16px;padding:14px 18px;font-size:.9rem;line-height:1.7;max-width:90%;animation:bubbleIn .3s ease;border:1px solid rgba(255,255,255,.04)}
+.dialogue-bubble.player{background:rgba(0,229,255,.08);border-color:rgba(0,229,255,.15);margin-right:auto;margin-left:10%}
+.dialogue-bubble.narrator{background:rgba(160,125,224,.06);border-color:rgba(160,125,224,.12);text-align:center;margin:8px auto;font-style:italic;color:var(--muted);max-width:85%}
+@keyframes bubbleIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Choice panel */
+.choice-panel{padding:12px 16px 24px;background:linear-gradient(to top,var(--bg),rgba(10,15,22,.95));position:relative;z-index:5;display:flex;flex-direction:column;gap:8px;flex-shrink:0;max-height:45vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.choice-hint{font-size:.72rem;color:var(--muted);text-align:center;margin-bottom:4px}
+.continue-btn{text-align:center;padding:12px;color:var(--accent);font-size:.88rem;font-weight:700;cursor:pointer;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* ===== MINI GAME: LISTENING PUZZLE ===== */
+#minigame{background:var(--bg);align-items:center;justify-content:center}
+.minigame-container{width:100%;max-width:420px;padding:24px;position:relative;z-index:2}
+.minigame-header{text-align:center;margin-bottom:24px}
+.minigame-header h2{font-size:1.2rem;font-weight:800;margin-bottom:6px}
+.minigame-header p{font-size:.85rem;color:var(--muted);line-height:1.5}
+.minigame-timer{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px}
+.timer-bar{width:200px;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.timer-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--success),var(--gold));transition:width .5s linear}
+.timer-text{font-size:.78rem;font-weight:700;color:var(--gold);min-width:40px}
+
+/* Listening puzzle */
+.listen-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.listen-item{background:var(--card);border-radius:14px;padding:14px;display:flex;align-items:flex-start;gap:10px;border:1.5px solid rgba(255,255,255,.04);cursor:pointer;transition:all .2s}
+.listen-item:active{transform:scale(.98)}
+.listen-item.correct{border-color:var(--success);background:rgba(122,182,72,.08)}
+.listen-item.wrong{border-color:var(--danger);background:rgba(255,77,106,.06)}
+.listen-num{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;flex-shrink:0}
+.listen-text{font-size:.85rem;line-height:1.5;flex:1}
+
+/* Drag & drop sorting */
+.sort-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.sort-item{background:var(--card);border-radius:12px;padding:12px 16px;font-size:.88rem;font-weight:600;border:1.5px solid rgba(255,255,255,.06);cursor:grab;display:flex;align-items:center;gap:10px;transition:all .2s;touch-action:none;user-select:none}
+.sort-item:active{cursor:grabbing;transform:scale(1.02);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.sort-item .drag-handle{color:var(--dim);font-size:1.1rem}
+.sort-item.in-place{border-color:var(--success);background:rgba(122,182,72,.06)}
+
+/* Emotion wheel */
+.emotion-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.emotion-btn{background:var(--card);border:1.5px solid rgba(255,255,255,.06);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:all .2s}
+.emotion-btn:active{transform:scale(.95)}
+.emotion-btn.selected{border-color:var(--belong);background:rgba(91,155,213,.1)}
+.emotion-icon{font-size:1.6rem;margin-bottom:6px;display:block}
+.emotion-label{font-size:.75rem;font-weight:600}
+
+/* ===== REFLECTION SCREEN ===== */
+#reflection{background:var(--bg);align-items:center;justify-content:center}
+.reflection-container{width:100%;max-width:420px;padding:24px;position:relative;z-index:2}
+.reflection-header{text-align:center;margin-bottom:24px}
+.reflection-header h2{font-size:1.2rem;font-weight:800;margin-bottom:6px}
+.reflection-header p{font-size:.85rem;color:var(--muted)}
+.reflection-question{background:var(--card);border-radius:16px;padding:18px;margin-bottom:16px;border:1px solid rgba(255,255,255,.04)}
+.reflection-question label{display:block;font-size:.88rem;font-weight:700;margin-bottom:10px;line-height:1.5}
+.reflection-textarea{width:100%;min-height:80px;padding:12px;border-radius:12px;border:1.5px solid rgba(255,255,255,.06);background:var(--bg2);color:var(--text);font-family:var(--font);font-size:.88rem;outline:none;resize:vertical;line-height:1.6}
+.reflection-textarea:focus{border-color:var(--accent)}
+
+/* ===== RESULTS SCREEN ===== */
+#results{background:var(--bg);align-items:center;justify-content:center}
+.results-container{width:100%;max-width:420px;padding:24px;text-align:center;position:relative;z-index:2}
+.results-header h2{font-size:1.4rem;font-weight:900;margin-bottom:4px}
+.results-header p{font-size:.88rem;color:var(--muted);margin-bottom:24px}
+.results-coins{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:24px}
+.result-coin{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 12px;border-radius:14px;background:var(--card);min-width:70px;border:1px solid rgba(255,255,255,.04)}
+.result-coin .rc-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.result-coin .rc-num{font-size:1.1rem;font-weight:800}
+.result-coin .rc-label{font-size:.65rem;color:var(--muted);font-weight:600}
+.result-badge{background:var(--card);border-radius:18px;padding:20px;margin-bottom:20px;border:1.5px solid rgba(255,215,0,.2)}
+.result-badge h3{font-size:1rem;font-weight:800;color:var(--gold);margin-bottom:4px}
+.result-badge p{font-size:.82rem;color:var(--muted)}
+.results-summary{background:var(--card);border-radius:16px;padding:18px;margin-bottom:24px;text-align:right;border:1px solid rgba(255,255,255,.04)}
+.results-summary h4{font-size:.9rem;font-weight:700;margin-bottom:8px}
+.results-summary p{font-size:.82rem;color:var(--muted);line-height:1.6}
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(10,15,22,.95);backdrop-filter:blur(12px);border-top:1px solid rgba(255,255,255,.04);z-index:20;padding:6px 0 env(safe-area-inset-bottom,8px)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;cursor:pointer;transition:color .2s;color:var(--dim)}
+.nav-item.active{color:var(--accent)}
+.nav-item svg{width:20px;height:20px}
+.nav-item span{font-size:.62rem;font-weight:600}
+
+/* ===== JOURNAL SCREEN ===== */
+#journal{background:var(--bg)}
+.journal-scroll{flex:1;overflow-y:auto;padding:16px 16px 100px}
+.journal-title{font-size:1.1rem;font-weight:800;margin-bottom:16px}
+.journal-entry{background:var(--card);border-radius:14px;padding:16px;margin-bottom:10px;border:1px solid rgba(255,255,255,.04)}
+.journal-entry .je-date{font-size:.72rem;color:var(--muted);margin-bottom:6px}
+.journal-entry .je-text{font-size:.85rem;line-height:1.6}
+.journal-empty{text-align:center;color:var(--dim);padding:40px;font-size:.9rem}
+
+/* ===== PROFILE SCREEN ===== */
+#profile{background:var(--bg)}
+.profile-scroll{flex:1;overflow-y:auto;padding:16px 16px 100px}
+.profile-card{background:var(--card);border-radius:20px;padding:24px;text-align:center;margin-bottom:16px;border:1px solid rgba(255,255,255,.04)}
+.profile-avatar-big{width:72px;height:72px;border-radius:50%;margin:0 auto 12px;background:linear-gradient(135deg,var(--belong),var(--capable));display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:var(--bg)}
+.profile-card h2{font-size:1.15rem;font-weight:900;margin-bottom:2px}
+.profile-card .profile-title{color:var(--gold);font-size:.82rem;font-weight:700}
+.profile-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.profile-stat{text-align:center}
+.profile-stat .ps-num{font-size:1.2rem;font-weight:800}
+.profile-stat .ps-label{font-size:.68rem;color:var(--muted)}
+.dimension-bars{background:var(--card);border-radius:16px;padding:18px;border:1px solid rgba(255,255,255,.04)}
+.dimension-bars h3{font-size:.92rem;font-weight:700;margin-bottom:14px}
+.dim-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.dim-row:last-child{margin-bottom:0}
+.dim-label{font-size:.78rem;font-weight:600;min-width:70px;text-align:left}
+.dim-bar{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden}
+.dim-fill{height:100%;border-radius:4px;transition:width .6s}
+
+/* ===== POPUPS ===== */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.popup-overlay.show{display:flex}
+.popup{background:var(--card);border-radius:24px;padding:28px;max-width:340px;width:90%;text-align:center;animation:popIn .3s ease;border:1px solid rgba(255,255,255,.06)}
+@keyframes popIn{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.popup h3{font-size:1.1rem;font-weight:800;margin-bottom:6px}
+.popup p{font-size:.88rem;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.popup-icon{font-size:2.5rem;margin-bottom:12px;display:block}
+.popup-coins{display:flex;justify-content:center;gap:12px;margin-bottom:20px}
+.popup-coin{display:flex;align-items:center;gap:4px;font-size:.88rem;font-weight:700}
+
+/* XP Float */
+.xp-float{position:fixed;pointer-events:none;z-index:90;font-size:1.4rem;font-weight:900;animation:floatUp 1.2s ease forwards}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.3)}}
+
+/* Particles */
+.particles{position:fixed;inset:0;pointer-events:none;z-index:95;overflow:hidden}
+.particle{position:absolute;border-radius:50%;animation:pFall 1s ease forwards}
+@keyframes pFall{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(80px) scale(0)}}
+
+/* ===== RESPONSIVE ===== */
+@media(min-width:500px){
+  .colony-scroll,.journal-scroll,.profile-scroll{max-width:480px;margin:0 auto}
+  .dialogue-content{max-width:520px;margin:0 auto}
+  .choice-panel{max-width:520px;margin:0 auto;width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- Stars background -->
+<div class="stars" id="stars"></div>
+
+<!-- ============ WELCOME ============ -->
+<div class="screen active" id="welcome">
+  <div class="welcome-glow"></div>
+  <div class="welcome-logo"><canvas id="logoCanvas" width="200" height="200"></canvas></div>
+  <h1>מסע המתקנים</h1>
+  <p class="subtitle">הגעת למושבה שנבנית מחדש. התפקיד שלך — לחבר בין אנשים, לתקן מה שנשבר, ולבחור את הדרך.</p>
+  <div class="welcome-form">
+    <input type="text" class="input" id="nameInput" placeholder="מה השם שלך?" maxlength="20" autocomplete="off">
+    <select class="input" id="classInput">
+      <option value="">— כיתה —</option>
+      <option>ט1</option><option>ט2</option><option>י1</option><option>י2</option><option>י3</option>
+      <option>יא1</option><option>יא2</option><option>יא3</option><option>יב1</option><option>יב2</option><option>יב3</option>
+    </select>
+    <button class="btn btn-primary" onclick="startGame()" id="startBtn" disabled>יוצאים למסע</button>
+  </div>
+</div>
+
+<!-- ============ INTRO CINEMATIC ============ -->
+<div class="screen" id="intro">
+  <div class="intro-panel">
+    <div class="intro-scene"><canvas id="sceneCanvas" width="760" height="428"></canvas></div>
+    <div class="intro-text" id="introText"></div>
+    <div class="intro-dots" id="introDots"></div>
+    <button class="btn btn-primary" id="introBtn" onclick="advanceIntro()">המשך</button>
+  </div>
+</div>
+
+<!-- ============ COLONY MAP ============ -->
+<div class="screen" id="colony">
+  <div class="hud">
+    <div class="hud-avatar" id="hudAvatar">?</div>
+    <div class="hud-info">
+      <div class="hud-name" id="hudName">—</div>
+      <div class="hud-location">מחוז הקשר — המושבה</div>
+    </div>
+    <div class="hud-coins" id="hudCoins"></div>
+  </div>
+  <div class="colony-scroll">
+    <h2 class="colony-title" id="colonyTitle">מחוז הקשר</h2>
+    <p class="colony-subtitle" id="colonySub">שלוש קבוצות מתגוררות כאן — אבל לא מדברות זו עם זו. מצא דרך לחבר ביניהן.</p>
+    <div class="npc-grid" id="npcGrid"></div>
+
+    <!-- Colony quest -->
+    <div id="colonyQuest" style="display:none;margin-top:20px">
+      <div style="background:linear-gradient(145deg,rgba(0,229,255,.08),rgba(160,125,224,.05));border:1.5px solid rgba(0,229,255,.15);border-radius:18px;padding:18px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span style="font-size:.82rem;font-weight:700;color:var(--accent)">משימה מרכזית</span>
+        </div>
+        <h3 id="questTitle" style="font-size:.95rem;font-weight:800;margin-bottom:4px"></h3>
+        <p id="questDesc" style="font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:12px"></p>
+        <div id="questProgress" style="display:flex;gap:6px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav" id="mainNav">
+    <div class="nav-item active" onclick="showTab('colony')" data-tab="colony">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+      <span>מושבה</span>
+    </div>
+    <div class="nav-item" onclick="showTab('journal')" data-tab="journal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>יומן</span>
+    </div>
+    <div class="nav-item" onclick="showTab('profile')" data-tab="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>פרופיל</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DIALOGUE ============ -->
+<div class="screen" id="dialogue">
+  <div class="hud">
+    <button onclick="exitDialogue()" style="background:none;border:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--font);font-size:.82rem;padding:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      חזרה
+    </button>
+    <div class="hud-info">
+      <div class="hud-name" id="dialogueNpcName">—</div>
+      <div class="hud-location" id="dialogueLocation"></div>
+    </div>
+    <div class="hud-coins" id="hudCoins2"></div>
+  </div>
+  <div class="dialogue-scene">
+    <div class="dialogue-content" id="dialogueContent"></div>
+    <div class="choice-panel" id="choicePanel"></div>
+  </div>
+</div>
+
+<!-- ============ MINI GAME ============ -->
+<div class="screen" id="minigame">
+  <div class="hud">
+    <button onclick="exitMinigame()" style="background:none;border:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px;font-family:var(--font);font-size:.82rem;padding:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      חזרה
+    </button>
+    <div class="hud-info">
+      <div class="hud-name" id="minigameTitle">—</div>
+      <div class="hud-location" id="minigameSub"></div>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto;display:flex;align-items:center;justify-content:center">
+    <div class="minigame-container" id="minigameContent"></div>
+  </div>
+</div>
+
+<!-- ============ REFLECTION ============ -->
+<div class="screen" id="reflection">
+  <div class="reflection-container" id="reflectionContent"></div>
+</div>
+
+<!-- ============ RESULTS ============ -->
+<div class="screen" id="results">
+  <div class="results-container" id="resultsContent"></div>
+</div>
+
+<!-- ============ JOURNAL TAB ============ -->
+<div class="screen" id="journal">
+  <div class="hud">
+    <div class="hud-avatar" id="hudAvatar2">?</div>
+    <div class="hud-info"><div class="hud-name">יומן המסע</div><div class="hud-location">הרשמים שלך מהדרך</div></div>
+  </div>
+  <div class="journal-scroll" id="journalContent"></div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="showTab('colony')" data-tab="colony">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+      <span>מושבה</span>
+    </div>
+    <div class="nav-item active" onclick="showTab('journal')" data-tab="journal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>יומן</span>
+    </div>
+    <div class="nav-item" onclick="showTab('profile')" data-tab="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>פרופיל</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PROFILE TAB ============ -->
+<div class="screen" id="profile">
+  <div class="hud">
+    <div class="hud-avatar" id="hudAvatar3">?</div>
+    <div class="hud-info"><div class="hud-name">הפרופיל שלי</div><div class="hud-location">מתקן דרכים</div></div>
+  </div>
+  <div class="profile-scroll" id="profileContent"></div>
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="showTab('colony')" data-tab="colony">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+      <span>מושבה</span>
+    </div>
+    <div class="nav-item" onclick="showTab('journal')" data-tab="journal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>יומן</span>
+    </div>
+    <div class="nav-item active" onclick="showTab('profile')" data-tab="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>פרופיל</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ POPUPS ============ -->
+<div class="popup-overlay" id="popup">
+  <div class="popup" id="popupContent"></div>
+</div>
+<div class="particles" id="particles"></div>
+
+<script>
+// ==============================================
+// GAME STATE
+// ==============================================
+const STATE = {
+  name: '', cls: '', avatar: '',
+  coins: { belong: 0, respect: 0, motive: 0, capable: 0, autonomy: 0 },
+  xp: 0,
+  npcsCompleted: [],
+  dialogueChoices: {},
+  journal: [],
+  minigamesCompleted: [],
+  currentNpc: null,
+  currentNode: null,
+  phase: 'welcome', // welcome, intro, colony, dialogue, minigame, reflection, results
+  district: 1,
+  questsDone: 0
+};
+
+// ==============================================
+// NPC DATA — DISTRICT 1: CONNECTION
+// ==============================================
+const NPCS = [
+  {
+    id: 'noa',
+    name: 'נועה',
+    role: 'הבודדה — יושבת בצד ומציירת',
+    desc: 'נועה הגיעה למושבה לפני שבוע. היא לא מדברת עם אף אחד, ציורים על הקיר הם הדרך שלה לתקשר.',
+    avatar: { bg: 'linear-gradient(135deg,#5B9BD5,#4A8BC5)', letter: 'נ' },
+    personality: 'cynical', // ציניקנית, פגועה, מגנה על עצמה
+    questHint: 'אולי הציורים שלה מספרים סיפור?',
+    color: 'var(--belong)'
+  },
+  {
+    id: 'ido',
+    name: 'עידו',
+    role: 'הכעוס — תמיד מוכן לריב',
+    desc: 'עידו מרגיש שאף אחד לא מקשיב לו. הוא מגיב בכעס כי הוא לא יודע דרך אחרת.',
+    avatar: { bg: 'linear-gradient(135deg,#E06090,#D04070)', letter: 'ע' },
+    personality: 'angry', // כועס, פגוע, מרגיש לא נראה
+    questHint: 'הוא צועק כי אף אחד לא מקשיב',
+    color: 'var(--danger)'
+  },
+  {
+    id: 'dana',
+    name: 'דנה',
+    role: 'השקטה — עוזרת מאחורי הקלעים',
+    desc: 'דנה עובדת קשה מכולם אבל לא אומרת מילה. היא מסדרת אוכל, מנקה — ואף אחד לא שם לב.',
+    avatar: { bg: 'linear-gradient(135deg,#7AB648,#5A9638)', letter: 'ד' },
+    personality: 'shy', // ביישנית, טובת לב, צריכה עידוד
+    questHint: 'שים לב למי שעובד בשקט',
+    color: 'var(--success)'
+  }
+];
+
+// ==============================================
+// DIALOGUE TREES
+// ==============================================
+const DIALOGUES = {
+  // ---- NOA: The Loner ----
+  noa: {
+    start: {
+      speaker: 'narrator',
+      text: 'נועה יושבת על אבן ליד הקיר המזרחי. מסביבה ציורים צבעוניים על הבטון. היא לא מרימה את הראש כשאתה מתקרב.',
+      next: 'noa_greet'
+    },
+    noa_greet: {
+      speaker: 'noa',
+      text: '...מה?',
+      choices: [
+        { text: 'הציורים שלך? הם ממש מדהימים', next: 'noa_art_good', coins: { belong: 2 } },
+        { text: 'למה את יושבת לבד? בואי תצטרפי לכולם', next: 'noa_push', coins: { belong: -1 } },
+        { text: 'אני חדש פה. אני פשוט מסתכל', next: 'noa_chill', coins: { belong: 1, respect: 1 } }
+      ]
+    },
+    noa_art_good: {
+      speaker: 'noa',
+      text: 'מתי בפעם האחרונה מישהו שם לב?... כן, הם שלי.',
+      next: 'noa_art_ask'
+    },
+    noa_art_ask: {
+      speaker: 'noa',
+      text: 'אני מציירת את מה שאני רואה. או... מה שאני מרגישה. תלוי.',
+      choices: [
+        { text: 'מה הציור הזה מייצג? זה שעם הצבעים הכהים?', next: 'noa_deep', coins: { belong: 2, respect: 1 } },
+        { text: 'את צריכה לצייר משהו למושבה — פוסטר או משהו', next: 'noa_use', coins: { respect: -1 } }
+      ]
+    },
+    noa_push: {
+      speaker: 'noa',
+      text: 'לצרף אותי? אתה לא מכיר אותם. הם שופטים כל דבר. עדיף לבד.',
+      choices: [
+        { text: 'אולי אני לא מבין את הסיטואציה. תספרי?', next: 'noa_listen', coins: { belong: 1, respect: 2 } },
+        { text: 'זה לא בריא לשבת לבד כל הזמן', next: 'noa_lecture', coins: { respect: -1 } }
+      ]
+    },
+    noa_chill: {
+      speaker: 'noa',
+      text: '...לפחות אתה לא מנסה להגיד לי מה לעשות.',
+      next: 'noa_chill2'
+    },
+    noa_chill2: {
+      speaker: 'narrator',
+      text: 'נועה מסתכלת עליך רגע. משהו קטן משתנה בפנים שלה. לא חיוך — אבל פחות הגנה.',
+      next: 'noa_chill3'
+    },
+    noa_chill3: {
+      speaker: 'noa',
+      text: 'אני ציירתי את כל הקיר הזה. שבוע שלם. אף אחד לא שאל.',
+      choices: [
+        { text: 'אני שואל עכשיו. מה הסיפור?', next: 'noa_deep', coins: { belong: 3, respect: 1 } },
+        { text: 'יש פה ציור של בית. את מתגעגעת?', next: 'noa_home', coins: { belong: 2, respect: 2 } }
+      ]
+    },
+    noa_deep: {
+      speaker: 'noa',
+      text: 'הציור הכהה? זה... הבית שלי. לפני שהגעתי לפה. כבר אין אותו.',
+      next: 'noa_deep2'
+    },
+    noa_deep2: {
+      speaker: 'narrator',
+      text: 'נועה שותקת רגע. היד שלה נוגעת בציור, כאילו נוגעת בזיכרון.',
+      next: 'noa_deep3'
+    },
+    noa_deep3: {
+      speaker: 'noa',
+      text: 'וזה? הציור הצבעוני? זה מה שאני רוצה שהמושבה תהיה. מקום שאנשים שמים לב אחד לשני.',
+      choices: [
+        { text: 'בואי נתלה את הציור הזה במרכז המושבה. שכולם יראו', next: 'noa_success', coins: { belong: 3, capable: 1 } },
+        { text: 'את ממש מוכשרת. זה יכול לעזור לכולם פה', next: 'noa_success', coins: { belong: 2, capable: 2 } }
+      ]
+    },
+    noa_home: {
+      speaker: 'noa',
+      text: 'כן... כל יום. אבל הבית הוא לא רק מבנה, נכון? הבית זה האנשים.',
+      next: 'noa_home2'
+    },
+    noa_home2: {
+      speaker: 'noa',
+      text: 'פעם היו לי אנשים. עכשיו יש לי ציורים.',
+      choices: [
+        { text: 'ואולי גם מישהו חדש שמקשיב?', next: 'noa_success', coins: { belong: 3, respect: 1 } },
+        { text: 'בואי נלך ביחד לארוחת ערב. פשוט לשבת עם אנשים', next: 'noa_success', coins: { belong: 3 } }
+      ]
+    },
+    noa_use: {
+      speaker: 'noa',
+      text: 'אה, הבנתי. את הכישרון שלי אתה רואה, אותי — לא.',
+      next: 'noa_use2'
+    },
+    noa_use2: {
+      speaker: 'narrator',
+      text: 'נועה חוזרת לצייר. ברור שלא אמרת את הדבר הנכון. אבל עוד אפשר לתקן.',
+      choices: [
+        { text: 'צודקת. סליחה. אני מתכוון — את עצמך, מה שאת מרגישה — זה מה שמעניין', next: 'noa_deep', coins: { belong: 1, respect: 2 } },
+        { text: '(לעזוב עכשיו ולחזור אח"כ)', next: 'noa_leave', coins: {} }
+      ]
+    },
+    noa_listen: {
+      speaker: 'noa',
+      text: 'באמת? כי רוב האנשים פה כבר יודעים הכל. הם לא צריכים לשמוע.',
+      next: 'noa_listen2'
+    },
+    noa_listen2: {
+      speaker: 'noa',
+      text: 'שם, בקבוצה של עידו, אומרים שאני "מוזרה" כי אני מציירת במקום לדבר. ובקבוצה של דנה — הם בסדר, אבל שקטים מדי. אף אחד לא יוזם כלום.',
+      choices: [
+        { text: 'ומה את הייתה רוצה שיקרה?', next: 'noa_deep3', coins: { belong: 2, respect: 2 } },
+        { text: 'אולי אני אנסה לדבר עם עידו', next: 'noa_bridge', coins: { belong: 1, respect: 1 } }
+      ]
+    },
+    noa_bridge: {
+      speaker: 'noa',
+      text: 'בהצלחה. הוא לא סוג שמקשיב. אבל... אם תצליח, תגיד לו שהציירתי אותו פעם. מגניב, בתוך ציור של כולם.',
+      next: 'noa_partial'
+    },
+    noa_lecture: {
+      speaker: 'noa',
+      text: 'עוד מישהו שיודע מה בריא ומה לא. תודה.',
+      next: 'noa_leave'
+    },
+    noa_success: {
+      speaker: 'narrator',
+      text: 'משהו השתנה בעיניים של נועה. פעם ראשונה מאז שהגיעה — היא מרגישה שמישהו באמת רואה אותה.',
+      next: 'noa_end_good'
+    },
+    noa_end_good: {
+      speaker: 'noa',
+      text: 'תודה... שהקשבת. זה היה חסר לי.',
+      action: 'complete_noa_good'
+    },
+    noa_partial: {
+      speaker: 'narrator',
+      text: 'נועה לא נפתחה לגמרי, אבל ראית חריץ באור. היא שמרה את הציור שלה בשבילך.',
+      action: 'complete_noa_partial'
+    },
+    noa_leave: {
+      speaker: 'narrator',
+      text: 'נועה חוזרת לעולם שלה. אולי מתי שהוא תחזור לנסות שוב.',
+      action: 'complete_noa_leave'
+    }
+  },
+
+  // ---- IDO: The Angry One ----
+  ido: {
+    start: {
+      speaker: 'narrator',
+      text: 'עידו עומד במגרש הכדורגל המאולתר. הוא בועט בכדור שוב ושוב לקיר. בעוצמה. כל בעיטה כאילו הקיר חייב לו משהו.',
+      next: 'ido_greet'
+    },
+    ido_greet: {
+      speaker: 'ido',
+      text: 'מה, שלחו אותך לדבר איתי? תגיד להם שאני בסדר.',
+      choices: [
+        { text: 'אף אחד לא שלח אותי. ראיתי אותך בועט וחשבתי לבוא', next: 'ido_honest', coins: { respect: 2 } },
+        { text: 'מה קרה? למה אתה כועס?', next: 'ido_direct', coins: { respect: -1 } },
+        { text: 'אתה בועט חזק. רוצה להשוות?', next: 'ido_play', coins: { belong: 2, respect: 1 } }
+      ]
+    },
+    ido_honest: {
+      speaker: 'ido',
+      text: 'כן? ומה, באת להיות ידיד? פה כולם "ידידים" ליום אחד.',
+      choices: [
+        { text: 'אני לא יודע אם אני ידיד שלך. אבל אני פה', next: 'ido_real', coins: { respect: 2, belong: 1 } },
+        { text: 'תן לי צ\'אנס. לא כולם אותו דבר', next: 'ido_chance', coins: { respect: 1 } }
+      ]
+    },
+    ido_direct: {
+      speaker: 'ido',
+      text: 'שוב? "למה אתה כועס?" — כאילו הכעס זה הבעיה. לא. הבעיה זה מה שעשו לי.',
+      choices: [
+        { text: 'צודק. הכעס זה רק סימפטום. מה קרה?', next: 'ido_real', coins: { respect: 2, belong: 1 } },
+        { text: 'אוקיי, אז תספר מה עשו לך', next: 'ido_story', coins: { respect: 1 } }
+      ]
+    },
+    ido_play: {
+      speaker: 'ido',
+      text: '...רוצה להשוות? נו יאללה. תראה מה אתה שווה.',
+      next: 'ido_play2'
+    },
+    ido_play2: {
+      speaker: 'narrator',
+      text: 'אתה ועידו בועטים לקיר, אחד אחרי השני. אחרי כמה דקות — הוא נרגע. הנשימה שלו יורדת. זה מה שהוא היה צריך.',
+      next: 'ido_play3'
+    },
+    ido_play3: {
+      speaker: 'ido',
+      text: 'אתה לא רע. לפחות אתה לא מנסה לתחקר אותי כמו כולם.',
+      choices: [
+        { text: 'אני פשוט אוהב לבעוט. מה הסיפור שלך פה?', next: 'ido_story', coins: { belong: 2, respect: 1 } },
+        { text: 'בוא נעשה קבוצה — יש פה עוד אנשים שאוהבים כדור', next: 'ido_team', coins: { belong: 2 } }
+      ]
+    },
+    ido_real: {
+      speaker: 'ido',
+      text: 'תשמע... במקום הקודם, הייתי "הבעייתי". כל פעם שמשהו קרה — מי אשם? עידו. אפילו כשלא עשיתי כלום.',
+      next: 'ido_story2'
+    },
+    ido_story: {
+      speaker: 'ido',
+      text: 'הגעתי מבית ספר אחר. שם הורידו אותי. כל פעם — "עידו, שב", "עידו, תירגע". כאילו אני חיה.',
+      next: 'ido_story2'
+    },
+    ido_story2: {
+      speaker: 'ido',
+      text: 'ופה? אותו דבר מתחיל. שומעים שהגעתי מ"שם" ומיד — "אה, הוא הבעייתי".',
+      choices: [
+        { text: 'אני שומע אותך. זה לא הוגן שיפטו אותך בלי לדעת', next: 'ido_validate', coins: { respect: 3, belong: 1 } },
+        { text: 'אז בוא נשנה את זה. בוא נראה להם מי אתה באמת', next: 'ido_change', coins: { respect: 1, capable: 2 } },
+        { text: 'ואולי הכעס שלך פשוט מחזק את הדעה שלהם?', next: 'ido_confront', coins: { autonomy: 1 } }
+      ]
+    },
+    ido_validate: {
+      speaker: 'ido',
+      text: '...תודה. רוב האנשים פה ממהרים לשפוט. אתה... לפחות מקשיב.',
+      next: 'ido_validate2'
+    },
+    ido_validate2: {
+      speaker: 'narrator',
+      text: 'עידו מוריד את השמירה. הידיים שהיו אגרופים — נפתחות. זה לא קורה בדרך כלל.',
+      next: 'ido_open'
+    },
+    ido_open: {
+      speaker: 'ido',
+      text: 'תדע מה? יש פה בחורה, נועה, שמציירת על הקיר. חשבתי פעם ללכת לראות — אבל מה אני אגיד? "היי, אני עידו, הבועט בקירות"?',
+      choices: [
+        { text: 'דווקא כן. לך תגיד לה שאתה אוהב את הציורים שלה', next: 'ido_success', coins: { belong: 3, respect: 1 } },
+        { text: 'היא דווקא ציירה אותך! בתוך ציור של כל המושבה', next: 'ido_success', coins: { belong: 3, respect: 2 } }
+      ]
+    },
+    ido_change: {
+      speaker: 'ido',
+      text: 'לשנות? איך? מה אני — אדבר יפה ופתאום יאהבו אותי?',
+      choices: [
+        { text: 'לא "ידברו יפה". תהיה אתה. אבל בלי שהכעס ידבר במקומך', next: 'ido_validate', coins: { respect: 2, autonomy: 1 } },
+        { text: 'אולי תתחיל עם דבר קטן — תעזור למישהו, בלי שיבקש', next: 'ido_success', coins: { belong: 2, capable: 1 } }
+      ]
+    },
+    ido_confront: {
+      speaker: 'ido',
+      text: 'מה?! אתה גם? חשבתי שאתה שונה.',
+      next: 'ido_confront2'
+    },
+    ido_confront2: {
+      speaker: 'narrator',
+      text: 'עידו מתרחק. הוא לא כועס — הוא מאוכזב. אבל משהו בדברים שלך נשאר בראש שלו.',
+      choices: [
+        { text: 'עידו, חכה. לא התכוונתי לפגוע. אני אומר שאתה יותר מהכעס', next: 'ido_repair', coins: { respect: 2, belong: 1 } },
+        { text: '(לתת לו ללכת עכשיו)', next: 'ido_leave', coins: {} }
+      ]
+    },
+    ido_repair: {
+      speaker: 'ido',
+      text: '...אני יותר מהכעס? אף אחד לא אמר לי את זה.',
+      next: 'ido_validate'
+    },
+    ido_team: {
+      speaker: 'ido',
+      text: 'קבוצה? פה? חצי מהאנשים פוחדים ממני.',
+      choices: [
+        { text: 'אז בוא נשנה את זה. משחק כדורגל — הדרך הכי טובה להכיר', next: 'ido_success', coins: { belong: 3, capable: 1 } },
+        { text: 'אולי כי הם לא מכירים אותך. בוא נתחיל מזה', next: 'ido_validate', coins: { belong: 2, respect: 1 } }
+      ]
+    },
+    ido_chance: {
+      speaker: 'ido',
+      text: 'צ\'אנס? יאללה. תפתיע אותי.',
+      choices: [
+        { text: 'סיפרו לי שהגעת ממקום קשה. אני רוצה לשמוע את הגרסה שלך', next: 'ido_story', coins: { respect: 2, belong: 1 } },
+        { text: 'בוא נבעט ביחד. אח"כ נדבר', next: 'ido_play2', coins: { belong: 2 } }
+      ]
+    },
+    ido_success: {
+      speaker: 'narrator',
+      text: 'עידו מחייך. לא חיוך גדול — אבל אמיתי. פעם ראשונה שמישהו התייחס אליו כאדם, לא כבעיה.',
+      next: 'ido_end_good'
+    },
+    ido_end_good: {
+      speaker: 'ido',
+      text: 'אתה בסדר, אחי. אם תצטרך — אני פה.',
+      action: 'complete_ido_good'
+    },
+    ido_leave: {
+      speaker: 'narrator',
+      text: 'עידו הולך. הקיר מקבל עוד כמה בעיטות. אולי בפעם אחרת.',
+      action: 'complete_ido_leave'
+    }
+  },
+
+  // ---- DANA: The Quiet Helper ----
+  dana: {
+    start: {
+      speaker: 'narrator',
+      text: 'דנה יושבת ליד ארגזי האוכל, ממיינת פחיות שימורים. היא עובדת בשקט, מסודרת, בלי ש shout אחד לבקש עזרה.',
+      next: 'dana_greet'
+    },
+    dana_greet: {
+      speaker: 'dana',
+      text: 'אה... היי. רוצה עזרה? כלומר... לא, זה בסדר, אני מסתדרת.',
+      choices: [
+        { text: 'בוא נעשה את זה ביחד. ארבע ידיים יותר מהר משתיים', next: 'dana_help', coins: { belong: 2, respect: 1 } },
+        { text: 'את עובדת קשה. מישהו יודע בכלל כמה את עושה פה?', next: 'dana_notice', coins: { respect: 2, belong: 1 } },
+        { text: 'מה צריך לעשות? תגידי לי מה לקחת', next: 'dana_task', coins: { belong: 1 } }
+      ]
+    },
+    dana_help: {
+      speaker: 'dana',
+      text: 'באמת? אוקיי... שים את הירקות פה ואת הדגנים שם.',
+      next: 'dana_help2'
+    },
+    dana_help2: {
+      speaker: 'narrator',
+      text: 'אתה עוזר לדנה למיין. היא מראה לך איפה הכל צריך לעמוד. מסודרת ברמה של מערכת צבאית — אבל בשקט.',
+      next: 'dana_help3'
+    },
+    dana_help3: {
+      speaker: 'dana',
+      text: 'תודה... בדרך כלל אני עושה את זה לבד. זה... נחמד שמישהו פשוט עוזר.',
+      choices: [
+        { text: 'למה לבד? יש פה עוד אנשים', next: 'dana_why', coins: { respect: 1, belong: 1 } },
+        { text: 'את מסודרת ברמה רצינית. מאיפה את?', next: 'dana_story', coins: { belong: 2 } }
+      ]
+    },
+    dana_notice: {
+      speaker: 'dana',
+      text: 'לא... לא ממש. אבל זה בסדר. מישהו צריך לעשות את זה.',
+      choices: [
+        { text: 'זה לא בסדר. את ראויה שידעו מה את עושה', next: 'dana_worth', coins: { respect: 2, capable: 1 } },
+        { text: 'בואי נעשה סיבוב ונראה מה עוד צריך לסדר', next: 'dana_tour', coins: { belong: 2 } }
+      ]
+    },
+    dana_task: {
+      speaker: 'dana',
+      text: 'אממ... קח את הפחיות האלה ושים אותן לפי סדר — ירקות, דגנים, רטבים.',
+      next: 'dana_task2'
+    },
+    dana_task2: {
+      speaker: 'narrator',
+      text: 'מיינת את הכל. דנה מחייכת — קטן, ביישני.',
+      next: 'dana_help3'
+    },
+    dana_why: {
+      speaker: 'dana',
+      text: 'כי... אני לא יודעת לבקש. כל פעם שאני מנסה, המילים נתקעות.',
+      next: 'dana_why2'
+    },
+    dana_why2: {
+      speaker: 'dana',
+      text: 'בבית, אמא תמיד אמרה "אל תפריעי". אז למדתי לעשות הכל בשקט.',
+      choices: [
+        { text: 'פה את לא מפריעה. פה — את חיונית', next: 'dana_success', coins: { belong: 3, capable: 2 } },
+        { text: 'מה דעתך — נלך ביחד לבקש מאנשים לעזור? אני לידך', next: 'dana_success', coins: { belong: 2, capable: 2, autonomy: 1 } }
+      ]
+    },
+    dana_worth: {
+      speaker: 'dana',
+      text: 'ראויה? אני... אני פשוט עושה מה שצריך.',
+      next: 'dana_worth2'
+    },
+    dana_worth2: {
+      speaker: 'narrator',
+      text: 'דנה מורידה את הראש. היא לא רגילה לתשומת לב. אבל יש משהו חדש בעיניים שלה.',
+      choices: [
+        { text: 'מה שאת עושה — מחזיק את כל המושבה. בלעדייך הכל היה מתפרק', next: 'dana_success', coins: { respect: 2, capable: 3 } },
+        { text: 'בואי נציג את מה שעשית בפגישה הקרובה. שכולם ידעו', next: 'dana_success', coins: { belong: 2, capable: 2 } }
+      ]
+    },
+    dana_story: {
+      speaker: 'dana',
+      text: 'אני מהדרום. בית ספר חקלאי. שם למדתי לסדר, לארגן, לנהל מחסן. זה מה שאני יודעת.',
+      choices: [
+        { text: 'את יודעת עוד דברים. את יודעת לראות מה חסר ולטפל בזה — זה מנהיגות', next: 'dana_success', coins: { capable: 3, belong: 1 } },
+        { text: 'מרשים. ומה עם חברים? יש לך אנשים פה?', next: 'dana_why', coins: { belong: 1, respect: 1 } }
+      ]
+    },
+    dana_tour: {
+      speaker: 'narrator',
+      text: 'דנה מראה לך את כל פינות המושבה. היא מכירה כל פרט: איפה הצינור דולף, איפה חסרה שמיכה, מי לא אכל היום.',
+      next: 'dana_tour2'
+    },
+    dana_tour2: {
+      speaker: 'dana',
+      text: 'אני שמה לב לדברים. אנשים... לא תמיד שמים לב שאני שמה לב.',
+      choices: [
+        { text: 'אני שם לב. ומהיום — גם אחרים ידעו', next: 'dana_success', coins: { belong: 3, respect: 2 } },
+        { text: 'את הלב של המושבה הזו, דנה. בלעדייך — זה קורס', next: 'dana_success', coins: { capable: 3, belong: 2 } }
+      ]
+    },
+    dana_success: {
+      speaker: 'narrator',
+      text: 'דנה מרימה את הראש. בפעם הראשונה — מישהו ראה אותה. לא את מה שהיא עושה. אותה.',
+      next: 'dana_end_good'
+    },
+    dana_end_good: {
+      speaker: 'dana',
+      text: 'תודה... שראית אותי.',
+      action: 'complete_dana_good'
+    }
+  }
+};
+
+// ==============================================
+// INTRO SCENES
+// ==============================================
+const INTRO_SCENES = [
+  { text: 'היה משבר. הכל נהרס. אבל אנשים לא ויתרו — הם התחילו לבנות <span class="highlight">מושבה חדשה</span>.', scene: 'ruins' },
+  { text: 'שלוש קבוצות הגיעו למושבה. כל אחת עם הסיפור שלה. כל אחת עם הכאב שלה. הן חיות פה — אבל <span class="highlight">לא מדברות זו עם זו</span>.', scene: 'groups' },
+  { text: 'אתה <span class="highlight">מתקן דרכים</span>. זה התפקיד שלך — לחבר בין אנשים, לגשר, לשמוע. כי מי שמקשיב — יכול לשנות הכל.', scene: 'player' },
+  { text: 'המסע שלך מתחיל ב<span class="highlight">מחוז הקשר</span>. שלושה אנשים מחכים לך. שלושה סיפורים שצריך לשמוע.', scene: 'map' }
+];
+
+// ==============================================
+// MINI GAMES DATA
+// ==============================================
+const MINIGAMES = {
+  listening_puzzle: {
+    title: 'פאזל ההקשבה',
+    sub: 'מה באמת אומרים?',
+    intro: 'שמעת שלושה אנשים מדברים. מי אמר מה? חבר כל משפט לדמות הנכונה.',
+    items: [
+      { text: '"אף אחד לא רואה את מה שאני עושה פה."', answer: 'dana', label: 'דנה' },
+      { text: '"הם שופטים אותי בלי להכיר אותי."', answer: 'ido', label: 'עידו' },
+      { text: '"הבית שלי כבר לא קיים, אז אני מציירת אותו."', answer: 'noa', label: 'נועה' },
+      { text: '"כל פעם שאני מנסה לבקש עזרה, המילים נתקעות."', answer: 'dana', label: 'דנה' },
+      { text: '"אני יותר מהכעס שלי."', answer: 'ido', label: 'עידו' }
+    ]
+  },
+  emotion_match: {
+    title: 'מה הוא/היא מרגיש/ה?',
+    sub: 'זהה את הרגש מאחורי ההתנהגות',
+    situations: [
+      { text: 'נועה יושבת לבד ומציירת על הקיר, ולא מרימה ראש כשפונים אליה', correct: 'loneliness', options: ['anger','loneliness','boredom','happiness'], labels: ['כעס','בדידות','שעמום','שמחה'] },
+      { text: 'עידו בועט בקיר שוב ושוב ואומר "אני בסדר"', correct: 'frustration', options: ['happiness','fear','frustration','boredom'], labels: ['שמחה','פחד','תסכול','שעמום'] },
+      { text: 'דנה ממיינת קופסאות לבד ואומרת "אני מסתדרת"', correct: 'need_to_be_seen', options: ['satisfaction','need_to_be_seen','anger','confidence'], labels: ['סיפוק','צורך להיראות','כעס','ביטחון'] }
+    ]
+  },
+  story_sort: {
+    title: 'סדר הפעולות',
+    sub: 'מה עושים כשפוגשים מישהו עצוב?',
+    correctOrder: [
+      'שמים לב שמשהו לא בסדר',
+      'ניגשים בשקט, בלי לחץ',
+      'שואלים שאלה פתוחה',
+      'מקשיבים — בלי לקטוע',
+      'מגיבים עם אמפתיה',
+      'מציעים עזרה — בלי לכפות'
+    ]
+  }
+};
+
+// ==============================================
+// GAME ENGINE
+// ==============================================
+let introIndex = 0;
+let typingInterval = null;
+
+function save() {
+  localStorage.setItem('adventure_game_state', JSON.stringify(STATE));
+}
+
+function load() {
+  const data = localStorage.getItem('adventure_game_state');
+  if (data) {
+    const saved = JSON.parse(data);
+    Object.assign(STATE, saved);
+    return true;
+  }
+  return false;
+}
+
+// Init stars
+function initStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 50; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*3}s;animation-delay:${Math.random()*3}s;opacity:${.1+Math.random()*.4}`;
+    c.appendChild(s);
+  }
+}
+
+// Logo animation
+function drawLogo() {
+  const canvas = document.getElementById('logoCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Compass/waypoint symbol
+  const cx = w/2, cy = h/2, r = 70;
+  const t = Date.now() / 1000;
+
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,229,255,0.3)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Rotating inner ring
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(t * 0.3);
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.7, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(160,125,224,0.3)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Diamond / waypoint
+  const s = 28;
+  ctx.beginPath();
+  ctx.moveTo(0, -s);
+  ctx.lineTo(s * 0.7, 0);
+  ctx.lineTo(0, s);
+  ctx.lineTo(-s * 0.7, 0);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(-s, -s, s, s);
+  grad.addColorStop(0, '#00E5FF');
+  grad.addColorStop(1, '#A07DE0');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Center dot
+  ctx.beginPath();
+  ctx.arc(0, 0, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#0a0f16';
+  ctx.fill();
+
+  ctx.restore();
+  requestAnimationFrame(drawLogo);
+}
+
+// Scene canvas
+function drawScene(scene) {
+  const canvas = document.getElementById('sceneCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Background gradient
+  let grad = ctx.createLinearGradient(0, 0, 0, h);
+
+  if (scene === 'ruins') {
+    grad.addColorStop(0, '#1a1520');
+    grad.addColorStop(1, '#0a0f16');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    // Broken buildings
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    for (let i = 0; i < 8; i++) {
+      const bx = i * 100 + 30;
+      const bh = 80 + Math.random() * 150;
+      ctx.fillRect(bx, h - bh, 60, bh);
+      // broken top
+      ctx.fillRect(bx + 10, h - bh - 20, 20, 20);
+    }
+    // Glow of hope
+    ctx.beginPath();
+    ctx.arc(w/2, h * 0.6, 100, 0, Math.PI * 2);
+    const g2 = ctx.createRadialGradient(w/2, h*0.6, 10, w/2, h*0.6, 100);
+    g2.addColorStop(0, 'rgba(0,229,255,0.15)');
+    g2.addColorStop(1, 'transparent');
+    ctx.fillStyle = g2;
+    ctx.fill();
+  } else if (scene === 'groups') {
+    grad.addColorStop(0, '#111921');
+    grad.addColorStop(1, '#0a0f16');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    // Three separated groups
+    const colors = ['#5B9BD5', '#E06090', '#7AB648'];
+    const positions = [w*0.2, w*0.5, w*0.8];
+    colors.forEach((c, i) => {
+      ctx.beginPath();
+      ctx.arc(positions[i], h*0.5, 50, 0, Math.PI * 2);
+      const g2 = ctx.createRadialGradient(positions[i], h*0.5, 5, positions[i], h*0.5, 50);
+      g2.addColorStop(0, c + '40');
+      g2.addColorStop(1, 'transparent');
+      ctx.fillStyle = g2;
+      ctx.fill();
+      // People dots
+      for (let j = 0; j < 4; j++) {
+        ctx.beginPath();
+        ctx.arc(positions[i] + (Math.random()-0.5)*40, h*0.5 + (Math.random()-0.5)*40, 5, 0, Math.PI*2);
+        ctx.fillStyle = c + '80';
+        ctx.fill();
+      }
+    });
+  } else if (scene === 'player') {
+    grad.addColorStop(0, '#0f1520');
+    grad.addColorStop(1, '#0a0f16');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    // Player silhouette with glow
+    ctx.beginPath();
+    ctx.arc(w/2, h*0.45, 80, 0, Math.PI * 2);
+    const g2 = ctx.createRadialGradient(w/2, h*0.45, 10, w/2, h*0.45, 80);
+    g2.addColorStop(0, 'rgba(0,229,255,0.2)');
+    g2.addColorStop(1, 'transparent');
+    ctx.fillStyle = g2;
+    ctx.fill();
+    // Waypoint symbol
+    ctx.save();
+    ctx.translate(w/2, h*0.45);
+    const s = 30;
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.lineTo(s*0.7, 0);
+    ctx.lineTo(0, s);
+    ctx.lineTo(-s*0.7, 0);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,229,255,0.5)';
+    ctx.fill();
+    ctx.restore();
+    // Connecting lines going out
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(w/2, h*0.45);
+      ctx.lineTo(w/2 + Math.cos(angle)*150, h*0.45 + Math.sin(angle)*100);
+      ctx.strokeStyle = 'rgba(0,229,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  } else {
+    grad.addColorStop(0, '#111921');
+    grad.addColorStop(1, '#0a0f16');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    // Map with locations
+    const locs = [{x:w*0.3,y:h*0.3,c:'#5B9BD5'},{x:w*0.7,y:h*0.25,c:'#E06090'},{x:w*0.5,y:h*0.65,c:'#7AB648'}];
+    locs.forEach(l => {
+      ctx.beginPath();
+      ctx.arc(l.x, l.y, 25, 0, Math.PI*2);
+      ctx.fillStyle = l.c + '30';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(l.x, l.y, 8, 0, Math.PI*2);
+      ctx.fillStyle = l.c + '80';
+      ctx.fill();
+    });
+    // Paths between
+    ctx.setLineDash([5,5]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    locs.forEach((l, i) => {
+      const next = locs[(i+1)%locs.length];
+      ctx.beginPath();
+      ctx.moveTo(l.x, l.y);
+      ctx.lineTo(next.x, next.y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+  }
+}
+
+// Typing effect
+function typeText(el, html, callback) {
+  if (typingInterval) clearInterval(typingInterval);
+  el.innerHTML = '';
+  // Strip HTML tags for typing, then insert full HTML
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const plain = tmp.textContent;
+  let i = 0;
+  el.innerHTML = '<span class="typing-cursor"></span>';
+  typingInterval = setInterval(() => {
+    if (i < plain.length) {
+      el.innerHTML = html.substring(0, findHtmlIndex(html, i+1)) + '<span class="typing-cursor"></span>';
+      i++;
+    } else {
+      clearInterval(typingInterval);
+      el.innerHTML = html;
+      if (callback) setTimeout(callback, 300);
+    }
+  }, 30);
+}
+
+function findHtmlIndex(html, plainIndex) {
+  let pi = 0, hi = 0;
+  let inTag = false;
+  while (hi < html.length && pi < plainIndex) {
+    if (html[hi] === '<') inTag = true;
+    else if (html[hi] === '>') inTag = false;
+    else if (!inTag) pi++;
+    hi++;
+  }
+  // Include any trailing tags
+  while (hi < html.length && html[hi] === '<') {
+    while (hi < html.length && html[hi] !== '>') hi++;
+    hi++;
+  }
+  return hi;
+}
+
+// ==============================================
+// SCREEN MANAGEMENT
+// ==============================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  STATE.phase = id;
+}
+
+function showTab(tab) {
+  if (tab === 'colony') {
+    showScreen('colony');
+    renderColony();
+  } else if (tab === 'journal') {
+    showScreen('journal');
+    renderJournal();
+  } else if (tab === 'profile') {
+    showScreen('profile');
+    renderProfile();
+  }
+  // Update nav active states
+  document.querySelectorAll('.bottom-nav .nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.tab === tab);
+  });
+}
+
+// ==============================================
+// WELCOME & INTRO
+// ==============================================
+document.getElementById('nameInput').addEventListener('input', function() {
+  document.getElementById('startBtn').disabled = !this.value.trim();
+});
+
+function startGame() {
+  const name = document.getElementById('nameInput').value.trim();
+  const cls = document.getElementById('classInput').value;
+  if (!name) return;
+
+  STATE.name = name;
+  STATE.cls = cls;
+  STATE.avatar = name.charAt(0);
+  save();
+
+  showScreen('intro');
+  introIndex = 0;
+  renderIntroDots();
+  showIntroScene(0);
+}
+
+function renderIntroDots() {
+  const c = document.getElementById('introDots');
+  c.innerHTML = INTRO_SCENES.map((_, i) => `<div class="intro-dot ${i===0?'active':''}"></div>`).join('');
+}
+
+function showIntroScene(idx) {
+  const scene = INTRO_SCENES[idx];
+  drawScene(scene.scene);
+  typeText(document.getElementById('introText'), scene.text);
+  document.querySelectorAll('.intro-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+  document.getElementById('introBtn').textContent = idx < INTRO_SCENES.length - 1 ? 'המשך' : 'בואו נתחיל';
+}
+
+function advanceIntro() {
+  introIndex++;
+  if (introIndex < INTRO_SCENES.length) {
+    showIntroScene(introIndex);
+  } else {
+    showScreen('colony');
+    renderColony();
+    updateHUD();
+  }
+}
+
+// ==============================================
+// COLONY (MAP)
+// ==============================================
+function renderColony() {
+  const grid = document.getElementById('npcGrid');
+  grid.innerHTML = NPCS.map(npc => {
+    const done = STATE.npcsCompleted.includes(npc.id);
+    const talked = STATE.dialogueChoices[npc.id];
+    return `
+      <div class="npc-card ${done?'talked':''}" onclick="startDialogue('${npc.id}')">
+        ${!done ? '<div class="quest-marker"><svg viewBox="0 0 24 24" fill="#1A2736"><path d="M12 2L8 12h3v8l4-10h-3z"/></svg></div>' : ''}
+        <div class="npc-header">
+          <div class="npc-avatar" style="background:${npc.avatar.bg};color:#fff;font-weight:900">${npc.avatar.letter}</div>
+          <div>
+            <div class="npc-name">${npc.name}</div>
+            <div class="npc-role">${npc.role}</div>
+          </div>
+        </div>
+        <div class="npc-desc">${npc.desc}</div>
+        ${!done ? `<div class="npc-status" style="color:${npc.color}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          ${npc.questHint}
+        </div>` : `<div class="npc-status" style="color:var(--success)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          שיחה הושלמה
+        </div>`}
+      </div>
+    `;
+  }).join('');
+
+  // Quest tracker
+  const questEl = document.getElementById('colonyQuest');
+  const done = STATE.npcsCompleted.length;
+  questEl.style.display = 'block';
+  document.getElementById('questTitle').textContent = 'חבר את המושבה';
+  document.getElementById('questDesc').textContent = `דבר עם שלושת האנשים ומצא דרך לגשר ביניהם. ${done}/3 שיחות הושלמו.`;
+  document.getElementById('questProgress').innerHTML = NPCS.map(npc => {
+    const completed = STATE.npcsCompleted.includes(npc.id);
+    return `<div style="width:32px;height:32px;border-radius:50%;background:${completed?npc.avatar.bg:'var(--card2)'};display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:${completed?'#fff':'var(--dim)'};border:2px solid ${completed?'var(--success)':'rgba(255,255,255,.06)'}">${npc.avatar.letter}</div>`;
+  }).join('');
+
+  // Check if all done
+  if (done === 3 && !STATE.minigamesCompleted.includes('listening_puzzle')) {
+    // Show final quest
+    questEl.innerHTML = `
+      <div style="background:linear-gradient(145deg,rgba(255,215,0,.1),rgba(255,215,0,.03));border:1.5px solid rgba(255,215,0,.25);border-radius:18px;padding:18px;cursor:pointer" onclick="startMinigame('listening_puzzle')">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span style="font-size:.82rem;font-weight:700;color:var(--gold)">משימה מיוחדת</span>
+        </div>
+        <h3 style="font-size:.95rem;font-weight:800;margin-bottom:4px">פאזל ההקשבה</h3>
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.5">שמעת את כולם. עכשיו — תוכיח שבאמת הקשבת.</p>
+        <div style="margin-top:10px"><span class="btn btn-primary" style="padding:10px 24px;font-size:.85rem">התחל פאזל</span></div>
+      </div>`;
+  } else if (done === 3 && STATE.minigamesCompleted.includes('listening_puzzle') && !STATE.minigamesCompleted.includes('emotion_match')) {
+    questEl.innerHTML = `
+      <div style="background:linear-gradient(145deg,rgba(160,125,224,.1),rgba(160,125,224,.03));border:1.5px solid rgba(160,125,224,.25);border-radius:18px;padding:18px;cursor:pointer" onclick="startMinigame('emotion_match')">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--capable)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span style="font-size:.82rem;font-weight:700;color:var(--capable)">משימה מיוחדת</span>
+        </div>
+        <h3 style="font-size:.95rem;font-weight:800;margin-bottom:4px">מה הוא/היא מרגיש/ה?</h3>
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.5">אתה מכיר את הסיפורים. עכשיו — זהה את הרגש מאחורי ההתנהגות.</p>
+        <div style="margin-top:10px"><span class="btn btn-primary" style="padding:10px 24px;font-size:.85rem">התחל</span></div>
+      </div>`;
+  } else if (done === 3 && STATE.minigamesCompleted.length >= 2 && !STATE.phase?.includes('reflection_done')) {
+    questEl.innerHTML = `
+      <div style="background:linear-gradient(145deg,rgba(122,182,72,.1),rgba(122,182,72,.03));border:1.5px solid rgba(122,182,72,.25);border-radius:18px;padding:18px;cursor:pointer" onclick="startReflection()">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span style="font-size:.82rem;font-weight:700;color:var(--success)">סיכום המסע</span>
+        </div>
+        <h3 style="font-size:.95rem;font-weight:800;margin-bottom:4px">יומן רפלקציה</h3>
+        <p style="font-size:.82rem;color:var(--muted);line-height:1.5">לפני שנמשיך — רגע של מחשבה על מה שלמדת.</p>
+        <div style="margin-top:10px"><span class="btn btn-primary" style="padding:10px 24px;font-size:.85rem">פתח יומן</span></div>
+      </div>`;
+  }
+
+  updateHUD();
+}
+
+// ==============================================
+// HUD
+// ==============================================
+function updateHUD() {
+  const avatarEls = document.querySelectorAll('[id^="hudAvatar"]');
+  avatarEls.forEach(el => el.textContent = STATE.avatar || '?');
+
+  const nameEls = document.querySelectorAll('.hud-name');
+  // Only update colony hud name
+  const hudName = document.getElementById('hudName');
+  if (hudName) hudName.textContent = STATE.name || '—';
+
+  // Coins display
+  const totalCoins = Object.values(STATE.coins).reduce((a,b) => a+b, 0);
+  const coinsHTML = `
+    <div class="coin-badge" style="color:var(--belong)"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>${STATE.coins.belong}</div>
+    <div class="coin-badge" style="color:var(--respect)"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>${STATE.coins.respect}</div>
+  `;
+  document.querySelectorAll('[id^="hudCoins"]').forEach(el => el.innerHTML = coinsHTML);
+}
+
+// ==============================================
+// DIALOGUE ENGINE
+// ==============================================
+function startDialogue(npcId) {
+  const npc = NPCS.find(n => n.id === npcId);
+  STATE.currentNpc = npcId;
+  STATE.currentNode = 'start';
+
+  showScreen('dialogue');
+  document.getElementById('dialogueNpcName').textContent = npc.name;
+  document.getElementById('dialogueLocation').textContent = npc.role;
+  document.getElementById('dialogueContent').innerHTML = '';
+  document.getElementById('choicePanel').innerHTML = '';
+
+  processDialogueNode(npcId, 'start');
+}
+
+function processDialogueNode(npcId, nodeId) {
+  const tree = DIALOGUES[npcId];
+  const node = tree[nodeId];
+  if (!node) return;
+
+  STATE.currentNode = nodeId;
+  const content = document.getElementById('dialogueContent');
+  const choicePanel = document.getElementById('choicePanel');
+
+  // Find NPC data
+  const npc = NPCS.find(n => n.id === npcId);
+
+  // Add dialogue bubble
+  const bubbleDiv = document.createElement('div');
+
+  if (node.speaker === 'narrator') {
+    bubbleDiv.innerHTML = `<div class="dialogue-bubble narrator">${node.text}</div>`;
+  } else if (node.speaker === npcId || NPCS.find(n => n.id === node.speaker)) {
+    const speakerNpc = NPCS.find(n => n.id === node.speaker) || npc;
+    bubbleDiv.innerHTML = `
+      <div class="dialogue-speaker">
+        <div class="dialogue-speaker-avatar" style="background:${speakerNpc.avatar.bg};color:#fff;font-weight:800;font-size:.85rem">${speakerNpc.avatar.letter}</div>
+        <div class="dialogue-speaker-name" style="color:${speakerNpc.color}">${speakerNpc.name}</div>
+      </div>
+      <div class="dialogue-bubble">${node.text}</div>
+    `;
+  }
+
+  content.appendChild(bubbleDiv);
+  content.scrollTop = content.scrollHeight;
+
+  // Clear choices
+  choicePanel.innerHTML = '';
+
+  // Handle action (completion)
+  if (node.action) {
+    setTimeout(() => handleAction(node.action, npcId), 800);
+    return;
+  }
+
+  // Handle choices or continue
+  if (node.choices) {
+    setTimeout(() => {
+      choicePanel.innerHTML = `<div class="choice-hint">בחר תגובה:</div>` +
+        node.choices.map((c, i) => `<button class="btn btn-choice" onclick="chooseDialogue('${npcId}','${c.next}',${i})">${c.text}</button>`).join('');
+    }, 600);
+  } else if (node.next) {
+    setTimeout(() => {
+      choicePanel.innerHTML = `<div class="continue-btn" onclick="processDialogueNode('${npcId}','${node.next}')">לחץ להמשך...</div>`;
+    }, 400);
+  }
+}
+
+function chooseDialogue(npcId, nextNode, choiceIdx) {
+  const tree = DIALOGUES[npcId];
+  const currentNode = tree[STATE.currentNode];
+  const choice = currentNode.choices[choiceIdx];
+
+  // Add player bubble
+  const content = document.getElementById('dialogueContent');
+  const playerDiv = document.createElement('div');
+  playerDiv.innerHTML = `<div class="dialogue-bubble player">${choice.text}</div>`;
+  content.appendChild(playerDiv);
+  content.scrollTop = content.scrollHeight;
+
+  // Apply coins
+  if (choice.coins) {
+    Object.entries(choice.coins).forEach(([key, val]) => {
+      STATE.coins[key] = Math.max(0, (STATE.coins[key] || 0) + val);
+      if (val > 0) showXPFloat(`+${val}`, key);
+    });
+  }
+
+  // Track choice
+  if (!STATE.dialogueChoices[npcId]) STATE.dialogueChoices[npcId] = [];
+  STATE.dialogueChoices[npcId].push({ node: STATE.currentNode, choice: choiceIdx });
+
+  save();
+  updateHUD();
+
+  // Continue
+  setTimeout(() => processDialogueNode(npcId, nextNode), 500);
+}
+
+function handleAction(action, npcId) {
+  const choicePanel = document.getElementById('choicePanel');
+
+  if (action.startsWith('complete_')) {
+    const quality = action.includes('good') ? 'good' : action.includes('partial') ? 'partial' : 'leave';
+
+    if (!STATE.npcsCompleted.includes(npcId)) {
+      STATE.npcsCompleted.push(npcId);
+    }
+
+    // Bonus coins for completion quality
+    const npc = NPCS.find(n => n.id === npcId);
+    let bonusCoins = {};
+    if (quality === 'good') {
+      bonusCoins = { belong: 3, respect: 1 };
+    } else if (quality === 'partial') {
+      bonusCoins = { belong: 1 };
+    }
+
+    Object.entries(bonusCoins).forEach(([key, val]) => {
+      STATE.coins[key] = (STATE.coins[key] || 0) + val;
+    });
+
+    STATE.xp += quality === 'good' ? 50 : quality === 'partial' ? 25 : 10;
+
+    // Journal entry
+    STATE.journal.push({
+      date: new Date().toLocaleDateString('he-IL'),
+      text: `שיחה עם ${npc.name}: ${quality === 'good' ? 'הצלחתי ליצור חיבור אמיתי' : quality === 'partial' ? 'התקדמנו, אבל עוד יש דרך' : 'לא הצלחתי הפעם — אבל למדתי משהו'}`,
+      npc: npcId,
+      quality
+    });
+
+    save();
+
+    // Show completion popup
+    setTimeout(() => {
+      showPopup({
+        icon: quality === 'good' ? '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' :
+              quality === 'partial' ? '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' :
+              '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/></svg>',
+        title: quality === 'good' ? 'חיבור נוצר!' : quality === 'partial' ? 'התחלה טובה' : 'בפעם הבאה',
+        text: quality === 'good' ? `${npc.name} מרגיש/ה שסוף סוף מישהו מקשיב.` : quality === 'partial' ? 'לא הגעת עד הסוף, אבל ראית משהו חשוב.' : 'לפעמים לא מצליחים — וזה בסדר. זו חוויית למידה.',
+        coins: bonusCoins,
+        btnText: 'חזרה למושבה',
+        onClose: () => { showTab('colony'); }
+      });
+      spawnParticles();
+    }, 500);
+  }
+}
+
+function exitDialogue() {
+  showTab('colony');
+}
+
+// ==============================================
+// MINI GAMES
+// ==============================================
+function startMinigame(gameId) {
+  showScreen('minigame');
+  const game = MINIGAMES[gameId];
+  document.getElementById('minigameTitle').textContent = game.title;
+  document.getElementById('minigameSub').textContent = game.sub;
+
+  if (gameId === 'listening_puzzle') renderListeningPuzzle();
+  else if (gameId === 'emotion_match') renderEmotionMatch();
+}
+
+function renderListeningPuzzle() {
+  const game = MINIGAMES.listening_puzzle;
+  const container = document.getElementById('minigameContent');
+
+  let currentQ = 0;
+  let score = 0;
+
+  function showQuestion(idx) {
+    if (idx >= game.items.length) {
+      finishMinigame('listening_puzzle', score, game.items.length);
+      return;
+    }
+
+    const item = game.items[idx];
+    const options = NPCS.map(n => ({ id: n.id, name: n.name, avatar: n.avatar }));
+
+    container.innerHTML = `
+      <div class="minigame-header">
+        <h2>${game.title}</h2>
+        <p>${game.intro}</p>
+      </div>
+      <div style="text-align:center;margin-bottom:8px;font-size:.78rem;color:var(--muted)">${idx+1} / ${game.items.length}</div>
+      <div style="background:var(--card);border-radius:16px;padding:18px;margin-bottom:20px;border:1px solid rgba(255,255,255,.04)">
+        <p style="font-size:.95rem;line-height:1.7;font-weight:600">${item.text}</p>
+      </div>
+      <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:12px">מי אמר/ה את זה?</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        ${options.map(o => `
+          <button class="btn btn-choice" style="width:auto;text-align:center;padding:14px 20px;display:flex;flex-direction:column;align-items:center;gap:6px" onclick="checkListening(this,'${o.id}','${item.answer}',${idx})">
+            <div style="width:40px;height:40px;border-radius:50%;background:${o.avatar.bg};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:1rem">${o.avatar.letter}</div>
+            <span style="font-size:.82rem">${o.name}</span>
+          </button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  window.checkListening = function(btn, chosen, correct, idx) {
+    const buttons = btn.parentElement.querySelectorAll('.btn-choice');
+    buttons.forEach(b => b.disabled = true);
+
+    if (chosen === correct) {
+      btn.classList.add('correct');
+      score++;
+      STATE.coins.belong += 1;
+      showXPFloat('+1', 'belong');
+    } else {
+      btn.classList.add('wrong');
+      buttons.forEach(b => {
+        if (b.textContent.includes(NPCS.find(n=>n.id===correct).name)) b.classList.add('correct');
+      });
+    }
+
+    save();
+    updateHUD();
+    setTimeout(() => showQuestion(idx + 1), 1200);
+  };
+
+  showQuestion(0);
+}
+
+function renderEmotionMatch() {
+  const game = MINIGAMES.emotion_match;
+  const container = document.getElementById('minigameContent');
+
+  let currentQ = 0;
+  let score = 0;
+
+  function showSituation(idx) {
+    if (idx >= game.situations.length) {
+      finishMinigame('emotion_match', score, game.situations.length);
+      return;
+    }
+
+    const sit = game.situations[idx];
+
+    container.innerHTML = `
+      <div class="minigame-header">
+        <h2>${game.title}</h2>
+        <p>${game.sub}</p>
+      </div>
+      <div style="text-align:center;margin-bottom:8px;font-size:.78rem;color:var(--muted)">${idx+1} / ${game.situations.length}</div>
+      <div style="background:var(--card);border-radius:16px;padding:18px;margin-bottom:20px;border:1px solid rgba(255,255,255,.04)">
+        <p style="font-size:.92rem;line-height:1.7">${sit.text}</p>
+      </div>
+      <p style="font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:12px">מה הרגש האמיתי מאחורי ההתנהגות?</p>
+      <div class="emotion-grid">
+        ${sit.options.map((o, i) => `
+          <button class="emotion-btn" onclick="checkEmotion(this,'${o}','${sit.correct}',${idx})">
+            <span class="emotion-label">${sit.labels[i]}</span>
+          </button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  window.checkEmotion = function(btn, chosen, correct, idx) {
+    const buttons = btn.parentElement.querySelectorAll('.emotion-btn');
+    buttons.forEach(b => b.style.pointerEvents = 'none');
+
+    if (chosen === correct) {
+      btn.style.borderColor = 'var(--success)';
+      btn.style.background = 'rgba(122,182,72,.15)';
+      score++;
+      STATE.coins.respect += 2;
+      showXPFloat('+2', 'respect');
+    } else {
+      btn.style.borderColor = 'var(--danger)';
+      btn.style.background = 'rgba(255,77,106,.08)';
+      buttons.forEach(b => {
+        const opt = b.getAttribute('onclick').match(/'([^']+)'/)[1];
+        if (opt === correct) {
+          b.style.borderColor = 'var(--success)';
+          b.style.background = 'rgba(122,182,72,.12)';
+        }
+      });
+    }
+
+    save();
+    updateHUD();
+    setTimeout(() => showSituation(idx + 1), 1500);
+  };
+
+  showSituation(0);
+}
+
+function finishMinigame(gameId, score, total) {
+  STATE.minigamesCompleted.push(gameId);
+  const pct = Math.round((score/total)*100);
+  STATE.xp += score * 15;
+
+  // Bonus coins
+  if (pct >= 80) {
+    STATE.coins.capable += 3;
+    STATE.coins.belong += 2;
+  } else if (pct >= 50) {
+    STATE.coins.capable += 1;
+    STATE.coins.belong += 1;
+  }
+
+  STATE.journal.push({
+    date: new Date().toLocaleDateString('he-IL'),
+    text: `השלמתי את ${MINIGAMES[gameId].title} — ${score}/${total} נכון (${pct}%)`,
+    type: 'minigame'
+  });
+
+  save();
+
+  showPopup({
+    icon: pct >= 80 ? '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' :
+          '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    title: pct >= 80 ? 'מדהים!' : pct >= 50 ? 'כל הכבוד!' : 'ניסיון טוב',
+    text: `${score} מתוך ${total} נכון. ${pct >= 80 ? 'אתה באמת מקשיב.' : 'יש מקום להשתפר — וזה בסדר.'}`,
+    coins: pct >= 80 ? { capable: 3, belong: 2 } : { capable: 1 },
+    btnText: 'חזרה למושבה',
+    onClose: () => { showTab('colony'); }
+  });
+  spawnParticles();
+}
+
+function exitMinigame() {
+  showTab('colony');
+}
+
+// ==============================================
+// REFLECTION
+// ==============================================
+function startReflection() {
+  showScreen('reflection');
+  const container = document.getElementById('reflectionContent');
+
+  container.innerHTML = `
+    <div class="reflection-header">
+      <h2>יומן המסע — רפלקציה</h2>
+      <p>לפני שנמשיך — עצור רגע וחשוב</p>
+    </div>
+    <div class="reflection-question">
+      <label>מה למדת היום על עצמך?</label>
+      <textarea class="reflection-textarea" id="ref1" placeholder="כתוב בחופשיות..."></textarea>
+    </div>
+    <div class="reflection-question">
+      <label>איזו דמות הרשימה אותך ולמה?</label>
+      <textarea class="reflection-textarea" id="ref2" placeholder="נועה? עידו? דנה?"></textarea>
+    </div>
+    <div class="reflection-question">
+      <label>איזו בחירה הייתה הכי קשה?</label>
+      <textarea class="reflection-textarea" id="ref3" placeholder="מה עמד מאחורי הבחירה?"></textarea>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="submitReflection()">שלח ועבור לסיכום</button>
+  `;
+}
+
+function submitReflection() {
+  const r1 = document.getElementById('ref1').value.trim();
+  const r2 = document.getElementById('ref2').value.trim();
+  const r3 = document.getElementById('ref3').value.trim();
+
+  if (r1) STATE.journal.push({ date: new Date().toLocaleDateString('he-IL'), text: `מה למדתי: ${r1}`, type: 'reflection' });
+  if (r2) STATE.journal.push({ date: new Date().toLocaleDateString('he-IL'), text: `דמות שהרשימה: ${r2}`, type: 'reflection' });
+  if (r3) STATE.journal.push({ date: new Date().toLocaleDateString('he-IL'), text: `בחירה קשה: ${r3}`, type: 'reflection' });
+
+  STATE.coins.autonomy += 3;
+  STATE.coins.motive += 2;
+  STATE.xp += 40;
+  STATE.phase = 'reflection_done';
+  save();
+
+  showResults();
+}
+
+// ==============================================
+// RESULTS
+// ==============================================
+function showResults() {
+  showScreen('results');
+  const container = document.getElementById('resultsContent');
+  const total = Object.values(STATE.coins).reduce((a,b) => a+b, 0);
+
+  const coinLabels = {
+    belong: { name: 'שייכות', color: 'var(--belong)' },
+    respect: { name: 'כבוד', color: 'var(--respect)' },
+    motive: { name: 'מוטיבציה', color: 'var(--motive)' },
+    capable: { name: 'מסוגלות', color: 'var(--capable)' },
+    autonomy: { name: 'אוטונומיה', color: 'var(--autonomy)' }
+  };
+
+  // Determine dominant dimension
+  const sorted = Object.entries(STATE.coins).sort((a,b) => b[1] - a[1]);
+  const dominant = sorted[0][0];
+
+  container.innerHTML = `
+    <div class="results-header">
+      <h2>מחוז הקשר — הושלם!</h2>
+      <p>סיימת את השלב הראשון של מסע המתקנים</p>
+    </div>
+
+    <div class="results-coins">
+      ${Object.entries(STATE.coins).map(([key, val]) => `
+        <div class="result-coin">
+          <div class="rc-icon" style="background:${coinLabels[key].color}20">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="${coinLabels[key].color}"><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <div class="rc-num" style="color:${coinLabels[key].color}">${val}</div>
+          <div class="rc-label">${coinLabels[key].name}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="result-badge">
+      <div style="font-size:2rem;margin-bottom:8px">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <h3>מתקן דרכים — רמה 1</h3>
+      <p>הכוח הדומיננטי שלך: <strong style="color:${coinLabels[dominant].color}">${coinLabels[dominant].name}</strong></p>
+    </div>
+
+    <div class="results-summary">
+      <h4>מה גילית במסע?</h4>
+      <p>פגשת שלושה אנשים — כל אחד עם סיפור אחר. למדת שהקשבה אמיתית היא הכלי הכי חזק שיש. שבחירה בכבוד ובסבלנות פותחת דלתות שכוח לעולם לא יפתח.</p>
+      <p style="margin-top:8px">הממד הכי חזק שלך הוא <strong style="color:${coinLabels[dominant].color}">${coinLabels[dominant].name}</strong> — וזה אומר שיש לך כוח אמיתי ב${dominant==='belong'?'יצירת קשרים':dominant==='respect'?'הקשבה והבנת האחר':dominant==='motive'?'מציאת משמעות':dominant==='capable'?'יוזמה ופעולה':'קבלת החלטות'}.</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary" onclick="showTab('colony')" style="width:100%">חזרה למושבה</button>
+      <button class="btn btn-secondary" onclick="showTab('journal')" style="width:100%">צפה ביומן המסע</button>
+    </div>
+  `;
+
+  spawnParticles();
+}
+
+// ==============================================
+// JOURNAL & PROFILE
+// ==============================================
+function renderJournal() {
+  const container = document.getElementById('journalContent');
+  if (STATE.journal.length === 0) {
+    container.innerHTML = '<div class="journal-title">יומן המסע</div><div class="journal-empty">היומן ריק. צא למסע ותרשום את חוויותיך.</div>';
+    return;
+  }
+
+  container.innerHTML = '<div class="journal-title">יומן המסע</div>' +
+    STATE.journal.slice().reverse().map(e => `
+      <div class="journal-entry">
+        <div class="je-date">${e.date || ''}</div>
+        <div class="je-text">${e.text}</div>
+      </div>
+    `).join('');
+}
+
+function renderProfile() {
+  const container = document.getElementById('profileContent');
+  const total = Object.values(STATE.coins).reduce((a,b) => a+b, 0);
+  const maxCoin = Math.max(...Object.values(STATE.coins), 1);
+
+  const coinLabels = {
+    belong: { name: 'שייכות', color: 'var(--belong)' },
+    respect: { name: 'כבוד', color: 'var(--respect)' },
+    motive: { name: 'מוטיבציה', color: 'var(--motive)' },
+    capable: { name: 'מסוגלות', color: 'var(--capable)' },
+    autonomy: { name: 'אוטונומיה', color: 'var(--autonomy)' }
+  };
+
+  container.innerHTML = `
+    <div class="profile-card">
+      <div class="profile-avatar-big">${STATE.avatar}</div>
+      <h2>${STATE.name}</h2>
+      <div class="profile-title">מתקן דרכים ${STATE.cls ? '— ' + STATE.cls : ''}</div>
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="ps-num" style="color:var(--xp)">${STATE.xp}</div><div class="ps-label">XP</div></div>
+        <div class="profile-stat"><div class="ps-num" style="color:var(--gold)">${total}</div><div class="ps-label">מטבעות</div></div>
+        <div class="profile-stat"><div class="ps-num" style="color:var(--success)">${STATE.npcsCompleted.length}/3</div><div class="ps-label">שיחות</div></div>
+      </div>
+    </div>
+    <div class="dimension-bars">
+      <h3>חמשת הממדים</h3>
+      ${Object.entries(STATE.coins).map(([key, val]) => `
+        <div class="dim-row">
+          <div class="dim-label" style="color:${coinLabels[key].color}">${coinLabels[key].name}</div>
+          <div class="dim-bar"><div class="dim-fill" style="width:${Math.round((val/Math.max(maxCoin,1))*100)}%;background:${coinLabels[key].color}"></div></div>
+          <div style="font-size:.78rem;font-weight:700;min-width:24px;text-align:left">${val}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ==============================================
+// POPUP & EFFECTS
+// ==============================================
+function showPopup({ icon, title, text, coins, btnText, onClose }) {
+  const overlay = document.getElementById('popup');
+  const content = document.getElementById('popupContent');
+
+  let coinsHtml = '';
+  if (coins && Object.keys(coins).length) {
+    const coinColors = { belong:'var(--belong)', respect:'var(--respect)', motive:'var(--motive)', capable:'var(--capable)', autonomy:'var(--autonomy)' };
+    const coinNames = { belong:'שייכות', respect:'כבוד', motive:'מוטיבציה', capable:'מסוגלות', autonomy:'אוטונומיה' };
+    coinsHtml = `<div class="popup-coins">${Object.entries(coins).map(([k,v]) => `<div class="popup-coin" style="color:${coinColors[k]}">+${v} ${coinNames[k]}</div>`).join('')}</div>`;
+  }
+
+  content.innerHTML = `
+    <div class="popup-icon">${icon || ''}</div>
+    <h3>${title}</h3>
+    <p>${text}</p>
+    ${coinsHtml}
+    <button class="btn btn-primary" onclick="closePopup()">${btnText || 'המשך'}</button>
+  `;
+
+  overlay.classList.add('show');
+  window._popupOnClose = onClose;
+}
+
+function closePopup() {
+  document.getElementById('popup').classList.remove('show');
+  if (window._popupOnClose) {
+    window._popupOnClose();
+    window._popupOnClose = null;
+  }
+}
+
+function showXPFloat(text, type) {
+  const colors = { belong:'var(--belong)', respect:'var(--respect)', motive:'var(--motive)', capable:'var(--capable)', autonomy:'var(--autonomy)' };
+  const el = document.createElement('div');
+  el.className = 'xp-float';
+  el.textContent = text;
+  el.style.color = colors[type] || 'var(--xp)';
+  el.style.left = (30 + Math.random() * 40) + '%';
+  el.style.top = (30 + Math.random() * 20) + '%';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+
+function spawnParticles() {
+  const c = document.getElementById('particles');
+  const colors = ['#FFD700','#00E5FF','#A07DE0','#7AB648','#E06090'];
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `left:${Math.random()*100}%;top:${30+Math.random()*30}%;width:${4+Math.random()*6}px;height:${4+Math.random()*6}px;background:${colors[Math.floor(Math.random()*colors.length)]};animation-delay:${Math.random()*0.5}s;animation-duration:${0.8+Math.random()*0.5}s`;
+    c.appendChild(p);
+    setTimeout(() => p.remove(), 1500);
+  }
+}
+
+// ==============================================
+// INIT
+// ==============================================
+initStars();
+drawLogo();
+
+// Check for saved game
+if (load() && STATE.name) {
+  // Resume
+  if (STATE.npcsCompleted.length > 0 || STATE.phase !== 'welcome') {
+    showScreen('colony');
+    renderColony();
+    updateHUD();
+  }
+}
+
+// Enable start button
+document.getElementById('nameInput').addEventListener('input', function() {
+  document.getElementById('startBtn').disabled = !this.value.trim();
+});
+
+// Close popup on overlay click
+document.getElementById('popup').addEventListener('click', function(e) {
+  if (e.target === this) closePopup();
+});
+</script>
+</body>
+</html>
