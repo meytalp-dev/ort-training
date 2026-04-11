@@ -98,7 +98,9 @@ function doGet(e) {
       case 'getDashboard':  result = getDashboard_(); break;
       case 'getQuota':      result = getQuota_(e.parameter.issuer); break;
       case 'getRewards':    result = getRewards_(); break;
-      default:              result = { result: 'ok', message: 'investment-bank API v1' };
+      case 'issue':         result = issueInvestment_(e.parameter); break;
+      case 'redeem':        result = redeemReward_(e.parameter); break;
+      default:              result = { result: 'ok', message: 'investment-bank API v2' };
     }
     return ContentService
       .createTextOutput(callback + '(' + JSON.stringify(result) + ')')

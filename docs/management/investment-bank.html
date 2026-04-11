@@ -516,29 +516,37 @@ function syncToServer(ticket, onResult){
     if (onResult) onResult({ result: 'offline' });
     return;
   }
-  // text/plain = simple request, ללא preflight. Apps Script Web App מחזיר
-  // Access-Control-Allow-Origin: * אוטומטית ומאפשר לקרוא את התגובה.
-  var body = { action: 'issue' };
-  for (var k in ticket) if (Object.prototype.hasOwnProperty.call(ticket, k)) body[k] = ticket[k];
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: {'Content-Type': 'text/plain;charset=utf-8'},
-    body: JSON.stringify(body)
-  }).then(function(r){ return r.json(); }).then(function(data){
-    if (data && data.result === 'success'){
-      // סימון כ-synced + שמירת ה-id של השרת
-      var log = JSON.parse(localStorage.getItem(STORAGE_KEY_LOCAL) || '[]');
-      var item = log.find(function(t){ return t.id === ticket.id; });
-      if (item) { item.synced = true; item.server_id = data.id; }
-      localStorage.setItem(STORAGE_KEY_LOCAL, JSON.stringify(log));
-      if (onResult) onResult(data);
-    } else {
-      if (onResult) onResult(data || { result: 'error', message: 'תגובה לא תקינה מהשרת' });
+  // JSONP GET — הדרך האמינה היחידה לקרוא תשובה מ-Apps Script (POST נופל ב-302 redirect)
+  var cb = 'issueCb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  var timeoutId = setTimeout(function(){
+    if (window[cb]) {
+      delete window[cb];
+      if (onResult) onResult({ result: 'error', message: 'השרת לא ענה בזמן — ננסה שוב' });
     }
-  }).catch(function(err){
-    console.warn('סנכרון נכשל — הפתק נשמר רק מקומית', err);
-    if (onResult) onResult({ result: 'error', message: 'שגיאת רשת — הפתק נשמר במכשיר זה בלבד' });
-  });
+  }, 15000);
+
+  window[cb] = function(data){
+    clearTimeout(timeoutId);
+    delete window[cb];
+    if (data && data.result === 'success' && onResult) onResult(data);
+    else if (onResult) onResult(data || { result: 'error', message: 'תגובה לא תקינה מהשרת' });
+  };
+
+  // בניית ה-URL עם כל השדות כ-query params
+  var params = ['action=issue', 'callback=' + cb];
+  for (var k in ticket) {
+    if (Object.prototype.hasOwnProperty.call(ticket, k) && ticket[k] != null) {
+      params.push(encodeURIComponent(k) + '=' + encodeURIComponent(ticket[k]));
+    }
+  }
+  var script = document.createElement('script');
+  script.src = APPS_SCRIPT_URL + '?' + params.join('&');
+  script.onerror = function(){
+    clearTimeout(timeoutId);
+    delete window[cb];
+    if (onResult) onResult({ result: 'error', message: 'שגיאת רשת — בדקי חיבור' });
+  };
+  document.head.appendChild(script);
 }
 
 function openPrintPreview(ticket){
