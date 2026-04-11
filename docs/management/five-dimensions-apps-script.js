@@ -33,6 +33,9 @@ function doGet(e) {
       case 'getAllPulse':
         result = getAllPulse_();
         break;
+      case 'getForm':
+        result = getForm_(e.parameter.sheet);
+        break;
       default:
         result = { result: 'ok', message: 'five-dimensions API active' };
     }

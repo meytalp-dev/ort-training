@@ -589,6 +589,14 @@ details[open] summary .arrow{transform:rotate(180deg)}
       <h3>הועבר לידיעת מיטל — תודה!</h3>
       <p>שתהיה חזרה טובה — ביחד נעשה את זה נכון.</p>
     </div>
+
+    <div class="ack-list-card" id="ackListCard">
+      <div class="ack-list-head">
+        <h3>מי כבר אישרו</h3>
+        <span class="ack-list-count" id="ackListCount">טוען…</span>
+      </div>
+      <div id="ackListBody" class="ack-list-body">טוען רשימה…</div>
+    </div>
   </div>
 
   <style>
@@ -607,6 +615,15 @@ details[open] summary .arrow{transform:rotate(180deg)}
     .ack-success-icon svg{width:36px;height:36px}
     .ack-success h3{color:var(--dream);font-size:1.4rem;margin-bottom:8px}
     .ack-success p{color:var(--text-mid)}
+    .ack-list-card{margin-top:22px;background:#fff;border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;box-shadow:var(--shadow-sm)}
+    .ack-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .ack-list-head h3{margin:0;color:var(--dream);font-size:1.1rem}
+    .ack-list-count{background:var(--lead-pale);color:var(--lead);padding:4px 12px;border-radius:999px;font-size:.85rem;font-weight:600}
+    .ack-list-body{color:var(--text-mid);font-size:.95rem;line-height:1.7}
+    .ack-list-body ul{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}
+    .ack-list-body li{background:var(--cream);padding:8px 14px;border-radius:999px;font-size:.92rem;color:var(--text);display:flex;align-items:center;gap:8px}
+    .ack-list-body li svg{width:14px;height:14px;color:var(--lead);flex-shrink:0}
+    .ack-list-empty{color:var(--text-mid);font-style:italic}
   </style>
 
   <script>
@@ -614,6 +631,42 @@ details[open] summary .arrow{transform:rotate(180deg)}
     const ACK_API = 'https://script.google.com/macros/s/AKfycbwzddi-gCLNdZBLYIhz17w_O5HESymDOT5FRJD_PphE-uLUfvNmBdeBfIujuVfz8O-IgQ/exec';
     const ACK_SHEET = 'אישור קריאה — שבוע חזרה';
     const CORRECT = { q1: 'a', q2: 'b' };
+
+    function loadAckList(){
+      const body = document.getElementById('ackListBody');
+      const count = document.getElementById('ackListCount');
+      const cbName = 'ackList_' + Date.now();
+      window[cbName] = function(data){
+        delete window[cbName];
+        if(!data || data.result !== 'success' || !data.rows){
+          body.innerHTML = '<span class="ack-list-empty">לא הצלחתי לטעון את הרשימה כרגע.</span>';
+          count.textContent = '—';
+          return;
+        }
+        const rows = data.rows;
+        count.textContent = rows.length + ' מתוך 10';
+        if(rows.length === 0){
+          body.innerHTML = '<span class="ack-list-empty">עדיין אף אחד לא אישר.</span>';
+          return;
+        }
+        const items = rows.map(function(r){
+          const name = r['שם'] || '—';
+          const date = r['תאריך'] ? new Date(r['תאריך']).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}) : '';
+          return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' + name + (date ? ' · ' + date : '') + '</li>';
+        }).join('');
+        body.innerHTML = '<ul>' + items + '</ul>';
+      };
+      const url = ACK_API + '?action=getForm&sheet=' + encodeURIComponent(ACK_SHEET) + '&callback=' + cbName;
+      const s = document.createElement('script');
+      s.src = url;
+      s.onerror = function(){
+        delete window[cbName];
+        body.innerHTML = '<span class="ack-list-empty">לא הצלחתי לטעון את הרשימה כרגע.</span>';
+        count.textContent = '—';
+      };
+      document.head.appendChild(s);
+    }
+    document.addEventListener('DOMContentLoaded', loadAckList);
 
     window.submitAck = async function(){
       const name = document.getElementById('ackName').value;
@@ -659,6 +712,7 @@ details[open] summary .arrow{transform:rotate(180deg)}
         document.getElementById('ackCard').style.display = 'none';
         document.getElementById('ackSuccess').style.display = 'block';
         document.getElementById('ackSuccess').scrollIntoView({behavior:'smooth',block:'center'});
+        setTimeout(loadAckList, 1500);
       } catch(e){
         btn.disabled = false;
         btn.textContent = 'אישור ושליחה';
