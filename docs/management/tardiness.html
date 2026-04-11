@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מעקב איחורים — אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@400;600;800&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="student-data.js"></script>
+<style>
+  :root{
+    --cyan:#06b6d4; --pink:#ec4899; --teal:#14b8a6;
+    --cream:#fef9f3; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
+    --border:#e5e7eb; --success:#10b981; --warning:#f59e0b; --danger:#ef4444;
+    --shadow:0 8px 24px rgba(6,182,212,.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Assistant',sans-serif; background:var(--cream); color:var(--text); min-height:100vh}
+
+  .login-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px}
+  .login-card{
+    background:var(--card); border-radius:28px; padding:40px; max-width:520px; width:100%;
+    box-shadow:var(--shadow); text-align:center;
+  }
+  .login-card h1{
+    font-family:'Playpen Sans Hebrew',sans-serif; font-size:1.8rem; font-weight:800;
+    color:var(--cyan); margin-bottom:8px;
+  }
+  .login-card .sub{color:var(--muted); margin-bottom:24px}
+  .role-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px}
+  .role-btn{
+    padding:16px; border:2px solid var(--border); background:var(--card); border-radius:16px;
+    cursor:pointer; font-family:inherit; font-size:.95rem; font-weight:700; color:var(--text);
+    transition:.2s;
+  }
+  .role-btn:hover{transform:translateY(-2px); box-shadow:var(--shadow)}
+  .role-btn.selected{border-color:var(--cyan); background:rgba(6,182,212,.1); color:var(--cyan)}
+  .login-card select, .login-card input{
+    width:100%; padding:14px; border:1px solid var(--border); border-radius:14px;
+    font-family:inherit; font-size:1rem; margin-bottom:12px;
+  }
+  .login-card button.enter{
+    width:100%; padding:16px; background:var(--cyan); color:#fff; border:none;
+    border-radius:14px; font-family:inherit; font-size:1.05rem; font-weight:800; cursor:pointer;
+  }
+  .login-card button.enter:disabled{background:#d1d5db; cursor:not-allowed}
+
+  .app-screen{padding:20px; max-width:1300px; margin:0 auto}
+  .app-screen.hidden{display:none}
+
+  .topbar{
+    background:linear-gradient(135deg,#06b6d4,#14b8a6); color:#fff;
+    border-radius:24px; padding:22px 28px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+  }
+  .topbar h1{font-family:'Playpen Sans Hebrew',sans-serif; font-size:1.8rem; font-weight:800}
+  .topbar .user-chip{
+    background:rgba(255,255,255,.2); padding:8px 16px; border-radius:100px;
+    font-size:.9rem; font-weight:700;
+  }
+
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:20px}
+  .stat{
+    background:var(--card); border-radius:20px; padding:20px; border:1px solid var(--border);
+    box-shadow:0 2px 8px rgba(0,0,0,.03);
+  }
+  .stat .num{font-family:'Playpen Sans Hebrew',sans-serif; font-size:2.4rem; font-weight:800; line-height:1}
+  .stat .lbl{color:var(--muted); font-size:.9rem; margin-top:6px; font-weight:600}
+  .stat.cyan .num{color:var(--cyan)}
+  .stat.warning .num{color:var(--warning)}
+  .stat.success .num{color:var(--success)}
+  .stat.danger .num{color:var(--danger)}
+
+  .section{
+    background:var(--card); border-radius:24px; padding:24px; margin-bottom:20px;
+    border:1px solid var(--border); box-shadow:0 4px 14px rgba(0,0,0,.04);
+  }
+  .section h2{
+    font-family:'Playpen Sans Hebrew',sans-serif; font-size:1.3rem; font-weight:800;
+    color:var(--cyan); margin-bottom:16px;
+  }
+  table{width:100%; border-collapse:collapse; font-size:.95rem}
+  th{background:#f0f9ff; padding:12px 10px; text-align:right; font-weight:700; color:var(--text); border-bottom:2px solid #dbeafe}
+  td{padding:14px 10px; border-bottom:1px solid var(--border)}
+  tr:hover{background:#fafcfe}
+
+  .badge{display:inline-block; padding:4px 12px; border-radius:100px; font-size:.78rem; font-weight:700}
+  .badge-in{background:#dbeafe; color:#1e40af}
+  .badge-done{background:#d1fae5; color:#065f46}
+  .badge-abandoned{background:#fee2e2; color:#991b1b}
+  .badge-justified{background:#fef3c7; color:#92400e}
+  .esc-1{color:var(--warning); font-weight:700}
+  .esc-2{color:var(--danger); font-weight:700}
+  .esc-3{color:#7f1d1d; font-weight:800; background:#fee2e2; padding:2px 8px; border-radius:6px}
+
+  .row-btn{
+    padding:8px 14px; background:var(--cyan); color:#fff; border:none; border-radius:10px;
+    font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer; margin-inline-start:4px;
+  }
+  .row-btn.warn{background:var(--warning)}
+  .row-btn.ghost{background:transparent; color:var(--cyan); border:1px solid var(--cyan)}
+  .row-btn:disabled{background:#d1d5db; cursor:not-allowed; border:none; color:#9ca3af}
+
+  .modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; padding:20px; z-index:50}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--card); border-radius:24px; padding:28px; max-width:480px; width:100%}
+  .modal h3{font-family:'Playpen Sans Hebrew',sans-serif; font-size:1.3rem; margin-bottom:12px; color:var(--cyan)}
+  .modal p{margin-bottom:14px; color:var(--muted)}
+  .modal textarea{
+    width:100%; padding:12px; border:1px solid var(--border); border-radius:12px;
+    font-family:inherit; min-height:100px; resize:vertical;
+  }
+  .modal-actions{display:flex; gap:10px; margin-top:16px}
+  .modal-actions button{flex:1; padding:12px; border-radius:12px; border:none; font-family:inherit; font-weight:700; cursor:pointer}
+  .modal-actions .cancel{background:#e5e7eb; color:var(--text)}
+  .modal-actions .confirm{background:var(--success); color:#fff}
+
+  .empty{text-align:center; padding:40px 20px; color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>מעקב איחורים</h1>
+    <div class="sub">אורט בית הערבה — כניסה לפי תפקיד</div>
+    <div class="role-grid">
+      <button class="role-btn" data-role="principal" onclick="selectRole('principal')">מנהלת</button>
+      <button class="role-btn" data-role="secretary" onclick="selectRole('secretary')">מזכירה</button>
+      <button class="role-btn" data-role="guard" onclick="selectRole('guard')">מנו / שומר</button>
+      <button class="role-btn" data-role="teacher" onclick="selectRole('teacher')">מחנכת</button>
+      <button class="role-btn" data-role="counselor" onclick="selectRole('counselor')">יועצת / רכזת שכבה</button>
+    </div>
+    <div id="loginFields"></div>
+    <button class="enter" id="enterBtn" disabled onclick="enterApp()">כניסה</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app-screen hidden" id="appScreen">
+  <div class="topbar">
+    <h1>מעקב איחורי בוקר</h1>
+    <div class="user-chip" id="userChip"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat cyan"><div class="num" id="statToday">0</div><div class="lbl">איחורים היום</div></div>
+    <div class="stat warning"><div class="num" id="statInCenter">0</div><div class="lbl">במרכז למידה עכשיו</div></div>
+    <div class="stat success"><div class="num" id="statCompleted">0</div><div class="lbl">השלימו</div></div>
+    <div class="stat danger"><div class="num" id="statDebts">0</div><div class="lbl">חובות פתוחים</div></div>
+  </div>
+
+  <div class="section">
+    <h2>אירועי היום</h2>
+    <div id="todayTable"></div>
+  </div>
+
+  <div class="section">
+    <h2>חובות פתוחים (מדרג)</h2>
+    <div id="debtsTable"></div>
+  </div>
+</div>
+
+<!-- Justify modal -->
+<div class="modal-bg" id="justifyModal">
+  <div class="modal">
+    <h3>אישור איחור מוצדק</h3>
+    <p id="justifyStudent"></p>
+    <textarea id="justifyReason" placeholder="סיבה (חובה): למשל — אירוע משפחתי, תור רפואי, הסעה שבוטלה..."></textarea>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeJustify()">ביטול</button>
+      <button class="confirm" onclick="confirmJustify()">אישור</button>
+    </div>
+  </div>
+</div>
+
+<!-- Force release modal -->
+<div class="modal-bg" id="releaseModal">
+  <div class="modal">
+    <h3>שחרור מוקדם ממרכז למידה</h3>
+    <p id="releaseStudent"></p>
+    <p style="color:var(--warning); font-weight:700">התלמיד עוד לא השלים את כל הזמן הנדרש. שחרור מוקדם יסגור את האירוע מיידית.</p>
+    <textarea id="releaseReason" placeholder="סיבה (חובה)"></textarea>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeForceRelease()">ביטול</button>
+      <button class="confirm" onclick="confirmForceRelease()">שחרר</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'REPLACE_WITH_DEPLOYED_APPS_SCRIPT_URL';
+
+let session = { role: null, name: null, filter: null };
+let currentJustifyEvent = null;
+let currentReleaseEvent = null;
+
+// ============ LOGIN ============
+function selectRole(role){
+  session.role = role;
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.toggle('selected', b.dataset.role === role));
+  const fields = document.getElementById('loginFields');
+  fields.innerHTML = '';
+  if (role === 'principal'){
+    session.name = 'מיטל פלג';
+    document.getElementById('enterBtn').disabled = false;
+  } else if (role === 'secretary'){
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">בחרי...</option><option value="מיטל">מיטל</option><option value="יסכה">יסכה</option>';
+    sel.onchange = () => { session.name = sel.value; document.getElementById('enterBtn').disabled = !sel.value; };
+    fields.appendChild(sel);
+  } else if (role === 'guard'){
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">בחרי...</option><option value="מנו">מנו</option><option value="יעקב">יעקב</option>';
+    sel.onchange = () => { session.name = sel.value; document.getElementById('enterBtn').disabled = !sel.value; };
+    fields.appendChild(sel);
+  } else if (role === 'teacher'){
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">בחרי מחנכת...</option>';
+    TEACHERS.forEach(t => sel.innerHTML += '<option value="'+t.name+'|'+t.classes[0]+'">'+t.name+'</option>');
+    sel.onchange = () => {
+      const [name, cls] = sel.value.split('|');
+      session.name = name; session.filter = { type:'class', value: cls };
+      document.getElementById('enterBtn').disabled = !sel.value;
+    };
+    fields.appendChild(sel);
+  } else if (role === 'counselor'){
+    const sel = document.createElement('select');
+    sel.innerHTML = '<option value="">בחרי...</option>';
+    COUNSELORS.forEach(c => sel.innerHTML += '<option value="'+c.name+'|'+c.grades.join(',')+'">'+c.name+' ('+c.grades.join(', ')+')</option>');
+    sel.onchange = () => {
+      const [name, grades] = sel.value.split('|');
+      session.name = name; session.filter = { type:'grades', value: grades.split(',') };
+      document.getElementById('enterBtn').disabled = !sel.value;
+    };
+    fields.appendChild(sel);
+  }
+}
+
+function enterApp(){
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+  document.getElementById('userChip').textContent = session.name + ' — ' + roleLabel(session.role);
+  loadData();
+}
+
+function roleLabel(r){
+  return {principal:'מנהלת', secretary:'מזכירה', guard:'שומר', teacher:'מחנכת', counselor:'יועצת/רכזת'}[r] || r;
+}
+function canJustify(){
+  return session.role === 'teacher' || session.role === 'principal' || session.role === 'guard';
+}
+function canForceRelease(){
+  return session.role === 'guard' || session.role === 'principal' || session.role === 'secretary';
+}
+
+// ============ DATA ============
+function jsonp(action, params){
+  return new Promise((resolve, reject) => {
+    const cb = 'cb' + Date.now() + Math.floor(Math.random()*1000);
+    window[cb] = (data) => { delete window[cb]; s.remove(); resolve(data); };
+    let url = APPS_SCRIPT_URL + '?action=' + action + '&callback=' + cb;
+    if (params) for (const k in params) url += '&' + k + '=' + encodeURIComponent(params[k]);
+    const s = document.createElement('script');
+    s.src = url;
+    s.onerror = () => { delete window[cb]; s.remove(); reject(new Error('network')); };
+    document.body.appendChild(s);
+  });
+}
+
+async function loadData(){
+  try {
+    const today = await jsonp('todayEvents');
+    const debts = await jsonp('openDebts');
+    renderToday(today.events || []);
+    renderDebts(debts.debts || []);
+    renderStats(today.events || [], debts.debts || []);
+  } catch(err){
+    document.getElementById('todayTable').innerHTML = '<div class="empty">שגיאת טעינה: '+err.message+'</div>';
+  }
+}
+
+function filterEvents(events){
+  if (!session.filter) return events;
+  if (session.filter.type === 'class'){
+    return events.filter(e => e.cls === session.filter.value);
+  }
+  if (session.filter.type === 'grades'){
+    const grades = session.filter.value;
+    return events.filter(e => grades.some(g => e.cls.indexOf(g) === 0));
+  }
+  return events;
+}
+
+function renderStats(today, debts){
+  const filtered = filterEvents(today);
+  document.getElementById('statToday').textContent = filtered.length;
+  document.getElementById('statInCenter').textContent = filtered.filter(e => e.status === 'in_learning_center').length;
+  document.getElementById('statCompleted').textContent = filtered.filter(e => e.status === 'completed').length;
+  document.getElementById('statDebts').textContent = filterEvents(debts).length;
+}
+
+function statusBadge(status){
+  const map = {
+    in_learning_center: ['במרכז למידה', 'badge-in'],
+    completed: ['השלים', 'badge-done'],
+    abandoned: ['לא נשאר', 'badge-abandoned'],
+    justified: ['מוצדק', 'badge-justified']
+  };
+  const [txt, cls] = map[status] || [status, 'badge-in'];
+  return '<span class="badge '+cls+'">'+txt+'</span>';
+}
+
+function fmtTime(ts){
+  if (!ts) return '-';
+  const d = new Date(ts);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+
+function renderToday(events){
+  const filtered = filterEvents(events);
+  const el = document.getElementById('todayTable');
+  if (filtered.length === 0){ el.innerHTML = '<div class="empty">אין איחורים היום</div>'; return; }
+  let html = '<table><thead><tr><th>שעה</th><th>תלמיד</th><th>כיתה</th><th>איחור</th><th>נדרש</th><th>ציון</th><th>סטטוס</th><th>פעולות</th></tr></thead><tbody>';
+  filtered.forEach(e => {
+    const isOpen = e.status === 'in_learning_center' || e.status === 'pending_lc' || e.status === 'abandoned';
+    const canJ = canJustify() && isOpen;
+    const canR = canForceRelease() && (e.status === 'in_learning_center' || e.status === 'pending_lc');
+    let actions = '';
+    if (canJ) actions += '<button class="row-btn warn" onclick="openJustify(\''+e.id+'\',\''+e.studentName+'\')">מוצדק</button>';
+    if (canR) actions += '<button class="row-btn" onclick="openForceRelease(\''+e.id+'\',\''+e.studentName+'\')">שחרור</button>';
+    html += '<tr>'
+      + '<td>'+fmtTime(e.timestampArrived)+'</td>'
+      + '<td>'+e.studentName+'</td>'
+      + '<td>'+e.cls+'</td>'
+      + '<td>'+e.lateMinutes+' דק</td>'
+      + '<td>'+e.requiredMinutes+' דק</td>'
+      + '<td>'+(e.taskScore||'-')+'</td>'
+      + '<td>'+statusBadge(e.status)+'</td>'
+      + '<td>'+actions+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function renderDebts(debts){
+  const filtered = filterEvents(debts);
+  const el = document.getElementById('debtsTable');
+  if (filtered.length === 0){ el.innerHTML = '<div class="empty">אין חובות פתוחים</div>'; return; }
+  let html = '<table><thead><tr><th>תלמיד</th><th>כיתה</th><th>תאריך</th><th>רמת מדרג</th><th>סטטוס</th><th>פעולות</th></tr></thead><tbody>';
+  filtered.forEach(e => {
+    const escClass = 'esc-'+e.escalationLevel;
+    const escText = {1:'יום 1 — לא נשאר',2:'יום 2 — הודעה להורים',3:'יום 3 — יועצת ורכזת'}[e.escalationLevel] || e.escalationLevel;
+    const canJ = canJustify();
+    html += '<tr>'
+      + '<td>'+e.studentName+'</td>'
+      + '<td>'+e.cls+'</td>'
+      + '<td>'+new Date(e.timestampArrived).toLocaleDateString('he-IL')+'</td>'
+      + '<td><span class="'+escClass+'">'+escText+'</span></td>'
+      + '<td>'+statusBadge(e.status)+'</td>'
+      + '<td>'+(canJ ? '<button class="row-btn warn" onclick="openJustify(\''+e.id+'\',\''+e.studentName+'\')">אשר מוצדק</button>' : '')+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ============ JUSTIFY ============
+function openJustify(eventId, studentName){
+  currentJustifyEvent = eventId;
+  document.getElementById('justifyStudent').textContent = 'תלמיד: ' + studentName;
+  document.getElementById('justifyReason').value = '';
+  document.getElementById('justifyModal').classList.add('show');
+}
+function closeJustify(){
+  document.getElementById('justifyModal').classList.remove('show');
+  currentJustifyEvent = null;
+}
+async function confirmJustify(){
+  const reason = document.getElementById('justifyReason').value.trim();
+  if (!reason){ alert('נדרש לכתוב סיבה'); return; }
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({
+        action:'justify', eventId: currentJustifyEvent,
+        role: session.role, staffName: session.name, reason: reason
+      })
+    });
+    const data = await res.json();
+    if (!data.ok){ alert('שגיאה: '+data.error); return; }
+    closeJustify();
+    loadData();
+  } catch(err){
+    alert('שגיאה: '+err.message);
+  }
+}
+
+// ============ FORCE RELEASE ============
+function openForceRelease(eventId, studentName){
+  currentReleaseEvent = eventId;
+  document.getElementById('releaseStudent').textContent = 'תלמיד: ' + studentName;
+  document.getElementById('releaseReason').value = '';
+  document.getElementById('releaseModal').classList.add('show');
+}
+function closeForceRelease(){
+  document.getElementById('releaseModal').classList.remove('show');
+  currentReleaseEvent = null;
+}
+async function confirmForceRelease(){
+  const reason = document.getElementById('releaseReason').value.trim();
+  if (!reason){ alert('נדרש לכתוב סיבה'); return; }
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain'},
+      body: JSON.stringify({
+        action:'forceRelease', eventId: currentReleaseEvent,
+        role: session.role, staffName: session.name, reason: reason
+      })
+    });
+    const data = await res.json();
+    if (!data.ok){ alert('שגיאה: '+data.error); return; }
+    closeForceRelease();
+    loadData();
+  } catch(err){ alert('שגיאה: '+err.message); }
+}
+
+// refresh every 60s
+setInterval(() => { if (!document.getElementById('appScreen').classList.contains('hidden')) loadData(); }, 60000);
+</script>
+</body>
+</html>

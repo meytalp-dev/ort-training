@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הפקת QR אישי — אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@400;600;800&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="student-data.js"></script>
+<style>
+  :root{--cyan:#06b6d4; --pink:#ec4899; --cream:#fef9f3; --card:#ffffff; --text:#1f2937; --muted:#6b7280; --border:#e5e7eb}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Assistant',sans-serif; background:var(--cream); color:var(--text); padding:24px}
+  .wrap{max-width:1000px; margin:0 auto}
+  h1{font-family:'Playpen Sans Hebrew',sans-serif; font-size:2rem; color:var(--cyan); margin-bottom:8px}
+  .sub{color:var(--muted); margin-bottom:24px}
+  .controls{background:var(--card); padding:20px; border-radius:20px; border:1px solid var(--border); margin-bottom:24px; display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+  .controls select, .controls input{padding:10px 14px; border:1px solid var(--border); border-radius:12px; font-family:inherit; font-size:.95rem}
+  .controls button{padding:12px 20px; background:var(--cyan); color:#fff; border:none; border-radius:12px; font-family:inherit; font-weight:700; cursor:pointer}
+  .controls button.secondary{background:var(--pink)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px}
+  .qr-card{
+    background:var(--card); border:2px dashed var(--border); border-radius:20px;
+    padding:20px; text-align:center; page-break-inside:avoid;
+  }
+  .qr-card img{width:180px; height:180px; display:block; margin:0 auto 12px}
+  .qr-card .name{font-weight:800; font-size:1.1rem; font-family:'Playpen Sans Hebrew',sans-serif}
+  .qr-card .meta{font-size:.85rem; color:var(--muted); margin-top:4px}
+  .qr-card .id-num{font-size:.8rem; color:var(--cyan); margin-top:6px; font-family:monospace}
+  @media print{
+    body{background:#fff; padding:10px}
+    .controls, h1, .sub{display:none}
+    .qr-card{border-color:#ccc}
+    .grid{grid-template-columns:repeat(3,1fr); gap:12px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>הפקת QR אישי לתלמידים</h1>
+  <div class="sub">סריקת ה-QR בעמדת הכניסה ובמרכז הלמידה. הדפסת הכרטיסים: Ctrl+P</div>
+
+  <div class="controls">
+    <label>סינון לפי כיתה:</label>
+    <select id="classFilter" onchange="render()">
+      <option value="">כל הכיתות</option>
+    </select>
+    <input type="text" id="searchInput" placeholder="חיפוש לפי שם..." oninput="render()">
+    <button onclick="window.print()">הדפס</button>
+    <button class="secondary" onclick="downloadAll()">הורד הכל (ZIP)</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+const classes = [...new Set(STUDENTS.map(s => s.cls))].sort();
+const sel = document.getElementById('classFilter');
+classes.forEach(c => sel.innerHTML += '<option value="'+c+'">'+c+'</option>');
+
+// בונה URL אישי של learning-center.html עם מזהה התלמיד
+function buildStudentUrl(studentId){
+  const base = window.location.origin + window.location.pathname.replace(/student-qr\.html.*$/, 'learning-center.html');
+  return base + '?sid=' + studentId;
+}
+function qrUrl(text, size){
+  return 'https://api.qrserver.com/v1/create-qr-code/?size='+(size||180)+'x'+(size||180)+'&data='+encodeURIComponent(text);
+}
+
+function render(){
+  const cls = document.getElementById('classFilter').value;
+  const q = document.getElementById('searchInput').value.trim();
+  const filtered = STUDENTS.filter(s => {
+    if (cls && s.cls !== cls) return false;
+    if (q && !(s.first+' '+s.last).includes(q)) return false;
+    return true;
+  });
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  filtered.forEach(s => {
+    const card = document.createElement('div');
+    card.className = 'qr-card';
+    const img = document.createElement('img');
+    img.alt = 'QR';
+    img.setAttribute('src', qrUrl(buildStudentUrl(s.id)));
+    card.appendChild(img);
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = s.first + ' ' + s.last;
+    card.appendChild(name);
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = 'כיתה ' + s.cls;
+    card.appendChild(meta);
+    const idNum = document.createElement('div');
+    idNum.className = 'id-num';
+    idNum.textContent = 'ID: ' + s.id;
+    card.appendChild(idNum);
+    grid.appendChild(card);
+  });
+}
+
+function downloadAll(){
+  alert('להורדה בכמות: השתמשי ב"הדפס" ושמרי כ-PDF. לצורך שליחה אישית — לחיצה ימנית על QR → שמירה.');
+}
+
+render();
+</script>
+</body>
+</html>

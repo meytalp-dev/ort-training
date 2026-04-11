@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>מרכז למידה — אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@400;600;800&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="student-data.js"></script>
+<style>
+  :root{
+    --cyan:#06b6d4; --pink:#ec4899; --teal:#14b8a6;
+    --cream:#fef9f3; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
+    --border:#e5e7eb; --success:#10b981; --warning:#f59e0b; --danger:#ef4444;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:'Assistant',sans-serif; background:var(--cream); color:var(--text);
+    min-height:100vh; padding:16px; padding-bottom:120px;
+  }
+  .hero{
+    background:linear-gradient(135deg,#06b6d4,#14b8a6); color:#fff;
+    border-radius:28px; padding:24px 20px; box-shadow:0 12px 30px rgba(6,182,212,.25);
+    position:sticky; top:8px; z-index:10;
+  }
+  .hero .greeting{font-family:'Playpen Sans Hebrew',sans-serif; font-size:1.4rem; font-weight:800; opacity:.95}
+  .hero .timer{
+    font-family:'Playpen Sans Hebrew',sans-serif; font-size:3.8rem; font-weight:800;
+    line-height:1; margin-top:8px; letter-spacing:-2px;
+  }
+  .hero .timer.done{color:#fef9c3}
+  .hero .status-line{margin-top:6px; font-size:1rem; font-weight:600; opacity:.95}
+  .hero .progress{
+    margin-top:14px; background:rgba(255,255,255,.25); border-radius:100px; height:10px; overflow:hidden;
+  }
+  .hero .progress-fill{
+    height:100%; background:#fff; border-radius:100px; transition:width .5s;
+  }
+
+  .card{
+    background:var(--card); border-radius:24px; padding:20px; margin-top:16px;
+    box-shadow:0 4px 14px rgba(0,0,0,.05); border:1px solid var(--border);
+  }
+  .card h2{
+    font-family:'Playpen Sans Hebrew',sans-serif; font-size:1.3rem; font-weight:800;
+    margin-bottom:14px; color:var(--cyan);
+  }
+
+  .subject-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
+  .subject-btn{
+    padding:18px 8px; background:var(--card); border:2px solid var(--border);
+    border-radius:18px; font-family:'Assistant',sans-serif; font-size:1rem; font-weight:700;
+    color:var(--text); cursor:pointer; transition:.2s; text-align:center;
+  }
+  .subject-btn:active{transform:scale(.96)}
+  .subject-btn.active{border-color:var(--cyan); background:rgba(6,182,212,.1); color:var(--cyan)}
+  .subject-btn .emoji{display:block; font-size:1.8rem; margin-bottom:6px}
+
+  .question{font-size:1.15rem; font-weight:600; line-height:1.5; margin-bottom:16px}
+  .options{display:flex; flex-direction:column; gap:10px}
+  .option{
+    padding:16px; background:var(--card); border:2px solid var(--border);
+    border-radius:16px; font-size:1rem; font-weight:600; color:var(--text);
+    cursor:pointer; text-align:right; transition:.15s; font-family:inherit;
+  }
+  .option:active{transform:scale(.98)}
+  .option.correct{border-color:var(--success); background:rgba(16,185,129,.1)}
+  .option.wrong{border-color:var(--danger); background:rgba(239,68,68,.1)}
+
+  .score-line{margin-top:14px; font-size:1rem; color:var(--muted); font-weight:600; text-align:center}
+  .score-line strong{color:var(--text); font-size:1.2rem}
+
+  .btn{
+    width:100%; padding:18px; border:none; border-radius:18px;
+    font-family:'Assistant',sans-serif; font-size:1.1rem; font-weight:800;
+    cursor:pointer; transition:.2s; margin-top:12px;
+  }
+  .btn-primary{background:var(--cyan); color:#fff}
+  .btn-primary:active{transform:scale(.97)}
+  .btn-next{background:var(--pink); color:#fff}
+  .btn-done{background:var(--success); color:#fff; font-size:1.3rem; padding:22px}
+  .btn:disabled{background:#d1d5db; color:#9ca3af; cursor:not-allowed; transform:none}
+
+  .identify-box p{color:var(--muted); margin-bottom:14px; text-align:center}
+  .search-input{
+    width:100%; padding:14px 18px; border:2px solid var(--border); border-radius:16px;
+    font-family:inherit; font-size:1.05rem; margin-bottom:12px;
+  }
+  .search-input:focus{outline:none; border-color:var(--cyan)}
+  .student-list{
+    max-height:380px; overflow-y:auto; border:1px solid var(--border); border-radius:16px; padding:6px;
+  }
+  .student-row{
+    padding:14px 16px; border-radius:12px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;
+    font-size:1rem; font-weight:600; transition:.15s; margin-bottom:4px;
+  }
+  .student-row:active{background:rgba(6,182,212,.1)}
+  .student-row .cls-tag{
+    background:#f3f4f6; padding:3px 10px; border-radius:100px; font-size:.8rem; color:var(--muted); font-weight:700;
+  }
+  .remember-me{
+    margin-top:12px; display:flex; align-items:center; gap:8px;
+    font-size:.9rem; color:var(--muted); justify-content:center;
+  }
+  .remember-me input{width:18px; height:18px}
+  .remembered-chip{
+    background:#ecfeff; border:2px solid var(--cyan); border-radius:16px; padding:14px 16px;
+    margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .remembered-chip .name{font-weight:800; color:var(--cyan); font-size:1.1rem}
+  .remembered-chip button{
+    background:transparent; border:none; color:var(--muted); font-size:.85rem; cursor:pointer; text-decoration:underline;
+  }
+
+  .explain{
+    margin-top:14px; padding:14px; background:#fef3c7; border-radius:14px;
+    font-size:.95rem; line-height:1.5; color:#713f12;
+  }
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="greeting" id="greeting">שלום!</div>
+  <div class="timer" id="timer">--:--</div>
+  <div class="status-line" id="statusLine">סרוק את ה-QR האישי שלך להתחלה</div>
+  <div class="progress"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+</div>
+
+<!-- STEP 1: Identify -->
+<div class="card identify-box" id="scanCard">
+  <h2>מי אתה?</h2>
+  <p>בחר את שמך מהרשימה</p>
+  <div id="rememberedBox"></div>
+  <input type="text" class="search-input" id="searchInput" placeholder="חיפוש לפי שם או כיתה...">
+  <div class="student-list" id="studentList"></div>
+  <div class="remember-me">
+    <input type="checkbox" id="rememberMe" checked>
+    <label for="rememberMe">זכור אותי בטלפון הזה</label>
+  </div>
+</div>
+
+<!-- STEP 1.25: Morning briefing — התלמיד זוהה בבוקר, צריך לחזור אחר הצהריים -->
+<div class="card hide" id="morningCard">
+  <h2 style="color:var(--warning)">⏰ איחרת הבוקר</h2>
+  <div style="background:#fef3c7; border-radius:16px; padding:18px; margin-bottom:14px">
+    <div style="font-size:1.05rem; font-weight:700; margin-bottom:6px">איחרת <span id="morningLate">--</span> דקות לבית הספר</div>
+    <div style="color:#78350f">צריך להשלים <strong><span id="morningReq">--</span> דקות</strong> במרכז הלמידה אחרי הלימודים.</div>
+  </div>
+  <div style="background:#ecfeff; border:2px solid var(--cyan); border-radius:16px; padding:20px; margin-bottom:14px; text-align:center">
+    <div style="font-size:.9rem; color:var(--muted); margin-bottom:4px">מה לעשות עכשיו:</div>
+    <div style="font-size:1.1rem; font-weight:800; color:var(--cyan); line-height:1.6">
+      1. לך לשיעור כרגיל<br>
+      2. בשעה <span style="font-size:1.4rem">13:30</span> חזור לקישור הזה<br>
+      3. לחץ "התחלתי" כשאתה במרכז הלמידה
+    </div>
+  </div>
+  <div style="background:#f3f4f6; border-radius:12px; padding:14px; font-size:.9rem; color:var(--muted); line-height:1.5">
+    💡 הטלפון שלך יזכור אותך — כשתחזור בצהריים פשוט תפתח את הקישור שוב ותלחץ "התחלתי".
+  </div>
+</div>
+
+<!-- STEP 1.5: Pending — התלמיד הגיע למרכז למידה, צריך ללחוץ התחלתי -->
+<div class="card hide" id="pendingCard">
+  <h2>חוב השלמה להיום</h2>
+  <p style="color:var(--muted); line-height:1.6; margin-bottom:16px">
+    איחרת בבוקר ל-<strong id="pendingLateMin">--</strong> דקות.<br>
+    צריך להישאר כאן <strong id="pendingReqMin">--</strong> דקות + להשלים מטלה לימודית.
+  </p>
+  <p style="color:var(--warning); font-weight:700; margin-bottom:16px">
+    לחצי "התחלתי" רק אחרי שהגעת פיזית למרכז הלמידה.
+  </p>
+  <button class="btn btn-primary" onclick="startLearningCenter()">התחלתי — אני במרכז למידה עכשיו</button>
+</div>
+
+<!-- STEP 2: Pick subject -->
+<div class="card hide" id="subjectCard">
+  <h2>בחר מקצוע למטלה</h2>
+  <div class="subject-grid">
+    <button class="subject-btn" data-subject="hebrew" onclick="pickSubject('hebrew')">
+      <span class="emoji">א</span>עברית
+    </button>
+    <button class="subject-btn" data-subject="math" onclick="pickSubject('math')">
+      <span class="emoji">+</span>מתמטיקה
+    </button>
+    <button class="subject-btn" data-subject="english" onclick="pickSubject('english')">
+      <span class="emoji">A</span>אנגלית
+    </button>
+  </div>
+  <button class="btn btn-primary" id="getTaskBtn" disabled onclick="loadTask()">קבל מטלה</button>
+</div>
+
+<!-- STEP 3: Task -->
+<div class="card hide" id="taskCard">
+  <h2 id="taskTitle">מטלה</h2>
+  <div class="question" id="questionText"></div>
+  <div class="options" id="optionsList"></div>
+  <div class="explain hide" id="explainBox"></div>
+  <div class="score-line">הציון הכולל: <strong id="totalScore">0%</strong> (נדרש 70%)</div>
+  <button class="btn btn-next hide" id="nextBtn" onclick="loadTask()">מטלה נוספת</button>
+</div>
+
+<!-- STEP 4: Sign out -->
+<div class="card hide" id="doneCard">
+  <h2>סיום מרכז למידה</h2>
+  <p id="doneStatus" style="color:var(--muted); margin-bottom:10px">
+    כדי לצאת צריך: זמן הסתיים <strong>וגם</strong> ציון ≥ 70%
+  </p>
+  <button class="btn btn-done" id="doneBtn" disabled onclick="signOut()">סיימתי — אני יוצא לכיתה</button>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'REPLACE_WITH_DEPLOYED_APPS_SCRIPT_URL';
+const PASSING_SCORE = 70;
+const DEMO_MODE = APPS_SCRIPT_URL.indexOf('REPLACE') >= 0;
+const LC_OPEN_HOUR = 13;  // מרכז למידה פותח 13:00
+
+// לצורך תצוגה במצב DEMO: טיימר מתחיל דקה אחת לאחור (כדי לראות את הכפתור נפתח בקרוב)
+const DEMO_REQUIRED_MINUTES = 2;
+const DEMO_ARRIVED_AGO_MINUTES = 1;
+
+const DEMO_TASKS = {
+  hebrew: {question:'מהי המילה הנרדפת ל"שמח"?', options:['עצוב','מאושר','כועס','עייף'], correct_index:1, explanation:'"מאושר" ו"שמח" הן מילים נרדפות — שתיהן מתארות רגש חיובי.'},
+  math:   {question:'כמה זה 7 × 8?', options:['54','56','64','49'], correct_index:1, explanation:'7 × 8 = 56. אפשר לחשוב על זה כ-(7 × 10) − (7 × 2) = 70 − 14 = 56.'},
+  english:{question:'What does "library" mean in Hebrew?', options:['בית ספר','ספרייה','חנות','בית חולים'], correct_index:1, explanation:'library = ספרייה. המילה נשמעת דומה ל"library" באנגלית מאותו השורש הלטיני.'}
+};
+
+let state = {
+  eventId: null, student: null, lcStart: null, requiredMinutes: 0, lateMinutes: 0,
+  subject: null, questionsAnswered: 0, correctAnswers: 0,
+  currentTask: null, timerDone: false, status: null
+};
+
+// ============ IDENTIFY ============
+function lookupStudent(id){
+  return STUDENTS.find(s => String(s.id) === String(id));
+}
+function extractPhone(p){ if(!p) return ''; const m=p.match(/0\d{8,9}/); return m ? '972'+m[0].substring(1) : ''; }
+function gradeFromCls(cls){ if(!cls) return ''; if(cls.indexOf('יב')===0) return 'יב'; if(cls.indexOf('יא')===0) return 'יא'; return cls.charAt(0); }
+function levelFromGrade(grade){ return (grade==='ט' || grade==='י') ? 'basic' : 'regular'; }
+
+async function identify(studentId){
+  const student = lookupStudent(studentId);
+  if (!student){ alert('מספר תלמיד לא מזוהה'); return; }
+  document.getElementById('greeting').textContent = 'שלום ' + student.first;
+
+  try {
+    let data;
+    if (DEMO_MODE){
+      // במצב DEMO — איחור של 30 דקות בבוקר, צריך 30 דקות במרכז למידה (נקצר ל-DEMO_REQUIRED_MINUTES)
+      data = { ok:true, status:'already_registered', event:{
+        id:'DEMO'+student.id,
+        lateMinutes: 30,
+        requiredMinutes: DEMO_REQUIRED_MINUTES,
+        status: 'pending_lc',
+        learningCenterStart: null
+      } };
+    } else {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({
+          action:'checkin',
+          studentId: student.id,
+          student:{ id:student.id, name:student.first+' '+student.last, cls:student.cls, megama:student.megama||'',
+                    parentPhone: extractPhone(student.parent1)||extractPhone(student.parent2) }
+        })
+      });
+      data = await res.json();
+    }
+    if (!data.ok) throw new Error(data.error);
+
+    if (data.status === 'on_time'){
+      document.getElementById('statusLine').textContent = 'הגעת בזמן — אין צורך במרכז למידה!';
+      document.getElementById('timer').textContent = '✓';
+      document.getElementById('scanCard').classList.add('hide');
+      return;
+    }
+
+    const ev = data.event || { id: data.eventId, lateMinutes: data.lateMinutes, requiredMinutes: data.requiredMinutes, status: 'pending_lc' };
+    state.eventId = ev.id;
+    state.student = student;
+    state.requiredMinutes = Number(ev.requiredMinutes);
+    state.lateMinutes = Number(ev.lateMinutes);
+    state.status = ev.status;
+    state.lcStart = ev.learningCenterStart ? new Date(ev.learningCenterStart) : null;
+
+    document.getElementById('scanCard').classList.add('hide');
+
+    if (state.status === 'pending_lc' || !state.lcStart){
+      var nowHour = new Date().getHours();
+      if (nowHour < LC_OPEN_HOUR){
+        // בוקר — מרכז למידה עוד לא פתוח. מציג מסך בריפינג בוקר.
+        document.getElementById('morningLate').textContent = state.lateMinutes;
+        document.getElementById('morningReq').textContent = state.requiredMinutes;
+        document.getElementById('morningCard').classList.remove('hide');
+        document.getElementById('statusLine').textContent = 'חזור לכאן בשעה 13:30';
+        document.getElementById('timer').textContent = '13:30';
+      } else {
+        // אחר הצהריים — מציג מסך המתנה
+        document.getElementById('pendingLateMin').textContent = state.lateMinutes;
+        document.getElementById('pendingReqMin').textContent = state.requiredMinutes;
+        document.getElementById('pendingCard').classList.remove('hide');
+        document.getElementById('statusLine').textContent = 'ממתין — לחץ "התחלתי" כשתגיע למרכז למידה';
+        document.getElementById('timer').textContent = '⏸';
+      }
+    } else {
+      // כבר בתוך מרכז למידה — ממשיך את הזרימה
+      enterLearningCenter();
+    }
+  } catch(err){
+    alert('שגיאה: ' + err.message);
+  }
+}
+
+async function startLearningCenter(){
+  try {
+    let data;
+    if (DEMO_MODE){
+      data = { ok: true };
+    } else {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ action:'startLearningCenter', eventId: state.eventId })
+      });
+      data = await res.json();
+    }
+    if (!data.ok){ alert('שגיאה: ' + (data.error||'')); return; }
+    state.lcStart = new Date();
+    state.status = 'in_learning_center';
+    document.getElementById('pendingCard').classList.add('hide');
+    enterLearningCenter();
+  } catch(err){
+    alert('שגיאה: ' + err.message);
+  }
+}
+
+function enterLearningCenter(){
+  document.getElementById('subjectCard').classList.remove('hide');
+  document.getElementById('taskCard').classList.remove('hide');
+  document.getElementById('doneCard').classList.remove('hide');
+  startTimer();
+}
+
+// ============ SEARCHABLE STUDENT PICKER + LOCALSTORAGE ============
+const REMEMBER_KEY = 'ort_learning_center_student';
+
+function renderStudentList(query){
+  const q = (query||'').trim();
+  const list = document.getElementById('studentList');
+  const filtered = STUDENTS.filter(s => {
+    if (!q) return true;
+    return (s.first+' '+s.last).includes(q) || s.cls.includes(q);
+  }).slice(0, 80);
+  list.innerHTML = '';
+  if (filtered.length === 0){
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">לא נמצא</div>';
+    return;
+  }
+  filtered.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'student-row';
+    const name = document.createElement('span'); name.textContent = s.first + ' ' + s.last;
+    const cls = document.createElement('span'); cls.className = 'cls-tag'; cls.textContent = s.cls;
+    row.appendChild(name); row.appendChild(cls);
+    row.onclick = () => pickStudent(s);
+    list.appendChild(row);
+  });
+}
+
+function pickStudent(student){
+  if (document.getElementById('rememberMe').checked){
+    try { localStorage.setItem(REMEMBER_KEY, String(student.id)); } catch(e){}
+  }
+  identify(student.id);
+}
+
+function showRemembered(student){
+  const box = document.getElementById('rememberedBox');
+  box.innerHTML = '';
+  const chip = document.createElement('div');
+  chip.className = 'remembered-chip';
+  const nameEl = document.createElement('div');
+  nameEl.innerHTML = '<div style="font-size:.85rem;color:var(--muted)">שלום שוב</div><div class="name">' + student.first + ' ' + student.last + '</div>';
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'זה לא אני';
+  clearBtn.onclick = () => { try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){} box.innerHTML = ''; };
+  chip.appendChild(nameEl);
+  chip.appendChild(clearBtn);
+  box.appendChild(chip);
+}
+
+// ============ TIMER ============
+function startTimer(){
+  updateTimer();
+  setInterval(updateTimer, 1000);
+}
+function updateTimer(){
+  if (!state.lcStart) return;
+  const elapsed = Math.floor((Date.now() - state.lcStart.getTime())/60000);
+  const remaining = Math.max(0, state.requiredMinutes - elapsed);
+  const mm = String(Math.floor(remaining)).padStart(2,'0');
+  const ss = String(Math.max(0, 60 - Math.floor((Date.now() - state.lcStart.getTime())/1000) % 60) % 60).padStart(2,'0');
+  document.getElementById('timer').textContent = mm + ':' + ss;
+  const pct = Math.min(100, (elapsed/state.requiredMinutes)*100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  if (remaining <= 0){
+    state.timerDone = true;
+    document.getElementById('timer').classList.add('done');
+    document.getElementById('timer').textContent = '✓ 00:00';
+    document.getElementById('statusLine').textContent = 'הזמן הסתיים — תשלים את המטלה';
+  } else {
+    document.getElementById('statusLine').textContent = 'נשארו ' + remaining + ' דקות במרכז למידה';
+  }
+  refreshDoneButton();
+}
+
+// ============ SUBJECT + TASK ============
+function pickSubject(subject){
+  state.subject = subject;
+  document.querySelectorAll('.subject-btn').forEach(b => b.classList.toggle('active', b.dataset.subject === subject));
+  document.getElementById('getTaskBtn').disabled = false;
+}
+
+async function loadTask(){
+  if (!state.subject){ alert('בחר מקצוע קודם'); return; }
+  document.getElementById('nextBtn').classList.add('hide');
+  document.getElementById('explainBox').classList.add('hide');
+  document.getElementById('questionText').textContent = 'טוען שאלה...';
+  document.getElementById('optionsList').innerHTML = '';
+
+  const grade = gradeFromCls(state.student.cls);
+  const level = levelFromGrade(grade);
+
+  try {
+    let data;
+    if (DEMO_MODE){
+      await new Promise(r => setTimeout(r, 400));
+      data = { ok:true, task: DEMO_TASKS[state.subject] };
+    } else {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({
+          action:'getTask', studentId: state.student.id, eventId: state.eventId,
+          grade: grade, level: level, subject: state.subject
+        })
+      });
+      data = await res.json();
+    }
+    if (!data.ok) throw new Error(data.error);
+    state.currentTask = data.task;
+    renderTask(data.task);
+  } catch(err){
+    document.getElementById('questionText').textContent = 'שגיאה בטעינת השאלה: ' + err.message;
+  }
+}
+
+function renderTask(task){
+  document.getElementById('questionText').textContent = task.question;
+  const list = document.getElementById('optionsList');
+  list.innerHTML = '';
+  task.options.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.textContent = opt;
+    btn.onclick = () => answerTask(idx, btn);
+    list.appendChild(btn);
+  });
+}
+
+async function answerTask(chosenIdx, btn){
+  // נעילת כפתורים
+  document.querySelectorAll('.option').forEach(b => b.onclick = null);
+  const correctIdx = Number(state.currentTask.correct_index);
+  const isCorrect = chosenIdx === correctIdx;
+  btn.classList.add(isCorrect ? 'correct' : 'wrong');
+  if (!isCorrect){
+    document.querySelectorAll('.option')[correctIdx].classList.add('correct');
+  }
+
+  state.questionsAnswered++;
+  if (isCorrect) state.correctAnswers++;
+  const score = Math.round((state.correctAnswers / state.questionsAnswered) * 100);
+  document.getElementById('totalScore').textContent = score + '%';
+
+  const explain = document.getElementById('explainBox');
+  if (state.currentTask.explanation){
+    explain.textContent = state.currentTask.explanation;
+    explain.classList.remove('hide');
+  }
+
+  // POST score
+  const grade = gradeFromCls(state.student.cls);
+  if (!DEMO_MODE){
+    try {
+      await fetch(APPS_SCRIPT_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({
+          action:'submitAnswer', eventId: state.eventId,
+          subject: state.subject, level: levelFromGrade(grade), score: score
+        })
+      });
+    } catch(err){ /* silent */ }
+  }
+
+  document.getElementById('nextBtn').classList.remove('hide');
+  refreshDoneButton();
+}
+
+// ============ DONE ============
+function refreshDoneButton(){
+  const score = state.questionsAnswered > 0 ? Math.round((state.correctAnswers/state.questionsAnswered)*100) : 0;
+  const canSign = state.timerDone && score >= PASSING_SCORE;
+  const btn = document.getElementById('doneBtn');
+  btn.disabled = !canSign;
+  const status = document.getElementById('doneStatus');
+  if (canSign){
+    status.innerHTML = '<span style="color:var(--success);font-weight:800">הכל מוכן! אפשר לצאת</span>';
+  } else if (!state.timerDone && score >= PASSING_SCORE){
+    status.innerHTML = '<span style="color:var(--warning);font-weight:700">כל הכבוד, עברת את המטלה!</span><br><span style="color:var(--muted);font-size:.95em">צריך להישאר עד שהטיימר מסתיים. שחרור מוקדם — רק דרך מנו / מיטל / המזכירה.</span>';
+  } else {
+    const missing = [];
+    if (!state.timerDone) missing.push('זמן');
+    if (score < PASSING_SCORE) missing.push('ציון (' + score + '%)');
+    status.textContent = 'חסר: ' + missing.join(' + ');
+  }
+}
+
+async function signOut(){
+  try {
+    let data;
+    if (DEMO_MODE){
+      data = { ok:true };
+    } else {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain'},
+        body: JSON.stringify({ action:'signOut', eventId: state.eventId })
+      });
+      data = await res.json();
+    }
+    if (!data.ok){ alert('לא ניתן לצאת: ' + (data.error||'')); return; }
+    document.body.innerHTML = '<div style="padding:60px 20px;text-align:center;font-family:\'Playpen Sans Hebrew\',sans-serif"><h1 style="font-size:2.5rem;color:#10b981">✓ סיימת!</h1><p style="font-size:1.3rem;margin-top:20px;color:#374151">חזור לכיתה עכשיו</p></div>';
+  } catch(err){
+    alert('שגיאה: ' + err.message);
+  }
+}
+
+// ============ INIT ============
+window.addEventListener('DOMContentLoaded', () => {
+  renderStudentList('');
+  document.getElementById('searchInput').addEventListener('input', e => renderStudentList(e.target.value));
+
+  // עדיפות ראשונה: URL עם ?sid=X (QR אישי מודפס)
+  const urlParams = new URLSearchParams(window.location.search);
+  const sidFromUrl = urlParams.get('sid');
+  if (sidFromUrl){
+    const s = lookupStudent(sidFromUrl);
+    if (s){
+      try { localStorage.setItem(REMEMBER_KEY, String(s.id)); } catch(e){}
+      showRemembered(s);
+      setTimeout(() => identify(s.id), 400);
+      return;
+    }
+  }
+
+  // עדיפות שנייה: localStorage "זכור אותי"
+  try {
+    const savedId = localStorage.getItem(REMEMBER_KEY);
+    if (savedId){
+      const s = lookupStudent(savedId);
+      if (s){
+        showRemembered(s);
+        setTimeout(() => identify(savedId), 600);
+      }
+    }
+  } catch(e){}
+});
+</script>
+</body>
+</html>
