@@ -32,6 +32,7 @@ body::before{content:'';position:fixed;inset:0;background:
   pointer-events:none;z-index:0}
 
 @keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
 /* Header */
 .header{background:#fff;padding:0 24px;display:flex;align-items:center;justify-content:space-between;
@@ -82,7 +83,14 @@ body::before{content:'';position:fixed;inset:0;background:
 /* Domain sections */
 .domain-section{border:2px solid var(--border-light);border-radius:var(--radius);padding:20px;margin-bottom:16px;
   background:linear-gradient(135deg,#fff 0%,var(--bg-alt) 100%)}
-.domain-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.domain-section.collapsed .domain-body{display:none}
+.domain-section.collapsed{padding:14px 20px}
+.domain-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;user-select:none}
+.domain-section.collapsed .domain-header{margin-bottom:0}
+.domain-toggle{margin-right:auto;width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;background:var(--bg-alt);transition:transform .2s}
+.domain-section.collapsed .domain-toggle{transform:rotate(-90deg)}
+.domain-filled{width:8px;height:8px;border-radius:50%;background:var(--success);margin-right:6px}
 .domain-badge{padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;color:#fff}
 .domain-name{font-family:var(--font-heading);font-weight:800;font-size:1rem}
 
@@ -408,11 +416,11 @@ const COORDINATORS = {
 };
 
 const DOMAINS = [
-  { id: 'pedagogic', name: 'פדגוגי', color: '#5B4BA0', icon: '📖', desc: 'הישגים, בגרויות, תגבורים, הוראה' },
-  { id: 'social', name: 'חברתי', color: '#3AACA0', icon: '🤝', desc: 'לכידות כיתתית, פעילויות, דינמיקה חברתית' },
-  { id: 'personal', name: 'קשר אישי', color: '#E8B060', icon: '💬', desc: 'שיחות 1:1, היכרות, ליווי אישי' },
-  { id: 'emotional', name: 'רגשי', color: '#E8909C', icon: '❤️', desc: 'רווחה רגשית, זיהוי מצוקה, תמיכה' },
-  { id: 'dimensions', name: 'חמשת הממדים', color: '#8E7ED4', icon: '⭐', desc: 'שייכות, כבוד, מסוגלות, מוטיבציה, אוטונומיה' }
+  { id: 'pedagogic', name: 'פדגוגי', color: '#5B4BA0', desc: 'הישגים, בגרויות, תגבורים, הוראה' },
+  { id: 'social', name: 'חברתי', color: '#3AACA0', desc: 'לכידות כיתתית, פעילויות, דינמיקה חברתית' },
+  { id: 'personal', name: 'קשר אישי', color: '#E8B060', desc: 'שיחות 1:1, היכרות, ליווי אישי' },
+  { id: 'emotional', name: 'רגשי', color: '#E8909C', desc: 'רווחה רגשית, זיהוי מצוקה, תמיכה' },
+  { id: 'dimensions', name: 'חמשת הממדים', color: '#8E7ED4', desc: 'שייכות, כבוד, מסוגלות, מוטיבציה, אוטונומיה' }
 ];
 
 const STATUS_OPTIONS = ['לא התחיל', 'בתהליך', 'הושלם'];
@@ -479,48 +487,65 @@ function showView(view) {
 // ============================================
 function buildDomainForms() {
   const container = document.getElementById('domains-container');
-  container.innerHTML = DOMAINS.map(d => `
-    <div class="domain-section">
-      <div class="domain-header">
+  container.innerHTML = DOMAINS.map((d, i) => `
+    <div class="domain-section${i > 0 ? ' collapsed' : ''}" id="domain-${d.id}">
+      <div class="domain-header" onclick="toggleDomain('${d.id}')">
         <span class="domain-badge" style="background:${d.color}">${d.name}</span>
         <span style="font-size:.8rem;color:var(--text-light)">${d.desc}</span>
+        <span class="domain-filled" id="filled-${d.id}" style="display:none"></span>
+        <span class="domain-toggle">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>מטרה</label>
-          <input id="goal-${d.id}" placeholder="מה רוצים להשיג?">
+      <div class="domain-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>מטרה</label>
+            <input id="goal-${d.id}" placeholder="מה רוצים להשיג?" oninput="checkDomainFilled('${d.id}')">
+          </div>
+          <div class="form-group">
+            <label>יעד מדיד</label>
+            <input id="target-${d.id}" placeholder="מספר שאפשר למדוד, למשל: 75% עוברים" oninput="checkDomainFilled('${d.id}')">
+          </div>
         </div>
-        <div class="form-group">
-          <label>יעד מדיד</label>
-          <input id="target-${d.id}" placeholder="איך נמדוד הצלחה?">
+        <div class="form-row">
+          <div class="form-group">
+            <label>פעולה קונקרטית</label>
+            <input id="action-${d.id}" placeholder="מה עושים בפועל?">
+          </div>
+          <div class="form-group">
+            <label>אחראי/ת</label>
+            <input id="responsible-${d.id}" placeholder="שם">
+          </div>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>פעולה קונקרטית</label>
-          <input id="action-${d.id}" placeholder="מה עושים בפועל?">
-        </div>
-        <div class="form-group">
-          <label>אחראי/ת</label>
-          <input id="responsible-${d.id}" placeholder="שם">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>תאריך יעד</label>
-          <input type="date" id="deadline-${d.id}">
-        </div>
-        <div class="form-group">
-          <label>סטטוס</label>
-          <select id="status-${d.id}">
-            <option value="לא התחיל">לא התחיל</option>
-            <option value="בתהליך">בתהליך</option>
-            <option value="הושלם">הושלם</option>
-          </select>
+        <div class="form-row">
+          <div class="form-group">
+            <label>תאריך יעד</label>
+            <input type="date" id="deadline-${d.id}">
+          </div>
+          <div class="form-group">
+            <label>סטטוס</label>
+            <select id="status-${d.id}">
+              <option value="לא התחיל">לא התחיל</option>
+              <option value="בתהליך">בתהליך</option>
+              <option value="הושלם">הושלם</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
   `).join('');
+}
+
+function toggleDomain(id) {
+  document.getElementById(`domain-${id}`).classList.toggle('collapsed');
+}
+
+function checkDomainFilled(id) {
+  const goal = document.getElementById(`goal-${id}`).value;
+  const target = document.getElementById(`target-${id}`).value;
+  const dot = document.getElementById(`filled-${id}`);
+  dot.style.display = (goal || target) ? 'inline-block' : 'none';
 }
 
 // ============================================
@@ -640,10 +665,11 @@ function submitMeeting() {
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
-  btn.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> שומר...';
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.2-8.6"/></svg> שומר...';
 
   fetch(APPS_SCRIPT_URL, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
   .then(r => r.json())
@@ -699,6 +725,12 @@ function filterDashboard(layer) {
 }
 
 function loadDashboard() {
+  // Show loading state
+  document.getElementById('stats-grid').innerHTML = '<div class="stat-card" style="grid-column:1/-1;text-align:center;color:var(--text-light)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite;margin-bottom:8px"><path d="M21 12a9 9 0 11-6.2-8.6"/></svg><div>טוען נתונים...</div></div>';
+  document.getElementById('meetings-list').innerHTML = '';
+  document.getElementById('attention-list').innerHTML = '';
+  document.getElementById('domain-progress').innerHTML = '';
+
   if (!APPS_SCRIPT_URL) {
     loadDashboardFromLocal();
     return;
