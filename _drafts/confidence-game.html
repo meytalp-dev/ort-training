@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Confidence — משחק</title>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@400;600;800&family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --burgundy: #7B1E2B;
+    --burgundy-dark: #5a1420;
+    --gold: #C9A961;
+    --gold-dark: #a88a3e;
+    --cream: #F4EBD0;
+    --cream-light: #FAF5E4;
+    --green: #059669;
+    --orange: #ea580c;
+    --text: #2a2a2a;
+    --muted: #78716c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow-x: hidden; }
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 560px;
+    background: white;
+    border-radius: 24px;
+    padding: 30px 24px;
+    box-shadow: 0 20px 60px rgba(123,30,43,0.12);
+    min-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1 {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 42px;
+    color: var(--burgundy);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .tagline {
+    text-align: center;
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 28px;
+    font-style: italic;
+  }
+  h2 {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 26px;
+    color: var(--burgundy);
+    margin-bottom: 12px;
+  }
+  h3 {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 20px;
+    color: var(--gold-dark);
+    margin: 16px 0 8px;
+  }
+  p { font-size: 16px; margin-bottom: 10px; }
+
+  button {
+    font-family: 'Heebo', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 14px 20px;
+    transition: transform 0.1s, box-shadow 0.2s;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--burgundy);
+    color: var(--cream);
+    width: 100%;
+    padding: 18px;
+    font-size: 18px;
+    box-shadow: 0 4px 15px rgba(123,30,43,0.25);
+  }
+  .btn-primary:hover { background: var(--burgundy-dark); }
+  .btn-secondary {
+    background: var(--cream);
+    color: var(--burgundy);
+    border: 2px solid var(--gold);
+    width: 100%;
+    padding: 14px;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .screen { flex: 1; display: flex; flex-direction: column; }
+  .screen.hidden { display: none; }
+
+  /* Setup screen */
+  .player-list { margin: 15px 0; }
+  .player-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .player-input-row input {
+    flex: 1;
+    padding: 14px 16px;
+    font-size: 16px;
+    font-family: 'Heebo', sans-serif;
+    border: 2px solid var(--cream);
+    border-radius: 12px;
+    background: var(--cream-light);
+    color: var(--text);
+  }
+  .player-input-row input:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+  .remove-btn {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 0 16px;
+    font-size: 20px;
+    font-weight: 700;
+    border-radius: 12px;
+  }
+  .info-box {
+    background: var(--cream-light);
+    border-right: 4px solid var(--gold);
+    padding: 16px 18px;
+    border-radius: 12px;
+    margin: 16px 0;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .info-box strong { color: var(--burgundy); }
+
+  /* Question screen */
+  .category-tag {
+    display: inline-block;
+    background: var(--cream);
+    color: var(--gold-dark);
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 14px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .question-text {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 24px;
+  }
+  .player-turn-header {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, var(--burgundy) 0%, #9B2333 100%);
+    color: var(--cream);
+    border-radius: 16px;
+    margin-bottom: 20px;
+  }
+  .player-turn-header .name {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 28px;
+    color: var(--gold);
+  }
+  .player-turn-header .instruction {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+
+  .options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .option-btn {
+    background: white;
+    color: var(--text);
+    border: 2.5px solid var(--cream);
+    text-align: right;
+    padding: 16px 20px;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .option-btn.selected {
+    border-color: var(--burgundy);
+    background: var(--cream-light);
+    color: var(--burgundy);
+  }
+
+  .confidence-title {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 18px;
+    color: var(--muted);
+    text-align: center;
+    margin: 20px 0 12px;
+  }
+  .confidence-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .conf-btn {
+    background: white;
+    border: 3px solid;
+    padding: 18px 8px;
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: center;
+    font-family: 'Heebo', sans-serif;
+  }
+  .conf-btn .conf-label {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .conf-btn .conf-value {
+    font-size: 28px;
+    font-weight: 900;
+    display: block;
+    line-height: 1;
+  }
+  .conf-btn.low { border-color: var(--green); color: var(--green); }
+  .conf-btn.mid { border-color: var(--orange); color: var(--orange); }
+  .conf-btn.high { border-color: var(--burgundy); color: var(--burgundy); }
+  .conf-btn.selected.low { background: var(--green); color: white; }
+  .conf-btn.selected.mid { background: var(--orange); color: white; }
+  .conf-btn.selected.high { background: var(--burgundy); color: white; }
+
+  /* Reveal screen */
+  .reveal-answer {
+    background: linear-gradient(135deg, var(--gold) 0%, #dcba75 100%);
+    color: var(--burgundy);
+    padding: 24px;
+    border-radius: 16px;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .reveal-answer .label {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 16px;
+    opacity: 0.8;
+  }
+  .reveal-answer .answer {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    margin-top: 6px;
+  }
+  .results-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .result-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--cream-light);
+    border-radius: 12px;
+    border: 2px solid var(--cream);
+  }
+  .result-row.correct {
+    background: #dcfce7;
+    border-color: #86efac;
+  }
+  .result-row.wrong {
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+  .result-name {
+    font-weight: 700;
+    flex: 1;
+    font-size: 16px;
+  }
+  .result-answer {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .result-points {
+    font-family: 'Heebo', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    min-width: 55px;
+    text-align: left;
+  }
+  .result-row.correct .result-points { color: var(--green); }
+  .result-row.wrong .result-points { color: #dc2626; }
+
+  /* Leaderboard */
+  .leaderboard {
+    background: var(--cream-light);
+    border-radius: 16px;
+    padding: 20px;
+    margin-top: 20px;
+  }
+  .leaderboard h3 {
+    margin-top: 0;
+    text-align: center;
+    color: var(--burgundy);
+  }
+  .lb-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    background: white;
+    border-radius: 10px;
+  }
+  .lb-row.first {
+    background: linear-gradient(135deg, var(--gold) 0%, #dcba75 100%);
+    color: var(--burgundy);
+    font-weight: 700;
+  }
+  .lb-rank {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    width: 30px;
+  }
+  .lb-name { flex: 1; font-weight: 600; font-size: 16px; }
+  .lb-score {
+    font-weight: 900;
+    font-size: 20px;
+  }
+
+  /* End screen */
+  .trophy {
+    text-align: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, var(--burgundy) 0%, #9B2333 100%);
+    color: var(--cream);
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  .trophy .title {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 20px;
+    color: var(--gold);
+  }
+  .trophy .winner {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    margin: 10px 0;
+  }
+  .trophy .score {
+    font-size: 18px;
+    opacity: 0.9;
+  }
+  .awards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .award {
+    padding: 16px;
+    background: var(--cream-light);
+    border: 2px dashed var(--gold);
+    border-radius: 12px;
+  }
+  .award .award-title {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 14px;
+    color: var(--gold-dark);
+    margin-bottom: 4px;
+  }
+  .award .award-winner {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--burgundy);
+  }
+
+  /* Progress */
+  .progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--cream-light);
+    border-radius: 20px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .progress .round-num {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-weight: 700;
+    color: var(--burgundy);
+  }
+
+  /* Pass phone overlay */
+  .pass-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 100;
+    padding: 30px;
+  }
+  .pass-overlay.hidden { display: none; }
+  .pass-overlay .icon {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 80px;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .pass-overlay h2 {
+    color: white;
+    font-size: 28px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .pass-overlay p {
+    color: rgba(255,255,255,0.7);
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 16px;
+  }
+  .pass-overlay button {
+    background: var(--gold);
+    color: var(--burgundy);
+    padding: 18px 40px;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 12px;
+  }
+
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row button { flex: 1; }
+
+  .spacer { flex: 1; min-height: 20px; }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--cream);
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <h1>Confidence</h1>
+  <div class="tagline">הביטחון שלך הוא ההימור שלך</div>
+
+  <!-- SCREEN: SETUP -->
+  <div class="screen" id="screen-setup">
+    <h2>מי משחק?</h2>
+    <div class="info-box">
+      הוסיפו <strong>2-8 שחקנים</strong>. המשחק עובר ממכשיר ליד, כל שחקן עונה בסוד בתור שלו.
+    </div>
+
+    <div class="player-list" id="playerList"></div>
+    <button class="btn-secondary" onclick="addPlayer()">+ הוסף שחקן</button>
+
+    <h3>כמה סיבובים?</h3>
+    <div class="btn-row">
+      <button class="btn-secondary" id="rounds-10" onclick="setRounds(10)">10</button>
+      <button class="btn-secondary" id="rounds-15" onclick="setRounds(15)">15</button>
+      <button class="btn-secondary" id="rounds-20" onclick="setRounds(20)">20</button>
+    </div>
+
+    <div class="spacer"></div>
+    <button class="btn-primary" onclick="startGame()">התחל משחק</button>
+  </div>
+
+  <!-- SCREEN: QUESTION INTRO -->
+  <div class="screen hidden" id="screen-intro">
+    <div class="progress">
+      <span>סיבוב <span class="round-num" id="introRoundNum">1</span> מתוך <span id="introTotalRounds">12</span></span>
+    </div>
+    <div class="category-tag" id="introCategory">קטגוריה</div>
+    <h2 style="color: var(--burgundy); font-size: 22px; margin-bottom: 20px;">שאלה לכולם:</h2>
+    <div class="question-text" id="introQuestion"></div>
+    <div class="info-box">
+      אחד מכם מקריא את השאלה בקול רם. אחר כך <strong>המכשיר יעבור בין כולם</strong> לבחירה סודית.
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-primary" onclick="startPlayerTurns()">בואו נתחיל</button>
+  </div>
+
+  <!-- SCREEN: PLAYER TURN -->
+  <div class="screen hidden" id="screen-turn">
+    <div class="player-turn-header">
+      <div class="name" id="currentPlayerName"></div>
+      <div class="instruction">התור שלך — אף אחד לא יראה את הבחירה שלך</div>
+    </div>
+    <div class="category-tag" id="turnCategory">קטגוריה</div>
+    <div class="question-text" id="turnQuestion"></div>
+
+    <div class="options-grid" id="optionsGrid"></div>
+
+    <div class="confidence-title">כמה אתה בטוח?</div>
+    <div class="confidence-grid">
+      <div class="conf-btn low" data-conf="1" onclick="selectConfidence(1)">
+        <span class="conf-label">ככה-ככה</span>
+        <span class="conf-value">±1</span>
+      </div>
+      <div class="conf-btn mid" data-conf="3" onclick="selectConfidence(3)">
+        <span class="conf-label">די בטוח</span>
+        <span class="conf-value">±3</span>
+      </div>
+      <div class="conf-btn high" data-conf="5" onclick="selectConfidence(5)">
+        <span class="conf-label">בטוח לגמרי</span>
+        <span class="conf-value">±5</span>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+    <button class="btn-primary" id="confirmBtn" onclick="confirmTurn()" disabled style="opacity:0.5;">שמור ומסור למכשיר הבא</button>
+  </div>
+
+  <!-- SCREEN: REVEAL -->
+  <div class="screen hidden" id="screen-reveal">
+    <div class="progress">
+      <span>סיבוב <span class="round-num" id="revealRoundNum">1</span></span>
+    </div>
+    <h2 style="text-align: center;">התשובה הנכונה</h2>
+    <div class="reveal-answer">
+      <div class="label">התשובה היא</div>
+      <div class="answer" id="revealAnswer"></div>
+    </div>
+
+    <div class="results-list" id="resultsList"></div>
+
+    <div class="leaderboard">
+      <h3>ניקוד כולל</h3>
+      <div id="leaderboardList"></div>
+    </div>
+
+    <div class="spacer"></div>
+    <button class="btn-primary" id="nextBtn" onclick="nextRound()">סיבוב הבא</button>
+  </div>
+
+  <!-- SCREEN: END -->
+  <div class="screen hidden" id="screen-end">
+    <div class="trophy">
+      <div class="title">המנצח/ת של הערב</div>
+      <div class="winner" id="endWinnerName"></div>
+      <div class="score" id="endWinnerScore"></div>
+    </div>
+
+    <div class="awards" id="awardsList"></div>
+
+    <div class="leaderboard">
+      <h3>דירוג סופי</h3>
+      <div id="endLeaderboard"></div>
+    </div>
+
+    <div class="spacer"></div>
+    <button class="btn-primary" onclick="newGame()">משחק חדש</button>
+  </div>
+
+  <footer>Confidence v0.3 · פרוטוטייפ דיגיטלי</footer>
+</div>
+
+<!-- PASS DEVICE OVERLAY -->
+<div class="pass-overlay hidden" id="passOverlay">
+  <div class="icon">→</div>
+  <h2>מסרו את המכשיר ל<span id="nextPlayerName"></span></h2>
+  <p>ואז לחצו על הכפתור</p>
+  <button onclick="dismissPass()">אני <span id="nextPlayerNameBtn"></span></button>
+</div>
+
+<script>
+// ============ QUESTION BANK ============
+const QUESTIONS = [
+  {cat: 'מי גדול יותר', q: 'מה גדול יותר בשטח — גרינלנד או ארגנטינה?', opts: ['גרינלנד', 'ארגנטינה'], correct: 1},
+  {cat: 'מי גדול יותר', q: 'מי גבוה יותר — מגדל אייפל או פסל החירות?', opts: ['מגדל אייפל', 'פסל החירות'], correct: 0},
+  {cat: 'מי גדול יותר', q: 'מה ארוך יותר — החומה הסינית או נהר הנילוס?', opts: ['החומה הסינית', 'נהר הנילוס'], correct: 0},
+  {cat: 'מי גדול יותר', q: 'מה כבד יותר — פיל אפריקאי בוגר או טירנוזאורוס רקס?', opts: ['פיל אפריקאי', 'טירנוזאורוס רקס'], correct: 1},
+  {cat: 'מי גדול יותר', q: 'מה גדול יותר — הירח של כדור הארץ או פלוטו?', opts: ['הירח', 'פלוטו'], correct: 0},
+  {cat: 'מי גדול יותר', q: 'מה עתיק יותר — כרישים או עצים?', opts: ['כרישים', 'עצים'], correct: 0},
+  {cat: 'מי גדול יותר', q: 'מה גדול יותר — אוסטרליה או הירח בקוטר?', opts: ['אוסטרליה', 'הירח'], correct: 0},
+  {cat: 'מי גדול יותר', q: 'מה ארוך יותר — מעי דק של אדם או מגרש כדורגל?', opts: ['מעי דק', 'מגרש כדורגל'], correct: 0},
+
+  {cat: 'איזו שנה', q: 'באיזו שנה יצא הסרט "טיטניק"?', opts: ['1995', '1997', '1999', '2001'], correct: 1},
+  {cat: 'איזו שנה', q: 'באיזו שנה נוסד פייסבוק?', opts: ['2002', '2004', '2006', '2008'], correct: 1},
+  {cat: 'איזו שנה', q: 'באיזו שנה יצא השיר "Despacito"?', opts: ['2015', '2016', '2017', '2018'], correct: 2},
+  {cat: 'איזו שנה', q: 'באיזו שנה נפטר סטיב ג\'ובס?', opts: ['2009', '2011', '2013', '2015'], correct: 1},
+  {cat: 'איזו שנה', q: 'באיזו שנה יצא ה-iPhone הראשון?', opts: ['2005', '2007', '2009', '2011'], correct: 1},
+  {cat: 'איזו שנה', q: 'באיזו שנה הוקמה מדינת ישראל?', opts: ['1945', '1948', '1950', '1953'], correct: 1},
+  {cat: 'איזו שנה', q: 'באיזו שנה עלה ChatGPT לאוויר?', opts: ['2020', '2021', '2022', '2023'], correct: 2},
+  {cat: 'איזו שנה', q: 'באיזו שנה נפלה חומת ברלין?', opts: ['1985', '1987', '1989', '1991'], correct: 2},
+
+  {cat: 'מי זה', q: 'מי האמן עם הכי הרבה אלבומים נמכרים בהיסטוריה?', opts: ['הביטלס', 'אלביס פרסלי', 'מייקל ג\'קסון', 'Queen'], correct: 0},
+  {cat: 'מי זה', q: 'איזו מדינה הכי מאושרת בעולם (מדד 2024)?', opts: ['דנמרק', 'שוויץ', 'פינלנד', 'נורווגיה'], correct: 2},
+  {cat: 'מי זה', q: 'איזו מדינה יש בה הכי הרבה אגמים בעולם?', opts: ['רוסיה', 'קנדה', 'ארה"ב', 'פינלנד'], correct: 1},
+  {cat: 'מי זה', q: 'איזו מדינה המציאה את הפיצה?', opts: ['יוון', 'איטליה', 'טורקיה', 'מצרים'], correct: 1},
+  {cat: 'מי זה', q: 'מי כתב את "מלחמה ושלום"?', opts: ['דוסטוייבסקי', 'טולסטוי', 'צ\'כוב', 'פושקין'], correct: 1},
+  {cat: 'מי זה', q: 'מי הייתה ראש הממשלה הראשונה של ישראל?', opts: ['גולדה מאיר', 'דוד בן-גוריון', 'לוי אשכול', 'יצחק רבין'], correct: 1},
+
+  {cat: 'כן או לא', q: 'האם עטלפים הם היונקים היחידים שיכולים לעוף?', opts: ['כן', 'לא'], correct: 0},
+  {cat: 'כן או לא', q: 'האם החומה הסינית נראית מהחלל בעין רגילה?', opts: ['כן', 'לא'], correct: 1},
+  {cat: 'כן או לא', q: 'האם דג הזהב זוכר רק 3 שניות?', opts: ['כן', 'לא'], correct: 1},
+  {cat: 'כן או לא', q: 'האם הבננה היא צמח עשב (ולא עץ)?', opts: ['כן', 'לא'], correct: 0},
+  {cat: 'כן או לא', q: 'האם יש יותר עצים בכדור הארץ מכוכבים בגלקסיית החלב?', opts: ['כן', 'לא'], correct: 0},
+  {cat: 'כן או לא', q: 'האם בחלל אי אפשר לשמוע קול?', opts: ['כן', 'לא'], correct: 0},
+  {cat: 'כן או לא', q: 'האם נפוליאון היה נמוך מהממוצע של תקופתו?', opts: ['כן', 'לא'], correct: 1},
+  {cat: 'כן או לא', q: 'האם יש מדינה בלי נהר טבעי כלל — ערב הסעודית?', opts: ['כן', 'לא'], correct: 0},
+];
+
+// ============ STATE ============
+const STATE = {
+  players: [],
+  rounds: 12,
+  currentRound: 0,
+  currentPlayerIdx: 0,
+  questions: [],
+  roundAnswers: {},
+  selectedAnswer: null,
+  selectedConfidence: null,
+  history: [],
+};
+
+// ============ PERSISTENCE ============
+function saveState() {
+  localStorage.setItem('confidence-game', JSON.stringify(STATE));
+}
+function loadState() {
+  const s = localStorage.getItem('confidence-game');
+  if (!s) return false;
+  try {
+    Object.assign(STATE, JSON.parse(s));
+    return true;
+  } catch { return false; }
+}
+
+// ============ SETUP ============
+function addPlayer(name = '') {
+  if (STATE.players.length >= 8) return;
+  STATE.players.push({ id: Date.now() + Math.random(), name: name, score: 0, maxWrong: 0 });
+  renderPlayers();
+}
+function removePlayer(id) {
+  STATE.players = STATE.players.filter(p => p.id !== id);
+  renderPlayers();
+}
+function renderPlayers() {
+  const list = document.getElementById('playerList');
+  list.innerHTML = '';
+  STATE.players.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'player-input-row';
+    row.innerHTML = `
+      <input type="text" placeholder="שם של שחקן ${i+1}" value="${p.name || ''}" oninput="updatePlayerName(${p.id}, this.value)">
+      <button class="remove-btn" onclick="removePlayer(${p.id})">×</button>
+    `;
+    list.appendChild(row);
+  });
+}
+function updatePlayerName(id, val) {
+  const p = STATE.players.find(p => p.id === id);
+  if (p) p.name = val.trim();
+}
+function setRounds(n) {
+  STATE.rounds = n;
+  ['10','15','20'].forEach(r => {
+    const btn = document.getElementById('rounds-' + r);
+    if (r == n) {
+      btn.style.background = 'var(--burgundy)';
+      btn.style.color = 'var(--cream)';
+      btn.style.borderColor = 'var(--burgundy)';
+    } else {
+      btn.style.background = 'var(--cream)';
+      btn.style.color = 'var(--burgundy)';
+      btn.style.borderColor = 'var(--gold)';
+    }
+  });
+}
+
+function startGame() {
+  const valid = STATE.players.filter(p => p.name && p.name.trim());
+  if (valid.length < 2) {
+    alert('צריך לפחות 2 שחקנים עם שמות');
+    return;
+  }
+  STATE.players = valid.map(p => ({ ...p, score: 0, maxWrong: 0 }));
+  STATE.questions = [...QUESTIONS].sort(() => Math.random() - 0.5).slice(0, STATE.rounds);
+  STATE.currentRound = 0;
+  STATE.history = [];
+  saveState();
+  showIntroScreen();
+}
+
+// ============ GAME FLOW ============
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById('screen-' + id).classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+
+function showIntroScreen() {
+  const q = STATE.questions[STATE.currentRound];
+  document.getElementById('introRoundNum').textContent = STATE.currentRound + 1;
+  document.getElementById('introTotalRounds').textContent = STATE.rounds;
+  document.getElementById('introCategory').textContent = q.cat;
+  document.getElementById('introQuestion').textContent = q.q;
+  showScreen('intro');
+}
+
+function startPlayerTurns() {
+  STATE.currentPlayerIdx = 0;
+  STATE.roundAnswers = {};
+  showPassOverlay();
+}
+
+function showPassOverlay() {
+  const p = STATE.players[STATE.currentPlayerIdx];
+  document.getElementById('nextPlayerName').textContent = p.name;
+  document.getElementById('nextPlayerNameBtn').textContent = p.name;
+  document.getElementById('passOverlay').classList.remove('hidden');
+}
+function dismissPass() {
+  document.getElementById('passOverlay').classList.add('hidden');
+  showPlayerTurn();
+}
+
+function showPlayerTurn() {
+  const q = STATE.questions[STATE.currentRound];
+  const p = STATE.players[STATE.currentPlayerIdx];
+  document.getElementById('currentPlayerName').textContent = p.name;
+  document.getElementById('turnCategory').textContent = q.cat;
+  document.getElementById('turnQuestion').textContent = q.q;
+
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = opt;
+    btn.onclick = () => selectAnswer(i);
+    btn.dataset.idx = i;
+    grid.appendChild(btn);
+  });
+
+  STATE.selectedAnswer = null;
+  STATE.selectedConfidence = null;
+  updateConfirmBtn();
+  document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('selected'));
+  showScreen('turn');
+}
+
+function selectAnswer(idx) {
+  STATE.selectedAnswer = idx;
+  document.querySelectorAll('.option-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.idx) === idx);
+  });
+  updateConfirmBtn();
+}
+function selectConfidence(val) {
+  STATE.selectedConfidence = val;
+  document.querySelectorAll('.conf-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.conf) === val);
+  });
+  updateConfirmBtn();
+}
+function updateConfirmBtn() {
+  const btn = document.getElementById('confirmBtn');
+  const ready = STATE.selectedAnswer !== null && STATE.selectedConfidence !== null;
+  btn.disabled = !ready;
+  btn.style.opacity = ready ? '1' : '0.5';
+}
+
+function confirmTurn() {
+  const p = STATE.players[STATE.currentPlayerIdx];
+  STATE.roundAnswers[p.id] = {
+    answer: STATE.selectedAnswer,
+    confidence: STATE.selectedConfidence,
+  };
+  STATE.currentPlayerIdx++;
+  if (STATE.currentPlayerIdx < STATE.players.length) {
+    showPassOverlay();
+  } else {
+    revealRound();
+  }
+}
+
+function revealRound() {
+  const q = STATE.questions[STATE.currentRound];
+  const results = [];
+  STATE.players.forEach(p => {
+    const ans = STATE.roundAnswers[p.id];
+    const correct = ans.answer === q.correct;
+    const points = correct ? ans.confidence : -ans.confidence;
+    p.score += points;
+    if (!correct && ans.confidence === 5) p.maxWrong++;
+    results.push({ player: p, answer: ans.answer, confidence: ans.confidence, correct, points });
+  });
+
+  STATE.history.push({ round: STATE.currentRound, question: q, results });
+
+  document.getElementById('revealRoundNum').textContent = STATE.currentRound + 1;
+  document.getElementById('revealAnswer').textContent = q.opts[q.correct];
+
+  const list = document.getElementById('resultsList');
+  list.innerHTML = '';
+  results.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'result-row ' + (r.correct ? 'correct' : 'wrong');
+    row.innerHTML = `
+      <div>
+        <div class="result-name">${r.player.name}</div>
+        <div class="result-answer">ענה: ${q.opts[r.answer]} · ביטחון ±${r.confidence}</div>
+      </div>
+      <div class="result-points">${r.points > 0 ? '+' : ''}${r.points}</div>
+    `;
+    list.appendChild(row);
+  });
+
+  renderLeaderboard('leaderboardList');
+
+  const isLast = STATE.currentRound + 1 >= STATE.rounds;
+  document.getElementById('nextBtn').textContent = isLast ? 'לסיום המשחק' : 'סיבוב הבא';
+  saveState();
+  showScreen('reveal');
+}
+
+function renderLeaderboard(elId) {
+  const sorted = [...STATE.players].sort((a,b) => b.score - a.score);
+  const el = document.getElementById(elId);
+  el.innerHTML = '';
+  sorted.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row' + (i === 0 ? ' first' : '');
+    row.innerHTML = `
+      <span class="lb-rank">${i+1}</span>
+      <span class="lb-name">${p.name}</span>
+      <span class="lb-score">${p.score}</span>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function nextRound() {
+  STATE.currentRound++;
+  if (STATE.currentRound >= STATE.rounds) {
+    showEndScreen();
+  } else {
+    showIntroScreen();
+  }
+}
+
+function showEndScreen() {
+  const sorted = [...STATE.players].sort((a,b) => b.score - a.score);
+  const winner = sorted[0];
+  document.getElementById('endWinnerName').textContent = winner.name;
+  document.getElementById('endWinnerScore').textContent = `${winner.score} נקודות`;
+
+  const awards = document.getElementById('awardsList');
+  awards.innerHTML = '';
+
+  const mostConfidentWrong = [...STATE.players].sort((a,b) => b.maxWrong - a.maxWrong)[0];
+  if (mostConfidentWrong && mostConfidentWrong.maxWrong > 0) {
+    const div = document.createElement('div');
+    div.className = 'award';
+    div.innerHTML = `
+      <div class="award-title">המתרברב/ת של הערב</div>
+      <div class="award-winner">${mostConfidentWrong.name}</div>
+      <div style="font-size:13px; color:var(--muted); margin-top:4px;">${mostConfidentWrong.maxWrong} פעמים -5</div>
+    `;
+    awards.appendChild(div);
+  }
+
+  renderLeaderboard('endLeaderboard');
+  saveState();
+  showScreen('end');
+}
+
+function newGame() {
+  localStorage.removeItem('confidence-game');
+  STATE.players = [];
+  STATE.currentRound = 0;
+  STATE.history = [];
+  initSetup();
+  showScreen('setup');
+}
+
+// ============ INIT ============
+function initSetup() {
+  STATE.players = [];
+  addPlayer();
+  addPlayer();
+  setRounds(12);
+  STATE.rounds = 12;
+}
+initSetup();
+</script>
+</body>
+</html>

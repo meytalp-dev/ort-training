@@ -1,0 +1,13 @@
+# Warm Embrace
+
+## A Visual Philosophy for School Belonging
+
+This movement speaks through warmth before words. Every surface radiates the quiet certainty of being held — soft rose gradients meeting cream, shapes that curve inward like arms opening. The palette lives entirely in the blush-to-terracotta spectrum with ivory breathing space, creating environments that feel like arriving home after a long day. Nothing sharp. Nothing cold. Every edge rounds toward comfort.
+
+Form communicates through **concentric gathering** — circles nesting within circles, figures drawn toward a shared center, organic clusters that suggest community without illustrating it literally. Human silhouettes appear as geometric abstractions: rounded rectangles that lean toward each other, overlapping with translucent warmth. Hearts manifest not as cliché symbols but as the negative space between two forms touching. The craft here must be extraordinary — every curve calculated, every gradient hand-tuned, every element placed with the precision of someone who has spent a lifetime mastering visual harmony.
+
+Typography exists as monumental presence. Hebrew letterforms are architectural — massive, centered, breathing. The primary message dominates the canvas at billboard scale, set in a warm humanist typeface that carries both strength and tenderness. Secondary text is whispered: small, precise, positioned with surgical intention in corners or along edges. The text-to-visual ratio never exceeds 15% — this is a poster that communicates through feeling, not reading. Every typographic decision must appear as if a master calligrapher labored over each letterform.
+
+Color follows a strict emotional grammar: **base warmth** (cream, warm white, pale rose) occupies 60% of the canvas. **Accent warmth** (dusty pink, soft coral, muted terracotta) provides 30% through shapes and overlays. **Punctuation color** (a single deeper rose or warm burgundy) appears in exactly 10% — a badge, a line, a focal point. This restraint is what separates amateur warmth from crafted intimacy. The result must look like it emerged from weeks of color study, not minutes of gradient selection.
+
+Composition follows the **embrace principle**: visual weight gathers toward center, with generous margins that create the sensation of being surrounded rather than crowded. Decorative elements — soft geometric patterns, subtle dot grids, gentle radiating lines — exist at whisper-opacity (5-12%), providing texture without noise. Every millimeter of the canvas serves the singular message: you belong here. The final piece must appear so meticulously crafted that viewers assume a team of designers spent days perfecting it.

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>העיר האבודה — Audio Test Bench</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #0d0d1a;
+      color: #c8c8e0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    h1 { color: #9090c0; margin-bottom: 8px; font-size: 1.6rem; }
+    h2 { color: #7878a8; margin: 24px 0 12px; font-size: 1.1rem; border-bottom: 1px solid #2a2a40; padding-bottom: 6px; }
+    .subtitle { font-size: 0.85rem; color: #6868a0; margin-bottom: 24px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+    button {
+      background: #1a1a30;
+      color: #b0b0d0;
+      border: 1px solid #3a3a55;
+      border-radius: 8px;
+      padding: 12px 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    button:hover { background: #25254a; border-color: #6060a0; }
+    button:active { background: #30305a; transform: scale(0.97); }
+    button.active { border-color: #8080d0; background: #20204a; box-shadow: 0 0 12px rgba(100,100,200,0.2); }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .slider-row label { min-width: 60px; font-size: 0.85rem; }
+    input[type=range] { flex: 1; accent-color: #7070b0; }
+    .slider-val { min-width: 36px; text-align: center; font-size: 0.8rem; color: #8080b0; }
+
+    .status {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      background: #1a1a30;
+      border: 1px solid #3a3a55;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.75rem;
+      z-index: 10;
+    }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
+    .dot.on { background: #60d060; }
+    .dot.off { background: #d06060; }
+  </style>
+</head>
+<body>
+  <div class="status">
+    <span id="ctx-state">לא פעיל</span>
+    <span class="dot off" id="ctx-dot"></span>
+  </div>
+
+  <h1>העיר האבודה — Audio Test Bench</h1>
+  <p class="subtitle">לחצו על כפתור כלשהו כדי להפעיל את מנוע הסאונד (נדרשת אינטראקציה ראשונה)</p>
+
+  <!-- Ambients -->
+  <h2>Ambient Soundscapes</h2>
+  <div class="grid" id="ambient-grid">
+    <button data-ambient="city">City<br><small>drone + echoes + wind</small></button>
+    <button data-ambient="dialogue">Dialogue<br><small>soft, minimal</small></button>
+    <button data-ambient="tension">Tension<br><small>dissonant, pulsing</small></button>
+    <button data-ambient="garden">Garden<br><small>warm, safe</small></button>
+    <button data-ambient="stop">Stop Ambient</button>
+  </div>
+
+  <!-- SFX -->
+  <h2>UI Sound Effects</h2>
+  <div class="grid" id="sfx-grid">
+    <button data-sfx="buttonTap">Button Tap<br><small>50ms click</small></button>
+    <button data-sfx="choiceSelected">Choice Selected<br><small>100ms blip</small></button>
+    <button data-sfx="trustUp">Trust Up<br><small>200ms ascending</small></button>
+    <button data-sfx="trustDown">Trust Down<br><small>200ms descending</small></button>
+    <button data-sfx="remember">Remember<br><small>300ms chime</small></button>
+    <button data-sfx="shardCollected">Shard Collected<br><small>400ms sparkle</small></button>
+    <button data-sfx="chapterComplete">Chapter Complete<br><small>800ms chord</small></button>
+    <button data-sfx="speechBubble">Speech Bubble<br><small>80ms pop</small></button>
+    <button data-sfx="silenceWarning">Silence Warning<br><small>3s pulse</small></button>
+  </div>
+
+  <!-- Music controls -->
+  <h2>Adaptive Music</h2>
+  <div class="slider-row">
+    <label>Trust Level</label>
+    <input type="range" id="trust-slider" min="0" max="100" value="50">
+    <span class="slider-val" id="trust-val">0.50</span>
+  </div>
+
+  <!-- Ducking -->
+  <h2>Ducking / Mute</h2>
+  <div class="grid">
+    <button id="btn-duck">Duck (Dialogue)</button>
+    <button id="btn-unduck">Unduck</button>
+    <button id="btn-mute">Mute</button>
+    <button id="btn-unmute">Unmute</button>
+  </div>
+
+  <script src="audio-engine.js"></script>
+  <script>
+    const audio = new AudioManager();
+    let inited = false;
+
+    async function ensureInit() {
+      if (!inited) {
+        await audio.init();
+        inited = true;
+        document.getElementById('ctx-state').textContent = 'פעיל';
+        const dot = document.getElementById('ctx-dot');
+        dot.classList.remove('off');
+        dot.classList.add('on');
+      }
+    }
+
+    // Ambient buttons
+    document.getElementById('ambient-grid').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      await ensureInit();
+      const scene = btn.dataset.ambient;
+      // Highlight active
+      document.querySelectorAll('#ambient-grid button').forEach(b => b.classList.remove('active'));
+      if (scene === 'stop') {
+        audio.playAmbient('__none__'); // triggers fade-out of current
+        audio._activeAmbient = null;
+      } else {
+        btn.classList.add('active');
+        audio.playAmbient(scene);
+      }
+    });
+
+    // SFX buttons
+    document.getElementById('sfx-grid').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      await ensureInit();
+      audio.playEffect(btn.dataset.sfx);
+    });
+
+    // Trust slider
+    const trustSlider = document.getElementById('trust-slider');
+    const trustVal = document.getElementById('trust-val');
+    trustSlider.addEventListener('input', async () => {
+      await ensureInit();
+      const v = trustSlider.value / 100;
+      trustVal.textContent = v.toFixed(2);
+      audio.setTrust(v);
+    });
+
+    // Duck / Mute
+    document.getElementById('btn-duck').addEventListener('click', async () => { await ensureInit(); audio.duck(); });
+    document.getElementById('btn-unduck').addEventListener('click', async () => { await ensureInit(); audio.unduck(); });
+    document.getElementById('btn-mute').addEventListener('click', async () => { await ensureInit(); audio.mute(); });
+    document.getElementById('btn-unmute').addEventListener('click', async () => { await ensureInit(); audio.unmute(); });
+  </script>
+</body>
+</html>

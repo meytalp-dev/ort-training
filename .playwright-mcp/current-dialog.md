@@ -1,0 +1,607 @@
+- generic [ref=e2]:
+  - dialog "Edit about" [active] [ref=e1261]:
+    - button "Dismiss" [ref=e1262] [cursor=pointer]:
+      - img [ref=e1264]
+    - generic [ref=e1266]:
+      - banner [ref=e1331]:
+        - heading "Edit about" [level=2] [ref=e1332]
+      - main [ref=e1398]:
+        - generic [ref=e1400]:
+          - generic [ref=e1402]:
+            - img [ref=e1403]
+            - paragraph [ref=e1409]: Your about section has been updated
+          - generic [ref=e1415]:
+            - paragraph [ref=e1416]: Further enhance your profile with Premium
+            - paragraph [ref=e1417]: Stand out for almost 2x as many opportunities. Get Premium to enhance your profile with the help of AI.
+            - link "Try Premium for ₪0" [ref=e1418] [cursor=pointer]:
+              - /url: https://www.linkedin.com/premium/products/?upsellOrderOrigin=Tracking%3Av1%3APROFILE_NEXT_BEST_ACTION%3AProfile%3AIn-Product&referenceId=T7o1QSiOTIGUZNTj7CpmuQ%3D%3D&isSS=false
+              - generic [ref=e1420]: Try Premium for ₪0
+            - paragraph [ref=e1421]: 1-month free trial with 24/7 support. Cancel with ease. We’ll remind you 7 days before your trial ends.
+    - heading "0 notifications" [level=2] [ref=e1422]
+  - generic [ref=e4]:
+    - generic:
+      - button [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: Skip to main content
+      - button [ref=e8] [cursor=pointer]:
+        - img [ref=e333]
+    - generic [ref=e11]:
+      - banner [ref=e13]:
+        - generic [ref=e16]:
+          - button "LinkedIn" [ref=e335] [cursor=pointer]:
+            - img "LinkedIn" [ref=e336]
+          - search [ref=e339]:
+            - generic [ref=e340]:
+              - img [ref=e342]
+              - textbox "Search" [ref=e344]
+          - generic [ref=e20]:
+            - figure [ref=e349]
+            - navigation [ref=e23]:
+              - list [ref=e24]:
+                - listitem [ref=e25]:
+                  - button "Home, 1 new notification" [ref=e26] [cursor=pointer]:
+                    - img [ref=e350]
+                    - generic [ref=e30]: Home
+                - listitem [ref=e31]:
+                  - link "My Network, 1 new notification" [ref=e32] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/mynetwork
+                    - generic [ref=e33]:
+                      - img [ref=e353]
+                      - generic [ref=e355]: "1"
+                    - generic [ref=e36]: My Network
+                - listitem [ref=e37]:
+                  - button "Jobs, 0 new notifications" [ref=e38] [cursor=pointer]:
+                    - img [ref=e356]
+                    - generic [ref=e42]: Jobs
+                - listitem [ref=e43]:
+                  - link "Messaging, 0 new notifications" [ref=e44] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/messaging/
+                    - img [ref=e358]
+                    - generic [ref=e48]: Messaging
+                - listitem [ref=e49]:
+                  - link "Notifications, 0 new notifications" [ref=e50] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/notifications/
+                    - img [ref=e360]
+                    - generic [ref=e54]: Notifications
+                - listitem [ref=e55]:
+                  - button "Me" [ref=e56] [cursor=pointer]:
+                    - figure [ref=e58]
+                    - generic [ref=e60]:
+                      - text: Me
+                      - img [ref=e362]
+            - generic [ref=e63]:
+              - navigation [ref=e64]:
+                - list [ref=e65]:
+                  - listitem [ref=e66]:
+                    - button "For Business" [ref=e67] [cursor=pointer]:
+                      - img [ref=e364]
+                      - generic [ref=e71]:
+                        - text: For Business
+                        - img [ref=e366]
+              - link "Try Premium for ₪0" [ref=e74] [cursor=pointer]:
+                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/?isSelfProfile=true
+                - generic [ref=e75]:
+                  - img [ref=e368]
+                  - paragraph [ref=e78]: Try Premium for ₪0
+      - main [ref=e79]:
+        - generic [ref=e80]:
+          - toolbar [ref=e81]:
+            - generic [ref=e85]:
+              - link "Meytal Peleg" [ref=e86] [cursor=pointer]:
+                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                - generic "Meytal Peleg" [ref=e87]:
+                  - figure [ref=e88]
+                  - generic [ref=e89]:
+                    - paragraph [ref=e90]: Meytal Peleg
+                    - paragraph [ref=e92]: "--"
+              - generic [ref=e93]:
+                - button "More" [ref=e95] [cursor=pointer]:
+                  - img [ref=e371]
+                - button "Enhance profile" [ref=e99] [cursor=pointer]:
+                  - generic [ref=e101]: Enhance profile
+                - link "Add section" [ref=e102] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/in/meytal-peleg-839265378/?isSelfProfile=true
+                  - generic [ref=e104]: Add section
+                - button "Open to" [ref=e106] [cursor=pointer]:
+                  - generic [ref=e108]: Open to
+          - main [ref=e109]:
+            - generic [ref=e111]:
+              - generic [ref=e114]:
+                - generic [ref=e1156]:
+                  - generic [ref=e1157]:
+                    - generic [ref=e1158]:
+                      - link [ref=e1160] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/overlay/background-photo/
+                        - figure [ref=e1161]:
+                          - img "Cover photo" [ref=e1162]
+                      - button "Add background image" [ref=e1171] [cursor=pointer]:
+                        - img [ref=e1173]
+                    - link "Profile photo" [ref=e1175] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/?isSelfProfile=true
+                      - generic "Profile photo" [ref=e1176]:
+                        - figure [ref=e1177]
+                    - link "Edit profile" [ref=e1179] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/intro/
+                      - img [ref=e1181]
+                  - generic [ref=e1183]:
+                    - generic [ref=e1186]:
+                      - generic [ref=e1187]:
+                        - link "Meytal Peleg" [ref=e1189] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/in/meytal-peleg-839265378/?isSelfProfile=true
+                          - heading "Meytal Peleg" [level=2] [ref=e1191]
+                        - link "Add verification badge" [ref=e1194] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/trust/verification/?isDeepLinkToCCT=true&verificationUrl=https%3A%2F%2Fwww.linkedin.com%2Fverify%2F%3FentryPoint%3DSELFVIEW_TOPCARD
+                          - generic [ref=e1195]:
+                            - img [ref=e1196]
+                            - paragraph [ref=e1198]: Add verification badge
+                      - paragraph [ref=e1199]: Educational Innovation Expert | Founder of Learni
+                      - generic [ref=e1200]:
+                        - paragraph [ref=e1201]: Tel Aviv-Yafo, Tel Aviv District, Israel
+                        - paragraph [ref=e1202]: ·
+                        - paragraph [ref=e1203]:
+                          - link "Contact info" [ref=e1204] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/in/meytal-peleg-839265378/overlay/contact-info/
+                    - generic [ref=e1207]:
+                      - button "Open to" [ref=e1209] [cursor=pointer]:
+                        - generic [ref=e1211]: Open to
+                      - link "Add section" [ref=e1212] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/?isSelfProfile=true
+                        - generic [ref=e1214]: Add section
+                      - button "Enhance profile" [ref=e1216] [cursor=pointer]:
+                        - generic [ref=e1218]: Enhance profile
+                      - button "More" [ref=e1220] [cursor=pointer]:
+                        - img [ref=e1222]
+                - generic [ref=e403]:
+                  - generic [ref=e1350]:
+                    - generic [ref=e1352]:
+                      - heading "Suggested for you" [level=2] [ref=e1353]
+                      - generic [ref=e1354]:
+                        - img [ref=e1355]
+                        - paragraph [ref=e1357]: Private to you
+                    - generic [ref=e1362]:
+                      - generic [ref=e1363]:
+                        - generic [ref=e1364]:
+                          - img [ref=e1365]
+                          - paragraph [ref=e1371]: Add a past position
+                        - paragraph [ref=e1372]: Help others find and connect with you.
+                        - link "Add past position" [ref=e1373] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new/
+                          - generic [ref=e1375]: Add past position
+                      - button "Dismiss adding a past position" [ref=e1376] [cursor=pointer]:
+                        - img [ref=e1378]
+                  - generic [ref=e480]:
+                    - generic [ref=e482]:
+                      - heading "Analytics" [level=2] [ref=e483]
+                      - generic [ref=e484]:
+                        - img [ref=e485]
+                        - paragraph [ref=e487]: Private to you
+                    - generic [ref=e488]:
+                      - generic [ref=e491]:
+                        - link "0 profile views Update your profile to attract viewers." [ref=e492] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/analytics/profile-views/
+                          - generic [ref=e493]:
+                            - img [ref=e494]
+                            - generic [ref=e496]:
+                              - paragraph [ref=e497]: 0 profile views
+                              - paragraph [ref=e498]: Update your profile to attract viewers.
+                        - link "0 post impressions Start a post to increase engagement. Past 7 days" [ref=e499] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/analytics/creator/content/?timeRange=past_7_days&dimension=INDUSTRY&metricType=IMPRESSIONS
+                          - generic [ref=e500]:
+                            - img [ref=e501]
+                            - generic [ref=e503]:
+                              - paragraph [ref=e504]: 0 post impressions
+                              - paragraph [ref=e505]: Start a post to increase engagement.
+                              - paragraph [ref=e506]: Past 7 days
+                        - link "0 search appearances Update your profile to appear more in search." [ref=e507] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/analytics/search-appearances/
+                          - generic [ref=e508]:
+                            - img [ref=e509]
+                            - generic [ref=e511]:
+                              - paragraph [ref=e512]: 0 search appearances
+                              - paragraph [ref=e513]: Update your profile to appear more in search.
+                      - link "Show all analytics" [ref=e515] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/dashboard/
+                        - generic [ref=e516]:
+                          - img [ref=e517]
+                          - generic [ref=e519]: Show all
+                  - generic [ref=e1385]:
+                    - generic [ref=e1386]:
+                      - heading "About" [level=2] [ref=e1387]
+                      - link "Edit about" [ref=e1389] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/summary/new/
+                        - img [ref=e1391]
+                    - paragraph [ref=e1394]:
+                      - generic [ref=e1395]:
+                        - text: Passionate about transforming education through technology and innovation. I founded Learni to help teachers integrate AI tools and digital solutions into their classrooms — making learning more engaging, accessible, and effective for every student. With hands-on experience in educational technology, curriculum design, and teacher training, I specialize in bridging the gap between cutting-edge AI tools and real classroom needs.
+                        - button:
+                          - generic [ref=e1397] [cursor=pointer]: … more
+                - generic [ref=e524]:
+                  - generic [ref=e525]:
+                    - generic [ref=e526]:
+                      - heading "Activity" [level=2] [ref=e527]
+                      - link "0 followers" [ref=e529] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/followers/
+                        - paragraph [ref=e530]: 0 followers
+                    - generic [ref=e531]:
+                      - link "Create a post" [ref=e532] [cursor=pointer]:
+                        - /url: /preload/sharebox/
+                        - generic [ref=e534]: Create a post
+                      - link "Edit default activity" [ref=e535] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/content-collections-star-pill/new/
+                        - img [ref=e537]
+                  - generic [ref=e540]:
+                    - list [ref=e548]:
+                      - listitem [ref=e549]:
+                        - listitem [ref=e551]:
+                          - generic [ref=e552]:
+                            - generic [ref=e553]:
+                              - link [ref=e554] [cursor=pointer]:
+                                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                                - figure [ref=e555]:
+                                  - img "View Meytal Peleg’s profile" [ref=e556]
+                              - 'link "Meytal Peleg You -- 7mo • Visibility: Global" [ref=e557] [cursor=pointer]':
+                                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                                - generic [ref=e558]:
+                                  - generic "Meytal Peleg You" [ref=e559]:
+                                    - paragraph [ref=e562]: Meytal Peleg
+                                    - paragraph [ref=e564]: • You
+                                  - paragraph [ref=e566]: "--"
+                                  - paragraph [ref=e568]:
+                                    - text: 7mo •
+                                    - 'img "Visibility: Global" [ref=e569]'
+                              - button "Open control menu for post by Meytal Peleg" [ref=e571] [cursor=pointer]:
+                                - img [ref=e573]
+                            - link ":)" [ref=e575] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/feed/update/urn:li:activity:7358436705676189698/?originTrackingId=qQaXRxZCeHfsxL2owd98pA%3D%3D
+                              - paragraph [ref=e576]:
+                                - generic [ref=e577]: :)
+                          - generic [ref=e579]:
+                            - generic [ref=e581]:
+                              - 'button "Reaction button state: no reaction" [ref=e584] [cursor=pointer]':
+                                - generic [ref=e585]:
+                                  - img [ref=e586]
+                                  - generic [ref=e588]: Like
+                              - button "Open reactions menu":
+                                - img [ref=e590] [cursor=pointer]
+                            - link "Comment" [ref=e592] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/feed/update/urn:li:activity:7358436705676189698/
+                              - generic [ref=e593]:
+                                - img [ref=e594]
+                                - generic [ref=e596]: Comment
+                            - button "Repost" [ref=e597] [cursor=pointer]:
+                              - generic [ref=e598]:
+                                - img [ref=e599]
+                                - generic [ref=e601]: Repost
+                            - link "Send" [ref=e602] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/in/meytal-peleg-839265378/?isSelfProfile=true
+                              - generic [ref=e603]:
+                                - img [ref=e604]
+                                - generic [ref=e606]: Send
+                      - listitem [ref=e607]:
+                        - listitem [ref=e609]:
+                          - generic [ref=e610]:
+                            - generic [ref=e611]:
+                              - link [ref=e612] [cursor=pointer]:
+                                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                                - figure [ref=e613]:
+                                  - img "View Meytal Peleg’s profile" [ref=e614]
+                              - 'link "Meytal Peleg You -- 7mo • Visibility: Global" [ref=e615] [cursor=pointer]':
+                                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                                - generic [ref=e616]:
+                                  - generic "Meytal Peleg You" [ref=e617]:
+                                    - paragraph [ref=e620]: Meytal Peleg
+                                    - paragraph [ref=e622]: • You
+                                  - paragraph [ref=e624]: "--"
+                                  - paragraph [ref=e626]:
+                                    - text: 7mo •
+                                    - 'img "Visibility: Global" [ref=e627]'
+                              - button "Open control menu for post by Meytal Peleg" [ref=e629] [cursor=pointer]:
+                                - img [ref=e631]
+                            - link "https://lnkd.in/eWv5Sd6v" [ref=e633] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/feed/update/urn:li:activity:7358436634570149888/?originTrackingId=KweAxzuX5Y1jyT6pI3rnLw%3D%3D
+                              - paragraph [ref=e634]:
+                                - link "https://lnkd.in/eWv5Sd6v" [ref=e636]:
+                                  - /url: https://www.linkedin.com/safety/go/?url=https%3A%2F%2Flnkd%2Ein%2FeWv5Sd6v&urlhash=DMI9&mt=HZvPgc0yPhPual_WpIcpcUhGrzbGGf-q7c-B75Xv-UewX3BZpNxlrz2F5nfOfddsnHpwpRqsanPDLgv_mKBno9iK_gPueeflQP_ZU3805HsjVzrSFiPmVvqdr5g&isSdui=true
+                                  - strong [ref=e638]: https://lnkd.in/eWv5Sd6v
+                            - link "מורה חכם app---74eb8ca2.base44.app" [ref=e639] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/safety/go/?url=https%3A%2F%2Fapp---74eb8ca2%2Ebase44%2Eapp&urlhash=vFYT&mt=I9T-GfRddsy9PprjA6G_djKScwsWop6D6bMhPNv1qaonHe3qrFrTupdnWCv9U2v2t3NQUqZHQEjGVSLad-FIIiu0x02qOQpJyV22aifz2p_rK0v9OY3BTJYR5Yk&isSdui=true
+                              - generic [ref=e640]:
+                                - figure [ref=e641]
+                                - generic [ref=e642]:
+                                  - paragraph [ref=e644]:
+                                    - generic [ref=e645]: מורה חכם
+                                    - text: מורה חכם
+                                  - paragraph [ref=e647]: app---74eb8ca2.base44.app
+                          - generic [ref=e649]:
+                            - generic [ref=e651]:
+                              - 'button "Reaction button state: no reaction" [ref=e654] [cursor=pointer]':
+                                - generic [ref=e655]:
+                                  - img [ref=e656]
+                                  - generic [ref=e658]: Like
+                              - button "Open reactions menu":
+                                - img [ref=e660] [cursor=pointer]
+                            - link "Comment" [ref=e662] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/feed/update/urn:li:activity:7358436634570149888/
+                              - generic [ref=e663]:
+                                - img [ref=e664]
+                                - generic [ref=e666]: Comment
+                            - button "Repost" [ref=e667] [cursor=pointer]:
+                              - generic [ref=e668]:
+                                - img [ref=e669]
+                                - generic [ref=e671]: Repost
+                            - link "Send" [ref=e672] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/in/meytal-peleg-839265378/?isSelfProfile=true
+                              - generic [ref=e673]:
+                                - img [ref=e674]
+                                - generic [ref=e676]: Send
+                    - link "Show all" [ref=e678] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/recent-activity/all/
+                      - generic [ref=e679]:
+                        - img [ref=e680]
+                        - generic [ref=e682]: Show all
+              - generic [ref=e223]:
+                - generic [ref=e224]:
+                  - generic [ref=e228]:
+                    - generic [ref=e229]:
+                      - heading "Profile language" [level=2] [ref=e230]
+                      - link "Edit profile language" [ref=e232] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/secondary-language/
+                        - img [ref=e683]
+                    - paragraph [ref=e236]: English
+                    - generic [ref=e237]:
+                      - heading "Public profile & URL" [level=2] [ref=e238]
+                      - link "Edit Public profile & URL" [ref=e240] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/public-profile/settings/?trk=d_flagship3_profile_self_view_public_profile
+                        - img [ref=e685]
+                    - paragraph [ref=e244]: www.linkedin.com/in/meytal-peleg-839265378
+                  - generic [ref=e691]:
+                    - generic [ref=e693]:
+                      - heading "You might like" [level=2] [ref=e694]
+                      - paragraph [ref=e695]: Pages for you
+                    - generic [ref=e697]:
+                      - link "JobHunt - Hunt Your Dream Job! Human Resources Services 52,086 followers Follow" [ref=e700] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/jobhunt/
+                        - generic [ref=e701]:
+                          - figure [ref=e702]
+                          - generic [ref=e703]:
+                            - paragraph [ref=e706]: JobHunt - Hunt Your Dream Job!
+                            - paragraph [ref=e708]: Human Resources Services
+                            - paragraph [ref=e709]: 52,086 followers
+                            - button "Follow" [ref=e712]:
+                              - generic [ref=e713]:
+                                - img [ref=e714]
+                                - generic [ref=e716]: Follow
+                      - link "EL AL Israel Airlines Airlines and Aviation 53,469 followers Follow" [ref=e719] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/el-al-israel-airlines/
+                        - generic [ref=e720]:
+                          - figure [ref=e721]
+                          - generic [ref=e722]:
+                            - paragraph [ref=e725]: EL AL Israel Airlines
+                            - paragraph [ref=e727]: Airlines and Aviation
+                            - paragraph [ref=e728]: 53,469 followers
+                            - button "Follow" [ref=e731]:
+                              - generic [ref=e732]:
+                                - img [ref=e733]
+                                - generic [ref=e735]: Follow
+                    - link "Show all" [ref=e737] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/?isSelfProfile=true
+                      - generic [ref=e738]:
+                        - img [ref=e739]
+                        - generic [ref=e741]: Show all
+                - iframe [ref=e746]:
+                  - link "Advertise on LinkedIn" [ref=f109e3] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/jobs/?trk=li_FA_global_careers_jobsgtm_jsFA_v1&mcid=6899045044465016833
+                    - img "Advertise on LinkedIn" [ref=f109e4]
+              - generic [ref=e248]:
+                - generic [ref=e249]:
+                  - navigation [ref=e250]:
+                    - link "About" [ref=e251] [cursor=pointer]:
+                      - /url: https://about.linkedin.com/
+                      - paragraph [ref=e252]: About
+                    - link "Accessibility" [ref=e253] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/accessibility/
+                      - paragraph [ref=e254]: Accessibility
+                    - link "Talent Solutions" [ref=e255] [cursor=pointer]:
+                      - /url: https://business.linkedin.com/talent-solutions?trk=flagship_nav&veh=li-footer-lts-control&src=li-footer
+                      - paragraph [ref=e256]: Talent Solutions
+                    - link "Community Guidelines" [ref=e257] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/legal/professional-community-policies/
+                      - paragraph [ref=e258]: Community Guidelines
+                    - link "Careers" [ref=e259] [cursor=pointer]:
+                      - /url: https://careers.linkedin.com/
+                      - paragraph [ref=e260]: Careers
+                    - link "Marketing Solutions" [ref=e261] [cursor=pointer]:
+                      - /url: https://business.linkedin.com/advertise?trk=n_nav_lms_f&src=li-footer
+                      - paragraph [ref=e262]: Marketing Solutions
+                    - button "Privacy & Terms" [ref=e263] [cursor=pointer]:
+                      - generic [ref=e264]:
+                        - paragraph [ref=e265]: Privacy & Terms
+                        - img [ref=e747]
+                    - link "Ad Choices" [ref=e267] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/help/linkedin/answer/62931/
+                      - paragraph [ref=e268]: Ad Choices
+                    - link "Advertising" [ref=e269] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/ad/start/?trk=n_nav_ads_rr
+                      - paragraph [ref=e270]: Advertising
+                    - link "Sales Solutions" [ref=e271] [cursor=pointer]:
+                      - /url: https://business.linkedin.com/sales-solutions?trk=flagship_nav&veh=li-footer-lss-control&src=li-footer
+                      - paragraph [ref=e272]: Sales Solutions
+                    - link "Mobile" [ref=e273] [cursor=pointer]:
+                      - /url: https://mobile.linkedin.com/
+                      - paragraph [ref=e274]: Mobile
+                    - link "Small Business" [ref=e275] [cursor=pointer]:
+                      - /url: https://business.linkedin.com/grow?src=li-footer
+                      - paragraph [ref=e276]: Small Business
+                    - link "Safety Center" [ref=e277] [cursor=pointer]:
+                      - /url: https://safety.linkedin.com/
+                      - paragraph [ref=e278]: Safety Center
+                  - paragraph [ref=e280]: LinkedIn Corporation © 2026
+                - generic [ref=e281]:
+                  - list [ref=e282]:
+                    - listitem [ref=e283]:
+                      - generic [ref=e284]:
+                        - img [ref=e749]
+                        - generic [ref=e286]:
+                          - link "Questions?" [ref=e287] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/help/linkedin/
+                            - paragraph [ref=e288]: Questions?
+                          - paragraph [ref=e289]: Visit our Help Center.
+                    - listitem [ref=e290]:
+                      - generic [ref=e291]:
+                        - img [ref=e751]
+                        - generic [ref=e293]:
+                          - link "Manage your account and privacy" [ref=e294] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/mypreferences/d/
+                            - paragraph [ref=e295]: Manage your account and privacy
+                          - paragraph [ref=e296]: Go to your Settings.
+                    - listitem [ref=e297]:
+                      - generic [ref=e298]:
+                        - img [ref=e753]
+                        - generic [ref=e300]:
+                          - link "Recommendation transparency" [ref=e301] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/help/linkedin/answer/a1339724/
+                            - paragraph [ref=e302]: Recommendation transparency
+                          - paragraph [ref=e303]: Learn more about Recommended Content.
+                  - generic [ref=e305]:
+                    - paragraph [ref=e307]: Select language
+                    - generic [ref=e308]:
+                      - combobox "Select language" [ref=e309] [cursor=pointer]:
+                        - option "العربية (Arabic)"
+                        - option "বাংলা (Bangla)"
+                        - option "Čeština (Czech)"
+                        - option "Dansk (Danish)"
+                        - option "Deutsch (German)"
+                        - option "Ελληνικά (Greek)"
+                        - option "English (English)" [selected]
+                        - option "Español (Spanish)"
+                        - option "فارسی (Persian)"
+                        - option "Suomi (Finnish)"
+                        - option "Français (French)"
+                        - option "हिंदी (Hindi)"
+                        - option "Magyar (Hungarian)"
+                        - option "Bahasa Indonesia (Indonesian)"
+                        - option "Italiano (Italian)"
+                        - option "עברית (Hebrew)"
+                        - option "日本語 (Japanese)"
+                        - option "한국어 (Korean)"
+                        - option "मराठी (Marathi)"
+                        - option "Bahasa Malaysia (Malay)"
+                        - option "Nederlands (Dutch)"
+                        - option "Norsk (Norwegian)"
+                        - option "ਪੰਜਾਬੀ (Punjabi)"
+                        - option "Polski (Polish)"
+                        - option "Português (Portuguese)"
+                        - option "Română (Romanian)"
+                        - option "Русский (Russian)"
+                        - option "Svenska (Swedish)"
+                        - option "తెలుగు (Telugu)"
+                        - option "ภาษาไทย (Thai)"
+                        - option "Tagalog (Tagalog)"
+                        - option "Türkçe (Turkish)"
+                        - option "Українська (Ukrainian)"
+                        - option "Tiếng Việt (Vietnamese)"
+                        - option "简体中文 (Chinese (Simplified))"
+                        - option "正體中文 (Chinese (Traditional))"
+                      - img
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - complementary:
+            - generic [ref=e756]:
+              - generic [ref=e758] [cursor=pointer]:
+                - generic [ref=e759]:
+                  - img "Meytal Peleg" [ref=e760]
+                  - generic [ref=e762]: Status is online
+                - button "You are on the messaging overlay. Press enter to open the list of conversations." [ref=e763]:
+                  - generic [ref=e764]:
+                    - generic [ref=e765]: Messaging
+                    - generic [ref=e766]: You are on the messaging overlay. Press enter to open the list of conversations.
+              - generic [ref=e767]:
+                - button "Open messenger dropdown menu" [ref=e769] [cursor=pointer]:
+                  - img "Open messenger dropdown menu" [ref=e770]
+                - button "Compose message" [ref=e773] [cursor=pointer]:
+                  - img [ref=e774]
+                  - generic [ref=e776]: Compose message
+                - button "You are on the messaging overlay. Press enter to open the list of conversations." [ref=e777] [cursor=pointer]:
+                  - img [ref=e778]
+                  - generic [ref=e780]: You are on the messaging overlay. Press enter to open the list of conversations.
+          - complementary "AI-powered assistant to get help with your career, jobs etc"
+  - iframe [ref=e781]:
+    - generic [active] [ref=f97e1]:
+      - generic:
+        - region "Toast message":
+          - heading "0 notifications total" [level=2] [ref=f97e3]
+          - alert
+      - region [ref=f97e4]
+      - generic [ref=f97e5]:
+        - generic [ref=f97e7]:
+          - button "Skip to search" [ref=f97e8] [cursor=pointer]:
+            - generic [ref=f97e9]: Skip to search
+          - button "Skip to main content" [ref=f97e10] [cursor=pointer]:
+            - generic [ref=f97e11]: Skip to main content
+          - button "Keyboard shortcuts" [ref=f97e12] [cursor=pointer]:
+            - generic [ref=f97e13]: Keyboard shortcuts
+          - button "Close jump menu" [ref=f97e14] [cursor=pointer]:
+            - img [ref=f97e15]
+            - generic [ref=f97e17]: Close jump menu
+        - banner "Global Navigation" [ref=f97e18]:
+          - generic [ref=f97e19]:
+            - link "LinkedIn" [ref=f97e20] [cursor=pointer]:
+              - /url: https://www.linkedin.com/feed/?nis=true
+              - img "LinkedIn" [ref=f97e23]:
+                - img [ref=f97e24]
+            - generic [ref=f97e28]:
+              - combobox "Search" [ref=f97e29]
+              - generic:
+                - img
+            - navigation "Primary Navigation" [ref=f97e30]:
+              - list [ref=f97e31]:
+                - listitem [ref=f97e32]:
+                  - link "new feed updates notifications Home" [ref=f97e33] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/feed/
+                    - generic [ref=f97e34]:
+                      - generic [ref=f97e37]: new feed updates notifications
+                      - img [ref=f97e41]
+                    - generic "Home" [ref=f97e43]
+                - listitem [ref=f97e44]:
+                  - link "1 new network update notification My Network" [ref=f97e45] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/mynetwork/?
+                    - generic [ref=f97e46]:
+                      - generic [ref=f97e47]:
+                        - generic [ref=f97e48]: "1"
+                        - generic [ref=f97e49]: 1 new network update notification
+                      - img [ref=f97e53]
+                    - generic "My Network" [ref=f97e55]
+                - listitem [ref=f97e56]:
+                  - link "Jobs" [ref=f97e57] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/jobs/?
+                    - img [ref=f97e61]
+                    - generic "Jobs" [ref=f97e63]
+                - listitem [ref=f97e64]:
+                  - link "Messaging" [ref=f97e65] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/messaging/?
+                    - img [ref=f97e69]
+                    - generic "Messaging" [ref=f97e71]
+                - listitem [ref=f97e72]:
+                  - link "Notifications" [ref=f97e73] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/notifications/?
+                    - img [ref=f97e77]
+                    - generic "Notifications" [ref=f97e79]
+                - listitem [ref=f97e80]:
+                  - button "Meytal Peleg Me" [ref=f97e82] [cursor=pointer]:
+                    - img "Meytal Peleg" [ref=f97e83]
+                    - generic [ref=f97e84]:
+                      - text: Me
+                      - img [ref=f97e85]
+                - listitem [ref=f97e87]:
+                  - button "For Business" [ref=f97e89] [cursor=pointer]:
+                    - img [ref=f97e93]
+                    - generic "For Business" [ref=f97e95]:
+                      - text: For Business
+                      - img [ref=f97e96]
+                - listitem [ref=f97e98]:
+                  - link "Try Premium for ₪0" [ref=f97e100] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                    - generic [ref=f97e101]:
+                      - img [ref=f97e102]
+                      - generic [ref=f97e104]: Try Premium for ₪0

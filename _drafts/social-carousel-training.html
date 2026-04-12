@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learni Carousel — מצגת הדרכה: Google Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@300;400;500;600;700;800&family=Assistant:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --hand: 'Playpen Sans Hebrew', cursive;
+  --clean: 'Assistant', sans-serif;
+  --pink: #e8a0b4;
+  --pink-deep: #d4789a;
+  --pink-light: #f3c4d4;
+  --dark: #1e3a5f;
+  --blue: #7babd4;
+  --green: #7dd4ac;
+  --lavender: #b8a9d4;
+  --slide-size: 1080px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; background: #c8c4be;
+  font-family: var(--clean);
+}
+
+/* ========== CAROUSEL WRAPPER ========== */
+.carousel {
+  position: relative;
+  width: var(--slide-size);
+  height: var(--slide-size);
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.track {
+  display: flex;
+  width: calc(var(--slide-size) * 4);
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  direction: ltr;
+}
+
+.slide {
+  width: var(--slide-size);
+  height: var(--slide-size);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ========== NAV ARROWS ========== */
+.nav-arrow {
+  position: absolute;
+  top: 50%; transform: translateY(-50%);
+  z-index: 100;
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  transition: all 0.2s;
+}
+.nav-arrow:hover { transform: translateY(-50%) scale(1.08); box-shadow: 0 6px 24px rgba(0,0,0,0.18); }
+.nav-arrow svg { width: 24px; height: 24px; stroke: var(--dark); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.nav-prev { right: 16px; }
+.nav-next { left: 16px; }
+.nav-arrow.hidden { opacity: 0; pointer-events: none; }
+
+/* ========== DOT INDICATORS ========== */
+.dots {
+  display: flex; gap: 10px;
+  margin-top: 20px;
+}
+.dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: rgba(30,58,95,0.2);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.dot.active {
+  background: var(--pink);
+  width: 32px; border-radius: 6px;
+}
+
+/* ========== SHARED ========== */
+.logo-circles { position: relative; width: 44px; height: 38px; }
+.logo-circles .c1, .logo-circles .c2 { position: absolute; width: 30px; height: 30px; border-radius: 50%; top: 4px; }
+.logo-circles .c1 { right: 0; background: var(--blue); opacity: 0.85; }
+.logo-circles .c2 { right: 15px; background: var(--green); opacity: 0.85; }
+.logo-name { font-family: var(--hand); font-size: 28px; font-weight: 700; color: var(--dark); }
+
+.slide-num {
+  position: absolute; top: 50px; left: 60px; z-index: 10;
+  font-family: var(--hand);
+  font-size: 28px; font-weight: 500; color: rgba(30,58,95,0.4);
+}
+
+.section-title {
+  position: absolute; top: 50px; right: 60px; z-index: 10;
+  font-family: var(--hand);
+  font-size: 56px; font-weight: 800; color: var(--dark);
+}
+.section-title .accent { color: var(--pink); }
+
+.slide-brand {
+  position: absolute; bottom: 40px; right: 60px; z-index: 10;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--hand);
+  font-size: 24px; font-weight: 600; color: rgba(30,58,95,0.45);
+}
+
+.img-placeholder {
+  position: absolute; z-index: 10;
+  background: rgba(255,255,255,0.5);
+  border: 3px dashed rgba(232,160,180,0.5);
+  border-radius: 20px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+}
+.img-placeholder svg { width: 48px; height: 48px; stroke: rgba(232,160,180,0.6); fill: none; stroke-width: 1.5; stroke-linecap: round; }
+.img-placeholder span {
+  font-family: var(--hand);
+  font-size: 28px; font-weight: 500; color: rgba(30,58,95,0.4);
+}
+
+/* ========================================================
+   SLIDE 1 — THE HOOK (Floating Cards + Starburst)
+   ======================================================== */
+.s1 {
+  background: linear-gradient(160deg, #fdf5f7 0%, #fef8fa 40%, #fdf2f5 100%);
+}
+.s1::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 15%, rgba(232,160,180,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 55% at 85% 75%, rgba(232,160,180,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 50% 45%, rgba(184,169,212,0.1) 0%, transparent 70%);
+}
+
+/* Category pill */
+.s1 .cat {
+  position: absolute; top: 52px; right: 60px; z-index: 10;
+  background: var(--pink); color: #fff;
+  font-family: var(--hand);
+  font-size: 28px; font-weight: 800;
+  padding: 12px 32px; border-radius: 28px;
+  box-shadow: 0 4px 0 rgba(30,58,95,0.06), 0 10px 28px rgba(232,160,180,0.3);
+  display: flex; align-items: center; gap: 12px;
+}
+.s1 .cat svg { width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Starburst badge */
+.s1 .starburst {
+  position: absolute; top: 36px; left: 60px; z-index: 20;
+  width: 120px; height: 120px;
+  transform: rotate(-12deg);
+  filter: drop-shadow(0 6px 18px rgba(212,120,154,0.4));
+}
+.s1 .starburst-shape {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, var(--pink), #d4789a);
+  clip-path: polygon(
+    50% 0%, 61% 11%, 75% 3%, 78% 19%, 93% 20%, 87% 35%,
+    100% 44%, 90% 55%, 97% 68%, 83% 72%, 82% 88%,
+    68% 82%, 58% 95%, 50% 82%, 42% 95%, 32% 82%,
+    18% 88%, 17% 72%, 3% 68%, 10% 55%, 0% 44%,
+    13% 35%, 7% 20%, 22% 19%, 25% 3%, 39% 11%
+  );
+  display: flex; align-items: center; justify-content: center;
+}
+.s1 .starburst-text {
+  font-family: var(--hand);
+  font-size: 30px; font-weight: 800; color: #fff;
+  text-align: center; line-height: 1;
+}
+
+/* Play button */
+.s1 .play-circle {
+  position: absolute; top: 170px; left: 80px; z-index: 12;
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 8px 30px rgba(232,160,180,0.4);
+  animation: play-pulse 2s ease-in-out infinite;
+}
+@keyframes play-pulse {
+  0%, 100% { box-shadow: 0 8px 30px rgba(232,160,180,0.4); transform: scale(1); }
+  50% { box-shadow: 0 12px 40px rgba(232,160,180,0.6); transform: scale(1.06); }
+}
+.s1 .play-circle svg { width: 44px; height: 44px; fill: #fff; margin-right: -4px; }
+
+/* Title */
+.s1 .title-area {
+  position: absolute; top: 130px; right: 60px; left: 200px; z-index: 10;
+}
+.s1 .title-main {
+  font-family: var(--hand);
+  font-size: 54px; font-weight: 800; color: var(--dark);
+  line-height: 1.2;
+}
+.s1 .subtitle {
+  font-family: var(--clean);
+  font-size: 34px; font-weight: 500; color: rgba(30,58,95,0.6);
+  margin-top: 8px;
+}
+
+/* Hero card */
+.s1 .hero-card {
+  position: absolute; top: 360px; right: 55px; left: 55px; z-index: 11;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border-radius: 28px;
+  padding: 36px 40px;
+  border: 2px solid rgba(255,255,255,0.95);
+  border-top: 6px solid var(--pink);
+  transform: rotate(-1.2deg) scale(1.04);
+  box-shadow: 0 20px 60px rgba(232,160,180,0.18), 0 6px 16px rgba(0,0,0,0.06), 0 36px 80px rgba(30,58,95,0.08);
+  display: flex; align-items: center; gap: 24px;
+}
+.s1 .hero-icon {
+  flex-shrink: 0; width: 64px; height: 64px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(232,160,180,0.18), rgba(232,160,180,0.08));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(232,160,180,0.2);
+}
+.s1 .hero-icon svg { width: 34px; height: 34px; }
+.s1 .hero-txt {
+  font-family: var(--clean);
+  font-size: 34px; font-weight: 700;
+  color: var(--dark); line-height: 1.45;
+}
+
+/* Compact pills */
+.s1 .pills {
+  position: absolute; top: 560px; right: 60px; left: 60px; z-index: 10;
+  display: flex; gap: 24px;
+}
+.s1 .pill {
+  flex: 1;
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(18px);
+  border-radius: 22px;
+  padding: 24px 28px;
+  border: 1.5px solid rgba(255,255,255,0.9);
+  display: flex; align-items: center; gap: 16px;
+  box-shadow: 0 10px 35px rgba(232,160,180,0.12), 0 18px 50px rgba(30,58,95,0.05);
+}
+.s1 .pill:first-child { border-top: 4px solid var(--pink); transform: rotate(1.2deg); }
+.s1 .pill:last-child { border-top: 4px solid var(--pink-deep); transform: rotate(-0.8deg); }
+.s1 .pill-num {
+  flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--hand);
+  font-size: 24px; font-weight: 800; color: #fff;
+  box-shadow: 0 4px 12px rgba(232,160,180,0.3);
+}
+.s1 .pill-txt {
+  font-family: var(--clean);
+  font-size: 28px; font-weight: 600; color: var(--dark); line-height: 1.4;
+}
+
+/* Swipe indicator */
+.s1 .swipe {
+  position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%);
+  z-index: 10;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--hand);
+  font-size: 28px; font-weight: 600; color: rgba(30,58,95,0.5);
+  animation: swipe-pulse 2s ease-in-out infinite;
+}
+@keyframes swipe-pulse {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%); }
+  50% { opacity: 0.8; transform: translateX(-60%); }
+}
+.s1 .swipe svg { width: 28px; height: 28px; stroke: rgba(30,58,95,0.5); fill: none; stroke-width: 2.5; stroke-linecap: round; }
+
+/* Logo */
+.s1 .bottom-logo {
+  position: absolute; bottom: 45px; right: 60px; z-index: 10;
+  display: flex; align-items: center; gap: 12px;
+}
+
+/* ========================================================
+   SLIDE 2 — WHAT YOU'LL LEARN
+   ======================================================== */
+.s2 {
+  background: linear-gradient(170deg, #fdf5f7 0%, #fef8fa 50%, #fdf2f5 100%);
+}
+.s2::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 50% 50% at 80% 20%, rgba(232,160,180,0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(184,169,212,0.08) 0%, transparent 70%);
+}
+
+.s2 .items {
+  position: absolute; top: 150px; right: 60px; left: 60px; z-index: 10;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.s2 .item {
+  display: flex; align-items: center; gap: 22px;
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(12px);
+  border-radius: 22px;
+  padding: 24px 32px;
+  border: 1.5px solid rgba(255,255,255,0.88);
+  box-shadow: 0 6px 20px rgba(30,58,95,0.05);
+}
+.s2 .item-num {
+  flex-shrink: 0; width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--hand);
+  font-size: 28px; font-weight: 800; color: #fff;
+  box-shadow: 0 4px 12px rgba(232,160,180,0.3);
+}
+.s2 .item-text {
+  font-family: var(--clean);
+  font-size: 30px; font-weight: 600; color: var(--dark); line-height: 1.4;
+}
+.s2 .item:nth-child(1) { transform: rotate(-0.5deg); }
+.s2 .item:nth-child(2) { transform: rotate(0.3deg); margin-right: 16px; }
+.s2 .item:nth-child(3) { transform: rotate(-0.3deg); }
+.s2 .item:nth-child(4) { transform: rotate(0.5deg); margin-right: 10px; }
+
+.s2 .img-placeholder {
+  top: 620px; right: 80px; left: 80px; height: 300px;
+}
+
+/* ========================================================
+   SLIDE 3 — PREVIEW / SCREENSHOT
+   ======================================================== */
+.s3 {
+  background: linear-gradient(160deg, #fdf5f7 0%, #fef8fa 50%, #fdf2f5 100%);
+}
+.s3::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 55% 50% at 20% 25%, rgba(232,160,180,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 45% at 75% 70%, rgba(184,169,212,0.08) 0%, transparent 70%);
+}
+
+.s3 .screenshot-area {
+  position: absolute; top: 160px; right: 60px; left: 60px; z-index: 10;
+}
+.s3 .screenshot-placeholder {
+  width: 100%; height: 500px;
+  background: rgba(255,255,255,0.55);
+  border: 3px dashed rgba(232,160,180,0.45);
+  border-radius: 24px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 18px;
+  box-shadow: 0 12px 40px rgba(30,58,95,0.06);
+}
+.s3 .screenshot-placeholder svg { width: 64px; height: 64px; stroke: rgba(232,160,180,0.5); fill: none; stroke-width: 1.5; stroke-linecap: round; }
+.s3 .screenshot-placeholder span {
+  font-family: var(--hand);
+  font-size: 32px; font-weight: 500; color: rgba(30,58,95,0.4);
+}
+.s3 .screenshot-note {
+  margin-top: 28px; text-align: center;
+  font-family: var(--clean);
+  font-size: 30px; font-weight: 500; color: rgba(30,58,95,0.55);
+  line-height: 1.5;
+}
+.s3 .screenshot-note strong {
+  font-weight: 700; color: var(--dark);
+}
+
+/* ========================================================
+   SLIDE 4 — CTA
+   ======================================================== */
+.s4 {
+  background: linear-gradient(160deg, #fdf5f7 0%, #fef0f4 40%, #fdf5f7 100%);
+}
+.s4::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 40%, rgba(232,160,180,0.14) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 20% 80%, rgba(184,169,212,0.08) 0%, transparent 70%);
+}
+
+.s4 .cta-block {
+  position: absolute; top: 50%; right: 60px; left: 60px;
+  transform: translateY(-50%);
+  z-index: 10; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+}
+.s4 .cta-title {
+  font-family: var(--hand);
+  font-size: 80px; font-weight: 800; color: var(--dark);
+  line-height: 1.2;
+}
+.s4 .cta-subtitle {
+  font-family: var(--clean);
+  font-size: 36px; font-weight: 500; color: rgba(30,58,95,0.6);
+}
+.s4 .cta-btn {
+  display: inline-flex; align-items: center; gap: 16px;
+  background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+  color: #fff;
+  font-family: var(--hand);
+  font-size: 36px; font-weight: 700;
+  padding: 22px 64px; border-radius: 50px;
+  box-shadow: 0 8px 32px rgba(232,160,180,0.4), 0 0 0 5px rgba(232,160,180,0.12);
+  text-decoration: none;
+  margin-top: 8px;
+}
+.s4 .cta-btn svg { width: 28px; height: 28px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.s4 .cta-url {
+  font-family: var(--clean);
+  font-size: 32px; font-weight: 700; color: var(--pink-deep);
+  direction: ltr;
+  margin-top: 4px;
+}
+.s4 .cta-save {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--hand);
+  font-size: 28px; font-weight: 600; color: rgba(30,58,95,0.55);
+  margin-top: 16px;
+  background: rgba(255,255,255,0.6);
+  padding: 14px 32px;
+  border-radius: 30px;
+  border: 1.5px solid rgba(232,160,180,0.2);
+}
+.s4 .cta-save svg { width: 24px; height: 24px; stroke: rgba(30,58,95,0.55); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Mini starburst callback */
+.s4 .mini-burst {
+  position: absolute; top: 50px; left: 60px; z-index: 20;
+  width: 80px; height: 80px;
+  transform: rotate(-12deg);
+  filter: drop-shadow(0 4px 12px rgba(212,120,154,0.35));
+}
+.s4 .mini-burst-shape {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, var(--pink), var(--pink-deep));
+  clip-path: polygon(
+    50% 0%, 61% 11%, 75% 3%, 78% 19%, 93% 20%, 87% 35%,
+    100% 44%, 90% 55%, 97% 68%, 83% 72%, 82% 88%,
+    68% 82%, 58% 95%, 50% 82%, 42% 95%, 32% 82%,
+    18% 88%, 17% 72%, 3% 68%, 10% 55%, 0% 44%,
+    13% 35%, 7% 20%, 22% 19%, 25% 3%, 39% 11%
+  );
+  display: flex; align-items: center; justify-content: center;
+}
+.s4 .mini-burst-text {
+  font-family: var(--hand);
+  font-size: 18px; font-weight: 800; color: #fff;
+  text-align: center; line-height: 1;
+}
+
+.s4 .cat {
+  position: absolute; top: 55px; right: 60px; z-index: 10;
+  font-family: var(--hand);
+  font-size: 28px; font-weight: 700; color: rgba(30,58,95,0.5);
+}
+
+.s4 .brand-footer {
+  position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+  z-index: 10;
+  display: flex; align-items: center; gap: 14px;
+}
+.s4 .brand-footer .logo-name {
+  font-family: var(--hand); font-size: 32px; font-weight: 700; color: var(--dark);
+}
+</style>
+</head>
+<body>
+
+<div class="carousel" id="carousel">
+  <div class="track" id="track">
+
+    <!-- ============ SLIDE 1 — HOOK ============ -->
+    <div class="slide s1">
+      <!-- Category pill -->
+      <div class="cat">
+        <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        מצגת הדרכה
+      </div>
+
+      <!-- Starburst badge -->
+      <div class="starburst">
+        <div class="starburst-shape">
+          <div class="starburst-text">!חדש</div>
+        </div>
+      </div>
+
+      <!-- Play button -->
+      <div class="play-circle">
+        <svg viewBox="0 0 24 24"><polygon points="8,5 20,12 8,19"/></svg>
+      </div>
+
+      <!-- Title -->
+      <div class="title-area">
+        <div class="title-main">הדרכה חדשה: Google Flow</div>
+        <div class="subtitle">סטודיו ליצירת וידאו עם AI</div>
+      </div>
+
+      <!-- Hero card -->
+      <div class="hero-card">
+        <div class="hero-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#d4789a" stroke-width="2" stroke-linecap="round">
+            <polygon points="5,3 19,12 5,21" fill="rgba(232,160,180,0.12)"/>
+          </svg>
+        </div>
+        <div class="hero-txt">איך ליצור סרטון מקצועי בדקות</div>
+      </div>
+
+      <!-- Two pills -->
+      <div class="pills">
+        <div class="pill">
+          <div class="pill-num">4</div>
+          <div class="pill-txt">כלים בפלטפורמה אחת</div>
+        </div>
+        <div class="pill">
+          <div class="pill-num">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" style="width:24px;height:24px"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+          <div class="pill-txt">תרגול מעשי — יוצרים ביחד</div>
+        </div>
+      </div>
+
+      <!-- Swipe -->
+      <div class="swipe">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
+        סוואיפו
+      </div>
+
+      <!-- Logo -->
+      <div class="bottom-logo">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        <span class="logo-name">Learni</span>
+      </div>
+    </div>
+
+    <!-- ============ SLIDE 2 — WHAT YOU'LL LEARN ============ -->
+    <div class="slide s2">
+      <div class="slide-num">2/4</div>
+      <div class="section-title">מה <span class="accent">תלמדו?</span></div>
+
+      <div class="items">
+        <div class="item">
+          <div class="item-num">1</div>
+          <div class="item-text">מה זה Google Flow ואיך נכנסים</div>
+        </div>
+        <div class="item">
+          <div class="item-num">2</div>
+          <div class="item-text">יצירת סרטון עם Veo 3</div>
+        </div>
+        <div class="item">
+          <div class="item-num">3</div>
+          <div class="item-text">עריכת תמונות עם Imagen</div>
+        </div>
+        <div class="item">
+          <div class="item-num">4</div>
+          <div class="item-text">שימוש ב-Whisk ליצירת סגנונות</div>
+        </div>
+      </div>
+
+      <div class="img-placeholder">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <span>תמונה מ-Flow</span>
+      </div>
+
+      <div class="slide-brand">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        Learni
+      </div>
+    </div>
+
+    <!-- ============ SLIDE 3 — PREVIEW / SCREENSHOT ============ -->
+    <div class="slide s3">
+      <div class="slide-num">3/4</div>
+      <div class="section-title">הצצה <span class="accent">למצגת</span></div>
+
+      <div class="screenshot-area">
+        <div class="screenshot-placeholder">
+          <svg viewBox="0 0 24 24">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <span>צילום מסך מהמצגת</span>
+        </div>
+        <div class="screenshot-note">המצגת כוללת <strong>15 שקפים</strong> עם תרגול מעשי</div>
+      </div>
+
+      <div class="slide-brand">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        Learni
+      </div>
+    </div>
+
+    <!-- ============ SLIDE 4 — CTA ============ -->
+    <div class="slide s4">
+      <div class="cat">מצגת הדרכה: Google Flow</div>
+
+      <!-- Mini burst callback -->
+      <div class="mini-burst">
+        <div class="mini-burst-shape">
+          <div class="mini-burst-text">!חדש</div>
+        </div>
+      </div>
+
+      <div class="cta-block">
+        <div class="cta-title">מוכנים להתחיל?</div>
+        <div class="cta-subtitle">המצגת מחכה לכם — בחינם</div>
+        <a class="cta-btn" href="#">
+          <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="none"/></svg>
+          לצפייה במצגת
+        </a>
+        <div class="cta-url">learni.ai</div>
+        <div class="cta-save">
+          <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          שמרו את הפוסט הזה
+        </div>
+      </div>
+
+      <div class="brand-footer">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        <span class="logo-name">Learni | לרני</span>
+      </div>
+    </div>
+
+  </div><!-- /track -->
+
+  <!-- Navigation arrows -->
+  <button class="nav-arrow nav-prev" id="prevBtn" onclick="changeSlide(-1)">
+    <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <button class="nav-arrow nav-next" id="nextBtn" onclick="changeSlide(1)">
+    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+  </button>
+</div>
+
+<!-- Dot indicators -->
+<div class="dots" id="dots">
+  <div class="dot active" onclick="goToSlide(0)"></div>
+  <div class="dot" onclick="goToSlide(1)"></div>
+  <div class="dot" onclick="goToSlide(2)"></div>
+  <div class="dot" onclick="goToSlide(3)"></div>
+</div>
+
+<script>
+let current = 0;
+const total = 4;
+const track = document.getElementById('track');
+const dots = document.querySelectorAll('.dot');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+function updateUI() {
+  track.style.transform = `translateX(-${current * 1080}px)`;
+  dots.forEach((d, i) => d.classList.toggle('active', i === current));
+  prevBtn.classList.toggle('hidden', current === 0);
+  nextBtn.classList.toggle('hidden', current === total - 1);
+}
+
+function changeSlide(dir) {
+  current = Math.max(0, Math.min(total - 1, current + dir));
+  updateUI();
+}
+
+function goToSlide(i) {
+  current = i;
+  updateUI();
+}
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') changeSlide(1);
+  if (e.key === 'ArrowRight') changeSlide(-1);
+});
+
+updateUI();
+</script>
+
+</body>
+</html>

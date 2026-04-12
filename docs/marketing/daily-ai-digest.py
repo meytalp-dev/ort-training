@@ -9,6 +9,8 @@ import sys
 import os
 import json
 import re
+import csv
+import io
 import time
 from datetime import datetime
 from html import escape
@@ -50,6 +52,51 @@ LINKEDIN_SEARCHES = [
 ARTIFACT_TIMEOUT = 600.0  # 10 minutes per artifact
 OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Desktop", "AI-Digest")
 
+# Telegram Collect Bot — Google Sheet
+TELEGRAM_SHEET_ID = '1NzLcB9jr6iuWCzj8huGVdyCDjJEGOgz-eotxJRgN3js'
+TELEGRAM_SHEET_CSV = f'https://docs.google.com/spreadsheets/d/{TELEGRAM_SHEET_ID}/gviz/tq?tqx=out:csv'
+def fetch_telegram_items():
+    """Fetch items from Telegram collect bot Sheet — last 48 hours only."""
+    try:
+        r = httpx.get(TELEGRAM_SHEET_CSV, follow_redirects=True, timeout=15)
+        if r.status_code != 200:
+            print(f"Telegram Sheet: failed ({r.status_code})")
+            return []
+
+        reader = csv.reader(io.StringIO(r.text))
+        headers = next(reader, None)
+        if not headers:
+            return []
+
+        cutoff = datetime.now().timestamp() - 48 * 3600  # last 48 hours
+        items = []
+        for row in reader:
+            if len(row) < 4:
+                continue
+            try:
+                item_date = datetime.strptime(row[0].strip(), '%d/%m/%Y %H:%M')
+                if item_date.timestamp() < cutoff:
+                    continue
+            except ValueError:
+                continue
+
+            content = row[1].strip()
+            if content == '/start':
+                continue
+
+            items.append({
+                'date': row[0].strip(),
+                'content': content,
+                'url': row[2].strip() if len(row) > 2 else '',
+                'platform': row[3].strip() if len(row) > 3 else '',
+            })
+
+        print(f"Telegram items: {len(items)} from last 48h")
+        return items
+    except Exception as e:
+        print(f"Telegram Sheet fetch failed: {e}")
+        return []
+
 
 async def scrape_linkedin_posts():
     """Scrape recent AI-related posts from LinkedIn using Chrome Debug profile."""
@@ -57,6 +104,16 @@ async def scrape_linkedin_posts():
 
     posts = []
     print("LinkedIn: launching Chrome Debug profile...")
+
+    # Check if Chrome is already running — if so, skip LinkedIn (profile is locked)
+    import subprocess
+    chrome_running = subprocess.run(
+        ['tasklist', '/FI', 'IMAGENAME eq chrome.exe', '/NH'],
+        capture_output=True, text=True
+    )
+    if 'chrome.exe' in chrome_running.stdout.lower():
+        print("LinkedIn: skipped — Chrome is already running (profile locked)")
+        return []
 
     try:
         async with async_playwright() as p:
@@ -344,8 +401,9 @@ async def create_daily_digest():
     csrf_token, session_id = await fetch_tokens(cookies)
     tokens = AuthTokens(cookies=cookies, csrf_token=csrf_token, session_id=session_id)
 
-    # Step 0: Scrape LinkedIn before connecting to NotebookLM
+    # Step 0: Collect external sources
     linkedin_posts = await scrape_linkedin_posts()
+    telegram_items = fetch_telegram_items()
 
     async with NotebookLMClient(auth=tokens) as client:
         # Create new notebook
@@ -381,6 +439,33 @@ async def create_daily_digest():
                 print(f"  Added: LinkedIn ({len(linkedin_posts)} posts as text source)")
             except Exception as e:
                 print(f"  LinkedIn text source failed: {e}")
+
+        # Add Telegram collected items
+        if telegram_items:
+            # Add URLs as sources
+            tg_urls = [item for item in telegram_items if item['url']]
+            for item in tg_urls:
+                try:
+                    await client.sources.add_url(notebook.id, item['url'])
+                    added += 1
+                    print(f"  Added (Telegram): {item['url']}")
+                except Exception as e:
+                    print(f"  Skipped (Telegram): {item['url']}")
+
+            # Add text-only items as text source
+            tg_text = [item for item in telegram_items if not item['url'] and item['content'] and item['content'] != '(קישור בלבד)']
+            if tg_text:
+                combined = f"Telegram Collected Items — {today}\n\n"
+                for i, item in enumerate(tg_text, 1):
+                    combined += f"--- Item {i} ({item['date']}) ---\n{item['content']}\n\n"
+                try:
+                    await client.sources.add_text(notebook.id, title=f"Telegram Items — {today}", content=combined)
+                    added += 1
+                    print(f"  Added: Telegram text ({len(tg_text)} items)")
+                except Exception as e:
+                    print(f"  Telegram text source failed: {e}")
+
+            print(f"  Telegram: {len(tg_urls)} URLs + {len(tg_text)} text items")
 
         print(f"Total sources: {added}")
 
@@ -460,61 +545,84 @@ async def create_daily_digest():
         infographic_path = None
         slides_path = None
 
-        # Kick off generation
+        # Kick off generation — skip polling if both fail immediately (quota exceeded)
+        infographic_ok = False
+        slides_ok = False
+
         print("Requesting infographic (Hebrew)...")
         try:
-            await client.artifacts.generate_infographic(
+            result = await client.artifacts.generate_infographic(
                 notebook.id, language='he',
                 instructions="Create an infographic summarizing today's top AI news in Hebrew."
             )
+            infographic_ok = getattr(result, 'status', '') != 'failed'
+            if not infographic_ok:
+                print(f"Infographic: {getattr(result, 'error', 'failed')}")
         except Exception as e:
             print(f"Infographic request: {e}")
 
         print("Requesting slides (Hebrew)...")
         try:
-            await client.artifacts.generate_slide_deck(
+            result = await client.artifacts.generate_slide_deck(
                 notebook.id, language='he',
                 instructions="Create a slide deck summarizing today's AI news in Hebrew."
             )
+            slides_ok = getattr(result, 'status', '') != 'failed'
+            if not slides_ok:
+                print(f"Slides: {getattr(result, 'error', 'failed')}")
         except Exception as e:
             print(f"Slides request: {e}")
 
-        # Poll until artifacts are ready (max 10 min)
-        print("Waiting for artifacts to complete...")
-        deadline = time.time() + ARTIFACT_TIMEOUT
-        while time.time() < deadline:
-            await asyncio.sleep(15)
-            try:
-                infographics = await client.artifacts.list_infographics(notebook.id)
-                completed_info = [a for a in infographics if a.status == 3]
-                if completed_info and not infographic_path:
-                    infographic_path = os.path.join(day_dir, f"infographic-{today}.png")
-                    await client.artifacts.download_infographic(
-                        notebook.id, infographic_path, artifact_id=completed_info[0].id
-                    )
-                    print(f"Infographic saved: {infographic_path}")
+        # Only poll if at least one request succeeded
+        if infographic_ok or slides_ok:
+            print("Waiting for artifacts to complete...")
+            deadline = time.time() + ARTIFACT_TIMEOUT
+            while time.time() < deadline:
+                await asyncio.sleep(15)
+                try:
+                    if infographic_ok and not infographic_path:
+                        infographics = await client.artifacts.list_infographics(notebook.id)
+                        completed_info = [a for a in infographics if a.status == 3]
+                        if completed_info:
+                            infographic_path = os.path.join(day_dir, f"infographic-{today}.png")
+                            await client.artifacts.download_infographic(
+                                notebook.id, infographic_path, artifact_id=completed_info[0].id
+                            )
+                            print(f"Infographic saved: {infographic_path}")
 
-                slide_decks = await client.artifacts.list_slide_decks(notebook.id)
-                completed_slides = [a for a in slide_decks if a.status == 3]
-                if completed_slides and not slides_path:
-                    slides_path = os.path.join(day_dir, f"slides-{today}.pdf")
-                    await client.artifacts.download_slide_deck(
-                        notebook.id, slides_path, artifact_id=completed_slides[0].id
-                    )
-                    print(f"Slides saved: {slides_path}")
+                    if slides_ok and not slides_path:
+                        slide_decks = await client.artifacts.list_slide_decks(notebook.id)
+                        completed_slides = [a for a in slide_decks if a.status == 3]
+                        if completed_slides:
+                            slides_path = os.path.join(day_dir, f"slides-{today}.pdf")
+                            await client.artifacts.download_slide_deck(
+                                notebook.id, slides_path, artifact_id=completed_slides[0].id
+                            )
+                            print(f"Slides saved: {slides_path}")
 
-                if infographic_path and slides_path:
-                    print("All artifacts ready!")
-                    break
+                    # Done if both resolved
+                    info_done = (not infographic_ok) or infographic_path
+                    slides_done = (not slides_ok) or slides_path
+                    if info_done and slides_done:
+                        print("All artifacts ready!")
+                        break
 
-                # Check if all failed
-                all_info_done = all(a.status in (3, 4) for a in infographics) if infographics else False
-                all_slides_done = all(a.status in (3, 4) for a in slide_decks) if slide_decks else False
-                if all_info_done and all_slides_done:
-                    print("All artifact generation finished.")
-                    break
-            except Exception as e:
-                print(f"Poll error: {e}")
+                    # Check if all failed
+                    if infographic_ok and not infographic_path:
+                        infographics = await client.artifacts.list_infographics(notebook.id)
+                        if infographics and all(a.status in (3, 4) for a in infographics):
+                            infographic_ok = False
+                    if slides_ok and not slides_path:
+                        slide_decks = await client.artifacts.list_slide_decks(notebook.id)
+                        if slide_decks and all(a.status in (3, 4) for a in slide_decks):
+                            slides_ok = False
+                    if not infographic_ok and not slides_ok:
+                        print("All artifact generation finished.")
+                        break
+                except Exception as e:
+                    print(f"Poll error: {e}")
+        else:
+            print("Skipping artifact polling — both requests failed (likely quota exceeded)")
 
         if not infographic_path:
             print("Infographic: not available")

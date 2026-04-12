@@ -1,0 +1,14 @@
+# Recipe: Pomelli Reel
+- Date: 2026-04-02
+- Template: AI Tool
+- Opener: Photo Zoom — product photo zooms in + blur + text overlay
+- Hook: Slide Up + Glow — card rises with pink glow ring
+- Feature 1: Cursor Drag — cursor drags product image into studio
+- Feature 2: Button Escape — Generate button shakes and escapes
+- Feature 3: Messy→Organized — logo+colors organize into Business DNA
+- Benefits: Stack Build — cards stack like card deck
+- Summary: Quote Card — elegant quote with handwriting font
+- CTA: Card + QR style (card with photo + details)
+- Color: #E8548C (Pomelli pink)
+- Background: #FFF5F8 (soft rose)
+- Previous reels: Claude Code (Energy Pulse / 3D Flip / Button+Messy+Cursor / Pill BIG / Number Slam / Photo+Social), Stitch (Countdown / Particle Converge / Typewriter+Morph+3DFlip / Orbit / Before-After / Fullscreen Gradient)

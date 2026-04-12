@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>גלויות פסח אישיות לצוות | אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Rubik:wght@300;400;500;700;900&family=Suez+One&family=Secular+One&family=Karantina:wght@300;400;700&family=Amatic+SC:wght@400;700&family=Playpen+Sans+Hebrew:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+@font-face { font-family: 'Cafe'; src: url('../docs/design-studio/fonts/Cafe.ttf'); }
+@font-face { font-family: 'Petel Bold'; src: url('../docs/design-studio/fonts/Petel.ttf'); }
+@font-face { font-family: 'Gveret Levin'; src: url('../docs/design-studio/fonts/GveretLevinAlefAlefAlef-Regular.otf'); }
+@font-face { font-family: 'Dana Yad'; src: url('../docs/design-studio/fonts/DanaYadAlefAlefAlef-Normal.otf'); }
+@font-face { font-family: 'Nehama'; src: url('../docs/design-studio/fonts/Nehama.ttf'); }
+@font-face { font-family: 'Carmela'; src: url('../docs/design-studio/fonts/Carmela.ttf'); }
+
+:root { --bg: #F5F0E8; --primary: #2A9D8F; --primary-dark: #1a7a6d; --accent: #E9C46A; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Heebo', sans-serif; background: var(--bg); min-height: 100vh; direction: rtl; }
+
+.header { background: linear-gradient(135deg, #2A9D8F 0%, #3CC5B5 50%, #2A9D8F 100%); padding: 28px 32px; text-align: center; color: white; }
+.header h1 { font-family: 'Rubik', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.header p { font-size: 14px; opacity: 0.9; }
+
+.controls-bar { max-width: 1200px; margin: 20px auto; padding: 0 20px; display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.btn { padding: 12px 28px; border: none; border-radius: 12px; font-family: 'Heebo'; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 200ms; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(42,157,143,0.3); }
+.btn-accent { background: var(--accent); color: #0F172A; }
+
+.progress-bar { display: none; max-width: 600px; margin: 10px auto; text-align: center; }
+.progress-bar .bar { height: 6px; background: #e0dcd4; border-radius: 3px; overflow: hidden; margin: 8px 0; }
+.progress-bar .fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 300ms; width: 0; }
+.progress-bar .label { font-size: 13px; color: #64748B; }
+
+.grid { max-width: 1280px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 28px; }
+.card-wrapper { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+.card {
+  width: 380px; height: 380px; border-radius: 0; overflow: hidden;
+  position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.card.sticker-mode {
+  width: 512px; height: 512px;
+}
+.card-canvas {
+  width: 100%; height: 100%; position: relative; overflow: hidden;
+  direction: rtl; display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
+.dl-btn {
+  padding: 6px 18px; border: 1.5px solid #d0ccc4; border-radius: 8px; background: white;
+  font-family: 'Heebo'; font-size: 12px; cursor: pointer; color: #64748B; transition: all 200ms;
+}
+.dl-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+@media print { .header, .controls-bar, .progress-bar, .dl-btn { display: none !important; } .card-wrapper { page-break-inside: avoid; } }
+@media (max-width: 768px) { .grid { grid-template-columns: 1fr; justify-items: center; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>גלויות פסח אישיות לצוות</h1>
+  <p>אורט בית הערבה — תשפ"ו | 39 גלויות מעוצבות</p>
+</div>
+<div class="controls-bar">
+  <button class="btn btn-primary" onclick="downloadAll()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:middle;margin-left:6px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    הורדת כל הגלויות (ZIP)
+  </button>
+  <button class="btn btn-accent" onclick="downloadStickers()" style="background:#25D366;color:white;">סטיקרים לוואטסאפ (512x512)</button>
+</div>
+<div class="progress-bar" id="progressBar">
+  <div class="label" id="progressLabel">מוריד...</div>
+  <div class="bar"><div class="fill" id="progressFill"></div></div>
+</div>
+<div class="grid" id="cardsGrid"></div>
+
+<script src="../docs/passover-cards/illustrations.js"></script>
+<script>
+// ====== THEME → ILLUSTRATION MAPPING ======
+const themeIllustMap = {
+  freedom: ['dove-with-olive-branch', 'birds-in-flight', 'butterfly-cluster', 'broken-chains-becoming-flowers'],
+  love: ['floral-heart-wreath', 'heart-of-flowers-and-leaves', 'two-hands-holding'],
+  hope: ['sunrise-over-hills', 'candle-flame', 'stars-constellation', 'rainbow-arc', 'growing-seedling'],
+  bloom: ['almond-blossom-branch', 'wildflowers-bouquet', 'cherry-blossoms-scattered', 'field-of-flowers-border'],
+  happy: ['cherry-blossoms-scattered', 'wildflowers-bouquet', 'butterfly-cluster'],
+  purity: ['olive-branch', 'growing-seedling', 'almond-blossom-branch']
+};
+let illustCounter = {};
+
+const illustPositions = [
+  { main: 'top:3%;right:3%;width:22%;opacity:0.4;', accent: 'bottom:14%;left:3%;width:14%;opacity:0.25;transform:scaleX(-1);' },
+  { main: 'bottom:14%;left:2%;width:20%;opacity:0.35;', accent: 'top:3%;right:4%;width:12%;opacity:0.25;' },
+  { main: 'top:2%;left:3%;width:22%;opacity:0.4;transform:scaleX(-1);', accent: 'bottom:15%;right:3%;width:13%;opacity:0.22;' },
+  { main: 'bottom:14%;right:2%;width:21%;opacity:0.35;transform:scaleX(-1);', accent: 'top:4%;left:4%;width:12%;opacity:0.25;' },
+  { main: 'top:3%;right:3%;width:20%;opacity:0.38;', accent: 'bottom:15%;left:4%;width:14%;opacity:0.22;transform:scaleX(-1);' },
+  { main: 'top:2%;left:2%;width:21%;opacity:0.38;', accent: 'bottom:14%;right:3%;width:13%;opacity:0.25;' },
+];
+let posCounter = 0;
+
+function getLibraryIllust(theme) {
+  const ids = themeIllustMap[theme] || themeIllustMap.bloom;
+  if (!illustCounter[theme]) illustCounter[theme] = 0;
+  const mainId = ids[illustCounter[theme] % ids.length];
+  const accentId = ids[(illustCounter[theme] + 1) % ids.length];
+  illustCounter[theme]++;
+  const mainIl = illustrations.find(x => x.id === mainId);
+  const accentIl = illustrations.find(x => x.id === accentId);
+  if (!mainIl) return '';
+  const pos = illustPositions[posCounter % illustPositions.length];
+  posCounter++;
+  return `<div style="position:absolute;${pos.main}z-index:1;pointer-events:none;overflow:hidden;">${mainIl.svg}</div>${accentIl ? `<div style="position:absolute;${pos.accent}z-index:1;pointer-events:none;overflow:hidden;">${accentIl.svg}</div>` : ''}`;
+}
+
+// ====== DESIGN TEMPLATES (from card generator) ======
+
+const styleTemplates = [
+  // 0: botanical - almond blossoms + butterfly
+  { gradient: 'linear-gradient(145deg, #e8efe8, #dce8dc, #f0f5f0)',
+    deco: (c) => `
+      <svg style="position:absolute;top:0;right:0;width:55%;height:50%;opacity:0.9;" viewBox="0 0 200 200" fill="none">
+        <path d="M200 0 Q180 30 160 50 Q140 65 130 80 Q120 95 115 110 Q110 120 108 130" stroke="${c[2]}" stroke-width="3" fill="none" opacity="0.75"/>
+        <path d="M160 50 Q145 40 140 55 Q150 55 160 50Z" fill="${c[1]}" opacity="0.6"/>
+        <path d="M130 80 Q115 70 112 85 Q122 85 130 80Z" fill="${c[1]}" opacity="0.65"/>
+        <g transform="translate(170,25) rotate(-20)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.7"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.7"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.7"/><circle cx="0" cy="0" r="3.5" fill="${c[2]}" opacity="0.8"/></g>
+        <g transform="translate(145,55) rotate(10) scale(0.8)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="0" cy="0" r="3" fill="${c[2]}" opacity="0.7"/></g>
+        <g transform="translate(125,90) rotate(-5) scale(0.65)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="0" cy="0" r="3" fill="${c[2]}" opacity="0.6"/></g>
+        <ellipse cx="180" cy="15" rx="4" ry="10" fill="${c[1]}" opacity="0.4" transform="rotate(-30,180,15)"/>
+        <ellipse cx="155" cy="42" rx="3.5" ry="9" fill="${c[1]}" opacity="0.45" transform="rotate(15,155,42)"/>
+        <ellipse cx="135" cy="72" rx="3" ry="8" fill="${c[1]}" opacity="0.4" transform="rotate(-10,135,72)"/>
+        <ellipse cx="118" cy="100" rx="3" ry="8" fill="${c[1]}" opacity="0.35" transform="rotate(20,118,100)"/>
+        <ellipse cx="190" cy="8" rx="2.5" ry="5" fill="${c[0]}" opacity="0.4" transform="rotate(-40,190,8)"/>
+      </svg>
+      <svg style="position:absolute;bottom:8%;left:0;width:40%;height:35%;opacity:0.75;transform:scaleX(-1) scaleY(-1);" viewBox="0 0 200 200" fill="none">
+        <path d="M200 0 Q180 30 160 50 Q140 65 130 80 Q125 90 120 100" stroke="${c[2]}" stroke-width="2.5" fill="none" opacity="0.65"/>
+        <g transform="translate(170,25) rotate(-20) scale(0.7)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="0" cy="0" r="3" fill="${c[2]}" opacity="0.7"/></g>
+        <ellipse cx="155" cy="42" rx="3" ry="8" fill="${c[1]}" opacity="0.4" transform="rotate(15,155,42)"/>
+      </svg>
+      <svg style="position:absolute;top:18%;left:15%;width:8%;opacity:0.55;" viewBox="0 0 40 40" fill="none">
+        <path d="M20 12 Q10 2 5 12 Q2 20 10 22 Q15 23 20 20Z" fill="${c[0]}" opacity="0.6"/>
+        <path d="M20 12 Q30 2 35 12 Q38 20 30 22 Q25 23 20 20Z" fill="${c[0]}" opacity="0.5"/>
+        <path d="M20 12 Q14 18 12 26 Q16 30 20 26Z" fill="${c[1]}" opacity="0.4"/>
+        <path d="M20 12 Q26 18 28 26 Q24 30 20 26Z" fill="${c[1]}" opacity="0.35"/>
+        <line x1="20" y1="12" x2="20" y2="28" stroke="${c[2]}" stroke-width="1" opacity="0.5"/>
+      </svg>` },
+
+  // 1: sage - elegant frame + olive branch + dove
+  { gradient: 'linear-gradient(145deg, #fdf6e3, #f8edd0, #fef9ed)',
+    deco: (c) => `
+      <div style="position:absolute;top:5%;left:5%;right:5%;bottom:5%;border:1.5px solid ${c[1]};opacity:0.3;border-radius:4px;"></div>
+      <div style="position:absolute;top:7%;left:7%;right:7%;bottom:7%;border:0.5px solid ${c[1]};opacity:0.15;border-radius:2px;"></div>
+      <svg style="position:absolute;bottom:6%;left:50%;transform:translateX(-50%);width:60%;opacity:0.75;" viewBox="0 0 300 60" fill="none">
+        <path d="M30 45 Q80 30 150 35 Q220 30 270 45" stroke="${c[1]}" stroke-width="1.5" fill="none"/>
+        <ellipse cx="60" cy="38" rx="5" ry="11" fill="${c[1]}" opacity="0.4" transform="rotate(-25,60,38)"/>
+        <ellipse cx="90" cy="33" rx="5" ry="11" fill="${c[1]}" opacity="0.35" transform="rotate(15,90,33)"/>
+        <ellipse cx="120" cy="35" rx="4.5" ry="10" fill="${c[1]}" opacity="0.4" transform="rotate(-10,120,35)"/>
+        <ellipse cx="150" cy="34" rx="5" ry="11" fill="${c[1]}" opacity="0.35" transform="rotate(20,150,34)"/>
+        <ellipse cx="180" cy="33" rx="4.5" ry="10" fill="${c[1]}" opacity="0.4" transform="rotate(-15,180,33)"/>
+        <ellipse cx="210" cy="35" rx="5" ry="11" fill="${c[1]}" opacity="0.35" transform="rotate(10,210,35)"/>
+        <ellipse cx="240" cy="38" rx="5" ry="11" fill="${c[1]}" opacity="0.4" transform="rotate(25,240,38)"/>
+        <circle cx="75" cy="32" r="3" fill="${c[2]}" opacity="0.3"/><circle cx="135" cy="33" r="2.5" fill="${c[2]}" opacity="0.25"/><circle cx="195" cy="32" r="3" fill="${c[2]}" opacity="0.3"/>
+      </svg>
+      <svg style="position:absolute;top:6%;right:8%;width:14%;opacity:0.45;" viewBox="0 0 60 50" fill="${c[0]}">
+        <path d="M30 10 Q20 5 15 10 Q10 15 15 20 Q10 18 5 20 Q15 25 20 22 Q18 28 20 32 L25 28 Q28 32 30 35 Q32 32 35 28 L40 32 Q42 28 40 22 Q45 25 55 20 Q50 18 45 20 Q50 15 45 10 Q40 5 30 10Z"/>
+        <line x1="28" y1="12" x2="22" y2="8" stroke="${c[1]}" stroke-width="0.8"/><ellipse cx="21" cy="7" rx="2" ry="4" fill="${c[1]}" opacity="0.5" transform="rotate(-30,21,7)"/>
+      </svg>` },
+
+  // 2: golden - corner diamonds + sun rays + sprout
+  { gradient: 'linear-gradient(145deg, #f0e8f5, #ece0f0, #f5f0fa)',
+    deco: (c) => `
+      <svg style="position:absolute;top:3%;right:3%;width:16%;opacity:0.5;" viewBox="0 0 50 50" fill="none" stroke="${c[2]}" stroke-width="1.5"><rect x="10" y="10" width="30" height="30" transform="rotate(45,25,25)"/><rect x="15" y="15" width="20" height="20" transform="rotate(45,25,25)" opacity="0.6"/></svg>
+      <svg style="position:absolute;top:3%;left:3%;width:16%;opacity:0.5;" viewBox="0 0 50 50" fill="none" stroke="${c[2]}" stroke-width="1.5"><rect x="10" y="10" width="30" height="30" transform="rotate(45,25,25)"/><rect x="15" y="15" width="20" height="20" transform="rotate(45,25,25)" opacity="0.6"/></svg>
+      <svg style="position:absolute;bottom:12%;right:3%;width:14%;opacity:0.4;" viewBox="0 0 50 50" fill="none" stroke="${c[2]}" stroke-width="1.5"><rect x="12" y="12" width="26" height="26" transform="rotate(45,25,25)"/></svg>
+      <svg style="position:absolute;bottom:12%;left:3%;width:14%;opacity:0.4;" viewBox="0 0 50 50" fill="none" stroke="${c[2]}" stroke-width="1.5"><rect x="12" y="12" width="26" height="26" transform="rotate(45,25,25)"/></svg>
+      <svg style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:50%;opacity:0.35;" viewBox="0 0 200 100" fill="none">
+        <line x1="100" y1="0" x2="40" y2="100" stroke="${c[2]}" stroke-width="0.5"/><line x1="100" y1="0" x2="60" y2="100" stroke="${c[2]}" stroke-width="0.5"/><line x1="100" y1="0" x2="80" y2="100" stroke="${c[2]}" stroke-width="0.5"/><line x1="100" y1="0" x2="100" y2="100" stroke="${c[2]}" stroke-width="0.5"/><line x1="100" y1="0" x2="120" y2="100" stroke="${c[2]}" stroke-width="0.5"/><line x1="100" y1="0" x2="140" y2="100" stroke="${c[2]}" stroke-width="0.5"/><line x1="100" y1="0" x2="160" y2="100" stroke="${c[2]}" stroke-width="0.5"/>
+        <circle cx="100" cy="5" r="12" fill="${c[2]}" opacity="0.15"/>
+      </svg>
+      <svg style="position:absolute;bottom:10%;left:50%;transform:translateX(-50%);width:12%;opacity:0.55;" viewBox="0 0 40 50" fill="none">
+        <line x1="20" y1="50" x2="20" y2="20" stroke="${c[1]}" stroke-width="1.5"/><path d="M20 25 Q12 15 20 8 Q28 15 20 25Z" fill="${c[1]}" opacity="0.5"/><path d="M20 32 Q14 25 8 28 Q12 35 20 32Z" fill="${c[1]}" opacity="0.4"/><path d="M20 32 Q26 25 32 28 Q28 35 20 32Z" fill="${c[1]}" opacity="0.4"/>
+      </svg>` },
+
+  // 3: lavender - blobs + petals + flower silhouette
+  { gradient: 'linear-gradient(145deg, #fef0e8, #fce8d8, #fff5f0)',
+    deco: (c) => `
+      <div style="position:absolute;top:-5%;right:-5%;width:35%;height:35%;background:radial-gradient(circle,${c[0]}33 0%,transparent 70%);border-radius:50%;"></div>
+      <div style="position:absolute;bottom:-5%;left:-5%;width:30%;height:30%;background:radial-gradient(circle,${c[1]}33 0%,transparent 70%);border-radius:50%;"></div>
+      <div style="position:absolute;top:40%;left:-8%;width:25%;height:25%;background:radial-gradient(circle,${c[2]}22 0%,transparent 70%);border-radius:50%;"></div>
+      <div style="position:absolute;bottom:30%;right:-8%;width:20%;height:20%;background:radial-gradient(circle,${c[0]}22 0%,transparent 70%);border-radius:50%;"></div>
+      <svg style="position:absolute;top:10%;right:12%;width:5%;opacity:0.4;" viewBox="0 0 30 30" fill="${c[0]}"><ellipse cx="15" cy="8" rx="5" ry="10" transform="rotate(20,15,15)"/></svg>
+      <svg style="position:absolute;top:25%;left:10%;width:4%;opacity:0.3;" viewBox="0 0 30 30" fill="${c[1]}"><ellipse cx="15" cy="8" rx="4" ry="9" transform="rotate(-30,15,15)"/></svg>
+      <svg style="position:absolute;bottom:20%;right:8%;width:3.5%;opacity:0.35;" viewBox="0 0 30 30" fill="${c[0]}"><ellipse cx="15" cy="8" rx="4.5" ry="8" transform="rotate(45,15,15)"/></svg>
+      <svg style="position:absolute;bottom:35%;left:6%;width:3%;opacity:0.25;" viewBox="0 0 30 30" fill="${c[2]}"><ellipse cx="15" cy="8" rx="4" ry="8" transform="rotate(-15,15,15)"/></svg>
+      <svg style="position:absolute;top:6%;left:50%;transform:translateX(-50%);width:8%;opacity:0.2;" viewBox="0 0 50 60" fill="${c[0]}"><ellipse cx="25" cy="12" rx="8" ry="12"/><ellipse cx="14" cy="22" rx="8" ry="12" transform="rotate(-30,14,22)"/><ellipse cx="36" cy="22" rx="8" ry="12" transform="rotate(30,36,22)"/><ellipse cx="17" cy="35" rx="8" ry="12" transform="rotate(-60,17,35)"/><ellipse cx="33" cy="35" rx="8" ry="12" transform="rotate(60,33,35)"/><circle cx="25" cy="25" r="6" fill="${c[2]}"/></svg>` },
+
+  // 4: botanical warm - almond blossoms on warm bg
+  { gradient: 'linear-gradient(145deg, #faf5ef, #f4ece0, #fdf8f0)',
+    deco: (c) => `
+      <svg style="position:absolute;top:0;right:0;width:55%;height:50%;opacity:0.9;" viewBox="0 0 200 200" fill="none">
+        <path d="M200 0 Q180 30 160 50 Q140 65 130 80 Q120 95 115 110 Q110 120 108 130" stroke="${c[2]}" stroke-width="3" fill="none" opacity="0.75"/>
+        <path d="M160 50 Q145 40 140 55 Q150 55 160 50Z" fill="${c[1]}" opacity="0.6"/>
+        <path d="M130 80 Q115 70 112 85 Q122 85 130 80Z" fill="${c[1]}" opacity="0.65"/>
+        <g transform="translate(170,25) rotate(-20)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.7"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.7"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.7"/><circle cx="0" cy="0" r="3.5" fill="${c[2]}" opacity="0.8"/></g>
+        <g transform="translate(145,55) rotate(10) scale(0.8)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="0" cy="0" r="3" fill="${c[2]}" opacity="0.7"/></g>
+        <g transform="translate(125,90) rotate(-5) scale(0.65)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="0" cy="0" r="3" fill="${c[2]}" opacity="0.6"/></g>
+        <ellipse cx="180" cy="15" rx="4" ry="10" fill="${c[1]}" opacity="0.4" transform="rotate(-30,180,15)"/>
+        <ellipse cx="155" cy="42" rx="3.5" ry="9" fill="${c[1]}" opacity="0.45" transform="rotate(15,155,42)"/>
+        <ellipse cx="135" cy="72" rx="3" ry="8" fill="${c[1]}" opacity="0.4" transform="rotate(-10,135,72)"/>
+      </svg>
+      <svg style="position:absolute;bottom:8%;left:0;width:40%;height:35%;opacity:0.75;transform:scaleX(-1) scaleY(-1);" viewBox="0 0 200 200" fill="none">
+        <path d="M200 0 Q180 30 160 50 Q140 65 130 80 Q125 90 120 100" stroke="${c[2]}" stroke-width="2.5" fill="none" opacity="0.65"/>
+        <g transform="translate(170,25) rotate(-20) scale(0.7)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="0" cy="0" r="3" fill="${c[2]}" opacity="0.7"/></g>
+        <ellipse cx="155" cy="42" rx="3" ry="8" fill="${c[1]}" opacity="0.4" transform="rotate(15,155,42)"/>
+      </svg>` }
+];
+
+const colorSets = [
+  { bg: 'linear-gradient(145deg, #f5e8ee, #f0dce4, #f8f0f2)', colors: ['#E8B4B8','#A7D7C5','#F4D06F'], textColor: '#5a3a3a', headColor: '#8B4A50', blessColor: '#2A7A6A' },
+  { bg: 'linear-gradient(145deg, #fdf6e3, #f8edd0, #fef9ed)', colors: ['#2A9D8F','#E9C46A','#264653'], textColor: '#264653', headColor: '#1a7a6d', blessColor: '#9B5A30' },
+  { bg: 'linear-gradient(145deg, #f0e8f5, #ece0f0, #f5f0fa)', colors: ['#D4A5E5','#F0C8CB','#C0E6D8'], textColor: '#4a2a5a', headColor: '#7B5A8E', blessColor: '#A0505A' },
+  { bg: 'linear-gradient(145deg, #fef0e8, #fce8d8, #fff5f0)', colors: ['#E76F51','#F4A261','#2A9D8F'], textColor: '#5a2a1a', headColor: '#C45A3A', blessColor: '#1a6a5a' },
+  { bg: 'linear-gradient(145deg, #e8f0f8, #dce8f5, #f0f5fa)', colors: ['#7EB5D6','#A7D7C5','#F8E0A0'], textColor: '#2a4a5a', headColor: '#3A7A9A', blessColor: '#8A5030' },
+  { bg: 'linear-gradient(145deg, #faf5ef, #f4ece0, #fdf8f0)', colors: ['#C8956C','#E8D5B7','#8B6F4E'], textColor: '#4a3020', headColor: '#7A5535', blessColor: '#8B3A4A' },
+  { bg: 'linear-gradient(145deg, #e8efe8, #dce8dc, #f0f5f0)', colors: ['#8BBD8E','#C0E6D8','#F4D06F'], textColor: '#3a4a3a', headColor: '#4a6b3a', blessColor: '#8B4A50' },
+  { bg: 'linear-gradient(145deg, #f8f0f5, #f2e8f0, #faf5f8)', colors: ['#F0C8CB','#D4A5E5','#F4D06F'], textColor: '#5a3040', headColor: '#9B4060', blessColor: '#4a6b3a' },
+];
+
+const fontSets = [
+  { heading: "'Suez One', serif", body: "'Cafe', sans-serif" },
+  { heading: "'Secular One', sans-serif", body: "'Gveret Levin', sans-serif" },
+  { heading: "'Suez One', serif", body: "'Dana Yad', sans-serif" },
+  { heading: "'Karantina', sans-serif", body: "'Cafe', sans-serif" },
+  { heading: "'Rubik', sans-serif", body: "'Cafe', sans-serif" },
+  { heading: "'Suez One', serif", body: "'Playpen Sans Hebrew', sans-serif" },
+  { heading: "'Cafe', sans-serif", body: "'Heebo', sans-serif" },
+  { heading: "'Gveret Levin', sans-serif", body: "'Heebo', sans-serif" },
+  { heading: "'Nehama', sans-serif", body: "'Rubik', sans-serif" },
+  { heading: "'Carmela', sans-serif", body: "'Rubik', sans-serif" },
+  { heading: "'Petel Bold', sans-serif", body: "'Rubik', sans-serif" },
+];
+
+// ====== THEMES (from card generator) ======
+const themes = {
+  freedom:  { heading: 'חג החירות', text: 'שנדע לבחור את הדרך שלנו ולפרוש כנפיים לעבר האור,\nולמצוא את החופש האמיתי — להיות מי שאנחנו באמת.' },
+  purity:   { heading: 'התחדשות', text: 'כמו טל הבוקר שמרענן את העולם, נדע גם אנחנו להתחדש —\nלהקל, לפשט, לנשום ולפנות מקום לדברים יפים.' },
+  love:     { heading: 'באהבה', text: 'מה שמחבר אותנו חזק מכל מה שמפריד.\nשנדע לאהוב בלי תנאי, לחבק ולהיות שם אחד לשני.' },
+  bloom:    { heading: 'פריחה חדשה', text: 'כמו פרחי השקדייה שפורחים אחרי החורף,\nכך גם אנחנו פורחים מחדש — עם אמונה, אהבה ותקווה.' },
+  hope:     { heading: 'אור של תקווה', text: 'גם אחרי הלילה הכי ארוך תמיד עולה שחר חדש.\nשנה של אור, של חום ושל אמונה שהטוב בדרך.' },
+  happy:    { heading: 'חג שמח', text: 'חג של שמחה, חג של משפחה,\nחג של זיכרונות יפים ושל רגעים שנרצה לזכור לתמיד.' }
+};
+
+// ====== PHOTO HELPER ======
+function driveThumb(id) { return `https://lh3.googleusercontent.com/d/${id}=w200`; }
+
+// ====== STAFF DATA — first names only, theme matched to traits ======
+// illust: extra illustrations | bc: blessing color override | pic: drive file ID
+const staff = [
+  { name: "שרון", theme: 'hope', blessing: "חג פסח שמח\nמאחלת לך שתתחזקי ותגשימי את עצמך" },
+  { name: "אושרת", theme: 'happy', illust: true, blessing: "מאחלת לך חג שמח מלא צחוק, קלילות וחברות טובה כמו שאת מביאה לכל מי שסביבך.\nשתמשיכי לדאוג לכולם עם לב רחב – וגם לזכור לפנות מקום לעצמך." },
+  { name: "שי", g:'m', theme: 'freedom', illust: true, pic:'15BBUkee7KTYncW8MNOxhi_xEtR3SIwZ2', blessing: "מאחלת לך חג של שקט פנימי והוקרה על הדרך הצנועה והמחויבת שלך.\nשתמשיך להיות איש צוות שאפשר לסמוך עליו בכל משימה – בדיוק כפי שאתה." },
+  { name: "מירב", theme: 'bloom', illust: true, pic:'1EFct6jM-BbrUcgkp5Z75CT4UNeEtO4sq', blessing: "מאחלת לך חג של צמיחה פנימית והתחזקות בדרך שאת עוברת.\nשתמשיכי להתבונן, להתמודד ולהתקדם – בקצב הנכון לך." },
+  { name: "ליאת", theme: 'freedom', illust: true, blessing: "מאחלת לך חג של בהירות, דיוק והובלה מקצועית כפי שאת יודעת להביא.\nשתמשיכי לראות לעומק ולהאיר לאחרים את הדרך עם החוכמה שלך." },
+  { name: "מאיה", theme: 'love', illust: true, pic:'1-U1UhlfNtT2cMAyWv-Ztfc0EdpJeu83G', blessing: "מאחלת לך חג של עשייה מהלב ושמחה בעשייה המקצועית שלך.\nשתמשיכי להיות מסורה ומלאת משמעות עבור התלמידים שלך." },
+  { name: "אפרת", theme: 'purity', illust: true, blessing: "מאחלת לך חג של יצירה והמשך מצוינות בדרך הקפדנית והמדויקת שלך.\nשתמשיכי להביא את הכישרון שלך לכדי השפעה אמיתית על התלמידים." },
+  { name: "רווית", theme: 'love', illust: 'love', pic:'1R5tMr-LIs7lopkhwTRN7-dndUaSLYY_f', blessing: "תודה עלייך.\nמאחלת לך חג של השראה והובלה משמעותית כפי שאת יודעת.\nשתמשיכי להשפיע, להוביל ולרגש את הצוות בעשייה שלך." },
+  { name: "יעקב", g:'m', theme: 'hope', illust: true, blessing: "מאחלת לך חג של חיזוק הערכים והעקרונות שמובילים אותך.\nשתמשיך להיות דמות יציבה ומשמעותית עבור התלמידים והצוות." },
+  { name: "מנו", g:'m', theme: 'love', pic:'1bXB4bskYxbZJnUzpqoOtA85LNfxSGot6', blessing: "מאחלת לך חג של הערכה לכל מה שאתה עושה מתוך מסירות.\nשתמשיך להביא לב גדול וחברות אמיתית לכל מקום שאתה נמצא בו." },
+  { name: "יסכה", theme: 'love', blessing: "מאחלת לך חג של שקט בתוך כל העשייה הרחבה שאת מחזיקה.\nשתמשיכי להיות מדויקת, זוכרת ומובילה את התמונה הגדולה." },
+  { name: "דורית", theme: 'love', illust: true, pic:'1MEouOQelW1PzOKw1parY0q0RiKqh2S6f', blessing: "מאחלת לך חג של עומק, הקשבה ונחת מהעשייה המשמעותית שלך.\nשתמשיכי להיות אוזן קשבת וכתובת אמיתית לכל מי שצריך." },
+  { name: "מריאן", theme: 'hope', illust: true, pic:'1MMMKqDh7YX0N5W9H3JD6NuCDtXperL2x', blessing: "מאחלת לך חג של התמדה והצלחות בדרך הרצינית שלך.\nשתמשיכי לא לוותר ולהוביל את התלמידים קדימה." },
+  { name: "יעל", theme: 'happy', illust: true, blessing: "מאחלת לך חג של שמחה, כוח ונוכחות נעימה כמו שאת מביאה.\nשתמשיכי לחייך, לחזק ולהאיר לכל מי שסביבך." },
+  { name: "רעיה", theme: 'love', illust: true, blessing: "מאחלת לך חג של חיבור עמוק ומשמעותי כמו שאת יוצרת עם התלמידים.\nשתמשיכי להיות דמות אהובה ומעוררת השראה." },
+  { name: "אדיר", g:'m', theme: 'purity', blessing: "מאחלת לך חג של מקצועיות מתפתחת והצלחות בעשייה.\nשתמשיך להביא חוכמה ורצינות לכל תלמיד ותלמיד." },
+  { name: "שמעון", g:'m', theme: 'freedom', pic:'12WdiBOorgiyBdF6dyA1fzZItWs9e4n-k', blessing: "מאחלת לך חג של יציבות והמשך עשייה מקצועית ומשמעותית.\nשתמשיך להיות חלק חשוב ומשפיע בצוות." },
+  { name: "מיטל", theme: 'hope', pic:'1Zw7CbBVCdpp7JsEnf5NyM5D0eZapTiIy', blessing: "מאחלת לך חג של הערכה על האחריות הגדולה שאת נושאת.\nשתמשיכי להוביל במסירות ובמקצועיות את ההון האנושי של בית הספר." },
+  { name: "אופירה", theme: 'hope', illust: true, pic:'1RjSJsm4YNeK0BAVG4AwwDDy7zMc6FjO4', blessing: "מאחלת לך חג של שמחה, צחוק ונחת מהקשר שלך עם כולם.\nשתמשיכי להיות דמות שאפשר לסמוך עליה בכל מצב." },
+  { name: "צהיי", theme: 'hope', blessing: "מאחלת לך חג של שלווה ופתרונות שמגיעים מתוך רוגע וחכמה.\nשתמשיכי להביא גישה נעימה ומקדמת לכל סיטואציה." },
+  { name: "גיא", g:'m', theme: 'freedom', blessing: "מאחלת לך חג של הובלה משמעותית והשפעה רחבה.\nשתמשיך להנהיג מתוך אחריות וראייה מערכתית." },
+  { name: "מיטל פ.", theme: 'freedom', pic:'17ET-eup_inr5EnOLPZ1cp4QpTRTntR7D', blessing: "מאחלת לך חג של חירות אמיתית להמשיך לחלום ולהוביל שינוי.\nשתמשיכי ליצור משמעות ולבנות דרך ייחודית לבית הספר." },
+  { name: "אהוד", g:'m', theme: 'hope', illust: true, pic:'1t7b2Ks5fSIWPG20NzsIP_E4WAwg8DVLx', blessing: "מאחלת לך חג של הכרה בעשייה המסורה שלך.\nשתמשיך לעבוד באחריות ובשקט שמחזיק את המערכת." },
+  { name: "משה", g:'m', theme: 'bloom', bc: '#7A5535', illust: true, blessing: "מאחלת לך חג של התפתחות ולמידה מתוך סקרנות.\nשתמשיך להשתפר, להתעניין ולהביא שמחה לכיתה." },
+  { name: "נעמה", theme: 'bloom', illust: true, blessing: "את מיוחדת.\nמאחלת לך חג של יצירתיות והמשך תהליכים עמוקים ומשמעותיים.\nשתמשיכי לחשוב אחרת ולהוביל לתוצאות מיוחדות." },
+  { name: "ויקטוריה", theme: 'bloom', pic:'1H-wYr31sZppPPvJwogQtlBUdnSUna8LR', blessing: "מאחלת לך חג של קסם והשראה בהוראה שלך.\nשתמשיכי ללמד מתוך חן אישי שמגיע ישר ללב." },
+  { name: "שרה", theme: 'freedom', illust: true, blessing: "מאחלת לך חג של משמעות והכרה בקול הייחודי שאת מביאה.\nשתמשיכי להיות גורם חשוב ומשפיע בצוות." },
+  { name: "יוסי", g:'m', theme: 'hope', pic:'1OoNDZcAqd-lLBBSo3fToSovu31cZRDSp', blessing: "מאחלת לך חג של שקט פנימי והערכה על החוכמה והניסיון שלך.\nשתמשיך להיות דמות יציבה ומלמדת." },
+  { name: "יואב", g:'m', theme: 'love', illust: 'love', blessing: "מאחלת לך חג של חיבור לתלמידים ומשמעות בעשייה.\nשתמשיך ללוות ולהשפיע בדרכך." },
+  { name: "פרלה", theme: 'happy', illust: true, pic:'1Zxsrs1hxl4MJufs7fVjpLgp2bIMMABko', blessing: "מאחלת לך חג של מצוינות ושמחה בהישגים שלך.\nשתמשיכי להיות חברה טובה ואדם שאפשר לסמוך עליו." },
+  { name: "חוה", theme: 'love', blessing: "מאחלת לך חג של הבנה עמוקה והמשך עשייה מסורה.\nשתמשיכי לראות כל תלמיד באמת ולהשקיע מכל הלב." },
+  { name: "אליאל", g:'m', theme: 'hope', illust: true, blessing: "מאחלת לך חג של שקט פנימי וביטחון בדרך שלך.\nשתמשיך להיות רציני, אחראי ונעים בסביבה שלך." },
+  { name: "אושר", theme: 'bloom', illust: true, blessing: "מאחלת לך חג של מיקוד בתוך כל הכישרונות הרבים שלך.\nשתמשיכי להביא אנרגיה ויצירתיות לעשייה החינוכית." },
+  { name: "בת-שבע", theme: 'love', blessing: "מאחלת לך חג של רגישות והשפעה דרך ההוראה שלך.\nשתמשיכי לשלב בין טיפול ללמידה בצורה משמעותית." },
+  { name: "מלי", theme: 'happy', bc: '#8B4A50', blessing: "מאחלת לך חג של שמחה והמשך עשייה מסורה.\nשתמשיכי להאיר לתלמידים את הדרך עם החיוך שלך." },
+  { name: "לינוי", theme: 'hope', blessing: "מאחלת לך חג של עומק והגשמה מקצועית בדרך שלך.\nשתמשיכי להוביל מתוך רצינות וערכים משמעותיים." },
+  { name: "רויטל", theme: 'freedom', illust: true, blessing: "מאחלת לך חג של הובלה משמעותית מתוך הערכים שמנחים אותך ביום־יום.\nשתמשיכי להיות מנהיגה שמכוונת דרך, משפיעה ומרימה את כולם סביבה." },
+  { name: "לירון", theme: 'happy', illust: true, blessing: "מאחלת לך חג של שמחה והגשמה, בדיוק כמו האנרגיה הטובה שאת מביאה.\nשתמשיכי להיות פרטנרית יוצאת דופן – חכמה, מוכשרת ואדם שאי אפשר בלעדיו." },
+  { name: "ענת", theme: 'hope', illust: true, blessing: "מאחלת לך חג של הערכה לעומק, לחוכמה ולניסיון שאת מביאה איתך.\nשתמשיכי להוביל בביטחון, בשקט ובעוצמה שמייצרת יציבות סביבך." }
+];
+
+// ====== EXTRA ILLUSTRATIONS ======
+function getExtraIllust(type, c) {
+  if (type === 'love') return `
+    <svg style="position:absolute;top:8%;left:10%;width:12%;opacity:0.35;z-index:1;" viewBox="0 0 50 50" fill="${c[0]}"><path d="M25 45 C25 45 5 30 5 18 C5 10 12 5 19 8 C22 9.5 24 12 25 15 C26 12 28 9.5 31 8 C38 5 45 10 45 18 C45 30 25 45 25 45Z"/></svg>
+    <svg style="position:absolute;bottom:15%;right:8%;width:9%;opacity:0.25;z-index:1;" viewBox="0 0 50 50" fill="${c[0]}"><path d="M25 45 C25 45 5 30 5 18 C5 10 12 5 19 8 C22 9.5 24 12 25 15 C26 12 28 9.5 31 8 C38 5 45 10 45 18 C45 30 25 45 25 45Z"/></svg>
+    <svg style="position:absolute;top:35%;right:5%;width:6%;opacity:0.2;z-index:1;" viewBox="0 0 50 50" fill="${c[1]}"><path d="M25 45 C25 45 5 30 5 18 C5 10 12 5 19 8 C22 9.5 24 12 25 15 C26 12 28 9.5 31 8 C38 5 45 10 45 18 C45 30 25 45 25 45Z"/></svg>
+    <svg style="position:absolute;bottom:30%;left:5%;width:5%;opacity:0.18;z-index:1;" viewBox="0 0 50 50" fill="${c[2]}"><path d="M25 45 C25 45 5 30 5 18 C5 10 12 5 19 8 C22 9.5 24 12 25 15 C26 12 28 9.5 31 8 C38 5 45 10 45 18 C45 30 25 45 25 45Z"/></svg>`;
+  // floral
+  return `
+    <svg style="position:absolute;top:6%;left:8%;width:14%;opacity:0.35;z-index:1;" viewBox="0 0 60 60">
+      <g transform="translate(30,25)"><circle cx="0" cy="-8" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="-4.7" cy="6.5" r="6" fill="${c[0]}" opacity="0.5"/><circle cx="-7.6" cy="-2.5" r="6" fill="${c[0]}" opacity="0.6"/><circle cx="0" cy="0" r="3" fill="${c[2]}" opacity="0.7"/></g>
+      <path d="M30 33 Q28 45 30 55" stroke="${c[1]}" stroke-width="1.5" fill="none" opacity="0.4"/>
+      <ellipse cx="24" cy="42" rx="5" ry="2.5" fill="${c[1]}" opacity="0.3" transform="rotate(-20,24,42)"/>
+    </svg>
+    <svg style="position:absolute;bottom:14%;right:6%;width:11%;opacity:0.3;z-index:1;" viewBox="0 0 60 60">
+      <g transform="translate(30,30)"><circle cx="0" cy="-6" r="5" fill="${c[0]}" opacity="0.5"/><circle cx="5.7" cy="-1.9" r="5" fill="${c[0]}" opacity="0.45"/><circle cx="3.5" cy="4.9" r="5" fill="${c[0]}" opacity="0.5"/><circle cx="-3.5" cy="4.9" r="5" fill="${c[0]}" opacity="0.45"/><circle cx="-5.7" cy="-1.9" r="5" fill="${c[0]}" opacity="0.5"/><circle cx="0" cy="0" r="2.5" fill="${c[2]}" opacity="0.6"/></g>
+    </svg>
+    <svg style="position:absolute;top:40%;left:4%;width:5%;opacity:0.2;z-index:1;" viewBox="0 0 30 30"><ellipse cx="15" cy="10" rx="5" ry="10" fill="${c[1]}" transform="rotate(15,15,10)"/></svg>
+    <svg style="position:absolute;bottom:25%;right:4%;width:4%;opacity:0.2;z-index:1;" viewBox="0 0 30 30"><ellipse cx="15" cy="10" rx="4" ry="9" fill="${c[0]}" transform="rotate(-20,15,10)"/></svg>`;
+}
+
+// ====== RENDER ======
+function renderCards() {
+  const grid = document.getElementById('cardsGrid');
+  grid.innerHTML = '';
+
+  staff.forEach((person, i) => {
+    const style = styleTemplates[0]; // botanical for all
+    const pal = colorSets[i % colorSets.length];
+    const font = fontSets[i % fontSets.length];
+    const textColor = pal.textColor;
+    const headColor = pal.headColor;
+    const blessColor = person.bc || pal.blessColor;
+    const divColor = pal.colors[0] + '66';
+    const bannerBg = 'linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 40%, rgba(255,255,255,0) 100%)';
+
+    const theme = themes[person.theme] || themes.happy;
+    const blessingHTML = person.blessing.split('\n').map(l => l.trim()).join('<br>');
+    const themeTextHTML = theme.text.split('\n').map(l => l.trim()).join('<br>');
+    const honorific = person.g === 'm' ? 'יקר' : 'יקרה';
+    // Cafe font renders small — boost size
+    const isCafeBody = font.body.includes('Cafe');
+    const isCafeHead = font.heading.includes('Cafe');
+    const nameSize = 'clamp(22px,6vw,32px)';
+    const headSize = isCafeHead ? 'clamp(18px,5vw,26px)' : 'clamp(16px,4.5vw,22px)';
+    const bodySize = isCafeBody ? 'clamp(15px,4vw,20px)' : 'clamp(13px,3.2vw,16px)';
+    const themeSize = isCafeBody ? 'clamp(14px,3.5vw,18px)' : 'clamp(12px,2.8vw,14px)';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'card-wrapper';
+    wrapper.innerHTML = `
+      <div class="card" id="card-${i}">
+        <div class="card-canvas" style="background:${pal.bg};">
+          ${style.deco(pal.colors)}
+          ${person.illust ? getLibraryIllust(person.theme) : ''}
+          ${person.pic ? `<div style="position:absolute;top:12px;left:12px;width:60px;height:60px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,0.9);box-shadow:0 3px 12px rgba(0,0,0,0.15);z-index:4;background:#f0ebe4;"><img src="${driveThumb(person.pic)}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center top;" onerror="this.parentElement.style.display='none'"></div>` : ''}
+          <div style="position:relative;z-index:2;text-align:center;padding:5% 6% 14%;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;">
+            <div style="font-family:'Rubik',sans-serif;font-size:${nameSize};font-weight:700;color:${headColor};line-height:1.2;margin-bottom:1%;">${person.name} ${honorific}</div>
+            <div style="font-family:${font.heading};font-size:${headSize};font-weight:700;color:${headColor};line-height:1.3;margin-bottom:1%;opacity:0.85;">${theme.heading}</div>
+            <div style="font-family:'Heebo',sans-serif;font-size:${themeSize};font-weight:400;color:${textColor};line-height:1.6;max-width:88%;margin-bottom:2%;opacity:0.7;font-style:italic;">${themeTextHTML}</div>
+            <div style="width:25%;height:1px;background:linear-gradient(90deg,transparent,${divColor},transparent);margin-bottom:2%;"></div>
+            <div style="font-family:'Gveret Levin',sans-serif;font-size:${bodySize};font-weight:400;color:${blessColor};line-height:1.7;max-width:90%;">${blessingHTML}</div>
+          </div>
+          <div style="position:absolute;bottom:0;left:0;right:0;padding:3% 0 2%;background:${bannerBg};text-align:center;z-index:3;">
+            <div style="width:20%;height:1px;background:linear-gradient(90deg,transparent,${divColor},transparent);margin:0 auto 1%;"></div>
+            <div style="font-family:'Suez One',serif;font-size:clamp(11px,3vw,16px);color:${headColor};letter-spacing:1px;">חג חירות שמח</div>
+            <div style="font-size:10px;color:${textColor};opacity:0.4;margin-top:2px;">בית ספר אורט בית הערבה</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="dl-btn" onclick="downloadCard(${i})">הורדה</button>
+        <button class="dl-btn flag-btn" id="flag-${i}" onclick="toggleFlag(${i})" style="color:#e76f51;">לשיפור</button>
+      </div>
+    `;
+    grid.appendChild(wrapper);
+  });
+}
+
+// ====== FLAG FOR IMPROVEMENT ======
+const flagged = new Set();
+// Reset on load - clean slate
+function toggleFlag(i) {
+  const btn = document.getElementById('flag-'+i);
+  const card = document.getElementById('card-'+i);
+  if (flagged.has(i)) {
+    flagged.delete(i);
+    btn.textContent = 'לשיפור';
+    btn.style.background = 'white';
+    card.style.outline = 'none';
+  } else {
+    flagged.add(i);
+    btn.textContent = 'סומן!';
+    btn.style.background = '#fef0e8';
+    card.style.outline = '3px solid #e76f51';
+  }
+  updateFlagSummary();
+}
+
+function updateFlagSummary() {
+  let el = document.getElementById('flagSummary');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'flagSummary';
+    el.style.cssText = 'position:fixed;bottom:16px;right:16px;background:white;border:2px solid #e76f51;border-radius:12px;padding:12px 18px;box-shadow:0 4px 20px rgba(0,0,0,0.15);z-index:999;font-family:Heebo;font-size:13px;max-width:300px;direction:rtl;';
+    document.body.appendChild(el);
+  }
+  if (flagged.size === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const names = [...flagged].map(i => staff[i].name).join(', ');
+  el.innerHTML = `<strong style="color:#e76f51;">סומנו לשיפור (${flagged.size}):</strong><br>${names}<br><button onclick="copyFlagged()" style="margin-top:6px;padding:4px 12px;background:#e76f51;color:white;border:none;border-radius:6px;cursor:pointer;font-family:Heebo;font-size:12px;">העתקת רשימה</button>`;
+}
+
+function copyFlagged() {
+  const names = [...flagged].map(i => `${i+1}. ${staff[i].name}`).join('\n');
+  navigator.clipboard.writeText(names);
+  document.querySelector('#flagSummary button').textContent = 'הועתק!';
+  setTimeout(() => { document.querySelector('#flagSummary button').textContent = 'העתקת רשימה'; }, 1500);
+}
+
+async function downloadCard(index) {
+  const card = document.getElementById(`card-${index}`);
+  const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true, logging: false });
+  const link = document.createElement('a');
+  const safeName = staff[index].name.replace(/[׳']/g, '').replace(/\s+/g, '-');
+  const sub = staff[index].subtitle ? `-${staff[index].subtitle.replace(/\s+/g,'-')}` : '';
+  link.download = `pesach-${safeName}${sub}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+async function downloadAll() {
+  const bar = document.getElementById('progressBar');
+  const fill = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  bar.style.display = 'block';
+  const zip = new JSZip();
+  for (let i = 0; i < staff.length; i++) {
+    label.textContent = `מוריד ${i + 1} מתוך ${staff.length}...`;
+    fill.style.width = `${((i + 1) / staff.length) * 100}%`;
+    const card = document.getElementById(`card-${i}`);
+    const canvas = await html2canvas(card, { scale: 2, backgroundColor: null, useCORS: true, logging: false });
+    const base64 = canvas.toDataURL('image/png').split(',')[1];
+    const safeName = staff[i].name.replace(/[׳']/g, '').replace(/\s+/g, '-');
+    const sub = staff[i].subtitle ? `-${staff[i].subtitle.replace(/\s+/g,'-')}` : '';
+    zip.file(`pesach-${safeName}${sub}.png`, base64, { base64: true });
+    await new Promise(r => setTimeout(r, 50));
+  }
+  label.textContent = 'מכין קובץ ZIP...';
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const link = document.createElement('a');
+  link.download = 'גלויות-פסח-צוות-אורט.zip';
+  link.href = URL.createObjectURL(blob);
+  link.click();
+  label.textContent = 'הושלם!';
+  setTimeout(() => { bar.style.display = 'none'; }, 2000);
+}
+
+renderCards();
+</script>
+</body>
+</html>

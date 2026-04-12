@@ -1,0 +1,14 @@
+# Recipe: Stitch Reel
+- Date: 2026-04-02
+- Template: AI Tool
+- Opener: Countdown Slam (3->2->1->"Stitch")
+- Hook: Particle Converge -- particles converge to form logo
+- Feature 1: Typewriter Build -- prompt lines typed one by one
+- Feature 2: Morph Transform -- circle morphs to Design System card
+- Feature 3: 3D Card Flip -- back=prompt -> front=finished website
+- Benefits: Orbit -- 3 cards rotating carousel
+- Summary: Before/After Split -- 3 hours vs 4 minutes
+- CTA: Fullscreen Gradient + "try it yourself"
+- Color: #4285F4 (Google blue)
+- Background: #F0F6FF (light blue)
+- Previous reel: Claude Code (Energy Pulse / 3D Flip / Button Escape+Messy+Cursor / Pill BIG / Number Slam / Photo+Social)

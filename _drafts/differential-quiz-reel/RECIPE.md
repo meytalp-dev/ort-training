@@ -1,0 +1,14 @@
+# Recipe: Differential Quiz Reel (שאלון דיפרנציאלי)
+- Date: 2026-04-03
+- Template: VS / Before-After
+- Opener: Split Reveal — screen splits pink + green
+- Hook: Slam+Bounce — "מי עוד מכינה מבחנים ב-Word?"
+- Feature 1: 3D Card Flip — "before" problems revealed
+- Feature 2: Typewriter Build — "after" benefits typed
+- Feature 3: Morph Transform — "שעתיים+" → "5 דקות" + confetti
+- Benefits: Pill BIG→Shrink (3 pills)
+- Summary: Number Slam — "5" + flying icons
+- CTA: Photo+Social
+- Colors: pink #E8A0B4 (before) + mint #7DD4AC (after)
+- Background: #F5F0FF (soft lavender)
+- Previous reels: Claude Code (Energy Pulse/3D Flip/Button+Messy+Cursor/Pill BIG/Number Slam/Photo+Social), Stitch (Countdown/Particle Converge/Typewriter+Morph+3DFlip/Orbit/Before-After/Fullscreen), Pomelli (Photo Zoom/Slide Up+Glow/Cursor+Button+Messy/Stack Build/Quote Card/Card+QR)

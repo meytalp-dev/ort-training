@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>לוגו לרני — תצוגה מהירה</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Heebo:wght@300;400;700&family=Karantina:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #f5f6f8; font-family: 'Heebo', sans-serif; gap: 2rem; padding: 2rem; }
+  h2 { color: #374151; font-size: 1.1rem; font-weight: 400; }
+  .row { display: flex; gap: 3rem; flex-wrap: wrap; justify-content: center; align-items: start; }
+  .box { padding: 2rem; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,.06); }
+  .box.light { background: #fff; }
+  .box.dark { background: #1e2a3f; }
+  .label { text-align: center; font-size: .8rem; color: #9ca3af; margin-top: .5rem; }
+  canvas { border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<h2>לוגו לרני — Caveat + כוכב לבנדר (הכל כמו קודם, רק הפונט והכוכב השתנו)</h2>
+
+<div class="row">
+  <div>
+    <div class="box light">
+      <canvas id="lightCanvas" width="500" height="500"></canvas>
+    </div>
+    <div class="label">רקע בהיר — 500x500</div>
+  </div>
+  <div>
+    <div class="box dark">
+      <canvas id="darkCanvas" width="500" height="500"></canvas>
+    </div>
+    <div class="label">רקע כהה — 500x500</div>
+  </div>
+</div>
+
+<div class="row" style="margin-top:1rem">
+  <div>
+    <div class="box light">
+      <canvas id="coverCanvas" width="820" height="312"></canvas>
+    </div>
+    <div class="label">כיסוי פייסבוק — 820x312</div>
+  </div>
+</div>
+
+<script>
+// === LAVENDER SPARKLE — replaces old blue/green sparkles ===
+function drawSparkle(ctx, x, y, size) {
+  ctx.save();
+  const color = '#9b7ed8';
+
+  // Glow
+  const haloR = size * 3.5;
+  const halo = ctx.createRadialGradient(x, y, size * 0.3, x, y, haloR);
+  halo.addColorStop(0, 'rgba(155,126,216,0.35)');
+  halo.addColorStop(0.3, 'rgba(155,126,216,0.12)');
+  halo.addColorStop(0.6, 'rgba(155,126,216,0.03)');
+  halo.addColorStop(1, 'transparent');
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(x, y, haloR, 0, Math.PI*2); ctx.fill();
+
+  // Light rays
+  ctx.globalAlpha = 0.2;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    const angle = (i * Math.PI) / 3;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(angle)*size*0.5, y + Math.sin(angle)*size*0.5);
+    ctx.lineTo(x + Math.cos(angle)*size*2.5, y + Math.sin(angle)*size*2.5);
+    ctx.stroke();
+  }
+
+  // Main 4-point star
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y - size*1.2);
+  ctx.quadraticCurveTo(x + size*0.12, y - size*0.12, x + size*1.2, y);
+  ctx.quadraticCurveTo(x + size*0.12, y + size*0.12, x, y + size*1.2);
+  ctx.quadraticCurveTo(x - size*0.12, y + size*0.12, x - size*1.2, y);
+  ctx.quadraticCurveTo(x - size*0.12, y - size*0.12, x, y - size*1.2);
+  ctx.closePath(); ctx.fill();
+
+  // White center
+  ctx.globalAlpha = 0.95;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(x, y, size*0.25, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+// === PROFILE — exactly like fb-logo-generator, just Caveat + lavender stars ===
+function drawProfile(canvasId, dark) {
+  const c = document.getElementById(canvasId);
+  const ctx = c.getContext('2d');
+  const W = 500, H = 500;
+
+  // Background
+  if (dark) {
+    const bg = ctx.createRadialGradient(W/2, W/2, 50, W/2, W/2, 350);
+    bg.addColorStop(0, '#1e2a3f');
+    bg.addColorStop(1, '#141e30');
+    ctx.fillStyle = bg;
+  } else {
+    const bg = ctx.createRadialGradient(W/2, W/2, 50, W/2, W/2, 350);
+    bg.addColorStop(0, '#ffffff');
+    bg.addColorStop(1, '#f0fdf9');
+    ctx.fillStyle = bg;
+  }
+  ctx.fillRect(0, 0, W, H);
+
+  // Venn circles
+  const cx1 = 200, cx2 = 300, cy = 195, r = 110;
+
+  const grad1 = ctx.createRadialGradient(cx1-20, cy-20, 10, cx1, cy, r);
+  grad1.addColorStop(0, '#a8c8f0');
+  grad1.addColorStop(0.5, '#7babd4');
+  grad1.addColorStop(1, '#5a93c0');
+  ctx.globalAlpha = dark ? 0.6 : 0.8;
+  ctx.beginPath(); ctx.arc(cx1, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = grad1; ctx.fill();
+
+  const grad2 = ctx.createRadialGradient(cx2+20, cy-20, 10, cx2, cy, r);
+  grad2.addColorStop(0, '#a8e6cf');
+  grad2.addColorStop(0.5, '#7dd4ac');
+  grad2.addColorStop(1, '#5abf92');
+  ctx.beginPath(); ctx.arc(cx2, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = grad2; ctx.fill();
+
+  // Overlap
+  ctx.globalAlpha = 0.3;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx2, cy, r, 0, Math.PI*2); ctx.clip();
+  const gradO = ctx.createLinearGradient(cx1-r, cy-r, cx2+r, cy+r);
+  gradO.addColorStop(0, '#7babd4');
+  gradO.addColorStop(1, '#7dd4ac');
+  ctx.beginPath(); ctx.arc(cx1, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = gradO; ctx.fill();
+  ctx.restore();
+
+  // Circle outlines
+  ctx.globalAlpha = dark ? 0.2 : 0.3;
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx1, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx2, cy, r, 0, Math.PI*2); ctx.stroke();
+
+  // LAVENDER sparkles (was blue/green, now all lavender)
+  ctx.globalAlpha = 0.45;
+  drawSparkle(ctx, 250, 70, 8);
+  drawSparkle(ctx, 120, 140, 6);
+  drawSparkle(ctx, 380, 130, 6);
+
+  // === "Learni" — CHANGED to Caveat handwriting ===
+  ctx.globalAlpha = 1;
+  ctx.font = "700 72px 'Caveat', cursive";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = dark ? '#e8e4f0' : '#1e3a5f';
+  ctx.shadowColor = 'rgba(255,255,255,0.6)';
+  ctx.shadowBlur = 6;
+  ctx.fillText('Learni', W/2, cy - 5);
+  ctx.shadowBlur = 0;
+
+  // "לרני" in Karantina — UNCHANGED
+  ctx.font = "700 38px 'Karantina', cursive";
+  ctx.fillStyle = dark ? '#b8a9d4' : '#4a6a8a';
+  ctx.globalAlpha = 0.85;
+  ctx.fillText('לרני', W/2, cy + 30);
+
+  // Subtitle — colored per word — UNCHANGED
+  ctx.font = "400 22px 'Heebo', sans-serif";
+  ctx.globalAlpha = 0.9;
+  ctx.textAlign = 'center';
+  const tagY = 340;
+  const parts = [
+    { text: 'הגשמת חלומות', color: '#9b7ed8' },
+    { text: '  ·  ', color: dark ? '#555' : '#aaa' },
+    { text: 'בינה מלאכותית', color: '#5a93c0' },
+    { text: '  ·  ', color: dark ? '#555' : '#aaa' },
+    { text: 'חינוך', color: '#5abf92' }
+  ];
+  let totalW = parts.reduce((sum, p) => sum + ctx.measureText(p.text).width, 0);
+  let curX = W/2 + totalW/2;
+  ctx.textAlign = 'right';
+  parts.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillText(p.text, curX, tagY);
+    curX -= ctx.measureText(p.text).width;
+  });
+  ctx.textAlign = 'center';
+
+  // Decorative line — UNCHANGED
+  ctx.globalAlpha = 0.5;
+  const lineGrad = ctx.createLinearGradient(130, 0, 370, 0);
+  lineGrad.addColorStop(0, '#9b7ed8');
+  lineGrad.addColorStop(0.5, '#7babd4');
+  lineGrad.addColorStop(1, '#7dd4ac');
+  ctx.strokeStyle = lineGrad;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(130, 365); ctx.lineTo(370, 365); ctx.stroke();
+
+  // "מיטל פלג" — UNCHANGED
+  ctx.globalAlpha = 1;
+  ctx.font = "700 26px 'Heebo', sans-serif";
+  ctx.fillStyle = dark ? '#e0daf0' : '#1e3a5f';
+  ctx.fillText('מיטל פלג', W/2, 415);
+
+  // Role — UNCHANGED
+  ctx.font = "400 18px 'Heebo', sans-serif";
+  ctx.fillStyle = dark ? '#6b9e8a' : '#6b9e8a';
+  ctx.fillText('מומחית לחדשנות חינוכית ובינה מלאכותית', W/2, 450);
+}
+
+// === COVER ===
+function drawCover() {
+  const c = document.getElementById('coverCanvas');
+  const ctx = c.getContext('2d');
+  const W = 820, H = 312;
+
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#f0fdf9');
+  bg.addColorStop(0.5, '#e8f7f3');
+  bg.addColorStop(1, '#eef6fc');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Dots
+  ctx.globalAlpha = 0.08;
+  for (let x = 0; x < W; x += 30) {
+    for (let y = 0; y < H; y += 30) {
+      ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI*2);
+      ctx.fillStyle = '#7babd4'; ctx.fill();
+    }
+  }
+
+  const logoX = W/2, logoY = 115, r = 90;
+  const cx1 = logoX - 50, cx2 = logoX + 50;
+
+  ctx.globalAlpha = 0.75;
+  const g1 = ctx.createRadialGradient(cx1, logoY, 10, cx1, logoY, r);
+  g1.addColorStop(0, '#a8c8f0'); g1.addColorStop(1, '#5a93c0');
+  ctx.beginPath(); ctx.arc(cx1, logoY, r, 0, Math.PI*2); ctx.fillStyle = g1; ctx.fill();
+
+  const g2 = ctx.createRadialGradient(cx2, logoY, 10, cx2, logoY, r);
+  g2.addColorStop(0, '#a8e6cf'); g2.addColorStop(1, '#5abf92');
+  ctx.beginPath(); ctx.arc(cx2, logoY, r, 0, Math.PI*2); ctx.fillStyle = g2; ctx.fill();
+
+  ctx.globalAlpha = 0.4;
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx1, logoY, r, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx2, logoY, r, 0, Math.PI*2); ctx.stroke();
+
+  // Lavender sparkles
+  ctx.globalAlpha = 0.4;
+  drawSparkle(ctx, logoX, logoY - r - 15, 7);
+  drawSparkle(ctx, cx1 - r + 10, logoY - 30, 5);
+  drawSparkle(ctx, cx2 + r - 10, logoY - 25, 5);
+
+  // "Learni" — Caveat
+  ctx.globalAlpha = 1;
+  ctx.font = "700 56px 'Caveat', cursive";
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1e3a5f';
+  ctx.shadowColor = 'rgba(255,255,255,0.8)'; ctx.shadowBlur = 6;
+  ctx.fillText('Learni', logoX, logoY - 5);
+  ctx.shadowBlur = 0;
+
+  // "לרני"
+  ctx.font = "700 30px 'Karantina', cursive";
+  ctx.fillStyle = '#4a6a8a';
+  ctx.globalAlpha = 0.85;
+  ctx.fillText('לרני', logoX, logoY + 25);
+
+  // Colored tagline
+  ctx.font = "400 18px 'Heebo', sans-serif";
+  ctx.globalAlpha = 0.9;
+  const cTagY = logoY + r + 30;
+  const cParts = [
+    { text: 'הגשמת חלומות', color: '#9b7ed8' },
+    { text: '  ·  ', color: '#aaa' },
+    { text: 'בינה מלאכותית', color: '#5a93c0' },
+    { text: '  ·  ', color: '#aaa' },
+    { text: 'חינוך', color: '#5abf92' }
+  ];
+  let cTotalW = cParts.reduce((s, p) => s + ctx.measureText(p.text).width, 0);
+  let cCurX = logoX + cTotalW/2;
+  ctx.textAlign = 'right';
+  cParts.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillText(p.text, cCurX, cTagY);
+    cCurX -= ctx.measureText(p.text).width;
+  });
+  ctx.textAlign = 'center';
+
+  // Line
+  ctx.globalAlpha = 0.4;
+  const lineGrad = ctx.createLinearGradient(logoX-140, 0, logoX+140, 0);
+  lineGrad.addColorStop(0, '#9b7ed8');
+  lineGrad.addColorStop(0.5, '#7babd4');
+  lineGrad.addColorStop(1, '#7dd4ac');
+  ctx.strokeStyle = lineGrad; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(logoX-140, logoY+r+48); ctx.lineTo(logoX+140, logoY+r+48); ctx.stroke();
+
+  // Name + role
+  ctx.globalAlpha = 1;
+  ctx.font = "700 20px 'Heebo', sans-serif";
+  ctx.fillStyle = '#1e3a5f';
+  ctx.fillText('מיטל פלג', logoX, H-30);
+
+  ctx.font = "400 15px 'Heebo', sans-serif";
+  ctx.fillStyle = '#0d9488';
+  ctx.fillText('מומחית לחדשנות חינוכית', logoX, H-10);
+}
+
+async function init() {
+  await document.fonts.ready;
+  await new Promise(r => setTimeout(r, 800));
+
+  drawProfile('lightCanvas', false);
+  drawProfile('darkCanvas', true);
+  drawCover();
+}
+init();
+</script>
+</body>
+</html>

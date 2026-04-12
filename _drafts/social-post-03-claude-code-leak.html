@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>קרוסלה — הדלפת Claude Code: מה גילו בפנים | Learni</title>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@300;400;500;600;700;800&family=Assistant:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #222; display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 20px; font-family: 'Playpen Sans Hebrew', cursive; }
+body::before { content: 'החליקו בין השקפים \2192'; display: block; color: #888; font-size: 14px; font-family: 'Assistant', sans-serif; }
+
+.slide {
+  width: 1080px; height: 1080px;
+  position: relative; overflow: hidden;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+/* ========== SHARED ========== */
+:root {
+  --cc-orange: #e87954;
+  --cc-dark: #2d3250;
+  --cc-light: #faf8f5;
+  --cc-accent: #c2410c;
+  --cc-red: #ef4444;
+  --cc-green: #22c55e;
+  --cc-blue: #3b82f6;
+  --cc-purple: #8b5cf6;
+}
+
+.cat {
+  position: absolute; top: 50px; right: 60px; z-index: 20;
+  font-size: 24px; font-weight: 700;
+  padding: 10px 24px; border-radius: 24px;
+  display: flex; align-items: center; gap: 10px;
+}
+.cat svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.slide-num {
+  position: absolute; top: 56px; left: 60px; z-index: 20;
+  font-size: 22px; font-weight: 700; color: rgba(45,50,80,0.3);
+  font-family: 'Assistant', sans-serif;
+}
+
+.bottom {
+  position: absolute; bottom: 35px; right: 60px; left: 60px;
+  z-index: 20; display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-circles { position: relative; width: 40px; height: 34px; }
+.logo-circles .c1, .logo-circles .c2 {
+  position: absolute; width: 28px; height: 28px; border-radius: 50%; top: 3px;
+}
+.logo-circles .c1 { right: 0; background: #7babd4; opacity: 0.85; }
+.logo-circles .c2 { right: 13px; background: #7dd4ac; opacity: 0.85; }
+.logo-name { font-size: 26px; font-weight: 700; color: var(--cc-dark); }
+.url { font-family: 'Assistant', sans-serif; font-size: 22px; font-weight: 600; color: rgba(45,50,80,0.4); direction: ltr; }
+
+/* Glassmorphism card */
+.glass {
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid rgba(255,255,255,0.9);
+  border-radius: 28px;
+  box-shadow: 0 14px 50px rgba(0,0,0,0.06), 0 4px 14px rgba(0,0,0,0.04);
+}
+
+/* Terminal-style code block */
+.terminal {
+  background: var(--cc-dark); border-radius: 20px; overflow: hidden;
+  box-shadow: 0 12px 40px rgba(45,50,80,0.2);
+}
+.terminal-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 20px; background: rgba(0,0,0,0.3);
+}
+.terminal-dot { width: 14px; height: 14px; border-radius: 50%; }
+.td-red { background: #ef4444; }
+.td-yellow { background: #f59e0b; }
+.td-green { background: #22c55e; }
+.terminal-title { color: rgba(255,255,255,0.5); font-family: 'Assistant', sans-serif; font-size: 14px; margin-right: auto; margin-left: 0; direction: ltr; }
+.terminal-body {
+  padding: 22px 30px;
+  font-family: 'Courier New', monospace;
+  font-size: 20px; color: #e2e8f0; line-height: 1.8;
+  direction: ltr; text-align: left;
+}
+.terminal-body .comment { color: #64748b; }
+.terminal-body .keyword { color: #7dd3fc; }
+.terminal-body .string { color: #86efac; }
+.terminal-body .highlight { color: var(--cc-orange); font-weight: 700; }
+
+/* Leaked sticker */
+.leak-badge {
+  position: absolute; top: 50px; left: 60px; z-index: 30;
+  transform: rotate(12deg);
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff; font-size: 22px; font-weight: 800;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(239,68,68,0.3);
+  font-family: 'Assistant', sans-serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.swipe-cta {
+  position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+  z-index: 20;
+  font-family: 'Playpen Sans Hebrew', cursive;
+  font-size: 26px; font-weight: 700; color: var(--cc-dark);
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(10px);
+  padding: 10px 32px; border-radius: 20px;
+  animation: pulseSwipe 2s ease-in-out infinite;
+  white-space: nowrap;
+}
+@keyframes pulseSwipe {
+  0%, 100% { transform: translateX(-50%); opacity: 0.8; }
+  50% { transform: translateX(-54%); opacity: 1; }
+}
+
+/* Feature section shared */
+.feature-title {
+  position: absolute; top: 120px; right: 60px; left: 60px; z-index: 10;
+}
+.feature-title h2 { font-size: 50px; font-weight: 800; color: var(--cc-dark); line-height: 1.3; margin-bottom: 10px; }
+.feature-title p { font-size: 24px; font-weight: 500; color: #64748b; line-height: 1.6; }
+
+.feature-cards {
+  position: absolute; top: 380px; right: 50px; left: 50px; z-index: 10;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.f-card {
+  border-radius: 24px; padding: 26px 30px;
+  display: flex; align-items: center; gap: 20px;
+  border-top: 5px solid;
+}
+.f-card .f-icon {
+  flex-shrink: 0; width: 60px; height: 60px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 800; color: #fff;
+}
+.f-card h3 { font-size: 26px; font-weight: 700; color: var(--cc-dark); margin-bottom: 4px; }
+.f-card p { font-size: 20px; font-weight: 500; color: #64748b; line-height: 1.5; }
+
+.save-sticker {
+  position: absolute; top: 280px; left: 60px; z-index: 30;
+  transform: rotate(8deg);
+  padding: 18px 24px;
+  background: #fef3c7; color: #92400e;
+  font-size: 28px; font-weight: 800;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  clip-path: polygon(
+    2% 4%, 8% 1%, 15% 3%, 22% 0%, 30% 2%, 38% 1%, 45% 3%, 52% 0%, 60% 2%, 68% 1%, 75% 3%, 82% 0%, 90% 2%, 96% 1%, 100% 4%,
+    99% 12%, 100% 20%, 98% 28%, 100% 36%, 99% 44%, 100% 52%, 98% 60%, 100% 68%, 99% 76%, 100% 84%, 98% 92%, 100% 100%,
+    96% 99%, 90% 100%, 82% 98%, 75% 100%, 68% 99%, 60% 100%, 52% 98%, 45% 100%, 38% 99%, 30% 100%, 22% 98%, 15% 100%, 8% 99%, 2% 100%,
+    0% 92%, 2% 84%, 0% 76%, 2% 68%, 0% 60%, 2% 52%, 0% 44%, 2% 36%, 0% 28%, 2% 20%, 0% 12%, 2% 4%
+  );
+}
+
+/* ===================================================
+   SLIDE 1 — HOOK
+   =================================================== */
+.s1 { background: var(--cc-light); }
+.s1::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 20%, rgba(232,121,84,0.1) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 85% 75%, rgba(45,50,80,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 50% 90%, rgba(232,121,84,0.05) 0%, transparent 70%);
+}
+.s1 .cat { background: var(--cc-dark); color: #fff; box-shadow: 0 4px 20px rgba(45,50,80,0.25); }
+
+.s1 .main-title {
+  position: absolute; top: 120px; right: 60px; left: 60px; z-index: 10;
+  font-size: 52px; font-weight: 800; color: var(--cc-dark); line-height: 1.35;
+}
+.s1 .main-title .orange { color: var(--cc-orange); }
+.s1 .main-title .small {
+  display: block; margin-top: 14px;
+  font-size: 26px; font-weight: 500; color: #64748b; line-height: 1.6;
+}
+
+.s1 .info-cards {
+  position: absolute; top: 580px; right: 50px; left: 50px; z-index: 20;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px;
+}
+.s1 .i-card {
+  border-radius: 22px; padding: 24px 22px; text-align: center;
+  border-top: 5px solid;
+}
+.s1 .i-card h3 { font-size: 34px; font-weight: 800; color: var(--cc-dark); margin-bottom: 6px; }
+.s1 .i-card p { font-size: 18px; font-weight: 500; color: #64748b; line-height: 1.4; }
+.ic1 { border-color: var(--cc-orange); transform: rotate(-0.8deg); }
+.ic2 { border-color: var(--cc-red); transform: rotate(0.6deg); }
+.ic3 { border-color: var(--cc-dark); transform: rotate(-0.5deg); }
+
+/* ===================================================
+   SLIDE 2 — KAIROS
+   =================================================== */
+.s2 { background: #f0f4ff; }
+.s2::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 20% 25%, rgba(59,130,246,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 80% 70%, rgba(59,130,246,0.06) 0%, transparent 70%);
+}
+.s2 .cat { background: var(--cc-blue); color: #fff; box-shadow: 0 4px 20px rgba(59,130,246,0.3); }
+.s2 .f-card { border-color: var(--cc-blue); }
+.s2 .f-card:nth-child(1) { transform: rotate(-0.8deg); }
+.s2 .f-card:nth-child(2) { transform: rotate(0.6deg); }
+.s2 .f-card:nth-child(3) { transform: rotate(-0.5deg); }
+.s2 .f-icon { background: var(--cc-blue); }
+
+/* ===================================================
+   SLIDE 3 — ANTI-DISTILLATION
+   =================================================== */
+.s3 { background: #fef2f0; }
+.s3::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 80% 25%, rgba(239,68,68,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 20% 70%, rgba(239,68,68,0.06) 0%, transparent 70%);
+}
+.s3 .cat { background: var(--cc-red); color: #fff; box-shadow: 0 4px 20px rgba(239,68,68,0.3); }
+.s3 .f-card { border-color: var(--cc-red); }
+.s3 .f-card:nth-child(1) { transform: rotate(0.7deg); }
+.s3 .f-card:nth-child(2) { transform: rotate(-1deg); }
+.s3 .f-card:nth-child(3) { transform: rotate(0.5deg); }
+.s3 .f-icon { background: var(--cc-red); }
+
+/* ===================================================
+   SLIDE 4 — BUDDY + UNDERCOVER
+   =================================================== */
+.s4 { background: #f0fdf4; }
+.s4::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 25% 30%, rgba(34,197,94,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 75% 65%, rgba(34,197,94,0.06) 0%, transparent 70%);
+}
+.s4 .cat { background: var(--cc-green); color: #fff; box-shadow: 0 4px 20px rgba(34,197,94,0.3); }
+.s4 .f-card { border-color: var(--cc-green); }
+.s4 .f-card:nth-child(1) { transform: rotate(-0.6deg); }
+.s4 .f-card:nth-child(2) { transform: rotate(0.8deg); }
+.s4 .f-icon { background: var(--cc-green); }
+
+/* ===================================================
+   SLIDE 5 — MYTHOS
+   =================================================== */
+.s5 { background: #faf5ff; }
+.s5::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 70% 60% at 20% 25%, rgba(139,92,246,0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 80% 70%, rgba(139,92,246,0.06) 0%, transparent 70%);
+}
+.s5 .cat { background: var(--cc-purple); color: #fff; box-shadow: 0 4px 20px rgba(139,92,246,0.3); }
+.s5 .f-card { border-color: var(--cc-purple); }
+.s5 .f-card:nth-child(1) { transform: rotate(0.5deg); }
+.s5 .f-card:nth-child(2) { transform: rotate(-0.7deg); }
+.s5 .f-card:nth-child(3) { transform: rotate(0.4deg); }
+.s5 .f-icon { background: var(--cc-purple); }
+
+/* ===================================================
+   SLIDE 6 — CTA
+   =================================================== */
+.s6 { background: var(--cc-light); }
+.s6::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 40%, rgba(232,121,84,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 20% 80%, rgba(45,50,80,0.06) 0%, transparent 60%);
+}
+.s6 .cta-title {
+  position: absolute; top: 140px; right: 60px; left: 60px; z-index: 10;
+  text-align: center;
+}
+.s6 .cta-title h2 { font-size: 52px; font-weight: 800; color: var(--cc-dark); line-height: 1.35; }
+.s6 .cta-title .subtitle {
+  display: block; margin-top: 16px;
+  font-size: 28px; font-weight: 500; color: #64748b; line-height: 1.6;
+}
+
+.s6 .tl-card {
+  position: absolute; top: 360px; right: 80px; left: 80px; z-index: 10;
+  border-radius: 24px; padding: 32px 36px;
+}
+.s6 .tl-item {
+  display: flex; align-items: flex-start; gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(45,50,80,0.08);
+}
+.s6 .tl-item:last-child { border-bottom: none; }
+.s6 .tl-dot {
+  flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
+  margin-top: 6px;
+}
+.s6 .tl-content { flex: 1; }
+.s6 .tl-date {
+  font-family: 'Assistant', sans-serif;
+  font-size: 18px; font-weight: 700; color: #94a3b8;
+  margin-bottom: 2px;
+}
+.s6 .tl-text { font-size: 22px; font-weight: 600; color: var(--cc-dark); line-height: 1.4; }
+
+.s6 .cta-box {
+  position: absolute; bottom: 110px; right: 80px; left: 80px; z-index: 10;
+  border-radius: 24px; padding: 28px 36px; text-align: center;
+  border-top: 5px solid var(--cc-orange);
+}
+.s6 .cta-box .cta-main { font-size: 24px; font-weight: 700; color: var(--cc-dark); line-height: 1.5; }
+.s6 .cta-box .cta-sub { font-size: 20px; font-weight: 500; color: #64748b; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ============ SLIDE 1 — HOOK ============ -->
+<div class="slide s1">
+  <div class="cat">
+    <svg viewBox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+    Claude Code
+  </div>
+  <div class="leak-badge">LEAKED</div>
+  <div class="slide-num">1/6</div>
+
+  <div class="main-title">
+    הקוד של <span class="orange">Claude Code</span><br>
+    דלף לרשת — ומה<br>שמצאו בפנים מטורף
+    <span class="small">קובץ דיבאג נשלח בטעות בעדכון שגרתי.<br>חצי מיליון שורות קוד. כלים סודיים. מודל עתידי.</span>
+  </div>
+
+  <div class="terminal" style="position:absolute;top:380px;right:60px;left:60px;z-index:10">
+    <div class="terminal-bar">
+      <div class="terminal-dot td-red"></div>
+      <div class="terminal-dot td-yellow"></div>
+      <div class="terminal-dot td-green"></div>
+      <div class="terminal-title">claude-code / leaked source</div>
+    </div>
+    <div class="terminal-body">
+      <span class="comment">// Project codename</span><br>
+      <span class="keyword">const</span> PROJECT = <span class="string">"Tengu"</span>;<br>
+      <span class="keyword">const</span> NEXT_MODEL = <span class="highlight">"Mythos"</span>;<br>
+      <span class="keyword">const</span> AGENT = <span class="string">"Kairos"</span>;<br>
+      <span class="keyword">const</span> PET = <span class="string">"Buddy"</span>;<br>
+      anti_distillation: [<span class="string">'fake_tools'</span>]
+    </div>
+  </div>
+
+  <div class="info-cards">
+    <div class="glass i-card ic1">
+      <h3>512K</h3>
+      <p>שורות קוד<br>שדלפו</p>
+    </div>
+    <div class="glass i-card ic2">
+      <h3>8,100</h3>
+      <p>מאגרי GitHub<br>נמחקו בטעות</p>
+    </div>
+    <div class="glass i-card ic3">
+      <h3>1,906</h3>
+      <p>קבצים<br>נחשפו</p>
+    </div>
+  </div>
+
+  <div class="swipe-cta">מה מצאו בפנים? החליקו &larr;</div>
+
+  <div class="bottom">
+    <div class="logo"><div class="logo-circles"><div class="c1"></div><div class="c2"></div></div><div class="logo-name">Learni</div></div>
+    <div class="url">learni.ai</div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 2 — KAIROS ============ -->
+<div class="slide s2">
+  <div class="cat">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Kairos
+  </div>
+  <div class="slide-num">2/6</div>
+
+  <div class="feature-title">
+    <h2>Kairos — סוכן AI<br>שעובד גם כשאתם ישנים</h2>
+    <p>מערכת חדשה שנמצאה בקוד: AI שרץ ברקע 24/7</p>
+  </div>
+
+  <div class="feature-cards">
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+      <div>
+        <h3>פועל בלי שמבקשים</h3>
+        <p>לא צריך לפתוח שיחה — הסוכן עובד ברקע, מבצע משימות, ומעדכן אותך כשסיים</p>
+      </div>
+    </div>
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+      </div>
+      <div>
+        <h3>מצב "חלימה"</h3>
+        <p>בלילה הסוכן מסדר את הזיכרון שלו — ממיין, מנקה כפילויות, הופך תחושות לעובדות</p>
+      </div>
+    </div>
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <div>
+        <h3>מחובר ל-GitHub</h3>
+        <p>מאזין לאירועים, מגיב לבקשות, ומתעדכן כל 5 דקות — כמו עובד דיגיטלי קבוע</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="logo"><div class="logo-circles"><div class="c1"></div><div class="c2"></div></div><div class="logo-name">Learni</div></div>
+    <div class="url">learni.ai</div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 3 — ANTI-DISTILLATION ============ -->
+<div class="slide s3">
+  <div class="cat">
+    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    הגנה
+  </div>
+  <div class="slide-num">3/6</div>
+
+  <div class="feature-title">
+    <h2>מלחמה סודית<br>נגד מתחרים</h2>
+    <p>Anthropic בנו מערכת שלמה שמגינה מפני העתקה</p>
+  </div>
+
+  <div class="feature-cards">
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M18.36 6.64a9 9 0 010 12.73M5.64 6.64a9 9 0 000 12.73"/><circle cx="12" cy="12" r="2"/></svg>
+      </div>
+      <div>
+        <h3>מלכודות למתחרים</h3>
+        <p>שתלו כלים מזויפים בתוך המערכת — אם חברה מתחרה מנסה להעתיק, היא מקבלת מידע שגוי</p>
+      </div>
+    </div>
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </div>
+      <div>
+        <h3>מנעול דיגיטלי</h3>
+        <p>חתימה סודית שמוודאת שרק התוכנה המקורית יכולה לתקשר עם המודל — חיקויים נחסמים</p>
+      </div>
+    </div>
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div>
+        <h3>מצב חשאי</h3>
+        <p>כשעובדי Anthropic עובדים על פרויקטים חיצוניים — קלוד מסתיר שהוא AI. אי אפשר לכבות את זה</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="logo"><div class="logo-circles"><div class="c1"></div><div class="c2"></div></div><div class="logo-name">Learni</div></div>
+    <div class="url">learni.ai</div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 4 — BUDDY + SURPRISES ============ -->
+<div class="slide s4">
+  <div class="cat">
+    <svg viewBox="0 0 24 24"><path d="M12 21a9 9 0 100-18 9 9 0 000 18z"/><path d="M9 10h.01M15 10h.01M8 14s1.5 2 4 2 4-2 4-2"/></svg>
+    הפתעות
+  </div>
+  <div class="slide-num">4/6</div>
+
+  <div class="feature-title">
+    <h2>חיית מחמד בטרמינל<br>ועוד הפתעות</h2>
+    <p>לא רק כלים רציניים — גם דברים משעשעים</p>
+  </div>
+
+  <div class="feature-cards">
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 21a9 9 0 100-18 9 9 0 000 18z"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>
+      </div>
+      <div>
+        <h3>Buddy — טמגוצ'י בקוד</h3>
+        <p>18 חיות (ברווז, דרקון, קפיברה), עם סטטיסטיקות כמו במשחק RPG. כנראה בדיחת 1 באפריל</p>
+      </div>
+    </div>
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div>
+        <h3>250 אלף בקשות מבוזבזות — ביום</h3>
+        <p>גילו באג שגרם ל-1,279 משתמשים להיתקע בלולאה אינסופית. התיקון? שורה אחת של קוד</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="logo"><div class="logo-circles"><div class="c1"></div><div class="c2"></div></div><div class="logo-name">Learni</div></div>
+    <div class="url">learni.ai</div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 5 — MYTHOS ============ -->
+<div class="slide s5">
+  <div class="cat">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    Mythos
+  </div>
+  <div class="slide-num">5/6</div>
+
+  <div class="feature-title">
+    <h2>Mythos — המודל<br>שאף אחד לא היה אמור לדעת עליו</h2>
+    <p>נחשף בהדלפה נפרדת כמה ימים קודם, ואז אושר בקוד</p>
+  </div>
+
+  <div class="feature-cards">
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <div>
+        <h3>מעל Opus</h3>
+        <p>שם הקוד "Capybara" — יושב מעל Opus 4.6 כמודל הכי חזק שנבנה אי פעם</p>
+      </div>
+    </div>
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 19V6l12-3v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <div>
+        <h3>"קפיצת מדרגה"</h3>
+        <p>Anthropic קראו לזה "step change" — שיפור דרמטי בקוד, חשיבה אקדמית, ואבטחת סייבר</p>
+      </div>
+    </div>
+    <div class="glass f-card">
+      <div class="f-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <div>
+        <h3>חששות אבטחה</h3>
+        <p>מסמך פנימי הזהיר: "המודל הזה יכול למצוא פרצות אבטחה מהר יותר מכל צוות הגנה אנושי"</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="logo"><div class="logo-circles"><div class="c1"></div><div class="c2"></div></div><div class="logo-name">Learni</div></div>
+    <div class="url">learni.ai</div>
+  </div>
+</div>
+
+<!-- ============ SLIDE 6 — CTA ============ -->
+<div class="slide s6">
+  <div class="slide-num">6/6</div>
+
+  <div class="cta-title">
+    <h2>מה קרה אחרי ההדלפה?</h2>
+    <span class="subtitle">ציר הזמן של אחד האירועים<br>הכי מטורפים בעולם ה-AI</span>
+  </div>
+
+  <div class="glass tl-card">
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--cc-purple)"></div>
+      <div class="tl-content">
+        <div class="tl-date">26 במרץ</div>
+        <div class="tl-text">מסמכים פנימיים דולפים — המודל הסודי Mythos נחשף</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--cc-red)"></div>
+      <div class="tl-content">
+        <div class="tl-date">31 במרץ</div>
+        <div class="tl-text">חצי מיליון שורות קוד דולפות בטעות לכל העולם</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--cc-orange)"></div>
+      <div class="tl-content">
+        <div class="tl-date">1 באפריל</div>
+        <div class="tl-text">Anthropic מנסים למחוק — ובטעות מורידים 8,100 פרויקטים של אחרים</div>
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot" style="background:var(--cc-blue)"></div>
+      <div class="tl-content">
+        <div class="tl-date">2 באפריל</div>
+        <div class="tl-text">חבר קונגרס אמריקאי דורש הסברים מהחברה</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass cta-box">
+    <div class="cta-main">כל בוקר ב-5:30 — סיכום AI למייל. בחינם.</div>
+    <div class="cta-sub">הקישור בביו</div>
+  </div>
+
+  <div class="save-sticker">שמרו את הפוסט!</div>
+
+  <div class="bottom">
+    <div class="logo"><div class="logo-circles"><div class="c1"></div><div class="c2"></div></div><div class="logo-name">Learni</div></div>
+    <div class="url">learni.ai</div>
+  </div>
+</div>
+
+</body>
+</html>

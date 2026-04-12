@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת השמש התלת-ממדית שלי</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Heebo', Arial, sans-serif;
+            background: radial-gradient(ellipse at center, #f0e8ff 0%, #e8e0f5 35%, #dde6f5 70%, #d5dff0 100%);
+        }
+        canvas {
+            display: block;
+        }
+        #label-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        .planet-label {
+            color: #222;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Heebo', Arial, sans-serif;
+            padding: 4px 10px;
+            border-radius: 12px;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(100, 100, 150, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            text-align: center;
+        }
+    </style>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="label-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- Basic Setup ---
+        let scene, camera, renderer, labelRenderer, controls;
+        const container = document.getElementById('label-container');
+
+        const planetsData = [
+            { name: "שמש", nameEn: "Sun", radius: 5, distance: 0, speed: 0, color: 0xFFD700, emissive: 0xFF8C00 }, // Sun
+            { name: "כוכב חמה", nameEn: "Mercury", radius: 0.5, distance: 10, speed: 0.04, color: 0x888888 }, // Mercury
+            { name: "נוגה", nameEn: "Venus", radius: 0.9, distance: 15, speed: 0.015, color: 0xE6C229 }, // Venus
+            { name: "ארץ", nameEn: "Earth", radius: 1, distance: 20, speed: 0.01, color: 0x1E90FF }, // Earth
+            { name: "מאדים", nameEn: "Mars", radius: 0.6, distance: 25, speed: 0.008, color: 0xFF4500 }, // Mars
+            { name: "צדק", nameEn: "Jupiter", radius: 3, distance: 40, speed: 0.002, color: 0xFFA500 }, // Jupiter
+            { name: "שבתאי", nameEn: "Saturn", radius: 2.5, distance: 55, speed: 0.0009, color: 0xD2B48C, hasRings: true }, // Saturn
+            { name: "אורנוס", nameEn: "Uranus", radius: 1.8, distance: 70, speed: 0.0004, color: 0xADD8E6 }, // Uranus
+            { name: "נפטון", nameEn: "Neptune", radius: 1.7, distance: 85, speed: 0.0001, color: 0x00008B } // Neptune
+        ];
+
+        const planets = [];
+
+        function init() {
+            // 1. Scene
+            scene = new THREE.Scene();
+            scene.background = null; // Use CSS gradient from body
+
+            // Add subtle stars (light dots on light bg for cosmic feel)
+            const starsGeometry = new THREE.BufferGeometry();
+            const starCount = 400;
+            const starPositions = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                const r = 200 + Math.random() * 200;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                starPositions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+                starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+                starPositions[i * 3 + 2] = r * Math.cos(phi);
+            }
+            starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xb8a8d8,
+                size: 1.2,
+                transparent: true,
+                opacity: 0.55,
+                sizeAttenuation: false
+            });
+            const stars = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(stars);
+
+            // 2. Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 50, 150);
+
+            // 3. Renderers
+            // WebGL Renderer for 3D graphics
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setClearColor(0x000000, 0); // Transparent so CSS bg shows
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // CSS2D Renderer for HTML labels
+            labelRenderer = new CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0px';
+            labelRenderer.domElement.style.pointerEvents = 'none'; // Clicks pass through
+            document.body.appendChild(labelRenderer.domElement);
+
+            // 4. Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; // Smooth motion
+
+            // 5. Light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // Soft ambient
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0xffffff, 1.5, 300); // Light source from the sun
+            scene.add(pointLight);
+
+            // 6. Create Celestial Bodies
+            planetsData.forEach((data, index) => {
+                // Sphere Geometry
+                const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
+
+                // Material
+                let material;
+                if (index === 0) {
+                    // Sun uses emissive material to glow
+                    material = new THREE.MeshStandardMaterial({
+                        color: data.color,
+                        emissive: data.emissive,
+                        emissiveIntensity: 1
+                    });
+                } else {
+                    // Planets use standard material to reflect light
+                    material = new THREE.MeshStandardMaterial({ color: data.color });
+                }
+
+                const planet = new THREE.Mesh(geometry, material);
+                planet.userData = { distance: data.distance, speed: data.speed, angle: Math.random() * Math.PI * 2 }; // Initialize with random angle
+
+                // Set initial position
+                planet.position.x = data.distance;
+                scene.add(planet);
+                planets.push(planet);
+
+                // Add special elements
+                if (data.hasRings) {
+                    const ringGeo = new THREE.RingGeometry(data.radius + 0.5, data.radius + 2.5, 64);
+                    const ringMat = new THREE.MeshStandardMaterial({
+                        color: 0xE6C229,
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI / 2; // Flip to horizontal
+                    planet.add(ring);
+                }
+
+                // Add Orbit Path (visual line)
+                if (data.distance > 0) {
+                    const points = [];
+                    for (let i = 0; i <= 64; i++) {
+                        const angle = (i / 64) * Math.PI * 2;
+                        points.push(new THREE.Vector3(Math.cos(angle) * data.distance, 0, Math.sin(angle) * data.distance));
+                    }
+                    const pathGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const pathMaterial = new THREE.LineBasicMaterial({ color: 0xCCCCCC });
+                    const pathLine = new THREE.LineLoop(pathGeometry, pathMaterial);
+                    scene.add(pathLine);
+                }
+
+                // 7. Add HTML Labels (Hebrew)
+                const planetDiv = document.createElement('div');
+                planetDiv.className = 'planet-label';
+                planetDiv.textContent = data.name;
+
+                const planetLabel = new CSS2DObject(planetDiv);
+                planetLabel.position.set(0, data.radius + 2, 0);
+                planet.add(planetLabel);
+            });
+
+            // Set point light position to center (sun)
+            pointLight.position.set(0, 0, 0);
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Auto-rotate camera mode (for video recording)
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoMode = urlParams.has('auto');
+        const startTime = performance.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Auto camera rotation for recording
+            if (autoMode) {
+                const t = (performance.now() - startTime) / 1000; // seconds
+                const radius = 110 - t * 3; // slowly zoom in
+                const angle = t * 0.35; // slow orbit
+                const height = 35 + Math.sin(t * 0.5) * 15; // gentle vertical drift
+                camera.position.set(
+                    Math.sin(angle) * radius,
+                    height,
+                    Math.cos(angle) * radius
+                );
+                camera.lookAt(0, 0, 0);
+            }
+
+            // Update Controls
+            controls.update();
+
+            // Animate Planet Orbits
+            planets.forEach((planet, index) => {
+                if (index > 0) { // Skip sun
+                    planet.userData.angle += planet.userData.speed;
+                    planet.position.x = Math.cos(planet.userData.angle) * planet.userData.distance;
+                    planet.position.z = Math.sin(planet.userData.angle) * planet.userData.distance;
+                }
+
+                // Make sun rotate slowly
+                if(index === 0) {
+                    planet.rotation.y += 0.001;
+                }
+            });
+
+            // Render 3D Scene
+            renderer.render(scene, camera);
+
+            // Render HTML Labels
+            labelRenderer.render(scene, camera);
+        }
+
+        // Run the simulation
+        init();
+        animate();
+
+    </script>
+</body>
+</html>

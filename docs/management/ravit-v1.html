@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ראש בובה תלת-ממדי — 9 חלוקות תספורת</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&family=Playpen+Sans+Hebrew:wght@600;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #fdfbf7 0%, #f5f0ea 100%);
+            font-family: 'Heebo', 'Segoe UI', sans-serif;
+            color: #2d2d3a;
+        }
+        #ui-panel {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px 28px;
+            border-radius: 18px;
+            border: 1px solid rgba(180, 180, 200, 0.25);
+            box-shadow: 0 10px 40px rgba(100, 100, 150, 0.12);
+            pointer-events: none;
+            max-width: 280px;
+        }
+        h1 {
+            margin: 0 0 8px 0;
+            font-family: 'Playpen Sans Hebrew', 'Heebo', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #4a5fc1;
+        }
+        .subtitle {
+            margin: 0 0 14px 0;
+            font-size: 0.85rem;
+            color: #6a6a7a;
+            font-weight: 400;
+        }
+        .instructions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.82rem;
+            color: #555;
+        }
+        .instructions span {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #7b8ee0;
+        }
+        #legend {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 16px 20px;
+            border-radius: 18px;
+            border: 1px solid rgba(180, 180, 200, 0.25);
+            box-shadow: 0 10px 40px rgba(100, 100, 150, 0.12);
+            pointer-events: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 18px;
+            font-size: 0.78rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="ui-panel">
+        <h1>9 חלוקות התספורת</h1>
+        <p class="subtitle">מודל תלת-ממדי אינטראקטיבי</p>
+        <div class="instructions">
+            <span><span class="dot"></span>גרירה — סיבוב</span>
+            <span><span class="dot"></span>גלגלת — זום</span>
+            <span><span class="dot"></span>קליק ימני — הזזה</span>
+        </div>
+    </div>
+
+    <div id="legend">
+        <div class="legend-item"><span class="legend-color" style="background:#f4a6c0"></span>1. קודקוד</div>
+        <div class="legend-item"><span class="legend-color" style="background:#a5d8e6"></span>2. פדחת ימין</div>
+        <div class="legend-item"><span class="legend-color" style="background:#c7b8e6"></span>3. פדחת שמאל</div>
+        <div class="legend-item"><span class="legend-color" style="background:#f5c98a"></span>4. צד ימין</div>
+        <div class="legend-item"><span class="legend-color" style="background:#a8e6c4"></span>5. צד שמאל</div>
+        <div class="legend-item"><span class="legend-color" style="background:#f8b6a0"></span>6. גב ימני</div>
+        <div class="legend-item"><span class="legend-color" style="background:#b8d4f0"></span>7. גב שמאלי</div>
+        <div class="legend-item"><span class="legend-color" style="background:#e0c4a0"></span>8. עורף ימין</div>
+        <div class="legend-item"><span class="legend-color" style="background:#d0d0e0"></span>9. עורף שמאל</div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // המתן לטעינת הפונט העברי לפני יצירת הטקסטורה
+        async function init() {
+            await document.fonts.load('bold 32px "Heebo"');
+            await document.fonts.load('800 36px "Playpen Sans Hebrew"');
+
+            // 1. סצנה, מצלמה, רנדרר
+            const scene = new THREE.Scene();
+            scene.background = null;
+
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 1.5, 11);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            // 2. בקרות סיבוב
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 6;
+            controls.maxDistance = 20;
+
+            // 3. תאורה רכה
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+            scene.add(ambientLight);
+
+            const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            keyLight.position.set(5, 10, 7);
+            scene.add(keyLight);
+
+            const fillLight = new THREE.DirectionalLight(0xc7b8e6, 0.4);
+            fillLight.position.set(-5, 3, -5);
+            scene.add(fillLight);
+
+            // 4. ראש בגוון עור (בלי חלוקות)
+            const skinMaterial = new THREE.MeshStandardMaterial({
+                color: '#e8c9a5',
+                roughness: 0.65,
+                metalness: 0.02
+            });
+            const headGeometry = new THREE.SphereGeometry(3, 96, 96);
+            const head = new THREE.Mesh(headGeometry, skinMaterial);
+            head.scale.set(0.88, 1.18, 0.95);
+            head.rotation.y = -Math.PI / 2;
+
+            // 4b. שיער — קליפה חיצונית מחולקת ל-9 סקציות
+            const hairCanvas = document.createElement('canvas');
+            hairCanvas.width = 2048;
+            hairCanvas.height = 1024;
+            const hctx = hairCanvas.getContext('2d');
+
+            // רקע — גוון שיער בסיסי (חום חמים)
+            hctx.fillStyle = '#5a3820';
+            hctx.fillRect(0, 0, 2048, 1024);
+
+            function drawHairSection(x, y, width, height, color, label, number) {
+                // בסיס הסקציה
+                hctx.fillStyle = color;
+                hctx.fillRect(x, y, width, height);
+
+                // קווי הפרדה לבנים בולטים
+                hctx.strokeStyle = '#ffffff';
+                hctx.lineWidth = 10;
+                hctx.strokeRect(x, y, width, height);
+
+                // מספר גדול
+                hctx.fillStyle = '#ffffff';
+                hctx.font = '800 90px "Playpen Sans Hebrew", "Heebo", sans-serif';
+                hctx.textAlign = 'center';
+                hctx.textBaseline = 'middle';
+                hctx.shadowColor = 'rgba(0,0,0,0.4)';
+                hctx.shadowBlur = 8;
+                hctx.fillText(number, x + width / 2, y + height / 2 - 25);
+
+                // תווית בעברית
+                hctx.font = 'bold 42px "Heebo", sans-serif';
+                hctx.fillText(label, x + width / 2, y + height / 2 + 50);
+                hctx.shadowBlur = 0;
+            }
+
+            // 9 חלוקות — שיער בלבד (בלי אזור פנים)
+            // שורה עליונה — קודקוד וצדדי הקדמה
+            drawHairSection(768,    0, 512, 280, '#c97b9a', 'קודקוד',    '1');
+            drawHairSection(1280,   0, 512, 280, '#7ba8c4', 'פדחת ימין', '2');
+            drawHairSection(256,    0, 512, 280, '#9b7fc4', 'פדחת שמאל', '3');
+
+            // אמצע — צדדים
+            drawHairSection(1280, 280, 512, 360, '#d49a4a', 'צד ימין',   '4');
+            drawHairSection(256,  280, 512, 360, '#5fb685', 'צד שמאל',   '5');
+
+            // אמצע — גב
+            drawHairSection(1280, 640, 512, 200, '#d9745a', 'גב ימני',   '6');
+            drawHairSection(256,  640, 512, 200, '#6a92c2', 'גב שמאלי',  '7');
+
+            // תחתית — עורף
+            drawHairSection(1280, 840, 512, 184, '#b08858', 'עורף ימין', '8');
+            drawHairSection(256,  840, 512, 184, '#8a8aa5', 'עורף שמאל', '9');
+
+            // 5. קליפת השיער — חצי-ספרה שלא מכסה את הפנים
+            const hairTexture = new THREE.CanvasTexture(hairCanvas);
+            hairTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            const hairMaterial = new THREE.MeshStandardMaterial({
+                map: hairTexture,
+                roughness: 0.78,
+                metalness: 0.0,
+                side: THREE.DoubleSide
+            });
+
+            // SphereGeometry partial — מכסה את החלק העליון/אחורי של הראש, פותח חזית לפנים
+            const hairGeometry = new THREE.SphereGeometry(
+                3.18,                       // רדיוס מעט גדול מהראש (3)
+                96, 96,
+                Math.PI * 0.20,             // phiStart — מתחיל אחרי הקו הקדמי
+                Math.PI * 1.60,             // phiLength — 288° סביב הראש
+                0,                          // thetaStart — מהחלק העליון
+                Math.PI * 0.72              // thetaLength — יורד עד מעל הסנטר
+            );
+            const hair = new THREE.Mesh(hairGeometry, hairMaterial);
+            hair.scale.set(0.88, 1.18, 0.95);
+            hair.rotation.y = -Math.PI / 2;
+
+            const mannequinGroup = new THREE.Group();
+            mannequinGroup.add(head);
+            mannequinGroup.add(hair);
+
+            // אף קטן לאוריינטציה
+            const noseGeo = new THREE.ConeGeometry(0.35, 1.0, 24);
+            const noseMat = new THREE.MeshStandardMaterial({ color: '#dba87a', roughness: 0.6 });
+            const nose = new THREE.Mesh(noseGeo, noseMat);
+            nose.position.set(0, -0.1, 2.85);
+            nose.rotation.x = Math.PI / 2;
+            mannequinGroup.add(nose);
+
+            // אוזניים — לאוריינטציה
+            const earGeo = new THREE.SphereGeometry(0.32, 24, 24);
+            const earMat = new THREE.MeshStandardMaterial({ color: '#dba87a', roughness: 0.6 });
+
+            const earL = new THREE.Mesh(earGeo, earMat);
+            earL.position.set(-2.55, 0.1, 0);
+            earL.scale.set(0.6, 1.2, 1);
+            mannequinGroup.add(earL);
+
+            const earR = new THREE.Mesh(earGeo, earMat);
+            earR.position.set(2.55, 0.1, 0);
+            earR.scale.set(0.6, 1.2, 1);
+            mannequinGroup.add(earR);
+
+            // צוואר
+            const neckGeo = new THREE.CylinderGeometry(1.1, 1.3, 1.6, 32);
+            const neckMat = new THREE.MeshStandardMaterial({ color: '#dba87a', roughness: 0.7 });
+            const neck = new THREE.Mesh(neckGeo, neckMat);
+            neck.position.set(0, -3.6, 0);
+            mannequinGroup.add(neck);
+
+            scene.add(mannequinGroup);
+
+            // 6. שינוי גודל
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // 7. לולאת אנימציה
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        init();
+    </script>
+</body>
+</html>

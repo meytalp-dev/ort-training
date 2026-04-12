@@ -206,6 +206,14 @@ function fetchAll() {
   const records = data.slice(1).map(function(row) {
     const rec = {};
     headers.forEach(function(h, i) { rec[h] = row[i]; });
+    // Fix date — Google Sheets auto-converts to Date object, normalize to YYYY-MM-DD
+    if (rec.date instanceof Date) {
+      var d = rec.date;
+      rec.date = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+    if (rec.timestamp instanceof Date) {
+      rec.timestamp = rec.timestamp.toISOString();
+    }
     return rec;
   });
   // Dedupe — keep latest per (date, student_id)
@@ -240,7 +248,10 @@ function saveRecords(records) {
     ];
   });
   if (rows.length > 0) {
-    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    var startRow = sheet.getLastRow() + 1;
+    var range = sheet.getRange(startRow, 1, rows.length, rows[0].length);
+    range.setNumberFormat('@'); // force text to prevent date auto-conversion
+    range.setValues(rows);
   }
   return {saved: rows.length, timestamp: now};
 }

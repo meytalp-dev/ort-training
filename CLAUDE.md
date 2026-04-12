@@ -6,7 +6,7 @@
 ## סגנון עבודה — כלל עליון
 
 כשמייטל מבקשת לבנות משהו — **לבנות ישר**. בלי brainstorming, בלי design doc, בלי שאלות מיותרות.
-דלג על superpowers:brainstorming, superpowers:writing-plans, superpowers:verification-before-completion אלא אם מייטל אומרת במפורש "תתכנן", "בוא נחשוב", או "תבדוק".
+השתמש ב-superpowers (brainstorming, writing-plans, verification-before-completion) כברירת מחדל גם כשמייטל לא מזכירה אותם במפורש.
 QA מקוצר: בדיקת RTL + קישורים שבורים בסוף בלבד. לא 5 שלבים אחרי כל שינוי קטן.
 
 ---

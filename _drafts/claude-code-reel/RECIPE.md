@@ -1,0 +1,15 @@
+# Recipe: Claude Code — 3 Modes Reel
+- Date: 2026-04-02
+- Template: AI Tool
+- Opener: Energy Pulse ("ידעתם?")
+- Hook: 3D Card Flip (back=orange gradient → front=glassmorphism "Claude Code")
+- Feature 1: Button Escape (Auto Mode — "אשר?" button shakes, escapes, explodes)
+- Feature 2: Messy→Organized (Auto Dream — pills reorganize, Z's float, card transforms)
+- Feature 3: Cursor Drag (Computer Use — cursor exits card, clicks+ripples, drags content back)
+- Benefits: Pill BIG→Shrink (3 pills enter 1.3x → read → shrink 0.92 to position)
+- Summary: Number Slam ("3" slams in scale 5→1, icons fly from 3 directions)
+- CTA: Photo+Social (photo with glow ring, name, Learni button, social icons)
+- Color: #D97757 (Claude Code orange)
+- Music: music.mp3, volume 0.2
+- Duration: ~36.5s (1100 frames @ 30fps)
+- Versions: 15 iterations (greg-style-v1 through v15)

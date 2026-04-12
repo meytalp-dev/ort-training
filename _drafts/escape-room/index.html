@@ -1,0 +1,2348 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>העיר האבודה — חדר בריחה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   RESET & BASE
+   ================================================================ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-size:16px;overflow:hidden;height:100%}
+body{
+  font-family:'Heebo',sans-serif;direction:rtl;
+  background:#06080e;color:#e0e6f0;
+  height:100%;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;
+}
+
+/* ================================================================
+   SCREENS
+   ================================================================ */
+.screen{
+  position:fixed;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .6s ease;
+  z-index:1;
+}
+.screen.active{opacity:1;pointer-events:auto;z-index:10}
+
+/* ================================================================
+   SPLASH SCREEN
+   ================================================================ */
+.splash-bg{
+  position:absolute;inset:0;overflow:hidden;
+  background:linear-gradient(180deg,#06080e 0%,#0a0f1c 40%,#111830 100%);
+}
+.moon{position:absolute;top:8%;left:50%;transform:translateX(-50%);z-index:2}
+.moon-core{
+  width:80px;height:80px;border-radius:50%;
+  background:radial-gradient(circle,#e0f0ff 0%,#80c0ff 50%,#4090d0 100%);
+}
+.moon-glow{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(100,180,255,.15) 0%,transparent 70%);
+  animation:moonPulse 4s ease-in-out infinite;
+}
+@keyframes moonPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.15)}}
+
+/* Parallax city layers */
+.city-layer{position:absolute;bottom:0;width:100%;height:40%}
+.city-far{z-index:1;animation:driftFar 20s ease-in-out infinite}
+.city-mid{z-index:2;animation:driftMid 15s ease-in-out infinite}
+.city-near{z-index:3;animation:driftNear 10s ease-in-out infinite}
+@keyframes driftFar{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}
+@keyframes driftMid{0%,100%{transform:translateX(0)}50%{transform:translateX(-12px)}}
+@keyframes driftNear{0%,100%{transform:translateX(0)}50%{transform:translateX(15px)}}
+
+/* Particles */
+.particles{position:absolute;inset:0;z-index:4;overflow:hidden}
+.particle{
+  position:absolute;border-radius:50%;
+  animation:particleFloat linear infinite;
+  opacity:0;
+}
+@keyframes particleFloat{
+  0%{transform:translateY(100vh) scale(0);opacity:0}
+  10%{opacity:1}
+  90%{opacity:1}
+  100%{transform:translateY(-20vh) scale(1);opacity:0}
+}
+
+/* Fog */
+.fog{
+  position:absolute;bottom:0;width:200%;height:30%;z-index:5;
+  background:linear-gradient(0deg,rgba(6,8,14,.9) 0%,transparent 100%);
+  animation:fogDrift 25s ease-in-out infinite;
+}
+@keyframes fogDrift{0%,100%{transform:translateX(0)}50%{transform:translateX(-10%)}}
+
+/* Title */
+.splash-title{
+  position:relative;z-index:10;
+  font-size:clamp(2.5rem,8vw,5rem);font-weight:900;
+  text-align:center;
+  color:#e0f0ff;
+  text-shadow:0 0 20px rgba(0,229,255,.4),0 0 60px rgba(0,229,255,.2);
+  animation:glitchTitle 8s ease-in-out infinite;
+}
+.splash-subtitle{
+  position:relative;z-index:10;
+  font-size:clamp(.9rem,3vw,1.3rem);font-weight:300;
+  color:rgba(200,220,255,.5);
+  margin-top:.5rem;letter-spacing:.15em;
+}
+@keyframes glitchTitle{
+  0%,92%,100%{transform:translate(0);filter:none}
+  93%{transform:translate(-3px,1px);filter:hue-rotate(30deg)}
+  94%{transform:translate(3px,-1px);filter:hue-rotate(-30deg)}
+  95%{transform:translate(0)}
+  96%{transform:translate(2px,2px);filter:hue-rotate(15deg)}
+  97%{transform:translate(0);filter:none}
+}
+
+/* Start button */
+.btn-start{
+  position:relative;z-index:10;
+  margin-top:2rem;padding:1rem 3rem;
+  background:transparent;
+  border:2px solid rgba(0,229,255,.5);
+  color:#00e5ff;font-family:'Heebo';font-size:1.2rem;font-weight:700;
+  border-radius:50px;cursor:pointer;
+  transition:all .3s ease;
+  animation:btnGlow 2s ease-in-out infinite;
+}
+.btn-start:hover,.btn-start:active{
+  background:rgba(0,229,255,.15);
+  box-shadow:0 0 30px rgba(0,229,255,.3);
+  transform:scale(1.05);
+}
+@keyframes btnGlow{
+  0%,100%{box-shadow:0 0 10px rgba(0,229,255,.2)}
+  50%{box-shadow:0 0 25px rgba(0,229,255,.4)}
+}
+
+/* ================================================================
+   NAME SCREEN
+   ================================================================ */
+#screen-name{background:radial-gradient(ellipse at center,#0f1525 0%,#06080e 100%)}
+.name-container{text-align:center;max-width:400px;padding:2rem}
+.name-container h2{font-size:1.8rem;font-weight:700;color:#c0d0e0;margin-bottom:.5rem}
+.name-container p{font-size:1rem;color:rgba(200,220,255,.5);margin-bottom:2rem}
+.name-input{
+  width:100%;padding:1rem 1.5rem;
+  background:rgba(255,255,255,.05);border:2px solid rgba(0,229,255,.3);
+  border-radius:12px;color:#e0f0ff;
+  font-family:'Heebo';font-size:1.3rem;font-weight:500;
+  text-align:center;outline:none;
+  transition:border-color .3s;
+}
+.name-input:focus{border-color:#00e5ff}
+.name-input::placeholder{color:rgba(200,220,255,.3)}
+.btn-enter{
+  margin-top:1.5rem;padding:.8rem 2.5rem;
+  background:linear-gradient(135deg,rgba(0,229,255,.2),rgba(160,125,224,.2));
+  border:1px solid rgba(0,229,255,.4);
+  color:#00e5ff;font-family:'Heebo';font-size:1.1rem;font-weight:700;
+  border-radius:50px;cursor:pointer;
+  opacity:.3;pointer-events:none;
+  transition:all .3s;
+}
+.btn-enter.ready{opacity:1;pointer-events:auto}
+.btn-enter.ready:hover{
+  background:linear-gradient(135deg,rgba(0,229,255,.3),rgba(160,125,224,.3));
+  transform:scale(1.05);
+}
+
+/* ================================================================
+   INTRO SCREEN
+   ================================================================ */
+#screen-intro{background:#06080e}
+.intro-text{
+  max-width:600px;padding:2rem;
+  font-size:clamp(1.1rem,3.5vw,1.4rem);
+  font-weight:300;line-height:2;
+  color:rgba(200,220,255,.7);
+  text-align:center;
+}
+.intro-text .typed-line{
+  opacity:0;transform:translateY(10px);
+  transition:opacity .5s ease,transform .5s ease;
+}
+.intro-text .typed-line.show{opacity:1;transform:translateY(0)}
+.btn-skip{
+  position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);
+  padding:.6rem 1.5rem;z-index:20;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);
+  color:rgba(200,220,255,.4);font-family:'Heebo';font-size:.9rem;
+  border-radius:30px;cursor:pointer;
+  transition:all .3s;
+}
+.btn-skip:hover{color:#00e5ff;border-color:rgba(0,229,255,.3)}
+
+/* ================================================================
+   CITY MAP SCREEN
+   ================================================================ */
+#screen-map{
+  background:radial-gradient(ellipse at 50% 80%,#111830 0%,#06080e 100%);
+}
+.map-header{
+  position:fixed;top:0;width:100%;
+  padding:1rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  z-index:20;
+  background:linear-gradient(180deg,rgba(6,8,14,.95) 0%,transparent 100%);
+}
+.map-player-name{font-size:.9rem;color:rgba(200,220,255,.5)}
+.map-shards{display:flex;gap:8px;align-items:center}
+.shard-icon{
+  width:24px;height:24px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.15);
+  transition:all .5s ease;
+  position:relative;
+}
+.shard-icon.collected{
+  border-color:currentColor;
+  box-shadow:0 0 12px currentColor;
+}
+.shard-icon.collected::after{
+  content:'';position:absolute;inset:4px;border-radius:50%;
+  background:currentColor;opacity:.6;
+}
+.shard-1{color:#4a9eff}
+.shard-2{color:#4ade80}
+.shard-3{color:#f97316}
+.shard-4{color:#a855f7}
+.shard-5{color:#ec4899}
+
+.map-container{
+  display:flex;flex-wrap:wrap;gap:1.5rem;
+  justify-content:center;align-items:center;
+  padding:2rem;max-width:600px;
+}
+
+.room-card{
+  width:140px;height:160px;
+  background:rgba(255,255,255,.03);
+  border:2px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.5rem;cursor:pointer;
+  transition:all .4s ease;
+  position:relative;overflow:hidden;
+}
+.room-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 50%,rgba(0,229,255,.05) 0%,transparent 70%);
+  opacity:0;transition:opacity .3s;
+}
+.room-card:hover::before{opacity:1}
+.room-card.locked{opacity:.4;cursor:not-allowed;filter:grayscale(.5)}
+.room-card.locked:hover::before{opacity:0}
+.room-card.unlocked{border-color:rgba(0,229,255,.3)}
+.room-card.unlocked:hover{
+  transform:translateY(-4px);
+  border-color:rgba(0,229,255,.5);
+  box-shadow:0 8px 30px rgba(0,229,255,.1);
+}
+.room-card.completed{
+  border-color:rgba(74,222,128,.3);
+}
+.room-card.completed .room-icon{color:#4ade80}
+
+.room-icon{
+  font-size:2.5rem;
+  filter:drop-shadow(0 0 8px currentColor);
+}
+.room-card.unlocked .room-icon{color:#00e5ff}
+.room-card.locked .room-icon{color:rgba(200,220,255,.3)}
+
+.room-name{
+  font-size:.85rem;font-weight:500;
+  color:rgba(200,220,255,.6);
+  text-align:center;
+}
+.room-card.unlocked .room-name{color:#c0d0e0}
+
+.lock-icon{
+  position:absolute;top:8px;left:8px;
+  font-size:.9rem;color:rgba(200,220,255,.3);
+}
+
+/* Map bottom buttons */
+.map-bottom{
+  position:fixed;bottom:0;width:100%;
+  padding:1rem 1.5rem;
+  display:flex;justify-content:center;gap:1rem;
+  z-index:20;
+}
+.btn-garden{
+  padding:.7rem 1.5rem;
+  background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.25);
+  color:#4ade80;font-family:'Heebo';font-size:.9rem;font-weight:500;
+  border-radius:30px;cursor:pointer;transition:all .3s;
+}
+.btn-garden:hover{background:rgba(74,222,128,.15);transform:scale(1.05)}
+
+/* ================================================================
+   ROOM SCREEN
+   ================================================================ */
+#screen-room{background:#080c18}
+.room-hud{
+  position:fixed;top:0;width:100%;
+  padding:.8rem 1.2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  z-index:30;
+  background:linear-gradient(180deg,rgba(8,12,24,.95) 0%,transparent 100%);
+}
+.room-title{font-size:1rem;font-weight:700;color:#c0d0e0}
+.room-timer{
+  font-size:1.1rem;font-weight:700;
+  color:#00e5ff;
+  font-variant-numeric:tabular-nums;
+}
+.room-timer.warning{color:#f97316;animation:timerPulse 1s ease-in-out infinite}
+.room-timer.danger{color:#ef4444;animation:timerPulse .5s ease-in-out infinite}
+@keyframes timerPulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+.btn-back-map{
+  padding:.4rem 1rem;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);
+  color:rgba(200,220,255,.5);font-family:'Heebo';font-size:.8rem;
+  border-radius:20px;cursor:pointer;
+  transition:all .3s;
+}
+.btn-back-map:hover{color:#00e5ff;border-color:rgba(0,229,255,.3)}
+
+.btn-hint{
+  padding:.4rem 1rem;
+  background:rgba(160,125,224,.08);border:1px solid rgba(160,125,224,.3);
+  color:#a07de0;font-family:'Heebo';font-size:.8rem;
+  border-radius:20px;cursor:pointer;
+  transition:all .3s;
+}
+.btn-hint:hover{background:rgba(160,125,224,.15)}
+.hint-count{font-size:.7rem;opacity:.6}
+
+/* Room scene container */
+.room-scene{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:4rem 1rem 2rem;
+  position:relative;
+}
+
+/* Interactive objects in room */
+.room-object{
+  position:absolute;cursor:pointer;
+  transition:all .3s ease;
+}
+.room-object:hover{transform:scale(1.08);filter:brightness(1.3)}
+.room-object.glow{animation:objectGlow 2s ease-in-out infinite}
+@keyframes objectGlow{
+  0%,100%{filter:drop-shadow(0 0 4px rgba(0,229,255,.3))}
+  50%{filter:drop-shadow(0 0 12px rgba(0,229,255,.6))}
+}
+.room-object.solved{
+  filter:brightness(.5) grayscale(.5);
+  pointer-events:none;
+  animation:none;
+}
+
+/* ================================================================
+   PUZZLE OVERLAY
+   ================================================================ */
+.puzzle-overlay{
+  position:fixed;inset:0;z-index:40;
+  background:rgba(6,8,14,.92);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:1.5rem;
+  opacity:0;pointer-events:none;
+  transition:opacity .4s ease;
+}
+.puzzle-overlay.active{opacity:1;pointer-events:auto}
+
+.puzzle-container{
+  width:100%;max-width:500px;
+  background:rgba(20,25,40,.8);
+  border:1px solid rgba(0,229,255,.15);
+  border-radius:20px;
+  padding:2rem;
+  position:relative;
+}
+.puzzle-title{
+  font-size:1.2rem;font-weight:700;
+  color:#c0d0e0;margin-bottom:.5rem;
+  text-align:center;
+}
+.puzzle-desc{
+  font-size:.9rem;color:rgba(200,220,255,.5);
+  text-align:center;margin-bottom:1.5rem;
+}
+.btn-close-puzzle{
+  position:absolute;top:1rem;left:1rem;
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  color:rgba(200,220,255,.5);font-size:1.2rem;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .3s;
+}
+.btn-close-puzzle:hover{color:#ef4444;border-color:rgba(239,68,68,.3)}
+
+/* ================================================================
+   PUZZLE 1: LIGHT THREADS (חוטי אור)
+   ================================================================ */
+.threads-area{
+  position:relative;width:100%;height:280px;
+  margin:1rem 0;
+}
+.threads-svg{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;z-index:1;
+}
+.threads-svg line{
+  stroke-width:3;stroke-linecap:round;
+  opacity:.8;
+  transition:opacity .3s;
+}
+.thread-dot{
+  width:40px;height:40px;border-radius:50%;
+  position:absolute;cursor:pointer;
+  border:3px solid currentColor;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .3s;
+  z-index:2;
+  background:rgba(6,8,14,.8);
+}
+.thread-dot::after{
+  content:'';width:16px;height:16px;border-radius:50%;
+  background:currentColor;opacity:.4;
+  transition:opacity .3s;
+}
+.thread-dot.selected{
+  transform:scale(1.2);
+  box-shadow:0 0 20px currentColor;
+}
+.thread-dot.selected::after{opacity:.8}
+.thread-dot.connected{
+  opacity:.5;pointer-events:none;
+}
+.thread-dot.connected::after{opacity:1}
+.threads-counter{
+  text-align:center;margin:.5rem 0;
+  font-size:.85rem;color:rgba(200,220,255,.4);
+}
+
+/* ================================================================
+   PUZZLE 2: COMPLETE THE PICTURE (השלם את הציור)
+   ================================================================ */
+.picture-area{
+  position:relative;width:100%;margin:1rem 0;
+}
+.picture-frame{
+  width:200px;height:200px;
+  margin:0 auto;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  gap:3px;
+  border:2px solid rgba(0,229,255,.2);
+  border-radius:12px;
+  padding:4px;
+  background:rgba(0,229,255,.03);
+}
+.picture-slot{
+  border-radius:6px;
+  background:rgba(255,255,255,.03);
+  border:1px dashed rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.5rem;
+  transition:all .3s;
+  min-height:60px;
+}
+.picture-slot.filled{
+  background:rgba(74,222,128,.08);
+  border:1px solid rgba(74,222,128,.3);
+  animation:slotFill .4s ease;
+}
+@keyframes slotFill{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}
+.picture-pieces{
+  display:flex;flex-wrap:wrap;gap:8px;
+  justify-content:center;
+  margin-top:1.5rem;
+}
+.picture-piece{
+  width:55px;height:55px;border-radius:10px;
+  background:rgba(0,229,255,.08);
+  border:2px solid rgba(0,229,255,.25);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;cursor:pointer;
+  transition:all .2s;
+}
+.picture-piece:hover{transform:scale(1.1);border-color:rgba(0,229,255,.5)}
+.picture-piece:active{transform:scale(.95)}
+.picture-piece.used{opacity:.2;pointer-events:none}
+.picture-counter{
+  text-align:center;margin:.5rem 0;
+  font-size:.85rem;color:rgba(200,220,255,.4);
+}
+
+/* ================================================================
+   PUZZLE 3: DUAL MECHANISM
+   ================================================================ */
+.dual-mechanism{
+  display:flex;flex-direction:column;
+  align-items:center;gap:1.5rem;
+  margin:1rem 0;
+}
+.mechanism-visual{
+  width:100%;height:200px;
+  background:rgba(255,255,255,.02);
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.06);
+  position:relative;overflow:hidden;
+}
+.door-visual{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:60px;height:100px;
+  border:3px solid rgba(200,220,255,.2);
+  border-radius:6px 6px 0 0;
+  transition:all .5s ease;
+}
+.door-visual.open{
+  border-color:rgba(74,222,128,.5);
+  box-shadow:0 0 30px rgba(74,222,128,.3);
+}
+.door-visual .door-lock{
+  position:absolute;top:50%;right:8px;
+  transform:translateY(-50%);
+  width:10px;height:10px;border-radius:50%;
+  background:rgba(239,68,68,.5);
+  transition:all .5s;
+}
+.door-visual.open .door-lock{background:rgba(74,222,128,.8)}
+
+.lever-container{
+  display:flex;gap:3rem;justify-content:center;
+}
+.lever{
+  width:70px;height:120px;
+  background:rgba(255,255,255,.03);
+  border:2px solid rgba(255,255,255,.1);
+  border-radius:12px;
+  position:relative;cursor:pointer;
+  transition:all .3s;
+}
+.lever-handle{
+  position:absolute;bottom:15px;left:50%;
+  transform:translateX(-50%);
+  width:30px;height:30px;border-radius:50%;
+  background:rgba(200,220,255,.15);
+  border:2px solid rgba(200,220,255,.3);
+  transition:all .4s ease;
+}
+.lever.active .lever-handle{
+  bottom:auto;top:15px;
+  background:rgba(0,229,255,.3);
+  border-color:#00e5ff;
+  box-shadow:0 0 15px rgba(0,229,255,.4);
+}
+.lever-label{
+  position:absolute;bottom:-25px;left:50%;
+  transform:translateX(-50%);white-space:nowrap;
+  font-size:.75rem;color:rgba(200,220,255,.4);
+}
+.lever-track{
+  position:absolute;left:50%;top:15px;bottom:15px;
+  transform:translateX(-50%);
+  width:4px;border-radius:2px;
+  background:rgba(255,255,255,.06);
+}
+
+/* Cooperation message */
+.coop-message{
+  text-align:center;padding:.8rem;
+  background:rgba(0,229,255,.05);
+  border:1px solid rgba(0,229,255,.15);
+  border-radius:12px;
+  font-size:.85rem;color:rgba(200,220,255,.5);
+  margin-top:.5rem;
+}
+
+/* ================================================================
+   SUCCESS ANIMATION
+   ================================================================ */
+.success-overlay{
+  position:fixed;inset:0;z-index:50;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(6,8,14,.85);
+  opacity:0;pointer-events:none;
+  transition:opacity .5s ease;
+}
+.success-overlay.active{opacity:1;pointer-events:auto}
+.success-text{
+  font-size:2rem;font-weight:900;
+  color:#4ade80;
+  text-shadow:0 0 30px rgba(74,222,128,.5);
+  animation:successPop .6s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes successPop{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
+
+.shard-collect{
+  margin-top:2rem;
+  width:80px;height:80px;
+  animation:shardFloat 2s ease-in-out infinite,shardAppear 1s ease .3s both;
+}
+@keyframes shardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes shardAppear{0%{transform:scale(0) rotate(-180deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
+
+.shard-name{
+  margin-top:1rem;font-size:1.1rem;font-weight:500;
+  color:rgba(200,220,255,.6);
+  animation:fadeInUp .5s ease .6s both;
+}
+@keyframes fadeInUp{0%{transform:translateY(20px);opacity:0}100%{transform:translateY(0);opacity:1}}
+
+.btn-continue{
+  margin-top:2rem;padding:.8rem 2rem;
+  background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);
+  color:#4ade80;font-family:'Heebo';font-size:1rem;font-weight:700;
+  border-radius:30px;cursor:pointer;
+  animation:fadeInUp .5s ease .8s both;
+  transition:all .3s;
+}
+.btn-continue:hover{background:rgba(74,222,128,.2);transform:scale(1.05)}
+
+/* ================================================================
+   QUIET GARDEN
+   ================================================================ */
+#screen-garden{
+  background:radial-gradient(ellipse at 50% 60%,#0a1a15 0%,#06080e 100%);
+}
+.garden-content{text-align:center;max-width:400px;padding:2rem}
+.garden-title{
+  font-size:1.5rem;font-weight:300;
+  color:rgba(74,222,128,.6);
+  margin-bottom:2rem;
+}
+.breathing-circle{
+  width:150px;height:150px;margin:0 auto;
+  border-radius:50%;
+  border:2px solid rgba(74,222,128,.3);
+  position:relative;
+  animation:breathe 8s ease-in-out infinite;
+}
+.breathing-circle::after{
+  content:'';position:absolute;inset:20px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(74,222,128,.15) 0%,transparent 70%);
+  animation:breathe 8s ease-in-out infinite;
+}
+@keyframes breathe{
+  0%,100%{transform:scale(.8);opacity:.5}
+  25%{transform:scale(1);opacity:.8}
+  50%{transform:scale(1.1);opacity:1}
+  75%{transform:scale(1);opacity:.8}
+}
+.breathing-text{
+  margin-top:2rem;font-size:1.1rem;font-weight:300;
+  color:rgba(74,222,128,.5);
+  min-height:2rem;
+}
+.btn-leave-garden{
+  margin-top:3rem;padding:.7rem 1.5rem;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);
+  color:rgba(200,220,255,.4);font-family:'Heebo';font-size:.9rem;
+  border-radius:30px;cursor:pointer;
+  transition:all .3s;
+}
+.btn-leave-garden:hover{color:#c0d0e0;border-color:rgba(200,220,255,.3)}
+
+/* ================================================================
+   TOAST NOTIFICATION ("Remember this")
+   ================================================================ */
+.toast{
+  position:fixed;top:1.5rem;left:50%;transform:translateX(-50%) translateY(-100px);
+  padding:.8rem 1.5rem;z-index:100;
+  background:rgba(20,25,40,.95);
+  border:1px solid rgba(160,125,224,.3);
+  border-radius:12px;
+  color:rgba(200,220,255,.7);font-size:.85rem;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  transition:transform .5s cubic-bezier(.175,.885,.32,1.275);
+  pointer-events:none;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ================================================================
+   CONFETTI
+   ================================================================ */
+.confetti-container{
+  position:fixed;inset:0;z-index:90;pointer-events:none;overflow:hidden;
+}
+.confetti-piece{
+  position:absolute;top:-10px;
+  width:10px;height:10px;
+  animation:confettiFall linear forwards;
+}
+@keyframes confettiFall{
+  0%{transform:translateY(0) rotate(0deg);opacity:1}
+  80%{opacity:1}
+  100%{transform:translateY(100vh) rotate(720deg);opacity:0}
+}
+
+/* ================================================================
+   HINT POPUP
+   ================================================================ */
+.hint-popup{
+  position:fixed;bottom:5rem;left:50%;transform:translateX(-50%) translateY(20px);
+  max-width:350px;width:90%;
+  padding:1rem 1.5rem;z-index:35;
+  background:rgba(25,20,40,.95);
+  border:1px solid rgba(160,125,224,.25);
+  border-radius:16px;
+  color:rgba(200,220,255,.7);font-size:.9rem;
+  line-height:1.6;text-align:center;
+  box-shadow:0 8px 30px rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;
+  transition:all .4s ease;
+}
+.hint-popup.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.hint-npc{
+  font-weight:700;color:#a07de0;
+  margin-bottom:.3rem;
+  display:block;
+}
+
+/* ================================================================
+   ROOM 1 SPECIFIC — THE QUIET ROOM
+   ================================================================ */
+.room1-scene{
+  width:100%;max-width:500px;
+  height:60vh;max-height:500px;
+  background:rgba(10,15,30,.5);
+  border:1px solid rgba(0,229,255,.08);
+  border-radius:20px;
+  position:relative;
+  overflow:hidden;
+}
+.room1-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 20% 30%,rgba(74,158,255,.05) 0%,transparent 50%),
+    radial-gradient(circle at 80% 70%,rgba(160,125,224,.05) 0%,transparent 50%),
+    linear-gradient(180deg,rgba(10,15,30,.8) 0%,rgba(15,20,35,.8) 100%);
+}
+
+/* Objects in room 1 */
+.r1-threads{
+  position:absolute;bottom:15%;left:50%;transform:translateX(-50%);
+  width:120px;height:60px;
+  background:rgba(74,158,255,.08);
+  border:2px solid rgba(74,158,255,.2);
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(74,158,255,.6);
+}
+.r1-picture{
+  position:absolute;top:15%;right:12%;
+  width:80px;height:80px;
+  background:rgba(74,222,128,.05);
+  border:2px solid rgba(74,222,128,.15);
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(74,222,128,.5);
+}
+.r1-door{
+  position:absolute;top:20%;left:10%;
+  width:60px;height:100px;
+  background:rgba(200,220,255,.03);
+  border:2px solid rgba(200,220,255,.1);
+  border-radius:6px 6px 0 0;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(200,220,255,.3);
+}
+.r1-status{
+  position:absolute;bottom:5%;left:50%;transform:translateX(-50%);
+  font-size:.8rem;color:rgba(200,220,255,.3);
+  text-align:center;
+  white-space:nowrap;
+}
+
+/* ================================================================
+   NPC DIALOG (between rooms)
+   ================================================================ */
+.npc-dialog{
+  position:fixed;bottom:0;width:100%;
+  padding:1.5rem;z-index:35;
+  background:linear-gradient(0deg,rgba(6,8,14,.98) 0%,rgba(6,8,14,.9) 80%,transparent 100%);
+  transform:translateY(100%);
+  transition:transform .5s ease;
+}
+.npc-dialog.show{transform:translateY(0)}
+.npc-dialog-name{
+  font-size:.9rem;font-weight:700;
+  color:#a07de0;margin-bottom:.5rem;
+}
+.npc-dialog-text{
+  font-size:1rem;line-height:1.8;
+  color:rgba(200,220,255,.7);
+  max-width:500px;
+}
+.btn-npc-continue{
+  margin-top:1rem;padding:.5rem 1.2rem;
+  background:rgba(160,125,224,.1);border:1px solid rgba(160,125,224,.25);
+  color:#a07de0;font-family:'Heebo';font-size:.85rem;
+  border-radius:20px;cursor:pointer;
+  transition:all .3s;
+}
+.btn-npc-continue:hover{background:rgba(160,125,224,.2)}
+
+/* ================================================================
+   FAILURE COUNTER
+   ================================================================ */
+.fail-counter{
+  position:fixed;top:4rem;left:50%;transform:translateX(-50%);
+  padding:.4rem 1rem;z-index:25;
+  background:rgba(249,115,22,.08);
+  border:1px solid rgba(249,115,22,.2);
+  border-radius:20px;
+  font-size:.8rem;color:rgba(249,115,22,.7);
+  opacity:0;transition:opacity .3s;
+}
+.fail-counter.show{opacity:1}
+
+/* ================================================================
+   MUTE BUTTON
+   ================================================================ */
+.btn-mute{
+  position:fixed;top:1rem;left:1rem;z-index:100;
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  color:rgba(200,220,255,.4);font-size:1.1rem;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .3s;
+}
+.btn-mute:hover{color:#00e5ff;border-color:rgba(0,229,255,.3)}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+/* ================================================================
+   TIME'S UP OVERLAY
+   ================================================================ */
+.timeup-overlay{
+  position:fixed;inset:0;z-index:55;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(6,8,14,.92);
+  opacity:0;pointer-events:none;
+  transition:opacity .5s ease;
+}
+.timeup-overlay.active{opacity:1;pointer-events:auto}
+.timeup-icon{
+  font-size:4rem;color:#ef4444;
+  animation:timeupPulse 1.5s ease-in-out infinite;
+  margin-bottom:1rem;
+}
+@keyframes timeupPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.1);opacity:1}}
+.timeup-text{
+  font-size:1.8rem;font-weight:900;
+  color:#ef4444;
+  text-shadow:0 0 20px rgba(239,68,68,.4);
+  margin-bottom:.5rem;
+}
+.timeup-sub{
+  font-size:1rem;color:rgba(200,220,255,.5);
+  margin-bottom:2rem;
+}
+.btn-retry{
+  padding:.8rem 2rem;
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
+  color:#ef4444;font-family:'Heebo';font-size:1rem;font-weight:700;
+  border-radius:30px;cursor:pointer;
+  transition:all .3s;margin-bottom:.8rem;
+}
+.btn-retry:hover{background:rgba(239,68,68,.2);transform:scale(1.05)}
+.btn-timeup-map{
+  padding:.6rem 1.5rem;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);
+  color:rgba(200,220,255,.4);font-family:'Heebo';font-size:.9rem;
+  border-radius:30px;cursor:pointer;
+  transition:all .3s;
+}
+.btn-timeup-map:hover{color:#c0d0e0;border-color:rgba(200,220,255,.3)}
+
+/* Lever countdown ring */
+.lever-countdown{
+  position:absolute;top:-8px;left:50%;transform:translateX(-50%);
+  width:20px;height:20px;
+}
+.lever-countdown circle{
+  fill:none;stroke:#00e5ff;stroke-width:2;
+  stroke-dasharray:50.27;stroke-dashoffset:0;
+  transform:rotate(-90deg);transform-origin:center;
+  transition:stroke-dashoffset 5s linear;
+}
+.lever.active .lever-countdown circle{
+  stroke-dashoffset:50.27;
+}
+
+/* Shake animation (from genially) */
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(5px)}
+}
+.shake{animation:shake .4s ease}
+
+/* FadeUp animation (from genially) */
+@keyframes fadeUp{
+  0%{opacity:0;transform:translateY(20px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+
+/* Screen enter animation */
+.screen.active .puzzle-container,
+.screen.active .room1-scene,
+.screen.active .name-container,
+.screen.active .garden-content,
+.screen.active .map-container{
+  animation:fadeUp .45s ease;
+}
+
+/* Door opening transition */
+.door-transition{
+  position:fixed;inset:0;z-index:60;
+  background:#06080e;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s;
+}
+.door-transition.active{opacity:1;pointer-events:auto}
+.door-transition-content{
+  text-align:center;
+  animation:fadeUp .5s ease;
+}
+.door-transition-icon{
+  font-size:4rem;margin-bottom:1rem;
+  color:#00e5ff;
+  animation:doorUnlock 1s ease;
+}
+@keyframes doorUnlock{
+  0%{transform:rotate(0deg) scale(1);opacity:0}
+  50%{transform:rotate(-15deg) scale(1.2);opacity:1}
+  100%{transform:rotate(0deg) scale(1);opacity:1}
+}
+.door-transition-text{
+  font-size:1.3rem;font-weight:700;
+  color:rgba(200,220,255,.7);
+}
+
+@media(max-width:400px){
+  .room-card{width:120px;height:140px}
+  .tone-buttons{gap:.6rem}
+  .symbol-grid{grid-template-columns:repeat(4,1fr);gap:.5rem}
+  .lever-container{gap:2rem}
+  .room1-scene{height:55vh}
+}
+@media(min-width:768px){
+  .room1-scene{max-height:600px}
+  .puzzle-container{padding:2.5rem}
+}
+</style>
+</head>
+<body>
+
+<!-- MUTE BUTTON (always visible) -->
+<button class="btn-mute" id="btnMute" title="השתק/הפעל צלילים">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path id="muteIcon" d="M11 5L6 9H2v6h4l5 4V5z M19.07 4.93a10 10 0 010 14.14 M15.54 8.46a5 5 0 010 7.07"/>
+  </svg>
+</button>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONFETTI CONTAINER -->
+<div class="confetti-container" id="confetti"></div>
+
+<!-- HINT POPUP -->
+<div class="hint-popup" id="hintPopup">
+  <span class="hint-npc" id="hintNpc"></span>
+  <span id="hintText"></span>
+</div>
+
+<!-- ============================================================
+     SCREEN: SPLASH
+     ============================================================ -->
+<div class="screen active" id="screen-splash">
+  <div class="splash-bg">
+    <div class="moon"><div class="moon-core"></div><div class="moon-glow"></div></div>
+    <svg class="city-layer city-far" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice">
+      <rect x="50" y="120" width="40" height="180" rx="2" fill="#0d1220"/>
+      <rect x="100" y="80" width="55" height="220" rx="2" fill="#0c1020"/>
+      <rect x="170" y="140" width="35" height="160" rx="2" fill="#0d1220"/>
+      <rect x="220" y="60" width="45" height="240" rx="2" fill="#0b0f1e"/>
+      <rect x="280" y="100" width="60" height="200" rx="2" fill="#0d1220"/>
+      <rect x="360" y="130" width="40" height="170" rx="2" fill="#0c1020"/>
+      <rect x="420" y="70" width="50" height="230" rx="2" fill="#0b0f1e"/>
+      <rect x="490" y="110" width="45" height="190" rx="2" fill="#0d1220"/>
+      <rect x="550" y="90" width="55" height="210" rx="2" fill="#0c1020"/>
+      <rect x="620" y="150" width="35" height="150" rx="2" fill="#0d1220"/>
+      <rect x="670" y="65" width="50" height="235" rx="2" fill="#0b0f1e"/>
+      <rect x="740" y="120" width="40" height="180" rx="2" fill="#0d1220"/>
+      <rect x="800" y="85" width="60" height="215" rx="2" fill="#0c1020"/>
+      <rect x="880" y="140" width="45" height="160" rx="2" fill="#0d1220"/>
+      <rect x="940" y="100" width="50" height="200" rx="2" fill="#0b0f1e"/>
+      <rect x="1010" y="75" width="40" height="225" rx="2" fill="#0d1220"/>
+      <rect x="1070" y="130" width="55" height="170" rx="2" fill="#0c1020"/>
+      <rect x="1140" y="95" width="45" height="205" rx="2" fill="#0d1220"/>
+    </svg>
+    <svg class="city-layer city-mid" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice">
+      <rect x="30" y="130" width="50" height="170" rx="2" fill="#111830"/>
+      <rect x="90" y="80" width="65" height="220" rx="2" fill="#131a35"/>
+      <rect x="170" y="110" width="45" height="190" rx="2" fill="#111830"/>
+      <rect x="230" y="60" width="70" height="240" rx="2" fill="#151c38"/>
+      <rect x="320" y="100" width="55" height="200" rx="2" fill="#131a35"/>
+      <rect x="395" y="75" width="60" height="225" rx="2" fill="#111830"/>
+      <rect x="475" y="140" width="40" height="160" rx="2" fill="#151c38"/>
+      <rect x="530" y="90" width="70" height="210" rx="2" fill="#131a35"/>
+      <rect x="620" y="120" width="50" height="180" rx="2" fill="#111830"/>
+      <rect x="690" y="55" width="65" height="245" rx="2" fill="#151c38"/>
+      <rect x="775" y="100" width="55" height="200" rx="2" fill="#131a35"/>
+      <rect x="850" y="130" width="45" height="170" rx="2" fill="#111830"/>
+      <rect x="910" y="70" width="60" height="230" rx="2" fill="#151c38"/>
+      <rect x="990" y="110" width="50" height="190" rx="2" fill="#131a35"/>
+      <rect x="1060" y="85" width="65" height="215" rx="2" fill="#111830"/>
+      <rect x="1140" y="120" width="50" height="180" rx="2" fill="#151c38"/>
+      <!-- windows -->
+      <rect x="103" y="100" width="6" height="8" rx="1" fill="#1a3050" opacity=".6"/>
+      <rect x="120" y="100" width="6" height="8" rx="1" fill="#1a3050" opacity=".4"/>
+      <rect x="243" y="80" width="6" height="8" rx="1" fill="#1a3050" opacity=".5"/>
+      <rect x="700" y="75" width="6" height="8" rx="1" fill="#1a3050" opacity=".5"/>
+      <rect x="720" y="75" width="6" height="8" rx="1" fill="#1a3050" opacity=".6"/>
+    </svg>
+    <svg class="city-layer city-near" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice">
+      <rect x="0" y="150" width="80" height="150" rx="2" fill="#181f38"/>
+      <rect x="95" y="90" width="75" height="210" rx="2" fill="#1a2240"/>
+      <rect x="185" y="120" width="60" height="180" rx="2" fill="#181f38"/>
+      <rect x="260" y="70" width="85" height="230" rx="2" fill="#1c2445"/>
+      <rect x="365" y="110" width="65" height="190" rx="2" fill="#1a2240"/>
+      <rect x="450" y="80" width="80" height="220" rx="2" fill="#181f38"/>
+      <rect x="550" y="140" width="55" height="160" rx="2" fill="#1c2445"/>
+      <rect x="620" y="65" width="75" height="235" rx="2" fill="#1a2240"/>
+      <rect x="715" y="100" width="65" height="200" rx="2" fill="#181f38"/>
+      <rect x="800" y="130" width="70" height="170" rx="2" fill="#1c2445"/>
+      <rect x="885" y="75" width="80" height="225" rx="2" fill="#1a2240"/>
+      <rect x="985" y="110" width="60" height="190" rx="2" fill="#181f38"/>
+      <rect x="1060" y="90" width="75" height="210" rx="2" fill="#1c2445"/>
+      <rect x="1150" y="130" width="60" height="170" rx="2" fill="#1a2240"/>
+      <!-- lit windows -->
+      <rect x="110" y="110" width="8" height="10" rx="1" fill="#00e5ff" opacity=".15"/>
+      <rect x="130" y="110" width="8" height="10" rx="1" fill="#a07de0" opacity=".1"/>
+      <rect x="275" y="90" width="8" height="10" rx="1" fill="#00e5ff" opacity=".12"/>
+      <rect x="295" y="90" width="8" height="10" rx="1" fill="#e06090" opacity=".08"/>
+      <rect x="465" y="100" width="8" height="10" rx="1" fill="#a07de0" opacity=".12"/>
+      <rect x="635" y="85" width="8" height="10" rx="1" fill="#00e5ff" opacity=".1"/>
+      <rect x="900" y="95" width="8" height="10" rx="1" fill="#e06090" opacity=".1"/>
+    </svg>
+    <div class="particles" id="particles"></div>
+    <div class="fog"></div>
+  </div>
+  <div class="splash-title">העיר האבודה</div>
+  <div class="splash-subtitle">חדר בריחה</div>
+  <button class="btn-start" id="btnStart">התחל מסע</button>
+</div>
+
+<!-- ============================================================
+     SCREEN: NAME
+     ============================================================ -->
+<div class="screen" id="screen-name">
+  <div class="name-container">
+    <h2>מי את/ה?</h2>
+    <p>כל נווד צריך שם.</p>
+    <input class="name-input" id="nameInput" type="text" placeholder="השם שלך..." maxlength="20" autocomplete="off">
+    <button class="btn-enter" id="btnEnter">להיכנס לעיר</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: INTRO
+     ============================================================ -->
+<div class="screen" id="screen-intro">
+  <div class="intro-text" id="introText">
+    <div class="typed-line">עיר עתיקה. פעם מלאה באנשים.</div>
+    <div class="typed-line">יום אחד — שתקו. הכל נשאר, כולם נעלמו.</div>
+    <div class="typed-line">אנשים מגיעים לפעמים. בלי לדעת למה.</div>
+    <div class="typed-line" id="introPlayerLine"></div>
+    <div class="typed-line">העיר נעולה. 5 חדרים. 5 שברים.</div>
+    <div class="typed-line">מצא אותם — והעיר תיפתח.</div>
+  </div>
+  <button class="btn-skip" id="btnSkip">דלג</button>
+</div>
+
+<!-- ============================================================
+     SCREEN: CITY MAP
+     ============================================================ -->
+<div class="screen" id="screen-map">
+  <div class="map-header">
+    <span class="map-player-name" id="mapPlayerName"></span>
+    <div class="map-shards">
+      <div class="shard-icon shard-1" id="shardIcon1" title="שבר חיבור"></div>
+      <div class="shard-icon shard-2" id="shardIcon2" title="שבר הקשבה"></div>
+      <div class="shard-icon shard-3" id="shardIcon3" title="שבר דחף"></div>
+      <div class="shard-icon shard-4" id="shardIcon4" title="שבר כוח"></div>
+      <div class="shard-icon shard-5" id="shardIcon5" title="שבר בחירה"></div>
+    </div>
+  </div>
+
+  <div class="map-container" id="mapContainer">
+    <div class="room-card unlocked" data-room="1" id="roomCard1">
+      <div class="room-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <span class="room-name">החדר השקט</span>
+    </div>
+    <div class="room-card locked" data-room="2" id="roomCard2">
+      <span class="lock-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </span>
+      <div class="room-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <span class="room-name">חדר ההדים</span>
+    </div>
+    <div class="room-card locked" data-room="3" id="roomCard3">
+      <span class="lock-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </span>
+      <div class="room-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
+      </div>
+      <span class="room-name">החדר שלא נגמר</span>
+    </div>
+    <div class="room-card locked" data-room="4" id="roomCard4">
+      <span class="lock-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </span>
+      <div class="room-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      </div>
+      <span class="room-name">חדר הכלים</span>
+    </div>
+    <div class="room-card locked" data-room="5" id="roomCard5">
+      <span class="lock-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </span>
+      <div class="room-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M12 2v20M2 12h20"/></svg>
+      </div>
+      <span class="room-name">חדר המראות</span>
+    </div>
+  </div>
+
+  <div class="map-bottom">
+    <button class="btn-garden" id="btnGarden">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:6px"><path d="M12 22c4-4 8-7.5 8-12a8 8 0 10-16 0c0 4.5 4 8 8 12z"/><circle cx="12" cy="10" r="3"/></svg>
+      גינה שקטה
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: ROOM (generic, filled by JS)
+     ============================================================ -->
+<div class="screen" id="screen-room">
+  <div class="room-hud">
+    <button class="btn-back-map" id="btnBackMap">חזרה למפה</button>
+    <span class="room-title" id="roomTitle"></span>
+    <span class="room-timer" id="roomTimer">5:00</span>
+    <button class="btn-hint" id="btnHint">
+      רמז <span class="hint-count" id="hintCount">(3)</span>
+    </button>
+  </div>
+  <div class="fail-counter" id="failCounter"></div>
+  <div class="room-scene" id="roomScene"></div>
+</div>
+
+<!-- PUZZLE OVERLAY -->
+<div class="puzzle-overlay" id="puzzleOverlay">
+  <div class="puzzle-container" id="puzzleContainer">
+    <button class="btn-close-puzzle" id="btnClosePuzzle">&times;</button>
+    <div id="puzzleContent"></div>
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-text" id="successText"></div>
+  <div id="shardVisual"></div>
+  <div class="shard-name" id="shardNameText"></div>
+  <button class="btn-continue" id="btnSuccessContinue">חזרה למפה</button>
+</div>
+
+<!-- ============================================================
+     SCREEN: QUIET GARDEN
+     ============================================================ -->
+<div class="screen" id="screen-garden">
+  <div class="garden-content">
+    <div class="garden-title">גינה שקטה</div>
+    <div class="breathing-circle"></div>
+    <div class="breathing-text" id="breathingText">שאפו...</div>
+    <button class="btn-leave-garden" id="btnLeaveGarden">חזרה למפה</button>
+  </div>
+</div>
+
+<!-- TIME'S UP OVERLAY -->
+<div class="timeup-overlay" id="timeupOverlay">
+  <div class="timeup-icon">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+  </div>
+  <div class="timeup-text">הזמן נגמר</div>
+  <div class="timeup-sub">לא הספקת הפעם. אבל אפשר לנסות שוב.</div>
+  <button class="btn-retry" id="btnRetry">נסה שוב</button>
+  <button class="btn-timeup-map" id="btnTimeupMap">חזרה למפה</button>
+</div>
+
+<!-- DOOR TRANSITION -->
+<div class="door-transition" id="doorTransition">
+  <div class="door-transition-content">
+    <div class="door-transition-icon" id="doorTransIcon">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1"/></svg>
+    </div>
+    <div class="door-transition-text" id="doorTransText"></div>
+  </div>
+</div>
+
+<!-- NPC DIALOG -->
+<div class="npc-dialog" id="npcDialog">
+  <div class="npc-dialog-name" id="npcDialogName"></div>
+  <div class="npc-dialog-text" id="npcDialogText"></div>
+  <button class="btn-npc-continue" id="btnNpcContinue">המשך</button>
+</div>
+
+<script>
+// ================================================================
+// GAME STATE
+// ================================================================
+const STATE = {
+  playerName: '',
+  currentScreen: 'splash',
+  currentRoom: null,
+  rooms: {
+    1: { unlocked: true, completed: false, puzzles: [false, false, false], hints: 3, attempts: 0 },
+    2: { unlocked: false, completed: false, puzzles: [false, false, false], hints: 3, attempts: 0 },
+    3: { unlocked: false, completed: false, puzzles: [false, false, false], hints: 3, attempts: 0 },
+    4: { unlocked: false, completed: false, puzzles: [false, false, false], hints: 3, attempts: 0 },
+    5: { unlocked: false, completed: false, puzzles: [false, false, false], hints: 3, attempts: 0 },
+  },
+  shards: [false, false, false, false, false],
+  timerSeconds: 0,
+  timerInterval: null,
+};
+
+const ROOMS = {
+  1: { name: 'החדר השקט', shard: 'שבר חיבור', shardColor: '#4a9eff', time: 420 },
+  2: { name: 'חדר ההדים', shard: 'שבר הקשבה', shardColor: '#4ade80', time: 420 },
+  3: { name: 'החדר שלא נגמר', shard: 'שבר דחף', shardColor: '#f97316', time: 420 },
+  4: { name: 'חדר הכלים', shard: 'שבר כוח', shardColor: '#a855f7', time: 420 },
+  5: { name: 'חדר המראות', shard: 'שבר בחירה', shardColor: '#ec4899', time: 420 },
+};
+
+const HINTS = {
+  1: [
+    { npc: 'נועה', text: 'הנקודות רוצות להתחבר. כל צבע מחפש את הצבע שלו בצד השני.' },
+    { npc: 'עידו', text: 'הציור שבור. כל חלק שייך למקום מסוים — תלחצו על חלק ואז על המקום.' },
+    { npc: 'דנה', text: 'הדלת לא תיפתח לבד. צריך שניים. שני המנגנונים — ביחד. יש לכם 5 שניות.' },
+  ]
+};
+
+// ================================================================
+// AUDIO ENGINE (simplified procedural)
+// ================================================================
+class Audio {
+  constructor() {
+    this.ctx = null;
+    this.master = null;
+    this.muted = false;
+    this.initialized = false;
+    this.ambientNodes = [];
+    try { this.muted = localStorage.getItem('escape_muted') === '1'; } catch(e){}
+  }
+
+  init() {
+    if (this.initialized) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC({ latencyHint: 'playback' });
+    this.master = this.ctx.createGain();
+    this.master.gain.value = this.muted ? 0 : 0.4;
+    this.master.connect(this.ctx.destination);
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.initialized = true;
+  }
+
+  toggle() {
+    this.muted = !this.muted;
+    if (this.master) this.master.gain.value = this.muted ? 0 : 0.4;
+    try { localStorage.setItem('escape_muted', this.muted ? '1' : '0'); } catch(e){}
+    updateMuteIcon();
+  }
+
+  // Play a simple tone
+  tone(freq, duration = 0.3, type = 'sine', vol = 0.3) {
+    if (!this.ctx || this.muted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+    osc.connect(gain).connect(this.master);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  }
+
+  // UI tap sound
+  tap() { this.tone(800, 0.08, 'sine', 0.15); }
+
+  // Success sound
+  success() {
+    if (!this.ctx) return;
+    [523.25, 659.25, 783.99].forEach((f, i) => {
+      setTimeout(() => this.tone(f, 0.4, 'sine', 0.2), i * 120);
+    });
+  }
+
+  // Error sound
+  error() { this.tone(200, 0.3, 'square', 0.1); }
+
+  // Shard collected
+  shardCollect() {
+    if (!this.ctx) return;
+    [440, 554.37, 659.25, 880].forEach((f, i) => {
+      setTimeout(() => this.tone(f, 0.6, 'sine', 0.15), i * 150);
+    });
+  }
+
+  // Confetti pop
+  confettiPop() {
+    if (!this.ctx || this.muted) return;
+    const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.15, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (data.length * 0.15));
+    }
+    const src = this.ctx.createBufferSource();
+    const gain = this.ctx.createGain();
+    src.buffer = buf;
+    gain.gain.value = 0.08;
+    src.connect(gain).connect(this.master);
+    src.start();
+  }
+
+  // Ambient drone
+  startAmbient(type = 'city') {
+    this.stopAmbient();
+    if (!this.ctx) return;
+    const configs = {
+      city:   { freqs: [55, 82.41, 110], type: 'sine', vol: 0.03 },
+      garden: { freqs: [130.81, 164.81, 196], type: 'sine', vol: 0.035 },
+      room:   { freqs: [65.41, 98, 130.81], type: 'sine', vol: 0.025 },
+      tension:{ freqs: [73.42, 87.31, 116.54], type: 'sawtooth', vol: 0.015 },
+    };
+    const cfg = configs[type] || configs.city;
+    cfg.freqs.forEach(f => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = cfg.type;
+      osc.frequency.value = f;
+      gain.gain.value = cfg.vol;
+      osc.connect(gain).connect(this.master);
+      osc.start();
+      this.ambientNodes.push({ osc, gain });
+    });
+  }
+
+  // Lever click mechanical sound
+  leverClick() { this.tone(150, 0.15, 'square', 0.12); }
+
+  stopAmbient() {
+    this.ambientNodes.forEach(n => { try { n.osc.stop(); } catch(e){} });
+    this.ambientNodes = [];
+  }
+
+  // Play specific puzzle tone (for tone puzzle)
+  puzzleTone(index) {
+    const freqs = [261.63, 329.63, 392, 523.25]; // C4, E4, G4, C5
+    this.tone(freqs[index], 0.5, 'sine', 0.25);
+  }
+}
+
+const audio = new Audio();
+
+function updateMuteIcon() {
+  const icon = document.getElementById('muteIcon');
+  if (audio.muted) {
+    icon.setAttribute('d', 'M11 5L6 9H2v6h4l5 4V5z M23 9l-6 6 M17 9l6 6');
+  } else {
+    icon.setAttribute('d', 'M11 5L6 9H2v6h4l5 4V5z M19.07 4.93a10 10 0 010 14.14 M15.54 8.46a5 5 0 010 7.07');
+  }
+}
+
+// ================================================================
+// PARTICLES
+// ================================================================
+function createParticles() {
+  const container = document.getElementById('particles');
+  const colors = ['#00e5ff', '#a07de0', '#e06090'];
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 2 + Math.random() * 4;
+    p.style.cssText = `
+      width:${size}px;height:${size}px;
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*3)]};
+      animation-duration:${8+Math.random()*12}s;
+      animation-delay:${Math.random()*10}s;
+    `;
+    container.appendChild(p);
+  }
+}
+
+// ================================================================
+// SCREEN MANAGEMENT
+// ================================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  STATE.currentScreen = id;
+}
+
+// ================================================================
+// SAVE / LOAD
+// ================================================================
+function saveGame() {
+  try {
+    const data = {
+      playerName: STATE.playerName,
+      rooms: STATE.rooms,
+      shards: STATE.shards,
+    };
+    localStorage.setItem('escape_save', JSON.stringify(data));
+  } catch(e){}
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem('escape_save');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    STATE.playerName = data.playerName;
+    STATE.rooms = data.rooms;
+    STATE.shards = data.shards;
+    return true;
+  } catch(e){ return false; }
+}
+
+// ================================================================
+// TOAST
+// ================================================================
+function showToast(text, duration = 3000) {
+  const toast = document.getElementById('toast');
+  toast.textContent = text;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+// ================================================================
+// CONFETTI
+// ================================================================
+function fireConfetti(count = 40) {
+  const container = document.getElementById('confetti');
+  const colors = ['#00e5ff', '#a07de0', '#e06090', '#4ade80', '#f97316', '#4a9eff'];
+  audio.confettiPop();
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    const size = 6 + Math.random() * 8;
+    piece.style.cssText = `
+      left:${10+Math.random()*80}%;
+      width:${size}px;height:${size}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      border-radius:${Math.random()>.5?'50%':'2px'};
+      animation-duration:${1.5+Math.random()*2}s;
+      animation-delay:${Math.random()*0.3}s;
+    `;
+    container.appendChild(piece);
+    setTimeout(() => piece.remove(), 4000);
+  }
+}
+
+// ================================================================
+// SPLASH SCREEN
+// ================================================================
+document.getElementById('btnStart').addEventListener('click', () => {
+  audio.init();
+  audio.tap();
+  // Check for save
+  if (loadGame()) {
+    showScreen('map');
+    updateMap();
+    audio.startAmbient('city');
+    return;
+  }
+  showScreen('name');
+});
+
+// ================================================================
+// NAME SCREEN
+// ================================================================
+const nameInput = document.getElementById('nameInput');
+const btnEnter = document.getElementById('btnEnter');
+
+nameInput.addEventListener('input', () => {
+  const val = nameInput.value.trim();
+  if (val.length >= 1) {
+    btnEnter.classList.add('ready');
+  } else {
+    btnEnter.classList.remove('ready');
+  }
+});
+
+nameInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && nameInput.value.trim().length >= 1) {
+    enterGame();
+  }
+});
+
+btnEnter.addEventListener('click', enterGame);
+
+function enterGame() {
+  STATE.playerName = nameInput.value.trim();
+  audio.tap();
+  showScreen('intro');
+  startIntro();
+}
+
+// ================================================================
+// INTRO SCREEN
+// ================================================================
+let introTimeout = null;
+
+function startIntro() {
+  const playerLine = document.getElementById('introPlayerLine');
+  playerLine.textContent = `גם ${STATE.playerName} הגיע/ה. בלי לדעת למה.`;
+
+  const lines = document.querySelectorAll('#introText .typed-line');
+  lines.forEach((line, i) => {
+    setTimeout(() => {
+      line.classList.add('show');
+      audio.tone(200 + i * 50, 0.2, 'sine', 0.05);
+    }, 800 + i * 1200);
+  });
+
+  introTimeout = setTimeout(() => {
+    finishIntro();
+  }, 800 + lines.length * 1200 + 1500);
+}
+
+function finishIntro() {
+  if (introTimeout) clearTimeout(introTimeout);
+  introTimeout = null;
+  audio.startAmbient('city');
+  showScreen('map');
+  updateMap();
+  saveGame();
+}
+
+document.getElementById('btnSkip').addEventListener('click', () => {
+  audio.tap();
+  finishIntro();
+});
+
+// ================================================================
+// CITY MAP
+// ================================================================
+function updateMap() {
+  document.getElementById('mapPlayerName').textContent = STATE.playerName;
+
+  // Update room cards
+  for (let i = 1; i <= 5; i++) {
+    const card = document.getElementById('roomCard' + i);
+    const room = STATE.rooms[i];
+    card.className = 'room-card';
+    if (room.completed) {
+      card.classList.add('completed');
+    } else if (room.unlocked) {
+      card.classList.add('unlocked');
+    } else {
+      card.classList.add('locked');
+    }
+    // Hide lock icon if unlocked
+    const lock = card.querySelector('.lock-icon');
+    if (lock) lock.style.display = room.unlocked ? 'none' : '';
+  }
+
+  // Update shard icons
+  STATE.shards.forEach((collected, i) => {
+    const icon = document.getElementById('shardIcon' + (i + 1));
+    if (collected) icon.classList.add('collected');
+    else icon.classList.remove('collected');
+  });
+}
+
+// Room card clicks
+document.querySelectorAll('.room-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const roomNum = parseInt(card.dataset.room);
+    const room = STATE.rooms[roomNum];
+    if (!room.unlocked) {
+      audio.error();
+      showToast('החדר הזה עדיין נעול.');
+      return;
+    }
+    if (room.completed) {
+      audio.tap();
+      showToast('כבר השלמת את החדר הזה.');
+      return;
+    }
+    audio.tap();
+    enterRoom(roomNum);
+  });
+});
+
+// Garden button
+document.getElementById('btnGarden').addEventListener('click', () => {
+  audio.tap();
+  audio.stopAmbient();
+  audio.startAmbient('garden');
+  showScreen('garden');
+  startBreathing();
+});
+
+// ================================================================
+// QUIET GARDEN
+// ================================================================
+let breathingInterval = null;
+
+function startBreathing() {
+  const text = document.getElementById('breathingText');
+  const phases = ['שאפו...', 'החזיקו...', 'נשפו...', 'המתינו...'];
+  let phase = 0;
+  text.textContent = phases[0];
+  breathingInterval = setInterval(() => {
+    phase = (phase + 1) % 4;
+    text.textContent = phases[phase];
+  }, 2000);
+}
+
+document.getElementById('btnLeaveGarden').addEventListener('click', () => {
+  audio.tap();
+  if (breathingInterval) clearInterval(breathingInterval);
+  audio.stopAmbient();
+  audio.startAmbient('city');
+  showScreen('map');
+});
+
+// ================================================================
+// ROOM LOGIC
+// ================================================================
+let currentPuzzle = null;
+
+function enterRoom(roomNum) {
+  STATE.currentRoom = roomNum;
+  const room = STATE.rooms[roomNum];
+  const info = ROOMS[roomNum];
+
+  // Reset puzzle state globals
+  toneSequence = []; tonePlayerInput = []; toneStep = 0; tonePlaying = false;
+  symbolCards = []; symbolFlipped = []; symbolMatched = 0; symbolLocked = false;
+  lever1Active = false; lever2Active = false;
+  if (dualTimer) { clearTimeout(dualTimer); dualTimer = null; }
+
+  // Door transition animation
+  const trans = document.getElementById('doorTransition');
+  const transText = document.getElementById('doorTransText');
+  transText.textContent = info.name;
+  trans.classList.add('active');
+  audio.stopAmbient();
+  audio.tone(220, 0.5, 'sine', 0.1);
+
+  setTimeout(() => {
+    document.getElementById('roomTitle').textContent = info.name;
+    document.getElementById('hintCount').textContent = `(${room.hints})`;
+    document.getElementById('failCounter').classList.remove('show');
+
+    // Start timer
+    STATE.timerSeconds = info.time;
+    updateTimerDisplay();
+    if (STATE.timerInterval) clearInterval(STATE.timerInterval);
+    STATE.timerInterval = setInterval(tickTimer, 1000);
+
+    // Build room scene
+    buildRoomScene(roomNum);
+    showScreen('room');
+    audio.startAmbient('room');
+
+    setTimeout(() => trans.classList.remove('active'), 400);
+  }, 1200);
+}
+
+function tickTimer() {
+  STATE.timerSeconds--;
+  updateTimerDisplay();
+  // Switch to tension ambient when time is low
+  if (STATE.timerSeconds === 60) {
+    audio.stopAmbient();
+    audio.startAmbient('tension');
+  }
+  if (STATE.timerSeconds <= 0) {
+    clearInterval(STATE.timerInterval);
+    showTimeUp();
+  }
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('roomTimer');
+  const min = Math.floor(STATE.timerSeconds / 60);
+  const sec = STATE.timerSeconds % 60;
+  el.textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+  el.className = 'room-timer';
+  if (STATE.timerSeconds <= 30) el.classList.add('danger');
+  else if (STATE.timerSeconds <= 60) el.classList.add('warning');
+}
+
+function leaveRoom() {
+  if (STATE.timerInterval) clearInterval(STATE.timerInterval);
+  if (dualTimer) { clearTimeout(dualTimer); dualTimer = null; }
+  STATE.currentRoom = null;
+  closePuzzle();
+  document.getElementById('timeupOverlay').classList.remove('active');
+  audio.stopAmbient();
+  audio.startAmbient('city');
+  showScreen('map');
+  updateMap();
+}
+
+// Time's up
+function showTimeUp() {
+  closePuzzle();
+  audio.stopAmbient();
+  audio.tone(100, 0.8, 'sawtooth', 0.15);
+  document.getElementById('timeupOverlay').classList.add('active');
+}
+
+document.getElementById('btnRetry').addEventListener('click', () => {
+  audio.tap();
+  document.getElementById('timeupOverlay').classList.remove('active');
+  const roomNum = STATE.currentRoom;
+  if (roomNum) enterRoom(roomNum);
+});
+
+document.getElementById('btnTimeupMap').addEventListener('click', () => {
+  audio.tap();
+  document.getElementById('timeupOverlay').classList.remove('active');
+  leaveRoom();
+});
+
+// Back to map
+document.getElementById('btnBackMap').addEventListener('click', () => {
+  audio.tap();
+  leaveRoom();
+});
+
+// Hint button
+document.getElementById('btnHint').addEventListener('click', () => {
+  const roomNum = STATE.currentRoom;
+  if (!roomNum) return;
+  const room = STATE.rooms[roomNum];
+  if (room.hints <= 0) {
+    showToast('אין עוד רמזים.');
+    return;
+  }
+  audio.tap();
+  room.hints--;
+  document.getElementById('hintCount').textContent = `(${room.hints})`;
+
+  const hints = HINTS[roomNum];
+  if (hints) {
+    const hintIndex = 3 - room.hints - 1;
+    const hint = hints[Math.min(hintIndex, hints.length - 1)];
+    showHint(hint.npc, hint.text);
+  }
+});
+
+function showHint(npc, text) {
+  document.getElementById('hintNpc').textContent = npc + ':';
+  document.getElementById('hintText').textContent = text;
+  const popup = document.getElementById('hintPopup');
+  popup.classList.add('show');
+  setTimeout(() => popup.classList.remove('show'), 5000);
+}
+
+// ================================================================
+// ROOM 1: THE QUIET ROOM
+// ================================================================
+function buildRoomScene(roomNum) {
+  const scene = document.getElementById('roomScene');
+  scene.innerHTML = '';
+
+  if (roomNum === 1) {
+    const s = (i) => STATE.rooms[1].puzzles[i] ? 'style="opacity:.3;pointer-events:none;animation:none"' : '';
+    scene.innerHTML = `
+      <div class="room1-scene">
+        <div class="room1-bg"></div>
+
+        <!-- Light Threads puzzle -->
+        <div class="room-object glow r1-threads" id="obj-threads" data-puzzle="threads" ${s(0)}>
+          <svg width="50" height="30" viewBox="0 0 50 30" fill="none" stroke-width="2">
+            <circle cx="8" cy="8" r="5" stroke="#4a9eff"/><circle cx="42" cy="8" r="5" stroke="#4a9eff"/>
+            <circle cx="8" cy="22" r="5" stroke="#4ade80"/><circle cx="42" cy="22" r="5" stroke="#4ade80"/>
+            <line x1="13" y1="8" x2="37" y2="8" stroke="#4a9eff" opacity=".3" stroke-dasharray="3"/>
+            <line x1="13" y1="22" x2="37" y2="22" stroke="#4ade80" opacity=".3" stroke-dasharray="3"/>
+          </svg>
+        </div>
+
+        <!-- Complete the Picture puzzle -->
+        <div class="room-object glow r1-picture" id="obj-picture" data-puzzle="picture" ${s(1)}>
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="rgba(74,222,128,.5)" stroke-width="1.5">
+            <rect x="4" y="4" width="32" height="32" rx="4"/>
+            <line x1="4" y1="15" x2="36" y2="15" stroke="rgba(74,222,128,.2)"/>
+            <line x1="4" y1="26" x2="36" y2="26" stroke="rgba(74,222,128,.2)"/>
+            <line x1="15" y1="4" x2="15" y2="36" stroke="rgba(74,222,128,.2)"/>
+            <line x1="26" y1="4" x2="26" y2="36" stroke="rgba(74,222,128,.2)"/>
+            <text x="20" y="23" text-anchor="middle" fill="rgba(74,222,128,.4)" font-size="10">?</text>
+          </svg>
+        </div>
+
+        <!-- Door / Dual Mechanism -->
+        <div class="room-object glow r1-door" id="obj-door" data-puzzle="dual" ${s(2)}>
+          <svg width="30" height="50" viewBox="0 0 30 50" fill="none" stroke="rgba(200,220,255,.3)" stroke-width="1.5">
+            <rect x="3" y="3" width="24" height="44" rx="3"/>
+            <circle cx="22" cy="25" r="3" fill="rgba(200,220,255,.1)"/>
+            <line x1="15" y1="3" x2="15" y2="47" stroke="rgba(200,220,255,.1)"/>
+          </svg>
+        </div>
+
+        <div class="r1-status" id="room1Status">${getRoomStatus(1)}</div>
+      </div>
+    `;
+
+    scene.querySelectorAll('.room-object').forEach(obj => {
+      obj.addEventListener('click', () => {
+        audio.tap();
+        const puzzle = obj.dataset.puzzle;
+        if (puzzle === 'threads') openThreadsPuzzle();
+        else if (puzzle === 'picture') openPicturePuzzle();
+        else if (puzzle === 'dual') openDualPuzzle();
+      });
+    });
+  }
+}
+
+function getRoomStatus(roomNum) {
+  const room = STATE.rooms[roomNum];
+  const solved = room.puzzles.filter(p => p).length;
+  return `${solved}/3 חידות נפתרו`;
+}
+
+function updateRoom1Status() {
+  const el = document.getElementById('room1Status');
+  if (el) el.textContent = getRoomStatus(1);
+}
+
+function checkRoomComplete(roomNum) {
+  const room = STATE.rooms[roomNum];
+  if (room.puzzles.every(p => p)) {
+    // Room complete!
+    clearInterval(STATE.timerInterval);
+    setTimeout(() => {
+      showRoomSuccess(roomNum);
+    }, 500);
+  }
+}
+
+function showRoomSuccess(roomNum) {
+  const info = ROOMS[roomNum];
+  closePuzzle();
+  audio.shardCollect();
+  fireConfetti(60);
+
+  STATE.rooms[roomNum].completed = true;
+  STATE.shards[roomNum - 1] = true;
+
+  // Unlock next room
+  if (roomNum < 5) {
+    STATE.rooms[roomNum + 1].unlocked = true;
+  }
+  saveGame();
+
+  // Show success overlay
+  document.getElementById('successText').textContent = 'נפתח!';
+  document.getElementById('shardVisual').innerHTML = `
+    <svg class="shard-collect" width="80" height="80" viewBox="0 0 80 80">
+      <defs>
+        <filter id="shardGlow"><feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <polygon points="40,5 50,30 75,35 55,55 60,75 40,62 20,75 25,55 5,35 30,30"
+        fill="${info.shardColor}" opacity=".8" filter="url(#shardGlow)"/>
+    </svg>
+  `;
+  document.getElementById('shardNameText').textContent = info.shard;
+  document.getElementById('successOverlay').classList.add('active');
+
+  showToast('תזכור את זה.', 4000);
+}
+
+document.getElementById('btnSuccessContinue').addEventListener('click', () => {
+  audio.tap();
+  document.getElementById('successOverlay').classList.remove('active');
+
+  // Show NPC dialog after room
+  const roomNum = STATE.currentRoom || 1;
+  showNpcAfterRoom(roomNum);
+});
+
+function showNpcAfterRoom(roomNum) {
+  const dialogs = {
+    1: { npc: 'נועה', text: 'הצלחת. בלי שאף אחד ביקש ממך... שבר חיבור. מעניין.' },
+    2: { npc: 'עידו', text: 'ואו, באמת הקשבת. רוב האנשים לא טורחים.' },
+    3: { npc: 'דנה', text: 'ניסית שוב ושוב. זה... לא מובן מאליו.' },
+    4: { npc: 'נועה', text: 'מצאת את הדרך. בלי שמישהו הראה לך. יפה.' },
+    5: { npc: 'עידו', text: 'בחרת. וזה מה שחשוב — שזו הייתה הבחירה שלך.' },
+  };
+  const d = dialogs[roomNum];
+  document.getElementById('npcDialogName').textContent = d.npc;
+  document.getElementById('npcDialogText').textContent = d.text;
+  document.getElementById('npcDialog').classList.add('show');
+}
+
+document.getElementById('btnNpcContinue').addEventListener('click', () => {
+  audio.tap();
+  document.getElementById('npcDialog').classList.remove('show');
+  leaveRoom();
+});
+
+// ================================================================
+// PUZZLE 1: LIGHT THREADS (חוטי אור — חיבור)
+// Connect matching colored dots on left and right sides
+// ================================================================
+let toneSequence = []; // kept for state reset compatibility
+let tonePlayerInput = [];
+let toneStep = 0;
+let tonePlaying = false;
+let symbolCards = [];
+let symbolFlipped = [];
+let symbolMatched = 0;
+let symbolLocked = false;
+
+let threadSelected = null;
+let threadConnections = 0;
+
+const THREAD_COLORS = [
+  { color: '#4a9eff', name: 'כחול' },
+  { color: '#4ade80', name: 'ירוק' },
+  { color: '#f97316', name: 'כתום' },
+  { color: '#a855f7', name: 'סגול' },
+];
+
+function openThreadsPuzzle() {
+  if (STATE.rooms[1].puzzles[0]) return;
+  currentPuzzle = 'threads';
+  threadSelected = null;
+  threadConnections = 0;
+
+  // Shuffle right-side order
+  const rightOrder = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+
+  const content = document.getElementById('puzzleContent');
+  content.innerHTML = `
+    <div class="puzzle-title">חוטי אור</div>
+    <div class="puzzle-desc">חברו כל נקודה לנקודה בצבע התואם בצד השני.</div>
+    <div class="threads-area" id="threadsArea">
+      <svg class="threads-svg" id="threadsSvg"></svg>
+      ${THREAD_COLORS.map((c, i) => `
+        <div class="thread-dot" data-side="L" data-idx="${i}"
+             style="color:${c.color};right:calc(100% - 35px);top:${20 + i * 65}px"></div>
+      `).join('')}
+      ${rightOrder.map((origIdx, posIdx) => `
+        <div class="thread-dot" data-side="R" data-idx="${origIdx}"
+             style="color:${THREAD_COLORS[origIdx].color};left:calc(100% - 35px);top:${20 + posIdx * 65}px"></div>
+      `).join('')}
+    </div>
+    <div class="threads-counter" id="threadsCounter">0/4 חיבורים</div>
+  `;
+
+  content.querySelectorAll('.thread-dot').forEach(dot => {
+    dot.addEventListener('click', () => handleThreadClick(dot));
+  });
+
+  openPuzzle();
+}
+
+function handleThreadClick(dot) {
+  const side = dot.dataset.side;
+  const idx = parseInt(dot.dataset.idx);
+
+  if (dot.classList.contains('connected')) return;
+
+  audio.tap();
+
+  if (!threadSelected) {
+    // First selection
+    threadSelected = { dot, side, idx };
+    dot.classList.add('selected');
+  } else {
+    // Second selection
+    if (threadSelected.side === side) {
+      // Same side — switch selection
+      threadSelected.dot.classList.remove('selected');
+      threadSelected = { dot, side, idx };
+      dot.classList.add('selected');
+      return;
+    }
+
+    // Different side — check if colors match
+    if (threadSelected.idx === idx) {
+      // Match! Draw line
+      const svg = document.getElementById('threadsSvg');
+      const area = document.getElementById('threadsArea');
+      const rect = area.getBoundingClientRect();
+      const dot1Rect = threadSelected.dot.getBoundingClientRect();
+      const dot2Rect = dot.getBoundingClientRect();
+
+      const x1 = dot1Rect.left + dot1Rect.width / 2 - rect.left;
+      const y1 = dot1Rect.top + dot1Rect.height / 2 - rect.top;
+      const x2 = dot2Rect.left + dot2Rect.width / 2 - rect.left;
+      const y2 = dot2Rect.top + dot2Rect.height / 2 - rect.top;
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      line.setAttribute('stroke', THREAD_COLORS[idx].color);
+      svg.appendChild(line);
+
+      threadSelected.dot.classList.remove('selected');
+      threadSelected.dot.classList.add('connected');
+      dot.classList.add('connected');
+      audio.success();
+
+      threadConnections++;
+      document.getElementById('threadsCounter').textContent = `${threadConnections}/4 חיבורים`;
+
+      if (threadConnections === 4) {
+        fireConfetti(20);
+        STATE.rooms[1].puzzles[0] = true;
+        saveGame();
+        showToast('תזכור את זה.', 3000);
+        setTimeout(() => { closePuzzle(); markPuzzleSolved(1, 0); }, 1000);
+      }
+    } else {
+      // Wrong match — shake
+      audio.error();
+      const pc = document.getElementById('puzzleContainer');
+      pc.classList.add('shake');
+      setTimeout(() => pc.classList.remove('shake'), 400);
+      threadSelected.dot.classList.remove('selected');
+      STATE.rooms[1].attempts++;
+      updateFailCounter();
+    }
+    threadSelected = null;
+  }
+}
+
+// ================================================================
+// PUZZLE 2: COMPLETE THE PICTURE (השלם את הציור — חיבור)
+// Place scattered pieces into a grid to reveal a connection image
+// ================================================================
+let picturePiecesOrder = [];
+let pictureFilledCount = 0;
+let pictureSelectedPiece = null;
+
+// The "image" is made of simple symbols that together form two reaching hands
+const PICTURE_GRID = [
+  ' ', '\\', ' ',
+  ' ', '|', ' ',
+  '/', ' ', '\\',
+];
+const PICTURE_SYMBOLS = ['\\', '|', '/', '\\'];  // pieces to place (4 missing)
+const PICTURE_MISSING = [1, 3, 4, 6, 8]; // indices that are missing
+const PICTURE_ICONS = ['\\', '\\', '|', '/', '\\'];
+
+function openPicturePuzzle() {
+  if (STATE.rooms[1].puzzles[1]) return;
+  currentPuzzle = 'picture';
+  pictureFilledCount = 0;
+  pictureSelectedPiece = null;
+
+  // Use SVG-based pieces for a cleaner look
+  const slotSymbols = ['>', '<', '^', 'v', '>', '<', '^', 'v', 'o'];
+  const missingIndices = [1, 3, 5, 7]; // 4 missing pieces
+  const pieces = missingIndices.map(i => ({ idx: i, sym: slotSymbols[i] }))
+    .sort(() => Math.random() - 0.5);
+
+  const content = document.getElementById('puzzleContent');
+  content.innerHTML = `
+    <div class="puzzle-title">השלם את הציור</div>
+    <div class="puzzle-desc">כל חלק שייך למקום אחד. מצאו את החיבור.</div>
+    <div class="picture-area">
+      <div class="picture-frame" id="pictureFrame">
+        ${slotSymbols.map((sym, i) => {
+          const isMissing = missingIndices.includes(i);
+          return `<div class="picture-slot ${isMissing ? '' : 'filled'}" data-idx="${i}" data-sym="${sym}">
+            ${isMissing ? '' : `<span style="color:rgba(74,222,128,.6)">${sym}</span>`}
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="picture-pieces" id="picturePieces">
+        ${pieces.map(p => `
+          <div class="picture-piece" data-target="${p.idx}" data-sym="${p.sym}">
+            ${p.sym}
+          </div>
+        `).join('')}
+      </div>
+      <div class="picture-counter" id="pictureCounter">0/4 חלקים במקום</div>
+    </div>
+  `;
+
+  // Click on piece, then click on slot
+  content.querySelectorAll('.picture-piece').forEach(piece => {
+    piece.addEventListener('click', () => {
+      if (piece.classList.contains('used')) return;
+      audio.tap();
+      // Deselect previous
+      content.querySelectorAll('.picture-piece').forEach(p => p.style.borderColor = '');
+      piece.style.borderColor = '#00e5ff';
+      pictureSelectedPiece = piece;
+    });
+  });
+
+  content.querySelectorAll('.picture-slot').forEach(slot => {
+    slot.addEventListener('click', () => {
+      if (slot.classList.contains('filled') || !pictureSelectedPiece) return;
+      const targetIdx = parseInt(pictureSelectedPiece.dataset.target);
+      const slotIdx = parseInt(slot.dataset.idx);
+
+      if (targetIdx === slotIdx) {
+        // Correct placement
+        slot.innerHTML = `<span style="color:rgba(74,222,128,.6)">${slot.dataset.sym}</span>`;
+        slot.classList.add('filled');
+        pictureSelectedPiece.classList.add('used');
+        audio.success();
+
+        pictureFilledCount++;
+        document.getElementById('pictureCounter').textContent = `${pictureFilledCount}/4 חלקים במקום`;
+        pictureSelectedPiece = null;
+
+        if (pictureFilledCount === 4) {
+          fireConfetti(20);
+          STATE.rooms[1].puzzles[1] = true;
+          saveGame();
+          showToast('תזכור את זה.', 3000);
+          setTimeout(() => { closePuzzle(); markPuzzleSolved(1, 1); }, 1000);
+        }
+      } else {
+        // Wrong slot — shake
+        audio.error();
+        const pc = document.getElementById('puzzleContainer');
+        pc.classList.add('shake');
+        setTimeout(() => pc.classList.remove('shake'), 400);
+        STATE.rooms[1].attempts++;
+        updateFailCounter();
+      }
+    });
+  });
+
+  openPuzzle();
+}
+
+// ================================================================
+// PUZZLE: DUAL MECHANISM
+// ================================================================
+let lever1Active = false;
+let lever2Active = false;
+let dualTimer = null;
+
+function openDualPuzzle() {
+  if (STATE.rooms[1].puzzles[2]) return;
+  currentPuzzle = 'dual';
+
+  lever1Active = false;
+  lever2Active = false;
+
+  const content = document.getElementById('puzzleContent');
+  content.innerHTML = `
+    <div class="puzzle-title">הדלת הנעולה</div>
+    <div class="puzzle-desc">שני מנגנונים. שניהם צריכים להיות למעלה — בו-זמנית.</div>
+    <div class="dual-mechanism">
+      <div class="mechanism-visual">
+        <div class="door-visual" id="doorVisual">
+          <div class="door-lock"></div>
+        </div>
+      </div>
+      <div class="lever-container">
+        <div class="lever" id="lever1">
+          <svg class="lever-countdown" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>
+          <div class="lever-track"></div>
+          <div class="lever-handle"></div>
+          <span class="lever-label">מנגנון א'</span>
+        </div>
+        <div class="lever" id="lever2">
+          <svg class="lever-countdown" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/></svg>
+          <div class="lever-track"></div>
+          <div class="lever-handle"></div>
+          <span class="lever-label">מנגנון ב'</span>
+        </div>
+      </div>
+      <div class="coop-message" id="coopMessage">
+        הפעילו את שני המנגנונים ביחד — לפני שהראשון חוזר למטה.
+      </div>
+    </div>
+  `;
+
+  document.getElementById('lever1').addEventListener('click', () => toggleLever(1));
+  document.getElementById('lever2').addEventListener('click', () => toggleLever(2));
+
+  openPuzzle();
+}
+
+function toggleLever(num) {
+  audio.leverClick();
+  const lever = document.getElementById('lever' + num);
+
+  if (num === 1) {
+    lever1Active = true;
+    lever.classList.add('active');
+    audio.tone(330, 0.2, 'sine', 0.15);
+    // Auto deactivate after 3 seconds
+    if (dualTimer) clearTimeout(dualTimer);
+    dualTimer = setTimeout(() => {
+      if (!STATE.rooms[1].puzzles[2]) {
+        lever1Active = false;
+        lever.classList.remove('active');
+        updateDoor();
+      }
+    }, 5000);
+  } else {
+    lever2Active = true;
+    lever.classList.add('active');
+    audio.tone(440, 0.2, 'sine', 0.15);
+    // Auto deactivate after 3 seconds
+    setTimeout(() => {
+      if (!STATE.rooms[1].puzzles[2]) {
+        lever2Active = false;
+        lever.classList.remove('active');
+        updateDoor();
+      }
+    }, 5000);
+  }
+
+  updateDoor();
+}
+
+function updateDoor() {
+  const door = document.getElementById('doorVisual');
+  const msg = document.getElementById('coopMessage');
+
+  if (lever1Active && lever2Active) {
+    // Both active!
+    door.classList.add('open');
+    msg.textContent = 'הדלת נפתחת!';
+    msg.style.borderColor = 'rgba(74,222,128,.3)';
+    msg.style.color = '#4ade80';
+    audio.success();
+    fireConfetti(20);
+    STATE.rooms[1].puzzles[2] = true;
+    saveGame();
+    setTimeout(() => {
+      closePuzzle();
+      markPuzzleSolved(1, 2);
+    }, 1200);
+  } else if (lever1Active || lever2Active) {
+    msg.textContent = 'מנגנון אחד למעלה... מהר! הפעילו גם את השני!';
+    msg.style.borderColor = 'rgba(249,115,22,.3)';
+    msg.style.color = '#f97316';
+  } else {
+    door.classList.remove('open');
+    msg.textContent = 'הפעילו את שני המנגנונים ביחד — לפני שהראשון חוזר למטה.';
+    msg.style.borderColor = 'rgba(0,229,255,.15)';
+    msg.style.color = 'rgba(200,220,255,.5)';
+  }
+}
+
+// ================================================================
+// PUZZLE OVERLAY MANAGEMENT
+// ================================================================
+function openPuzzle() {
+  document.getElementById('puzzleOverlay').classList.add('active');
+}
+
+function closePuzzle() {
+  document.getElementById('puzzleOverlay').classList.remove('active');
+  currentPuzzle = null;
+}
+
+document.getElementById('btnClosePuzzle').addEventListener('click', () => {
+  audio.tap();
+  closePuzzle();
+});
+
+function markPuzzleSolved(roomNum, puzzleIndex) {
+  // Update the visual in room
+  const scene = document.getElementById('roomScene');
+  const objects = scene.querySelectorAll('.room-object');
+  if (objects[puzzleIndex]) {
+    objects[puzzleIndex].style.opacity = '.3';
+    objects[puzzleIndex].style.pointerEvents = 'none';
+    objects[puzzleIndex].style.animation = 'none';
+  }
+  updateRoom1Status();
+  checkRoomComplete(roomNum);
+}
+
+// ================================================================
+// FAIL COUNTER
+// ================================================================
+function updateFailCounter() {
+  const el = document.getElementById('failCounter');
+  const room = STATE.rooms[STATE.currentRoom];
+  if (room.attempts > 0) {
+    el.textContent = `ניסית ${room.attempts} פעמים. לא ויתרת.`;
+    el.classList.add('show');
+  }
+}
+
+// ================================================================
+// MUTE BUTTON
+// ================================================================
+document.getElementById('btnMute').addEventListener('click', () => {
+  audio.init();
+  audio.toggle();
+});
+
+// ================================================================
+// INIT
+// ================================================================
+createParticles();
+updateMuteIcon();
+
+// Auto-load save on splash
+if (loadGame() && STATE.playerName) {
+  document.getElementById('btnStart').textContent = 'המשך מסע';
+}
+</script>
+</body>
+</html>

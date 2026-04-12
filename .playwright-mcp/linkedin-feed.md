@@ -1,0 +1,1116 @@
+- generic [ref=e2]:
+  - heading "0 notifications" [level=2] [ref=e3]
+  - generic [ref=e4]:
+    - generic:
+      - button [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: Skip to main content
+      - button [ref=e8] [cursor=pointer]:
+        - img [ref=e10]
+    - generic [ref=e12]:
+      - banner [ref=e14]:
+        - generic [ref=e17]:
+          - button "LinkedIn" [ref=e18] [cursor=pointer]:
+            - img "LinkedIn" [ref=e19]
+          - search [ref=e22]:
+            - generic [ref=e23]:
+              - img [ref=e25]
+              - textbox "Search" [ref=e27]
+          - generic [ref=e29]:
+            - figure [ref=e34]
+            - navigation [ref=e37]:
+              - list [ref=e38]:
+                - listitem [ref=e39]:
+                  - button "Home, 1 new notification" [ref=e40] [cursor=pointer]:
+                    - img [ref=e42]
+                    - generic [ref=e45]: Home
+                - listitem [ref=e46]:
+                  - link "My Network, 0 new notifications" [ref=e47] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/mynetwork
+                    - img [ref=e49]
+                    - generic [ref=e52]: My Network
+                - listitem [ref=e53]:
+                  - button "Jobs, 0 new notifications" [ref=e54] [cursor=pointer]:
+                    - img [ref=e56]
+                    - generic [ref=e59]: Jobs
+                - listitem [ref=e60]:
+                  - link "Messaging, 1 new notification" [ref=e61] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/messaging/
+                    - generic [ref=e62]:
+                      - img [ref=e63]
+                      - generic [ref=e65]: "1"
+                    - generic [ref=e67]: Messaging
+                - listitem [ref=e68]:
+                  - link "Notifications, 9 new notifications" [ref=e69] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/notifications/
+                    - generic [ref=e70]:
+                      - img [ref=e71]
+                      - generic [ref=e73]: "9"
+                    - generic [ref=e75]: Notifications
+                - listitem [ref=e76]:
+                  - button "Me" [ref=e77] [cursor=pointer]:
+                    - figure [ref=e79]
+                    - generic [ref=e81]:
+                      - text: Me
+                      - img [ref=e82]
+            - generic [ref=e85]:
+              - navigation [ref=e86]:
+                - list [ref=e87]:
+                  - listitem [ref=e88]:
+                    - button "For Business" [ref=e89] [cursor=pointer]:
+                      - img [ref=e91]
+                      - generic [ref=e94]:
+                        - text: For Business
+                        - img [ref=e95]
+              - link "Try Premium for ₪0" [ref=e98] [cursor=pointer]:
+                - /url: https://www.linkedin.com/feed/
+                - generic [ref=e99]:
+                  - img [ref=e100]
+                  - paragraph [ref=e104]: Try Premium for ₪0
+      - main [ref=e105]:
+        - main [ref=e107]:
+          - generic [ref=e109]:
+            - generic [ref=e113]:
+              - generic [ref=e117]:
+                - link [ref=e118] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                  - generic [ref=e119]:
+                    - figure [ref=e121]:
+                      - img [ref=e122]
+                    - figure [ref=e128]:
+                      - img "Meytal Peleg" [ref=e129]
+                - generic [ref=e130]:
+                  - link "Meytal Peleg -- Tel Aviv-Yafo, Tel Aviv District" [ref=e131] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                    - generic [ref=e132]:
+                      - paragraph [ref=e135]: Meytal Peleg
+                      - paragraph [ref=e137]: "--"
+                      - paragraph [ref=e138]: Tel Aviv-Yafo, Tel Aviv District
+                  - link "Experience" [ref=e139] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new/?profileFormEntryPoint=identityModuleMirror
+                    - generic [ref=e141]:
+                      - img [ref=e142]
+                      - paragraph [ref=e144]: Experience
+              - link "Learn new skills with Premium Try Premium for ₪0" [ref=e149] [cursor=pointer]:
+                - /url: https://www.linkedin.com/premium/products/?upsellOrderOrigin=Tracking%3Av1%3Apremium_homepage_identity_upsell%3ANav%3AIn-Product&referenceId=OnGsecZ3QdOdkxb%2FmHBvOQ%3D%3D&isSS=true
+                - generic [ref=e150]:
+                  - paragraph [ref=e151]: Learn new skills with Premium
+                  - generic [ref=e153]:
+                    - img [ref=e154]
+                    - paragraph [ref=e158]: Try Premium for ₪0
+              - menu [ref=e161]:
+                - link "Connections 0 Grow your network" [ref=e163] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/mynetwork/
+                  - generic "Connections 0 Grow your network" [ref=e164]:
+                    - generic [ref=e165]:
+                      - paragraph [ref=e166]: Connections
+                      - paragraph [ref=e167]: Grow your network
+                    - paragraph [ref=e168]: "0"
+              - menu [ref=e171]:
+                - link "Saved items" [ref=e172] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/my-items/saved-posts/
+                  - generic [ref=e173]:
+                    - img [ref=e174]
+                    - paragraph [ref=e176]: Saved items
+                - link "Groups" [ref=e177] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/groups/
+                  - generic [ref=e178]:
+                    - img [ref=e179]
+                    - paragraph [ref=e185]: Groups
+                - link "Newsletters" [ref=e186] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/mynetwork/network-manager/newsletters/
+                  - generic [ref=e187]:
+                    - img [ref=e188]
+                    - paragraph [ref=e190]: Newsletters
+                - link "Events" [ref=e191] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/events/
+                  - generic [ref=e192]:
+                    - img [ref=e193]
+                    - paragraph [ref=e195]: Events
+            - list [ref=e197]:
+              - generic [ref=e199]:
+                - generic [ref=e200]:
+                  - link [ref=e201] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                    - figure [ref=e202]
+                  - button "Start a post" [ref=e204] [cursor=pointer]:
+                    - generic "Start a post" [ref=e205]:
+                      - generic [ref=e207]:
+                        - paragraph [ref=e208]: Start a post
+                        - generic:
+                          - paragraph
+                - generic [ref=e209]:
+                  - button "Video" [ref=e210] [cursor=pointer]:
+                    - generic [ref=e211]:
+                      - img [ref=e212]
+                      - paragraph [ref=e214]: Video
+                  - button "Photo" [ref=e215] [cursor=pointer]:
+                    - generic [ref=e216]:
+                      - img [ref=e217]
+                      - paragraph [ref=e219]: Photo
+                  - link "Write article" [ref=e220] [cursor=pointer]:
+                    - /url: /article/new/
+                    - generic [ref=e221]:
+                      - img [ref=e222]
+                      - paragraph [ref=e224]: Write article
+              - 'button "Sort by: Top" [ref=e226] [cursor=pointer]':
+                - generic [ref=e227]:
+                  - paragraph [ref=e228]:
+                    - text: "Sort by:"
+                    - strong [ref=e229]: Top
+                  - img [ref=e230]
+              - listitem [ref=e235]:
+                - generic [ref=e237]:
+                  - heading "Feed post" [level=2]:
+                    - generic [ref=e238]: Feed post
+                  - generic [ref=e239]:
+                    - paragraph [ref=e243]: Recommended for you
+                    - link "Bill Gates Chair, Gates Foundation and Founder, Breakthrough Energy People who are in the industry also follow these people Follow Bill Gates" [ref=e244] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/williamhgates/
+                      - listitem [ref=e245]:
+                        - generic [ref=e246]:
+                          - figure [ref=e247]:
+                            - img "View profile" [ref=e248]
+                          - generic [ref=e249]:
+                            - paragraph [ref=e252]:
+                              - text: Bill Gates
+                              - img [ref=e254]
+                            - paragraph [ref=e257]: Chair, Gates Foundation and Founder, Breakthrough Energy
+                            - generic [ref=e258]:
+                              - img [ref=e259]
+                              - paragraph [ref=e262]: People who are in the industry also follow these people
+                        - button "Follow Bill Gates" [ref=e264]:
+                          - generic [ref=e265]:
+                            - img [ref=e266]
+                            - generic [ref=e269]: Follow
+                    - link "Amina Habib Entrepreneure| Fondatrice Women Impact Hub - Incubateur 100% féminin & Women Proactive MR🇲🇷 | Consultante en Entrepreneuriat je t’accompagne sur tes projets| Auteure engagée| 🏆Top#1 LinkedIn Creator Mauritanie🇲🇷 People who are in the industry also follow these people Follow Amina Habib" [ref=e270] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/amina-habib-364006152/
+                      - listitem [ref=e271]:
+                        - generic [ref=e272]:
+                          - figure [ref=e273]:
+                            - img "View profile" [ref=e274]
+                          - generic [ref=e275]:
+                            - paragraph [ref=e278]:
+                              - text: Amina Habib
+                              - img [ref=e280]
+                            - paragraph [ref=e283]: Entrepreneure| Fondatrice Women Impact Hub - Incubateur 100% féminin & Women Proactive MR🇲🇷 | Consultante en Entrepreneuriat je t’accompagne sur tes projets| Auteure engagée| 🏆Top#1 LinkedIn Creator Mauritanie🇲🇷
+                            - generic [ref=e284]:
+                              - img [ref=e285]
+                              - paragraph [ref=e288]: People who are in the industry also follow these people
+                        - button "Follow Amina Habib" [ref=e290]:
+                          - generic [ref=e291]:
+                            - img [ref=e292]
+                            - generic [ref=e295]: Follow
+                    - link "Touhajleb Sidi Aly Entrepreneure | Directrice-Fondatrice chez ETOP SARL | Aménagement paysager & Environnement People who are in the industry also follow these people Follow Touhajleb Sidi Aly" [ref=e296] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/touhajleb-sidi-aly-289772164/
+                      - listitem [ref=e297]:
+                        - generic [ref=e298]:
+                          - figure [ref=e299]:
+                            - img "View profile" [ref=e300]
+                          - generic [ref=e301]:
+                            - paragraph [ref=e304]:
+                              - text: Touhajleb Sidi Aly
+                              - img [ref=e306]
+                            - paragraph [ref=e309]: Entrepreneure | Directrice-Fondatrice chez ETOP SARL | Aménagement paysager & Environnement
+                            - generic [ref=e310]:
+                              - img [ref=e311]
+                              - paragraph [ref=e314]: People who are in the industry also follow these people
+                        - button "Follow Touhajleb Sidi Aly" [ref=e316]:
+                          - generic [ref=e317]:
+                            - img [ref=e318]
+                            - generic [ref=e321]: Follow
+                    - link "Show more" [ref=e322] [cursor=pointer]:
+                      - /url: /mynetwork/discover-hub/
+                      - generic [ref=e323]:
+                        - img [ref=e324]
+                        - generic [ref=e326]: Show more
+              - listitem [ref=e330]:
+                - generic [ref=e332]:
+                  - heading "Feed post" [level=2]:
+                    - generic [ref=e333]: Feed post
+                  - generic [ref=e334]:
+                    - link [ref=e335] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/nocham/
+                      - figure [ref=e336]:
+                        - img "View Nocham ohana נוחם אוחנה’s profile" [ref=e337]
+                    - 'link "Nocham ohana נוחם אוחנה Verified Profile 3rd+ C.E.O at Midrag - Service Ratings LTD | Hiring: Marketing Lead & Head of AI Agents Promoted by Midrag- Service rating LTD" [ref=e338] [cursor=pointer]':
+                      - /url: https://www.linkedin.com/in/nocham/
+                      - generic [ref=e339]:
+                        - generic "Nocham ohana נוחם אוחנה Verified Profile 3rd+" [ref=e340]:
+                          - paragraph [ref=e343]: Nocham ohana נוחם אוחנה
+                          - paragraph [ref=e345]:
+                            - img [ref=e347]
+                            - text: • 3rd+
+                        - paragraph [ref=e350]: "C.E.O at Midrag - Service Ratings LTD | Hiring: Marketing Lead & Head of AI Agents"
+                        - paragraph [ref=e352]:
+                          - text: Promoted by
+                          - link "Midrag- Service rating LTD" [ref=e353]:
+                            - /url: https://www.linkedin.com/company/midrag/posts/
+                            - strong [ref=e354]: Midrag- Service rating LTD
+                    - button "Follow Nocham ohana נוחם אוחנה" [ref=e358] [cursor=pointer]:
+                      - generic [ref=e359]:
+                        - img [ref=e360]
+                        - generic [ref=e363]: Follow
+                    - button "Open control menu for post by Nocham ohana נוחם אוחנה" [ref=e364] [cursor=pointer]:
+                      - img [ref=e366]
+                  - paragraph [ref=e370]:
+                    - generic [ref=e371]:
+                      - text: מודה... זה קצת מפחיד אותי לשחרר את לוטם לאוויר, כי יש פה הרבה אנשים חכמים בלינקדאין שינסו לשבור אותו (או אותה).
+                      - text: אבל תהיו עדינים עם לוטם, בסדר? בכל זאת הוא נולד בזמן מלחמה... 😉
+                      - link "Midrag- Service rating LTD" [ref=e373] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/midrag/
+                        - strong [ref=e375]: Midrag- Service rating LTD
+                      - button:
+                        - generic [ref=e377] [cursor=pointer]: … more
+                  - button "Show translation" [ref=e379] [cursor=pointer]:
+                    - generic [ref=e381]: Show translation
+                  - generic [ref=e384]:
+                    - region "Video Player" [ref=e386]:
+                      - application [ref=e388]
+                      - text:             
+                    - button "Play video" [ref=e391] [cursor=pointer]:
+                      - img [ref=e393]
+                  - generic [ref=e395]:
+                    - link "296 reactions" [ref=e396] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e397]:
+                        - img [ref=e398]
+                        - img [ref=e404]
+                        - img [ref=e418]
+                        - paragraph [ref=e427]:
+                          - generic [ref=e428]: 296 reactions
+                          - text: "296"
+                    - generic [ref=e429]:
+                      - button "34 comments" [ref=e430] [cursor=pointer]:
+                        - paragraph [ref=e431]:
+                          - generic [ref=e432]: 34 comments
+                          - generic [ref=e433]: 34 comments
+                      - paragraph [ref=e434]: •
+                      - link "8 reposts" [ref=e435] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/
+                        - paragraph [ref=e436]:
+                          - generic [ref=e437]: 8 reposts
+                          - generic [ref=e438]: 8 reposts
+                  - generic [ref=e439]:
+                    - generic [ref=e441]:
+                      - 'button "Reaction button state: no reaction" [ref=e444] [cursor=pointer]':
+                        - generic [ref=e445]:
+                          - img [ref=e446]
+                          - generic [ref=e448]: Like
+                      - button "Open reactions menu":
+                        - img [ref=e450] [cursor=pointer]
+                    - button "Comment" [ref=e452] [cursor=pointer]:
+                      - generic [ref=e453]:
+                        - img [ref=e454]
+                        - generic [ref=e457]: Comment
+                    - button "Repost" [ref=e458] [cursor=pointer]:
+                      - generic [ref=e459]:
+                        - img [ref=e460]
+                        - generic [ref=e463]: Repost
+                    - link "Send" [ref=e464] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e465]:
+                        - img [ref=e466]
+                        - generic [ref=e469]: Send
+              - listitem [ref=e473]:
+                - generic [ref=e475]:
+                  - heading "Feed post" [level=2]:
+                    - generic [ref=e476]: Feed post
+                  - generic [ref=e477]:
+                    - paragraph [ref=e480]: Suggested
+                    - button "Open control menu for post by Eli Itzkin" [ref=e481] [cursor=pointer]:
+                      - img [ref=e483]
+                    - button "Hide post by Eli Itzkin" [ref=e485] [cursor=pointer]:
+                      - img [ref=e487]
+                  - generic [ref=e489]:
+                    - link [ref=e490] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/eli-itzkin-3b3a1817/
+                      - figure [ref=e491]:
+                        - img "View Eli Itzkin’s profile" [ref=e492]
+                    - 'link "Eli Itzkin Verified Profile 3rd+ Founder @ Eli 5d • Visibility: Global" [ref=e493] [cursor=pointer]':
+                      - /url: https://www.linkedin.com/in/eli-itzkin-3b3a1817/
+                      - generic [ref=e494]:
+                        - generic "Eli Itzkin Verified Profile 3rd+" [ref=e495]:
+                          - paragraph [ref=e498]: Eli Itzkin
+                          - paragraph [ref=e500]:
+                            - img [ref=e502]
+                            - text: • 3rd+
+                        - paragraph [ref=e505]: Founder @ Eli
+                        - paragraph [ref=e507]:
+                          - text: 5d •
+                          - 'img "Visibility: Global" [ref=e508]'
+                    - button "Follow Eli Itzkin" [ref=e513] [cursor=pointer]:
+                      - generic [ref=e514]:
+                        - img [ref=e515]
+                        - generic [ref=e518]: Follow
+                  - paragraph [ref=e519]:
+                    - generic [ref=e520]:
+                      - text: "A significant amount of investment in FoodTech has been lost globally over the past few years. Not because of bad science. Not because of a lack of talent. But because too much capital was deployed into ideas that weren’t ready for the real world. In 2021–2022, capital was abundant. So we built ambitious plans often disconnected from the fundamentals: • supply chains • production constraints • unit economics • time to scale FoodTech isn’t software. You don’t iterate your way to product-market fit in a lab alone. At some point, you have to produce, distribute, and compete inside one of the most complex and low-margin industries in the world. That’s where many of these companies broke. The issue wasn’t vision. It was the gap between vision and execution in a real food system. If there’s one takeaway going forward, it’s this: We need smaller, more disciplined investments. More focus on execution. More respect for the complexity of the food system. And a clearer understanding that FoodTech is not “just another tech vertical” it’s part of the food industry. And the food industry plays by different rules. From my own experience working hands-on in the food industry, with both large corporates and early-stage companies ,the real challenge is not innovation, but turning that innovation into something that can actually live and breathe within the existing system. That’s also why I strongly believe in staying close to execution ,working side by side with teams, focusing on what actually moves the needle, rather than building plans that look good only on paper."
+                      - button:
+                        - generic [ref=e522] [cursor=pointer]: … more
+                  - link [ref=e524] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/feed/
+                    - figure [ref=e525]:
+                      - img "View image" [ref=e526]
+                  - generic [ref=e527]:
+                    - link "136 reactions" [ref=e528] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e529]:
+                        - img [ref=e530]
+                        - img [ref=e536]
+                        - img [ref=e544]
+                        - paragraph [ref=e559]:
+                          - generic [ref=e560]: 136 reactions
+                          - text: "136"
+                    - generic [ref=e561]:
+                      - button "21 comments" [ref=e562] [cursor=pointer]:
+                        - paragraph [ref=e563]:
+                          - generic [ref=e564]: 21 comments
+                          - generic [ref=e565]: 21 comments
+                      - paragraph [ref=e566]: •
+                      - link "7 reposts" [ref=e567] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/
+                        - paragraph [ref=e568]:
+                          - generic [ref=e569]: 7 reposts
+                          - generic [ref=e570]: 7 reposts
+                  - generic [ref=e571]:
+                    - generic [ref=e573]:
+                      - 'button "Reaction button state: no reaction" [ref=e576] [cursor=pointer]':
+                        - generic [ref=e577]:
+                          - img [ref=e578]
+                          - generic [ref=e580]: Like
+                      - button "Open reactions menu":
+                        - img [ref=e582] [cursor=pointer]
+                    - button "Comment" [ref=e584] [cursor=pointer]:
+                      - generic [ref=e585]:
+                        - img [ref=e586]
+                        - generic [ref=e589]: Comment
+                    - button "Repost" [ref=e590] [cursor=pointer]:
+                      - generic [ref=e591]:
+                        - img [ref=e592]
+                        - generic [ref=e595]: Repost
+                    - link "Send" [ref=e596] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e597]:
+                        - img [ref=e598]
+                        - generic [ref=e601]: Send
+              - listitem [ref=e605]:
+                - generic [ref=e607]:
+                  - heading "Feed post" [level=2]:
+                    - generic [ref=e608]: Feed post
+                  - generic [ref=e609]:
+                    - paragraph [ref=e612]: Suggested
+                    - button "Open control menu for post by Sean Semo 🦊" [ref=e613] [cursor=pointer]:
+                      - img [ref=e615]
+                    - button "Hide post by Sean Semo 🦊" [ref=e617] [cursor=pointer]:
+                      - img [ref=e619]
+                  - generic [ref=e621]:
+                    - link [ref=e622] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/seansemo/
+                      - figure [ref=e623]:
+                        - img "View Sean Semo 🦊’s profile" [ref=e624]
+                    - 'link "Sean Semo 🦊 3rd+ Digital Marketing Strategist | Helping Entrepreneurs & CEOs Grow Online with Blogging & Strategy | Lecturer in Content Marketing | Speaker on Digital Growth and SEO 1d • Visibility: Global" [ref=e625] [cursor=pointer]':
+                      - /url: https://www.linkedin.com/in/seansemo/
+                      - generic [ref=e626]:
+                        - generic "Sean Semo 🦊 3rd+" [ref=e627]:
+                          - paragraph [ref=e630]: Sean Semo 🦊
+                          - paragraph [ref=e632]: • 3rd+
+                        - paragraph [ref=e634]: Digital Marketing Strategist | Helping Entrepreneurs & CEOs Grow Online with Blogging & Strategy | Lecturer in Content Marketing | Speaker on Digital Growth and SEO
+                        - paragraph [ref=e636]:
+                          - text: 1d •
+                          - 'img "Visibility: Global" [ref=e637]'
+                    - button "Follow Sean Semo 🦊" [ref=e642] [cursor=pointer]:
+                      - generic [ref=e643]:
+                        - img [ref=e644]
+                        - generic [ref=e647]: Follow
+                  - paragraph [ref=e648]:
+                    - generic [ref=e649]:
+                      - text: Training every new hire yourself isn't leadership
+                      - text: It’s a bottleneck...
+                      - text: (Save + Repost this ♻️ for later)
+                      - text: Delegation.
+                      - text: Hiring great people is not enough.
+                      - text: ↳ But many leaders stop there.
+                      - text: "They assume: “I have to train everyone.”"
+                      - text: ↳ But great leaders don’t do everything.
+                      - text: They build up people who can teach others.
+                      - text: "They use:"
+                      - text: "- Experienced employees."
+                      - text: "- Shared knowledge."
+                      - text: "- Trust in their team."
+                      - text: "Without that:"
+                      - text: 1. Leaders burn out.
+                      - text: 2. Growth slows down.
+                      - text: 3. And teams stay dependent.
+                      - text: "Great leaders do something simple:"
+                      - text: → They let their team lead.
+                      - text: "Because delegation:"
+                      - text: • Saves time.
+                      - text: • Builds trust.
+                      - text: • Grows leaders.
+                      - text: • Strengthens teams.
+                      - text: • Speeds up learning.
+                      - text: Your team already has the knowledge...
+                      - text: So let them share it.
+                      - text: Because if the chef is doing all the training…
+                      - text: Who’s running the kitchen?
+                      - text: ♻️ Save & Repost to inspire others
+                      - text: 👣 Follow
+                      - link "Sean Semo 🦊" [ref=e651] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/seansemo/
+                        - strong [ref=e653]: Sean Semo 🦊
+                      - text: for more
+                      - link "#Leadership" [ref=e654] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23leadership&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e656]: "#Leadership"
+                      - link "#Teamwork" [ref=e657] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23teamwork&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e659]: "#Teamwork"
+                      - link "#EmployeeDevelopment" [ref=e660] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23employeedevelopment&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e662]: "#EmployeeDevelopment"
+                      - link "#CompanyCulture" [ref=e663] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23companyculture&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e665]: "#CompanyCulture"
+                      - link "#BusinessGrowth" [ref=e666] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23businessgrowth&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e668]: "#BusinessGrowth"
+                      - button:
+                        - generic [ref=e670] [cursor=pointer]: … more
+                  - generic [ref=e673]:
+                    - region "Video Player" [ref=e675]:
+                      - application [ref=e677]
+                      - text:             
+                    - button "Play video" [ref=e680] [cursor=pointer]:
+                      - img [ref=e682]
+                  - generic [ref=e684]:
+                    - link "517 reactions" [ref=e685] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e686]:
+                        - img [ref=e687]
+                        - img [ref=e693]
+                        - img [ref=e699]
+                        - paragraph [ref=e711]:
+                          - generic [ref=e712]: 517 reactions
+                          - text: "517"
+                    - generic [ref=e713]:
+                      - button "25 comments" [ref=e714] [cursor=pointer]:
+                        - paragraph [ref=e715]:
+                          - generic [ref=e716]: 25 comments
+                          - generic [ref=e717]: 25 comments
+                      - paragraph [ref=e718]: •
+                      - link "45 reposts" [ref=e719] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/
+                        - paragraph [ref=e720]:
+                          - generic [ref=e721]: 45 reposts
+                          - generic [ref=e722]: 45 reposts
+                  - generic [ref=e723]:
+                    - generic [ref=e725]:
+                      - 'button "Reaction button state: no reaction" [ref=e728] [cursor=pointer]':
+                        - generic [ref=e729]:
+                          - img [ref=e730]
+                          - generic [ref=e732]: Like
+                      - button "Open reactions menu":
+                        - img [ref=e734] [cursor=pointer]
+                    - button "Comment" [ref=e736] [cursor=pointer]:
+                      - generic [ref=e737]:
+                        - img [ref=e738]
+                        - generic [ref=e741]: Comment
+                    - button "Repost" [ref=e742] [cursor=pointer]:
+                      - generic [ref=e743]:
+                        - img [ref=e744]
+                        - generic [ref=e747]: Repost
+                    - link "Send" [ref=e748] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e749]:
+                        - img [ref=e750]
+                        - generic [ref=e753]: Send
+              - listitem [ref=e757]:
+                - generic [ref=e759]:
+                  - heading "Feed post" [level=2]:
+                    - generic [ref=e760]: Feed post
+                  - generic [ref=e761]:
+                    - paragraph [ref=e764]: Suggested
+                    - button "Open control menu for post by Yael Gargir" [ref=e765] [cursor=pointer]:
+                      - img [ref=e767]
+                    - button "Hide post by Yael Gargir" [ref=e769] [cursor=pointer]:
+                      - img [ref=e771]
+                  - generic [ref=e773]:
+                    - link [ref=e774] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/yael-gargir/
+                      - figure [ref=e775]:
+                        - img "View Yael Gargir’s profile" [ref=e776]
+                    - 'link "Yael Gargir Verified Profile 3rd+ UX Writer | Content Designer | I help brands use their voice to communicate. 4d • Visibility: Global" [ref=e777] [cursor=pointer]':
+                      - /url: https://www.linkedin.com/in/yael-gargir/
+                      - generic [ref=e778]:
+                        - generic "Yael Gargir Verified Profile 3rd+" [ref=e779]:
+                          - paragraph [ref=e782]: Yael Gargir
+                          - paragraph [ref=e784]:
+                            - img [ref=e786]
+                            - text: • 3rd+
+                        - paragraph [ref=e789]: UX Writer | Content Designer | I help brands use their voice to communicate.
+                        - paragraph [ref=e791]:
+                          - text: 4d •
+                          - 'img "Visibility: Global" [ref=e792]'
+                    - button "Follow Yael Gargir" [ref=e797] [cursor=pointer]:
+                      - generic [ref=e798]:
+                        - img [ref=e799]
+                        - generic [ref=e802]: Follow
+                  - paragraph [ref=e803]:
+                    - generic [ref=e804]:
+                      - text: 5 ways not to get a job 1. Spend 60 hours building a portfolio 2. Reach out to all your connections 3. Figure out what you bring to the table that no one else does 4. Post weekly on LinkedIn 5. Get pulled into reserves mid-process None of these get you the job. They shape the character that eventually does.
+                      - button:
+                        - generic [ref=e806] [cursor=pointer]: … more
+                  - link [ref=e808] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/feed/
+                    - figure [ref=e809]:
+                      - img "View image" [ref=e810]
+                  - generic [ref=e811]:
+                    - link "70 reactions" [ref=e812] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e813]:
+                        - img [ref=e814]
+                        - img [ref=e820]
+                        - img [ref=e831]
+                        - paragraph [ref=e838]:
+                          - generic [ref=e839]: 70 reactions
+                          - text: "70"
+                    - button "10 comments" [ref=e841] [cursor=pointer]:
+                      - paragraph [ref=e842]:
+                        - generic [ref=e843]: 10 comments
+                        - generic [ref=e844]: 10 comments
+                  - generic [ref=e845]:
+                    - generic [ref=e847]:
+                      - 'button "Reaction button state: no reaction" [ref=e850] [cursor=pointer]':
+                        - generic [ref=e851]:
+                          - img [ref=e852]
+                          - generic [ref=e854]: Like
+                      - button "Open reactions menu":
+                        - img [ref=e856] [cursor=pointer]
+                    - button "Comment" [ref=e858] [cursor=pointer]:
+                      - generic [ref=e859]:
+                        - img [ref=e860]
+                        - generic [ref=e863]: Comment
+                    - button "Repost" [ref=e864] [cursor=pointer]:
+                      - generic [ref=e865]:
+                        - img [ref=e866]
+                        - generic [ref=e869]: Repost
+                    - link "Send" [ref=e870] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e871]:
+                        - img [ref=e872]
+                        - generic [ref=e875]: Send
+              - listitem [ref=e879]:
+                - generic [ref=e881]:
+                  - heading "Feed post" [level=2]:
+                    - generic [ref=e882]: Feed post
+                  - generic [ref=e883]:
+                    - link [ref=e884] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/company/advantive-software/posts/
+                      - figure [ref=e885]:
+                        - 'img "View company: Advantive" [ref=e886]'
+                    - link "Advantive 10,183 followers Promoted" [ref=e887] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/company/advantive-software/posts/
+                      - generic [ref=e888]:
+                        - paragraph [ref=e892]: Advantive
+                        - paragraph [ref=e894]: 10,183 followers
+                        - paragraph [ref=e896]: Promoted
+                    - button "Open control menu for post by Advantive" [ref=e897] [cursor=pointer]:
+                      - img [ref=e899]
+                  - generic [ref=e901]:
+                    - paragraph [ref=e902]:
+                      - generic [ref=e903]: Stop wasting $1M+ on flawed Sales incentives. Learn how to fix 10 errors—like poor automation—that drive reps to competitors.
+                    - generic [ref=e905]:
+                      - generic [ref=e907]:
+                        - generic [ref=e908]:
+                          - paragraph [ref=e910]: Pepperi - 10 Costly Pitfalls to Avoid in Sales Rep Incentives PDF
+                          - paragraph [ref=e912]: Preview 1 of 30 pages
+                        - generic [ref=e914]:
+                          - button "Go to next page of document" [ref=e915] [cursor=pointer]:
+                            - img [ref=e917]
+                          - list [ref=e919]:
+                            - listitem [ref=e920]:
+                              - figure [ref=e921]
+                            - listitem [ref=e922]:
+                              - paragraph [ref=e924]: Want to view more? Unlock the full document below.
+                        - generic [ref=e925]:
+                          - paragraph [ref=e926]: 1 / 2
+                          - generic "Slide to navigate to a page" [ref=e927]:
+                            - generic [ref=e929]:
+                              - slider "Slider, 0" [ref=e930]: "0"
+                              - status: "0"
+                          - button "Full screen" [ref=e931] [cursor=pointer]:
+                            - img [ref=e933]
+                      - link "Unlock Full Document" [ref=e935] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/
+                        - generic [ref=e936]:
+                          - img [ref=e937]
+                          - generic [ref=e939]: Unlock Full Document
+                  - generic [ref=e940]:
+                    - link "295 reactions" [ref=e941] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e942]:
+                        - img [ref=e943]
+                        - img [ref=e949]
+                        - img [ref=e963]
+                        - paragraph [ref=e970]:
+                          - generic [ref=e971]: 295 reactions
+                          - text: "295"
+                    - generic [ref=e972]:
+                      - button "7 comments" [ref=e973] [cursor=pointer]:
+                        - paragraph [ref=e974]:
+                          - generic [ref=e975]: 7 comments
+                          - generic [ref=e976]: 7 comments
+                      - paragraph [ref=e977]: •
+                      - link "12 reposts" [ref=e978] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/
+                        - paragraph [ref=e979]:
+                          - generic [ref=e980]: 12 reposts
+                          - generic [ref=e981]: 12 reposts
+                  - generic [ref=e982]:
+                    - generic [ref=e984]:
+                      - 'button "Reaction button state: no reaction" [ref=e987] [cursor=pointer]':
+                        - generic [ref=e988]:
+                          - img [ref=e989]
+                          - generic [ref=e991]: Like
+                      - button "Open reactions menu":
+                        - img [ref=e993] [cursor=pointer]
+                    - button "Comment" [ref=e995] [cursor=pointer]:
+                      - generic [ref=e996]:
+                        - img [ref=e997]
+                        - generic [ref=e1000]: Comment
+                    - button "Repost" [ref=e1001] [cursor=pointer]:
+                      - generic [ref=e1002]:
+                        - img [ref=e1003]
+                        - generic [ref=e1006]: Repost
+                    - link "Send" [ref=e1007] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e1008]:
+                        - img [ref=e1009]
+                        - generic [ref=e1012]: Send
+              - listitem [ref=e1016]:
+                - generic [ref=e1018]:
+                  - heading "Feed post" [level=2]:
+                    - generic [ref=e1019]: Feed post
+                  - generic [ref=e1020]:
+                    - paragraph [ref=e1023]: Suggested
+                    - button "Open control menu for post by Brett C." [ref=e1024] [cursor=pointer]:
+                      - img [ref=e1026]
+                    - button "Hide post by Brett C." [ref=e1028] [cursor=pointer]:
+                      - img [ref=e1030]
+                  - generic [ref=e1032]:
+                    - link [ref=e1033] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/brett-c-78a74647/
+                      - figure [ref=e1034]:
+                        - img "View Brett C.’s profile" [ref=e1035]
+                    - 'link "Brett C. Verified Profile 3rd+ Geopolitics | Author of Stop The Hate | Director at BLC Writeworks Ink© 1d • Edited • Visibility: Global" [ref=e1041] [cursor=pointer]':
+                      - /url: https://www.linkedin.com/in/brett-c-78a74647/
+                      - generic [ref=e1042]:
+                        - generic "Brett C. Verified Profile 3rd+" [ref=e1043]:
+                          - paragraph [ref=e1046]: Brett C.
+                          - paragraph [ref=e1048]:
+                            - img [ref=e1050]
+                            - text: • 3rd+
+                        - paragraph [ref=e1053]: Geopolitics | Author of Stop The Hate | Director at BLC Writeworks Ink©
+                        - paragraph [ref=e1055]:
+                          - text: 1d • Edited •
+                          - 'img "Visibility: Global" [ref=e1056]'
+                    - button "Follow Brett C." [ref=e1061] [cursor=pointer]:
+                      - generic [ref=e1062]:
+                        - img [ref=e1063]
+                        - generic [ref=e1066]: Follow
+                  - paragraph [ref=e1067]:
+                    - generic [ref=e1068]:
+                      - text: Bill Gates didn’t say this lightly, and he didn’t hedge it either. Within the next decade, AI will make expert-level knowledge fast, accessible, and everywhere. That means roles we once thought untouchable—doctors, teachers, specialists—are now in the firing line. This goes far beyond automation as we’ve understood it in the past. It’s no longer about tools helping you work faster, it’s about systems that can think and deliver outcomes. And when that level of capability becomes widespread, your individual edge starts to fade. For years, we’ve built our careers on being the person who knows more than others. Experience, judgment, and insight were our leverage, the things that made us valuable. Now those same strengths are being replicated, scaled, and delivered instantly by machines. Even voices like Mustafa Suleyman are warning us directly. These systems won’t just support human work, they will replace large parts of it over time. It won’t happen all at once, but it will happen faster than most people are ready for. So this isn’t a debate about whether AI will change things, that part is already underway. The real question is whether you’re adjusting quickly enough to stay relevant in the shift. Because in a world where intelligence is everywhere, only those who move early will keep their place.
+                      - button:
+                        - generic [ref=e1070] [cursor=pointer]: … more
+                  - link [ref=e1072] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/feed/
+                    - figure [ref=e1073]:
+                      - img "View image" [ref=e1074]
+                  - generic [ref=e1075]:
+                    - link "32 reactions" [ref=e1076] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e1077]:
+                        - img [ref=e1078]
+                        - img [ref=e1084]
+                        - img [ref=e1090]
+                        - paragraph [ref=e1099]:
+                          - generic [ref=e1100]: 32 reactions
+                          - text: "32"
+                    - generic [ref=e1101]:
+                      - button "122 comments" [ref=e1102] [cursor=pointer]:
+                        - paragraph [ref=e1103]:
+                          - generic [ref=e1104]: 122 comments
+                          - generic [ref=e1105]: 122 comments
+                      - paragraph [ref=e1106]: •
+                      - link "3 reposts" [ref=e1107] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/
+                        - paragraph [ref=e1108]:
+                          - generic [ref=e1109]: 3 reposts
+                          - generic [ref=e1110]: 3 reposts
+                  - generic [ref=e1111]:
+                    - generic [ref=e1113]:
+                      - 'button "Reaction button state: no reaction" [ref=e1116] [cursor=pointer]':
+                        - generic [ref=e1117]:
+                          - img [ref=e1118]
+                          - generic [ref=e1120]: Like
+                      - button "Open reactions menu":
+                        - img [ref=e1122] [cursor=pointer]
+                    - button "Comment" [ref=e1124] [cursor=pointer]:
+                      - generic [ref=e1125]:
+                        - img [ref=e1126]
+                        - generic [ref=e1129]: Comment
+                    - button "Repost" [ref=e1130] [cursor=pointer]:
+                      - generic [ref=e1131]:
+                        - img [ref=e1132]
+                        - generic [ref=e1135]: Repost
+                    - link "Send" [ref=e1136] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e1137]:
+                        - img [ref=e1138]
+                        - generic [ref=e1141]: Send
+              - listitem [ref=e1145]:
+                - generic [ref=e1147]:
+                  - heading "Feed post" [level=2]:
+                    - generic [ref=e1148]: Feed post
+                  - generic [ref=e1149]:
+                    - paragraph [ref=e1152]: Suggested
+                    - button "Open control menu for post by Gabriel A." [ref=e1153] [cursor=pointer]:
+                      - img [ref=e1155]
+                    - button "Hide post by Gabriel A." [ref=e1157] [cursor=pointer]:
+                      - img [ref=e1159]
+                  - generic [ref=e1161]:
+                    - link [ref=e1162] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/gabriel-atar/
+                      - figure [ref=e1163]:
+                        - img "View Gabriel A.’s profile" [ref=e1164]
+                    - 'link "Gabriel A. Verified Profile 3rd+ Aerospace & Energy Executive | Strategic Advisor 6d • Edited • Visibility: Global" [ref=e1165] [cursor=pointer]':
+                      - /url: https://www.linkedin.com/in/gabriel-atar/
+                      - generic [ref=e1166]:
+                        - generic "Gabriel A. Verified Profile 3rd+" [ref=e1167]:
+                          - paragraph [ref=e1170]: Gabriel A.
+                          - paragraph [ref=e1172]:
+                            - img [ref=e1174]
+                            - text: • 3rd+
+                        - paragraph [ref=e1177]: Aerospace & Energy Executive | Strategic Advisor
+                        - paragraph [ref=e1179]:
+                          - text: 6d • Edited •
+                          - 'img "Visibility: Global" [ref=e1180]'
+                    - button "Follow Gabriel A." [ref=e1185] [cursor=pointer]:
+                      - generic [ref=e1186]:
+                        - img [ref=e1187]
+                        - generic [ref=e1190]: Follow
+                  - paragraph [ref=e1191]:
+                    - generic [ref=e1192]:
+                      - text: The Future of Flight!
+                      - text: Behind every fighter jet or missile system is a multi-billion-dollar ecosystem driving innovation at scale.
+                      - text: From propulsion and avionics to advanced defense systems, these platforms represent the cutting edge of engineering and technological progress.
+                      - text: What’s remarkable is how a focused group of industry leaders continues to push the boundaries.
+                      - text: Companies like
+                      - link "GE Aerospace" [ref=e1193] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/geaerospace/
+                        - strong [ref=e1195]: GE Aerospace
+                      - text: ","
+                      - link "RTX" [ref=e1196] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/rtx/
+                        - strong [ref=e1198]: RTX
+                      - text: ","
+                      - link "Boeing" [ref=e1199] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/boeing/
+                        - strong [ref=e1201]: Boeing
+                      - text: ","
+                      - link "Airbus" [ref=e1202] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/airbusgroup/
+                        - strong [ref=e1204]: Airbus
+                      - text: ", and"
+                      - link "Lockheed Martin" [ref=e1205] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/lockheed-martin/
+                        - strong [ref=e1207]: Lockheed Martin
+                      - text: are advancing technologies platforms that shape the future.
+                      - text: "These organizations operate at the intersection of:"
+                      - text: • Innovation and engineering excellence
+                      - text: • Global collaboration
+                      - text: • Long-term strategic thinking
+                      - text: Beyond defense, their impact extends into commercial aviation, energy, and next-generation technologies, driving progress across industries.
+                      - text: At their core, they represent what’s possible when scale, expertise, and vision come together.
+                      - link "#Aerospace" [ref=e1208] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23aerospace&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e1210]: "#Aerospace"
+                      - link "#Defense" [ref=e1211] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23defense&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e1213]: "#Defense"
+                      - link "#Innovation" [ref=e1214] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23innovation&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e1216]: "#Innovation"
+                      - link "#Technology" [ref=e1217] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23technology&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e1219]: "#Technology"
+                      - link "#Leadership" [ref=e1220] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/search/results/all/?keywords=%23leadership&origin=HASH_TAG_FROM_FEED
+                        - strong [ref=e1222]: "#Leadership"
+                      - button:
+                        - generic [ref=e1224] [cursor=pointer]: … more
+                  - link [ref=e1226] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/feed/
+                    - figure [ref=e1227]:
+                      - img "View image" [ref=e1228]
+                  - generic [ref=e1229]:
+                    - link "577 reactions" [ref=e1230] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e1231]:
+                        - img [ref=e1232]
+                        - img [ref=e1238]
+                        - img [ref=e1246]
+                        - paragraph [ref=e1261]:
+                          - generic [ref=e1262]: 577 reactions
+                          - text: "577"
+                    - generic [ref=e1263]:
+                      - button "20 comments" [ref=e1264] [cursor=pointer]:
+                        - paragraph [ref=e1265]:
+                          - generic [ref=e1266]: 20 comments
+                          - generic [ref=e1267]: 20 comments
+                      - paragraph [ref=e1268]: •
+                      - link "13 reposts" [ref=e1269] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/
+                        - paragraph [ref=e1270]:
+                          - generic [ref=e1271]: 13 reposts
+                          - generic [ref=e1272]: 13 reposts
+                  - generic [ref=e1273]:
+                    - generic [ref=e1275]:
+                      - 'button "Reaction button state: no reaction" [ref=e1278] [cursor=pointer]':
+                        - generic [ref=e1279]:
+                          - img [ref=e1280]
+                          - generic [ref=e1282]: Like
+                      - button "Open reactions menu":
+                        - img [ref=e1284] [cursor=pointer]
+                    - button "Comment" [ref=e1286] [cursor=pointer]:
+                      - generic [ref=e1287]:
+                        - img [ref=e1288]
+                        - generic [ref=e1291]: Comment
+                    - button "Repost" [ref=e1292] [cursor=pointer]:
+                      - generic [ref=e1293]:
+                        - img [ref=e1294]
+                        - generic [ref=e1297]: Repost
+                    - link "Send" [ref=e1298] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - generic [ref=e1299]:
+                        - img [ref=e1300]
+                        - generic [ref=e1303]: Send
+              - button "Load more" [ref=e1305] [cursor=pointer]:
+                - generic [ref=e1307]: Load more
+            - generic [ref=e1309]:
+              - generic [ref=e1310]:
+                - generic [ref=e1313]:
+                  - paragraph [ref=e1314]: Today’s puzzles
+                  - link "Zip - a quick brain teaser Solve in 60s or less!" [ref=e1315] [cursor=pointer]:
+                    - /url: /games/zip/
+                    - generic [ref=e1316]:
+                      - figure [ref=e1317]
+                      - generic [ref=e1318]:
+                        - paragraph [ref=e1319]: Zip - a quick brain teaser
+                        - paragraph [ref=e1320]: Solve in 60s or less!
+                      - img [ref=e1321]
+                - generic [ref=e1324]:
+                  - paragraph [ref=e1325]: Add to your feed
+                  - link "Elbit Systems Israel Company • Defense and Space Manufacturing Follow Elbit Systems Israel" [ref=e1326] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/company/elbit-systems-ltd/
+                    - generic [ref=e1327]:
+                      - figure [ref=e1328]:
+                        - img "View company" [ref=e1329]
+                      - generic [ref=e1330]:
+                        - paragraph [ref=e1333]: Elbit Systems Israel
+                        - paragraph [ref=e1335]: Company • Defense and Space Manufacturing
+                        - button "Follow Elbit Systems Israel" [ref=e1338]:
+                          - generic [ref=e1339]:
+                            - img [ref=e1340]
+                            - generic [ref=e1343]: Follow
+                  - link "Bill Gates Chair, Gates Foundation and Founder, Breakthrough Energy Follow Bill Gates" [ref=e1344] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/in/williamhgates/
+                    - generic [ref=e1345]:
+                      - figure [ref=e1346]:
+                        - img "View profile" [ref=e1347]
+                      - generic [ref=e1348]:
+                        - paragraph [ref=e1351]: Bill Gates
+                        - paragraph [ref=e1353]: Chair, Gates Foundation and Founder, Breakthrough Energy
+                        - button "Follow Bill Gates" [ref=e1356]:
+                          - generic [ref=e1357]:
+                            - img [ref=e1358]
+                            - generic [ref=e1361]: Follow
+                  - link "Bank Hapoalim בנק הפועלים Company • Banking Follow Bank Hapoalim בנק הפועלים" [ref=e1362] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/company/bank-hapoalim/
+                    - generic [ref=e1363]:
+                      - figure [ref=e1364]:
+                        - img "View company" [ref=e1365]
+                      - generic [ref=e1366]:
+                        - paragraph [ref=e1369]: Bank Hapoalim בנק הפועלים
+                        - paragraph [ref=e1371]: Company • Banking
+                        - button "Follow Bank Hapoalim בנק הפועלים" [ref=e1374]:
+                          - generic [ref=e1375]:
+                            - img [ref=e1376]
+                            - generic [ref=e1379]: Follow
+                  - link "View all recommendations" [ref=e1380] [cursor=pointer]:
+                    - /url: /mynetwork/discover-hub/
+                    - generic [ref=e1381]:
+                      - img [ref=e1382]
+                      - generic [ref=e1384]: View all recommendations
+              - generic [ref=e1386]:
+                - iframe [ref=e1389]:
+                  - generic [ref=f127e2]:
+                    - generic [ref=f127e3]: Ad
+                    - img "overflow-web-small" [ref=f127e6] [cursor=pointer]
+                    - link "Zapier" [ref=f127e10] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/li/tscp/sct?destinationUrl=https%3A%2F%2Fwww.zapier.com%2F%3Futm_source%3Dlinkedin%26utm_medium%3Dpaid%26utm_campaign%3Dli-row-nua-evr-prospecting_presignup_visitors_viewers_engagers_alldev_dynamicad_conversions-ads%26hsa_acc%3D503593393%26hsa_cam%3D657045204%26hsa_grp%3D252818696%26hsa_ad%3D392881916%26hsa_net%3Dlinkedin%26hsa_ver%3D3%26li_fat_id%3D7621bcd9-09b3-43ac-9068-4ecdc98c8270%26utm_campaign%3Dli-row-nua-evr-prospecting_presignup_visitors_viewers_engagers_alldev_dynamicad_conversions-ads%26utm_medium%3Dpaid%26utm_ads_campaign_id%3D252818696%26utm_source%3Dlinkedin%26utm_ads_ad_id%3D392881916%26utm_ads_adset_id%3D657045204&trackingEvent=%5B%7B%22eventInfo%22%3A%7B%22appId%22%3A%22com.linkedin.ads.rendering.d_web%22%2C%22eventName%22%3A%22SponsoredRightRailContentActionEvent%22%2C%22topicName%22%3A%22SponsoredRightRailContentActionEvent%22%7D%2C%22eventBody%22%3A%7B%22sponsoredEventHeader%22%3A%7B%22encryptedTrackingData%22%3A%22CwEAAAGdP6-T9VYdmh3K5fGs5sDwoepzNmp1CgJlJlzDGRv6I86_NiGr5VW81VIGz0Wweyd7eZEWUBxvxHlOrxLKP5EWtXpjuJ9K2CHCRt-BzPlitoar3WF-XBVPepfpYgl27vQe2Zmg1P_fvz4H1WkZxc5T0zq_RDHx17PkqYlVJijabCBM2KgOvT9j6BOjiq-WUsz6BOP9enYKZp9ySpvh8wwURiZLAgOjfFjdenrg-51DTdwLLv0u2KLgrkpjLFqbC_eFTci0qROudrHjlmZZCw0IjVIIRW3YlGrfvdLoz-2izjctEUOzxP-cHOi4S0YE6x5S08BHsmCTRPyWw-UaurIVpYLTY_lakUGMvZGXEryt9DB1nFmyvy4tGUNG-I1cuG_7QrM9MGgTpQgmx-mygLXhHFy7Y1Nt1S7MpuEy_KG3WalOz8WB2vPpzdmbEat4RQi2-XTxkrS4lrUGvtPE2Xwt_m2BGyrttF2kWZ3Ecia1jo2gC_K_Z58mTHc3cgs8fh2nDu7PNdql5xsYEJyJUMpk9ua5Y9RTiW5mHAEIC8mrZ1ngNLOO8l7t2XUkSjEV1haryGCwtHtB2FxU2BoAvwRBffVAwTBorsv_2i0KFbrk5zsQa8x5dOUwStTOcJRoHwuS3CW_oBoKSS8JSBnSY8f6LOb0PhQSN9T6OeOT9lzcHE_eL5_7-3R2YzTvzaC0ZTN0Ubv07KJKGRiQJvbj4MJygSr5TWYMilJA39pZnsZU53PrGTWWCRdBOWWAXjPxgXN2iMBkeZBkVT_JkTwvY1KLjbBdso8y8MmMxwtW6YRCoLoVcJjgrMdnVJHrjD1JhzjoMrRZebx55_9aLe1jsuzJLS3htO8qbdSsWxRBxsaTefRex19U1ZKsIobYOQS6vxGyWb3s5n7ySbQJvjN45liywPD_81lmkKlZ9a4qrWIVG_mGBDuZJwS-ndLXu5nhCWbThbyyRM7J5AFfztFuzfS5NCe8zGRu-KihF_TxPRYX480KTBSlhqFSCPjXivfAfBqGXR2YT5lOOBpl-BNTe81IsaTNaCw-8G2XJ0rZ0unYv0-5O_mbTdV-Psgdt1wfi-wHkEAJfj59ZsKR-LwplSfpebo7zEt3b04%22%7D%2C%22header%22%3A%7B%22pageInstance%22%3A%7B%22pageUrn%22%3A%22urn%3Ali%3Apage%3Ad_flagship3_feed%22%2C%22trackingId%22%3A%22bb7c08d5-7abd-4cf0-a763-df7f0c41c829%22%7D%2C%22time%22%3A1774889964486%2C%22version%22%3A%220.0.0%22%7D%2C%22requestHeader%22%3A%7B%22pageKey%22%3A%22d_flagship3_feed%22%2C%22interfaceLocale%22%3A%22en-US%22%7D%7D%7D%5D&csrfToken=ajax%3A1724718975394247043
+                    - generic [ref=f127e11]:
+                      - heading "Start automating for free" [level=2] [ref=f127e14]
+                      - generic [ref=f127e16]:
+                        - img "Meytal" [ref=f127e17]
+                        - generic [ref=f127e18]:
+                          - link "Zapier" [ref=f127e19] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/li/tscp/sct?destinationUrl=https%3A%2F%2Fwww.zapier.com%2F%3Futm_source%3Dlinkedin%26utm_medium%3Dpaid%26utm_campaign%3Dli-row-nua-evr-prospecting_presignup_visitors_viewers_engagers_alldev_dynamicad_conversions-ads%26hsa_acc%3D503593393%26hsa_cam%3D657045204%26hsa_grp%3D252818696%26hsa_ad%3D392881916%26hsa_net%3Dlinkedin%26hsa_ver%3D3%26li_fat_id%3D7621bcd9-09b3-43ac-9068-4ecdc98c8270%26utm_campaign%3Dli-row-nua-evr-prospecting_presignup_visitors_viewers_engagers_alldev_dynamicad_conversions-ads%26utm_medium%3Dpaid%26utm_ads_campaign_id%3D252818696%26utm_source%3Dlinkedin%26utm_ads_ad_id%3D392881916%26utm_ads_adset_id%3D657045204&trackingEvent=%5B%7B%22eventInfo%22%3A%7B%22appId%22%3A%22com.linkedin.ads.rendering.d_web%22%2C%22eventName%22%3A%22SponsoredRightRailContentActionEvent%22%2C%22topicName%22%3A%22SponsoredRightRailContentActionEvent%22%7D%2C%22eventBody%22%3A%7B%22sponsoredEventHeader%22%3A%7B%22encryptedTrackingData%22%3A%22CwEAAAGdP6-T9VYdmh3K5fGs5sDwoepzNmp1CgJlJlzDGRv6I86_NiGr5VW81VIGz0Wweyd7eZEWUBxvxHlOrxLKP5EWtXpjuJ9K2CHCRt-BzPlitoar3WF-XBVPepfpYgl27vQe2Zmg1P_fvz4H1WkZxc5T0zq_RDHx17PkqYlVJijabCBM2KgOvT9j6BOjiq-WUsz6BOP9enYKZp9ySpvh8wwURiZLAgOjfFjdenrg-51DTdwLLv0u2KLgrkpjLFqbC_eFTci0qROudrHjlmZZCw0IjVIIRW3YlGrfvdLoz-2izjctEUOzxP-cHOi4S0YE6x5S08BHsmCTRPyWw-UaurIVpYLTY_lakUGMvZGXEryt9DB1nFmyvy4tGUNG-I1cuG_7QrM9MGgTpQgmx-mygLXhHFy7Y1Nt1S7MpuEy_KG3WalOz8WB2vPpzdmbEat4RQi2-XTxkrS4lrUGvtPE2Xwt_m2BGyrttF2kWZ3Ecia1jo2gC_K_Z58mTHc3cgs8fh2nDu7PNdql5xsYEJyJUMpk9ua5Y9RTiW5mHAEIC8mrZ1ngNLOO8l7t2XUkSjEV1haryGCwtHtB2FxU2BoAvwRBffVAwTBorsv_2i0KFbrk5zsQa8x5dOUwStTOcJRoHwuS3CW_oBoKSS8JSBnSY8f6LOb0PhQSN9T6OeOT9lzcHE_eL5_7-3R2YzTvzaC0ZTN0Ubv07KJKGRiQJvbj4MJygSr5TWYMilJA39pZnsZU53PrGTWWCRdBOWWAXjPxgXN2iMBkeZBkVT_JkTwvY1KLjbBdso8y8MmMxwtW6YRCoLoVcJjgrMdnVJHrjD1JhzjoMrRZebx55_9aLe1jsuzJLS3htO8qbdSsWxRBxsaTefRex19U1ZKsIobYOQS6vxGyWb3s5n7ySbQJvjN45liywPD_81lmkKlZ9a4qrWIVG_mGBDuZJwS-ndLXu5nhCWbThbyyRM7J5AFfztFuzfS5NCe8zGRu-KihF_TxPRYX480KTBSlhqFSCPjXivfAfBqGXR2YT5lOOBpl-BNTe81IsaTNaCw-8G2XJ0rZ0unYv0-5O_mbTdV-Psgdt1wfi-wHkEAJfj59ZsKR-LwplSfpebo7zEt3b04%22%7D%2C%22header%22%3A%7B%22pageInstance%22%3A%7B%22pageUrn%22%3A%22urn%3Ali%3Apage%3Ad_flagship3_feed%22%2C%22trackingId%22%3A%22bb7c08d5-7abd-4cf0-a763-df7f0c41c829%22%7D%2C%22time%22%3A1774889964486%2C%22version%22%3A%220.0.0%22%7D%2C%22requestHeader%22%3A%7B%22pageKey%22%3A%22d_flagship3_feed%22%2C%22interfaceLocale%22%3A%22en-US%22%7D%7D%7D%5D&csrfToken=ajax%3A1724718975394247043
+                            - img "Zapier" [ref=f127e20]
+                          - tooltip "Zapier" [ref=f127e21]
+                      - generic [ref=f127e22]:
+                        - heading "You're much more than busywork" [level=2] [ref=f127e25]
+                        - link "Try It Free" [ref=f127e27] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/li/tscp/sct?destinationUrl=https%3A%2F%2Fwww.zapier.com%2F%3Futm_source%3Dlinkedin%26utm_medium%3Dpaid%26utm_campaign%3Dli-row-nua-evr-prospecting_presignup_visitors_viewers_engagers_alldev_dynamicad_conversions-ads%26hsa_acc%3D503593393%26hsa_cam%3D657045204%26hsa_grp%3D252818696%26hsa_ad%3D392881916%26hsa_net%3Dlinkedin%26hsa_ver%3D3%26li_fat_id%3D7621bcd9-09b3-43ac-9068-4ecdc98c8270%26utm_campaign%3Dli-row-nua-evr-prospecting_presignup_visitors_viewers_engagers_alldev_dynamicad_conversions-ads%26utm_medium%3Dpaid%26utm_ads_campaign_id%3D252818696%26utm_source%3Dlinkedin%26utm_ads_ad_id%3D392881916%26utm_ads_adset_id%3D657045204&trackingEvent=%5B%7B%22eventInfo%22%3A%7B%22appId%22%3A%22com.linkedin.ads.rendering.d_web%22%2C%22eventName%22%3A%22SponsoredRightRailContentActionEvent%22%2C%22topicName%22%3A%22SponsoredRightRailContentActionEvent%22%7D%2C%22eventBody%22%3A%7B%22sponsoredEventHeader%22%3A%7B%22encryptedTrackingData%22%3A%22CwEAAAGdP6-T9VYdmh3K5fGs5sDwoepzNmp1CgJlJlzDGRv6I86_NiGr5VW81VIGz0Wweyd7eZEWUBxvxHlOrxLKP5EWtXpjuJ9K2CHCRt-BzPlitoar3WF-XBVPepfpYgl27vQe2Zmg1P_fvz4H1WkZxc5T0zq_RDHx17PkqYlVJijabCBM2KgOvT9j6BOjiq-WUsz6BOP9enYKZp9ySpvh8wwURiZLAgOjfFjdenrg-51DTdwLLv0u2KLgrkpjLFqbC_eFTci0qROudrHjlmZZCw0IjVIIRW3YlGrfvdLoz-2izjctEUOzxP-cHOi4S0YE6x5S08BHsmCTRPyWw-UaurIVpYLTY_lakUGMvZGXEryt9DB1nFmyvy4tGUNG-I1cuG_7QrM9MGgTpQgmx-mygLXhHFy7Y1Nt1S7MpuEy_KG3WalOz8WB2vPpzdmbEat4RQi2-XTxkrS4lrUGvtPE2Xwt_m2BGyrttF2kWZ3Ecia1jo2gC_K_Z58mTHc3cgs8fh2nDu7PNdql5xsYEJyJUMpk9ua5Y9RTiW5mHAEIC8mrZ1ngNLOO8l7t2XUkSjEV1haryGCwtHtB2FxU2BoAvwRBffVAwTBorsv_2i0KFbrk5zsQa8x5dOUwStTOcJRoHwuS3CW_oBoKSS8JSBnSY8f6LOb0PhQSN9T6OeOT9lzcHE_eL5_7-3R2YzTvzaC0ZTN0Ubv07KJKGRiQJvbj4MJygSr5TWYMilJA39pZnsZU53PrGTWWCRdBOWWAXjPxgXN2iMBkeZBkVT_JkTwvY1KLjbBdso8y8MmMxwtW6YRCoLoVcJjgrMdnVJHrjD1JhzjoMrRZebx55_9aLe1jsuzJLS3htO8qbdSsWxRBxsaTefRex19U1ZKsIobYOQS6vxGyWb3s5n7ySbQJvjN45liywPD_81lmkKlZ9a4qrWIVG_mGBDuZJwS-ndLXu5nhCWbThbyyRM7J5AFfztFuzfS5NCe8zGRu-KihF_TxPRYX480KTBSlhqFSCPjXivfAfBqGXR2YT5lOOBpl-BNTe81IsaTNaCw-8G2XJ0rZ0unYv0-5O_mbTdV-Psgdt1wfi-wHkEAJfj59ZsKR-LwplSfpebo7zEt3b04%22%7D%2C%22header%22%3A%7B%22pageInstance%22%3A%7B%22pageUrn%22%3A%22urn%3Ali%3Apage%3Ad_flagship3_feed%22%2C%22trackingId%22%3A%22bb7c08d5-7abd-4cf0-a763-df7f0c41c829%22%7D%2C%22time%22%3A1774889964486%2C%22version%22%3A%220.0.0%22%7D%2C%22requestHeader%22%3A%7B%22pageKey%22%3A%22d_flagship3_feed%22%2C%22interfaceLocale%22%3A%22en-US%22%7D%7D%7D%5D&csrfToken=ajax%3A1724718975394247043
+                - generic [ref=e1390]:
+                  - generic [ref=e1391]:
+                    - link "About" [ref=e1392] [cursor=pointer]:
+                      - /url: https://about.linkedin.com/
+                      - paragraph [ref=e1393]: About
+                    - link "Accessibility" [ref=e1394] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/accessibility/
+                      - paragraph [ref=e1395]: Accessibility
+                    - link "Help Center" [ref=e1396] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/help/linkedin/
+                      - paragraph [ref=e1397]: Help Center
+                    - button "Privacy & Terms" [ref=e1398] [cursor=pointer]:
+                      - generic [ref=e1399]:
+                        - paragraph [ref=e1400]: Privacy & Terms
+                        - img [ref=e1401]
+                    - link "Ad Choices" [ref=e1403] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/help/linkedin/answer/62931/
+                      - paragraph [ref=e1404]: Ad Choices
+                    - link "Advertising" [ref=e1405] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/ad/start/?trk=n_nav_ads_rr
+                      - paragraph [ref=e1406]: Advertising
+                    - button "Business Services" [ref=e1407] [cursor=pointer]:
+                      - generic [ref=e1408]:
+                        - paragraph [ref=e1409]: Business Services
+                        - img [ref=e1410]
+                    - link "Get the LinkedIn app" [ref=e1412] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/mobile/
+                      - paragraph [ref=e1413]: Get the LinkedIn app
+                    - link "More" [ref=e1414] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/feed/
+                      - paragraph [ref=e1415]: More
+                  - generic [ref=e1416]:
+                    - img [ref=e1417]
+                    - paragraph [ref=e1419]: LinkedIn Corporation © 2026
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - complementary:
+            - generic [ref=e1421]:
+              - generic [ref=e1423] [cursor=pointer]:
+                - generic [ref=e1424]:
+                  - img "Meytal Peleg" [ref=e1425]
+                  - generic [ref=e1427]: Status is online
+                - button "You are on the messaging overlay. Press enter to open the list of conversations." [ref=e1428]:
+                  - generic [ref=e1429]:
+                    - generic [ref=e1430]: Messaging
+                    - generic [ref=e1431]: You are on the messaging overlay. Press enter to open the list of conversations.
+                - mark [ref=e1432]:
+                  - generic [ref=e1433]: "1"
+              - generic [ref=e1434]:
+                - button "Open messenger dropdown menu" [ref=e1436] [cursor=pointer]:
+                  - img "Open messenger dropdown menu" [ref=e1437]
+                - button "Compose message" [ref=e1440] [cursor=pointer]:
+                  - img [ref=e1441]
+                  - generic [ref=e1443]: Compose message
+                - button "You are on the messaging overlay. Press enter to open the list of conversations." [ref=e1444] [cursor=pointer]:
+                  - img [ref=e1445]
+                  - generic [ref=e1447]: You are on the messaging overlay. Press enter to open the list of conversations.
+          - complementary "AI-powered assistant to get help with your career, jobs etc"
+  - iframe [ref=e1448]:
+    - generic [active] [ref=f128e1]:
+      - generic:
+        - region "Toast message":
+          - heading "0 notifications total" [level=2] [ref=f128e3]
+          - alert
+      - region [ref=f128e4]
+      - generic [ref=f128e5]:
+        - generic [ref=f128e7]:
+          - button "Skip to search" [ref=f128e8] [cursor=pointer]:
+            - generic [ref=f128e9]: Skip to search
+          - button "Skip to main content" [ref=f128e10] [cursor=pointer]:
+            - generic [ref=f128e11]: Skip to main content
+          - button "Keyboard shortcuts" [ref=f128e12] [cursor=pointer]:
+            - generic [ref=f128e13]: Keyboard shortcuts
+          - button "Close jump menu" [ref=f128e14] [cursor=pointer]:
+            - img [ref=f128e15]
+            - generic [ref=f128e17]: Close jump menu
+        - banner "Global Navigation" [ref=f128e18]:
+          - generic [ref=f128e19]:
+            - link "LinkedIn" [ref=f128e20] [cursor=pointer]:
+              - /url: https://www.linkedin.com/feed/?nis=true
+              - img "LinkedIn" [ref=f128e23]:
+                - img [ref=f128e24]
+            - generic [ref=f128e28]:
+              - combobox "Search" [ref=f128e29]
+              - generic:
+                - img
+            - navigation "Primary Navigation" [ref=f128e30]:
+              - list [ref=f128e31]:
+                - listitem [ref=f128e32]:
+                  - link "Home" [ref=f128e33] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/feed/
+                    - img [ref=f128e37]
+                    - generic "Home" [ref=f128e39]
+                - listitem [ref=f128e40]:
+                  - link "My Network" [ref=f128e41] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/mynetwork/?
+                    - img [ref=f128e45]
+                    - generic "My Network" [ref=f128e47]
+                - listitem [ref=f128e48]:
+                  - link "Jobs" [ref=f128e49] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/jobs/?
+                    - img [ref=f128e53]
+                    - generic "Jobs" [ref=f128e55]
+                - listitem [ref=f128e56]:
+                  - link "1 new message notification Messaging" [ref=f128e57] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/messaging/?
+                    - generic [ref=f128e58]:
+                      - generic [ref=f128e59]:
+                        - generic [ref=f128e60]: "1"
+                        - generic [ref=f128e61]: 1 new message notification
+                      - img [ref=f128e65]
+                    - generic "Messaging" [ref=f128e67]
+                - listitem [ref=f128e68]:
+                  - link "9 new notifications Notifications" [ref=f128e69] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/notifications/?
+                    - generic [ref=f128e70]:
+                      - generic [ref=f128e71]:
+                        - generic [ref=f128e72]: "9"
+                        - generic [ref=f128e73]: 9 new notifications
+                      - img [ref=f128e77]
+                    - generic "Notifications" [ref=f128e79]
+                - listitem [ref=f128e80]:
+                  - button "Meytal Peleg Me" [ref=f128e82] [cursor=pointer]:
+                    - img "Meytal Peleg" [ref=f128e83]
+                    - generic [ref=f128e84]:
+                      - text: Me
+                      - img [ref=f128e85]
+                - listitem [ref=f128e87]:
+                  - button "For Business" [ref=f128e89] [cursor=pointer]:
+                    - img [ref=f128e93]
+                    - generic "For Business" [ref=f128e95]:
+                      - text: For Business
+                      - img [ref=f128e96]
+                - listitem [ref=f128e98]:
+                  - link "Try Premium for ₪0" [ref=f128e100] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                    - generic [ref=f128e101]:
+                      - img [ref=f128e102]
+                      - generic [ref=f128e104]: Try Premium for ₪0

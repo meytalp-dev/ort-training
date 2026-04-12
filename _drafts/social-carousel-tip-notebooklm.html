@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learni Carousel — NotebookLM חידושים</title>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@300;400;500;600;700;800&family=Assistant:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --hand: 'Playpen Sans Hebrew', cursive;
+  --clean: 'Assistant', sans-serif;
+  --blue: #7babd4;
+  --green: #7dd4ac;
+  --dark: #1e3a5f;
+  --lavender: #b8a9d4;
+  --cream: #f7f5f0;
+  --slide-size: 1080px;
+  --nb-purple: #8b6fc0;
+  --nb-light: #ede8f5;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100vh; background: #c8c4be;
+  font-family: var(--clean);
+}
+
+/* ========== CAROUSEL ========== */
+.carousel {
+  position: relative;
+  width: var(--slide-size); height: var(--slide-size);
+  overflow: hidden; border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  direction: ltr;
+}
+.track {
+  display: flex; flex-direction: row;
+  width: calc(var(--slide-size) * 5);
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide {
+  width: var(--slide-size); min-width: var(--slide-size);
+  height: var(--slide-size);
+  flex-shrink: 0; position: relative; overflow: hidden;
+  direction: rtl;
+}
+
+/* ========== NAV ========== */
+.nav-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 100;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: rgba(255,255,255,0.92); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); transition: all 0.2s;
+}
+.nav-arrow:hover { transform: translateY(-50%) scale(1.08); }
+.nav-arrow svg { width: 24px; height: 24px; stroke: var(--dark); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.nav-prev { right: 16px; }
+.nav-next { left: 16px; }
+.nav-arrow.hidden { opacity: 0; pointer-events: none; }
+
+/* ========== DOTS ========== */
+.dots { display: flex; gap: 10px; margin-top: 20px; }
+.dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: rgba(30,58,95,0.2); cursor: pointer; transition: all 0.3s;
+}
+.dot.active { background: var(--green); width: 32px; border-radius: 6px; }
+
+/* ========== SHARED ========== */
+.logo-circles { position: relative; width: 44px; height: 38px; }
+.logo-circles .c1, .logo-circles .c2 { position: absolute; width: 30px; height: 30px; border-radius: 50%; top: 4px; }
+.logo-circles .c1 { right: 0; background: var(--blue); opacity: 0.85; }
+.logo-circles .c2 { right: 15px; background: var(--green); opacity: 0.85; }
+.logo-name { font-family: var(--hand); font-size: 28px; font-weight: 700; color: var(--dark); }
+.slide-num {
+  position: absolute; top: 50px; left: 60px; z-index: 10;
+  font-family: var(--hand); font-size: 28px; font-weight: 500; color: rgba(30,58,95,0.4);
+}
+.slide-brand {
+  position: absolute; bottom: 40px; right: 60px; z-index: 10;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--hand); font-size: 24px; font-weight: 600; color: rgba(30,58,95,0.45);
+}
+
+/* ========== SLIDE BG ========== */
+.slide-bg {
+  background: linear-gradient(160deg, var(--cream) 0%, #f2f0eb 40%, #eef6f2 100%);
+}
+.slide-bg::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 15%, rgba(139,111,192,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 55% at 85% 75%, rgba(125,212,172,0.14) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 50% 45%, rgba(123,171,212,0.10) 0%, transparent 70%);
+}
+
+/* ========================================================
+   SLIDE 1 — HOOK
+   ======================================================== */
+.s1 .cat {
+  position: absolute; top: 52px; right: 60px; z-index: 10;
+  background: var(--green); color: #fff;
+  font-family: var(--hand); font-size: 28px; font-weight: 800;
+  padding: 12px 32px; border-radius: 28px;
+  box-shadow: 0 4px 0 rgba(30,58,95,0.08), 0 10px 28px rgba(125,212,172,0.3);
+  display: flex; align-items: center; gap: 12px;
+}
+.s1 .cat svg { width: 24px; height: 24px; fill: #fff; }
+
+.s1 .sticker {
+  position: absolute; top: 50px; left: 50px; z-index: 20;
+  background: #fde68a; color: var(--dark);
+  font-family: var(--hand); font-size: 28px; font-weight: 800;
+  padding: 16px 24px; transform: rotate(8deg);
+  clip-path: polygon(
+    0% 5%, 3% 0%, 8% 4%, 14% 1%, 20% 5%, 26% 0%, 32% 3%, 38% 1%, 44% 5%, 50% 0%,
+    56% 4%, 62% 1%, 68% 5%, 74% 0%, 80% 3%, 86% 1%, 92% 5%, 97% 0%, 100% 4%,
+    100% 95%, 97% 100%, 92% 96%, 86% 99%, 80% 95%, 74% 100%, 68% 97%, 62% 99%,
+    56% 95%, 50% 100%, 44% 96%, 38% 99%, 32% 95%, 26% 100%, 20% 97%, 14% 99%,
+    8% 95%, 3% 100%, 0% 96%
+  );
+  box-shadow: 0 6px 24px rgba(0,0,0,0.12); text-align: center; line-height: 1.3;
+}
+
+.s1 .title-area {
+  position: absolute; top: 130px; right: 60px; left: 60px; z-index: 10;
+  text-align: right;
+}
+.s1 .title-main {
+  font-family: var(--hand); font-size: 58px; font-weight: 800;
+  color: var(--dark); line-height: 1.25;
+}
+.s1 .title-main .accent { color: var(--nb-purple); }
+.s1 .title-sub {
+  font-family: var(--clean); font-size: 32px; font-weight: 500;
+  color: rgba(30,58,95,0.55); margin-top: 8px;
+}
+
+/* Hero card */
+.s1 .hero-card {
+  position: absolute; top: 380px; right: 55px; left: 55px; z-index: 11;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(24px);
+  border-radius: 28px; padding: 28px 32px;
+  border: 2px solid rgba(255,255,255,0.95);
+  border-top: 6px solid var(--nb-purple);
+  transform: rotate(-1.5deg) scale(1.03);
+  box-shadow: 0 20px 60px rgba(139,111,192,0.18), 0 6px 16px rgba(0,0,0,0.07);
+  display: flex; align-items: center; gap: 18px;
+}
+.s1 .hero-icon {
+  flex-shrink: 0; width: 52px; height: 52px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(139,111,192,0.15), rgba(139,111,192,0.05));
+  display: flex; align-items: center; justify-content: center;
+}
+.s1 .hero-icon svg { width: 26px; height: 26px; }
+.s1 .hero-txt {
+  font-family: var(--clean); font-size: 30px; font-weight: 700;
+  color: var(--dark); line-height: 1.4; flex: 1;
+}
+
+/* Sub cards */
+.s1 .sub-cards {
+  position: absolute; top: 570px; right: 55px; left: 55px; z-index: 10;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.s1 .sub-card {
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(18px);
+  border-radius: 20px; padding: 22px 26px;
+  display: flex; align-items: center; gap: 16px;
+  border: 1.5px solid rgba(255,255,255,0.9);
+  box-shadow: 0 10px 35px rgba(30,58,95,0.06);
+}
+.s1 .sub-card:nth-child(1) { border-right: 5px solid var(--blue); transform: rotate(0.6deg); }
+.s1 .sub-card:nth-child(2) { border-right: 5px solid var(--green); transform: rotate(-0.4deg); }
+.s1 .sub-card:nth-child(3) { border-right: 5px solid var(--lavender); transform: rotate(0.3deg); }
+.s1 .sub-icon {
+  flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.s1 .sub-card:nth-child(1) .sub-icon { background: rgba(123,171,212,0.12); }
+.s1 .sub-card:nth-child(2) .sub-icon { background: rgba(125,212,172,0.12); }
+.s1 .sub-card:nth-child(3) .sub-icon { background: rgba(184,169,212,0.12); }
+.s1 .sub-icon svg { width: 22px; height: 22px; }
+.s1 .sub-txt {
+  font-family: var(--clean); font-size: 26px; font-weight: 600;
+  color: var(--dark); line-height: 1.35; flex: 1;
+}
+
+.s1 .swipe {
+  position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); z-index: 10;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--hand); font-size: 28px; font-weight: 600; color: rgba(30,58,95,0.5);
+  animation: swipe-pulse 2s ease-in-out infinite;
+}
+@keyframes swipe-pulse {
+  0%, 100% { opacity: 0.5; transform: translateX(-50%); }
+  50% { opacity: 0.8; transform: translateX(-60%); }
+}
+.s1 .swipe svg { width: 28px; height: 28px; stroke: rgba(30,58,95,0.5); fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.s1 .bottom-logo {
+  position: absolute; bottom: 45px; right: 60px; z-index: 10;
+  display: flex; align-items: center; gap: 12px;
+}
+
+/* ========================================================
+   SLIDES 2-4 — FEATURE SLIDES with mockups
+   ======================================================== */
+.feat-title {
+  position: absolute; top: 50px; right: 60px; z-index: 10;
+  font-family: var(--hand); font-size: 48px; font-weight: 800; color: var(--dark);
+}
+.feat-title .accent { color: var(--nb-purple); }
+
+.feat-badge {
+  position: absolute; top: 52px; left: 55px; z-index: 20;
+  background: #ff6b6b; color: #fff;
+  font-family: var(--hand); font-size: 20px; font-weight: 800;
+  padding: 8px 20px; border-radius: 20px;
+  transform: rotate(-4deg);
+  box-shadow: 0 4px 16px rgba(255,107,107,0.3);
+}
+
+.feat-desc {
+  position: absolute; top: 125px; right: 60px; left: 60px; z-index: 10;
+  font-family: var(--clean); font-size: 28px; font-weight: 500;
+  color: rgba(30,58,95,0.6); line-height: 1.5;
+}
+
+/* Mockup container */
+.mockup {
+  position: absolute; z-index: 10;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 16px 50px rgba(30,58,95,0.12), 0 4px 12px rgba(0,0,0,0.06);
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.mockup-bar {
+  background: #f5f5f5;
+  padding: 12px 20px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid #eee;
+  direction: ltr;
+}
+.mockup-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.mockup-dot.r { background: #ff5f57; }
+.mockup-dot.y { background: #ffbd2e; }
+.mockup-dot.g { background: #28c840; }
+.mockup-url {
+  flex: 1; background: #e8e8e8; border-radius: 6px;
+  padding: 4px 12px; font-size: 13px; color: #888;
+  margin-right: 8px; margin-left: 40px;
+  font-family: monospace;
+}
+.mockup-body {
+  padding: 24px;
+}
+
+/* ========================================================
+   SLIDE 2 — INFOGRAPHICS
+   ======================================================== */
+.s2-mockup {
+  top: 210px; right: 60px; left: 60px; bottom: 100px;
+}
+.infographic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  direction: ltr;
+}
+.infographic-sample {
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  font-family: var(--hand);
+  aspect-ratio: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  transition: transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.infographic-sample:hover { transform: scale(1.03); }
+.infographic-sample .style-name {
+  font-size: 18px; font-weight: 700;
+  position: relative; z-index: 2;
+}
+.infographic-sample .style-icon {
+  font-size: 36px;
+  position: relative; z-index: 2;
+}
+
+/* Sketch Note */
+.style-sketch {
+  background: #fefce8;
+  border: 2px dashed #ca8a04;
+  color: #854d0e;
+}
+.style-sketch::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(202,138,4,0.08) 28px, rgba(202,138,4,0.08) 29px);
+}
+
+/* Kawaii */
+.style-kawaii {
+  background: linear-gradient(135deg, #fce7f3, #ede9fe);
+  border: 2px solid #f9a8d4;
+  color: #9333ea;
+}
+
+/* Professional */
+.style-pro {
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+}
+
+/* Scientific */
+.style-sci {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+.style-sci::before {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(148,163,184,0.06) 20px, rgba(148,163,184,0.06) 21px),
+    repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(148,163,184,0.06) 20px, rgba(148,163,184,0.06) 21px);
+}
+
+/* Bento Grid */
+.style-bento {
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #fff;
+  border-radius: 14px;
+}
+
+/* Editorial */
+.style-editorial {
+  background: #faf5ff;
+  border: 2px solid var(--lavender);
+  color: #6b21a8;
+}
+
+.infographic-label {
+  text-align: center;
+  margin-top: 12px;
+  font-family: var(--hand);
+  font-size: 22px; font-weight: 700;
+  color: rgba(30,58,95,0.5);
+}
+.infographic-label span { color: var(--nb-purple); }
+
+/* ========================================================
+   SLIDE 3 — PPTX EXPORT
+   ======================================================== */
+.s3-mockup {
+  top: 210px; right: 60px; left: 60px; bottom: 100px;
+}
+.pptx-preview {
+  display: flex; gap: 16px;
+  direction: ltr;
+}
+.pptx-sidebar {
+  width: 160px; display: flex; flex-direction: column; gap: 10px;
+}
+.pptx-thumb {
+  background: #f8f8f8;
+  border: 2px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 8px;
+  aspect-ratio: 16/9;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  font-size: 10px; color: #999;
+  cursor: pointer; transition: all 0.2s;
+}
+.pptx-thumb.active {
+  border-color: var(--nb-purple);
+  box-shadow: 0 0 0 3px rgba(139,111,192,0.2);
+}
+.pptx-thumb-line {
+  width: 70%; height: 4px; border-radius: 2px; background: #ddd;
+}
+.pptx-thumb-line.title { width: 80%; height: 6px; background: var(--nb-purple); opacity: 0.3; }
+
+.pptx-main {
+  flex: 1; display: flex; flex-direction: column; gap: 14px;
+}
+.pptx-slide-preview {
+  background: linear-gradient(135deg, #faf8ff, #f0ecf9);
+  border: 2px solid rgba(139,111,192,0.2);
+  border-radius: 16px;
+  padding: 28px;
+  flex: 1;
+  display: flex; flex-direction: column;
+  justify-content: center; gap: 14px;
+}
+.pptx-slide-title {
+  font-family: var(--hand);
+  font-size: 22px; font-weight: 800; color: var(--nb-purple);
+}
+.pptx-slide-line {
+  height: 8px; border-radius: 4px; background: rgba(139,111,192,0.12);
+}
+.pptx-slide-line:nth-child(2) { width: 90%; }
+.pptx-slide-line:nth-child(3) { width: 75%; }
+.pptx-slide-line:nth-child(4) { width: 60%; }
+
+.pptx-actions {
+  display: flex; gap: 12px; direction: rtl;
+}
+.pptx-btn {
+  padding: 12px 24px; border-radius: 12px;
+  font-family: var(--hand); font-size: 18px; font-weight: 700;
+  border: none; cursor: pointer;
+}
+.pptx-btn.primary {
+  background: var(--nb-purple); color: #fff;
+  box-shadow: 0 4px 16px rgba(139,111,192,0.3);
+}
+.pptx-btn.secondary {
+  background: rgba(139,111,192,0.1); color: var(--nb-purple);
+}
+.pptx-btn svg {
+  width: 18px; height: 18px; vertical-align: middle;
+  margin-left: 6px; stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+
+.pptx-feedback {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,214,102,0.15);
+  border: 1.5px solid rgba(255,214,102,0.4);
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-family: var(--clean);
+  font-size: 16px; color: #92600a;
+}
+.pptx-feedback svg {
+  width: 20px; height: 20px; stroke: #b88b1a; fill: none;
+  stroke-width: 2; flex-shrink: 0;
+}
+
+/* ========================================================
+   SLIDE 4 — FLASHCARDS + EPUB
+   ======================================================== */
+.s4-mockup {
+  top: 210px; right: 60px; left: 60px; bottom: 100px;
+}
+.flash-layout {
+  display: flex; gap: 20px;
+  direction: ltr;
+  height: 100%;
+}
+.flash-main { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+/* Flashcard */
+.flashcard {
+  background: linear-gradient(135deg, #faf8ff, #ede8f5);
+  border: 2px solid rgba(139,111,192,0.2);
+  border-radius: 20px;
+  padding: 32px;
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  position: relative;
+}
+.flash-q {
+  font-family: var(--hand); font-size: 16px;
+  font-weight: 600; color: var(--nb-purple);
+  opacity: 0.6; margin-bottom: 12px;
+}
+.flash-text {
+  font-family: var(--clean); font-size: 24px;
+  font-weight: 700; color: var(--dark);
+  line-height: 1.5;
+}
+.flash-btns {
+  display: flex; gap: 12px; margin-top: 20px;
+}
+.flash-btn {
+  padding: 10px 28px; border-radius: 30px;
+  font-family: var(--hand); font-size: 16px; font-weight: 700;
+  border: none; cursor: pointer;
+}
+.flash-btn.got { background: var(--green); color: #fff; }
+.flash-btn.missed { background: rgba(255,107,107,0.15); color: #dc2626; }
+
+.flash-progress {
+  display: flex; gap: 6px; align-items: center;
+  margin-top: 12px;
+}
+.flash-pip {
+  width: 28px; height: 6px; border-radius: 3px;
+}
+.flash-pip.done { background: var(--green); }
+.flash-pip.current { background: var(--nb-purple); }
+.flash-pip.todo { background: #e5e5e5; }
+
+/* EPUB sidebar */
+.epub-sidebar {
+  width: 200px;
+  display: flex; flex-direction: column; gap: 12px;
+  direction: rtl;
+}
+.epub-card {
+  background: rgba(255,255,255,0.9);
+  border: 1.5px solid #e5e5e5;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+.epub-card.highlight {
+  border-color: var(--nb-purple);
+  background: rgba(139,111,192,0.06);
+}
+.epub-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.epub-icon svg { width: 20px; height: 20px; }
+.epub-icon.pdf { background: rgba(220,38,38,0.1); }
+.epub-icon.pdf svg { stroke: #dc2626; }
+.epub-icon.epub { background: rgba(139,111,192,0.1); }
+.epub-icon.epub svg { stroke: var(--nb-purple); }
+.epub-icon.sheet { background: rgba(22,163,74,0.1); }
+.epub-icon.sheet svg { stroke: #16a34a; }
+.epub-icon.url { background: rgba(37,99,235,0.1); }
+.epub-icon.url svg { stroke: #2563eb; }
+.epub-label {
+  font-family: var(--clean); font-size: 15px;
+  font-weight: 600; color: var(--dark);
+}
+.epub-sub {
+  font-size: 12px; color: #999; font-weight: 400;
+}
+.epub-new {
+  font-size: 11px; font-weight: 700;
+  color: var(--nb-purple); background: rgba(139,111,192,0.1);
+  padding: 2px 8px; border-radius: 8px;
+  margin-right: auto;
+}
+
+/* ========================================================
+   SLIDE 5 — CTA
+   ======================================================== */
+.s5 .cat {
+  position: absolute; top: 55px; right: 60px; z-index: 10;
+  font-family: var(--hand); font-size: 28px; font-weight: 700; color: rgba(30,58,95,0.5);
+}
+.s5 .mini-sticker {
+  position: absolute; top: 55px; left: 55px; z-index: 10;
+  background: #fde68a; color: var(--dark);
+  font-family: var(--hand); font-size: 18px; font-weight: 800;
+  padding: 12px 18px; transform: rotate(8deg);
+  clip-path: polygon(
+    0% 5%, 3% 0%, 8% 4%, 14% 1%, 20% 5%, 26% 0%, 32% 3%, 38% 1%, 44% 5%, 50% 0%,
+    56% 4%, 62% 1%, 68% 5%, 74% 0%, 80% 3%, 86% 1%, 92% 5%, 97% 0%, 100% 4%,
+    100% 95%, 97% 100%, 92% 96%, 86% 99%, 80% 95%, 74% 100%, 68% 97%, 62% 99%,
+    56% 95%, 50% 100%, 44% 96%, 38% 99%, 32% 95%, 26% 100%, 20% 97%, 14% 99%,
+    8% 95%, 3% 100%, 0% 96%
+  );
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1); text-align: center; line-height: 1.3;
+}
+.s5 .cta-block {
+  position: absolute; top: 50%; right: 60px; left: 60px;
+  transform: translateY(-50%); z-index: 10; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+}
+.s5 .cta-title {
+  font-family: var(--hand); font-size: 72px; font-weight: 800;
+  color: var(--dark); line-height: 1.2;
+}
+.s5 .cta-subtitle {
+  font-family: var(--clean); font-size: 34px; font-weight: 500;
+  color: rgba(30,58,95,0.6); line-height: 1.5;
+}
+.s5 .cta-btn {
+  display: inline-flex; align-items: center; gap: 16px;
+  background: linear-gradient(135deg, var(--green), #5ac48a);
+  color: #fff; font-family: var(--hand); font-size: 36px; font-weight: 700;
+  padding: 22px 64px; border-radius: 50px;
+  box-shadow: 0 8px 32px rgba(125,212,172,0.4), 0 0 0 5px rgba(125,212,172,0.12);
+  text-decoration: none; margin-top: 8px;
+}
+.s5 .cta-btn svg { width: 28px; height: 28px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.s5 .cta-save {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--hand); font-size: 28px; font-weight: 600;
+  color: rgba(30,58,95,0.55); margin-top: 16px;
+  background: rgba(255,255,255,0.6); padding: 14px 32px;
+  border-radius: 30px; border: 1.5px solid rgba(125,212,172,0.2);
+}
+.s5 .cta-save svg { width: 24px; height: 24px; stroke: rgba(30,58,95,0.55); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.s5 .brand-footer {
+  position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+  z-index: 10; display: flex; align-items: center; gap: 14px;
+}
+.s5 .brand-footer .logo-name {
+  font-family: var(--hand); font-size: 32px; font-weight: 700; color: var(--dark);
+}
+</style>
+</head>
+<body>
+
+<div class="carousel" id="carousel">
+  <div class="track" id="track">
+
+    <!-- ============ SLIDE 1 — HOOK ============ -->
+    <div class="slide slide-bg s1">
+      <div class="cat">
+        <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="#fff" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+        טיפ יומי
+      </div>
+
+      <div class="sticker">!שמרו את זה</div>
+
+      <div class="title-area">
+        <div class="title-main"><span class="accent">NotebookLM</span><br>התחדש!</div>
+        <div class="title-sub">4 פיצ'רים חדשים — חינם לכולם</div>
+      </div>
+
+      <!-- Hero card -->
+      <div class="hero-card">
+        <div class="hero-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#8b6fc0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <div class="hero-txt">10 סגנונות אינפוגרפיקה חדשים<br>Sketch Note, Kawaii, Bento Grid</div>
+      </div>
+
+      <!-- Sub cards — stacked -->
+      <div class="sub-cards">
+        <div class="sub-card">
+          <div class="sub-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5a94c4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2"/>
+              <path d="M8 21h8M12 17v4"/>
+            </svg>
+          </div>
+          <div class="sub-txt">ייצוא PPTX — מצגות שאפשר לערוך</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3a9b72" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="M2 8h20"/>
+            </svg>
+          </div>
+          <div class="sub-txt">Flashcards + Quizzes — שמירת התקדמות</div>
+        </div>
+        <div class="sub-card">
+          <div class="sub-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b7bb4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+            </svg>
+          </div>
+          <div class="sub-txt">EPUB + Google Sheets כמקורות חדשים</div>
+        </div>
+      </div>
+
+      <div class="swipe">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
+        סוואיפו
+      </div>
+      <div class="bottom-logo">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        <span class="logo-name">Learni</span>
+      </div>
+    </div>
+
+    <!-- ============ SLIDE 2 — INFOGRAPHICS ============ -->
+    <div class="slide slide-bg">
+      <div class="slide-num">2/5</div>
+      <div class="feat-title">10 סגנונות <span class="accent">אינפוגרפיקה</span></div>
+      <div class="feat-badge">חדש!</div>
+      <div class="feat-desc">העלו מסמך — קבלו סיכום ויזואלי בסגנון שאתם בוחרים</div>
+
+      <div class="mockup s2-mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div>
+          <div class="mockup-dot y"></div>
+          <div class="mockup-dot g"></div>
+          <div class="mockup-url">notebooklm.google.com</div>
+        </div>
+        <div class="mockup-body">
+          <div class="infographic-grid">
+            <div class="infographic-sample style-sketch">
+              <div class="style-icon">
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#854d0e" stroke-width="2" stroke-linecap="round">
+                  <path d="M8 28c4-8 8-12 12-16s6-2 8 2"/>
+                  <circle cx="12" cy="14" r="4" fill="rgba(202,138,4,0.2)"/>
+                </svg>
+              </div>
+              <div class="style-name">Sketch Note</div>
+            </div>
+            <div class="infographic-sample style-kawaii">
+              <div class="style-icon">
+                <svg width="36" height="36" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="14" fill="rgba(249,168,212,0.3)" stroke="#c084fc" stroke-width="2"/>
+                  <circle cx="13" cy="16" r="2" fill="#9333ea"/>
+                  <circle cx="23" cy="16" r="2" fill="#9333ea"/>
+                  <path d="M13 22c2 3 8 3 10 0" stroke="#9333ea" stroke-width="2" fill="none" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="style-name">Kawaii</div>
+            </div>
+            <div class="infographic-sample style-pro">
+              <div class="style-icon">
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#0369a1" stroke-width="2" stroke-linecap="round">
+                  <rect x="6" y="8" width="24" height="20" rx="3"/>
+                  <path d="M6 14h24"/>
+                  <path d="M14 14v14"/>
+                </svg>
+              </div>
+              <div class="style-name">Professional</div>
+            </div>
+            <div class="infographic-sample style-sci">
+              <div class="style-icon">
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#334155" stroke-width="2" stroke-linecap="round">
+                  <path d="M14 6v12l-6 10h20l-6-10V6"/>
+                  <path d="M12 6h12"/>
+                  <circle cx="16" cy="24" r="2" fill="rgba(51,65,85,0.3)"/>
+                  <circle cx="22" cy="22" r="1.5" fill="rgba(51,65,85,0.3)"/>
+                </svg>
+              </div>
+              <div class="style-name">Scientific</div>
+            </div>
+            <div class="infographic-sample style-bento">
+              <div class="style-icon">
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#fff" stroke-width="2">
+                  <rect x="4" y="4" width="12" height="12" rx="4"/>
+                  <rect x="20" y="4" width="12" height="6" rx="3"/>
+                  <rect x="20" y="14" width="12" height="6" rx="3"/>
+                  <rect x="4" y="20" width="12" height="12" rx="4"/>
+                  <rect x="20" y="24" width="12" height="8" rx="3"/>
+                </svg>
+              </div>
+              <div class="style-name">Bento Grid</div>
+            </div>
+            <div class="infographic-sample style-editorial">
+              <div class="style-icon">
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="#6b21a8" stroke-width="2" stroke-linecap="round">
+                  <rect x="6" y="4" width="24" height="28" rx="2"/>
+                  <path d="M10 10h16"/>
+                  <path d="M10 16h10"/>
+                  <path d="M10 22h14"/>
+                  <path d="M10 28h8"/>
+                </svg>
+              </div>
+              <div class="style-name">Editorial</div>
+            </div>
+          </div>
+          <div class="infographic-label">...ועוד <span>4 סגנונות</span></div>
+        </div>
+      </div>
+
+      <div class="slide-brand">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        Learni
+      </div>
+    </div>
+
+    <!-- ============ SLIDE 3 — PPTX EXPORT ============ -->
+    <div class="slide slide-bg">
+      <div class="slide-num">3/5</div>
+      <div class="feat-title">ייצוא <span class="accent">PPTX</span></div>
+      <div class="feat-badge">חדש!</div>
+      <div class="feat-desc">מצגת מוכנה מהמסמך שלכם — עם אפשרות לתקן כל שקף</div>
+
+      <div class="mockup s3-mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div>
+          <div class="mockup-dot y"></div>
+          <div class="mockup-dot g"></div>
+          <div class="mockup-url">notebooklm.google.com</div>
+        </div>
+        <div class="mockup-body">
+          <div class="pptx-preview">
+            <div class="pptx-sidebar">
+              <div class="pptx-thumb active">
+                <div class="pptx-thumb-line title"></div>
+                <div class="pptx-thumb-line"></div>
+                <div class="pptx-thumb-line" style="width:50%"></div>
+              </div>
+              <div class="pptx-thumb">
+                <div class="pptx-thumb-line title" style="width:60%"></div>
+                <div class="pptx-thumb-line"></div>
+                <div class="pptx-thumb-line" style="width:60%"></div>
+              </div>
+              <div class="pptx-thumb">
+                <div class="pptx-thumb-line title" style="width:70%"></div>
+                <div class="pptx-thumb-line" style="width:80%"></div>
+                <div class="pptx-thumb-line" style="width:40%"></div>
+              </div>
+            </div>
+            <div class="pptx-main">
+              <div class="pptx-slide-preview">
+                <div class="pptx-slide-title">מבוא לבינה מלאכותית</div>
+                <div class="pptx-slide-line"></div>
+                <div class="pptx-slide-line"></div>
+                <div class="pptx-slide-line"></div>
+              </div>
+              <div class="pptx-feedback">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                שלחו פידבק — NotebookLM ירגנרר את השקף
+              </div>
+              <div class="pptx-actions">
+                <button class="pptx-btn primary">
+                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  הורדת PPTX
+                </button>
+                <button class="pptx-btn secondary">
+                  <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  הורדת PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-brand">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        Learni
+      </div>
+    </div>
+
+    <!-- ============ SLIDE 4 — FLASHCARDS + EPUB ============ -->
+    <div class="slide slide-bg">
+      <div class="slide-num">4/5</div>
+      <div class="feat-title">Flashcards + <span class="accent">מקורות חדשים</span></div>
+      <div class="feat-badge">חדש!</div>
+      <div class="feat-desc">כרטיסיות לימוד חכמות + EPUB וגיליונות כמקור</div>
+
+      <div class="mockup s4-mockup">
+        <div class="mockup-bar">
+          <div class="mockup-dot r"></div>
+          <div class="mockup-dot y"></div>
+          <div class="mockup-dot g"></div>
+          <div class="mockup-url">notebooklm.google.com</div>
+        </div>
+        <div class="mockup-body">
+          <div class="flash-layout">
+            <div class="flash-main">
+              <div class="flashcard">
+                <div class="flash-q">כרטיסייה 3 מתוך 8</div>
+                <div class="flash-text">מה ההבדל בין<br>Machine Learning ל-Deep Learning?</div>
+                <div class="flash-btns">
+                  <button class="flash-btn got">ידעתי</button>
+                  <button class="flash-btn missed">לחזור</button>
+                </div>
+                <div class="flash-progress">
+                  <div class="flash-pip done"></div>
+                  <div class="flash-pip done"></div>
+                  <div class="flash-pip current"></div>
+                  <div class="flash-pip todo"></div>
+                  <div class="flash-pip todo"></div>
+                  <div class="flash-pip todo"></div>
+                  <div class="flash-pip todo"></div>
+                  <div class="flash-pip todo"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="epub-sidebar">
+              <div style="font-family:var(--hand);font-size:16px;font-weight:700;color:var(--dark);padding:4px 0;">מקורות</div>
+              <div class="epub-card">
+                <div class="epub-icon pdf">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div>
+                  <div class="epub-label">מסמך.pdf</div>
+                  <div class="epub-sub">PDF</div>
+                </div>
+              </div>
+              <div class="epub-card highlight">
+                <div class="epub-icon epub">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                </div>
+                <div>
+                  <div class="epub-label">ספר.epub</div>
+                  <div class="epub-sub">EPUB <span class="epub-new">חדש</span></div>
+                </div>
+              </div>
+              <div class="epub-card highlight">
+                <div class="epub-icon sheet">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
+                </div>
+                <div>
+                  <div class="epub-label">נתונים.xlsx</div>
+                  <div class="epub-sub">Sheets <span class="epub-new">חדש</span></div>
+                </div>
+              </div>
+              <div class="epub-card">
+                <div class="epub-icon url">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                </div>
+                <div>
+                  <div class="epub-label">google.com/ai</div>
+                  <div class="epub-sub">URL</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="slide-brand">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        Learni
+      </div>
+    </div>
+
+    <!-- ============ SLIDE 5 — CTA ============ -->
+    <div class="slide slide-bg s5">
+      <div class="cat">טיפ יומי</div>
+      <div class="mini-sticker">!שמרו את זה</div>
+
+      <div class="cta-block">
+        <div class="cta-title">רוצים עוד טיפים?</div>
+        <div class="cta-subtitle">עקבו אחרינו ברשתות החברתיות<br>טיפ חדש כל שבוע</div>
+        <a class="cta-btn" href="#">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+          עקבו אחרינו
+        </a>
+        <div class="cta-save">
+          <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+          שמרו את הפוסט הזה
+        </div>
+      </div>
+
+      <div class="brand-footer">
+        <div class="logo-circles"><div class="c1"></div><div class="c2"></div></div>
+        <span class="logo-name">Learni</span>
+      </div>
+    </div>
+
+  </div><!-- /track -->
+
+  <button class="nav-arrow nav-prev" id="prevBtn" onclick="changeSlide(-1)">
+    <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
+  <button class="nav-arrow nav-next" id="nextBtn" onclick="changeSlide(1)">
+    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+  </button>
+</div>
+
+<div class="dots" id="dots">
+  <div class="dot active" onclick="goToSlide(0)"></div>
+  <div class="dot" onclick="goToSlide(1)"></div>
+  <div class="dot" onclick="goToSlide(2)"></div>
+  <div class="dot" onclick="goToSlide(3)"></div>
+  <div class="dot" onclick="goToSlide(4)"></div>
+</div>
+
+<script>
+let current = 0;
+const total = 5;
+const track = document.getElementById('track');
+const dots = document.querySelectorAll('.dot');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+function updateUI() {
+  track.style.transform = `translateX(-${current * 1080}px)`;
+  dots.forEach((d, i) => d.classList.toggle('active', i === current));
+  prevBtn.classList.toggle('hidden', current === 0);
+  nextBtn.classList.toggle('hidden', current === total - 1);
+}
+function changeSlide(dir) {
+  current = Math.max(0, Math.min(total - 1, current + dir));
+  updateUI();
+}
+function goToSlide(i) { current = i; updateUI(); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft') changeSlide(1);
+  if (e.key === 'ArrowRight') changeSlide(-1);
+});
+updateUI();
+</script>
+</body>
+</html>

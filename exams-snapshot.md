@@ -1,0 +1,7 @@
+- generic [ref=e1]:
+  - generic [ref=e16]:
+    - heading "תוכנית שנתית תשפ\"ז" [level=1] [ref=e17]
+    - generic [ref=e22]
+  - generic [ref=e33]:
+    - navigation [ref=e34]
+    - generic [ref=e83]

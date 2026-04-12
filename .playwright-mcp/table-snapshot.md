@@ -1,0 +1,127 @@
+- generic [ref=e34]:
+  - generic [ref=e35]:
+    - generic [ref=e36]:
+      - img "לוגו אורט" [ref=e37]
+      - heading "דוח חודשי — משהצברי — כיתה ט1" [level=1] [ref=e39]
+      - link "ניהול מערכות" [ref=e40] [cursor=pointer]:
+        - /url: index.html
+        - img [ref=e41]
+        - text: ניהול מערכות
+      - button "החלף משתמש" [ref=e43] [cursor=pointer]:
+        - img [ref=e44]
+        - text: החלף משתמש
+    - generic [ref=e46]:
+      - navigation [ref=e47]:
+        - button "דוח מחנך/ת" [ref=e48] [cursor=pointer]
+        - button "ביקור בית" [ref=e52] [cursor=pointer]
+        - button "תצוגת כיתה" [ref=e56] [cursor=pointer]
+      - combobox [ref=e62] [cursor=pointer]:
+        - option "אפריל 2026" [selected]
+        - option "מרץ 2026"
+        - option "פברואר 2026"
+        - option "ינואר 2026"
+        - option "דצמבר 2025"
+        - option "נובמבר 2025"
+        - option "אוקטובר 2025"
+        - option "ספטמבר 2025"
+  - generic:
+    - img
+    - generic: נשמר בהצלחה
+  - generic [ref=e64]:
+    - generic [ref=e65]:
+      - generic [ref=e66]: התקדמות הדוח
+      - generic [ref=e69]: 12%
+    - generic [ref=e70]:
+      - generic [ref=e71]: "מקרא רמות:"
+      - generic [ref=e72]: בבנייה
+      - generic [ref=e74]: מתבססת
+      - generic [ref=e76]: יציבה
+      - generic [ref=e78]: מובילה
+    - generic [ref=e80]:
+      - heading "א. פרטי דוח" [level=4] [ref=e81]:
+        - img [ref=e82]
+        - text: א. פרטי דוח
+      - generic [ref=e85]:
+        - generic [ref=e86]
+        - generic [ref=e89]
+        - generic [ref=e92]
+    - generic [ref=e95]:
+      - heading "ב. מצב כיתה כללי" [level=4] [ref=e96]:
+        - img [ref=e97]
+        - text: ב. מצב כיתה כללי
+      - generic [ref=e100]:
+        - generic [ref=e101]: איך הכיתה מתפקדת?
+        - textbox "תאר/י את מצב הכיתה הכללי — אווירה, שיתוף פעולה, אתגרים..." [ref=e102]
+    - generic [ref=e103]:
+      - generic [ref=e104]:
+        - heading "ב. מעקב תלמידים — אפריל" [level=3] [ref=e105]
+        - generic [ref=e110]: 0/20 שיחות | 0/20 מילה טובה
+      - table [ref=e113]:
+        - rowgroup [ref=e114]
+        - rowgroup [ref=e123]
+    - generic [ref=e464]:
+      - heading "ג. שיעורי חינוך" [level=4] [ref=e465]:
+        - img [ref=e466]
+        - text: ג. שיעורי חינוך
+      - generic [ref=e469]:
+        - generic [ref=e470]
+        - generic [ref=e473]
+      - generic [ref=e477]:
+        - generic [ref=e478]: תיאור
+        - textbox "מה נעשה בשיעורי החינוך?" [ref=e479]
+    - generic [ref=e480]:
+      - heading "ד. נוכחות" [level=4] [ref=e481]:
+        - img [ref=e482]
+        - text: ד. נוכחות
+      - generic [ref=e485]:
+        - generic [ref=e486] [cursor=pointer]
+        - generic [ref=e488]: האם יש בעיות נוכחות?
+    - generic [ref=e489]:
+      - heading "ה. ביקורי בית" [level=4] [ref=e490]:
+        - img [ref=e491]
+        - text: ה. ביקורי בית
+      - paragraph [ref=e494]: לא בוצעו ביקורי בית באפריל
+      - button "הוסף ביקור חדש" [ref=e495] [cursor=pointer]:
+        - img [ref=e496]
+        - text: הוסף ביקור חדש
+    - generic [ref=e498]:
+      - heading "ו. חיבור למגמה" [level=4] [ref=e499]:
+        - img [ref=e500]
+        - text: ו. חיבור למגמה
+      - generic [ref=e502]:
+        - generic [ref=e503]: שמות תלמידים עם קושי בחיבור למגמה
+        - textbox "שמות..." [ref=e504]
+      - generic [ref=e505]:
+        - generic [ref=e506]: תיאור הקושי
+        - textbox "מה הקושי?" [ref=e507]
+    - generic [ref=e508]:
+      - heading "ח. דגלים להנהלה" [level=4] [ref=e509]:
+        - img [ref=e510]
+        - text: ח. דגלים להנהלה
+      - generic [ref=e512]:
+        - generic [ref=e513]: נושאים שדורשים התייחסות ההנהלה
+        - textbox "דגלים חשובים..." [ref=e514]
+    - generic [ref=e515]:
+      - heading "ט. הצלחות" [level=4] [ref=e516]:
+        - img [ref=e517]
+        - text: ט. הצלחות
+      - generic [ref=e519]:
+        - generic [ref=e520]: הצלחות ורגעים טובים החודש
+        - textbox "מה הלך טוב?" [ref=e521]
+    - generic [ref=e522]:
+      - heading "י. מטרה לחודש הבא" [level=4] [ref=e523]:
+        - img [ref=e524]
+        - text: י. מטרה לחודש הבא
+      - generic [ref=e527]:
+        - generic [ref=e528]: מטרה לחודש הבא
+        - textbox "מה המטרה?" [ref=e529]
+    - generic [ref=e530]:
+      - heading "הערות ושאלות" [level=3] [ref=e532]:
+        - img [ref=e533]
+        - text: הערות ושאלות
+      - generic [ref=e535]:
+        - paragraph [ref=e537]: אין הערות עדיין
+        - generic [ref=e538]
+    - button "שמור דוח" [ref=e544] [cursor=pointer]:
+      - img [ref=e545]
+      - text: שמור דוח

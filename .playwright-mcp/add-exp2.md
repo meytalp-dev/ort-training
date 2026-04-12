@@ -1,0 +1,987 @@
+- generic [ref=e2]:
+  - heading "0 notifications" [level=2] [ref=e3]
+  - dialog "Add experience" [active] [ref=e373]:
+    - button "Dismiss" [ref=e374] [cursor=pointer]:
+      - img [ref=e376]
+    - generic [ref=e378]:
+      - banner [ref=e379]:
+        - heading "Add experience" [level=2] [ref=e380]
+      - generic [ref=e382]:
+        - generic [ref=e383]:
+          - generic [ref=e384]:
+            - generic [ref=e385]:
+              - paragraph [ref=e386]: Notify network
+              - paragraph [ref=e387]:
+                - text: Turn on to notify your network of key profile changes (such as new job) and work anniversaries. Updates can take up to 2 hours. Learn more about
+                - link "sharing profile changes" [ref=e388] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/help/linkedin/answer/86236/
+                - text: .
+            - switch "Tap to toggle setting" [checked] [ref=e389] [cursor=pointer]:
+              - generic "Tap to toggle setting" [ref=e390]:
+                - generic:
+                  - paragraph
+                - generic [ref=e391]:
+                  - generic [ref=e392]: "On"
+                  - generic [ref=e393]:
+                    - switch [checked]
+          - paragraph [ref=e396]: "* Indicates required"
+          - generic [ref=e397]:
+            - paragraph [ref=e398]: Title*
+            - 'textbox "Ex: Retail Sales Manager" [ref=e401]'
+          - generic [ref=e402]:
+            - generic [ref=e404]: Employment type
+            - generic [ref=e405]:
+              - combobox "Employment type" [ref=e406] [cursor=pointer]:
+                - option "Please select" [selected]
+                - option "Full-time"
+                - option "Part-time"
+                - option "Self-employed"
+                - option "Freelance"
+                - option "Contract"
+                - option "Internship"
+                - option "Apprenticeship"
+                - option "Seasonal"
+              - img
+          - generic [ref=e407]:
+            - paragraph [ref=e408]: Company or organization*
+            - 'textbox "Ex: Microsoft" [ref=e411]'
+          - checkbox "I am currently working in this role" [checked] [ref=e412] [cursor=pointer]:
+            - generic "I am currently working in this role" [ref=e413]:
+              - generic [ref=e414]:
+                - checkbox [checked]
+                - img
+              - paragraph [ref=e417]: I am currently working in this role
+          - checkbox "End current position as of now - School Principal" [ref=e418] [cursor=pointer]:
+            - generic "End current position as of now - School Principal" [ref=e419]:
+              - generic [ref=e420]:
+                - checkbox
+              - paragraph [ref=e423]: End current position as of now - School Principal
+          - generic [ref=e425]:
+            - paragraph [ref=e426]: Start date
+            - generic [ref=e427]:
+              - generic [ref=e428]:
+                - generic [ref=e430]: Month*
+                - generic [ref=e431]:
+                  - combobox "Month*" [ref=e432] [cursor=pointer]:
+                    - option "Month" [selected]
+                    - option "January"
+                    - option "February"
+                    - option "March"
+                    - option "April"
+                    - option "May"
+                    - option "June"
+                    - option "July"
+                    - option "August"
+                    - option "September"
+                    - option "October"
+                    - option "November"
+                    - option "December"
+                  - img
+              - generic [ref=e433]:
+                - generic [ref=e435]: Year*
+                - generic [ref=e436]:
+                  - combobox "Year*" [ref=e437] [cursor=pointer]:
+                    - option "Year" [selected]
+                    - option "2026"
+                    - option "2025"
+                    - option "2024"
+                    - option "2023"
+                    - option "2022"
+                    - option "2021"
+                    - option "2020"
+                    - option "2019"
+                    - option "2018"
+                    - option "2017"
+                    - option "2016"
+                    - option "2015"
+                    - option "2014"
+                    - option "2013"
+                    - option "2012"
+                    - option "2011"
+                    - option "2010"
+                    - option "2009"
+                    - option "2008"
+                    - option "2007"
+                    - option "2006"
+                    - option "2005"
+                    - option "2004"
+                    - option "2003"
+                    - option "2002"
+                    - option "2001"
+                    - option "2000"
+                    - option "1999"
+                    - option "1998"
+                    - option "1997"
+                    - option "1996"
+                    - option "1995"
+                    - option "1994"
+                    - option "1993"
+                    - option "1992"
+                    - option "1991"
+                    - option "1990"
+                    - option "1989"
+                    - option "1988"
+                    - option "1987"
+                    - option "1986"
+                    - option "1985"
+                    - option "1984"
+                    - option "1983"
+                    - option "1982"
+                    - option "1981"
+                    - option "1980"
+                    - option "1979"
+                    - option "1978"
+                    - option "1977"
+                    - option "1976"
+                    - option "1975"
+                    - option "1974"
+                    - option "1973"
+                    - option "1972"
+                    - option "1971"
+                    - option "1970"
+                    - option "1969"
+                    - option "1968"
+                    - option "1967"
+                    - option "1966"
+                    - option "1965"
+                    - option "1964"
+                    - option "1963"
+                    - option "1962"
+                    - option "1961"
+                    - option "1960"
+                    - option "1959"
+                    - option "1958"
+                    - option "1957"
+                    - option "1956"
+                    - option "1955"
+                    - option "1954"
+                    - option "1953"
+                    - option "1952"
+                    - option "1951"
+                    - option "1950"
+                    - option "1949"
+                    - option "1948"
+                    - option "1947"
+                    - option "1946"
+                    - option "1945"
+                    - option "1944"
+                    - option "1943"
+                    - option "1942"
+                    - option "1941"
+                    - option "1940"
+                    - option "1939"
+                    - option "1938"
+                    - option "1937"
+                    - option "1936"
+                    - option "1935"
+                    - option "1934"
+                    - option "1933"
+                    - option "1932"
+                    - option "1931"
+                    - option "1930"
+                    - option "1929"
+                    - option "1928"
+                    - option "1927"
+                    - option "1926"
+                  - img
+          - generic [ref=e438]:
+            - paragraph [ref=e439]: Location
+            - 'textbox "Ex: London, United Kingdom" [ref=e442]'
+          - generic [ref=e443]:
+            - generic [ref=e445]: Location type
+            - generic [ref=e446]:
+              - combobox "Location type" [ref=e447] [cursor=pointer]:
+                - option "Please select" [selected]
+                - option "On-site"
+                - option "Hybrid"
+                - option "Remote"
+              - img
+            - paragraph [ref=e449]: "Pick a location type (ex: remote)"
+          - generic [ref=e450]:
+            - generic [ref=e452]:
+              - generic [ref=e454]: Description
+              - textbox "Description" [ref=e455]
+              - paragraph [ref=e457]: 0/2,000
+            - generic [ref=e458]:
+              - img [ref=e459]
+              - button "Get AI suggestions" [ref=e462] [cursor=pointer]:
+                - paragraph [ref=e463]: Get AI suggestions
+              - paragraph [ref=e464]: with Premium
+          - generic [ref=e466]:
+            - generic [ref=e468]: Profile headline
+            - textbox "Profile headline" [ref=e470]:
+              - /placeholder: "Ex: Software engineer"
+              - text: Educational Innovation Expert | Founder of Learni
+            - generic [ref=e471]:
+              - paragraph [ref=e472]: Appears below your name at the top of your profile.
+              - paragraph [ref=e473]: 49/220
+          - generic [ref=e474]:
+            - generic [ref=e476]: Where did you find the job?
+            - generic [ref=e477]:
+              - combobox "Where did you find the job?" [ref=e478] [cursor=pointer]:
+                - option "Please select" [selected]
+                - option "LinkedIn"
+                - option "Company website"
+                - option "Indeed"
+                - option "Other job sites"
+                - option "Referral"
+                - option "Contacted by recruiter"
+                - option "Staffing agency"
+                - option "Other"
+              - img
+            - paragraph [ref=e480]: This information will be used to improve LinkedIns job search experience.
+          - generic [ref=e481]:
+            - generic [ref=e482]:
+              - paragraph [ref=e483]: Skills
+              - paragraph [ref=e484]: We recommend adding your top 5 used in this role. They'll also appear in your Skills section.
+            - list:
+              - status [ref=e485]
+            - button "Add skill" [ref=e490] [cursor=pointer]:
+              - generic [ref=e491]:
+                - img [ref=e492]
+                - generic [ref=e494]: Add skill
+          - generic [ref=e495]:
+            - generic [ref=e496]:
+              - paragraph [ref=e497]: Media
+              - paragraph [ref=e498]:
+                - text: Add media like images, documents, sites or presentations (up to 50). Learn more about
+                - link "media file types supported" [ref=e499] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/help/linkedin/answer/a1516731/
+                  - strong [ref=e500]: media file types supported
+            - button "Add media" [ref=e501] [cursor=pointer]:
+              - generic [ref=e502]:
+                - img [ref=e503]
+                - generic [ref=e505]: Add media
+            - list
+        - button "Save" [ref=e507] [cursor=pointer]:
+          - generic [ref=e509]: Save
+  - generic [ref=e4]:
+    - generic:
+      - button [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: Skip to main content
+      - button [ref=e8] [cursor=pointer]:
+        - img [ref=e510]
+    - generic [ref=e11]:
+      - banner [ref=e13]:
+        - generic [ref=e16]:
+          - button "LinkedIn" [ref=e512] [cursor=pointer]:
+            - img "LinkedIn" [ref=e513]
+          - search [ref=e516]:
+            - generic [ref=e517]:
+              - img [ref=e519]
+              - textbox "Search" [ref=e521]
+          - generic [ref=e20]:
+            - figure [ref=e526]
+            - navigation [ref=e23]:
+              - list [ref=e24]:
+                - listitem [ref=e25]:
+                  - button "Home, 1 new notification" [ref=e26] [cursor=pointer]:
+                    - img [ref=e527]
+                    - generic [ref=e30]: Home
+                - listitem [ref=e31]:
+                  - link "My Network, 1 new notification" [ref=e32] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/mynetwork
+                    - generic [ref=e33]:
+                      - img [ref=e530]
+                      - generic [ref=e532]: "1"
+                    - generic [ref=e36]: My Network
+                - listitem [ref=e37]:
+                  - button "Jobs, 0 new notifications" [ref=e38] [cursor=pointer]:
+                    - img [ref=e533]
+                    - generic [ref=e42]: Jobs
+                - listitem [ref=e43]:
+                  - link "Messaging, 0 new notifications" [ref=e44] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/messaging/
+                    - img [ref=e535]
+                    - generic [ref=e48]: Messaging
+                - listitem [ref=e49]:
+                  - link "Notifications, 0 new notifications" [ref=e50] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/notifications/
+                    - img [ref=e537]
+                    - generic [ref=e54]: Notifications
+                - listitem [ref=e55]:
+                  - button "Me" [ref=e56] [cursor=pointer]:
+                    - figure [ref=e58]
+                    - generic [ref=e60]:
+                      - text: Me
+                      - img [ref=e539]
+            - generic [ref=e63]:
+              - navigation [ref=e64]:
+                - list [ref=e65]:
+                  - listitem [ref=e66]:
+                    - button "For Business" [ref=e67] [cursor=pointer]:
+                      - img [ref=e541]
+                      - generic [ref=e71]:
+                        - text: For Business
+                        - img [ref=e543]
+              - link "Try Premium for ₪0" [ref=e74] [cursor=pointer]:
+                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                - generic [ref=e75]:
+                  - img [ref=e545]
+                  - paragraph [ref=e78]: Try Premium for ₪0
+      - main [ref=e79]:
+        - generic [ref=e80]:
+          - toolbar [ref=e81]:
+            - generic [ref=e85]:
+              - link "Meytal Peleg" [ref=e86] [cursor=pointer]:
+                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                - generic "Meytal Peleg" [ref=e87]:
+                  - figure [ref=e88]
+                  - generic [ref=e89]:
+                    - paragraph [ref=e90]: Meytal Peleg
+                    - paragraph [ref=e92]: Educational Innovation Expert | Founder of Learni
+              - generic [ref=e93]:
+                - button "More" [ref=e95] [cursor=pointer]:
+                  - img [ref=e548]
+                - button "Enhance profile" [ref=e99] [cursor=pointer]:
+                  - generic [ref=e101]: Enhance profile
+                - link "Add section" [ref=e102] [cursor=pointer]:
+                  - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                  - generic [ref=e104]: Add section
+                - button "Open to" [ref=e106] [cursor=pointer]:
+                  - generic [ref=e108]: Open to
+          - main [ref=e109]:
+            - generic [ref=e111]:
+              - generic [ref=e114]:
+                - generic [ref=e119]:
+                  - generic [ref=e120]:
+                    - generic [ref=e121]:
+                      - link [ref=e123] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/overlay/background-photo/
+                        - figure [ref=e124]:
+                          - img "Cover photo" [ref=e550]
+                      - button "Add background image" [ref=e128] [cursor=pointer]:
+                        - img [ref=e556]
+                    - link "Profile photo" [ref=e131] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                      - generic "Profile photo" [ref=e132]:
+                        - figure [ref=e133]
+                    - link "Edit profile" [ref=e135] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/intro/
+                      - img [ref=e558]
+                  - generic [ref=e138]:
+                    - generic [ref=e139]:
+                      - generic [ref=e141]:
+                        - generic [ref=e142]:
+                          - link "Meytal Peleg" [ref=e144] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                            - heading "Meytal Peleg" [level=2] [ref=e146]
+                          - link "Add verification badge" [ref=e562] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/trust/verification/?isDeepLinkToCCT=true&verificationUrl=https%3A%2F%2Fwww.linkedin.com%2Fverify%2F%3FentryPoint%3DSELFVIEW_TOPCARD
+                            - generic [ref=e563]:
+                              - img [ref=e564]
+                              - paragraph [ref=e566]: Add verification badge
+                        - paragraph [ref=e147]: Educational Innovation Expert | Founder of Learni
+                        - generic [ref=e148]:
+                          - paragraph [ref=e149]: Tel Aviv-Yafo, Tel Aviv District, Israel
+                          - paragraph [ref=e150]: ·
+                          - paragraph [ref=e151]:
+                            - link "Contact info" [ref=e152] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/in/meytal-peleg-839265378/overlay/contact-info/
+                      - button "ORT Beit Ha'Arava" [ref=e155] [cursor=pointer]:
+                        - generic [ref=e156]:
+                          - figure [ref=e157]:
+                            - img [ref=e567]
+                          - paragraph [ref=e161]: ORT Beit Ha'Arava
+                    - generic [ref=e164]:
+                      - button "Open to" [ref=e166] [cursor=pointer]:
+                        - generic [ref=e168]: Open to
+                      - link "Add section" [ref=e169] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                        - generic [ref=e171]: Add section
+                      - button "Enhance profile" [ref=e173] [cursor=pointer]:
+                        - generic [ref=e175]: Enhance profile
+                      - button "More" [ref=e177] [cursor=pointer]:
+                        - img [ref=e573]
+                  - generic [ref=e182]:
+                    - list [ref=e184]:
+                      - listitem [ref=e185]:
+                        - generic [ref=e186]:
+                          - link "Show recruiters you’re open to work — you control who sees this. Get started" [ref=e187] [cursor=pointer]:
+                            - /url: /in/meytal-peleg-839265378/opportunities/job-opportunities/?origin=PROFILE_TOP_CARD
+                            - generic [ref=e188]:
+                              - paragraph [ref=e189]:
+                                - strong [ref=e190]: Show recruiters you’re open to work
+                                - text: — you control who sees this.
+                              - paragraph [ref=e192]: Get started
+                          - button "Close" [ref=e193] [cursor=pointer]:
+                            - img [ref=e575]
+                      - listitem [ref=e196]:
+                        - generic [ref=e197]:
+                          - link "Share that you’re hiring and attract qualified candidates. Get started" [ref=e198] [cursor=pointer]:
+                            - /url: /in/meytal-peleg-839265378/opportunities/hiring-opportunities/onboarding/
+                            - generic [ref=e199]:
+                              - paragraph [ref=e200]:
+                                - strong [ref=e201]: Share that you’re hiring
+                                - text: and attract qualified candidates.
+                              - paragraph [ref=e203]: Get started
+                          - button "Close" [ref=e204] [cursor=pointer]:
+                            - img [ref=e577]
+                      - listitem [ref=e207]:
+                        - generic [ref=e209]:
+                          - link "Showcase your services as a section on your profile so your business can be easily discovered. Add services" [ref=e210] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/in/meytal-peleg-839265378/opportunities/services/education/
+                            - generic [ref=e211]:
+                              - paragraph [ref=e212]:
+                                - strong [ref=e213]: Showcase your services
+                                - text: as a section on your profile so your business can be easily discovered.
+                              - paragraph [ref=e215]: Add services
+                          - button "Close" [ref=e216] [cursor=pointer]:
+                            - img [ref=e579]
+                      - listitem [ref=e219]:
+                        - generic [ref=e221]:
+                          - link "Tell non-profits you are interested in getting involved with your time and skills Get started" [ref=e222] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/in/meytal-peleg-839265378/opportunities/volunteering/education/
+                            - generic [ref=e223]:
+                              - paragraph [ref=e224]:
+                                - strong [ref=e225]: Tell non-profits
+                                - text: you are interested in getting involved with your time and skills
+                              - paragraph [ref=e227]: Get started
+                          - button "Close" [ref=e228] [cursor=pointer]:
+                            - img [ref=e581]
+                    - button "Next" [ref=e231] [cursor=pointer]:
+                      - img [ref=e583]
+                - generic [ref=e586]:
+                  - generic [ref=e590]:
+                    - generic [ref=e592]:
+                      - heading "Suggested for you" [level=2] [ref=e593]
+                      - generic [ref=e594]:
+                        - img [ref=e595]
+                        - paragraph [ref=e597]: Private to you
+                    - list [ref=e603]:
+                      - listitem [ref=e604]:
+                        - generic [ref=e608]:
+                          - generic [ref=e609]:
+                            - generic [ref=e610]:
+                              - img [ref=e611]
+                              - paragraph [ref=e620]: What would you like your headline to say about you?
+                            - paragraph [ref=e621]: It’s the first thing people see by your name.
+                            - link "Update headline" [ref=e622] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/in/meytal-peleg-839265378/guided-edit/GUIDED_EDIT_HEADLINE/
+                              - generic [ref=e624]: Update headline
+                          - button "dismiss updating profile headline" [ref=e625] [cursor=pointer]:
+                            - img [ref=e627]
+                      - listitem [ref=e629]:
+                        - generic [ref=e632]:
+                          - generic [ref=e633]:
+                            - img [ref=e634]
+                            - paragraph [ref=e642]: Highlight your skills from ORT Beit Ha'Arava
+                          - paragraph [ref=e643]: Make it easier for recruiters to find you by showing where and how you used your skills.
+                          - link "Edit experience" [ref=e644] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/in/meytal-peleg-839265378/details/experience/edit/forms/2879078165/
+                            - generic [ref=e646]: Edit experience
+                  - generic [ref=e649]:
+                    - generic [ref=e651]:
+                      - heading "Analytics" [level=2] [ref=e652]
+                      - generic [ref=e653]:
+                        - img [ref=e654]
+                        - paragraph [ref=e656]: Private to you
+                    - generic [ref=e657]:
+                      - generic [ref=e660]:
+                        - link "0 profile views Update your profile to attract viewers." [ref=e661] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/analytics/profile-views/
+                          - generic [ref=e662]:
+                            - img [ref=e663]
+                            - generic [ref=e665]:
+                              - paragraph [ref=e666]: 0 profile views
+                              - paragraph [ref=e667]: Update your profile to attract viewers.
+                        - link "0 post impressions Start a post to increase engagement. Past 7 days" [ref=e668] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/analytics/creator/content/?timeRange=past_7_days&dimension=INDUSTRY&metricType=IMPRESSIONS
+                          - generic [ref=e669]:
+                            - img [ref=e670]
+                            - generic [ref=e672]:
+                              - paragraph [ref=e673]: 0 post impressions
+                              - paragraph [ref=e674]: Start a post to increase engagement.
+                              - paragraph [ref=e675]: Past 7 days
+                        - link "0 search appearances Update your profile to appear more in search." [ref=e676] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/analytics/search-appearances/
+                          - generic [ref=e677]:
+                            - img [ref=e678]
+                            - generic [ref=e680]:
+                              - paragraph [ref=e681]: 0 search appearances
+                              - paragraph [ref=e682]: Update your profile to appear more in search.
+                      - link "Show all analytics" [ref=e684] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/dashboard/
+                        - generic [ref=e685]:
+                          - img [ref=e686]
+                          - generic [ref=e688]: Show all
+                  - generic [ref=e693]:
+                    - generic [ref=e694]:
+                      - heading "About" [level=2] [ref=e695]
+                      - link "Edit about" [ref=e697] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/summary/new/
+                        - img [ref=e699]
+                    - paragraph [ref=e702]:
+                      - generic [ref=e703]:
+                        - text: Passionate about transforming education through technology and innovation. I founded Learni to help teachers integrate AI tools and digital solutions into their classrooms — making learning more engaging, accessible, and effective for every student. With hands-on experience in educational technology, curriculum design, and teacher training, I specialize in bridging the gap between cutting-edge AI tools and real classroom needs.
+                        - button:
+                          - generic [ref=e705] [cursor=pointer]: … more
+                - generic [ref=e710]:
+                  - generic [ref=e711]:
+                    - generic [ref=e712]:
+                      - heading "Activity" [level=2] [ref=e713]
+                      - link "0 followers" [ref=e715] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/feed/followers/
+                        - paragraph [ref=e716]: 0 followers
+                    - generic [ref=e717]:
+                      - link "Create a post" [ref=e718] [cursor=pointer]:
+                        - /url: /preload/sharebox/
+                        - generic [ref=e720]: Create a post
+                      - link "Edit default activity" [ref=e721] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/content-collections-star-pill/new/
+                        - img [ref=e723]
+                  - generic [ref=e726]:
+                    - list [ref=e734]:
+                      - listitem [ref=e735]:
+                        - listitem [ref=e737]:
+                          - generic [ref=e738]:
+                            - generic [ref=e739]:
+                              - link [ref=e740] [cursor=pointer]:
+                                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                                - figure [ref=e741]:
+                                  - img "View Meytal Peleg’s profile" [ref=e742]
+                              - 'link "Meytal Peleg You Educational Innovation Expert | Founder of Learni 7mo • Visibility: Global" [ref=e743] [cursor=pointer]':
+                                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                                - generic [ref=e744]:
+                                  - generic "Meytal Peleg You" [ref=e745]:
+                                    - paragraph [ref=e748]: Meytal Peleg
+                                    - paragraph [ref=e750]: • You
+                                  - paragraph [ref=e752]: Educational Innovation Expert | Founder of Learni
+                                  - paragraph [ref=e754]:
+                                    - text: 7mo •
+                                    - 'img "Visibility: Global" [ref=e755]'
+                              - button "Open control menu for post by Meytal Peleg" [ref=e757] [cursor=pointer]:
+                                - img [ref=e759]
+                            - link ":)" [ref=e761] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/feed/update/urn:li:activity:7358436705676189698/?originTrackingId=CZwaQoTl6iqJG57DYuZ1Lw%3D%3D
+                              - paragraph [ref=e762]:
+                                - generic [ref=e763]: :)
+                          - generic [ref=e765]:
+                            - generic [ref=e767]:
+                              - 'button "Reaction button state: no reaction" [ref=e770] [cursor=pointer]':
+                                - generic [ref=e771]:
+                                  - img [ref=e772]
+                                  - generic [ref=e774]: Like
+                              - button "Open reactions menu":
+                                - img [ref=e776] [cursor=pointer]
+                            - link "Comment" [ref=e778] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/feed/update/urn:li:activity:7358436705676189698/
+                              - generic [ref=e779]:
+                                - img [ref=e780]
+                                - generic [ref=e782]: Comment
+                            - button "Repost" [ref=e783] [cursor=pointer]:
+                              - generic [ref=e784]:
+                                - img [ref=e785]
+                                - generic [ref=e787]: Repost
+                            - link "Send" [ref=e788] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                              - generic [ref=e789]:
+                                - img [ref=e790]
+                                - generic [ref=e792]: Send
+                      - listitem [ref=e793]:
+                        - listitem [ref=e795]:
+                          - generic [ref=e796]:
+                            - generic [ref=e797]:
+                              - link [ref=e798] [cursor=pointer]:
+                                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                                - figure [ref=e799]:
+                                  - img "View Meytal Peleg’s profile" [ref=e800]
+                              - 'link "Meytal Peleg You Educational Innovation Expert | Founder of Learni 7mo • Visibility: Global" [ref=e801] [cursor=pointer]':
+                                - /url: https://www.linkedin.com/in/meytal-peleg-839265378/
+                                - generic [ref=e802]:
+                                  - generic "Meytal Peleg You" [ref=e803]:
+                                    - paragraph [ref=e806]: Meytal Peleg
+                                    - paragraph [ref=e808]: • You
+                                  - paragraph [ref=e810]: Educational Innovation Expert | Founder of Learni
+                                  - paragraph [ref=e812]:
+                                    - text: 7mo •
+                                    - 'img "Visibility: Global" [ref=e813]'
+                              - button "Open control menu for post by Meytal Peleg" [ref=e815] [cursor=pointer]:
+                                - img [ref=e817]
+                            - link "https://lnkd.in/eWv5Sd6v" [ref=e819] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/feed/update/urn:li:activity:7358436634570149888/?originTrackingId=iTs6ftSIWOTfS2a3PSFnxg%3D%3D
+                              - paragraph [ref=e820]:
+                                - link "https://lnkd.in/eWv5Sd6v" [ref=e822]:
+                                  - /url: https://www.linkedin.com/safety/go/?url=https%3A%2F%2Flnkd%2Ein%2FeWv5Sd6v&urlhash=DMI9&mt=42aQUkwBGU1zSGcPTKYU47kQDl3xZFyZN_f1KS2HrSMn7r3FhOJqgUteIQmgEDx3B0R2fcef4qx7BEEu_Tu33_IE5nW6xmhFwH6gvFmZEHVzUEBiGV8QS_PNq7M&isSdui=true
+                                  - strong [ref=e824]: https://lnkd.in/eWv5Sd6v
+                            - link "מורה חכם app---74eb8ca2.base44.app" [ref=e825] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/safety/go/?url=https%3A%2F%2Fapp---74eb8ca2%2Ebase44%2Eapp&urlhash=vFYT&mt=wDlefPbiCtvkibOq-kdFepdjuFFeDmwYAsT_d4FXbW4IFxiuv5N48l_V71YILM_JIfX0XJcuopGNWlozey0L_jZW-3O37DNfDAnm5L9l26hVJn88r9YoHrF4ioU&isSdui=true
+                              - generic [ref=e826]:
+                                - figure [ref=e827]
+                                - generic [ref=e828]:
+                                  - paragraph [ref=e830]:
+                                    - generic [ref=e831]: מורה חכם
+                                    - text: מורה חכם
+                                  - paragraph [ref=e833]: app---74eb8ca2.base44.app
+                          - generic [ref=e835]:
+                            - generic [ref=e837]:
+                              - 'button "Reaction button state: no reaction" [ref=e840] [cursor=pointer]':
+                                - generic [ref=e841]:
+                                  - img [ref=e842]
+                                  - generic [ref=e844]: Like
+                              - button "Open reactions menu":
+                                - img [ref=e846] [cursor=pointer]
+                            - link "Comment" [ref=e848] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/feed/update/urn:li:activity:7358436634570149888/
+                              - generic [ref=e849]:
+                                - img [ref=e850]
+                                - generic [ref=e852]: Comment
+                            - button "Repost" [ref=e853] [cursor=pointer]:
+                              - generic [ref=e854]:
+                                - img [ref=e855]
+                                - generic [ref=e857]: Repost
+                            - link "Send" [ref=e858] [cursor=pointer]:
+                              - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                              - generic [ref=e859]:
+                                - img [ref=e860]
+                                - generic [ref=e862]: Send
+                    - link "Show all" [ref=e864] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/recent-activity/all/
+                      - generic [ref=e865]:
+                        - img [ref=e866]
+                        - generic [ref=e868]: Show all
+              - generic [ref=e286]:
+                - generic [ref=e287]:
+                  - generic [ref=e291]:
+                    - generic [ref=e292]:
+                      - heading "Profile language" [level=2] [ref=e293]
+                      - link "Edit profile language" [ref=e295] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/secondary-language/
+                        - img [ref=e869]
+                    - paragraph [ref=e299]: English
+                    - generic [ref=e300]:
+                      - heading "Public profile & URL" [level=2] [ref=e301]
+                      - link "Edit Public profile & URL" [ref=e303] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/public-profile/settings/?trk=d_flagship3_profile_self_view_public_profile
+                        - img [ref=e871]
+                    - paragraph [ref=e307]: www.linkedin.com/in/meytal-peleg-839265378
+                  - generic [ref=e877]:
+                    - generic [ref=e879]:
+                      - heading "People you may know" [level=2] [ref=e880]
+                      - paragraph [ref=e881]: From your industry
+                    - generic [ref=e883]:
+                      - generic [ref=e885]:
+                        - link "Shalom Weil Verified · 3rd+ National Education Leader | CEO, Yesodot | Former Principal of Award-Winning School | Harvard MPA | Builder of Educational Ecosystems" [ref=e887] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/in/shalom-weil-32632316/
+                          - generic [ref=e888]:
+                            - figure [ref=e889]
+                            - generic [ref=e890]:
+                              - generic [ref=e891]:
+                                - paragraph [ref=e893]:
+                                  - link "Shalom Weil Verified" [ref=e894]:
+                                    - /url: https://www.linkedin.com/in/shalom-weil-32632316/
+                                    - text: Shalom Weil
+                                    - img "Verified" [ref=e895]:
+                                      - img [ref=e896]
+                                - paragraph [ref=e898]: · 3rd+
+                              - paragraph [ref=e900]: National Education Leader | CEO, Yesodot | Former Principal of Award-Winning School | Harvard MPA | Builder of Educational Ecosystems
+                        - button "Invite Shalom Weil to connect" [ref=e904] [cursor=pointer]:
+                          - generic [ref=e905]:
+                            - img [ref=e906]
+                            - generic [ref=e909]: Connect
+                      - generic [ref=e911]:
+                        - link "Ram Cohen · 3rd+ Entrepreneur & High-School Principal" [ref=e913] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/in/%D7%A8%D7%9D-%D7%9B%D7%94%D7%9F-410892243/en/
+                          - generic [ref=e914]:
+                            - figure [ref=e915]
+                            - generic [ref=e916]:
+                              - generic [ref=e917]:
+                                - paragraph [ref=e919]:
+                                  - link "Ram Cohen" [ref=e920]:
+                                    - /url: https://www.linkedin.com/in/%D7%A8%D7%9D-%D7%9B%D7%94%D7%9F-410892243/en/
+                                - paragraph [ref=e921]: · 3rd+
+                              - paragraph [ref=e923]: Entrepreneur & High-School Principal
+                        - button "Invite Ram Cohen to connect" [ref=e927] [cursor=pointer]:
+                          - generic [ref=e928]:
+                            - img [ref=e929]
+                            - generic [ref=e932]: Connect
+                      - generic [ref=e934]:
+                        - link "Dr. Aml Amer, Adv · 3rd+ Principal of Democratic High School - Hadera Dr. Aml Amer is a lawyer, mediator, and educator with nearly 20 years of experience in teaching, training, and management at the Ministry of Education." [ref=e936] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/in/dr-aml-amer-adv-b7651449/
+                          - generic [ref=e937]:
+                            - figure [ref=e938]
+                            - generic [ref=e939]:
+                              - generic [ref=e940]:
+                                - paragraph [ref=e942]:
+                                  - link "Dr. Aml Amer, Adv" [ref=e943]:
+                                    - /url: https://www.linkedin.com/in/dr-aml-amer-adv-b7651449/
+                                - paragraph [ref=e944]: · 3rd+
+                              - paragraph [ref=e946]: Principal of Democratic High School - Hadera Dr. Aml Amer is a lawyer, mediator, and educator with nearly 20 years of experience in teaching, training, and management at the Ministry of Education.
+                        - button "Invite Dr. Aml Amer, Adv to connect" [ref=e950] [cursor=pointer]:
+                          - generic [ref=e951]:
+                            - img [ref=e952]
+                            - generic [ref=e955]: Connect
+                      - generic [ref=e957]:
+                        - link "elana zohar · 3rd+ School principal at Ministry of Education, Culture and Science" [ref=e959] [cursor=pointer]:
+                          - /url: https://www.linkedin.com/in/elana-zohar-a0554a59/
+                          - generic [ref=e960]:
+                            - figure [ref=e961]:
+                              - img [ref=e962]
+                            - generic [ref=e968]:
+                              - generic [ref=e969]:
+                                - paragraph [ref=e971]:
+                                  - link "elana zohar" [ref=e972]:
+                                    - /url: https://www.linkedin.com/in/elana-zohar-a0554a59/
+                                - paragraph [ref=e973]: · 3rd+
+                              - paragraph [ref=e975]: School principal at Ministry of Education, Culture and Science
+                        - button "Invite elana zohar to connect" [ref=e979] [cursor=pointer]:
+                          - generic [ref=e980]:
+                            - img [ref=e981]
+                            - generic [ref=e984]: Connect
+                    - link "Show all" [ref=e986] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                      - generic [ref=e987]:
+                        - img [ref=e988]
+                        - generic [ref=e990]: Show all
+                  - generic [ref=e995]:
+                    - generic [ref=e997]:
+                      - heading "You might like" [level=2] [ref=e998]
+                      - paragraph [ref=e999]: Pages for you
+                    - generic [ref=e1001]:
+                      - link "Israel Innovation Authority רשות החדשנות Research Services 108,951 followers Follow" [ref=e1004] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/israelinnovationauthority/
+                        - generic [ref=e1005]:
+                          - figure [ref=e1006]
+                          - generic [ref=e1007]:
+                            - paragraph [ref=e1010]: Israel Innovation Authority רשות החדשנות
+                            - paragraph [ref=e1012]: Research Services
+                            - paragraph [ref=e1013]: 108,951 followers
+                            - button "Follow" [ref=e1016]:
+                              - generic [ref=e1017]:
+                                - img [ref=e1018]
+                                - generic [ref=e1020]: Follow
+                      - link "JobHunt - Hunt Your Dream Job! Human Resources Services 52,086 followers Follow" [ref=e1023] [cursor=pointer]:
+                        - /url: https://www.linkedin.com/company/jobhunt/
+                        - generic [ref=e1024]:
+                          - figure [ref=e1025]
+                          - generic [ref=e1026]:
+                            - paragraph [ref=e1029]: JobHunt - Hunt Your Dream Job!
+                            - paragraph [ref=e1031]: Human Resources Services
+                            - paragraph [ref=e1032]: 52,086 followers
+                            - button "Follow" [ref=e1035]:
+                              - generic [ref=e1036]:
+                                - img [ref=e1037]
+                                - generic [ref=e1039]: Follow
+                    - link "Show all" [ref=e1041] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/in/meytal-peleg-839265378/edit/forms/position/new?profileFormEntryPoint=PROFILE_SECTION
+                      - generic [ref=e1042]:
+                        - img [ref=e1043]
+                        - generic [ref=e1045]: Show all
+                - iframe [ref=e1050]:
+                  - link "Advertise on LinkedIn" [ref=f154e3] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/jobs/?trk=li_FA_global_careers_jobsgtm_jsFA_v1&mcid=6899045044465016833
+                    - img "Advertise on LinkedIn" [ref=f154e4]
+              - generic [ref=e311]:
+                - generic [ref=e312]:
+                  - navigation [ref=e313]:
+                    - link "About" [ref=e314] [cursor=pointer]:
+                      - /url: https://about.linkedin.com/
+                      - paragraph [ref=e315]: About
+                    - link "Accessibility" [ref=e316] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/accessibility/
+                      - paragraph [ref=e317]: Accessibility
+                    - link "Talent Solutions" [ref=e318] [cursor=pointer]:
+                      - /url: https://business.linkedin.com/talent-solutions?trk=flagship_nav&veh=li-footer-lts-control&src=li-footer
+                      - paragraph [ref=e319]: Talent Solutions
+                    - link "Community Guidelines" [ref=e320] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/legal/professional-community-policies/
+                      - paragraph [ref=e321]: Community Guidelines
+                    - link "Careers" [ref=e322] [cursor=pointer]:
+                      - /url: https://careers.linkedin.com/
+                      - paragraph [ref=e323]: Careers
+                    - link "Marketing Solutions" [ref=e324] [cursor=pointer]:
+                      - /url: https://business.linkedin.com/advertise?trk=n_nav_lms_f&src=li-footer
+                      - paragraph [ref=e325]: Marketing Solutions
+                    - button "Privacy & Terms" [ref=e326] [cursor=pointer]:
+                      - generic [ref=e327]:
+                        - paragraph [ref=e328]: Privacy & Terms
+                        - img [ref=e1051]
+                    - link "Ad Choices" [ref=e330] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/help/linkedin/answer/62931/
+                      - paragraph [ref=e331]: Ad Choices
+                    - link "Advertising" [ref=e332] [cursor=pointer]:
+                      - /url: https://www.linkedin.com/ad/start/?trk=n_nav_ads_rr
+                      - paragraph [ref=e333]: Advertising
+                    - link "Sales Solutions" [ref=e334] [cursor=pointer]:
+                      - /url: https://business.linkedin.com/sales-solutions?trk=flagship_nav&veh=li-footer-lss-control&src=li-footer
+                      - paragraph [ref=e335]: Sales Solutions
+                    - link "Mobile" [ref=e336] [cursor=pointer]:
+                      - /url: https://mobile.linkedin.com/
+                      - paragraph [ref=e337]: Mobile
+                    - link "Small Business" [ref=e338] [cursor=pointer]:
+                      - /url: https://business.linkedin.com/grow?src=li-footer
+                      - paragraph [ref=e339]: Small Business
+                    - link "Safety Center" [ref=e340] [cursor=pointer]:
+                      - /url: https://safety.linkedin.com/
+                      - paragraph [ref=e341]: Safety Center
+                  - paragraph [ref=e343]: LinkedIn Corporation © 2026
+                - generic [ref=e344]:
+                  - list [ref=e345]:
+                    - listitem [ref=e346]:
+                      - generic [ref=e347]:
+                        - img [ref=e1053]
+                        - generic [ref=e349]:
+                          - link "Questions?" [ref=e350] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/help/linkedin/
+                            - paragraph [ref=e351]: Questions?
+                          - paragraph [ref=e352]: Visit our Help Center.
+                    - listitem [ref=e353]:
+                      - generic [ref=e354]:
+                        - img [ref=e1055]
+                        - generic [ref=e356]:
+                          - link "Manage your account and privacy" [ref=e357] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/mypreferences/d/
+                            - paragraph [ref=e358]: Manage your account and privacy
+                          - paragraph [ref=e359]: Go to your Settings.
+                    - listitem [ref=e360]:
+                      - generic [ref=e361]:
+                        - img [ref=e1057]
+                        - generic [ref=e363]:
+                          - link "Recommendation transparency" [ref=e364] [cursor=pointer]:
+                            - /url: https://www.linkedin.com/help/linkedin/answer/a1339724/
+                            - paragraph [ref=e365]: Recommendation transparency
+                          - paragraph [ref=e366]: Learn more about Recommended Content.
+                  - generic [ref=e368]:
+                    - paragraph [ref=e370]: Select language
+                    - generic [ref=e371]:
+                      - combobox "Select language" [ref=e372] [cursor=pointer]:
+                        - option "العربية (Arabic)"
+                        - option "বাংলা (Bangla)"
+                        - option "Čeština (Czech)"
+                        - option "Dansk (Danish)"
+                        - option "Deutsch (German)"
+                        - option "Ελληνικά (Greek)"
+                        - option "English (English)" [selected]
+                        - option "Español (Spanish)"
+                        - option "فارسی (Persian)"
+                        - option "Suomi (Finnish)"
+                        - option "Français (French)"
+                        - option "हिंदी (Hindi)"
+                        - option "Magyar (Hungarian)"
+                        - option "Bahasa Indonesia (Indonesian)"
+                        - option "Italiano (Italian)"
+                        - option "עברית (Hebrew)"
+                        - option "日本語 (Japanese)"
+                        - option "한국어 (Korean)"
+                        - option "मराठी (Marathi)"
+                        - option "Bahasa Malaysia (Malay)"
+                        - option "Nederlands (Dutch)"
+                        - option "Norsk (Norwegian)"
+                        - option "ਪੰਜਾਬੀ (Punjabi)"
+                        - option "Polski (Polish)"
+                        - option "Português (Portuguese)"
+                        - option "Română (Romanian)"
+                        - option "Русский (Russian)"
+                        - option "Svenska (Swedish)"
+                        - option "తెలుగు (Telugu)"
+                        - option "ภาษาไทย (Thai)"
+                        - option "Tagalog (Tagalog)"
+                        - option "Türkçe (Turkish)"
+                        - option "Українська (Ukrainian)"
+                        - option "Tiếng Việt (Vietnamese)"
+                        - option "简体中文 (Chinese (Simplified))"
+                        - option "正體中文 (Chinese (Traditional))"
+                      - img
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - complementary:
+            - generic [ref=e1060]:
+              - generic [ref=e1062] [cursor=pointer]:
+                - generic [ref=e1063]:
+                  - img "Meytal Peleg" [ref=e1064]
+                  - generic [ref=e1066]: Status is online
+                - button "You are on the messaging overlay. Press enter to open the list of conversations." [ref=e1067]:
+                  - generic [ref=e1068]:
+                    - generic [ref=e1069]: Messaging
+                    - generic [ref=e1070]: You are on the messaging overlay. Press enter to open the list of conversations.
+              - generic [ref=e1071]:
+                - button "Open messenger dropdown menu" [ref=e1073] [cursor=pointer]:
+                  - img "Open messenger dropdown menu" [ref=e1074]
+                - button "Compose message" [ref=e1077] [cursor=pointer]:
+                  - img [ref=e1078]
+                  - generic [ref=e1080]: Compose message
+                - button "You are on the messaging overlay. Press enter to open the list of conversations." [ref=e1081] [cursor=pointer]:
+                  - img [ref=e1082]
+                  - generic [ref=e1084]: You are on the messaging overlay. Press enter to open the list of conversations.
+          - complementary "AI-powered assistant to get help with your career, jobs etc"
+  - iframe [ref=e1085]:
+    - generic [active] [ref=f142e1]:
+      - generic:
+        - region "Toast message":
+          - heading "0 notifications total" [level=2] [ref=f142e3]
+          - alert
+      - region [ref=f142e4]
+      - generic [ref=f142e5]:
+        - generic [ref=f142e7]:
+          - button "Skip to search" [ref=f142e8] [cursor=pointer]:
+            - generic [ref=f142e9]: Skip to search
+          - button "Skip to main content" [ref=f142e10] [cursor=pointer]:
+            - generic [ref=f142e11]: Skip to main content
+          - button "Keyboard shortcuts" [ref=f142e12] [cursor=pointer]:
+            - generic [ref=f142e13]: Keyboard shortcuts
+          - button "Close jump menu" [ref=f142e14] [cursor=pointer]:
+            - img [ref=f142e15]
+            - generic [ref=f142e17]: Close jump menu
+        - banner "Global Navigation" [ref=f142e18]:
+          - generic [ref=f142e19]:
+            - link "LinkedIn" [ref=f142e20] [cursor=pointer]:
+              - /url: https://www.linkedin.com/feed/?nis=true
+              - img "LinkedIn" [ref=f142e23]:
+                - img [ref=f142e24]
+            - generic [ref=f142e28]:
+              - combobox "Search" [ref=f142e29]
+              - generic:
+                - img
+            - navigation "Primary Navigation" [ref=f142e30]:
+              - list [ref=f142e31]:
+                - listitem [ref=f142e32]:
+                  - link "new feed updates notifications Home" [ref=f142e33] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/feed/
+                    - generic [ref=f142e34]:
+                      - generic [ref=f142e37]: new feed updates notifications
+                      - img [ref=f142e41]
+                    - generic "Home" [ref=f142e43]
+                - listitem [ref=f142e44]:
+                  - link "1 new network update notification My Network" [ref=f142e45] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/mynetwork/?
+                    - generic [ref=f142e46]:
+                      - generic [ref=f142e47]:
+                        - generic [ref=f142e48]: "1"
+                        - generic [ref=f142e49]: 1 new network update notification
+                      - img [ref=f142e53]
+                    - generic "My Network" [ref=f142e55]
+                - listitem [ref=f142e56]:
+                  - link "Jobs" [ref=f142e57] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/jobs/?
+                    - img [ref=f142e61]
+                    - generic "Jobs" [ref=f142e63]
+                - listitem [ref=f142e64]:
+                  - link "Messaging" [ref=f142e65] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/messaging/?
+                    - img [ref=f142e69]
+                    - generic "Messaging" [ref=f142e71]
+                - listitem [ref=f142e72]:
+                  - link "Notifications" [ref=f142e73] [cursor=pointer]:
+                    - /url: https://www.linkedin.com/notifications/?
+                    - img [ref=f142e77]
+                    - generic "Notifications" [ref=f142e79]
+                - listitem [ref=f142e80]:
+                  - button "Meytal Peleg Me" [ref=f142e82] [cursor=pointer]:
+                    - img "Meytal Peleg" [ref=f142e83]
+                    - generic [ref=f142e84]:
+                      - text: Me
+                      - img [ref=f142e85]
+                - listitem [ref=f142e87]:
+                  - button "For Business" [ref=f142e89] [cursor=pointer]:
+                    - img [ref=f142e93]
+                    - generic "For Business" [ref=f142e95]:
+                      - text: For Business
+                      - img [ref=f142e96]
+                - listitem [ref=f142e98]:
+                  - link "Try Premium for ₪0" [ref=f142e100] [cursor=pointer]:
+                    - /url: javascript:void(0)
+                    - generic [ref=f142e101]:
+                      - img [ref=f142e102]
+                      - generic [ref=f142e104]: Try Premium for ₪0

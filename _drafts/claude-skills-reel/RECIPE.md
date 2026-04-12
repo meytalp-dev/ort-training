@@ -1,0 +1,14 @@
+# Recipe: Claude Code Skills Reel
+- Date: 2026-04-03
+- Language: English
+- Template: Tip / How-To
+- Opener: Typing Reveal
+- Hook: Slide Up + Glow
+- Feature 1: Typewriter Build (Structure)
+- Feature 2: 3D Card Flip (Hard Rules)
+- Feature 3: Pipeline Animation (Composition)
+- Benefits: Stack Build
+- Summary: Number Slam
+- CTA: Photo + Social
+- Color: #D97757 (Claude Code orange)
+- Previous reel: Claude Code Greg (Energy Pulse / 3D Flip / Button Escape+Messy→Org+Cursor Drag / Pill BIG / Number Slam / Photo+Social)

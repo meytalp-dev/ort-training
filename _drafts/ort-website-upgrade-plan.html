@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תוכנית שדרוג אתר אורט בית הערבה</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: #f8f9fa;
+            color: #1a1a2e;
+            line-height: 1.7;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #0d7377 0%, #14919b 50%, #0d7377 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2.4rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+        }
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .header .score {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            border-radius: 16px;
+            padding: 8px 24px;
+            margin-top: 16px;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        /* Container */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Section */
+        .section {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0d7377;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section h2 .num {
+            background: #0d7377;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .section h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #333;
+            margin: 20px 0 10px;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+        }
+        .section h3:first-of-type {
+            border-top: none;
+            padding-top: 0;
+        }
+        .section p, .section li {
+            font-size: 0.95rem;
+            color: #444;
+        }
+        .section ul {
+            padding-right: 20px;
+            margin: 8px 0;
+        }
+        .section li {
+            margin-bottom: 6px;
+        }
+
+        /* Priority badges */
+        .priority {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+        .priority.critical { background: #fee2e2; color: #dc2626; }
+        .priority.high { background: #fef3c7; color: #d97706; }
+        .priority.medium { background: #dbeafe; color: #2563eb; }
+        .priority.low { background: #e0e7ff; color: #4f46e5; }
+
+        /* Status badges */
+        .status {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .status.delete { background: #fee2e2; color: #dc2626; }
+        .status.update { background: #fef3c7; color: #d97706; }
+        .status.new { background: #d1fae5; color: #059669; }
+        .status.fix { background: #e0e7ff; color: #4f46e5; }
+        .status.keep { background: #f3f4f6; color: #6b7280; }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 0.9rem;
+        }
+        th {
+            background: #f8f9fa;
+            padding: 10px 12px;
+            text-align: right;
+            font-weight: 700;
+            color: #333;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: top;
+        }
+        tr:hover td {
+            background: #fafafa;
+        }
+        code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            direction: ltr;
+            unicode-bidi: embed;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .checklist li:last-child { border-bottom: none; }
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #d1d5db;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Summary bar */
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .summary-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .summary-item .number {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #0d7377;
+        }
+        .summary-item .label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        /* Where in WP */
+        .wp-location {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            color: #166534;
+            margin: 8px 0;
+        }
+        .wp-location strong {
+            color: #15803d;
+        }
+
+        /* Collapsible */
+        details {
+            margin: 8px 0;
+        }
+        summary {
+            cursor: pointer;
+            font-weight: 500;
+            color: #0d7377;
+            padding: 6px 0;
+        }
+        summary:hover {
+            color: #14919b;
+        }
+
+        .divider {
+            height: 4px;
+            background: linear-gradient(90deg, #0d7377, #14919b, #0d7377);
+            border-radius: 2px;
+            margin: 40px 0;
+        }
+
+        @media (max-width: 640px) {
+            .header { padding: 40px 20px; }
+            .header h1 { font-size: 1.8rem; }
+            .section { padding: 20px; }
+            .summary-bar { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>תוכנית שדרוג אתר אורט בית הערבה</h1>
+    <p>bethaarava.ort.org.il | סקירה מלאה + רשימת משימות</p>
+    <div class="score">ציון נוכחי: 3.6 / 10</div>
+    <p style="margin-top: 8px; font-size: 0.9rem; opacity: 0.7;">נוצר: 6.4.2026 | WordPress 6.9.4</p>
+</div>
+
+<div class="container">
+
+    <!-- סיכום מספרים -->
+    <div class="summary-bar">
+        <div class="summary-item">
+            <div class="number">3</div>
+            <div class="label">עמודים למחיקה</div>
+        </div>
+        <div class="summary-item">
+            <div class="number">8</div>
+            <div class="label">פוסטים למחיקה</div>
+        </div>
+        <div class="summary-item">
+            <div class="number">3</div>
+            <div class="label">קטגוריות ריקות</div>
+        </div>
+        <div class="summary-item">
+            <div class="number">28</div>
+            <div class="label">פוסטים לעדכון</div>
+        </div>
+        <div class="summary-item">
+            <div class="number">9</div>
+            <div class="label">תמונות שבורות</div>
+        </div>
+        <div class="summary-item">
+            <div class="number">1</div>
+            <div class="label">קישור הרשמה לתקן</div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- שלב 1: ניקוי -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="section">
+        <h2><span class="num">1</span> ניקוי — מחיקת תוכן מיושן</h2>
+        <p>העברה לפח (אפשר לשחזר 30 יום). לא מחיקה לצמיתות.</p>
+
+        <h3>עמודים למחיקה (3)</h3>
+        <div class="wp-location"><strong>איפה ב-WP:</strong> עמודים &larr; בחר הכל &larr; "להעביר לפח" &larr; החל</div>
+        <table>
+            <tr><th>עמוד</th><th>ID</th><th>תאריך</th><th>סיבה</th><th>סטטוס</th></tr>
+            <tr>
+                <td>Authentication Error</td>
+                <td>4514</td>
+                <td>03/2022</td>
+                <td>דף טכני מיותר של WPO365, ריק</td>
+                <td><span class="status delete">למחוק</span></td>
+            </tr>
+            <tr>
+                <td>דף נחיתה</td>
+                <td>4353</td>
+                <td>12/2019</td>
+                <td>ריק — רק לינק ל-Trendy</td>
+                <td><span class="status delete">למחוק</span></td>
+            </tr>
+            <tr>
+                <td>לפרטים והרשמה</td>
+                <td>4641</td>
+                <td>07/2022</td>
+                <td>ריק לחלוטין</td>
+                <td><span class="status delete">למחוק</span></td>
+            </tr>
+        </table>
+
+        <h3>פוסטים למחיקה (8)</h3>
+        <div class="wp-location"><strong>איפה ב-WP:</strong> פוסטים &larr; סמנו כל פוסט &larr; "להעביר לפח" &larr; החל</div>
+        <table>
+            <tr><th>פוסט</th><th>ID</th><th>תאריך</th><th>קטגוריה</th><th>סיבה</th></tr>
+            <tr>
+                <td>לוח חופשות והימים המיוחדים</td>
+                <td>3691</td>
+                <td>10/2018</td>
+                <td>מאגר מידע</td>
+                <td>מיושן — תשע"ט</td>
+            </tr>
+            <tr>
+                <td>לוח צלצולים</td>
+                <td>3686</td>
+                <td>10/2018</td>
+                <td>מאגר מידע</td>
+                <td>מיושן</td>
+            </tr>
+            <tr>
+                <td>ספרי לימוד</td>
+                <td>3705</td>
+                <td>10/2018</td>
+                <td>מאגר מידע</td>
+                <td>מיושן — תשע"ט</td>
+            </tr>
+            <tr>
+                <td>אתרים שכדאי להכיר</td>
+                <td>3919</td>
+                <td>10/2018</td>
+                <td>מאגר מידע</td>
+                <td>מיושן, לא רלוונטי</td>
+            </tr>
+            <tr>
+                <td>קישורים שימושיים</td>
+                <td>3710</td>
+                <td>10/2018</td>
+                <td>מאגר מידע</td>
+                <td>מיושן</td>
+            </tr>
+            <tr>
+                <td>יומן אירועים</td>
+                <td>3681</td>
+                <td>10/2018</td>
+                <td>למידה בחירום</td>
+                <td>ריק, מיושן</td>
+            </tr>
+            <tr>
+                <td>למידה בחרום — RSS</td>
+                <td>3931</td>
+                <td>12/2021</td>
+                <td>למידה בחירום</td>
+                <td>לא רלוונטי</td>
+            </tr>
+            <tr>
+                <td>מה להביא לרישום</td>
+                <td>3646</td>
+                <td>09/2018</td>
+                <td>כללי</td>
+                <td>מיושן — תשע"ט</td>
+            </tr>
+        </table>
+
+        <h3>קטגוריות למחיקה (3)</h3>
+        <div class="wp-location"><strong>איפה ב-WP:</strong> פוסטים &larr; קטגוריות &larr; העבירו עכבר על השם &larr; "מחיקה"</div>
+        <table>
+            <tr><th>קטגוריה</th><th>Slug</th><th>פוסטים</th><th>סיבה</th></tr>
+            <tr>
+                <td>יצירת קשר</td>
+                <td>יצירת-קשר</td>
+                <td>0</td>
+                <td>ריקה</td>
+            </tr>
+            <tr>
+                <td>מגמות הלימוד</td>
+                <td>megamot</td>
+                <td>0</td>
+                <td>ריקה — כפילות עם "המגמות שלנו"</td>
+            </tr>
+            <tr>
+                <td>מסלולי לימוד</td>
+                <td>learning-path</td>
+                <td>0</td>
+                <td>ריקה</td>
+            </tr>
+        </table>
+
+        <h3>קטגוריות שיתרוקנו אחרי המחיקה</h3>
+        <table>
+            <tr><th>קטגוריה</th><th>פוסטים שיימחקו</th><th>המלצה</th></tr>
+            <tr>
+                <td>מאגר מידע (information)</td>
+                <td>5 מתוך 6 (נשאר: מגילת זכויות)</td>
+                <td>להעביר את "מגילת זכויות" לקטגוריה אחרת ולמחוק</td>
+            </tr>
+            <tr>
+                <td>למידה בחירום</td>
+                <td>2 מתוך 2</td>
+                <td>למחוק אחרי שהפוסטים בפח</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- שלב 2: תיקונים טכניים -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="section">
+        <h2><span class="num">2</span> תיקונים טכניים דחופים</h2>
+
+        <h3><span class="priority critical">קריטי</span> תיקון קישור ההרשמה</h3>
+        <div class="wp-location"><strong>איפה ב-WP:</strong> התבנית עשויה להשתמש בתפריט מותאם אישית. בדקו: מראה &larr; תפריטים, או: מראה &larr; ווידג'טים (Widgets).<br>אם אין גישה ל"מראה" (כי אתם Editors), צריך Admin.</div>
+        <p>הקישור הנוכחי של "הרשמה" בתפריט עובר דרך Cisco Secure Web proxy:</p>
+        <p style="direction:ltr; text-align:left; font-size: 0.8rem; word-break: break-all; background: #fee2e2; padding: 8px; border-radius: 6px; margin: 8px 0;">
+            https://secure-web.cisco.com/1-axsEgLjvvspgVrgkBIx_QrIcd9a2RQpWLsqij3XTgtO_6oWjMogyV2GIYcpd15v...
+        </p>
+        <p><strong>להחליף ב:</strong></p>
+        <p style="direction:ltr; text-align:left; background: #d1fae5; padding: 8px; border-radius: 6px; margin: 8px 0;">
+            https://landing.trendy.org.il/bet-haarava/
+        </p>
+
+        <h3><span class="priority critical">קריטי</span> דף יצירת קשר חסר</h3>
+        <p>אין דף יצירת קשר עובד באתר (404). צריך ליצור פוסט/עמוד חדש עם:</p>
+        <ul>
+            <li>טלפון: 02-5374682, 02-5370454</li>
+            <li>WhatsApp: 050-2671012</li>
+            <li>כתובת פיזית של בית הספר</li>
+            <li>מפת Google</li>
+            <li>שעות פעילות</li>
+        </ul>
+
+        <h3><span class="priority high">גבוה</span> תמונות שבורות (403)</h3>
+        <p>9 תמונות עם שמות בעברית מחזירות שגיאת 403. הפתרון: להעלות מחדש עם שמות באנגלית.</p>
+        <table>
+            <tr><th>תמונה</th><th>משויכת לפוסט</th></tr>
+            <tr><td>סלטה.jpg</td><td>סלטה</td></tr>
+            <tr><td>מרכז-למידה.jpg</td><td>מרכז למידה</td></tr>
+            <tr><td>מפגש-מנהלת-תלמידים.jpg</td><td>מפגשי מנהלת תלמידים</td></tr>
+            <tr><td>יום-המעשים-הטובים.png</td><td>יום המעשים הטובים</td></tr>
+            <tr><td>מעורבות-חברתית.jpg</td><td>מעורבות חברתית-קהילתית</td></tr>
+            <tr><td>כלבנות.jpeg</td><td>כלבנות</td></tr>
+            <tr><td>מגמת-מחשבים-אורט-בית-הערבה-.jpg</td><td>מגמת מחשבים</td></tr>
+            <tr><td>מכונאות-חשמל-בית-הערבה-.jpg</td><td>מגמת אוטו-טק</td></tr>
+            <tr><td>תמונה-פנימית-2-1.jpg</td><td>דף ראשי / סליידר</td></tr>
+        </table>
+
+        <h3><span class="priority high">גבוה</span> Slugs לא הגיוניים</h3>
+        <p>כמה פוסטים יש להם כתובות URL שלא תואמות את התוכן. לתקן דרך: פוסטים &larr; עריכה מהירה &larr; שינוי ה-Slug.</p>
+        <table>
+            <tr><th>פוסט</th><th>Slug נוכחי (שגוי)</th><th>Slug מומלץ</th></tr>
+            <tr>
+                <td>יזמות</td>
+                <td><code>the-beginning-of-the-school-year</code></td>
+                <td><code>entrepreneurship</code></td>
+            </tr>
+            <tr>
+                <td>רלוונטיות</td>
+                <td><code>אצלנו-לומדים-כרגיל-הכשרה-מקצועית-ולמ</code> (קטוע)</td>
+                <td><code>relevance</code></td>
+            </tr>
+            <tr>
+                <td>מעבדת מחשבים חברתית</td>
+                <td><code>repair-of-cell-phones</code></td>
+                <td><code>community-computer-lab</code></td>
+            </tr>
+            <tr>
+                <td>הפקת אירועים חברתיים</td>
+                <td><code>training-for-use-on-the-phone</code></td>
+                <td><code>community-events</code></td>
+            </tr>
+            <tr>
+                <td>החינוך היוצר</td>
+                <td><code>כתבו-עלינו-בעיתון</code></td>
+                <td><code>creative-education</code></td>
+            </tr>
+            <tr>
+                <td>דבר המנהלת</td>
+                <td><code>the-managers-thing</code></td>
+                <td><code>principal-message</code></td>
+            </tr>
+            <tr>
+                <td>לוח צלצולים</td>
+                <td><code>טפסים-ונהלים</code></td>
+                <td>(יימחק)</td>
+            </tr>
+        </table>
+        <p><strong>חשוב:</strong> אחרי שינוי slug, להגדיר Redirect מהכתובת הישנה לחדשה דרך Yoast SEO &larr; הפניות (Redirects).</p>
+
+        <h3><span class="priority medium">בינוני</span> תיקוני robots.txt</h3>
+        <p>ה-robots.txt מפנה ל-<code>/sitemap_index.xml</code> אבל הקובץ האמיתי הוא <code>/sitemap.xml</code>. דורש גישת Admin לתיקון.</p>
+
+        <h3><span class="priority medium">בינוני</span> אייקוני Top Bar שגויים</h3>
+        <p>בסרגל העליון של האתר, הלייבלים לא תואמים:</p>
+        <ul>
+            <li>"google" &larr; זה קישור למייל, צריך "מייל" או "Gmail"</li>
+            <li>"webtop" &larr; זה קישור לאינסטגרם, צריך "Instagram"</li>
+        </ul>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- שלב 3: SEO -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="section">
+        <h2><span class="num">3</span> שיפורי SEO</h2>
+        <div class="wp-location"><strong>איפה ב-WP:</strong> בכל פוסט/עמוד, למטה יש תיבת Yoast SEO. שם עורכים את ה-Meta Description ו-Title.</div>
+
+        <h3>Meta Description לדף הבית</h3>
+        <p><strong>נוכחי:</strong> "תיכון יזמי, חדשני ורלוונטי" (קצר מדי)</p>
+        <p><strong>מומלץ:</strong></p>
+        <p style="background: #d1fae5; padding: 10px; border-radius: 6px; direction: rtl;">
+            תיכון מקצועי בירושלים | מגמות מחשבים, אוטוטק, עיצוב שיער | בגרות מלאה + תעודת מקצוע + ניסיון תעסוקתי | הרשמה לתשפ"ז
+        </p>
+
+        <h3>Alt Text לתמונות</h3>
+        <p>רוב התמונות באתר ללא תיאור alt. בכל עריכת פוסט, ללחוץ על התמונה ולהוסיף תיאור.</p>
+        <p>דוגמאות:</p>
+        <ul>
+            <li>תמונת סליידר 1: "תלמידים באורט בית הערבה בשיעור מעשי"</li>
+            <li>תמונת סליידר 2: "בית ספר אורט בית הערבה ירושלים — מבט מבחוץ"</li>
+            <li>תמונת מגמת מחשבים: "תלמיד עובד על מחשב במגמת ניהול רשתות"</li>
+        </ul>
+
+        <h3>דף נפרד לכל מגמה (SEO חדש)</h3>
+        <p>כל מגמה צריכה דף נחיתה עם מילות מפתח ייעודיות כדי שמי שמחפש ימצא:</p>
+        <ul>
+            <li><strong>מגמת מחשבים:</strong> "לימודי מחשבים ירושלים", "קורס ניהול רשתות תיכון"</li>
+            <li><strong>מגמת אוטוטק:</strong> "לימודי מכונאות ירושלים", "מכונאות רכב תיכון"</li>
+            <li><strong>מגמת ביוטי:</strong> "לימודי עיצוב שיער ירושלים", "ביוטי טק תיכון"</li>
+        </ul>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- שלב 4: עדכון תוכן -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="section">
+        <h2><span class="num">4</span> עדכון תוכן קיים</h2>
+        <p>כל הפוסטים הנשארים (28) צריכים עדכון. הנה פירוט לפי קטגוריה:</p>
+
+        <h3>אודות (4 פוסטים)</h3>
+        <table>
+            <tr><th>פוסט</th><th>עדכון אחרון</th><th>מה לעדכן</th><th>עדיפות</th></tr>
+            <tr>
+                <td>מי אנחנו (ID: 3562)</td>
+                <td>08/2022</td>
+                <td>לשכתב בשפה פשוטה שמדברת להורים. להוסיף מספרים (שנות פעילות, תלמידים, אחוזי בגרות). להחליף תמונה.</td>
+                <td><span class="priority critical">קריטי</span></td>
+            </tr>
+            <tr>
+                <td>דבר המנהלת (ID: 4121)</td>
+                <td>08/2022</td>
+                <td>לעדכן טקסט לתשפ"ז. לוודא שם המנהלת נכון. תמונה עדכנית.</td>
+                <td><span class="priority high">גבוה</span></td>
+            </tr>
+            <tr>
+                <td>חזון בית הספר (ID: 3544)</td>
+                <td>08/2022</td>
+                <td>לשכתב — שפה פילוסופית מדי. להפוך לנקודות ברורות.</td>
+                <td><span class="priority medium">בינוני</span></td>
+            </tr>
+            <tr>
+                <td>בעלי תפקידים (ID: 4210)</td>
+                <td>06/2024</td>
+                <td>לוודא שהרשימה עדכנית לתשפ"ז. להוסיף תמונות.</td>
+                <td><span class="priority medium">בינוני</span></td>
+            </tr>
+        </table>
+
+        <h3>המגמות שלנו (3 פוסטים)</h3>
+        <table>
+            <tr><th>פוסט</th><th>עדכון אחרון</th><th>מה לעדכן</th><th>עדיפות</th></tr>
+            <tr>
+                <td>מגמת מחשבים — ניהול רשתות (ID: 3850)</td>
+                <td>08/2022</td>
+                <td>עדכון תוכן, תמונות עדכניות, הוספת הישגים וסיפור בוגר</td>
+                <td><span class="priority high">גבוה</span></td>
+            </tr>
+            <tr>
+                <td>מגמת אוטו-טק (ID: 3843)</td>
+                <td>08/2022</td>
+                <td>אותו דבר — תמונות, הישגים, בוגרים</td>
+                <td><span class="priority high">גבוה</span></td>
+            </tr>
+            <tr>
+                <td>מגמת ביוטי-טק (ID: 3622)</td>
+                <td>08/2022</td>
+                <td>אותו דבר — תמונות, הישגים, בוגרים</td>
+                <td><span class="priority high">גבוה</span></td>
+            </tr>
+        </table>
+
+        <h3>חדשני — יזמי — רלוונטי (4 פוסטים)</h3>
+        <table>
+            <tr><th>פוסט</th><th>עדכון אחרון</th><th>מה לעדכן</th></tr>
+            <tr>
+                <td>החינוך היוצר (ID: 4403)</td>
+                <td>08/2022</td>
+                <td>לעדכן תוכן, להוסיף דוגמאות עדכניות</td>
+            </tr>
+            <tr>
+                <td>חדשנות (ID: 3638)</td>
+                <td>08/2022</td>
+                <td>לעדכן — מה חדשני בתשפ"ז?</td>
+            </tr>
+            <tr>
+                <td>יזמות (ID: 3636)</td>
+                <td>08/2022</td>
+                <td>לעדכן + לתקן slug</td>
+            </tr>
+            <tr>
+                <td>רלוונטיות (ID: 3634)</td>
+                <td>08/2022</td>
+                <td>לעדכן + לתקן slug</td>
+            </tr>
+        </table>
+
+        <h3>העסקים החברתיים שלנו (4 פוסטים)</h3>
+        <table>
+            <tr><th>פוסט</th><th>עדכון אחרון</th><th>מה לעדכן</th></tr>
+            <tr>
+                <td>השתלבות בעולם התעסוקה (ID: 4218)</td>
+                <td>04/2022</td>
+                <td>לעדכן נתונים ודוגמאות עדכניות</td>
+            </tr>
+            <tr>
+                <td>מספרה קהילתית (ID: 3867)</td>
+                <td>04/2022</td>
+                <td>לוודא שעדיין פעילה, לעדכן תמונות</td>
+            </tr>
+            <tr>
+                <td>מעבדת מחשבים (ID: 3864)</td>
+                <td>04/2022</td>
+                <td>לוודא שעדיין פעילה, לתקן slug</td>
+            </tr>
+            <tr>
+                <td>הפקת אירועים (ID: 3861)</td>
+                <td>04/2022</td>
+                <td>לוודא שעדיין פעילה, לתקן slug</td>
+            </tr>
+        </table>
+
+        <h3>הייחודיות שלנו (6 פוסטים)</h3>
+        <table>
+            <tr><th>פוסט</th><th>עדכון אחרון</th><th>מה לעדכן</th></tr>
+            <tr>
+                <td>חווית לימודים (ID: 4278)</td>
+                <td>08/2022</td>
+                <td>לעדכן תוכן</td>
+            </tr>
+            <tr>
+                <td>פרויקט מעגלים (ID: 4276)</td>
+                <td>08/2022</td>
+                <td>לוודא שעדיין פעיל</td>
+            </tr>
+            <tr>
+                <td>יזמות וחדשנות (ID: 4272)</td>
+                <td>08/2022</td>
+                <td>לעדכן דוגמאות</td>
+            </tr>
+            <tr>
+                <td>סלטה (ID: 4268)</td>
+                <td>07/2019</td>
+                <td>לוודא שעדיין פעיל, לתקן תמונה שבורה</td>
+            </tr>
+            <tr>
+                <td>כלבנות (ID: 4266)</td>
+                <td>07/2019</td>
+                <td>לוודא שעדיין פעיל, לתקן תמונה שבורה</td>
+            </tr>
+            <tr>
+                <td>מרכז למידה (ID: 4228)</td>
+                <td>07/2019</td>
+                <td>לוודא שעדיין פעיל, לתקן תמונה שבורה</td>
+            </tr>
+        </table>
+
+        <h3>יזמות וקהילה (3 פוסטים)</h3>
+        <table>
+            <tr><th>פוסט</th><th>עדכון אחרון</th><th>מה לעדכן</th></tr>
+            <tr>
+                <td>מפגשי מנהלת תלמידים (ID: 4284)</td>
+                <td>07/2019</td>
+                <td>לעדכן, תמונה שבורה</td>
+            </tr>
+            <tr>
+                <td>יום המעשים הטובים (ID: 4282)</td>
+                <td>07/2019</td>
+                <td>לעדכן, תמונה שבורה</td>
+            </tr>
+            <tr>
+                <td>מעורבות חברתית-קהילתית (ID: 4280)</td>
+                <td>07/2019</td>
+                <td>לעדכן, תמונה שבורה</td>
+            </tr>
+        </table>
+
+        <h3>נשארים כמו שהם</h3>
+        <table>
+            <tr><th>פוסט</th><th>הערה</th></tr>
+            <tr><td>הצהרת נגישות (ID: 4510)</td><td><span class="status keep">נשאר</span> — חובה חוקית</td></tr>
+            <tr><td>טופס יצירת קשר (ID: 4333)</td><td><span class="status update">לבדוק</span> — לוודא שעובד</td></tr>
+            <tr><td>מגילת זכויות התלמיד (ID: 3699)</td><td><span class="status keep">נשאר</span> — להעביר קטגוריה</td></tr>
+            <tr><td>יזכור (ID: 3180)</td><td><span class="status keep">נשאר</span> — תוכן רגיש, לא לגעת</td></tr>
+        </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- שלב 5: תוכן חדש -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="section">
+        <h2><span class="num">5</span> תוכן חדש שחסר</h2>
+
+        <table>
+            <tr><th>תוכן</th><th>סוג</th><th>עדיפות</th><th>תיאור</th></tr>
+            <tr>
+                <td>דף בית ייעודי</td>
+                <td><span class="status new">חדש</span></td>
+                <td><span class="priority critical">קריטי</span></td>
+                <td>Hero Section עם סרטון, מספרים מפתח (שנים/תלמידים/בגרות), מגמות, CTA בולט. במקום הפורמט הנוכחי של בלוג.</td>
+            </tr>
+            <tr>
+                <td>דף יצירת קשר</td>
+                <td><span class="status new">חדש</span></td>
+                <td><span class="priority critical">קריטי</span></td>
+                <td>טלפונים, WhatsApp, כתובת, מפה, טופס קשר, שעות</td>
+            </tr>
+            <tr>
+                <td>סיפורי בוגרים</td>
+                <td><span class="status new">חדש</span></td>
+                <td><span class="priority high">גבוה</span></td>
+                <td>5-8 כרטיסי בוגרים: תמונה, שם, מגמה, "היום אני עובד ב...", ציטוט</td>
+            </tr>
+            <tr>
+                <td>שאלות נפוצות (FAQ)</td>
+                <td><span class="status new">חדש</span></td>
+                <td><span class="priority high">גבוה</span></td>
+                <td>תשובות לשאלות הורים: הסעות, ארוחות, שעות, תנאי קבלה, מלגות</td>
+            </tr>
+            <tr>
+                <td>חדשות ואירועים</td>
+                <td><span class="status new">חדש</span></td>
+                <td><span class="priority high">גבוה</span></td>
+                <td>עמוד בלוג עדכני עם אירועים, הישגים, טקסים</td>
+            </tr>
+            <tr>
+                <td>גלריה עדכנית</td>
+                <td><span class="status new">חדש</span></td>
+                <td><span class="priority medium">בינוני</span></td>
+                <td>הגלריה הנוכחית מ-2018. צריך תמונות 2025-2026.</td>
+            </tr>
+            <tr>
+                <td>יום בחיי תלמיד</td>
+                <td><span class="status new">חדש</span></td>
+                <td><span class="priority medium">בינוני</span></td>
+                <td>תוכן רגשי — מה התלמיד עושה מ-8 בבוקר עד 3 אחה"צ</td>
+            </tr>
+            <tr>
+                <td>שורת לוגואים — שותפים</td>
+                <td><span class="status new">חדש</span></td>
+                <td><span class="priority low">נמוך</span></td>
+                <td>אורט, משרד העבודה, ג'וינט, נפט"י — לוגואים בדף הבית</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- שלב 6: עיצוב וביצועים -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="section">
+        <h2><span class="num">6</span> שיפורי עיצוב וביצועים</h2>
+        <p>חלק מהדברים האלה דורשים גישת Admin. סימון בהתאם.</p>
+
+        <h3><span class="priority high">גבוה</span> כפתור WhatsApp צף</h3>
+        <p>להוסיף כפתור WhatsApp קבוע (floating) בפינת המסך שנגיש בכל דף. דורש Admin (תוסף או קוד בתבנית).</p>
+
+        <h3><span class="priority high">גבוה</span> כפתור CTA בולט בתפריט</h3>
+        <p>להפוך את "הרשמה" בתפריט לכפתור צבעוני בולט (לא רק טקסט). דורש Admin (CSS מותאם).</p>
+
+        <h3><span class="priority high">גבוה</span> סרטון בדף הבית</h3>
+        <p>להעלות את סרטון "תלמידים ממליצים" מהפוטר לראש דף הבית. סרטון YouTube קיים — רק להזיז.</p>
+
+        <h3><span class="priority medium">בינוני</span> צבעים</h3>
+        <p>הפלטת הנוכחית צעקנית: ורוד חזק + טורקיז + סגול. מומלץ לצמצם ל-2 צבעים רגועים (בהתאם למיתוג החדש).</p>
+
+        <h3><span class="priority medium">בינוני</span> ביצועי טעינה</h3>
+        <ul>
+            <li>הוספת <code>loading="lazy"</code> לתמונות (דורש Admin)</li>
+            <li>דחיסת תמונות — רובן 2560px, צריך להקטין ל-1200px</li>
+            <li>צמצום פונטים מ-Google Fonts ל-2-3 משקלים בלבד</li>
+            <li>הסרת תוספים כבדים שלא בשימוש (FortVision campaign)</li>
+        </ul>
+
+        <h3><span class="priority low">נמוך</span> החלפת תבנית</h3>
+        <p>התבנית Poza מבוססת Bootstrap 3.2 (מיושן מאוד). בשלב המיתוג לשקול מעבר לתבנית מודרנית. דורש Admin.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- שלב 7: הרשאות -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="section">
+        <h2><span class="num">7</span> הרשאות חסרות — דורש Admin</h2>
+        <p>המשתמשת הנוכחית (golan liron) היא <strong>Editor</strong>, לא Administrator. לכן אי אפשר:</p>
+        <ul>
+            <li>להוסיף משתמשים חדשים</li>
+            <li>לערוך תפריטים (Appearance &rarr; Menus)</li>
+            <li>להתקין/להסיר תוספים</li>
+            <li>לשנות תבנית</li>
+            <li>לערוך CSS</li>
+            <li>לערוך ווידג'טים (Widgets)</li>
+        </ul>
+        <p><strong>מה לעשות:</strong> לפנות ל-IT של אורט ולבקש:</p>
+        <ol>
+            <li>הרשאות Administrator למשתמשת שלך (או למייטל)</li>
+            <li>או לחלופין — Application Password שמאפשר גישה דרך API</li>
+        </ol>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- צ'קליסט מסכם -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="divider"></div>
+
+    <div class="section">
+        <h2><span class="num" style="background:#d97706;">!</span> צ'קליסט עבודה — סדר ביצוע</h2>
+        <p>מסומן לפי מי יכול לבצע: <strong>Editor</strong> (עם ההרשאות הנוכחיות) או <strong>Admin</strong> (דורש שדרוג הרשאות).</p>
+
+        <h3>שלב א — ניקוי (Editor)</h3>
+        <ul class="checklist">
+            <li><div class="checkbox"></div><span>מחיקת 3 עמודים ריקים (Authentication Error, דף נחיתה, לפרטים והרשמה)</span></li>
+            <li><div class="checkbox"></div><span>מחיקת 8 פוסטים מיושנים (לוח חופשות, לוח צלצולים, ספרי לימוד, אתרים, קישורים, יומן אירועים, למידה בחירום, מה להביא)</span></li>
+            <li><div class="checkbox"></div><span>מחיקת 3 קטגוריות ריקות (יצירת קשר, מגמות הלימוד, מסלולי לימוד)</span></li>
+            <li><div class="checkbox"></div><span>מחיקת קטגוריות "מאגר מידע" ו"למידה בחירום" (אחרי שהפוסטים בפח)</span></li>
+        </ul>
+
+        <h3>שלב ב — תיקונים טכניים (Admin)</h3>
+        <ul class="checklist">
+            <li><div class="checkbox"></div><span>תיקון קישור הרשמה בתפריט &rarr; <code>https://landing.trendy.org.il/bet-haarava/</code></span></li>
+            <li><div class="checkbox"></div><span>יצירת דף יצירת קשר</span></li>
+            <li><div class="checkbox"></div><span>תיקון לייבלים בסרגל עליון (google &rarr; מייל, webtop &rarr; Instagram)</span></li>
+            <li><div class="checkbox"></div><span>הוספת משתמשת Admin למיטל</span></li>
+        </ul>
+
+        <h3>שלב ג — תיקוני Slugs (Editor)</h3>
+        <ul class="checklist">
+            <li><div class="checkbox"></div><span>תיקון 6 slugs שגויים + הגדרת redirects</span></li>
+        </ul>
+
+        <h3>שלב ד — עדכון תוכן (Editor)</h3>
+        <ul class="checklist">
+            <li><div class="checkbox"></div><span>עדכון "מי אנחנו" — שפה פשוטה, מספרים, תמונה</span></li>
+            <li><div class="checkbox"></div><span>עדכון "דבר המנהלת" — תשפ"ז</span></li>
+            <li><div class="checkbox"></div><span>עדכון 3 מגמות — תמונות, הישגים, סיפורי בוגרים</span></li>
+            <li><div class="checkbox"></div><span>עדכון 4 עסקים חברתיים — לוודא שפעילים</span></li>
+            <li><div class="checkbox"></div><span>עדכון 6 פוסטי ייחודיות — תמונות שבורות</span></li>
+            <li><div class="checkbox"></div><span>עדכון 3 פוסטי יזמות וקהילה</span></li>
+            <li><div class="checkbox"></div><span>עדכון Meta Description דרך Yoast</span></li>
+            <li><div class="checkbox"></div><span>הוספת Alt Text לכל התמונות</span></li>
+        </ul>
+
+        <h3>שלב ה — תוכן חדש (Editor + Admin)</h3>
+        <ul class="checklist">
+            <li><div class="checkbox"></div><span>בניית דף בית ייעודי (Admin — דורש שינוי הגדרת דף הבית)</span></li>
+            <li><div class="checkbox"></div><span>הוספת סרטון המלצות לדף הבית</span></li>
+            <li><div class="checkbox"></div><span>יצירת 5-8 סיפורי בוגרים</span></li>
+            <li><div class="checkbox"></div><span>יצירת עמוד FAQ</span></li>
+            <li><div class="checkbox"></div><span>יצירת עמוד חדשות/אירועים</span></li>
+            <li><div class="checkbox"></div><span>עדכון גלריה — תמונות 2025-2026</span></li>
+        </ul>
+
+        <h3>שלב ו — עיצוב וביצועים (Admin)</h3>
+        <ul class="checklist">
+            <li><div class="checkbox"></div><span>הוספת כפתור WhatsApp צף</span></li>
+            <li><div class="checkbox"></div><span>כפתור CTA בולט בתפריט</span></li>
+            <li><div class="checkbox"></div><span>דחיסת תמונות</span></li>
+            <li><div class="checkbox"></div><span>Lazy loading</span></li>
+            <li><div class="checkbox"></div><span>עדכון צבעים (לפי מיתוג חדש)</span></li>
+            <li><div class="checkbox"></div><span>שקילת החלפת תבנית</span></li>
+        </ul>
+    </div>
+
+    <p style="text-align: center; color: #999; font-size: 0.85rem; padding: 20px 0;">
+        נוצר ע"י Claude Code | 6.4.2026 | bethaarava.ort.org.il
+    </p>
+
+</div>
+
+</body>
+</html>
