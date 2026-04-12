@@ -990,7 +990,7 @@ function onRoleChange(role, skipCloudLoad) {
     loadFromSheet(role)
       .then(response => {
         showLoading(false);
-        if (response && (response.result === 'success' || response.status === 'ok') && response.plan && Object.keys(response.plan).length > 0) {
+        if (response && (response.result === 'success' || response.status === 'ok') && response.plan && hasRealContent(response.plan)) {
           const data = applyPlanData(response.plan);
           selectedAreas = data.selectedAreas || selectedAreas;
           customAreas = data.customAreas || customAreas;
@@ -1004,7 +1004,7 @@ function onRoleChange(role, skipCloudLoad) {
             localStorage.setItem('planning_last_role', role);
           } catch(e) {}
         } else {
-          // No data on Sheet, try localStorage
+          // Cloud empty — try localStorage (may have unsaved work)
           const key = 'planning_' + role;
           let localData;
           try { localData = JSON.parse(localStorage.getItem(key)); } catch(e) {}
@@ -1012,6 +1012,8 @@ function onRoleChange(role, skipCloudLoad) {
             populateForm(localData);
             renderAreaPills();
             renderGoalTabs();
+            // Sync local data up to cloud
+            scheduleCloudSave();
           }
           localStorage.setItem('planning_last_role', role);
           updateProgress();
@@ -1736,6 +1738,20 @@ function showLoading(show) {
   document.getElementById('loadingOverlay').classList.toggle('active', show);
 }
 
+function hasRealContent(plan) {
+  // Check if the plan from Sheet has actual content beyond just name/role
+  if (!plan) return false;
+  const g = plan.goals || {};
+  const a = plan.activities || {};
+  const v = plan.vision || {};
+  const e = plan.evaluation || {};
+  return (Object.keys(g).length > 0) ||
+         (Object.keys(a).length > 0) ||
+         (v.vision && v.vision.length > 0) ||
+         (Object.keys(e).length > 0) ||
+         (plan.profile && plan.profile.selectedAreas && plan.profile.selectedAreas.length > 0);
+}
+
 function applyPlanData(plan) {
   // Flatten plan structure back to the format populateForm expects
   const data = {};
@@ -1854,7 +1870,7 @@ function loadData() {
     loadFromSheet(lastRole)
       .then(response => {
         showLoading(false);
-        if (response && (response.result === 'success' || response.status === 'ok') && response.plan && Object.keys(response.plan).length > 0) {
+        if (response && (response.result === 'success' || response.status === 'ok') && response.plan && hasRealContent(response.plan)) {
           const data = applyPlanData(response.plan);
           onRoleChange(lastRole, true);
           selectedAreas = data.selectedAreas || selectedAreas;
@@ -1866,8 +1882,16 @@ function loadData() {
           // Also cache in localStorage
           try { localStorage.setItem('planning_' + lastRole, JSON.stringify(collectFormData())); } catch(e) {}
         } else {
-          // Fall back to localStorage
+          // Cloud data empty or missing — use localStorage (may have unsaved work)
           loadFromLocalStorage(lastRole);
+          // If localStorage had data and cloud was empty, sync up to cloud
+          const localKey = 'planning_' + lastRole;
+          try {
+            const localData = localStorage.getItem(localKey);
+            if (localData && response && (response.result === 'success' || response.status === 'ok')) {
+              scheduleCloudSave();
+            }
+          } catch(e) {}
         }
       })
       .catch(err => {
