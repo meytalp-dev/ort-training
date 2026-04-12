@@ -66,6 +66,14 @@ body::before{content:'';position:fixed;inset:0;
 .login-btn{width:100%;padding:14px;border:none;border-radius:14px;background:var(--primary);color:#fff;font-family:Heebo;font-size:1rem;font-weight:700;cursor:pointer;transition:.2s;opacity:.5;pointer-events:none}
 .login-btn.ready{opacity:1;pointer-events:auto}
 .login-btn.ready:hover{background:var(--primary-dark)}
+.pin-field{margin-bottom:16px;text-align:right;display:none}
+.pin-field.visible{display:block;animation:fadeIn .3s ease}
+.pin-field label{display:block;font-size:.85rem;font-weight:600;margin-bottom:5px}
+.pin-field input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:14px;font-family:Heebo;font-size:1.1rem;color:var(--text);background:var(--card);outline:none;text-align:center;letter-spacing:8px;box-sizing:border-box}
+.pin-field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(58,172,160,.15)}
+.pin-error{color:#e74c3c;font-size:.82rem;margin-top:6px;display:none}
+.pin-lock-icon{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:.78rem;margin-top:12px}
+.pin-lock-icon svg{width:14px;height:14px}
 
 /* ===== HEADER ===== */
 .header{background:linear-gradient(180deg,rgba(142,126,212,.18) 0%,#fff 100%);color:var(--text);padding:0 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:50;min-height:64px;box-shadow:0 2px 12px rgba(44,38,34,.06)}
@@ -288,7 +296,14 @@ body::before{content:'';position:fixed;inset:0;
       </select>
     </div>
 
+    <div class="pin-field" id="pinField">
+      <label>קוד גישה:</label>
+      <input type="password" id="pinInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="****" onkeyup="checkReady();if(event.key==='Enter')doLogin()">
+      <div class="pin-error" id="pinError">קוד שגוי</div>
+    </div>
+
     <button class="login-btn" id="loginBtn" onclick="doLogin()">כניסה</button>
+    <div class="pin-lock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> גישה מאובטחת</div>
   </div>
 </div>
 
@@ -404,7 +419,14 @@ function selectRole(role) {
   var fields = document.getElementById('loginFields');
   var sel = document.getElementById('loginSelect');
   var label = document.getElementById('loginLabel');
+  var pinField = document.getElementById('pinField');
+  var pinInput = document.getElementById('pinInput');
   sel.innerHTML = '<option value="">בחרי...</option>';
+  pinInput.value = '';
+  document.getElementById('pinError').style.display = 'none';
+
+  // PIN required for all roles
+  pinField.classList.add('visible');
 
   if (role === 'principal') {
     fields.classList.add('visible');
@@ -451,12 +473,34 @@ function selectRole(role) {
 function checkReady() {
   var sel = document.getElementById('loginSelect');
   var btn = document.getElementById('loginBtn');
-  btn.classList.toggle('ready', !!sel.value);
+  var pin = document.getElementById('pinInput').value;
+  btn.classList.toggle('ready', !!sel.value && pin.length >= 4);
 }
 
-function doLogin() {
+async function doLogin() {
   var sel = document.getElementById('loginSelect');
   if (!sel.value) return;
+
+  var pin = document.getElementById('pinInput').value;
+  if (pin.length < 4) { document.getElementById('pinError').style.display = 'block'; return; }
+
+  // Decrypt counselor reports
+  var btn = document.getElementById('loginBtn');
+  btn.textContent = 'מפענח...';
+  btn.style.opacity = '.5';
+  btn.style.pointerEvents = 'none';
+
+  var ok = await decryptCounselorReports(pin);
+  if (!ok) {
+    document.getElementById('pinError').style.display = 'block';
+    btn.textContent = 'כניסה';
+    btn.classList.add('ready');
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+    return;
+  }
+  document.getElementById('pinError').style.display = 'none';
+  btn.textContent = 'כניסה';
 
   state.userName = sel.options[sel.selectedIndex].textContent;
 
@@ -627,6 +671,8 @@ function renderTabs() {
   var visibleTabs = TAB_DEFS;
   if (state.role === 'student') {
     visibleTabs = TAB_DEFS.filter(function(t) { return ['profile','development','journey'].indexOf(t.id) > -1; });
+  } else if (state.role === 'teacher') {
+    visibleTabs = TAB_DEFS.filter(function(t) { return t.id !== 'treatment'; });
   }
 
   var bar = document.getElementById('tabsBar');
