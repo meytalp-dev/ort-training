@@ -452,6 +452,9 @@ document.addEventListener('DOMContentLoaded', () => {
   addStudentRow();
   buildLinks();
 
+  // Auto-restore from localStorage if available
+  if (layer) restoreFromLocal(layer);
+
   // Auto-detect view
   if (!layer && !name) {
     showView('dashboard');
@@ -535,6 +538,77 @@ function buildDomainForms() {
       </div>
     </div>
   `).join('');
+}
+
+function restoreFromLocal(layer) {
+  // Find most recent saved meeting for this layer
+  let latest = null;
+  let latestKey = null;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key.startsWith('meeting-')) continue;
+    try {
+      const data = JSON.parse(localStorage.getItem(key));
+      if (data.layer === layer) {
+        const ts = parseInt(key.split('-').pop()) || 0;
+        if (!latest || ts > latest._ts) {
+          data._ts = ts;
+          latest = data;
+          latestKey = key;
+        }
+      }
+    } catch (e) {}
+  }
+  if (!latest) return;
+
+  // Restore form fields
+  if (latest.date) document.getElementById('f-date').value = latest.date;
+  if (latest.participants) document.getElementById('f-participants').value = latest.participants;
+  if (latest.status_text) document.getElementById('f-status').value = latest.status_text;
+  if (latest.whats_good) document.getElementById('f-good').value = latest.whats_good;
+  if (latest.whats_challenging) document.getElementById('f-challenging').value = latest.whats_challenging;
+  if (latest.needs_from_management) document.getElementById('f-needs').value = latest.needs_from_management;
+  if (latest.notes) document.getElementById('f-notes').value = latest.notes;
+
+  // Restore goals
+  if (latest.goals) {
+    latest.goals.forEach(g => {
+      const domain = DOMAINS.find(d => d.name === g.domain);
+      if (domain) {
+        if (g.goal) document.getElementById(`goal-${domain.id}`).value = g.goal;
+        if (g.measurable_target) document.getElementById(`target-${domain.id}`).value = g.measurable_target;
+        if (g.action) document.getElementById(`action-${domain.id}`).value = g.action;
+        if (g.responsible) document.getElementById(`responsible-${domain.id}`).value = g.responsible;
+        if (g.deadline) document.getElementById(`deadline-${domain.id}`).value = g.deadline;
+        if (g.status) document.getElementById(`status-${domain.id}`).value = g.status;
+        checkDomainFilled(domain.id);
+        // Open domain if filled
+        if (g.goal || g.measurable_target) {
+          document.getElementById(`domain-${domain.id}`).classList.remove('collapsed');
+        }
+      }
+    });
+  }
+
+  // Restore students
+  if (latest.attention_students && latest.attention_students.length > 0) {
+    const container = document.getElementById('students-container');
+    container.innerHTML = '';
+    studentCounter = 0;
+    latest.attention_students.forEach(s => {
+      addStudentRow();
+      const rows = container.querySelectorAll('.domain-section');
+      const lastRow = rows[rows.length - 1];
+      if (s.student_name) lastRow.querySelector('.s-name').value = s.student_name;
+      if (s.student_class) lastRow.querySelector('.s-class').value = s.student_class;
+      if (s.reason) lastRow.querySelector('.s-reason').value = s.reason;
+      if (s.plan) lastRow.querySelector('.s-plan').value = s.plan;
+      if (s.responsible) lastRow.querySelector('.s-responsible').value = s.responsible;
+      if (s.status) lastRow.querySelector('.s-status').value = s.status;
+    });
+  }
+
+  toast('שוחזר מגיבוי מקומי — בדקי ושלחי שוב');
 }
 
 function toggleDomain(id) {
