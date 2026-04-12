@@ -387,6 +387,9 @@ var TAB_DEFS = [
   {id:'conversations',label:'שיחות',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>'},
   {id:'journey',label:'מסע אישי',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'},
   {id:'investments',label:'בנק השקעות',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'},
+  {id:'attendance',label:'נוכחות',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>'},
+  {id:'tardiness',label:'איחורים',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/><path d="M4.93 4.93l14.14 14.14"/></svg>'},
+  {id:'incidents',label:'אירועים חריגים',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'},
   {id:'documents',label:'מסמכים',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>'}
 ];
 
@@ -655,6 +658,9 @@ function renderTabContent(s) {
     conversations: renderConversations,
     journey: renderJourney,
     investments: renderInvestments,
+    attendance: renderAttendance,
+    tardiness: renderTardiness,
+    incidents: renderIncidents,
     documents: renderDocuments
   };
   var renderer = fn[state.activeTab];
@@ -1338,6 +1344,326 @@ function renderInvestments(s) {
   }
 
   return html;
+}
+
+// ===== ATTENDANCE TAB (נוכחות) =====
+function renderAttendance(s) {
+  var fullName = s.first + ' ' + s.last;
+  var fullNameRev = s.last + ' ' + s.first;
+  var data = getAttendanceData(s.id, fullName, fullNameRev);
+  var html = '';
+
+  // Summary cards
+  var pct = data.totalDays > 0 ? Math.round((data.presentDays / data.totalDays) * 100) : 0;
+  var pctColor = pct >= 80 ? 'var(--success)' : pct >= 60 ? 'var(--warn)' : 'var(--danger)';
+  var star = pct >= 90;
+  var risk = data.absentStreak >= 3;
+
+  html += '<div style="display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap">';
+  html += '<div style="background:rgba(122,173,173,.06);border:1.5px solid rgba(122,173,173,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:100px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">אחוז נוכחות</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:' + pctColor + '">' + pct + '%</div></div>';
+
+  html += '<div style="background:rgba(168,181,160,.06);border:1.5px solid rgba(168,181,160,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:100px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">ימי נוכחות</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--text)">' + data.presentDays + '<span style="font-size:.85rem;color:var(--muted)">/' + data.totalDays + '</span></div></div>';
+
+  html += '<div style="background:rgba(212,92,110,.06);border:1.5px solid rgba(212,92,110,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:100px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">ימי היעדרות</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--danger)">' + data.absentDays + '</div></div>';
+
+  html += '<div style="background:rgba(232,176,96,.06);border:1.5px solid rgba(232,176,96,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:100px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">חולה</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--warn)">' + data.sickDays + '</div></div>';
+  html += '</div>';
+
+  // Alerts
+  if (star) {
+    html += '<div style="background:rgba(76,175,80,.08);border:1.5px solid rgba(76,175,80,.2);border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">';
+    html += '<svg width="22" height="22" viewBox="0 0 24 24" fill="var(--success)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+    html += '<span style="font-size:.85rem;font-weight:600;color:var(--success)">כוכב נוכחות! נוכחות מעל 90%</span></div>';
+  }
+  if (risk) {
+    html += '<div style="background:rgba(212,92,110,.08);border:1.5px solid rgba(212,92,110,.2);border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">';
+    html += '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    html += '<span style="font-size:.85rem;font-weight:600;color:var(--danger)">התראת נשירה סמויה! ' + data.absentStreak + ' ימי היעדרות רצופים</span></div>';
+  }
+
+  // Monthly summary
+  html += '<h4 style="font-size:.92rem;font-weight:700;margin:18px 0 10px;font-family:Heebo">סיכום חודשי</h4>';
+  if (data.months.length > 0) {
+    html += '<table class="grades-table"><thead><tr><th>חודש</th><th>נוכחות</th><th>היעדרות</th><th>חולה</th><th>אחוז</th></tr></thead><tbody>';
+    data.months.forEach(function(m) {
+      var mPct = m.total > 0 ? Math.round((m.present / m.total) * 100) : 0;
+      var mColor = mPct >= 80 ? 'var(--success)' : mPct >= 60 ? 'var(--warn)' : 'var(--danger)';
+      html += '<tr><td style="font-weight:600">' + esc(m.label) + '</td>';
+      html += '<td style="color:var(--success)">' + m.present + '</td>';
+      html += '<td style="color:var(--danger)">' + m.absent + '</td>';
+      html += '<td style="color:var(--warn)">' + m.sick + '</td>';
+      html += '<td><span style="font-weight:700;color:' + mColor + '">' + mPct + '%</span></td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div style="text-align:center;padding:30px;color:var(--muted);font-size:.85rem">אין נתוני נוכחות עדיין.<br>הנתונים יתמלאו מדיווחי הנוכחות של בנות השירות.</div>';
+  }
+
+  // Recent events
+  if (data.recent.length > 0) {
+    html += '<h4 style="font-size:.92rem;font-weight:700;margin:18px 0 10px;font-family:Heebo">אירועי נוכחות אחרונים</h4>';
+    data.recent.forEach(function(r) {
+      var statusLabel = {present:'נוכח/ת',absent:'חסר/ה',sick:'חולה',late:'איחור',early:'יציאה מוקדמת'}[r.status] || r.status;
+      var statusColor = {present:'var(--success)',absent:'var(--danger)',sick:'var(--warn)',late:'var(--accent)',early:'var(--info)'}[r.status] || 'var(--muted)';
+      html += '<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid rgba(232,221,208,.3)">';
+      html += '<span style="font-size:.78rem;color:var(--muted);min-width:70px">' + esc(r.date) + '</span>';
+      html += '<span style="font-size:.78rem;font-weight:600;color:' + statusColor + ';background:' + statusColor.replace(')', ',.08)').replace('var(', 'rgba(').replace('--success','76,175,80').replace('--danger','212,92,110').replace('--warn','232,176,96').replace('--accent','232,176,96').replace('--info','91,155,213') + ';padding:2px 10px;border-radius:8px">' + statusLabel + '</span>';
+      if (r.reason) html += '<span style="font-size:.75rem;color:var(--muted)">' + esc(r.reason) + '</span>';
+      html += '</div>';
+    });
+  }
+
+  return html;
+}
+
+function getAttendanceData(studentId, fullName, fullNameRev) {
+  var result = {totalDays:0,presentDays:0,absentDays:0,sickDays:0,absentStreak:0,months:[],recent:[]};
+
+  // Try loading from localStorage (synced from attendance system)
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('sf_attendance_' + studentId)); } catch(e) {}
+
+  // Also try cloud storage
+  if (!stored && typeof cloudStorage !== 'undefined') {
+    try { stored = JSON.parse(cloudStorage.get('sf_attendance_' + studentId)); } catch(e) {}
+  }
+
+  if (stored) return stored;
+
+  // Try reading from ATTENDANCE global (if loaded from attendance system)
+  if (typeof ATTENDANCE !== 'undefined' && ATTENDANCE[studentId]) {
+    var records = ATTENDANCE[studentId];
+    var byMonth = {};
+    var sortedDates = Object.keys(records).sort().reverse();
+    var streak = 0;
+    var streakBroken = false;
+
+    sortedDates.forEach(function(date) {
+      var r = records[date];
+      result.totalDays++;
+      if (r.status === 'present' || r.status === 'late') { result.presentDays++; if (!streakBroken) { streakBroken = true; streak = 0; } }
+      else if (r.status === 'absent') { result.absentDays++; if (!streakBroken) streak++; }
+      else if (r.status === 'sick') { result.sickDays++; if (!streakBroken) streak++; }
+
+      // Monthly grouping
+      var monthKey = date.substring(0, 7);
+      if (!byMonth[monthKey]) byMonth[monthKey] = {present:0,absent:0,sick:0,total:0};
+      byMonth[monthKey].total++;
+      if (r.status === 'present' || r.status === 'late') byMonth[monthKey].present++;
+      else if (r.status === 'absent') byMonth[monthKey].absent++;
+      else if (r.status === 'sick') byMonth[monthKey].sick++;
+
+      // Recent
+      if (result.recent.length < 10) result.recent.push({date:date,status:r.status,reason:r.reason||''});
+    });
+
+    result.absentStreak = streak;
+    var MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    Object.keys(byMonth).sort().reverse().forEach(function(k) {
+      var m = byMonth[k];
+      var monthIdx = parseInt(k.split('-')[1]) - 1;
+      m.label = MONTH_NAMES[monthIdx] || k;
+      result.months.push(m);
+    });
+  }
+
+  return result;
+}
+
+// ===== TARDINESS TAB (איחורים) =====
+function renderTardiness(s) {
+  var fullName = s.first + ' ' + s.last;
+  var data = getTardinessData(s.id, fullName);
+  var html = '';
+
+  // Summary cards
+  html += '<div style="display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap">';
+
+  html += '<div style="background:rgba(232,176,96,.06);border:1.5px solid rgba(232,176,96,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:100px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">סה"כ איחורים</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--warn)">' + data.totalLates + '</div></div>';
+
+  html += '<div style="background:rgba(212,92,110,.06);border:1.5px solid rgba(212,92,110,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:100px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">חובות פתוחים</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--danger)">' + data.openDebts + '</div></div>';
+
+  html += '<div style="background:rgba(76,175,80,.06);border:1.5px solid rgba(76,175,80,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:100px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">הושלמו</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--success)">' + data.completed + '</div></div>';
+
+  html += '<div style="background:rgba(142,126,212,.06);border:1.5px solid rgba(142,126,212,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:100px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">דקות איחור ממוצע</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--dream)">' + data.avgMinutes + '</div></div>';
+  html += '</div>';
+
+  // Escalation warning
+  if (data.escalationLevel >= 2) {
+    html += '<div style="background:rgba(212,92,110,.08);border:1.5px solid rgba(212,92,110,.2);border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">';
+    html += '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    html += '<span style="font-size:.85rem;font-weight:600;color:var(--danger)">רמת הסלמה ' + data.escalationLevel + ' — נדרש טיפול</span></div>';
+  }
+
+  // Events list
+  if (data.events.length > 0) {
+    html += '<h4 style="font-size:.92rem;font-weight:700;margin:18px 0 10px;font-family:Heebo">היסטוריית איחורים</h4>';
+    html += '<table class="grades-table"><thead><tr><th>תאריך</th><th>דקות</th><th>סטטוס</th><th>מרכז למידה</th></tr></thead><tbody>';
+    data.events.forEach(function(e) {
+      var statusLabel = {completed:'הושלם',pending_lc:'ממתין',in_learning_center:'במרכז',abandoned:'לא הושלם',justified:'מוצדק'}[e.status] || e.status;
+      var statusColor = {completed:'var(--success)',pending_lc:'var(--warn)',in_learning_center:'var(--info)',abandoned:'var(--danger)',justified:'var(--muted)'}[e.status] || 'var(--muted)';
+      html += '<tr><td>' + esc(e.date) + '</td>';
+      html += '<td style="font-weight:600">' + e.minutes + '</td>';
+      html += '<td><span style="color:' + statusColor + ';font-weight:600;font-size:.78rem">' + statusLabel + '</span></td>';
+      html += '<td style="font-size:.78rem;color:var(--muted)">' + (e.taskScore ? e.taskScore + ' נק\'' : '—') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div style="text-align:center;padding:30px;color:var(--muted);font-size:.85rem">אין נתוני איחורים.<br>הנתונים יתמלאו ממערכת האיחורים.</div>';
+  }
+
+  return html;
+}
+
+function getTardinessData(studentId, fullName) {
+  var result = {totalLates:0,openDebts:0,completed:0,avgMinutes:0,escalationLevel:0,events:[]};
+
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('sf_tardiness_' + studentId)); } catch(e) {}
+  if (!stored && typeof cloudStorage !== 'undefined') {
+    try { stored = JSON.parse(cloudStorage.get('sf_tardiness_' + studentId)); } catch(e) {}
+  }
+  if (stored) return stored;
+
+  return result;
+}
+
+// ===== INCIDENTS TAB (אירועים חריגים) =====
+function renderIncidents(s) {
+  var data = getIncidentsData(s.id);
+  var html = '';
+
+  // Summary
+  html += '<div style="display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap">';
+
+  html += '<div style="background:rgba(212,92,110,.06);border:1.5px solid rgba(212,92,110,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:120px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">אירועי משמעת</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--danger)">' + data.disciplineCount + '</div></div>';
+
+  html += '<div style="background:rgba(232,176,96,.06);border:1.5px solid rgba(232,176,96,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:120px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">אירועים חריגים</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--warn)">' + data.specialCount + '</div></div>';
+
+  html += '<div style="background:rgba(91,155,213,.06);border:1.5px solid rgba(91,155,213,.15);border-radius:14px;padding:16px 24px;text-align:center;flex:1;min-width:120px">';
+  html += '<div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">סטטוס פתוח</div>';
+  html += '<div style="font-size:1.8rem;font-weight:900;color:var(--info)">' + data.openCount + '</div></div>';
+  html += '</div>';
+
+  // Events list
+  if (data.events.length > 0) {
+    html += '<h4 style="font-size:.92rem;font-weight:700;margin:18px 0 10px;font-family:Heebo">רשימת אירועים</h4>';
+    data.events.forEach(function(e) {
+      var typeColor = e.type === 'discipline' ? 'var(--danger)' : e.type === 'safety' ? 'var(--warn)' : 'var(--info)';
+      var typeBg = e.type === 'discipline' ? 'rgba(212,92,110,.06)' : e.type === 'safety' ? 'rgba(232,176,96,.06)' : 'rgba(91,155,213,.06)';
+      var typeLabel = {discipline:'משמעת',safety:'בטיחות',social:'חברתי',emotional:'רגשי',other:'אחר'}[e.type] || e.type;
+      var statusLabel = e.status === 'open' ? 'פתוח' : e.status === 'handled' ? 'טופל' : e.status === 'closed' ? 'סגור' : e.status;
+      var statusColor = e.status === 'open' ? 'var(--danger)' : e.status === 'handled' ? 'var(--warn)' : 'var(--success)';
+
+      html += '<div style="background:' + typeBg + ';border:1px solid ' + typeColor.replace('var(','rgba(').replace('--danger','212,92,110').replace('--warn','232,176,96').replace('--info','91,155,213') + ',.15);border-radius:12px;padding:14px;margin-bottom:10px">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+      html += '<span style="font-size:.75rem;font-weight:700;color:' + typeColor + ';background:' + typeBg + ';padding:2px 10px;border-radius:8px;border:1px solid ' + typeColor.replace('var(','rgba(').replace('--danger','212,92,110').replace('--warn','232,176,96').replace('--info','91,155,213') + ',.2)">' + typeLabel + '</span>';
+      html += '<span style="font-size:.72rem;color:var(--muted)">' + esc(e.date) + '</span>';
+      html += '</div>';
+      html += '<div style="font-size:.85rem;font-weight:600;color:var(--text);margin-bottom:6px">' + esc(e.title) + '</div>';
+      if (e.description) html += '<div style="font-size:.8rem;color:var(--text-light);margin-bottom:8px;line-height:1.5">' + esc(e.description) + '</div>';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+      html += '<span style="font-size:.72rem;color:var(--muted)">' + esc(e.reporter || '') + '</span>';
+      html += '<span style="font-size:.72rem;font-weight:600;color:' + statusColor + '">' + statusLabel + '</span>';
+      html += '</div>';
+      if (e.action_taken) html += '<div style="font-size:.78rem;color:var(--primary-dark);margin-top:8px;padding-top:8px;border-top:1px solid rgba(232,221,208,.3)">פעולה: ' + esc(e.action_taken) + '</div>';
+      html += '</div>';
+    });
+  } else {
+    html += '<div style="text-align:center;padding:30px;color:var(--muted);font-size:.85rem">אין אירועים מתועדים.<br>אירועי משמעת ואירועים חריגים יתועדו כאן.</div>';
+  }
+
+  // Add incident button (for staff only)
+  if (state.role !== 'student') {
+    html += '<div style="margin-top:18px;text-align:center">';
+    html += '<button class="btn btn-primary btn-sm" onclick="showAddIncidentForm()" style="padding:8px 20px">+ תיעוד אירוע חדש</button></div>';
+  }
+
+  return html;
+}
+
+function getIncidentsData(studentId) {
+  var result = {disciplineCount:0,specialCount:0,openCount:0,events:[]};
+
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('sf_incidents_' + studentId)); } catch(e) {}
+  if (!stored && typeof cloudStorage !== 'undefined') {
+    try { stored = JSON.parse(cloudStorage.get('sf_incidents_' + studentId)); } catch(e) {}
+  }
+  if (stored) return stored;
+
+  return result;
+}
+
+function showAddIncidentForm() {
+  var studentId = state.selectedStudentId;
+  if (!studentId) return;
+  var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">';
+  html += '<div style="background:var(--card);border-radius:var(--radius-lg);padding:28px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto" dir="rtl">';
+  html += '<h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;font-family:Heebo">תיעוד אירוע חדש</h3>';
+  html += '<label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:4px">סוג</label>';
+  html += '<select id="incType" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:12px;font-family:Heebo"><option value="discipline">משמעת</option><option value="safety">בטיחות</option><option value="social">חברתי</option><option value="emotional">רגשי</option><option value="other">אחר</option></select>';
+  html += '<label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:4px">כותרת</label>';
+  html += '<input id="incTitle" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:12px;font-family:Heebo" placeholder="תיאור קצר">';
+  html += '<label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:4px">פירוט</label>';
+  html += '<textarea id="incDesc" rows="3" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:12px;font-family:Heebo;resize:vertical" placeholder="מה קרה?"></textarea>';
+  html += '<label style="font-size:.8rem;color:var(--muted);display:block;margin-bottom:4px">פעולה שננקטה</label>';
+  html += '<input id="incAction" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:16px;font-family:Heebo" placeholder="אם רלוונטי">';
+  html += '<div style="display:flex;gap:10px;justify-content:flex-start"><button class="btn btn-primary btn-sm" onclick="saveIncident()">שמירה</button><button class="btn btn-sm" onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:var(--bg-alt);border:1px solid var(--border)">ביטול</button></div>';
+  html += '</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function saveIncident() {
+  var studentId = state.selectedStudentId;
+  var type = document.getElementById('incType').value;
+  var title = document.getElementById('incTitle').value.trim();
+  if (!title) return;
+
+  var data = getIncidentsData(studentId);
+  var incident = {
+    id: Date.now().toString(36),
+    type: type,
+    title: title,
+    description: document.getElementById('incDesc').value.trim(),
+    action_taken: document.getElementById('incAction').value.trim(),
+    reporter: state.userName,
+    date: new Date().toLocaleDateString('he-IL'),
+    status: 'open'
+  };
+  data.events.unshift(incident);
+  if (type === 'discipline') data.disciplineCount++;
+  else data.specialCount++;
+  data.openCount++;
+
+  localStorage.setItem('sf_incidents_' + studentId, JSON.stringify(data));
+  if (typeof cloudStorage !== 'undefined') cloudStorage.set('sf_incidents_' + studentId, JSON.stringify(data));
+
+  var modal = document.querySelector('div[style*="fixed"][style*="z-index:1000"]');
+  if (modal) modal.remove();
+
+  var s = STUDENTS.find(function(st) { return st.id === studentId; });
+  if (s) renderTabContent(s);
 }
 
 // ===== DOCUMENTS TAB =====
