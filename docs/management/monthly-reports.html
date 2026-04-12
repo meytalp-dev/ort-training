@@ -56,6 +56,8 @@ h1,h2,h3,h4{font-family:'Shuneet3 Bold','Shuneet3',Heebo,sans-serif}
 .role-card.role-counselor.selected{border-color:var(--dusty-rose);background:rgba(201,160,160,.16)}
 .role-card.role-principal{background:rgba(122,173,173,.08)}
 .role-card.role-principal.selected{border-color:var(--primary);background:rgba(122,173,173,.16)}
+.role-card.role-deputy{background:rgba(91,155,213,.08)}
+.role-card.role-deputy.selected{border-color:#5B9BD5;background:rgba(91,155,213,.16)}
 .role-card svg{width:32px;height:32px;flex-shrink:0}
 .role-card .role-name{font-size:.9rem;font-weight:700}
 .login-name-area{margin-bottom:24px;text-align:right;display:none}
@@ -515,6 +517,10 @@ h1,h2,h3,h4{font-family:'Shuneet3 Bold','Shuneet3',Heebo,sans-serif}
         <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary-dark)" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span class="role-name">מנהלת</span>
       </div>
+      <div class="role-card role-deputy" onclick="selectRole('deputy')" id="roleCardDeputy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5B9BD5" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span class="role-name">סגנית</span>
+      </div>
     </div>
     <div class="login-name-area" id="loginNameArea">
       <label id="loginNameLabel">בחר שם:</label>
@@ -595,6 +601,7 @@ h1,h2,h3,h4{font-family:'Shuneet3 Bold','Shuneet3',Heebo,sans-serif}
 </div><!-- /container -->
 </div><!-- /appMain -->
 
+<script src="cloud-storage.js"></script>
 <script>
 // ==================== STAFF DATA ====================
 const STAFF = {
@@ -616,7 +623,8 @@ const STAFF = {
     {name:'ליאת רוזנר', classes:['יא1','יא2','יא3','ט2']},
     {name:'דורית ויגדור', classes:['י1','י2','י3']}
   ],
-  principal: {name:'מיטל פלג'}
+  principal: {name:'מיטל פלג'},
+  deputy: {name:'רווית גל'}
 };
 
 const CLASSES = ['ט1','ט2','י1','י2','י3','יא1','יא2','יא3','יב1','יב2','יב3'];
@@ -900,23 +908,19 @@ const LS_SESSION = 'ort_reports_session';
 let DATA = {};
 
 function loadData(){
-  const stored = localStorage.getItem(LS_KEY);
-  if(stored){
-    try{
-      DATA = JSON.parse(stored);
-      if(DATA.students && DATA.homeroomReports){
-        // Ensure homeVisits exists (migration for old data)
-        if(!DATA.homeVisits) DATA.homeVisits = generateHomeVisits(DATA.students);
-        return;
-      }
-    } catch(e){}
-  }
-  DATA = generateDemoData();
-  saveData();
+  return cloudStorage.get(LS_KEY).then(function(stored){
+    if(stored && stored.students && stored.homeroomReports){
+      DATA = stored;
+      if(!DATA.homeVisits) DATA.homeVisits = generateHomeVisits(DATA.students);
+      return;
+    }
+    DATA = generateDemoData();
+    saveData();
+  });
 }
 
 function saveData(){
-  localStorage.setItem(LS_KEY, JSON.stringify(DATA));
+  cloudStorage.set(LS_KEY, DATA);
 }
 
 function getAllStudents(){
@@ -1002,6 +1006,10 @@ function selectRole(role){
     STAFF.counselors.forEach(c => {
       nameSel.innerHTML += `<option value="${c.name}">${c.name} — ${c.classes.join(', ')}</option>`;
     });
+  } else if(role==='deputy'){
+    document.getElementById('loginNameLabel').textContent = 'סגנית:';
+    nameSel.innerHTML += `<option value="${STAFF.deputy.name}">${STAFF.deputy.name}</option>`;
+    nameSel.value = STAFF.deputy.name;
   } else {
     document.getElementById('loginNameLabel').textContent = 'מנהלת:';
     nameSel.innerHTML += `<option value="${STAFF.principal.name}">${STAFF.principal.name}</option>`;
@@ -1031,8 +1039,11 @@ function doLogin(){
   } else if(selectedRole==='counselor'){
     const c = STAFF.counselors.find(x=>x.name===name);
     currentUser = {role:'counselor', name:c.name, classes:c.classes};
+  } else if(selectedRole==='deputy'){
+    // סגנית — גישה זהה למנהלת לכל המסכים והדוחות
+    currentUser = {role:'principal', name:STAFF.deputy.name, title:'סגנית'};
   } else {
-    currentUser = {role:'principal', name:STAFF.principal.name};
+    currentUser = {role:'principal', name:STAFF.principal.name, title:'מנהלת'};
   }
 
   sessionStorage.setItem(LS_SESSION, JSON.stringify(currentUser));
@@ -1084,7 +1095,8 @@ function updateHeaderTitle(){
   } else if(currentUser.role==='counselor'){
     h.textContent = `דוח יועצת — ${currentUser.name}`;
   } else {
-    h.textContent = `דשבורד מנהלת — ${currentUser.name}`;
+    const title = currentUser.title || 'מנהלת';
+    h.textContent = `דשבורד ${title} — ${currentUser.name}`;
   }
 }
 
@@ -3050,13 +3062,14 @@ function sendReportToTeacher(cls, month){
 }
 
 function init(){
-  loadData();
-  // Check for direct report link first
-  if(checkDirectReportLink()) return;
-  if(!tryRestoreSession()){
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('appMain').style.display = 'none';
-  }
+  cloudStorage.mountStatusBadge();
+  loadData().then(function(){
+    if(checkDirectReportLink()) return;
+    if(!tryRestoreSession()){
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('appMain').style.display = 'none';
+    }
+  });
 }
 
 init();

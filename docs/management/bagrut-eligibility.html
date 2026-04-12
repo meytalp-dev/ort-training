@@ -445,6 +445,7 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 
 </div><!-- container -->
 
+<script src="cloud-storage.js"></script>
 <script>
 // ============================================
 // DATA
@@ -1209,22 +1210,23 @@ function filterPlans(query) {
 // ============================================
 
 function saveToStorage() {
-  try {
-    localStorage.setItem('ort_bagrut_data', JSON.stringify(bagrutData));
-    localStorage.setItem('ort_voc_data', JSON.stringify(vocData));
-    localStorage.setItem('ort_math_plans', JSON.stringify(mathPlans));
-  } catch(e) { console.warn('Storage save failed:', e); }
+  cloudStorage.setMany([
+    { key: 'ort_bagrut_data', value: bagrutData },
+    { key: 'ort_voc_data', value: vocData },
+    { key: 'ort_math_plans', value: mathPlans }
+  ]);
 }
 
 function loadFromStorage() {
-  try {
-    const b = localStorage.getItem('ort_bagrut_data');
-    const v = localStorage.getItem('ort_voc_data');
-    const m = localStorage.getItem('ort_math_plans');
-    if (b) bagrutData = JSON.parse(b);
-    if (v) vocData = JSON.parse(v);
-    if (m) mathPlans = JSON.parse(m);
-  } catch(e) { console.warn('Storage load failed:', e); }
+  // סינכרוני-לשעבר — עכשיו init() טוען מהענן לפני הקריאה
+}
+
+function loadFromStorageAsync() {
+  return cloudStorage.getMany(['ort_bagrut_data','ort_voc_data','ort_math_plans']).then(function(data){
+    if (data.ort_bagrut_data) bagrutData = data.ort_bagrut_data;
+    if (data.ort_voc_data) vocData = data.ort_voc_data;
+    if (data.ort_math_plans) mathPlans = data.ort_math_plans;
+  });
 }
 
 function saveAllData() {
@@ -1467,27 +1469,27 @@ function removeStudent(tab, identifier, name) {
 }
 
 function saveStudentList() {
-  try {
-    localStorage.setItem('ort_class_students', JSON.stringify(CLASS_STUDENTS));
-    localStorage.setItem('ort_voc_init', JSON.stringify(VOC_DATA_INIT));
-  } catch(e) {}
+  cloudStorage.setMany([
+    { key: 'ort_class_students', value: CLASS_STUDENTS },
+    { key: 'ort_voc_init', value: VOC_DATA_INIT }
+  ]);
 }
 
-function loadStudentList() {
-  try {
-    const cs = localStorage.getItem('ort_class_students');
-    const vi = localStorage.getItem('ort_voc_init');
-    if (cs) { const s = JSON.parse(cs); for (const k in s) CLASS_STUDENTS[k] = s[k]; }
-    if (vi) { const s = JSON.parse(vi); for (const k in s) VOC_DATA_INIT[k] = s[k]; }
-  } catch(e) {}
+function loadStudentListAsync() {
+  return cloudStorage.getMany(['ort_class_students','ort_voc_init']).then(function(data){
+    if (data.ort_class_students) { for (const k in data.ort_class_students) CLASS_STUDENTS[k] = data.ort_class_students[k]; }
+    if (data.ort_voc_init) { for (const k in data.ort_voc_init) VOC_DATA_INIT[k] = data.ort_voc_init[k]; }
+  });
 }
 
 // ============================================
 // START
 // ============================================
 
-loadStudentList();
-init();
+cloudStorage.mountStatusBadge();
+Promise.all([loadStudentListAsync(), loadFromStorageAsync()]).then(function(){
+  init();
+});
 </script>
 </body>
 </html>

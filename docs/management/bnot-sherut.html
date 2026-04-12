@@ -460,12 +460,15 @@ textarea.form-input{resize:vertical;min-height:80px}
 
 <div class="toast" id="toast"></div>
 
+<script src="cloud-storage.js"></script>
 <script>
-var APPS_SCRIPT_URL = '';
 var KEYS = ['bs_girls','bs_assignments','bs_attendance','bs_evaluations','bs_tasks'];
-var DB = {};
-KEYS.forEach(function(k){DB[k.replace('bs_','')]=JSON.parse(localStorage.getItem(k)||'[]');});
-function persist(){KEYS.forEach(function(k){localStorage.setItem(k,JSON.stringify(DB[k.replace('bs_','')]));});}
+var DB = { girls:[], assignments:[], attendance:[], evaluations:[], tasks:[] };
+function persist(){
+  cloudStorage.setMany(KEYS.map(function(k){
+    return { key: k, value: DB[k.replace('bs_','')] };
+  }));
+}
 
 // Tabs
 document.querySelectorAll('.nav button').forEach(function(btn){
@@ -743,9 +746,16 @@ document.getElementById('evalGirlFilter').addEventListener('change',renderEvals)
 document.getElementById('taskGirlFilter').addEventListener('change',renderTasks);
 document.getElementById('taskStatusFilter').addEventListener('change',renderTasks);
 
-// Init
+// Init — טעינה מהענן ואז רינדור
 function renderAll(){renderGirls();renderAssignments();renderAtt();renderEvals();renderTasks();updateGirlSelects();updateTaskSelects();}
-renderAll();
+cloudStorage.mountStatusBadge();
+cloudStorage.getMany(KEYS).then(function(data){
+  KEYS.forEach(function(k){
+    var prop = k.replace('bs_','');
+    DB[prop] = Array.isArray(data[k]) ? data[k] : [];
+  });
+  renderAll();
+});
 </script>
 </body>
 </html>

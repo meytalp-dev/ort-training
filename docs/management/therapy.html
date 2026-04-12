@@ -306,9 +306,10 @@ body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(c
 
 </div>
 
+<script src="cloud-storage.js"></script>
 <script>
 // ==================== DATA ====================
-// Data is stored in localStorage so admin changes persist
+// Data is stored via cloudStorage so admin changes persist across devices
 
 const DEFAULT_THERAPISTS = [
   {
@@ -505,29 +506,21 @@ const DEFAULT_ROOMS = [
 
 const STORAGE_KEY = 'ort_therapy_data';
 
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch(e) {}
-  return null;
-}
-
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+  cloudStorage.set(STORAGE_KEY, {
     therapists: THERAPISTS,
     waiting: WAITING_LIST,
     rooms: ROOMS,
     log: adminLog,
     version: 2
-  }));
+  });
 }
 
-const saved = loadData();
-let THERAPISTS = saved ? saved.therapists : JSON.parse(JSON.stringify(DEFAULT_THERAPISTS));
-let WAITING_LIST = saved ? saved.waiting : JSON.parse(JSON.stringify(DEFAULT_WAITING));
-let ROOMS = saved && saved.rooms ? saved.rooms : JSON.parse(JSON.stringify(DEFAULT_ROOMS));
-let adminLog = saved && saved.log ? saved.log : [];
+// ברירות מחדל — מוחלפות בטעינה מהענן ב-init
+let THERAPISTS = JSON.parse(JSON.stringify(DEFAULT_THERAPISTS));
+let WAITING_LIST = JSON.parse(JSON.stringify(DEFAULT_WAITING));
+let ROOMS = JSON.parse(JSON.stringify(DEFAULT_ROOMS));
+let adminLog = [];
 
 // ==================== RENDER ====================
 
@@ -1253,7 +1246,16 @@ function showToast(msg) {
 }
 
 // Init
-init();
+cloudStorage.mountStatusBadge();
+cloudStorage.get(STORAGE_KEY).then(function(saved){
+  if (saved) {
+    if (saved.therapists) THERAPISTS = saved.therapists;
+    if (saved.waiting) WAITING_LIST = saved.waiting;
+    if (saved.rooms) ROOMS = saved.rooms;
+    if (saved.log) adminLog = saved.log;
+  }
+  init();
+});
 </script>
 
 </body>
