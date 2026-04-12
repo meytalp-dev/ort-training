@@ -545,12 +545,12 @@ function ttColor(specialist) {
   return TT_COLOR_MAP[key];
 }
 
-let _ttView = 'students'; // 'students' | 'staff'
+let _ttView = 'students';
 let _ttFilterText = '';
 let _ttFilterClass = '';
+let _ttCurrentList = []; // stores the currently displayed list for click lookup
 
 function ttInit() {
-  // populate class select
   const classes = [...new Set(TT_DATA.students.filter(s=>s.class).map(s=>s.class))].sort();
   const sel = document.getElementById('tt-class');
   sel.innerHTML = '<option value="">כל הכיתות</option>';
@@ -579,85 +579,82 @@ function ttCountSlots(schedule) {
   return n;
 }
 
+function ttCardClick(idx) {
+  var person = _ttCurrentList[idx];
+  if (person) ttShowPerson2(person);
+}
+
 function ttRenderCards() {
-  const cards = document.getElementById('tt-cards');
-  const timetableDiv = document.getElementById('tt-timetable');
+  var cards = document.getElementById('tt-cards');
+  var timetableDiv = document.getElementById('tt-timetable');
   cards.style.display = 'grid';
   timetableDiv.style.display = 'none';
 
-  const search = _ttFilterText.toLowerCase();
-  const cls = _ttFilterClass;
+  var search = _ttFilterText;
+  var cls = _ttFilterClass;
+  var list;
 
   if (_ttView === 'students') {
-    let list = TT_DATA.students;
-    if (search) list = list.filter(s => s.name.includes(_ttFilterText) || (s.class||'').includes(_ttFilterText));
-    if (cls) list = list.filter(s => s.class === cls);
-    // sort by class
-    list = [...list].sort((a,b) => (a.class||'').localeCompare(b.class||'') || a.name.localeCompare(b.name));
-    cards.innerHTML = list.map((s,i) => {
-      const slots = ttCountSlots(s.schedule);
-      return '<div class="tt-person-card" data-name="' + s.name.replace(/"/g,'&quot;') + '" data-type="student">' +
-        '<div class="pc-name">' + s.name + '</div>' +
-        '<div class="pc-class">' + (s.class || 'ללא כיתה') + '</div>' +
-        '<div class="pc-count">' + slots + ' <span style="font-size:11px;font-weight:400;color:var(--muted)">שיבוצים</span></div>' +
-        '</div>';
-    }).join('');
+    list = TT_DATA.students.slice();
+    if (search) list = list.filter(function(s) { return s.name.indexOf(search) !== -1 || (s.class||'').indexOf(search) !== -1; });
+    if (cls) list = list.filter(function(s) { return s.class === cls; });
+    list.sort(function(a,b) { return (a.class||'').localeCompare(b.class||'') || a.name.localeCompare(b.name); });
   } else {
-    let list = TT_DATA.staff;
-    if (search) list = list.filter(s => s.name.includes(_ttFilterText) || (s.title||'').includes(_ttFilterText));
-    cards.innerHTML = list.map(s => {
-      const slots = ttCountSlots(s.schedule);
-      return '<div class="tt-person-card" data-name="' + s.name.replace(/"/g,'&quot;') + '" data-type="staff">' +
-        '<div class="pc-name">' + s.name + '</div>' +
-        '<div class="pc-class" style="color:var(--teal)">' + (s.title || '') + '</div>' +
-        '<div class="pc-count">' + slots + ' <span style="font-size:11px;font-weight:400;color:var(--muted)">שיבוצים</span></div>' +
-        '</div>';
-    }).join('');
+    list = TT_DATA.staff.slice();
+    if (search) list = list.filter(function(s) { return s.name.indexOf(search) !== -1 || (s.title||'').indexOf(search) !== -1; });
   }
+
+  _ttCurrentList = list;
+  var html = '';
+  for (var i = 0; i < list.length; i++) {
+    var s = list[i];
+    var slots = ttCountSlots(s.schedule);
+    var classLabel = _ttView === 'students' ? (s.class || 'ללא כיתה') : '';
+    var classStyle = _ttView === 'staff' ? ' style="color:var(--teal)"' : '';
+    var subtitle = _ttView === 'staff' ? (s.title || '') : classLabel;
+    html += '<div class="tt-person-card" onclick="ttCardClick(' + i + ')">' +
+      '<div class="pc-name">' + s.name + '</div>' +
+      '<div class="pc-class"' + classStyle + '>' + subtitle + '</div>' +
+      '<div class="pc-count">' + slots + ' <span style="font-size:11px;font-weight:400;color:var(--muted)">שיבוצים</span></div>' +
+      '</div>';
+  }
+  cards.innerHTML = html;
 }
 
-function ttShowPerson(name, type) {
-  const person = type === 'student'
-    ? TT_DATA.students.find(s => s.name === name)
-    : TT_DATA.staff.find(s => s.name === name);
-  if (!person) return;
-
+function ttShowPerson2(person) {
   document.getElementById('tt-cards').style.display = 'none';
-  const timetableDiv = document.getElementById('tt-timetable');
+  var timetableDiv = document.getElementById('tt-timetable');
   timetableDiv.style.display = 'block';
   document.getElementById('tt-person-name').textContent = person.name;
-  document.getElementById('tt-person-meta').textContent = type === 'student' ? (person.class || '') : (person.title || '');
-
-  // build grid — figure out which periods actually exist
-  const usedPeriods = new Set();
-  TT_DAYS.forEach(d => {
-    Object.keys(person.schedule[d] || {}).forEach(p => usedPeriods.add(p));
-  });
-  // always show periods 1-7 for clean layout
-  const periods = TT_PERIODS.filter(p => usedPeriods.size === 0 || true); // always 1-7
+  document.getElementById('tt-person-meta').textContent = person.class || person.title || '';
 
   // Head
-  let headHtml = '<tr><th class="tt-period-header">שעה</th>';
-  TT_DAY_HE.forEach(d => { headHtml += '<th class="tt-cell-header">יום ' + d + '</th>'; });
+  var headHtml = '<tr><th class="tt-period-header">שעה</th>';
+  for (var di = 0; di < TT_DAY_HE.length; di++) {
+    headHtml += '<th class="tt-cell-header">יום ' + TT_DAY_HE[di] + '</th>';
+  }
   headHtml += '</tr>';
   document.getElementById('tt-head').innerHTML = headHtml;
 
   // Body
-  let bodyHtml = '';
-  periods.forEach(p => {
+  var bodyHtml = '';
+  for (var pi = 0; pi < TT_PERIODS.length; pi++) {
+    var p = TT_PERIODS[pi];
     bodyHtml += '<tr><td class="tt-period-header">' + p + '</td>';
-    TT_DAYS.forEach(day => {
-      const cell = (person.schedule[day] || {})[p];
+    for (var di2 = 0; di2 < TT_DAYS.length; di2++) {
+      var day = TT_DAYS[di2];
+      var sched = person.schedule[day] || {};
+      var cell = sched[p] || '';
       if (cell) {
-        const [bg, fg] = type === 'student' ? ttColor(cell) : ['#EBF5FF','#2A4365'];
-        const label = cell.length > 25 ? cell.slice(0,23) + '…' : cell;
-        bodyHtml += '<td class="tt-cell"><span class="tt-badge" style="background:' + bg + ';color:' + fg + '" title="' + cell + '">' + label + '</span></td>';
+        var colors = ttColor(cell);
+        var label = cell.length > 25 ? cell.substring(0, 23) + '...' : cell;
+        bodyHtml += '<td class="tt-cell"><span class="tt-badge" style="background:' + colors[0] + ';color:' + colors[1] + '">' + label + '</span></td>';
       } else {
         bodyHtml += '<td class="tt-cell"><div class="tt-empty"></div></td>';
       }
-    });
+    }
     bodyHtml += '</tr>';
-  });
+  }
   document.getElementById('tt-body').innerHTML = bodyHtml;
 }
 
@@ -665,15 +662,6 @@ function ttBack() {
   document.getElementById('tt-cards').style.display = 'grid';
   document.getElementById('tt-timetable').style.display = 'none';
 }
-
-// ===== Card click delegation =====
-document.getElementById('tt-cards').addEventListener('click', function(e) {
-  var card = e.target.closest('.tt-person-card');
-  if (!card) return;
-  var name = card.getAttribute('data-name');
-  var type = card.getAttribute('data-type');
-  if (name && type) ttShowPerson(name, type);
-});
 
 // ===== INIT =====
 render();
