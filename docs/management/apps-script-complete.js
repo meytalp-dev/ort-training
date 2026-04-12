@@ -484,6 +484,24 @@ function doGet(e) {
     }
   }
 
+  // === JSONP WRITE — שמירה דרך GET (עוקף CORS) ===
+  if (params.action === 'jsonpWrite' && params.payload) {
+    var cb = (params.callback || 'cb').replace(/[^a-zA-Z0-9_]/g, '');
+    try {
+      var writeData = JSON.parse(decodeURIComponent(params.payload));
+      var writeAction = writeData.action;
+      // Route to existing doPost handlers
+      var fakePost = { postData: { contents: JSON.stringify(writeData) } };
+      var postResult = doPost(fakePost);
+      var postText = postResult.getContent();
+      return ContentService.createTextOutput(cb + '(' + postText + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    } catch (err) {
+      return ContentService.createTextOutput(cb + '(' + JSON.stringify({ status: 'error', message: err.toString().substring(0, 300) }) + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+  }
+
   // === דשבורד מורים ===
   return HtmlService.createHtmlOutput(getDashboardHTML())
     .setTitle('דשבורד ציונים – אורט בית הערבה')

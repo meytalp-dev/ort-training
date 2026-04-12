@@ -2669,15 +2669,29 @@ const ACTION_TO_BUCKET={saveClassSchedule:'classSchedule',savePosition:'position
 function remoteSave(action,data,isRetry){
   const bucket=ACTION_TO_BUCKET[action];
   if(bucket)markLocalEdit(bucket);
-  return fetch(APPS_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})})
-    .then(r=>{if(r.ok)return r.text();throw new Error('HTTP '+r.status)})
-    .then(()=>{if(!isRetry)showSaveStatus(true);return true})
-    .catch(()=>{
-      // Queue for retry — do NOT fire-and-forget no-cors (which lies about success)
-      queueFailedSave(action,data);
-      if(!isRetry)showSaveStatus(false);
-      return false;
-    });
+  // JSONP GET — עוקף CORS, עובד אמין מכל דפדפן
+  return new Promise((resolve,reject)=>{
+    const cb='sv_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    const payload=encodeURIComponent(JSON.stringify({action,...data}));
+    const url=APPS_SCRIPT+'?action=jsonpWrite&payload='+payload+'&callback='+cb;
+    // URL too long? fall back to fetch POST
+    if(url.length>7500){
+      return fetch(APPS_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})})
+        .then(r=>{if(r.ok)return r.text();throw new Error('HTTP '+r.status)})
+        .then(()=>{if(!isRetry)showSaveStatus(true);resolve(true)})
+        .catch(()=>{queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);resolve(false)});
+    }
+    const timeout=setTimeout(()=>{delete window[cb];s.remove();queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);resolve(false)},15000);
+    window[cb]=function(d){
+      clearTimeout(timeout);delete window[cb];s.remove();
+      if(d&&(d.status==='ok'||d.result==='ok')){if(!isRetry)showSaveStatus(true);resolve(true)}
+      else{queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);resolve(false)}
+    };
+    const s=document.createElement('script');
+    s.src=url;
+    s.onerror=()=>{clearTimeout(timeout);delete window[cb];queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);resolve(false)};
+    document.head.appendChild(s);
+  });
 }
 
 // Heuristics — does the local data contain ACTUAL user content, or just empty scaffolding?
