@@ -55,7 +55,9 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents);
+    // Support both JSON body and form payload
+    var raw = (e.parameter && e.parameter.payload) ? e.parameter.payload : e.postData.contents;
+    var data = JSON.parse(raw);
     var action = data.action || '';
     var result;
 
