@@ -79,6 +79,7 @@ body::before{content:'';position:fixed;inset:0;background:
 .form-group input:focus,.form-group textarea:focus,.form-group select:focus{
   outline:none;border-color:var(--primary)}
 .form-group textarea{resize:vertical;min-height:70px}
+.form-group input[readonly]{background:var(--bg-alt);color:var(--text-light)}
 
 /* Domain sections */
 .domain-section{border:2px solid var(--border-light);border-radius:var(--radius);padding:20px;margin-bottom:16px;
@@ -169,6 +170,34 @@ body::before{content:'';position:fixed;inset:0;background:
   padding:4px 12px;border-radius:8px;font-size:.78rem;font-weight:600;cursor:pointer}
 .link-item .copy-btn:hover{background:var(--primary);color:#fff}
 
+/* Follow-up section */
+.followup-card{background:linear-gradient(135deg,#fff 0%,#FFF8F5 100%);border:2px solid var(--create-light);
+  border-radius:var(--radius);padding:24px;margin-bottom:20px;animation:fadeInUp .5s ease backwards}
+.followup-card .card-title{color:var(--create-dark)}
+.followup-item{border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff}
+.followup-item .item-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.followup-item .item-domain{padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700;color:#fff;flex-shrink:0}
+.followup-item .item-goal{font-size:.88rem;font-weight:600;flex:1}
+.followup-notes{display:none;margin-top:8px}
+.followup-notes.visible{display:block}
+.followup-loading{text-align:center;padding:20px;color:var(--text-light);font-size:.9rem}
+
+/* Extra topics */
+.topics-card{background:#fff;border:2px solid #eef0f4;border-radius:var(--radius);padding:24px;margin-bottom:20px;animation:fadeInUp .5s ease backwards}
+.topic-item{border:1px solid var(--border-light);border-radius:12px;padding:16px;margin-bottom:12px;background:var(--bg-alt);position:relative}
+.topic-remove{position:absolute;top:12px;left:12px;background:none;border:none;cursor:pointer;color:var(--text-lighter);padding:4px}
+.topic-remove:hover{color:var(--danger)}
+
+/* Custom domain */
+.custom-domain-section{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;
+  background:linear-gradient(135deg,#fff 0%,var(--bg-alt) 100%)}
+
+/* Teacher dashboard mode */
+.teacher-mode .links-panel{display:none!important}
+.teacher-mode #btn-form{display:none!important}
+.teacher-dashboard-header{background:var(--primary);color:#fff;padding:12px 24px;border-radius:var(--radius);
+  margin-bottom:20px;font-family:var(--font-heading);font-size:1.2rem;font-weight:800;text-align:center}
+
 /* Responsive */
 @media(max-width:600px){
   .form-row{grid-template-columns:1fr}
@@ -192,7 +221,7 @@ body::before{content:'';position:fixed;inset:0;background:
 <body>
 
 <!-- Header -->
-<div class="header">
+<div class="header" id="main-header">
   <div class="header-title">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
     ישיבות רכזי שכבות
@@ -283,6 +312,21 @@ body::before{content:'';position:fixed;inset:0;background:
     </div>
   </div>
 
+  <!-- ============ FOLLOW-UP SECTION (loads dynamically) ============ -->
+  <div id="followup-section" class="followup-card hidden" style="animation-delay:.18s">
+    <div class="card-title">
+      <div class="card-icon" style="background:var(--create-dark)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      </div>
+      מעקב ישיבה קודמת
+    </div>
+    <div id="followup-loading" class="followup-loading">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-left:6px"><path d="M21 12a9 9 0 11-6.2-8.6"/></svg>
+      טוען נתוני ישיבה קודמת...
+    </div>
+    <div id="followup-content"></div>
+  </div>
+
   <!-- 5 Domains -->
   <div class="card" style="animation-delay:.2s">
     <div class="card-title">
@@ -292,6 +336,12 @@ body::before{content:'';position:fixed;inset:0;background:
       מטרות ויעדים — 5 תחומים
     </div>
     <div id="domains-container"></div>
+    <!-- Custom domains -->
+    <div id="custom-domains-container"></div>
+    <button class="btn-add" onclick="addCustomDomain()" id="btn-add-domain" style="margin-top:8px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-left:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      הוספת תחום נוסף
+    </button>
   </div>
 
   <!-- Attention students -->
@@ -303,7 +353,25 @@ body::before{content:'';position:fixed;inset:0;background:
       תלמידים בתשומת לב מיוחדת
     </div>
     <div id="students-container"></div>
-    <button class="btn-add" onclick="addStudentRow()" style="margin-top:10px">+ תלמיד/ה נוסף/ת</button>
+    <button class="btn-add" onclick="addStudentRow()" style="margin-top:10px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-left:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      תלמיד/ה נוסף/ת
+    </button>
+  </div>
+
+  <!-- Extra Topics -->
+  <div class="topics-card" style="animation-delay:.28s">
+    <div class="card-title">
+      <div class="card-icon" style="background:var(--lead)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </div>
+      נושאים נוספים
+    </div>
+    <div id="topics-container"></div>
+    <button class="btn-add" onclick="addTopicItem()" style="margin-top:8px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-left:4px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      הוספת נושא
+    </button>
   </div>
 
   <!-- Notes -->
@@ -340,12 +408,12 @@ body::before{content:'';position:fixed;inset:0;background:
 <!-- ==================== DASHBOARD VIEW ==================== -->
 <div id="view-dashboard" class="container hidden">
 
-  <div class="hero">
-    <h2>דשבורד — ישיבות רכזי שכבות</h2>
+  <div class="hero" id="dashboard-hero">
+    <h2 id="dashboard-hero-title">דשבורד — ישיבות רכזי שכבות</h2>
     <div class="subtitle">מעקב מטרות ויעדים לפי שכבות</div>
   </div>
 
-  <!-- Links panel -->
+  <!-- Links panel (manager only) -->
   <div class="links-panel" id="links-panel">
     <h3>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:6px"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
@@ -354,8 +422,8 @@ body::before{content:'';position:fixed;inset:0;background:
     <div id="links-list"></div>
   </div>
 
-  <!-- Layer tabs -->
-  <div class="layer-tabs">
+  <!-- Layer tabs (hidden in teacher mode — filtered automatically) -->
+  <div class="layer-tabs" id="layer-tabs-container">
     <button class="layer-tab active" onclick="filterDashboard('')" data-layer="">הכל</button>
     <button class="layer-tab" onclick="filterDashboard('ט')" data-layer="ט">שכבת ט — יסכה</button>
     <button class="layer-tab" onclick="filterDashboard('י')" data-layer="י">שכבת י — אופירה מלכה</button>
@@ -364,6 +432,17 @@ body::before{content:'';position:fixed;inset:0;background:
 
   <!-- Stats -->
   <div class="stats-grid" id="stats-grid"></div>
+
+  <!-- Follow-up stats (shown in dashboard) -->
+  <div class="card hidden" id="followup-stats-card" style="animation-delay:.15s">
+    <div class="card-title">
+      <div class="card-icon" style="background:var(--create-dark)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      </div>
+      מעקב ביצוע מטרות
+    </div>
+    <div id="followup-stats-content"></div>
+  </div>
 
   <!-- Goals by domain -->
   <div class="card" id="domain-progress-card">
@@ -428,6 +507,11 @@ const STATUS_OPTIONS = ['לא התחיל', 'בתהליך', 'הושלם'];
 let currentView = 'form';
 let currentDashboardLayer = '';
 let editingMeetingId = null;
+let customDomainCounter = 0;
+let topicCounter = 0;
+let studentCounter = 0;
+let isTeacherMode = false;
+let teacherLayer = '';
 
 // ============================================
 // Init
@@ -436,11 +520,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   const layer = params.get('layer');
   const name = params.get('name');
+  const view = params.get('view');
+
+  // Teacher dashboard mode: ?view=dashboard&layer=י
+  if (view === 'dashboard' && layer) {
+    isTeacherMode = true;
+    teacherLayer = layer;
+    document.body.classList.add('teacher-mode');
+    currentDashboardLayer = layer;
+    showView('dashboard');
+    // In teacher mode update hero title
+    const heroTitle = document.getElementById('dashboard-hero-title');
+    if (heroTitle) heroTitle.textContent = `דשבורד שכבת ${layer}`;
+    // Hide layer tabs in teacher mode — show filtered only
+    const tabsContainer = document.getElementById('layer-tabs-container');
+    if (tabsContainer) tabsContainer.style.display = 'none';
+    return;
+  }
 
   if (layer && COORDINATORS[layer]) {
     document.getElementById('f-layer').value = layer;
     document.getElementById('f-coordinator').value = COORDINATORS[layer];
     document.getElementById('form-subtitle').textContent = `שכבת ${layer} — ${COORDINATORS[layer]}`;
+    // Load previous meeting for follow-up
+    loadFollowUp(layer);
   }
 
   // Set today's date
@@ -468,8 +571,10 @@ function onLayerChange() {
   if (COORDINATORS[layer]) {
     document.getElementById('f-coordinator').value = COORDINATORS[layer];
     document.getElementById('form-subtitle').textContent = `שכבת ${layer} — ${COORDINATORS[layer]}`;
+    loadFollowUp(layer);
   } else {
     document.getElementById('f-coordinator').value = '';
+    document.getElementById('followup-section').classList.add('hidden');
   }
 }
 
@@ -483,6 +588,165 @@ function showView(view) {
   document.getElementById('btn-form').classList.toggle('active', view === 'form');
   document.getElementById('btn-dashboard').classList.toggle('active', view === 'dashboard');
   if (view === 'dashboard') loadDashboard();
+}
+
+// ============================================
+// Follow-up — load previous meeting
+// ============================================
+function loadFollowUp(layer) {
+  const section = document.getElementById('followup-section');
+  const loading = document.getElementById('followup-loading');
+  const content = document.getElementById('followup-content');
+
+  section.classList.remove('hidden');
+  loading.style.display = 'block';
+  content.innerHTML = '';
+
+  if (!APPS_SCRIPT_URL) {
+    loading.style.display = 'none';
+    content.innerHTML = '<p style="color:var(--text-lighter);text-align:center;padding:12px">Apps Script לא מוגדר</p>';
+    return;
+  }
+
+  const url = `${APPS_SCRIPT_URL}?action=getLatestMeeting&layer=${encodeURIComponent(layer)}`;
+  fetch(url)
+    .then(r => r.text())
+    .then(text => {
+      let data;
+      try { data = JSON.parse(text); } catch (e) {
+        const match = text.match(/\w+\((\{[\s\S]+\})\)/);
+        if (match) data = JSON.parse(match[1]);
+        else throw new Error('Invalid response');
+      }
+      loading.style.display = 'none';
+      if (data.result !== 'success' || !data.meeting) {
+        content.innerHTML = '<p style="color:var(--text-lighter);font-size:.88rem;padding:8px 0">אין ישיבה קודמת לשכבה זו — זוהי הישיבה הראשונה.</p>';
+        return;
+      }
+      renderFollowUp(data);
+    })
+    .catch(() => {
+      loading.style.display = 'none';
+      content.innerHTML = '<p style="color:var(--text-lighter);font-size:.88rem;padding:8px 0">לא ניתן לטעון ישיבה קודמת</p>';
+    });
+}
+
+function renderFollowUp(data) {
+  const content = document.getElementById('followup-content');
+  const m = data.meeting;
+  const goals = data.goals || [];
+  const students = data.attention_students || [];
+
+  let html = `<p style="font-size:.83rem;color:var(--text-light);margin-bottom:14px">
+    ישיבה מתאריך <strong>${formatDate(m.date)}</strong> — ${goals.length} מטרות, ${students.length} תלמידים בתשומת לב
+  </p>`;
+
+  if (goals.length > 0) {
+    html += `<div style="margin-bottom:16px">
+      <div style="font-family:var(--font-heading);font-weight:700;font-size:.9rem;margin-bottom:10px;color:var(--create-dark)">מטרות מהישיבה הקודמת</div>`;
+    goals.forEach((g, i) => {
+      const domainInfo = DOMAINS.find(d => d.name === g.domain) || { color: '#888' };
+      html += `
+        <div class="followup-item">
+          <div class="item-header">
+            <span class="item-domain" style="background:${domainInfo.color}">${g.domain}</span>
+            <span class="item-goal">${g.goal || g.measurable_target || '—'}</span>
+          </div>
+          <div class="form-row" style="margin-bottom:0">
+            <div class="form-group">
+              <label>סטטוס ביצוע</label>
+              <select class="fu-goal-status" data-goal-id="${g.id || i}" data-domain="${g.domain}" data-goal="${g.goal || ''}"
+                onchange="toggleFollowUpNotes(this)">
+                <option value="בוצע">בוצע</option>
+                <option value="בוצע חלקית">בוצע חלקית</option>
+                <option value="לא בוצע">לא בוצע</option>
+              </select>
+            </div>
+            <div class="form-group followup-notes" id="fu-goal-notes-${i}">
+              <label>מה קרה?</label>
+              <textarea class="fu-goal-note" rows="2" placeholder="הסבר קצר..."></textarea>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+
+  if (students.length > 0) {
+    html += `<div>
+      <div style="font-family:var(--font-heading);font-weight:700;font-size:.9rem;margin-bottom:10px;color:var(--spark-dark)">תלמידים בתשומת לב מהישיבה הקודמת</div>`;
+    students.forEach((s, i) => {
+      html += `
+        <div class="followup-item">
+          <div class="item-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--spark)" stroke-width="2.5" style="flex-shrink:0;margin-top:3px"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+            <span class="item-goal"><strong>${s.student_name}</strong>${s.student_class ? ` — ${s.student_class}` : ''}</span>
+          </div>
+          ${s.reason ? `<div style="font-size:.82rem;color:var(--text-light);margin-bottom:8px">סיבה: ${s.reason}</div>` : ''}
+          <div class="form-row" style="margin-bottom:0">
+            <div class="form-group">
+              <label>סטטוס טיפול</label>
+              <select class="fu-student-status" data-student-name="${s.student_name}" data-student-class="${s.student_class || ''}"
+                onchange="toggleFollowUpStudentNotes(this)">
+                <option value="טופל">טופל</option>
+                <option value="בטיפול" selected>בטיפול</option>
+                <option value="פתוח">פתוח</option>
+              </select>
+            </div>
+            <div class="form-group followup-notes" id="fu-student-notes-${i}">
+              <label>הערה</label>
+              <textarea class="fu-student-note" rows="2" placeholder="מה התרחש?"></textarea>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+  }
+
+  content.innerHTML = html;
+  // Init visibility for non-"בוצע" selects
+  content.querySelectorAll('.fu-goal-status').forEach(sel => toggleFollowUpNotes(sel));
+  content.querySelectorAll('.fu-student-status').forEach(sel => toggleFollowUpStudentNotes(sel));
+}
+
+function toggleFollowUpNotes(sel) {
+  const row = sel.closest('.followup-item');
+  const notesGroups = row.querySelectorAll('.followup-notes');
+  const showNotes = sel.value !== 'בוצע';
+  notesGroups.forEach(g => g.classList.toggle('visible', showNotes));
+}
+
+function toggleFollowUpStudentNotes(sel) {
+  const row = sel.closest('.followup-item');
+  const notesGroups = row.querySelectorAll('.followup-notes');
+  const showNotes = sel.value !== 'טופל';
+  notesGroups.forEach(g => g.classList.toggle('visible', showNotes));
+}
+
+function collectFollowUps() {
+  const followUps = [];
+  document.querySelectorAll('.fu-goal-status').forEach(sel => {
+    followUps.push({
+      type: 'goal',
+      prev_goal_id: sel.dataset.goalId || '',
+      prev_goal_domain: sel.dataset.domain || '',
+      prev_goal_text: sel.dataset.goal || '',
+      status: sel.value,
+      notes: sel.closest('.followup-item').querySelector('.fu-goal-note')?.value || ''
+    });
+  });
+  document.querySelectorAll('.fu-student-status').forEach(sel => {
+    followUps.push({
+      type: 'student',
+      student_name: sel.dataset.studentName || '',
+      student_class: sel.dataset.studentClass || '',
+      status: sel.value,
+      notes: sel.closest('.followup-item').querySelector('.fu-student-note')?.value || ''
+    });
+  });
+  return followUps;
 }
 
 // ============================================
@@ -540,92 +804,133 @@ function buildDomainForms() {
   `).join('');
 }
 
-function restoreFromLocal(layer) {
-  // Find most recent saved meeting for this layer
-  let latest = null;
-  let latestKey = null;
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (!key.startsWith('meeting-')) continue;
-    try {
-      const data = JSON.parse(localStorage.getItem(key));
-      if (data.layer === layer) {
-        const ts = parseInt(key.split('-').pop()) || 0;
-        if (!latest || ts > latest._ts) {
-          data._ts = ts;
-          latest = data;
-          latestKey = key;
-        }
-      }
-    } catch (e) {}
-  }
-  if (!latest) return;
-
-  // Restore form fields
-  if (latest.date) document.getElementById('f-date').value = latest.date;
-  if (latest.participants) document.getElementById('f-participants').value = latest.participants;
-  if (latest.status_text) document.getElementById('f-status').value = latest.status_text;
-  if (latest.whats_good) document.getElementById('f-good').value = latest.whats_good;
-  if (latest.whats_challenging) document.getElementById('f-challenging').value = latest.whats_challenging;
-  if (latest.needs_from_management) document.getElementById('f-needs').value = latest.needs_from_management;
-  if (latest.notes) document.getElementById('f-notes').value = latest.notes;
-
-  // Restore goals
-  if (latest.goals) {
-    latest.goals.forEach(g => {
-      const domain = DOMAINS.find(d => d.name === g.domain);
-      if (domain) {
-        if (g.goal) document.getElementById(`goal-${domain.id}`).value = g.goal;
-        if (g.measurable_target) document.getElementById(`target-${domain.id}`).value = g.measurable_target;
-        if (g.action) document.getElementById(`action-${domain.id}`).value = g.action;
-        if (g.responsible) document.getElementById(`responsible-${domain.id}`).value = g.responsible;
-        if (g.deadline) document.getElementById(`deadline-${domain.id}`).value = g.deadline;
-        if (g.status) document.getElementById(`status-${domain.id}`).value = g.status;
-        checkDomainFilled(domain.id);
-        // Open domain if filled
-        if (g.goal || g.measurable_target) {
-          document.getElementById(`domain-${domain.id}`).classList.remove('collapsed');
-        }
-      }
-    });
-  }
-
-  // Restore students
-  if (latest.attention_students && latest.attention_students.length > 0) {
-    const container = document.getElementById('students-container');
-    container.innerHTML = '';
-    studentCounter = 0;
-    latest.attention_students.forEach(s => {
-      addStudentRow();
-      const rows = container.querySelectorAll('.domain-section');
-      const lastRow = rows[rows.length - 1];
-      if (s.student_name) lastRow.querySelector('.s-name').value = s.student_name;
-      if (s.student_class) lastRow.querySelector('.s-class').value = s.student_class;
-      if (s.reason) lastRow.querySelector('.s-reason').value = s.reason;
-      if (s.plan) lastRow.querySelector('.s-plan').value = s.plan;
-      if (s.responsible) lastRow.querySelector('.s-responsible').value = s.responsible;
-      if (s.status) lastRow.querySelector('.s-status').value = s.status;
-    });
-  }
-
-  toast('שוחזר מגיבוי מקומי — בדקי ושלחי שוב');
+// ============================================
+// Custom domains
+// ============================================
+function addCustomDomain() {
+  customDomainCounter++;
+  const idx = customDomainCounter;
+  const container = document.getElementById('custom-domains-container');
+  const div = document.createElement('div');
+  div.className = 'custom-domain-section';
+  div.id = `custom-domain-${idx}`;
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="form-group" style="flex:1;margin-left:12px">
+        <label>שם התחום</label>
+        <input class="custom-domain-name" placeholder="למשל: ועד הורים, מקצוע ספציפי..." style="font-weight:700">
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="document.getElementById('custom-domain-${idx}').remove()" style="flex-shrink:0;align-self:flex-end">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        הסרה
+      </button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>מטרה</label>
+        <input class="custom-goal" placeholder="מה רוצים להשיג?">
+      </div>
+      <div class="form-group">
+        <label>יעד מדיד</label>
+        <input class="custom-target" placeholder="מספר שאפשר למדוד">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>פעולה קונקרטית</label>
+        <input class="custom-action" placeholder="מה עושים בפועל?">
+      </div>
+      <div class="form-group">
+        <label>אחראי/ת</label>
+        <input class="custom-responsible" placeholder="שם">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>תאריך יעד</label>
+        <input type="date" class="custom-deadline">
+      </div>
+      <div class="form-group">
+        <label>סטטוס</label>
+        <select class="custom-status">
+          <option value="לא התחיל">לא התחיל</option>
+          <option value="בתהליך">בתהליך</option>
+          <option value="הושלם">הושלם</option>
+        </select>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
 }
 
-function toggleDomain(id) {
-  document.getElementById(`domain-${id}`).classList.toggle('collapsed');
+function collectCustomDomains() {
+  const result = [];
+  document.querySelectorAll('.custom-domain-section').forEach(div => {
+    const name = div.querySelector('.custom-domain-name')?.value?.trim();
+    const goal = div.querySelector('.custom-goal')?.value?.trim();
+    const target = div.querySelector('.custom-target')?.value?.trim();
+    if (name && (goal || target)) {
+      result.push({
+        domain: name,
+        goal: goal || '',
+        measurable_target: target || '',
+        action: div.querySelector('.custom-action')?.value || '',
+        responsible: div.querySelector('.custom-responsible')?.value || '',
+        deadline: div.querySelector('.custom-deadline')?.value || '',
+        status: div.querySelector('.custom-status')?.value || 'לא התחיל'
+      });
+    }
+  });
+  return result;
 }
 
-function checkDomainFilled(id) {
-  const goal = document.getElementById(`goal-${id}`).value;
-  const target = document.getElementById(`target-${id}`).value;
-  const dot = document.getElementById(`filled-${id}`);
-  dot.style.display = (goal || target) ? 'inline-block' : 'none';
+// ============================================
+// Topics
+// ============================================
+function addTopicItem() {
+  topicCounter++;
+  const idx = topicCounter;
+  const container = document.getElementById('topics-container');
+  const div = document.createElement('div');
+  div.className = 'topic-item';
+  div.id = `topic-${idx}`;
+  div.innerHTML = `
+    <button class="topic-remove" onclick="document.getElementById('topic-${idx}').remove()" title="הסרה">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="form-row full" style="margin-bottom:8px">
+      <div class="form-group">
+        <label>כותרת הנושא</label>
+        <input class="topic-title" placeholder="למשל: תיאום עם יועצת, ועד הורים...">
+      </div>
+    </div>
+    <div class="form-row full" style="margin-bottom:0">
+      <div class="form-group">
+        <label>פרטים</label>
+        <textarea class="topic-details" rows="2" placeholder="הרחבה, החלטות, משימות..."></textarea>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+}
+
+function collectTopics() {
+  const result = [];
+  document.querySelectorAll('.topic-item').forEach(div => {
+    const title = div.querySelector('.topic-title')?.value?.trim();
+    if (title) {
+      result.push({
+        title,
+        details: div.querySelector('.topic-details')?.value || ''
+      });
+    }
+  });
+  return result;
 }
 
 // ============================================
 // Form — students
 // ============================================
-let studentCounter = 0;
 function addStudentRow() {
   studentCounter++;
   const container = document.getElementById('students-container');
@@ -676,6 +981,84 @@ function addStudentRow() {
 }
 
 // ============================================
+// Form — restore from localStorage
+// ============================================
+function restoreFromLocal(layer) {
+  let latest = null;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key.startsWith('meeting-')) continue;
+    try {
+      const data = JSON.parse(localStorage.getItem(key));
+      if (data.layer === layer) {
+        const ts = parseInt(key.split('-').pop()) || 0;
+        if (!latest || ts > latest._ts) {
+          data._ts = ts;
+          latest = data;
+        }
+      }
+    } catch (e) {}
+  }
+  if (!latest) return;
+
+  if (latest.date) document.getElementById('f-date').value = latest.date;
+  if (latest.participants) document.getElementById('f-participants').value = latest.participants;
+  if (latest.status_text) document.getElementById('f-status').value = latest.status_text;
+  if (latest.whats_good) document.getElementById('f-good').value = latest.whats_good;
+  if (latest.whats_challenging) document.getElementById('f-challenging').value = latest.whats_challenging;
+  if (latest.needs_from_management) document.getElementById('f-needs').value = latest.needs_from_management;
+  if (latest.notes) document.getElementById('f-notes').value = latest.notes;
+
+  if (latest.goals) {
+    latest.goals.forEach(g => {
+      const domain = DOMAINS.find(d => d.name === g.domain);
+      if (domain) {
+        if (g.goal) document.getElementById(`goal-${domain.id}`).value = g.goal;
+        if (g.measurable_target) document.getElementById(`target-${domain.id}`).value = g.measurable_target;
+        if (g.action) document.getElementById(`action-${domain.id}`).value = g.action;
+        if (g.responsible) document.getElementById(`responsible-${domain.id}`).value = g.responsible;
+        if (g.deadline) document.getElementById(`deadline-${domain.id}`).value = g.deadline;
+        if (g.status) document.getElementById(`status-${domain.id}`).value = g.status;
+        checkDomainFilled(domain.id);
+        if (g.goal || g.measurable_target) {
+          document.getElementById(`domain-${domain.id}`).classList.remove('collapsed');
+        }
+      }
+    });
+  }
+
+  if (latest.attention_students && latest.attention_students.length > 0) {
+    const container = document.getElementById('students-container');
+    container.innerHTML = '';
+    studentCounter = 0;
+    latest.attention_students.forEach(s => {
+      addStudentRow();
+      const rows = container.querySelectorAll('.domain-section');
+      const lastRow = rows[rows.length - 1];
+      if (s.student_name) lastRow.querySelector('.s-name').value = s.student_name;
+      if (s.student_class) lastRow.querySelector('.s-class').value = s.student_class;
+      if (s.reason) lastRow.querySelector('.s-reason').value = s.reason;
+      if (s.plan) lastRow.querySelector('.s-plan').value = s.plan;
+      if (s.responsible) lastRow.querySelector('.s-responsible').value = s.responsible;
+      if (s.status) lastRow.querySelector('.s-status').value = s.status;
+    });
+  }
+
+  toast('שוחזר מגיבוי מקומי — בדקי ושלחי שוב');
+}
+
+function toggleDomain(id) {
+  document.getElementById(`domain-${id}`).classList.toggle('collapsed');
+}
+
+function checkDomainFilled(id) {
+  const goal = document.getElementById(`goal-${id}`).value;
+  const target = document.getElementById(`target-${id}`).value;
+  const dot = document.getElementById(`filled-${id}`);
+  dot.style.display = (goal || target) ? 'inline-block' : 'none';
+}
+
+// ============================================
 // Form — submit
 // ============================================
 function submitMeeting() {
@@ -684,6 +1067,7 @@ function submitMeeting() {
 
   if (!layer) { toast('יש לבחור שכבה', true); return; }
 
+  // Collect standard domain goals
   const goals = DOMAINS.map(d => ({
     domain: d.name,
     goal: document.getElementById(`goal-${d.id}`).value,
@@ -694,7 +1078,11 @@ function submitMeeting() {
     status: document.getElementById(`status-${d.id}`).value
   })).filter(g => g.goal || g.measurable_target || g.action);
 
-  if (goals.length === 0) { toast('יש למלא לפחות מטרה אחת', true); return; }
+  // Collect custom domain goals
+  const customGoals = collectCustomDomains();
+  const allGoals = goals.concat(customGoals);
+
+  if (allGoals.length === 0) { toast('יש למלא לפחות מטרה אחת', true); return; }
 
   const studentRows = document.querySelectorAll('#students-container .domain-section');
   const attention_students = [];
@@ -712,6 +1100,12 @@ function submitMeeting() {
     }
   });
 
+  // Collect follow-ups
+  const follow_ups = collectFollowUps();
+
+  // Collect topics
+  const topics = collectTopics();
+
   const payload = {
     action: 'saveMeeting',
     id: editingMeetingId || undefined,
@@ -724,8 +1118,10 @@ function submitMeeting() {
     whats_challenging: document.getElementById('f-challenging').value,
     needs_from_management: document.getElementById('f-needs').value,
     notes: document.getElementById('f-notes').value,
-    goals,
-    attention_students
+    goals: allGoals,
+    attention_students,
+    follow_ups,
+    topics
   };
 
   // Save to localStorage as backup
@@ -739,7 +1135,7 @@ function submitMeeting() {
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
-  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.2-8.6"/></svg> שומר...';
+  btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 11-6.2-8.6"/></svg> שומר...`;
 
   // Apps Script CORS workaround — send via hidden form in iframe
   const iframe = document.createElement('iframe');
@@ -759,17 +1155,15 @@ function submitMeeting() {
   document.body.appendChild(form);
   form.submit();
 
-  // Verify save via JSONP after short delay
   setTimeout(() => {
     form.remove();
     iframe.remove();
-    toast('הישיבה נשמרה בהצלחה!');
-    localStorage.removeItem(key);
-  }, 2500)
-  .finally(() => {
     btn.disabled = false;
     btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> שמירה ושליחה`;
-  });
+    toast('הישיבה נשמרה בהצלחה!');
+    localStorage.removeItem(key);
+    editingMeetingId = null;
+  }, 2500);
 }
 
 // ============================================
@@ -778,16 +1172,35 @@ function submitMeeting() {
 function buildLinks() {
   const base = window.location.href.split('?')[0];
   const list = document.getElementById('links-list');
-  list.innerHTML = Object.entries(COORDINATORS).map(([layer, name]) => {
+  if (!list) return;
+
+  // Form links
+  let html = '<div style="font-size:.82rem;font-weight:700;color:var(--text-light);margin-bottom:6px">קישורי טופס ישיבה:</div>';
+  html += Object.entries(COORDINATORS).map(([layer, name]) => {
     const url = `${base}?layer=${encodeURIComponent(layer)}&name=${encodeURIComponent(name)}`;
     return `
       <div class="link-item">
-        <span style="font-weight:700;min-width:120px">שכבת ${layer} — ${name}</span>
-        <a href="${url}" target="_blank">${url.length > 60 ? url.substring(0, 60) + '...' : url}</a>
+        <span style="font-weight:700;min-width:140px">שכבת ${layer} — ${name}</span>
+        <a href="${url}" target="_blank">${url.length > 55 ? url.substring(0, 55) + '...' : url}</a>
         <button class="copy-btn" onclick="copyLink(this, '${url}')">העתקה</button>
       </div>
     `;
   }).join('');
+
+  // Dashboard links for teachers
+  html += '<div style="font-size:.82rem;font-weight:700;color:var(--text-light);margin:12px 0 6px">קישורי דשבורד שכבה (לרכזות):</div>';
+  html += Object.entries(COORDINATORS).map(([layer, name]) => {
+    const url = `${base}?view=dashboard&layer=${encodeURIComponent(layer)}`;
+    return `
+      <div class="link-item">
+        <span style="font-weight:700;min-width:140px">דשבורד שכבת ${layer}</span>
+        <a href="${url}" target="_blank">${url.length > 55 ? url.substring(0, 55) + '...' : url}</a>
+        <button class="copy-btn" onclick="copyLink(this, '${url}')">העתקה</button>
+      </div>
+    `;
+  }).join('');
+
+  list.innerHTML = html;
 }
 
 function copyLink(btn, url) {
@@ -798,6 +1211,7 @@ function copyLink(btn, url) {
 }
 
 function filterDashboard(layer) {
+  if (isTeacherMode) return; // teacher mode — fixed layer
   currentDashboardLayer = layer;
   document.querySelectorAll('.layer-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.layer === layer);
@@ -806,8 +1220,11 @@ function filterDashboard(layer) {
 }
 
 function loadDashboard() {
-  // Show loading state
-  document.getElementById('stats-grid').innerHTML = '<div class="stat-card" style="grid-column:1/-1;text-align:center;color:var(--text-light)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite;margin-bottom:8px"><path d="M21 12a9 9 0 11-6.2-8.6"/></svg><div>טוען נתונים...</div></div>';
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card" style="grid-column:1/-1;text-align:center;color:var(--text-light)">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite;margin-bottom:8px"><path d="M21 12a9 9 0 11-6.2-8.6"/></svg>
+      <div>טוען נתונים...</div>
+    </div>`;
   document.getElementById('meetings-list').innerHTML = '';
   document.getElementById('attention-list').innerHTML = '';
   document.getElementById('domain-progress').innerHTML = '';
@@ -821,10 +1238,8 @@ function loadDashboard() {
   fetch(url)
     .then(r => r.text())
     .then(text => {
-      // Apps Script may return JSONP or plain JSON
       let data;
       try { data = JSON.parse(text); } catch (e) {
-        // Try extracting JSON from JSONP wrapper: callback({...})
         const match = text.match(/\w+\((\{[\s\S]+\})\)/);
         if (match) data = JSON.parse(match[1]);
         else throw new Error('Invalid response');
@@ -835,14 +1250,10 @@ function loadDashboard() {
       }
       renderDashboard(data);
     })
-    .catch(err => {
-      console.error('Dashboard load error:', err);
-      loadDashboardFromLocal();
-    });
+    .catch(() => loadDashboardFromLocal());
 }
 
 function renderDashboard(data) {
-  // Stats
   const grid = document.getElementById('stats-grid');
   const completedPct = data.goal_stats.total > 0 ? Math.round(data.goal_stats.completed / data.goal_stats.total * 100) : 0;
   grid.innerHTML = `
@@ -867,6 +1278,36 @@ function renderDashboard(data) {
       <div class="stat-label">השלמה כוללת</div>
     </div>
   `;
+
+  // Follow-up stats
+  if (data.followup_stats && (data.followup_stats.done + data.followup_stats.partial + data.followup_stats.not_done) > 0) {
+    const fu = data.followup_stats;
+    const fuCard = document.getElementById('followup-stats-card');
+    const fuContent = document.getElementById('followup-stats-content');
+    fuCard.classList.remove('hidden');
+    const total = fu.done + fu.partial + fu.not_done;
+    const donePct = Math.round(fu.done / total * 100);
+    fuContent.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+        <div style="text-align:center;padding:12px;background:#E8F5E9;border-radius:10px">
+          <div style="font-size:1.4rem;font-weight:900;color:#2E7D32">${fu.done}</div>
+          <div style="font-size:.78rem;color:#2E7D32">בוצע</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:#FFF3E0;border-radius:10px">
+          <div style="font-size:1.4rem;font-weight:900;color:#E65100">${fu.partial}</div>
+          <div style="font-size:.78rem;color:#E65100">בוצע חלקית</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:#FFEBEE;border-radius:10px">
+          <div style="font-size:1.4rem;font-weight:900;color:#C62828">${fu.not_done}</div>
+          <div style="font-size:.78rem;color:#C62828">לא בוצע</div>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${donePct}%;background:var(--success)"></div>
+      </div>
+      <div style="font-size:.78rem;color:var(--text-light);margin-top:6px;text-align:center">${donePct}% ביצוע</div>
+    `;
+  }
 
   // Domain progress
   const domainDiv = document.getElementById('domain-progress');
@@ -932,7 +1373,6 @@ function renderDashboard(data) {
 }
 
 function loadDashboardFromLocal() {
-  // Aggregate from localStorage
   const meetings = [];
   const goals = [];
   const students = [];
@@ -967,6 +1407,7 @@ function loadDashboardFromLocal() {
   renderDashboard({
     total_meetings: meetings.length,
     goal_stats: goalStats,
+    followup_stats: null,
     per_domain: Object.values(perDomain),
     attention_students: students.filter(s => s.status !== 'טופל'),
     recent_meetings: meetings.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 10)
@@ -992,7 +1433,6 @@ function viewMeeting(id) {
 }
 
 function loadMeetingIntoForm(data) {
-  // Load into form for editing
   editingMeetingId = data.meeting.id;
   const m = data.meeting;
   document.getElementById('f-layer').value = m.layer;
@@ -1006,7 +1446,6 @@ function loadMeetingIntoForm(data) {
   document.getElementById('f-notes').value = m.notes || '';
   document.getElementById('form-subtitle').textContent = `עריכת ישיבה — שכבת ${m.layer}`;
 
-  // Fill goals
   if (data.goals) {
     data.goals.forEach(g => {
       const domain = DOMAINS.find(d => d.name === g.domain);
@@ -1021,7 +1460,6 @@ function loadMeetingIntoForm(data) {
     });
   }
 
-  // Fill students
   const container = document.getElementById('students-container');
   container.innerHTML = '';
   studentCounter = 0;
@@ -1047,15 +1485,6 @@ function loadMeetingIntoForm(data) {
 // ============================================
 // Helpers
 // ============================================
-function jsonp(url, callbackName) {
-  window[callbackName] = window[callbackName]; // already defined
-  const script = document.createElement('script');
-  script.src = url;
-  script.onerror = () => toast('שגיאת תקשורת', true);
-  document.body.appendChild(script);
-  script.onload = () => script.remove();
-}
-
 function formatDate(d) {
   if (!d) return '';
   try {

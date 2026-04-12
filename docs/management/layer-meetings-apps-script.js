@@ -2,7 +2,8 @@
  * Google Apps Script — ישיבות רכזי שכבות | אורט בית הערבה
  *
  * תיעוד ישיבות רכזי שכבות עם מחנכות ויועצות —
- * מטרות ויעדים ב-5 תחומים, מעקב התקדמות, תלמידים בתשומת לב.
+ * מטרות ויעדים ב-5 תחומים + תחומים מותאמים אישית,
+ * מעקב ביצוע ישיבה קודמת, נושאים נוספים, תלמידים בתשומת לב.
  *
  * ════════════════════════════════════════════════════════════
  * הוראות התקנה
@@ -36,11 +37,12 @@ function doGet(e) {
   try {
     var result;
     switch (action) {
-      case 'getMeetings':   result = getMeetings_(e.parameter.layer); break;
-      case 'getMeeting':    result = getMeeting_(e.parameter.id); break;
-      case 'getDashboard':  result = getDashboard_(e.parameter.layer); break;
-      case 'getHistory':    result = getHistory_(e.parameter.layer); break;
-      default:              result = { result: 'ok', message: 'layer-meetings API v1' };
+      case 'getMeetings':      result = getMeetings_(e.parameter.layer); break;
+      case 'getMeeting':       result = getMeeting_(e.parameter.id); break;
+      case 'getDashboard':     result = getDashboard_(e.parameter.layer); break;
+      case 'getHistory':       result = getHistory_(e.parameter.layer); break;
+      case 'getLatestMeeting': result = getLatestMeeting_(e.parameter.layer); break;
+      default:                 result = { result: 'ok', message: 'layer-meetings API v2' };
     }
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -88,7 +90,7 @@ function setupSheets() {
     'status_text', 'whats_good', 'whats_challenging', 'needs_from_management', 'notes'
   ]);
 
-  // goals — יעדים לפי תחום
+  // goals — יעדים לפי תחום (כולל תחומים מותאמים)
   ensureSheet_(ss, 'goals', [
     'id', 'meeting_id', 'layer', 'domain', 'goal', 'measurable_target',
     'action', 'responsible', 'deadline', 'status'
@@ -100,7 +102,18 @@ function setupSheets() {
     'reason', 'plan', 'responsible', 'status'
   ]);
 
-  SpreadsheetApp.getUi().alert('מוכן! 3 טאבים נוצרו.');
+  // follow_ups — מעקב ביצוע ישיבה קודמת
+  ensureSheet_(ss, 'follow_ups', [
+    'id', 'meeting_id', 'prev_goal_id', 'prev_goal_domain', 'prev_goal_text',
+    'student_name', 'student_class', 'type', 'status', 'notes'
+  ]);
+
+  // topics — נושאים נוספים
+  ensureSheet_(ss, 'topics', [
+    'id', 'meeting_id', 'layer', 'title', 'details'
+  ]);
+
+  SpreadsheetApp.getUi().alert('מוכן! 5 טאבים נוצרו.');
 }
 
 function ensureSheet_(ss, name, headers) {
@@ -136,6 +149,8 @@ function saveMeeting_(data) {
       // עדכון ישיבה קיימת — מוחק שורות ישנות ומוסיף חדשות
       deleteRowsByMeetingId_(ss, 'goals', meetingId);
       deleteRowsByMeetingId_(ss, 'attention_students', meetingId);
+      deleteRowsByMeetingId_(ss, 'follow_ups', meetingId);
+      deleteRowsByMeetingId_(ss, 'topics', meetingId);
       updateMeetingRow_(ss, meetingId, data, timestamp);
     } else {
       // ישיבה חדשה
@@ -147,7 +162,7 @@ function saveMeeting_(data) {
       ]);
     }
 
-    // שמירת יעדים
+    // שמירת יעדים (כולל תחומים מותאמים אישית)
     var shGoals = ss.getSheetByName('goals');
     data.goals.forEach(function (g) {
       shGoals.appendRow([
@@ -157,7 +172,7 @@ function saveMeeting_(data) {
       ]);
     });
 
-    // שמירת תלמידים
+    // שמירת תלמידים בתשומת לב
     if (data.attention_students && data.attention_students.length > 0) {
       var shStudents = ss.getSheetByName('attention_students');
       data.attention_students.forEach(function (s) {
@@ -165,6 +180,41 @@ function saveMeeting_(data) {
           Utilities.getUuid().substring(0, 8), meetingId, data.layer,
           s.student_name || '', s.student_class || '',
           s.reason || '', s.plan || '', s.responsible || '', s.status || 'פתוח'
+        ]);
+      });
+    }
+
+    // שמירת מעקב ביצוע ישיבה קודמת
+    if (data.follow_ups && data.follow_ups.length > 0) {
+      var shFollowUps = ss.getSheetByName('follow_ups');
+      if (!shFollowUps) {
+        shFollowUps = ensureSheet_(ss, 'follow_ups', [
+          'id', 'meeting_id', 'prev_goal_id', 'prev_goal_domain', 'prev_goal_text',
+          'student_name', 'student_class', 'type', 'status', 'notes'
+        ]);
+      }
+      data.follow_ups.forEach(function (f) {
+        shFollowUps.appendRow([
+          Utilities.getUuid().substring(0, 8), meetingId,
+          f.prev_goal_id || '', f.prev_goal_domain || '', f.prev_goal_text || '',
+          f.student_name || '', f.student_class || '',
+          f.type || 'goal', f.status || '', f.notes || ''
+        ]);
+      });
+    }
+
+    // שמירת נושאים נוספים
+    if (data.topics && data.topics.length > 0) {
+      var shTopics = ss.getSheetByName('topics');
+      if (!shTopics) {
+        shTopics = ensureSheet_(ss, 'topics', [
+          'id', 'meeting_id', 'layer', 'title', 'details'
+        ]);
+      }
+      data.topics.forEach(function (t) {
+        shTopics.appendRow([
+          Utilities.getUuid().substring(0, 8), meetingId, data.layer,
+          t.title || '', t.details || ''
         ]);
       });
     }
@@ -240,12 +290,16 @@ function getMeeting_(id) {
 
   var goals = readSheet_(ss, 'goals').filter(function (g) { return g.meeting_id === id; });
   var students = readSheet_(ss, 'attention_students').filter(function (s) { return s.meeting_id === id; });
+  var followUps = readSheet_(ss, 'follow_ups').filter(function (f) { return f.meeting_id === id; });
+  var topics = readSheet_(ss, 'topics').filter(function (t) { return t.meeting_id === id; });
 
   return {
     result: 'success',
     meeting: meetings[0],
     goals: goals,
-    attention_students: students
+    attention_students: students,
+    follow_ups: followUps,
+    topics: topics
   };
 }
 
@@ -254,11 +308,15 @@ function getDashboard_(layer) {
   var meetings = readSheet_(ss, 'meetings');
   var goals = readSheet_(ss, 'goals');
   var students = readSheet_(ss, 'attention_students');
+  var followUps = readSheet_(ss, 'follow_ups');
 
   if (layer) {
     meetings = meetings.filter(function (m) { return m.layer === layer; });
     goals = goals.filter(function (g) { return g.layer === layer; });
     students = students.filter(function (s) { return s.layer === layer; });
+    // filter follow_ups by meeting_id in the filtered meeting set
+    var meetingIds = meetings.map(function (m) { return m.id; });
+    followUps = followUps.filter(function (f) { return meetingIds.indexOf(f.meeting_id) !== -1; });
   }
 
   // סטטיסטיקות יעדים
@@ -267,6 +325,14 @@ function getDashboard_(layer) {
     if (g.status === 'הושלם') goalStats.completed++;
     else if (g.status === 'בתהליך') goalStats.inProgress++;
     else goalStats.notStarted++;
+  });
+
+  // סטטיסטיקות מעקב ביצוע
+  var followupStats = { done: 0, partial: 0, not_done: 0 };
+  followUps.forEach(function (f) {
+    if (f.status === 'בוצע') followupStats.done++;
+    else if (f.status === 'בוצע חלקית') followupStats.partial++;
+    else if (f.status === 'לא בוצע') followupStats.not_done++;
   });
 
   // לפי שכבה
@@ -290,6 +356,7 @@ function getDashboard_(layer) {
     result: 'success',
     total_meetings: meetings.length,
     goal_stats: goalStats,
+    followup_stats: followupStats,
     per_layer: Object.keys(perLayer).map(function (k) { return perLayer[k]; }),
     per_domain: Object.keys(perDomain).map(function (k) { return perDomain[k]; }),
     attention_students: students.filter(function (s) { return s.status !== 'טופל'; }),
@@ -315,6 +382,34 @@ function getHistory_(layer) {
         attention_students: students.filter(function (s) { return s.meeting_id === m.id; })
       };
     })
+  };
+}
+
+/**
+ * getLatestMeeting_ — מחזיר את הישיבה האחרונה לשכבה כולל יעדים ותלמידים
+ * משמש לטעינת חלק ה"מעקב ישיבה קודמת" בטופס ישיבה חדשה
+ */
+function getLatestMeeting_(layer) {
+  if (!layer) return { result: 'error', message: 'חסרה שכבה' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var meetings = readSheet_(ss, 'meetings').filter(function (m) { return m.layer === layer; });
+
+  if (meetings.length === 0) {
+    return { result: 'success', meeting: null, goals: [], attention_students: [] };
+  }
+
+  // מיין לפי timestamp יורד — הישיבה האחרונה ראשונה
+  meetings.sort(function (a, b) { return b.timestamp > a.timestamp ? 1 : -1; });
+  var latest = meetings[0];
+
+  var goals = readSheet_(ss, 'goals').filter(function (g) { return g.meeting_id === latest.id; });
+  var students = readSheet_(ss, 'attention_students').filter(function (s) { return s.meeting_id === latest.id; });
+
+  return {
+    result: 'success',
+    meeting: latest,
+    goals: goals,
+    attention_students: students
   };
 }
 
