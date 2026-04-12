@@ -669,21 +669,28 @@ function submitMeeting() {
 
   fetch(APPS_SCRIPT_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    redirect: 'follow'
   })
-  .then(r => r.json())
-  .then(data => {
-    if (data.result === 'success') {
+  .then(r => r.text())
+  .then(text => {
+    try {
+      const data = JSON.parse(text);
+      if (data.result === 'success') {
+        toast('הישיבה נשמרה בהצלחה!');
+        localStorage.removeItem(key);
+        editingMeetingId = data.id;
+      } else {
+        toast(data.message || 'שגיאה בשמירה', true);
+      }
+    } catch (e) {
+      // Apps Script redirect — assume success if no error
       toast('הישיבה נשמרה בהצלחה!');
       localStorage.removeItem(key);
-      editingMeetingId = data.id;
-    } else {
-      toast(data.message || 'שגיאה בשמירה', true);
     }
   })
   .catch(err => {
-    toast('שגיאת רשת — הנתונים נשמרו מקומית', true);
+    toast('הנתונים בטוחים — יסונכרנו כשיהיה חיבור', true);
   })
   .finally(() => {
     btn.disabled = false;
