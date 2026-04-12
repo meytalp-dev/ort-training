@@ -360,6 +360,7 @@ body::before{content:'';position:fixed;inset:0;
 <!-- Load student data -->
 <script src="student-data.js"></script>
 <script src="student-data-extra.js"></script>
+<script src="counselor-reports-data.js"></script>
 <script src="cloud-storage.js"></script>
 
 <script>
@@ -778,19 +779,77 @@ function renderAcademic(s) {
 function renderTreatment(s) {
   var fullName = s.last + ' ' + s.first;
   var html = '';
+  var hasContent = false;
 
-  // Counselor background
+  // ── Counselor Report from Word files (counselor-reports-data.js) ──
+  var crReport = (typeof findCounselorReport === 'function') ? findCounselorReport(s.first, s.last) : null;
+  if (crReport) {
+    hasContent = true;
+    var counselorNames = {'\u05d3\u05d5\u05e8\u05d9\u05ea':'\u05d3\u05d5\u05e8\u05d9\u05ea \u05d5\u05d9\u05d2\u05d3\u05d5\u05e8','\u05dc\u05d9\u05d0\u05ea':'\u05dc\u05d9\u05d0\u05ea \u05e8\u05d5\u05d6\u05e0\u05e8','\u05e6\u05d4\u05d9\u05d9':'\u05e6\u05d4\u05d9\u05d9 \u05d2\u05d8\u05d4\u05d5\u05df'};
+    var cName = counselorNames[crReport.counselor] || crReport.counselor;
+
+    // Header with counselor name
+    html += '<div class="report-section" style="border-right:3px solid var(--dusty-rose);padding-right:12px;margin-bottom:16px">';
+    html += '<h4 style="display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dusty-rose)" stroke-width="2" style="width:18px;height:18px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> \u05d3\u05d5\u05d7 \u05d9\u05d5\u05e2\u05e6\u05ea \u2014 \u05d9\u05e0\u05d5\u05d0\u05e8 \u05ea\u05e9\u05e4"\u05d5</h4>';
+    html += '<div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">\u05d9\u05d5\u05e2\u05e6\u05ea: ' + esc(cName) + ' \u00b7 \u05ea\u05dc\u05de\u05d9\u05d3: ' + esc(crReport.name) + '</div>';
+
+    // Background info grid
+    var bgFields = crReport.background;
+    if (bgFields && Object.keys(bgFields).length > 0) {
+      var fieldLabels = {
+        familyCircle:'\u05de\u05e2\u05d2\u05dc \u05de\u05e9\u05e4\u05d7\u05ea\u05d9', parentCooperation:'\u05e9\u05d9\u05ea\u05d5\u05e3 \u05e4\u05e2\u05d5\u05dc\u05d4 \u05d4\u05d5\u05e8\u05d9\u05dd',
+        significantFigure:'\u05d3\u05de\u05d5\u05ea \u05de\u05e9\u05de\u05e2\u05d5\u05ea\u05d9\u05ea', economicStatus:'\u05de\u05e6\u05d1 \u05db\u05dc\u05db\u05dc\u05d9',
+        prevSchool:'\u05d1\u05d9"\u05e1 \u05e7\u05d5\u05d3\u05dd', diagnosis:'\u05d0\u05d1\u05d7\u05d5\u05df/\u05d5\u05e2\u05d3\u05ea \u05d4\u05e9\u05de\u05d4',
+        therapist:'\u05d2\u05d5\u05e8\u05dd \u05de\u05d8\u05e4\u05dc/\u05ea\u05e8\u05d5\u05e4\u05ea\u05d9', socialEmotional:'\u05de\u05e2\u05d2\u05dc \u05d7\u05d1\u05e8\u05ea\u05d9-\u05e8\u05d2\u05e9\u05d9',
+        emotionalHistory:'\u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05d4 \u05d8\u05d9\u05e4\u05d5\u05dc \u05e8\u05d2\u05e9\u05d9', authority:'\u05e7\u05d1\u05dc\u05ea \u05e1\u05de\u05db\u05d5\u05ea',
+        criminalRecord:'\u05ea\u05d9\u05e7 \u05e4\u05dc\u05d9\u05dc\u05d9/\u05e7\u05e6\u05d9\u05e0\u05ea \u05de\u05d1\u05d7\u05df', attendanceIssue:'\u05d1\u05e2\u05d9\u05d5\u05ea \u05e0\u05d5\u05db\u05d7\u05d5\u05ea',
+        academicCircle:'\u05de\u05e2\u05d2\u05dc \u05dc\u05d9\u05de\u05d5\u05d3\u05d9', employment:'\u05de\u05e7\u05d5\u05dd \u05e2\u05d1\u05d5\u05d3\u05d4'
+      };
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:14px">';
+      var importantKeys = ['familyCircle','diagnosis','therapist','socialEmotional','emotionalHistory','parentCooperation','prevSchool','significantFigure','criminalRecord','authority','economicStatus','attendanceIssue','academicCircle','employment'];
+      importantKeys.forEach(function(key) {
+        var val = bgFields[key];
+        if (val && val.trim()) {
+          var label = fieldLabels[key] || key;
+          html += '<div style="padding:6px 8px;background:rgba(183,134,168,.06);border-radius:6px">';
+          html += '<div style="font-size:.68rem;color:var(--muted);font-weight:600">' + esc(label) + '</div>';
+          html += '<div style="font-size:.82rem;white-space:pre-line">' + esc(val) + '</div>';
+          html += '</div>';
+        }
+      });
+      html += '</div>';
+    }
+
+    // Monthly updates timeline
+    if (crReport.monthly && crReport.monthly.length > 0) {
+      html += '<h4 style="margin-top:14px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="2" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> \u05de\u05e2\u05e7\u05d1 \u05d7\u05d5\u05d3\u05e9\u05d9</h4>';
+      html += '<div style="display:flex;flex-direction:column;gap:8px">';
+      crReport.monthly.forEach(function(m) {
+        html += '<div style="background:rgba(232,176,96,.06);border-radius:8px;padding:10px 12px;border-right:3px solid var(--warm-gold)">';
+        html += '<div style="font-weight:600;color:var(--warm-gold);font-size:.82rem;margin-bottom:4px">' + esc(m.month) + '</div>';
+        if (m.updates) html += '<div style="font-size:.82rem;white-space:pre-line;margin-bottom:4px"><span style="color:var(--muted);font-size:.72rem">\u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd: </span>' + esc(m.updates) + '</div>';
+        if (m.goals) html += '<div style="font-size:.82rem;white-space:pre-line"><span style="color:var(--muted);font-size:.72rem">\u05de\u05d8\u05e8\u05d5\u05ea: </span>' + esc(m.goals) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // ── Counselor background (legacy/online system) ──
   var bg = (typeof COUNSELOR_BACKGROUND !== 'undefined') ? COUNSELOR_BACKGROUND[fullName] || COUNSELOR_BACKGROUND[s.first + ' ' + s.last] : null;
   if (bg) {
-    html += '<div class="report-section"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--dusty-rose)" stroke-width="2" style="width:16px;height:16px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> רקע — דוח יועצת</h4>';
-    if (bg.teacher) html += '<div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">מחנכת: ' + esc(bg.teacher) + ' · כיתה: ' + esc(bg['class'] || '') + '</div>';
+    hasContent = true;
+    html += '<div class="report-section"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--dusty-rose)" stroke-width="2" style="width:16px;height:16px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> \u05e8\u05e7\u05e2 \u2014 \u05d3\u05d5\u05d7 \u05d9\u05d5\u05e2\u05e6\u05ea</h4>';
+    if (bg.teacher) html += '<div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">\u05de\u05d7\u05e0\u05db\u05ea: ' + esc(bg.teacher) + ' \u00b7 \u05db\u05d9\u05ea\u05d4: ' + esc(bg['class'] || '') + '</div>';
     html += '<div class="report-text">' + esc(bg.text || '') + '</div></div>';
   }
 
-  // Monthly reports
+  // ── Monthly reports (legacy/online system) ──
   var monthly = (typeof COUNSELOR_MONTHLY !== 'undefined') ? COUNSELOR_MONTHLY[fullName] || COUNSELOR_MONTHLY[s.first + ' ' + s.last] : null;
   if (monthly && monthly.length > 0) {
-    html += '<div class="report-section"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="2" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> דוחות חודשיים — יועצת</h4>';
+    hasContent = true;
+    html += '<div class="report-section"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="2" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> \u05d3\u05d5\u05d7\u05d5\u05ea \u05d7\u05d5\u05d3\u05e9\u05d9\u05d9\u05dd \u2014 \u05d9\u05d5\u05e2\u05e6\u05ea</h4>';
     monthly.forEach(function(m) {
       html += '<div class="monthly-entry"><div class="month-label"><span class="status-dot ' + (m.status || 'stable') + '"></span> ' + esc(m.month) + '</div>';
       html += '<div class="month-text">' + esc(m.text) + '</div></div>';
@@ -798,23 +857,24 @@ function renderTreatment(s) {
     html += '</div>';
   }
 
-  // TACHI goals
+  // ── TACHI goals ──
   var tachi = SHILUV_TACHI ? SHILUV_TACHI[fullName] : null;
   if (tachi) {
+    hasContent = true;
     if (tachi.g1 && tachi.g1.length > 0) {
-      html += '<div class="tachi-card"><h4>יעדי תח"י — קבוצה א\'</h4><ul class="tachi-goals">';
+      html += '<div class="tachi-card"><h4>\u05d9\u05e2\u05d3\u05d9 \u05ea\u05d7"\u05d9 \u2014 \u05e7\u05d1\u05d5\u05e6\u05d4 \u05d0\'</h4><ul class="tachi-goals">';
       tachi.g1.forEach(function(goal) { html += '<li>' + esc(goal) + '</li>'; });
       html += '</ul></div>';
     }
     if (tachi.g2 && tachi.g2.length > 0) {
-      html += '<div class="tachi-card"><h4>יעדי תח"י — קבוצה ב\'</h4><ul class="tachi-goals">';
+      html += '<div class="tachi-card"><h4>\u05d9\u05e2\u05d3\u05d9 \u05ea\u05d7"\u05d9 \u2014 \u05e7\u05d1\u05d5\u05e6\u05d4 \u05d1\'</h4><ul class="tachi-goals">';
       tachi.g2.forEach(function(goal) { html += '<li>' + esc(goal) + '</li>'; });
       html += '</ul></div>';
     }
   }
 
-  if (!bg && !monthly && !tachi) {
-    html += '<div style="text-align:center;padding:40px;color:var(--muted)">אין מידע טיפולי</div>';
+  if (!hasContent) {
+    html += '<div style="text-align:center;padding:40px;color:var(--muted)">\u05d0\u05d9\u05df \u05de\u05d9\u05d3\u05e2 \u05d8\u05d9\u05e4\u05d5\u05dc\u05d9</div>';
   }
 
   return html;
