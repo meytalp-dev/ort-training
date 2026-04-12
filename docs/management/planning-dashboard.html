@@ -95,6 +95,12 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 .role-border-counselor{border-right:4px solid #3B82F6}
 .role-border-ofira{border-right:4px solid #D47A35}
 .role-border-homeroom{border-right:4px solid #E05050}
+.role-color-mano{background:#DDEEDD;color:#1A5C1A}
+.role-color-yiska{background:#FCE4EC;color:#880E4F}
+.role-color-dorit{background:#E8EAF6;color:#283593}
+.role-border-mano{border-right:4px solid #6A9F6A}
+.role-border-yiska{border-right:4px solid #EC407A}
+.role-border-dorit{border-right:4px solid #5C6BC0}
 
 /* Bar chart */
 .bar-chart{display:flex;align-items:flex-end;gap:8px;height:180px;padding:0 12px;margin-top:12px}
@@ -144,6 +150,7 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       דשבורד תכנון שנתי
       <span class="badge">תשפ"ז -- אורט בית הערבה</span>
+      <span class="badge" id="dataSource" style="background:rgba(39,174,96,.12);color:#1E8449;border-color:rgba(39,174,96,.25)">...</span>
     </h1>
   </div>
   <div class="hdr-btns">
@@ -167,13 +174,19 @@ body{font-family:Heebo,sans-serif;background:var(--bg);color:var(--text);min-hei
 </div>
 
 <script>
-const ROLE_KEYS = ['ravit', 'yaakov', 'counselor', 'ofira', 'homeroom'];
+const API_URL = 'https://script.google.com/macros/s/AKfycby_PjhdOFI8mr1u9h5h0qi2uCkK3GkJP--iMo-GjIDPXRT2H7nLxO5UWMv6Ek70uDfv/exec';
+let _jsonpCounter = 0;
+
+const ROLE_KEYS = ['ravit', 'yaakov', 'counselor', 'ofira', 'homeroom', 'mano', 'yiska', 'dorit'];
 const ROLE_LABELS = {
-  ravit: 'רוית -- סגנית/רכזת פדגוגית',
-  yaakov: 'יעקב -- רכז חברתי',
+  ravit: 'רוית — סגנית/רכזת פדגוגית',
+  yaakov: 'יעקב — רכז חברתי',
   counselor: 'יועצת',
-  ofira: 'אופירה -- שורשי ישראל',
-  homeroom: 'מחנכת'
+  ofira: 'אופירה — שורשי ישראל',
+  homeroom: 'מחנכת',
+  mano: 'מנו — רכז מוגנות',
+  yiska: 'יסכה — רכזת טיפול',
+  dorit: 'דורית — רכזת יועצות'
 };
 
 const PRINCIPLE_LABELS = {
@@ -194,7 +207,7 @@ const PRINCIPLE_COLORS = {
 
 const MONTHS_ORDER = ['ספטמבר','אוקטובר','נובמבר','דצמבר','ינואר','פברואר','מרץ','אפריל','מאי','יוני'];
 
-function loadAllData() {
+function loadAllDataLocal() {
   const allData = {};
   ROLE_KEYS.forEach(role => {
     try {
@@ -208,6 +221,46 @@ function loadAllData() {
     } catch(e) {}
   });
   return allData;
+}
+
+function convertSheetPlan(plan) {
+  const data = {};
+  if (plan.profile) Object.keys(plan.profile).forEach(k => { data[k] = plan.profile[k]; });
+  if (plan.goals && plan.goals.areas) {
+    data.areas = plan.goals.areas;
+    data.selectedAreas = Object.keys(plan.goals.areas);
+  }
+  if (plan.activities) data.activities = plan.activities;
+  if (plan.evaluation) data.evaluation = plan.evaluation;
+  return data;
+}
+
+function loadAllDataFromSheet() {
+  return new Promise((resolve, reject) => {
+    const cbName = '_jsonpCb_' + (++_jsonpCounter);
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      reject(new Error('JSONP timeout'));
+    }, 12000);
+
+    window[cbName] = function(response) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      resolve(response);
+    };
+
+    const script = document.createElement('script');
+    script.src = API_URL + '?action=getAllPlans&callback=' + cbName;
+    script.onerror = function() {
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      reject(new Error('JSONP network error'));
+    };
+    document.head.appendChild(script);
+  });
 }
 
 function getAllGoals(data) {
@@ -261,8 +314,12 @@ function getEventMonth(ev) {
   return '';
 }
 
-function render() {
-  const data = loadAllData();
+function showSource(src) {
+  const el = document.getElementById('dataSource');
+  if (el) el.textContent = src;
+}
+
+function render(data) {
   const container = document.getElementById('dashContent');
   const roleCount = Object.keys(data).length;
 
@@ -491,8 +548,38 @@ function toggleRoleDetails(btn) {
   btn.textContent = details.classList.contains('open') ? 'הסתר פירוט' : 'הצג פירוט';
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', render);
+// Initialize — try Sheet first, fallback to localStorage
+document.addEventListener('DOMContentLoaded', function() {
+  // Show loading state
+  const container = document.getElementById('dashContent');
+  container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted)"><div style="font-size:18px;font-weight:600;margin-bottom:8px">טוען נתונים מהענן...</div></div>';
+
+  loadAllDataFromSheet()
+    .then(response => {
+      if (response && response.result === 'success' && response.plans) {
+        const allData = {};
+        Object.keys(response.plans).forEach(role => {
+          const plan = response.plans[role];
+          const converted = convertSheetPlan(plan);
+          if (converted && (converted.areas || converted.name)) {
+            allData[role] = converted;
+            // Cache locally
+            try { localStorage.setItem('planning_' + role, JSON.stringify(converted)); } catch(e) {}
+          }
+        });
+        showSource('ענן');
+        render(allData);
+      } else {
+        showSource('מקומי');
+        render(loadAllDataLocal());
+      }
+    })
+    .catch(err => {
+      console.warn('Sheet load failed, using localStorage:', err);
+      showSource('מקומי');
+      render(loadAllDataLocal());
+    });
+});
 </script>
 </body>
 </html>
