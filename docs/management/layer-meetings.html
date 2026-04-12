@@ -817,16 +817,28 @@ function loadDashboard() {
     return;
   }
 
-  const url = `${APPS_SCRIPT_URL}?action=getDashboard&layer=${encodeURIComponent(currentDashboardLayer)}&callback=dashboardCallback`;
-  jsonp(url, 'dashboardCallback');
-}
-
-function dashboardCallback(data) {
-  if (data.result !== 'success') {
-    toast(data.message || 'שגיאה בטעינת דשבורד', true);
-    return;
-  }
-  renderDashboard(data);
+  const url = `${APPS_SCRIPT_URL}?action=getDashboard&layer=${encodeURIComponent(currentDashboardLayer)}`;
+  fetch(url)
+    .then(r => r.text())
+    .then(text => {
+      // Apps Script may return JSONP or plain JSON
+      let data;
+      try { data = JSON.parse(text); } catch (e) {
+        // Try extracting JSON from JSONP wrapper: callback({...})
+        const match = text.match(/\w+\((\{[\s\S]+\})\)/);
+        if (match) data = JSON.parse(match[1]);
+        else throw new Error('Invalid response');
+      }
+      if (data.result !== 'success') {
+        toast(data.message || 'שגיאה בטעינת דשבורד', true);
+        return;
+      }
+      renderDashboard(data);
+    })
+    .catch(err => {
+      console.error('Dashboard load error:', err);
+      loadDashboardFromLocal();
+    });
 }
 
 function renderDashboard(data) {
@@ -963,12 +975,23 @@ function loadDashboardFromLocal() {
 
 function viewMeeting(id) {
   if (!APPS_SCRIPT_URL) return;
-  const url = `${APPS_SCRIPT_URL}?action=getMeeting&id=${encodeURIComponent(id)}&callback=viewMeetingCallback`;
-  jsonp(url, 'viewMeetingCallback');
+  const url = `${APPS_SCRIPT_URL}?action=getMeeting&id=${encodeURIComponent(id)}`;
+  fetch(url)
+    .then(r => r.text())
+    .then(text => {
+      let data;
+      try { data = JSON.parse(text); } catch (e) {
+        const match = text.match(/\w+\((\{[\s\S]+\})\)/);
+        if (match) data = JSON.parse(match[1]);
+        else return;
+      }
+      if (data.result !== 'success') return;
+      loadMeetingIntoForm(data);
+    })
+    .catch(err => console.error('viewMeeting error:', err));
 }
 
-function viewMeetingCallback(data) {
-  if (data.result !== 'success') return;
+function loadMeetingIntoForm(data) {
   // Load into form for editing
   editingMeetingId = data.meeting.id;
   const m = data.meeting;

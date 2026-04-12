@@ -31,8 +31,7 @@ var DOMAINS = ['פדגוגי', 'חברתי', 'קשר אישי', 'רגשי', 'ח�
 // ============================================
 
 function doGet(e) {
-  var callback = (e.parameter.callback || 'callback').replace(/[^a-zA-Z0-9_]/g, '');
-  var action = e.parameter.action || '';
+  var action = (e.parameter && e.parameter.action) || '';
 
   try {
     var result;
@@ -44,12 +43,12 @@ function doGet(e) {
       default:              result = { result: 'ok', message: 'layer-meetings API v1' };
     }
     return ContentService
-      .createTextOutput(callback + '(' + JSON.stringify(result) + ')')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      .createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService
-      .createTextOutput(callback + '(' + JSON.stringify({ result: 'error', message: err.toString().substring(0, 300) }) + ')')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+      .createTextOutput(JSON.stringify({ result: 'error', message: err.toString().substring(0, 300) }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
