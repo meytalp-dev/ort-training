@@ -22,7 +22,7 @@
  * ════════════════════════════════════════════════════════════
  */
 
-var SHEET_ID = '';  // ← הדביקי כאן את ה-Sheet ID
+var SHEET_ID = '1g3GXxYjK70SJqXLhHmeC6pULTKYsr7kitupiNQslbPg';
 
 var DOMAINS = ['פדגוגי', 'חברתי', 'קשר אישי', 'רגשי', 'חמשת הממדים'];
 
