@@ -117,6 +117,21 @@ tr:hover td { background: var(--hover); }
   .tabs { flex-wrap: wrap; }
 }
 @media print { .tabs, .filter-bar, .modal-overlay { display: none !important; } }
+
+/* Timetable tab */
+.tt-toggle { border: none; background: transparent; cursor: pointer; padding: 6px 14px; border-radius: 6px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--muted); transition: all .2s; }
+.tt-toggle.active { background: var(--purple-dark); color: #fff; }
+.tt-person-card { background: var(--card); border-radius: 10px; padding: 14px; border: 1px solid var(--border); cursor: pointer; transition: all .15s; }
+.tt-person-card:hover { border-color: var(--purple); box-shadow: 0 2px 8px rgba(128,90,213,.15); }
+.tt-person-card .pc-name { font-weight: 700; font-size: 14px; }
+.tt-person-card .pc-class { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.tt-person-card .pc-count { font-size: 20px; font-weight: 800; color: var(--purple); margin-top: 6px; }
+.tt-cell { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; min-width: 110px; }
+.tt-cell-header { background: #F7F5F2; padding: 8px 12px; font-weight: 700; font-size: 12px; color: #4A5568; text-align: center; }
+.tt-period-header { background: #F7F5F2; padding: 8px 6px; font-weight: 700; font-size: 12px; color: #4A5568; text-align: center; min-width: 40px; }
+.tt-badge { display: block; border-radius: 8px; padding: 4px 7px; font-size: 11px; font-weight: 600; margin: 2px 0; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.tt-empty { background: #F5F5F5; color: #ccc; border-radius: 6px; height: 28px; }
+@media (max-width: 768px) { #tt-cards { grid-template-columns: repeat(2,1fr); } }
 </style>
 </head>
 <body>
@@ -173,6 +188,7 @@ tr:hover td { background: var(--hover); }
   <button class="tab-btn" onclick="switchTab('students')">תלמידים</button>
   <button class="tab-btn" onclick="switchTab('teachers')">נותני מענה</button>
   <button class="tab-btn" onclick="switchTab('tachi')">תוכניות תח"י</button>
+  <button class="tab-btn" onclick="switchTab('timetables')">מערכות תח"י</button>
 </div>
 
 <!-- TAB: Hours Balance -->
@@ -231,6 +247,36 @@ tr:hover td { background: var(--hover); }
   </div>
 </div>
 
+<!-- TAB: Timetables -->
+<div class="tab-content" id="tab-timetables">
+  <div class="section">
+    <div class="filter-bar" style="margin-bottom:12px">
+      <input type="text" id="tt-search" placeholder="חיפוש תלמיד, כיתה או נותן מענה..." oninput="ttFilter()" style="flex:1;min-width:200px">
+      <select id="tt-class" onchange="ttFilter()">
+        <option value="">כל הכיתות</option>
+      </select>
+      <div style="display:flex;gap:4px;background:#F0EBF8;border-radius:8px;padding:4px">
+        <button id="tt-view-students" class="tt-toggle active" onclick="ttSetView('students')">תלמידים</button>
+        <button id="tt-view-staff" class="tt-toggle" onclick="ttSetView('staff')">צוות</button>
+      </div>
+    </div>
+    <div id="tt-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:20px"></div>
+    <div id="tt-timetable" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <button onclick="ttBack()" style="padding:6px 16px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px">← חזרה</button>
+        <h3 id="tt-person-name" style="font-size:18px;font-weight:800;color:var(--purple-dark)"></h3>
+        <span id="tt-person-meta" style="color:var(--muted);font-size:13px"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="tt-grid" style="min-width:600px">
+          <thead id="tt-head"></thead>
+          <tbody id="tt-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal for Tachi -->
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modal-content"></div>
@@ -251,7 +297,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
-  const idx = ['hours','students','teachers','tachi'].indexOf(name);
+  const idx = ['hours','students','teachers','tachi','timetables'].indexOf(name);
   document.querySelectorAll('.tab-btn')[idx].classList.add('active');
 }
 
@@ -452,8 +498,177 @@ function closeModal() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
+// ===== TIMETABLES TAB =====
+const TT_DAYS = ['sunday','monday','tuesday','wednesday','thursday'];
+const TT_DAY_HE = ['ראשון','שני','שלישי','רביעי','חמישי'];
+const TT_PERIODS = ['1','2','3','4','5','6','7'];
+
+const TT_DATA = {"students":[{"name":"ווינסוב נתנאל-אלון","class":"ט2","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{},"thursday":{"3":"שמעון"}}},{"name":"צלח איתמר","class":"י1","status":"active","schedule":{"sunday":{"2":"אליאל - רבי מלל","3":"אלון - טיפול","4":"יסכה","5":"קבוצה מתמטיקה - שירלי"},"monday":{},"tuesday":{},"wednesday":{},"thursday":{}}},{"name":"אלקריף דוד","class":"י1","status":"active","schedule":{"sunday":{"1":"אליאל - רבי מלל","2":"אליאל - רבי מלל","3":"אלון - טיפול"},"monday":{},"tuesday":{},"wednesday":{},"thursday":{}}},{"name":"בן ארוש משה","class":"י1","status":"active","schedule":{"sunday":{"7":"שירלי"},"monday":{},"tuesday":{"7":"שירלי"},"wednesday":{},"thursday":{}}},{"name":"אבישג אליהו","class":"י1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{"2":"בת שבע","4":"נעמה"},"thursday":{}}},{"name":"דוד חן","class":"י1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{"6":"קבוצה עברית - יעל"},"thursday":{"2":"מתמטיקה - שירלי","3":"בת שבע - פסיכותרפיה"}}},{"name":"יאיר ברהום","class":"י2","status":"active","schedule":{"sunday":{"4":"אלון"},"monday":{},"tuesday":{},"wednesday":{"2":"עברית - יעל"},"thursday":{"2":"מתמטיקה - שירלי","3":"יסכה"}}},{"name":"ניתאי בן סעדון","class":"י2","status":"active","schedule":{"sunday":{},"monday":{"3":"קבוצה י על עברית"},"tuesday":{},"wednesday":{},"thursday":{"1":"מתמטיקה - שירלי","2":"מתמטיקה - שירלי","4":"יסכה"}}},{"name":"פאנה","class":"יא1","status":"active","schedule":{"sunday":{},"monday":{"1":"מתמטיקה - שירלי","2":"מתמטיקה - שירלי","4":"רבי מלל - יעל"},"tuesday":{},"wednesday":{"5":"טיפול רגשי - שרה"},"thursday":{}}},{"name":"ברוק  טפרה","class":"יא1","status":"active","schedule":{"sunday":{},"monday":{"1":"מתמטיקה - שירלי","2":"מתמטיקה - שירלי"},"tuesday":{"5":"יסכה"},"wednesday":{"3":"שי","5":"טיפול רגשי בבע \" ח"},"thursday":{}}},{"name":"ליאם פחימה","class":"יא2","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{"2":"נעמה - קבוצה מתמטיקה","5":"עברית - נעמה"},"thursday":{}}},{"name":"לוי ליאורה","class":"יא2","status":"active","schedule":{"sunday":{"3":"טיפול רגשי - שרה"},"monday":{},"tuesday":{},"wednesday":{"3":"עברית נעמה"},"thursday":{}}},{"name":"איילה גליסקו","class":"יא3","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"5":"שירלי - מתמטיקה"},"wednesday":{"3":"טיפול רגשי בבע \" ח","6":"שירלי קבוצה מתמטיקה"},"thursday":{}}},{"name":"נועה יוחננוב","class":"יא3","status":"active","schedule":{"sunday":{},"monday":{"4":"מגדלור","6":"יסכה"},"tuesday":{"5":"שירלי - מתמטיקה -","6":"שירלי - מתמטיקה -"},"wednesday":{},"thursday":{}}},{"name":"נויה גהן","class":"יא3","status":"active","schedule":{"sunday":{},"monday":{"3":"טיפול רגשי - שרה"},"tuesday":{"5":"שירלי - מתמטיקה -","6":"שירלי מתמטיקה"},"wednesday":{},"thursday":{}}},{"name":"נתנאל אבוצדקה","class":"יב1","status":"active","schedule":{"sunday":{"3":"עברית - יעל","4":"עברית - יעל"},"monday":{},"tuesday":{"3":"כושר קרבי - קבוצה"},"wednesday":{},"thursday":{}}},{"name":"אביאור ששון","class":"יב1","status":"active","schedule":{"sunday":{"3":"עברית - שירלי"},"monday":{"2":"קבוצנ עם אלון"},"tuesday":{"3":"כושר קרבי"},"wednesday":{"3":"שי - מחשבים","4":"שי - מחשבים"},"thursday":{}}},{"name":"בן כהן","class":"יב1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"1":"אדיר","2":"אדיר","3":"אלון - קבוצה"},"wednesday":{},"thursday":{}}},{"name":"רועי יחזקאל","class":"יב1","status":"active","schedule":{"sunday":{"6":"צהי"},"monday":{},"tuesday":{"3":"כושר קרבי"},"wednesday":{},"thursday":{"5":"יוסי - אוטוטרוניקה","6":"יוסי - אוטוטרוניקה"}}},{"name":"נדב בניטה","class":"יב1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"1":"אדיר אוטוטרוניקה","2":"אדיר אוטוטרוניקה"},"wednesday":{},"thursday":{}}},{"name":"דוד דיאר","class":"יב1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"3":"כושר קרבי"},"wednesday":{"3":"אשר","4":"אשר"},"thursday":{"5":"שירלי"}}},{"name":"ינון טל","class":"יב1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"1":"אדיר","2":"אדיר","3":"אלון - קבוצה","4":"כושר קרבי"},"wednesday":{},"thursday":{}}},{"name":"לירון גולר","class":"יב2","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"1":"עברית - שירלי","2":"עברית - שירלי","3":"כושר קרבי"},"wednesday":{},"thursday":{}}},{"name":"עידו בן שמחון","class":"יב2","status":"active","schedule":{"sunday":{"1":"אנגלית - יעל","2":"אנגלית - יעל","3":"מתמטיקה - שירלי","4":"מתמטיקה - שירלי"},"monday":{},"tuesday":{"1":"שירלי - אזרחות","4":"אוטוטרוניקה - מוריס"},"wednesday":{},"thursday":{}}},{"name":"בירהנו נתנאל","class":"יב2","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{},"thursday":{"1":"תקשוב - שי","2":"תקשוב - שי","6":"יסכה"}}},{"name":"אליאור אביגדור יהודה","class":"יב2","status":"active","schedule":{"sunday":{"6":"רבי מלל - שירלי"},"monday":{},"tuesday":{"3":"רבי מלל - שירלי","6":"כושר קרבי"},"wednesday":{},"thursday":{}}},{"name":"שחרי","class":"יב3","status":"active","schedule":{"sunday":{},"monday":{"4":"שירלי - עברית"},"tuesday":{},"wednesday":{"1":"שירלי - מתמטיקה","4":"עיצוב שיער","5":"עיצוב שיער"},"thursday":{"3":"שירלי - מתמטיקה","4":"שירלי - מתמטיקה","6":"שירלי - מתמטיקה"}}},{"name":"דביר פשקו","class":"יב3","status":"active","schedule":{"sunday":{"1":"תעסוקה"},"monday":{"7":"השלמות שירה סרוסי"},"tuesday":{"1":"אדיר","2":"אדיר","3":"קבוצה עברית - שירלי","7":"השלמות"},"wednesday":{"6":"כלבים ?","7":"השלמות עם שירה עזריה -"},"thursday":{"1":"תעסוקה"}}},{"name":"דרעי דניאל","class":"יב3","status":"active","schedule":{"sunday":{},"monday":{"3":"צהיי"},"tuesday":{},"wednesday":{},"thursday":{"1":"עיצוב שיער","2":"עיצוב שיער"}}},{"name":"אופיר מימוני","class":"יב3","status":"active","schedule":{"sunday":{"3":"עברית - יעל"},"monday":{},"tuesday":{},"wednesday":{"3":"שי"},"thursday":{}}},{"name":"אורי ארגמן","class":"יב3","status":"active","schedule":{"sunday":{"7":"מתמטיקה - מתרגלת אפרת"},"monday":{"3":"יסכה","7":"מתמטיקה - מתרגלת אפרת"},"tuesday":{"1":"אדיר","2":"אדיר","3":"שירלי רבי מלל","4":"שירלי רבי מלל"},"wednesday":{},"thursday":{}}},{"name":"לידור מתנה","class":"יב3","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"4":"אדיר","5":"אדיר","6":"כושר קרבי"},"wednesday":{},"thursday":{}}},{"name":"מנשורי דניאל","class":"יב3","status":"active","schedule":{"sunday":{"3":"עברית - יעל","4":"עברית יעל"},"monday":{},"tuesday":{"6":"כושר קרבי"},"wednesday":{},"thursday":{}}},{"name":"טויטו אביגיל","class":"י3","status":"active","schedule":{"sunday":{"1":"שירלי מתמטיקה"},"monday":{"4":"טיפול רגשי נויה"},"tuesday":{"3":"מוריס"},"wednesday":{},"thursday":{}}},{"name":"נועם שלום ועדה פתוחה","class":"ט1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"4":"אליאל רבי מלל"},"wednesday":{},"thursday":{"3":"אליאל רבי מלל"}}},{"name":"לוי ליאורה","class":"יא2","status":"active","schedule":{"sunday":{"2":"טיפול רגשי - שרה"},"monday":{},"tuesday":{},"wednesday":{"3":"רבי מלל נעמה"},"thursday":{}}},{"name":"מאיר ריכנשטיין","class":"י3","status":"active","schedule":{"sunday":{"2":"שירלי מתמטיקה"},"monday":{},"tuesday":{"5":"מוריס","6":"מוריס"},"wednesday":{"4":"מגדלור"},"thursday":{"6":"י"}}},{"name":"נריה בר חן","class":"ט1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{"2":"אליאל"},"wednesday":{"4":"מגדלור"},"thursday":{}}},{"name":"אביאל סמיח","class":"","status":"active","schedule":{"sunday":{},"monday":{"2":"טיפול במוזיקה"},"tuesday":{},"wednesday":{},"thursday":{"1":"אליאל","2":"אליאל"}}},{"name":"אמינוף נהוראי","class":"י2","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{"3":"שירלי - רבי מלל","6":"שי"},"thursday":{}}},{"name":"ליאן נחום","class":"י2","status":"active","schedule":{"sunday":{},"monday":{"6":"שירלי - מתמטיקה"},"tuesday":{},"wednesday":{},"thursday":{"2":"פסיכותרפיה - בת שבע"}}},{"name":"אליאב כהן","class":"","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{"1":"שירלי - רבי מלל","2":"אשר"},"thursday":{}}},{"name":"דוד דיין","class":"יא2","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{"6":"נעמה","7":"נעמה"},"thursday":{}}},{"name":"מושיקו מריאן","class":"יב1","status":"active","schedule":{"sunday":{"3":"יעל - רבי מלל","4":"יעל"},"monday":{},"tuesday":{"5":"אדיר","6":"אדיר"},"wednesday":{"4":"שירלי","5":"שירלי"},"thursday":{}}},{"name":"יוליה","class":"י3","status":"active","schedule":{"sunday":{"1":"מתמטיקה שירלי","2":"שירלי"},"monday":{"3":"שירלי - רבי מלל","6":"מתיאס"},"tuesday":{"4":"שירלי - רבי מלל"},"wednesday":{"5":"יוסי","6":"יוסי"},"thursday":{}}},{"name":"עידו טקלה","class":"ט1","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{},"thursday":{"4":"בת שבע","6":"אליאל"}}},{"name":"עידו כהן","class":"ט2","status":"active","schedule":{"sunday":{},"monday":{},"tuesday":{},"wednesday":{"3":"מגדלור"},"thursday":{"5":"אליאל"}}},{"name":"תהל מועלם","class":"י2","status":"active","schedule":{"sunday":{},"monday":{"4":"יעל"},"tuesday":{},"wednesday":{},"thursday":{"4":"שרה"}}},{"name":"מיכאל צצווילי","class":"ט1","status":"active","schedule":{"sunday":{},"monday":{"1":"אליאל"},"tuesday":{},"wednesday":{"5":"כלבים"},"thursday":{}}},{"name":"אריה חייט","class":"ט1","status":"active","schedule":{"sunday":{},"monday":{"2":"אליאל"},"tuesday":{},"wednesday":{"6":"יוסי"},"thursday":{"4":"בת שבע"}}}],"staff":[{"name":"שירלי","title":"שירלי","schedule":{"sunday":{"1":"י 3: אביגיל , מאיר , יוליה","2":"י 3: אביגיל , מאיר , יוליה","3":", עידו יב 2","4":", עידו יב 2","5":"קב י 1: איתמר","6":"ב 2 אליאור","7":"משה בן ארוש י 1"},"monday":{"1":"פאנה וברוק יא 1","2":"פאנה וברוק יא 1","3":"יוליה י 3","4":"שחר יב 3","6":"ליאן מתמטי י 2"},"tuesday":{"1":"יב 2 גולר ועידו","2":"יב 2 גולר ועידו","3":"יב קב עברית : דביר ואורי","4":"יוליה י 3","5":"קב מתמט : נועה , איילה , נויה יא 3","6":"3 קב מתמט : נועה , איילה , נויה יא 3","7":"י 1 משה"},"wednesday":{"1":"רבי מלל אליאב כהן יב 1- פרויקטים","3":"נהוראי י 2","4":"מושיקו רבי מלל - יב 1","5":"מושיקו רבי מלל - יב 1","6":"קב מתמט : נועה , איילה , נויה יא 3"},"thursday":{"1":"דוד חן , מאור יאיר וניתאי י 2","2":"דוד חן , מאור יאיר וניתאי י 2","3":"שחר יב 3","4":"שחר יב 3","5":"דוד דיאר יב 1","6":"שחר יב 3"}}},{"name":"אליאל","title":"אליאל","schedule":{"sunday":{"1":"פרטני - צלח איתמר ואלקריף דוד י 1","2":"פרטני - צלח איתמר ואלקריף דוד י 1","3":"י 2 פרטני היסטוריה","4":"י 2 פרטני","5":"י 3 היסטוריה","6":"ישיבת - שילוב והכלה","7":"השתלמות עד 15.30"},"monday":{"1":"יא תנך","2":"יא תנך","3":"ט 1 - מיכאלפרטני היסטוריה","4":"ט 2 - עידו כהן פרטני היסטוריה","5":"יא 3 תנך","6":"היסטוריה","7":"ט 1 היסטוריה"},"tuesday":{"1":"פרטני ט נריה","2":"פרטני ט 1 אריה","3":"פרטני אביאל ט 1","4":"עידו טרלה ט 1","5":"יא 3","6":"יא 3","7":"ישיבת צוות עד 15.30"},"wednesday":{"1":"יא 3 תנ \" ך","2":"יא 3 תנך","3":"י 2 פרטניהיסטוריה","4":"י 2 פרטני","5":"יא 3","6":"יא 3 תנ \" ך"},"thursday":{"3":"נועם שלום ט 1","4":"ט 1 היסטוריה","5":"ט 2 היסטוריה"}}},{"name":"יעל","title":"יעל","schedule":{"sunday":{"1":"אנגלית עידו יב 2","2":"אנגלית עידו יב 2","3":"יב 3 לידור מנשורי אופיר אביאור נתנאל מושיקו רבי מלל","4":"ייב 3 לידור מנשורי אופיר אביאור נתנאל מושיקו רבי מלל","5":"תהל י 2","6":"ישיבה - שילוב והכלה"},"monday":{"1":"י 2 אסטרטגיות","2":"י 2 אסטרטגיות","3":"ניתאי י 2","4":"לשון יא 1= פאנה","5":"מעגלים יא 1","6":"מעגלים יא 3","7":"אנגלית ט 2"},"tuesday":{"2":"מעגלים יב 2","3":"אנגלית יא 1","4":"אנגלית יא 1","5":"מעגלים יא 2"},"wednesday":{"2":"יאיר י 2","3":"מעגלים יב 1","4":"מעגלים יב 3","6":"חן דוד י 2","7":"אנגלית ט 2"},"thursday":{}}},{"name":"יסכה","title":"יסכה","schedule":{"sunday":{"3":"אשד י 1","4":"נריה ט 1","6":"נועם ט 1"},"monday":{"2":"9.15 אלמוג יא 1","4":"עידו ט 2","7":"שטח"},"tuesday":{"3":"נתנאל יא 2","4":"דוד יא 3"},"wednesday":{"3":"ינון + יב 1 ויהודה יב 2","4":"יהודה יב 2","6":"שחר יב 3","7":"שטח"},"thursday":{"1":"דניאל דרעי יב 3","2":"דניאל דרעי יב 3"}}}]};
+
+// collect unique staff names from student schedules too
+(function() {
+  const staffNames = new Set(TT_DATA.staff.map(s => s.name));
+  // build staff from student schedules if not already there
+  const staffMap = {};
+  TT_DATA.students.forEach(st => {
+    TT_DAYS.forEach(day => {
+      const dayData = st.schedule[day] || {};
+      Object.entries(dayData).forEach(([period, specialist]) => {
+        // extract first Hebrew word as key name
+        const key = specialist.split('-')[0].trim().split(' ')[0];
+        if (!staffMap[key]) staffMap[key] = { name: key, schedule: {sunday:{},monday:{},tuesday:{},wednesday:{},thursday:{}} };
+        if (!staffMap[key].schedule[day][period]) {
+          staffMap[key].schedule[day][period] = st.name + (st.class ? ' (' + st.class + ')' : '');
+        } else {
+          staffMap[key].schedule[day][period] += ', ' + st.name;
+        }
+      });
+    });
+  });
+})();
+
+// Color palette per specialist
+const TT_COLORS = [
+  ['#E9D8FD','#44337A'],['#BEE3F8','#2A4365'],['#C6F6D5','#22543D'],
+  ['#FEFCBF','#744210'],['#FED7D7','#742A2A'],['#E6FFFA','#234E52'],
+  ['#FFF5F7','#702459'],['#EBF8FF','#2B6CB0'],['#F0FFF4','#276749'],
+  ['#FFFAF0','#7B341E'],['#FAF5FF','#553C9A'],['#F0F4FF','#3730A3'],
+];
+const TT_COLOR_MAP = {};
+let _ttColorIdx = 0;
+function ttColor(specialist) {
+  const key = specialist.split('-')[0].trim().split(' ')[0];
+  if (!TT_COLOR_MAP[key]) {
+    TT_COLOR_MAP[key] = TT_COLORS[_ttColorIdx % TT_COLORS.length];
+    _ttColorIdx++;
+  }
+  return TT_COLOR_MAP[key];
+}
+
+let _ttView = 'students'; // 'students' | 'staff'
+let _ttFilterText = '';
+let _ttFilterClass = '';
+
+function ttInit() {
+  // populate class select
+  const classes = [...new Set(TT_DATA.students.filter(s=>s.class).map(s=>s.class))].sort();
+  const sel = document.getElementById('tt-class');
+  sel.innerHTML = '<option value="">כל הכיתות</option>';
+  classes.forEach(c => { sel.innerHTML += '<option value="' + c + '">' + c + '</option>'; });
+  ttRenderCards();
+}
+
+function ttSetView(v) {
+  _ttView = v;
+  document.getElementById('tt-view-students').classList.toggle('active', v === 'students');
+  document.getElementById('tt-view-staff').classList.toggle('active', v === 'staff');
+  document.getElementById('tt-class').style.display = v === 'students' ? '' : 'none';
+  ttBack();
+  ttRenderCards();
+}
+
+function ttFilter() {
+  _ttFilterText = document.getElementById('tt-search').value.trim();
+  _ttFilterClass = document.getElementById('tt-class').value;
+  ttRenderCards();
+}
+
+function ttCountSlots(schedule) {
+  let n = 0;
+  TT_DAYS.forEach(d => { n += Object.keys(schedule[d] || {}).length; });
+  return n;
+}
+
+function ttRenderCards() {
+  const cards = document.getElementById('tt-cards');
+  const timetableDiv = document.getElementById('tt-timetable');
+  cards.style.display = 'grid';
+  timetableDiv.style.display = 'none';
+
+  const search = _ttFilterText.toLowerCase();
+  const cls = _ttFilterClass;
+
+  if (_ttView === 'students') {
+    let list = TT_DATA.students;
+    if (search) list = list.filter(s => s.name.includes(_ttFilterText) || (s.class||'').includes(_ttFilterText));
+    if (cls) list = list.filter(s => s.class === cls);
+    // sort by class
+    list = [...list].sort((a,b) => (a.class||'').localeCompare(b.class||'') || a.name.localeCompare(b.name));
+    cards.innerHTML = list.map((s,i) => {
+      const slots = ttCountSlots(s.schedule);
+      return '<div class="tt-person-card" onclick="ttShowPerson(' + JSON.stringify(s.name) + ',\'student\')">' +
+        '<div class="pc-name">' + s.name + '</div>' +
+        '<div class="pc-class">' + (s.class || 'ללא כיתה') + '</div>' +
+        '<div class="pc-count">' + slots + ' <span style="font-size:11px;font-weight:400;color:var(--muted)">שיבוצים</span></div>' +
+        '</div>';
+    }).join('');
+  } else {
+    let list = TT_DATA.staff;
+    if (search) list = list.filter(s => s.name.includes(_ttFilterText) || (s.title||'').includes(_ttFilterText));
+    cards.innerHTML = list.map(s => {
+      const slots = ttCountSlots(s.schedule);
+      return '<div class="tt-person-card" onclick="ttShowPerson(' + JSON.stringify(s.name) + ',\'staff\')">' +
+        '<div class="pc-name">' + s.name + '</div>' +
+        '<div class="pc-class" style="color:var(--teal)">' + (s.title || '') + '</div>' +
+        '<div class="pc-count">' + slots + ' <span style="font-size:11px;font-weight:400;color:var(--muted)">שיבוצים</span></div>' +
+        '</div>';
+    }).join('');
+  }
+}
+
+function ttShowPerson(name, type) {
+  const person = type === 'student'
+    ? TT_DATA.students.find(s => s.name === name)
+    : TT_DATA.staff.find(s => s.name === name);
+  if (!person) return;
+
+  document.getElementById('tt-cards').style.display = 'none';
+  const timetableDiv = document.getElementById('tt-timetable');
+  timetableDiv.style.display = 'block';
+  document.getElementById('tt-person-name').textContent = person.name;
+  document.getElementById('tt-person-meta').textContent = type === 'student' ? (person.class || '') : (person.title || '');
+
+  // build grid — figure out which periods actually exist
+  const usedPeriods = new Set();
+  TT_DAYS.forEach(d => {
+    Object.keys(person.schedule[d] || {}).forEach(p => usedPeriods.add(p));
+  });
+  // always show periods 1-7 for clean layout
+  const periods = TT_PERIODS.filter(p => usedPeriods.size === 0 || true); // always 1-7
+
+  // Head
+  let headHtml = '<tr><th class="tt-period-header">שעה</th>';
+  TT_DAY_HE.forEach(d => { headHtml += '<th class="tt-cell-header">יום ' + d + '</th>'; });
+  headHtml += '</tr>';
+  document.getElementById('tt-head').innerHTML = headHtml;
+
+  // Body
+  let bodyHtml = '';
+  periods.forEach(p => {
+    bodyHtml += '<tr><td class="tt-period-header">' + p + '</td>';
+    TT_DAYS.forEach(day => {
+      const cell = (person.schedule[day] || {})[p];
+      if (cell) {
+        const [bg, fg] = type === 'student' ? ttColor(cell) : ['#EBF5FF','#2A4365'];
+        const label = cell.length > 25 ? cell.slice(0,23) + '…' : cell;
+        bodyHtml += '<td class="tt-cell"><span class="tt-badge" style="background:' + bg + ';color:' + fg + '" title="' + cell + '">' + label + '</span></td>';
+      } else {
+        bodyHtml += '<td class="tt-cell"><div class="tt-empty"></div></td>';
+      }
+    });
+    bodyHtml += '</tr>';
+  });
+  document.getElementById('tt-body').innerHTML = bodyHtml;
+}
+
+function ttBack() {
+  document.getElementById('tt-cards').style.display = 'grid';
+  document.getElementById('tt-timetable').style.display = 'none';
+}
+
 // ===== INIT =====
 render();
+ttInit();
 </script>
 </body>
 </html>
