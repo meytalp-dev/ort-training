@@ -184,6 +184,10 @@ function doPost(e) {
       const result = deleteDay(body.date, body.class);
       return respond(result);
     }
+    if (action === 'update-config') {
+      const result = updateConfig(body.updates || []);
+      return respond(result);
+    }
     return respond({error: 'unknown action: ' + action});
   } catch (err) {
     logError('doPost', err);
@@ -267,6 +271,25 @@ function fetchConfig() {
     cfg[key] = String(data[i][1] || '').trim();
   }
   return cfg;
+}
+
+function updateConfig(updates) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_CONFIG);
+  const data = sheet.getDataRange().getValues();
+  var updated = 0;
+  updates.forEach(function(u) {
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === u.key) {
+        var cell = sheet.getRange(i + 1, 2);
+        cell.setNumberFormat('@');
+        cell.setValue(String(u.value));
+        data[i][1] = u.value;
+        updated++;
+        return;
+      }
+    }
+  });
+  return { result: 'success', updated: updated };
 }
 
 // ============================================================
