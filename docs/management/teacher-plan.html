@@ -826,17 +826,27 @@ function cloudSave(data, callback) {
   fetch(APPS_SCRIPT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  }).then(function(r) { return r.json(); })
+    body: JSON.stringify(payload),
+    redirect: 'follow'
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
   .then(function(res) {
     var key = 'teacherPlan_' + (state.subjectKey || 'draft');
     localStorage.setItem(key, JSON.stringify(data));
-    if (callback) callback(res && res.result ? res : { result: 'success' });
+    if (res && res.result === 'success') {
+      if (callback) callback(res);
+    } else {
+      // Apps Script returned an error
+      localStorage.setItem(key, JSON.stringify(data));
+      if (callback) callback({ result: 'error', message: (res && res.message) || 'השרת החזיר שגיאה' });
+    }
   }).catch(function(err) {
-    // Fallback to local
+    // Network error — save locally as backup
     var key = 'teacherPlan_' + (state.subjectKey || 'draft');
     localStorage.setItem(key, JSON.stringify(data));
-    if (callback) callback({ result: 'error', message: err.toString() });
+    if (callback) callback({ result: 'error', message: 'שגיאת רשת: ' + err.toString() });
   });
 }
 
@@ -1453,10 +1463,12 @@ function savePlan() {
   cloudSave(data, function(res) {
     if (res && res.result === 'success') {
       showCloudStatus('saved');
-      showToast(APPS_SCRIPT_URL ? 'התוכנית נשמרה בענן' : 'התוכנית נשמרה (טיוטה מקומית)');
+      showToast('התוכנית נשמרה בענן');
     } else {
       showCloudStatus('error');
-      showToast('שגיאה בשמירה — נשמר מקומית');
+      var errMsg = (res && res.message) ? res.message : 'שגיאה לא ידועה';
+      showCloudStatus('error');
+      showPersistentError('השמירה לענן נכשלה — התוכנית נשמרה מקומית בלבד. נסו שוב בעוד דקה.\nפרטי שגיאה: ' + errMsg);
     }
   });
 }
@@ -1469,22 +1481,49 @@ function submitPlan() {
 
   showCloudStatus('saving');
 
-  // First save the full plan
-  cloudSave(data, function() {
-    // Then submit for review
+  // First save the full plan — only submit if save succeeded
+  cloudSave(data, function(saveRes) {
+    if (!saveRes || saveRes.result !== 'success') {
+      showCloudStatus('error');
+      var errMsg = (saveRes && saveRes.message) || 'שגיאה לא ידועה';
+      showPersistentError('השמירה נכשלה — התוכנית לא נשלחה. נסו שוב.\nפרטי שגיאה: ' + errMsg);
+      return;
+    }
+    // Save succeeded — now submit for review
     cloudSubmit(function(res) {
+      if (!res || res.result !== 'success') {
+        showCloudStatus('error');
+        showPersistentError('התוכנית נשמרה אבל השליחה לבדיקה נכשלה. נסו ללחוץ "שליחה" שוב.');
+        return;
+      }
       // Update approval bar
       document.getElementById('step1').className = 'approval-step done';
       document.getElementById('step2').className = 'approval-step current';
       document.getElementById('submitMsg').style.display = 'block';
 
       showCloudStatus('saved');
-      showToast(APPS_SCRIPT_URL ? 'התוכנית נשלחה לבדיקת רוית' : 'התוכנית נשמרה (לא מחובר לענן)');
+      showToast('התוכנית נשלחה לבדיקת רוית');
 
       // Update approval summary
       updateApprovalSummary(data);
     });
   });
+}
+
+function showPersistentError(msg) {
+  var el = document.getElementById('persistentErrorBar');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'persistentErrorBar';
+    el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:14px 20px;' +
+      'background:#F8D7DA;color:#721C24;border-bottom:2px solid #F5C6CB;' +
+      'font-family:Heebo,sans-serif;font-size:14px;font-weight:600;text-align:center;' +
+      'white-space:pre-line;cursor:pointer;';
+    el.onclick = function() { el.style.display = 'none'; };
+    document.body.appendChild(el);
+  }
+  el.textContent = msg + '\n(לחצו כאן לסגירה)';
+  el.style.display = 'block';
 }
 
 function showCloudStatus(status) {
