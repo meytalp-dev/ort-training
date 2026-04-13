@@ -15,7 +15,7 @@
  */
 
 // ==================== הגדרות ====================
-var SHEET_ID = 'REPLACE_WITH_YOUR_SHEET_ID';
+var SHEET_ID = '1tw9RPopzW5OVEjuygpUzAn9BvlItMirfJIWYGLVFdC0';
 
 // שעת תחילת לימודים — מי שנכנס אחרי זה = איחור
 var SCHOOL_START_HOUR = 8;
