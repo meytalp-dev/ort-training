@@ -11,7 +11,7 @@
  * 7. העתיקי את ה-URL — זה ה-endpoint למערכת
  */
 
-var SHEET_ID = 'REPLACE_WITH_YOUR_SHEET_ID';
+var SHEET_ID = '1Gl_5LhUsouKPQtGHZPBskWVnLTnA9Sur3iMFY1YrhJI';
 
 // ============================================
 // Web App Entry Points
