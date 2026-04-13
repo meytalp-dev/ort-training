@@ -552,8 +552,9 @@ function updateScheduleYoavMiluim() {
     if (dateStr < '2026-04-14') keepRows.push([dateStr, data[i][1]]);
   }
 
-  // שלב 2: 14.4–12.5 בלי יואב
+  // שלב 2: 14.4–12.5 בלי יואב — ממשיך מהרוטציה המקורית (ליאת הבאה בתור)
   const staffNoYoav = [
+    { name: 'ליאת רוזנר', off: [] },
     { name: 'אפרת בר אשר', off: [3] }, { name: 'רווית גל', off: [] },
     { name: 'יעקב גרונספלד', off: [] }, { name: 'עמנואל דהאן', off: [] },
     { name: 'יסכה הגר', off: [] }, { name: 'דורית ויגדור', off: [4] },
@@ -565,7 +566,6 @@ function updateScheduleYoavMiluim() {
     { name: 'יוסף רבבשי', off: [] }, { name: 'פרלה שאזו', off: [4] },
     { name: 'מיטל פלג', off: [] }, { name: 'אושר אהרוני', off: [] },
     { name: 'שי בגלר', off: [] }, { name: 'מירב בטיטו', off: [1] },
-    { name: 'ליאת רוזנר', off: [] },
   ];
 
   const holidays = getHolidays_();
