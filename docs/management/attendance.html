@@ -87,6 +87,20 @@ body::before{content:'';position:fixed;inset:0;
 .kpi.yellow .kpi-value{color:var(--warn)}
 .kpi.blue .kpi-value{color:var(--info)}
 .kpi.primary .kpi-value{color:var(--primary-dark)}
+.kpi[onclick]:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+
+/* ===== KPI DETAIL PANEL ===== */
+.kpi-detail{overflow:hidden;max-height:0;transition:max-height .3s;margin-top:0}
+.kpi-detail.open{max-height:2000px;margin-top:14px}
+.kpi-detail-inner{background:var(--card);border-radius:14px;border:1px solid var(--border);padding:16px 20px;box-shadow:var(--shadow-sm)}
+.kpi-detail-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.kpi-detail-head h4{font-size:.95rem;font-weight:800;font-family:Heebo;display:flex;align-items:center;gap:6px}
+.kpi-detail-close{background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);padding:4px 8px}
+.kpi-detail-list{display:flex;flex-direction:column;gap:6px}
+.kpi-detail-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;font-size:.82rem;background:rgba(0,0,0,.02);border:1px solid rgba(0,0,0,.04)}
+.kpi-detail-item .kd-cls{font-weight:800;min-width:35px;font-family:Heebo}
+.kpi-detail-item .kd-name{font-weight:600;min-width:110px}
+.kpi-detail-item .kd-reason{color:var(--muted);flex:1;font-size:.78rem}
 
 /* ===== TABS ===== */
 .tabs{display:flex;gap:2px;background:var(--card);border-radius:16px 16px 0 0;border:1px solid var(--border);border-bottom:none;overflow-x:auto;box-shadow:var(--shadow-sm)}
@@ -591,7 +605,7 @@ body::before{content:'';position:fixed;inset:0;
     <div class="hero-top">
       <div class="hero-title">
         <h2>נוכחות — <span id="todayDate"></span></h2>
-        <div class="hero-sub">198 תלמידים · 11 כיתות · עדכון אחרון: <span id="lastUpdate">—</span></div>
+        <div class="hero-sub"><span id="heroStudentCount">—</span> תלמידים · 11 כיתות · עדכון אחרון: <span id="lastUpdate">—</span></div>
       </div>
       <div class="hero-actions">
         <button class="hero-btn" onclick="exportCSV()">
@@ -618,15 +632,15 @@ body::before{content:'';position:fixed;inset:0;
     </div>
 
     <div class="kpi-row">
-      <div class="kpi green">
+      <div class="kpi green" onclick="toggleKpiDetail('present')" style="cursor:pointer">
         <div class="kpi-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
           נוכחים היום
         </div>
         <div class="kpi-value" id="kpiPresent">—</div>
-        <div class="kpi-sub">מתוך <span id="kpiTotal">198</span></div>
+        <div class="kpi-sub">מתוך <span id="kpiTotal">—</span></div>
       </div>
-      <div class="kpi red">
+      <div class="kpi red" onclick="toggleKpiDetail('absent')" style="cursor:pointer">
         <div class="kpi-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
           חסרים
@@ -634,7 +648,7 @@ body::before{content:'';position:fixed;inset:0;
         <div class="kpi-value" id="kpiAbsent">—</div>
         <div class="kpi-sub">ללא הצדקה</div>
       </div>
-      <div class="kpi yellow">
+      <div class="kpi yellow" onclick="toggleKpiDetail('sick')" style="cursor:pointer">
         <div class="kpi-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
           מחלה/מוצדק
@@ -642,7 +656,7 @@ body::before{content:'';position:fixed;inset:0;
         <div class="kpi-value" id="kpiSick">—</div>
         <div class="kpi-sub">עם אישור</div>
       </div>
-      <div class="kpi blue">
+      <div class="kpi blue" onclick="toggleKpiDetail('late')" style="cursor:pointer">
         <div class="kpi-label">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           איחורים
@@ -659,6 +673,8 @@ body::before{content:'';position:fixed;inset:0;
         <div class="kpi-sub">כלל בית הספר</div>
       </div>
     </div>
+    <!-- KPI drilldown panel -->
+    <div id="kpiDetail" class="kpi-detail"></div>
   </div>
 
   <!-- ===== TABS ===== -->
@@ -707,7 +723,25 @@ body::before{content:'';position:fixed;inset:0;
 <div class="toast" id="toast"></div>
 
 <script src="student-data.js"></script>
+<script src="cloud-storage.js"></script>
 <script>
+// ============================================================
+// ROSTER FILTER — exclude "להוריד" students
+// ============================================================
+var ROSTER_STATE={};
+var ACTIVE_STUDENTS=STUDENTS; // will be filtered after roster loads
+
+function applyRosterFilter(){
+  ACTIVE_STUDENTS=STUDENTS.filter(function(s){
+    var tab=ROSTER_STATE[s.tz];
+    // "remove" = להוריד — exclude from attendance
+    return tab!=='remove';
+  });
+  // Update total display
+  var totalEl=document.getElementById('kpiTotal');
+  if(totalEl)totalEl.textContent=ACTIVE_STUDENTS.length;
+}
+
 // ============================================================
 // CONSTANTS
 // ============================================================
@@ -719,6 +753,10 @@ var STATUSES=[
   {id:'early',label:'יציאה מוקדמת',hebrew:'יצא מוקדם',cls:'early',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'}
 ];
 var CLASS_ORDER=['ט1','ט2','י1','י2','י3','יא1','יא2','יא3','יב1','יב2','יב3'];
+
+// יום תעסוקה — שני(1) וחמישי(4): יא2 ויב2 נחשבים כולם נוכחים
+var EMPLOYMENT_DAY_CLASSES=['יא2','יב2'];
+var EMPLOYMENT_DAYS=[1,4]; // Monday, Thursday
 
 var TABS=[
   {id:'dashboard',label:'דשבורד שבועי',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>'},
@@ -840,6 +878,21 @@ var state={
 // ============================================================
 // INIT
 // ============================================================
+function autoFillEmploymentDay(){
+  var today=new Date();
+  var dow=today.getDay();
+  if(EMPLOYMENT_DAYS.indexOf(dow)===-1)return; // not Mon/Thu
+  var todayStr=toDateKey(today);
+  EMPLOYMENT_DAY_CLASSES.forEach(function(cls){
+    ACTIVE_STUDENTS.filter(function(s){return s.cls===cls}).forEach(function(s){
+      if(!ATTENDANCE[s.id])ATTENDANCE[s.id]={};
+      if(!ATTENDANCE[s.id][todayStr]){
+        ATTENDANCE[s.id][todayStr]={status:'present',reason:'יום תעסוקה'};
+      }
+    });
+  });
+}
+
 function init(){
   if(REAL_MODE){
     // Real mode — load from localStorage, skip mock generation
@@ -852,6 +905,7 @@ function init(){
     generateHistory();
     forceStreaksForDemo();
   }
+  autoFillEmploymentDay();
   setDate();
   renderKPIs();
   renderTabs();
@@ -910,7 +964,7 @@ function getStudentWeekStats(s){
 }
 
 function getClassWeekStats(cls){
-  var students=STUDENTS.filter(function(s){return s.cls===cls});
+  var students=ACTIVE_STUDENTS.filter(function(s){return s.cls===cls});
   var totalPresent=0,totalLogged=0,absentToday=0;
   students.forEach(function(s){
     var st=getStudentWeekStats(s);
@@ -941,7 +995,7 @@ function getConsecutiveAbsences(s){
 function getAttendanceAlerts(){
   var counselorAlerts=[]; // 2 consecutive
   var criticalAlerts=[];  // 3+ consecutive
-  STUDENTS.forEach(function(s){
+  ACTIVE_STUDENTS.forEach(function(s){
     var streak=getConsecutiveAbsences(s);
     if(streak>=3)criticalAlerts.push({s:s,streak:streak});
     else if(streak===2)counselorAlerts.push({s:s,streak:streak});
@@ -954,7 +1008,7 @@ function getWeeklyChampions(){
   // Top performers: 100% present this week AND no issues in the last 2 weeks
   // This keeps the list short and meaningful (≈ top ~10-20)
   var allDays=HISTORY_DAYS.slice(0,-1);
-  return STUDENTS.map(function(s){
+  return ACTIVE_STUDENTS.map(function(s){
     var weekSt=getStudentWeekStats(s);
     var perfectWeek=weekSt.logged===5&&weekSt.counts.present===5;
     // Check full history: all days must be present (strict)
@@ -984,11 +1038,11 @@ function setDate(){
 function renderKPIs(){
   // Show today's data first; if nothing reported yet fall back to last working day
   var todayStr=toDateKey(new Date());
-  var todayHasData=STUDENTS.some(function(s){return (ATTENDANCE[s.id]||{})[todayStr]});
+  var todayHasData=ACTIVE_STUDENTS.some(function(s){return (ATTENDANCE[s.id]||{})[todayStr]});
   var dateKey=todayHasData?todayStr:toDateKey(HISTORY_DAYS[HISTORY_DAYS.length-2]);
   var counts={present:0,absent:0,sick:0,late:0,early:0};
   var reported=0;
-  STUDENTS.forEach(function(s){
+  ACTIVE_STUDENTS.forEach(function(s){
     var rec=(ATTENDANCE[s.id]||{})[dateKey];
     if(rec){reported++;if(counts[rec.status]!==undefined)counts[rec.status]++}
   });
@@ -998,12 +1052,67 @@ function renderKPIs(){
   document.getElementById('kpiSick').textContent=counts.sick;
   document.getElementById('kpiLate').textContent=counts.late;
   document.getElementById('kpiPct').textContent=pct+'%';
-  // Update subtitle to show which date the KPIs reflect
+  // Update total and subtitle
+  var totalEl=document.getElementById('kpiTotal');
+  if(totalEl)totalEl.textContent=ACTIVE_STUDENTS.length;
   var sub=document.querySelector('.hero-sub');
   if(sub){
     var label=todayHasData?'נתוני היום':'נתוני יום עבודה אחרון ('+dateKey+')';
-    sub.innerHTML=reported+' תלמידים דווחו · '+label+' · עדכון: '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    sub.innerHTML=ACTIVE_STUDENTS.length+' תלמידים · '+reported+' דווחו · '+label+' · עדכון: '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
   }
+  // Store current dateKey for drilldown
+  window._kpiDateKey=dateKey;
+}
+
+var _kpiDetailOpen='';
+function toggleKpiDetail(status){
+  var panel=document.getElementById('kpiDetail');
+  if(!panel)return;
+  if(_kpiDetailOpen===status){
+    panel.classList.remove('open');
+    panel.innerHTML='';
+    _kpiDetailOpen='';
+    return;
+  }
+  _kpiDetailOpen=status;
+  var dateKey=window._kpiDateKey||toDateKey(new Date());
+  var STATUS_LABELS={present:'נוכח/ת',absent:'חיסור',sick:'מחלה',late:'איחור',early:'יצא/ה מוקדם'};
+  var STATUS_COLORS={present:'var(--success)',absent:'var(--danger)',sick:'var(--warn)',late:'var(--info)',early:'var(--dream)'};
+  var title={present:'תלמידים נוכחים',absent:'תלמידים חסרים',sick:'מחלה/מוצדק',late:'איחורים'}[status]||status;
+
+  var list=[];
+  ACTIVE_STUDENTS.forEach(function(s){
+    var rec=(ATTENDANCE[s.id]||{})[dateKey];
+    if(!rec)return;
+    if(status==='present'&&rec.status==='present')list.push({s:s,reason:''});
+    else if(status==='absent'&&rec.status==='absent')list.push({s:s,reason:rec.reason||''});
+    else if(status==='sick'&&rec.status==='sick')list.push({s:s,reason:rec.reason||''});
+    else if(status==='late'&&(rec.status==='late'||rec.status==='early'))list.push({s:s,reason:rec.reason||'',st:rec.status});
+  });
+
+  // Sort by class
+  list.sort(function(a,b){return a.s.cls<b.s.cls?-1:a.s.cls>b.s.cls?1:0});
+
+  var html='<div class="kpi-detail-inner">';
+  html+='<div class="kpi-detail-head"><h4 style="color:'+STATUS_COLORS[status]+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'+title+' ('+list.length+')</h4>';
+  html+='<button class="kpi-detail-close" onclick="toggleKpiDetail(\''+status+'\')">X</button></div>';
+
+  if(list.length===0){
+    html+='<div style="text-align:center;color:var(--muted);padding:12px;font-size:.85rem">אין נתונים</div>';
+  }else{
+    html+='<div class="kpi-detail-list">';
+    list.forEach(function(item){
+      html+='<div class="kpi-detail-item">';
+      html+='<span class="kd-cls">'+item.s.cls+'</span>';
+      html+='<span class="kd-name">'+item.s.first+' '+item.s.last+'</span>';
+      if(item.reason)html+='<span class="kd-reason">'+item.reason+'</span>';
+      html+='</div>';
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  panel.innerHTML=html;
+  panel.classList.add('open');
 }
 
 function renderTabs(){
@@ -1028,7 +1137,7 @@ function setTab(id){
 // TAB 1 — DAILY ENTRY
 // ============================================================
 function renderDaily(){
-  var students=STUDENTS.filter(function(s){return s.cls===state.entryClass});
+  var students=ACTIVE_STUDENTS.filter(function(s){return s.cls===state.entryClass});
   // Pre-fill pending from existing attendance for selected date
   state.pendingEntries={};
   students.forEach(function(s){
@@ -1100,7 +1209,7 @@ function updateSummary(){
     return '<div class="summary-chip '+s.cls+'"><span class="chip-dot"></span>'+s.label+' — <strong>'+counts[s.id]+'</strong></div>';
   }).join('');
   // Update save bar
-  var total=STUDENTS.filter(function(s){return s.cls===state.entryClass}).length;
+  var total=ACTIVE_STUDENTS.filter(function(s){return s.cls===state.entryClass}).length;
   var marked=Object.keys(state.pendingEntries).length;
   var sbM=document.getElementById('sbMarked');
   var sbU=document.getElementById('sbUnmarked');
@@ -1132,7 +1241,7 @@ function setReason(sid,reason){
 }
 
 function markAll(status){
-  STUDENTS.filter(function(s){return s.cls===state.entryClass}).forEach(function(s){
+  ACTIVE_STUDENTS.filter(function(s){return s.cls===state.entryClass}).forEach(function(s){
     state.pendingEntries[s.id]={status:status,reason:''};
   });
   setTab('daily');
@@ -1149,7 +1258,7 @@ function saveEntry(){
   Object.keys(state.pendingEntries).forEach(function(sid){
     if(!ATTENDANCE[sid])ATTENDANCE[sid]={};
     ATTENDANCE[sid][state.entryDate]=state.pendingEntries[sid];
-    var s=STUDENTS.find(function(x){return x.id===parseInt(sid)});
+    var s=ACTIVE_STUDENTS.find(function(x){return x.id===parseInt(sid)});
     if(!s)return;
     var e=state.pendingEntries[sid];
     records.push({
@@ -1180,7 +1289,7 @@ function saveEntry(){
 // ============================================================
 function renderMatrix(){
   var days=HISTORY_DAYS.slice(-state.matrixDays);
-  var students=STUDENTS.filter(function(s){return s.cls===state.matrixClass});
+  var students=ACTIVE_STUDENTS.filter(function(s){return s.cls===state.matrixClass});
   var html='<div class="tab-panel active">';
   html+='<div class="filters">';
   html+='<div class="entry-field"><label>כיתה</label><select onchange="state.matrixClass=this.value;setTab(\'matrix\')">';
@@ -1244,7 +1353,7 @@ function renderStudent(){
   html+='<option value="">— בחר/י —</option>';
   CLASS_ORDER.forEach(function(cls){
     html+='<optgroup label="'+cls+'">';
-    STUDENTS.filter(function(s){return s.cls===cls}).forEach(function(s){
+    ACTIVE_STUDENTS.filter(function(s){return s.cls===cls}).forEach(function(s){
       html+='<option value="'+s.id+'"'+(state.studentId===s.id?' selected':'')+'>'+s.first+' '+s.last+'</option>';
     });
     html+='</optgroup>';
@@ -1255,7 +1364,7 @@ function renderStudent(){
   if(!state.studentId){
     html+='<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><h4>בחרי תלמיד/ה לצפייה</h4><div style="font-size:.85rem">היסטוריית נוכחות, סטטיסטיקות ומגמות</div></div>';
   }else{
-    var s=STUDENTS.find(function(x){return x.id===state.studentId});
+    var s=ACTIVE_STUDENTS.find(function(x){return x.id===state.studentId});
     if(!s){html+='<div class="empty-state"><h4>תלמיד/ה לא נמצא/ה</h4></div>'}
     else{
       var records=ATTENDANCE[s.id]||{};
@@ -1311,7 +1420,7 @@ function getReportingStatus(){
   var todayStr=toDateKey(new Date());
   var results=[];
   CLASS_ORDER.forEach(function(cls){
-    var classStudents=STUDENTS.filter(function(s){return s.cls===cls});
+    var classStudents=ACTIVE_STUDENTS.filter(function(s){return s.cls===cls});
     var reported=0;
     var firstTime=null;
     classStudents.forEach(function(s){
@@ -1377,7 +1486,7 @@ function renderClassOverview(){
   html+='</div>';
 
   CLASS_ORDER.forEach(function(cls){
-    var students=STUDENTS.filter(function(s){return s.cls===cls});
+    var students=ACTIVE_STUDENTS.filter(function(s){return s.cls===cls});
     var counts={present:0,absent:0,sick:0,late:0,early:0,none:0};
     var absentList=[];
 
@@ -1454,7 +1563,7 @@ function renderDashboard(){
 
   var trend=HISTORY_DAYS.slice(0,-1).map(function(d){
     var present=0,total=0;
-    STUDENTS.forEach(function(s){
+    ACTIVE_STUDENTS.forEach(function(s){
       var rec=(ATTENDANCE[s.id]||{})[toDateKey(d)];
       if(rec){total++;if(isPresent(rec.status))present++}
     });
@@ -1620,7 +1729,7 @@ function renderTrendSvg(trend){
 function exportCSV(){
   var lines=['date,student_id,name,class,status,reason'];
   Object.keys(ATTENDANCE).forEach(function(sid){
-    var s=STUDENTS.find(function(x){return x.id===parseInt(sid)});
+    var s=ACTIVE_STUDENTS.find(function(x){return x.id===parseInt(sid)});
     if(!s)return;
     Object.keys(ATTENDANCE[sid]).forEach(function(date){
       var r=ATTENDANCE[sid][date];
@@ -1826,7 +1935,7 @@ function matchStudentName(text,classStudents){
 
 function analyzeMessage(text,cls){
   var parsed=parseWhatsAppMessage(text);
-  var classStudents=STUDENTS.filter(function(s){return s.cls===cls});
+  var classStudents=ACTIVE_STUDENTS.filter(function(s){return s.cls===cls});
 
   var resolved={
     format:parsed.format,
@@ -1890,7 +1999,7 @@ function renderParser(){
 
   html+='<div class="parser-field"><label>כיתה</label><select id="parserClass" onchange="PARSER_STATE.cls=this.value">';
   CLASS_ORDER.forEach(function(c){
-    html+='<option value="'+c+'"'+(PARSER_STATE.cls===c?' selected':'')+'>'+c+' ('+STUDENTS.filter(function(s){return s.cls===c}).length+' תלמידים)</option>';
+    html+='<option value="'+c+'"'+(PARSER_STATE.cls===c?' selected':'')+'>'+c+' ('+ACTIVE_STUDENTS.filter(function(s){return s.cls===c}).length+' תלמידים)</option>';
   });
   html+='</select></div>';
 
@@ -2038,7 +2147,7 @@ function saveParserResult(){
   function addRecord(studentId,status,reason){
     if(!ATTENDANCE[studentId])ATTENDANCE[studentId]={};
     ATTENDANCE[studentId][today]={status:status,reason:reason||''};
-    var s=STUDENTS.find(function(x){return x.id===studentId});
+    var s=ACTIVE_STUDENTS.find(function(x){return x.id===studentId});
     if(s){
       records.push({
         date:today,student_id:studentId,student_name:s.first+' '+s.last,
@@ -2322,12 +2431,31 @@ if(!REAL_MODE&&CLOUD_URL){
   REAL_MODE=true;
   try{localStorage.setItem('ort-real-mode','1')}catch(e){}
 }
-init();
-updateSyncBadge();
-// Auto-sync on load if URL configured and in real mode
-if(CLOUD_URL&&REAL_MODE){
-  setTimeout(syncFromCloud,400);
-}
+
+// Load roster state (who is "להוריד") then init
+cloudStorage.get('ort-student-roster-v1',{fallback:{}}).then(function(loaded){
+  ROSTER_STATE=loaded||{};
+  applyRosterFilter();
+  init();
+  updateSyncBadge();
+  // Update hero count
+  var hc=document.getElementById('heroStudentCount');
+  if(hc)hc.textContent=ACTIVE_STUDENTS.length;
+  // Auto-sync on load if URL configured and in real mode
+  if(CLOUD_URL&&REAL_MODE){
+    setTimeout(syncFromCloud,400);
+  }
+}).catch(function(){
+  // Fallback — proceed without roster filter
+  applyRosterFilter();
+  init();
+  updateSyncBadge();
+  var hc=document.getElementById('heroStudentCount');
+  if(hc)hc.textContent=ACTIVE_STUDENTS.length;
+  if(CLOUD_URL&&REAL_MODE){
+    setTimeout(syncFromCloud,400);
+  }
+});
 </script>
 </body>
 </html>
