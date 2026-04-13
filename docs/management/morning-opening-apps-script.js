@@ -372,8 +372,8 @@ function updateScheduleYoavMiluim() {
     { name: 'משה צברי', off: [] },
     { name: 'נעמה קוסטן', off: [] },
     { name: 'ויקטוריה קלדרון', off: [4] },
+    { name: 'פרלה שאזו', off: [4] },  // הוזז לפני יוסף — תיקון באג שדילג עליה כל פעם
     { name: 'יוסף רבבשי', off: [] },
-    { name: 'פרלה שאזו', off: [4] },
     { name: 'מיטל פלג', off: [] },
     { name: 'אושר אהרוני', off: [] },
     { name: 'שי בגלר', off: [] },
@@ -424,8 +424,8 @@ function updateScheduleYoavMiluim() {
     { name: 'משה צברי', off: [] },
     { name: 'נעמה קוסטן', off: [] },
     { name: 'ויקטוריה קלדרון', off: [4] },
+    { name: 'פרלה שאזו', off: [4] },  // הוזז לפני יוסף — תיקון באג שדילג עליה כל פעם
     { name: 'יוסף רבבשי', off: [] },
-    { name: 'פרלה שאזו', off: [4] },
     { name: 'מיטל פלג', off: [] },
     { name: 'אושר אהרוני', off: [] },
     { name: 'שי בגלר', off: [] },
@@ -534,6 +534,7 @@ function initialSetup() {
     ['יוסף רבבשי', '972506563344'],
     ['יואב רוט', '972527218003'],
     ['פרלה שאזו', '972525115337'],
+    ['מיטל פלג', '972536256653'],
   ];
   staffSheet.getRange(2, 1, staffData.length, 2).setValues(staffData);
   staffSheet.setColumnWidth(1, 180);
