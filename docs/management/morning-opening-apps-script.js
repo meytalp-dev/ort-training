@@ -335,8 +335,10 @@ function setupTriggers() {
 // ==================== מילואים — עדכון שיבוצים ====================
 
 /**
- * הריצי פעם אחת — מעדכן שיבוצים: יואב רוט במילואים עד סוף מאי 2026
- * שומר על שיבוצים שכבר עברו, מייצר מחדש מ-14.4.2026 והלאה בלי יואב
+ * הריצי פעם אחת — מעדכן שיבוצים: יואב רוט במילואים 14.4–12.5, חוזר ב-13.5
+ * שלב 1: שומר שיבוצים שעברו (עד 13.4)
+ * שלב 2: 14.4–12.5 בלי יואב
+ * שלב 3: 13.5–19.6 עם יואב חזרה ברוטציה
  */
 function updateScheduleYoavMiluim() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -344,18 +346,16 @@ function updateScheduleYoavMiluim() {
   const data = sheet.getDataRange().getValues();
 
   // שמור שיבוצים שכבר עברו (עד 13.4 כולל)
-  const cutoffDate = '2026-04-14';
   const keepRows = [];
   for (let i = 1; i < data.length; i++) {
     const dateStr = Utilities.formatDate(new Date(data[i][0]), 'Asia/Jerusalem', 'yyyy-MM-dd');
-    if (dateStr < cutoffDate) {
+    if (dateStr < '2026-04-14') {
       keepRows.push([dateStr, data[i][1]]);
     }
   }
 
-  // צוות בלי יואב רוט — ממשיך מהמקום שבו הרוטציה הגיעה
-  // אחרי 13.4 (ליאת, idx=4 ברוטציה המקורית) הבא הוא אפרת
-  const staffWithDays = [
+  // --- שלב 2: 14.4 — 12.5 בלי יואב ---
+  const staffNoYoav = [
     { name: 'אפרת בר אשר', off: [3] },
     { name: 'רווית גל', off: [] },
     { name: 'יעקב גרונספלד', off: [] },
@@ -373,7 +373,6 @@ function updateScheduleYoavMiluim() {
     { name: 'נעמה קוסטן', off: [] },
     { name: 'ויקטוריה קלדרון', off: [4] },
     { name: 'יוסף רבבשי', off: [] },
-    // יואב רוט — במילואים עד סוף מאי
     { name: 'פרלה שאזו', off: [4] },
     { name: 'מיטל פלג', off: [] },
     { name: 'אושר אהרוני', off: [] },
@@ -383,22 +382,20 @@ function updateScheduleYoavMiluim() {
   ];
 
   const holidays = getHolidays();
-  const start = new Date(2026, 3, 14); // April 14
-  const end = new Date(2026, 5, 19);   // June 19
-  const newRows = [];
+  const phase2Rows = [];
   let idx = 0;
 
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(2026, 3, 14); d <= new Date(2026, 4, 12); d.setDate(d.getDate() + 1)) {
     const day = d.getDay();
     if (day === 5 || day === 6) continue;
     const dateStr = Utilities.formatDate(d, 'Asia/Jerusalem', 'yyyy-MM-dd');
     if (holidays.includes(dateStr)) continue;
 
     let attempts = 0;
-    while (attempts < staffWithDays.length) {
-      const staff = staffWithDays[idx % staffWithDays.length];
+    while (attempts < staffNoYoav.length) {
+      const staff = staffNoYoav[idx % staffNoYoav.length];
       if (!staff.off.includes(day)) {
-        newRows.push([dateStr, staff.name]);
+        phase2Rows.push([dateStr, staff.name]);
         idx++;
         break;
       }
@@ -407,8 +404,59 @@ function updateScheduleYoavMiluim() {
     }
   }
 
+  // --- שלב 3: 13.5 — 19.6 עם יואב חזרה ---
+  // יואב חוזר ראשון ברוטציה, אחריו ממשיכים מאיפה שעצרנו
+  const staffWithYoav = [
+    { name: 'יואב רוט', off: [3] },
+    { name: 'אפרת בר אשר', off: [3] },
+    { name: 'רווית גל', off: [] },
+    { name: 'יעקב גרונספלד', off: [] },
+    { name: 'עמנואל דהאן', off: [] },
+    { name: 'יסכה הגר', off: [] },
+    { name: 'דורית ויגדור', off: [4] },
+    { name: 'מריאן זרצקי', off: [] },
+    { name: 'יעל טטנבאום', off: [] },
+    { name: 'רעיה יצחקי', off: [4] },
+    { name: 'מיטל לאלום', off: [] },
+    { name: 'אופירה מלכה', off: [1] },
+    { name: 'צהיי גטהון', off: [4] },
+    { name: 'גיא נתנאל', off: [] },
+    { name: 'משה צברי', off: [] },
+    { name: 'נעמה קוסטן', off: [] },
+    { name: 'ויקטוריה קלדרון', off: [4] },
+    { name: 'יוסף רבבשי', off: [] },
+    { name: 'פרלה שאזו', off: [4] },
+    { name: 'מיטל פלג', off: [] },
+    { name: 'אושר אהרוני', off: [] },
+    { name: 'שי בגלר', off: [] },
+    { name: 'מירב בטיטו', off: [1] },
+    { name: 'ליאת רוזנר', off: [] },
+  ];
+
+  const phase3Rows = [];
+  let idx2 = 0;
+
+  for (let d = new Date(2026, 4, 13); d <= new Date(2026, 5, 19); d.setDate(d.getDate() + 1)) {
+    const day = d.getDay();
+    if (day === 5 || day === 6) continue;
+    const dateStr = Utilities.formatDate(d, 'Asia/Jerusalem', 'yyyy-MM-dd');
+    if (holidays.includes(dateStr)) continue;
+
+    let attempts = 0;
+    while (attempts < staffWithYoav.length) {
+      const staff = staffWithYoav[idx2 % staffWithYoav.length];
+      if (!staff.off.includes(day)) {
+        phase3Rows.push([dateStr, staff.name]);
+        idx2++;
+        break;
+      }
+      idx2++;
+      attempts++;
+    }
+  }
+
   // כתוב הכל מחדש ל-Sheet
-  const allRows = keepRows.concat(newRows);
+  const allRows = keepRows.concat(phase2Rows).concat(phase3Rows);
   if (sheet.getLastRow() > 1) {
     sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).clearContent();
   }
@@ -416,8 +464,8 @@ function updateScheduleYoavMiluim() {
     sheet.getRange(2, 1, allRows.length, 2).setValues(allRows);
   }
 
-  Logger.log('שיבוצים עודכנו! ' + keepRows.length + ' נשמרו, ' + newRows.length + ' נוצרו מחדש (בלי יואב רוט)');
-  SpreadsheetApp.getUi().alert('השיבוצים עודכנו!\n\n' + keepRows.length + ' ימים שעברו — נשמרו\n' + newRows.length + ' ימים חדשים — בלי יואב רוט\n\nהתזכורות האוטומטיות ישלחו לאנשים הנכונים.');
+  Logger.log('שיבוצים עודכנו! ' + keepRows.length + ' נשמרו, ' + phase2Rows.length + ' בלי יואב, ' + phase3Rows.length + ' עם יואב');
+  SpreadsheetApp.getUi().alert('השיבוצים עודכנו!\n\n' + keepRows.length + ' ימים שעברו — נשמרו\n' + phase2Rows.length + ' ימים (14.4–12.5) — בלי יואב\n' + phase3Rows.length + ' ימים (13.5–19.6) — יואב חזר!\n\nהתזכורות האוטומטיות ישלחו לאנשים הנכונים.');
 }
 
 // ==================== בדיקות ====================
