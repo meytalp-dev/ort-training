@@ -50,10 +50,6 @@ body::before{content:'';position:fixed;inset:0;
   transform-origin: top center;
   margin-bottom: -35%;
 }
-.canvas.screenshot-mode {
-  transform: none;
-  margin-bottom: 0;
-}
 .canvas::before {
   content: '';
   position: absolute; inset: 0;
@@ -258,7 +254,7 @@ body::before{content:'';position:fixed;inset:0;
     <button class="btn action-btn" style="background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff" onclick="copyText()">העתק טקסט ללוח</button>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
-    <button class="btn action-btn" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff" onclick="prepareScreenshot()">הכן לצילום מסך</button>
+    <button class="btn action-btn" style="background:linear-gradient(135deg,#25D366,#128C7E);color:#fff" onclick="downloadImage()">הורד כתמונה</button>
     <button class="btn action-btn" style="background:linear-gradient(135deg,#E8B060,#D48A2C);color:#fff" onclick="copyText();window.open('https://jobs.shatil.org.il/advertising-jobs','_blank')">שתיל — העתק + פתח</button>
     <button class="btn action-btn" style="background:linear-gradient(135deg,#4CAF50,#4A7A4A);color:#fff" onclick="copyText();window.open('https://www.igm.org.il/site/pg/igm_wanted_teacher','_blank')">ארגון המורים — העתק + פתח</button>
   </div>
@@ -321,6 +317,7 @@ body::before{content:'';position:fixed;inset:0;
   <div class="bottom-bar"></div>
 </div>
 
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <script>
 const defaultJobs = [
   { title: 'מורה לרבי מלל', dept: 'רבי מלל', scope: '100%' },
@@ -423,34 +420,47 @@ function copyText() {
   });
 }
 
-function prepareScreenshot() {
-  const editor = document.querySelector('.editor');
+async function downloadImage() {
   const canvas = document.getElementById('canvas');
-  editor.style.display = 'none';
-  document.body.style.padding = '0';
-  document.body.style.background = '#f7f5f0';
-  canvas.classList.add('screenshot-mode');
+  const btn = event.target;
+  const origText = btn.textContent;
+  btn.textContent = 'מכין תמונה...';
+  btn.disabled = true;
+
+  // Temporarily remove transform for accurate capture
+  const origTransform = canvas.style.transform;
+  const origMargin = canvas.style.marginBottom;
+  const origRadius = canvas.style.borderRadius;
+  const origShadow = canvas.style.boxShadow;
+  canvas.style.transform = 'none';
+  canvas.style.marginBottom = '0';
   canvas.style.borderRadius = '0';
   canvas.style.boxShadow = 'none';
-  const hint = document.createElement('div');
-  hint.id = 'screenshotHint';
-  hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999;background:#1a1a1a;color:#fff;padding:14px 28px;border-radius:14px;font-family:Heebo;font-size:16px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3)';
-  hint.innerHTML = '<b>Ctrl+Shift+S</b> ← "בחירת אזור" ← סמני את הכרטיס &nbsp;&nbsp; <button onclick="exitScreenshot()" style="background:#0EA5E9;color:#fff;border:none;padding:8px 20px;border-radius:10px;font-family:Playpen Sans Hebrew;font-size:14px;font-weight:700;cursor:pointer;margin-right:12px">חזרה</button>';
-  document.body.appendChild(hint);
-  window.scrollTo(0, 0);
-}
 
-function exitScreenshot() {
-  const editor = document.querySelector('.editor');
-  const canvas = document.getElementById('canvas');
-  editor.style.display = '';
-  document.body.style.padding = '30px';
-  document.body.style.background = '#ddd';
-  canvas.classList.remove('screenshot-mode');
-  canvas.style.borderRadius = '12px';
-  canvas.style.boxShadow = '0 20px 60px rgba(0,0,0,.15)';
-  const hint = document.getElementById('screenshotHint');
-  if (hint) hint.remove();
+  try {
+    const result = await html2canvas(canvas, {
+      scale: 1,
+      useCORS: true,
+      backgroundColor: '#f7f5f0',
+      width: 1080,
+      windowWidth: 1080
+    });
+
+    const link = document.createElement('a');
+    link.download = 'modaa-drushim-ort.png';
+    link.href = result.toDataURL('image/png');
+    link.click();
+  } catch(e) {
+    alert('שגיאה ביצירת התמונה: ' + e.message);
+  }
+
+  // Restore original styles
+  canvas.style.transform = origTransform;
+  canvas.style.marginBottom = origMargin;
+  canvas.style.borderRadius = origRadius;
+  canvas.style.boxShadow = origShadow;
+  btn.textContent = origText;
+  btn.disabled = false;
 }
 
 // Init
