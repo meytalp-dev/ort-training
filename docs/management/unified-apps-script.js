@@ -583,9 +583,6 @@ function updateScheduleYoavMiluim() {
   if (allRows.length > 0) sheet.getRange(2, 1, allRows.length, 2).setValues(allRows);
 
   Logger.log('שיבוצים עודכנו! ' + keepRows.length + ' נשמרו, ' + phase2Rows.length + ' בלי יואב, ' + phase3Rows.length + ' עם יואב');
-  try {
-    SpreadsheetApp.getUi().alert('השיבוצים עודכנו!\n\n' + keepRows.length + ' ימים שעברו — נשמרו\n' + phase2Rows.length + ' ימים (14.4–12.5) — בלי יואב\n' + phase3Rows.length + ' ימים (13.5–19.6) — יואב חזר!');
-  } catch(e) { /* getUi not available from trigger context */ }
 }
 
 function generateScheduleRows_(staffList, startDate, endDate, holidays) {
@@ -663,9 +660,6 @@ function setupAllTriggers() {
     .inTimezone('Asia/Jerusalem').create();
 
   Logger.log('5 טריגרים הוגדרו: 07:00 תזכורות, 07:30 הפסקות, 12:00 צהריים, 14:30 פתיחת בוקר, 16:00 בדיקת טופס');
-  try {
-    SpreadsheetApp.getUi().alert('5 טריגרים הוגדרו בהצלחה!\n\n07:00 — תזכורות מרכזיות\n07:30 — תורנויות הפסקות\n12:00 — תורנויות צהריים\n14:30 — פתיחת בוקר\n16:00 — בדיקת טופס');
-  } catch(e) { /* getUi not available from trigger context */ }
 }
 
 // ╔══════════════════════════════════════════════╗
