@@ -536,7 +536,9 @@ body::before{content:'';position:fixed;inset:0;
     <div class="form-grid">
       <div class="form-field">
         <label>שם המורה</label>
-        <input type="text" id="teacherName" placeholder="שם המורה המדווח...">
+        <select id="teacherName" onchange="onTeacherSelect()">
+          <option value="">בחר מורה...</option>
+        </select>
       </div>
       <div class="form-field">
         <label>מקצוע</label>
@@ -597,6 +599,11 @@ body::before{content:'';position:fixed;inset:0;
     <select id="dashClassFilter" onchange="renderDashboard()" style="padding:7px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.82rem;font-weight:600;cursor:pointer">
       <option value="all">כל הכיתות</option>
     </select>
+  </div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:16px">
+    <h4 style="font-size:.86rem;font-weight:800;font-family:Heebo;margin-bottom:4px;display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> מגמת אירועים — 8 שבועות אחרונים</h4>
+    <div id="trendChart"></div>
   </div>
 
   <div class="events-table-wrap">
@@ -677,6 +684,41 @@ var EVENT_LABELS = {
   other: 'אחר'
 };
 
+var STAFF = [
+  {name:'אושר אהרוני',role:'מחנכת ט2 + מורה מקצועית'},
+  {name:'בגלר שי',role:'מורה מחשבים'},
+  {name:'בטיטו מירב',role:'מחנכת'},
+  {name:'בנבג\'י רוזנר ליאת',role:'יועצת יא'},
+  {name:'בנסאסי מיה',role:'מורה עיצוב שיער'},
+  {name:'בר אשר אפרת',role:'מורה לשון'},
+  {name:'גל רווית',role:'סגנית מנהלת'},
+  {name:'גרונספלד יעקב',role:'מחנך יא1, רכז חברתי'},
+  {name:'דהאן עמנואל (מנו)',role:'מחנך יב3'},
+  {name:'הגר יסכה',role:'רכזת נשירה וטיפול'},
+  {name:'ויגדור מועלם דורית',role:'יועצת יב'},
+  {name:'זרצקי מריאן',role:'מורה אנגלית'},
+  {name:'טננבאום יעל',role:'מדריכת מעגלים'},
+  {name:'יצחקי רעיה',role:'מחנכת י1'},
+  {name:'כהן אדיר',role:'מורה חשמל'},
+  {name:'כהן שמעון',role:'מורה מקצועי'},
+  {name:'מלכה אופירה',role:'מחנכת י2'},
+  {name:'ממו גטהון צהיי',role:'יועצת יב'},
+  {name:'נתנאל גיא',role:'מחנך יא3'},
+  {name:'פלג מיטל',role:'מנהלת'},
+  {name:'משה צברי',role:'מחנך ט1'},
+  {name:'קוסטן נעמה',role:'מחנכת יא2'},
+  {name:'קלדרון ויקטוריה',role:'מורה מקצועי'},
+  {name:'שרה מרציאנו',role:'עובדת סוציאלית'},
+  {name:'רבבשי יוסף',role:'מחנך יב1'},
+  {name:'רוט יואב',role:'מחנך יב2'},
+  {name:'שאזו פרלה',role:'מחנכת י3'},
+  {name:'חוה בנימין',role:'רכזת שילוב'},
+  {name:'קוסקאס אליאל',role:'מורה מקצועי'},
+  {name:'בת-שבע אדלר',role:'מורה מקצועי'},
+  {name:'נמיר מלכה',role:'מורה אנגלית'},
+  {name:'לינוי בנג\'י',role:'רכזת חניכות ותעסוקה'}
+];
+
 var ACTION_LABELS = {
   talk: 'שיחה אישית',
   'parent-call': 'שיחה עם הורים',
@@ -702,9 +744,17 @@ var ACTION_LABELS = {
     document.getElementById('cloudUrl').value = CLOUD_URL;
   }
 
-  // Load saved teacher name
+  // Populate teacher dropdown
+  var teacherSel = document.getElementById('teacherName');
+  STAFF.forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s.name;
+    opt.textContent = s.name + ' — ' + s.role;
+    teacherSel.appendChild(opt);
+  });
+  // Load saved teacher
   var savedTeacher = localStorage.getItem('discipline_teacher_name');
-  if (savedTeacher) document.getElementById('teacherName').value = savedTeacher;
+  if (savedTeacher) teacherSel.value = savedTeacher;
   var savedSubject = localStorage.getItem('discipline_teacher_subject');
   if (savedSubject) document.getElementById('teacherSubject').value = savedSubject;
 
@@ -733,7 +783,7 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
   document.querySelector('[data-tab="'+tab+'"]').classList.add('active');
   document.getElementById('tab-'+tab).classList.add('active');
-  if (tab === 'dashboard') renderDashboard();
+  if (tab === 'dashboard') { renderDashboard(); renderTrendChart(); }
 }
 
 // ============================================
@@ -847,9 +897,15 @@ function validateForm(context) {
   } else {
     var ok2 = teacherState.studentId && teacherState.eventType
       && document.getElementById('teacherDate').value
-      && document.getElementById('teacherName').value.trim();
+      && document.getElementById('teacherName').value;
     document.getElementById('teacherSubmit').disabled = !ok2;
   }
+}
+
+function onTeacherSelect() {
+  var sel = document.getElementById('teacherName');
+  if (sel.value) localStorage.setItem('discipline_teacher_name', sel.value);
+  validateForm('teacher');
 }
 
 // Listen for input changes
@@ -910,7 +966,7 @@ function submitTeacherEvent() {
     subject: document.getElementById('teacherSubject').value.trim(),
     notes: document.getElementById('teacherNotes').value.trim(),
     actions: [],
-    reporter: document.getElementById('teacherName').value.trim(),
+    reporter: document.getElementById('teacherName').value,
     created: new Date().toISOString()
   };
 
@@ -947,8 +1003,11 @@ function resetTeacherForm() {
   document.getElementById('teacherSelected').style.display = 'none';
   document.getElementById('teacherEventTypes').querySelectorAll('.event-type-btn').forEach(function(b) { b.classList.remove('selected'); });
   document.getElementById('teacherDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('teacherName').value = '';
-  document.getElementById('teacherSubject').value = '';
+  // Keep saved teacher name
+  var saved = localStorage.getItem('discipline_teacher_name');
+  document.getElementById('teacherName').value = saved || '';
+  var savedSubj = localStorage.getItem('discipline_teacher_subject');
+  document.getElementById('teacherSubject').value = savedSubj || '';
   document.getElementById('teacherPeriod').value = '';
   document.getElementById('teacherNotes').value = '';
   document.getElementById('teacherOtherText').value = '';
@@ -1137,7 +1196,14 @@ function renderStudentProfile(student) {
   html += '<div class="meta">'+student.cls+' | '+getMegamaLabel(student.megama)+'</div></div>';
   html += '<div class="stats-inline">';
   html += '<div class="stat-mini"><div class="val" style="color:var(--danger)">'+events.length+'</div><div class="lbl">סה"כ אירועים</div></div>';
-  html += '</div></div>';
+  html += '</div>';
+  // Action buttons row
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-right:auto">';
+  html += '<a href="student-file.html?id='+student.id+'" target="_blank" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.74rem;font-weight:600;color:var(--primary-dark);text-decoration:none;font-family:Heebo;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>תיק תלמיד</a>';
+  html += '<a href="student-risk.html?id='+student.id+'" target="_blank" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.74rem;font-weight:600;color:var(--warn);text-decoration:none;font-family:Heebo;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>זיהוי סיכון</a>';
+  html += '<button onclick="sendWhatsAppAlert('+student.id+')" style="padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.74rem;font-weight:600;color:var(--success);background:var(--card);font-family:Heebo;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>WhatsApp להורים</button>';
+  html += '</div>';
+  html += '</div>';
 
   // Breakdown tiles
   if (Object.keys(counts).length > 0) {
@@ -1172,7 +1238,10 @@ function renderStudentProfile(student) {
       if (e.actions && e.actions.length > 0) {
         html += '<div class="tl-actions">'+e.actions.map(function(a) { return '<span class="action-tag">'+escapeHtml(a)+'</span>'; }).join('')+'</div>';
       }
-      html += '<div class="tl-reporter">דיווח: '+escapeHtml(e.reporter)+'</div>';
+      html += '<div class="tl-reporter">דיווח: '+escapeHtml(e.reporter);
+      if (e.severity) html += ' | חומרה: '+e.severity;
+      html += ' <button onclick="event.stopPropagation();deleteEvent('+e.id+','+student.id+')" style="margin-right:8px;padding:2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--card);font-family:Heebo;font-size:.65rem;color:var(--danger);cursor:pointer">מחק</button>';
+      html += '</div>';
       html += '</div></div>';
     });
     html += '</div>';
@@ -1348,6 +1417,79 @@ function escapeHtml(str) {
   var div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+
+// ============================================
+// DELETE EVENT
+// ============================================
+function deleteEvent(eventId, studentId) {
+  if (!confirm('למחוק את האירוע? הפעולה לא ניתנת לביטול.')) return;
+  allEvents = allEvents.filter(function(e) { return e.id !== eventId; });
+  saveLocal();
+  updateKPIs();
+  showToast('האירוע נמחק');
+  var s = STUDENTS.find(function(st) { return st.id === studentId; });
+  if (s) renderStudentProfile(s);
+}
+
+// ============================================
+// TREND CHART (simple CSS bar chart)
+// ============================================
+function renderTrendChart() {
+  var container = document.getElementById('trendChart');
+  if (!container) return;
+  if (allEvents.length === 0) { container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:.84rem">אין נתונים להצגת מגמות</div>'; return; }
+
+  // Group by week (last 8 weeks)
+  var now = new Date();
+  var weeks = [];
+  for (var w = 7; w >= 0; w--) {
+    var d = new Date(now); d.setDate(d.getDate() - w * 7);
+    var weekStart = new Date(d); weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    var weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+    weeks.push({ start: weekStart.toISOString().split('T')[0], end: weekEnd.toISOString().split('T')[0], count: 0, label: weekStart.getDate()+'/'+(weekStart.getMonth()+1) });
+  }
+  allEvents.forEach(function(e) {
+    var ed = (e.date || '').substring(0, 10);
+    weeks.forEach(function(wk) { if (ed >= wk.start && ed <= wk.end) wk.count++; });
+  });
+  var maxCount = Math.max.apply(null, weeks.map(function(w) { return w.count; })) || 1;
+
+  var html = '<div style="display:flex;align-items:end;gap:6px;height:120px;padding:10px 0">';
+  weeks.forEach(function(wk) {
+    var pct = Math.round((wk.count / maxCount) * 100);
+    var color = wk.count > 5 ? 'var(--danger)' : wk.count > 2 ? 'var(--warn)' : 'var(--primary)';
+    html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">';
+    html += '<div style="font-size:.68rem;font-weight:800;color:var(--text)">' + (wk.count || '') + '</div>';
+    html += '<div style="width:100%;background:' + color + ';border-radius:6px 6px 0 0;min-height:4px;height:' + pct + '%;transition:height .5s;opacity:.8"></div>';
+    html += '<div style="font-size:.6rem;color:var(--muted);white-space:nowrap">' + wk.label + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ============================================
+// WHATSAPP ALERT — open pre-filled message
+// ============================================
+function sendWhatsAppAlert(studentId) {
+  var s = STUDENTS.find(function(st) { return st.id === studentId; });
+  if (!s) return;
+  var events = allEvents.filter(function(e) { return e.studentId === studentId; });
+  var parentPhone = '';
+  if (s.parent1) { var m = s.parent1.match(/(\d[\d-]{8,})/); if (m) parentPhone = m[1].replace(/-/g, ''); }
+  if (!parentPhone && s.parent2) { var m2 = s.parent2.match(/(\d[\d-]{8,})/); if (m2) parentPhone = m2[1].replace(/-/g, ''); }
+  if (!parentPhone) { showToast('לא נמצא טלפון הורה לתלמיד'); return; }
+  if (parentPhone.startsWith('05')) parentPhone = '972' + parentPhone.substring(1);
+
+  var msg = 'שלום, פנייה מאורט בית הערבה בנוגע ל' + s.first + ' ' + s.last + '.\n';
+  msg += 'נרשמו ' + events.length + ' אירועי משמעת.\n';
+  if (events.length > 0) {
+    var last = events[events.length - 1];
+    msg += 'אירוע אחרון: ' + last.eventLabel + ' (' + formatDate(last.date) + ').\n';
+  }
+  msg += 'נשמח לתאם שיחה.';
+  window.open('https://api.whatsapp.com/send?phone=' + parentPhone + '&text=' + encodeURIComponent(msg), '_blank');
 }
 
 function showToast(msg) {
