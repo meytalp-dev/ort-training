@@ -825,19 +825,46 @@ function isPresent(status){return status==='present'||status==='late'}
 
 // Last 5 working days (excluding today which isn't logged yet)
 function getWeekDays(){
-  return HISTORY_DAYS.slice(-6,-1); // 5 days before today
+  // Israeli work week: Sunday(0)–Thursday(4)
+  // Return working days of the current week up to today
+  var today=new Date();
+  var dow=today.getDay(); // 0=Sun..6=Sat
+  // Find Sunday of this week
+  var sunday=new Date(today);
+  sunday.setDate(today.getDate()-dow);
+  sunday.setHours(0,0,0,0);
+
+  var days=[];
+  for(var i=0;i<=4;i++){ // Sun–Thu
+    var d=new Date(sunday);
+    d.setDate(sunday.getDate()+i);
+    if(d<=today)days.push(d);
+  }
+  // If no days yet (Saturday), show last week
+  if(days.length===0){
+    var lastSun=new Date(sunday);
+    lastSun.setDate(sunday.getDate()-7);
+    for(var j=0;j<=4;j++){
+      var d2=new Date(lastSun);
+      d2.setDate(lastSun.getDate()+j);
+      days.push(d2);
+    }
+  }
+  return days;
 }
 
 function getStudentWeekStats(s){
+  var weekDays=getWeekDays();
+  var total=weekDays.length;
   var counts={present:0,absent:0,sick:0,late:0,early:0,none:0};
-  getWeekDays().forEach(function(d){
+  weekDays.forEach(function(d){
     var rec=(ATTENDANCE[s.id]||{})[toDateKey(d)];
     if(!rec){counts.none++;return}
     if(counts[rec.status]!==undefined)counts[rec.status]++;
   });
-  var logged=5-counts.none;
+  var logged=total-counts.none;
   var pct=logged?Math.round(((counts.present+counts.late)/logged)*100):null;
-  return {counts:counts,logged:logged,pct:pct,total:5};
+  return {counts:counts,logged:logged,pct:pct,total:total};
 }
 
 function getClassWeekStats(cls){
@@ -913,19 +940,28 @@ function setDate(){
 }
 
 function renderKPIs(){
-  // Use yesterday's data since today isn't logged yet
-  var yesterdayKey=toDateKey(HISTORY_DAYS[HISTORY_DAYS.length-2]);
+  // Show today's data first; if nothing reported yet fall back to last working day
+  var todayStr=toDateKey(new Date());
+  var todayHasData=STUDENTS.some(function(s){return (ATTENDANCE[s.id]||{})[todayStr]});
+  var dateKey=todayHasData?todayStr:toDateKey(HISTORY_DAYS[HISTORY_DAYS.length-2]);
   var counts={present:0,absent:0,sick:0,late:0,early:0};
+  var reported=0;
   STUDENTS.forEach(function(s){
-    var rec=ATTENDANCE[s.id][yesterdayKey];
-    if(rec&&counts[rec.status]!==undefined)counts[rec.status]++;
+    var rec=(ATTENDANCE[s.id]||{})[dateKey];
+    if(rec){reported++;if(counts[rec.status]!==undefined)counts[rec.status]++}
   });
-  var pct=Math.round(((counts.present+counts.late)/STUDENTS.length)*100);
+  var pct=reported?Math.round(((counts.present+counts.late)/reported)*100):0;
   document.getElementById('kpiPresent').textContent=counts.present;
   document.getElementById('kpiAbsent').textContent=counts.absent;
   document.getElementById('kpiSick').textContent=counts.sick;
   document.getElementById('kpiLate').textContent=counts.late;
   document.getElementById('kpiPct').textContent=pct+'%';
+  // Update subtitle to show which date the KPIs reflect
+  var sub=document.querySelector('.hero-sub');
+  if(sub){
+    var label=todayHasData?'נתוני היום':'נתוני יום עבודה אחרון ('+dateKey+')';
+    sub.innerHTML=reported+' תלמידים דווחו · '+label+' · עדכון: '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  }
 }
 
 function renderTabs(){
@@ -1301,7 +1337,7 @@ function renderDashboard(){
 
   // Week period header
   html+='<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">';
-  html+='<div style="font-size:.88rem;color:var(--muted)">סיכום שבועי · <strong style="color:var(--text)">'+formatDateShort(weekStart)+' – '+formatDateShort(weekEnd)+'</strong> · 5 ימי עבודה</div>';
+  html+='<div style="font-size:.88rem;color:var(--muted)">סיכום שבועי · <strong style="color:var(--text)">'+formatDateShort(weekStart)+' – '+formatDateShort(weekEnd)+'</strong> · '+weekDays.length+' ימי עבודה</div>';
   html+='</div>';
 
   // Top / Bottom class cards
