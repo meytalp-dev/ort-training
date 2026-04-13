@@ -374,6 +374,7 @@ select.form-input{cursor:pointer}
     <h1><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg> מערכת תעסוקה <span class="header-badge">תשפ"ז</span></h1>
   </div>
   <div class="header-left">
+    <span id="syncStatus" style="font-size:.72rem;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--bg-alt)"></span>
     <div class="auth-indicator locked" id="authIndicator" onclick="showLoginIfNeeded()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="authIcon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
       <span id="authLabel">נעול</span>
@@ -998,7 +999,56 @@ var APPS_SCRIPT_URL = '';
 var KEYS = ['emp_employers','emp_potential','emp_placements','emp_attendance','emp_lessons','emp_visits','emp_letters','emp_forms','emp_schedule','emp_workshop','emp_prepfile','emp_studentmap','emp_recommendations','emp_resumes','emp_mentorship_current','emp_mentorship_next','emp_documents'];
 var DB = {};
 KEYS.forEach(function(k) { DB[k.replace('emp_','')] = JSON.parse(localStorage.getItem(k) || '[]'); });
-function persist() { KEYS.forEach(function(k) { localStorage.setItem(k, JSON.stringify(DB[k.replace('emp_','')])); }); }
+var syncTimer = null;
+function persist() {
+  KEYS.forEach(function(k) { localStorage.setItem(k, JSON.stringify(DB[k.replace('emp_','')])); });
+  // Debounced sync to Google Sheets (2 seconds after last change)
+  if (APPS_SCRIPT_URL) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function() { syncToSheets(); }, 2000);
+  }
+}
+function syncToSheets() {
+  if (!APPS_SCRIPT_URL) return;
+  var payload = { action: 'syncAll' };
+  KEYS.forEach(function(k) { payload[k.replace('emp_','')] = DB[k.replace('emp_','')]; });
+  fetch(APPS_SCRIPT_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) })
+    .then(function(r) { return r.json(); })
+    .then(function(d) { if (d.result === 'success') { updateSyncStatus('synced'); } else { updateSyncStatus('error'); } })
+    .catch(function() { updateSyncStatus('error'); });
+  updateSyncStatus('syncing');
+}
+function loadFromSheets(cb) {
+  if (!APPS_SCRIPT_URL) { if (cb) cb(); return; }
+  var cbName = 'empLoad_' + Date.now();
+  window[cbName] = function(data) {
+    delete window[cbName];
+    if (data && data.result === 'success' && data.data) {
+      var mapping = { 'מעסיקים':'employers','פוטנציאליים':'potential','שיבוצים':'placements','נוכחות':'attendance','מערכי שיעור':'lessons','ביקורים':'visits','מכתבים':'letters','טפסים':'forms','לוז שבועי':'schedule','סדנה':'workshop','תיק הכנה':'prepfile','מיפוי':'studentmap','המלצות':'recommendations','קורות חיים':'resumes','חניכות':'mentorship_current','מסמכים':'documents' };
+      for (var sheetName in mapping) {
+        var key = mapping[sheetName];
+        if (data.data[sheetName] && data.data[sheetName].length > 0) {
+          DB[key] = data.data[sheetName];
+          localStorage.setItem('emp_' + key, JSON.stringify(DB[key]));
+        }
+      }
+      updateSyncStatus('synced');
+      if (cb) cb();
+    } else { updateSyncStatus('error'); if (cb) cb(); }
+  };
+  var s = document.createElement('script');
+  s.src = APPS_SCRIPT_URL + '?action=getAll&callback=' + cbName;
+  s.onerror = function() { delete window[cbName]; updateSyncStatus('error'); if (cb) cb(); };
+  document.head.appendChild(s);
+  updateSyncStatus('syncing');
+}
+function updateSyncStatus(status) {
+  var el = document.getElementById('syncStatus');
+  if (!el) return;
+  if (status === 'synced') { el.textContent = 'מסונכרן'; el.style.color = 'var(--success)'; }
+  else if (status === 'syncing') { el.textContent = 'מסנכרן...'; el.style.color = 'var(--warn)'; }
+  else { el.textContent = 'לא מסונכרן'; el.style.color = 'var(--danger)'; }
+}
 
 // ============================================
 // AUTH
@@ -1941,7 +1991,12 @@ function renderAll(){
   renderSchedule();renderWorkshop();renderPrepfile();renderStudentMap();
   renderRecommendations();renderResume();renderMentorship();renderMentorshipNext();
 }
-renderAll();
+// Initial load: try Sheets first, fallback to localStorage
+if (APPS_SCRIPT_URL) {
+  loadFromSheets(function() { renderAll(); });
+} else {
+  renderAll();
+}
 </script>
 </body>
 </html>
