@@ -245,9 +245,23 @@ function loadAllDataLocal() {
 function convertSheetPlan(plan) {
   const data = {};
   if (plan.profile) Object.keys(plan.profile).forEach(k => { data[k] = plan.profile[k]; });
-  if (plan.goals && plan.goals.areas) {
-    data.areas = plan.goals.areas;
-    data.selectedAreas = Object.keys(plan.goals.areas);
+  // readGoals_ returns { areaName: [goals] } — convert to { areaName: { goals: [...] } }
+  if (plan.goals) {
+    const goalsObj = plan.goals.areas || plan.goals;
+    const areas = {};
+    Object.keys(goalsObj).forEach(area => {
+      if (area === 'role') return; // skip metadata keys
+      const val = goalsObj[area];
+      if (Array.isArray(val)) {
+        areas[area] = { goals: val };
+      } else if (val && val.goals) {
+        areas[area] = val;
+      }
+    });
+    if (Object.keys(areas).length > 0) {
+      data.areas = areas;
+      data.selectedAreas = Object.keys(areas);
+    }
   }
   if (plan.activities) data.activities = plan.activities;
   if (plan.evaluation) data.evaluation = plan.evaluation;

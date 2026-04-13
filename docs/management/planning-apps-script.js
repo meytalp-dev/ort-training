@@ -268,14 +268,33 @@ function saveGoals_(ss, role, goals) {
   // Delete existing rows for this role
   deleteRoleRows_(sheet, role);
 
+  // Support both formats:
+  // Old: { areaName: [goalArray] }
+  // New (from form): { areas: { areaName: { goals: [goalArray] } } }
+  var normalized = {};
+  if (goals.areas && typeof goals.areas === 'object') {
+    for (var areaKey in goals.areas) {
+      var areaObj = goals.areas[areaKey];
+      if (Array.isArray(areaObj)) {
+        normalized[areaKey] = areaObj;
+      } else if (areaObj && Array.isArray(areaObj.goals)) {
+        normalized[areaKey] = areaObj.goals;
+      }
+    }
+  } else {
+    for (var area in goals) {
+      if (Array.isArray(goals[area])) {
+        normalized[area] = goals[area];
+      }
+    }
+  }
+
   // Write new rows
   var rows = [];
-  for (var area in goals) {
-    var areaGoals = goals[area];
-    if (!Array.isArray(areaGoals)) continue;
-    areaGoals.forEach(function (g) {
+  for (var a in normalized) {
+    normalized[a].forEach(function (g) {
       rows.push([
-        role, area,
+        role, a,
         g.domain || '', g.principle || '',
         g.what || '', g.measures || '',
         g.partners || '', g.extra_needs || '',
