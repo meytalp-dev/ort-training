@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הגרלת זוגות צוות | אורט בית הערבה</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Playpen+Sans+Hebrew:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cyan: #00bcd4;
+            --cyan-light: #e0f7fa;
+            --pink: #ec407a;
+            --pink-light: #fce4ec;
+            --turquoise: #26a69a;
+            --turquoise-light: #e0f2f1;
+            --lavender: #b39ddb;
+            --lavender-light: #ede7f6;
+            --bg: #fafbfc;
+            --card-bg: #ffffff;
+            --text: #2d3748;
+            --text-light: #718096;
+            --shadow: 0 4px 20px rgba(0,0,0,0.06);
+            --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Assistant', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        h1, h2, h3 { font-family: 'Playpen Sans Hebrew', 'Assistant', sans-serif; }
+
+        .header {
+            text-align: center;
+            padding: 32px 0 24px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--turquoise);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        /* Lottery Button */
+        .lottery-section {
+            text-align: center;
+            margin: 24px 0 32px;
+        }
+
+        .btn-lottery {
+            background: linear-gradient(135deg, var(--cyan), var(--turquoise));
+            color: white;
+            border: none;
+            padding: 16px 48px;
+            font-size: 1.3rem;
+            font-family: 'Playpen Sans Hebrew', sans-serif;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,188,212,0.3);
+        }
+
+        .btn-lottery:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0,188,212,0.4);
+        }
+
+        .btn-lottery:active { transform: translateY(0); }
+
+        .btn-lottery svg {
+            width: 24px; height: 24px;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+
+        .btn-reshuffle {
+            background: var(--card-bg);
+            color: var(--turquoise);
+            border: 2px solid var(--turquoise);
+            padding: 10px 28px;
+            font-size: 1rem;
+            font-family: 'Assistant', sans-serif;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-reshuffle:hover {
+            background: var(--turquoise-light);
+        }
+
+        /* Animation */
+        .shuffle-animation {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .shuffle-animation.active {
+            display: block;
+        }
+
+        .shuffle-names {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--cyan);
+            height: 50px;
+            line-height: 50px;
+            overflow: hidden;
+        }
+
+        /* Pairs Grid */
+        .pairs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .pair-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pair-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .pair-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 4px;
+        }
+
+        .pair-card:nth-child(1)::before, .pair-card:nth-child(5)::before, .pair-card:nth-child(9)::before { background: linear-gradient(90deg, var(--cyan), var(--turquoise)); }
+        .pair-card:nth-child(2)::before, .pair-card:nth-child(6)::before, .pair-card:nth-child(10)::before { background: linear-gradient(90deg, var(--pink), var(--lavender)); }
+        .pair-card:nth-child(3)::before, .pair-card:nth-child(7)::before, .pair-card:nth-child(11)::before { background: linear-gradient(90deg, var(--turquoise), var(--lavender)); }
+        .pair-card:nth-child(4)::before, .pair-card:nth-child(8)::before { background: linear-gradient(90deg, var(--lavender), var(--cyan)); }
+
+        .pair-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: var(--cyan-light);
+            color: var(--cyan);
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        .pair-names {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .pair-name {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .pair-role {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .pair-divider {
+            width: 24px; height: 2px;
+            background: var(--cyan);
+            border-radius: 2px;
+            margin: 4px auto;
+            opacity: 0.4;
+        }
+
+        .pair-topic {
+            background: var(--turquoise-light);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-top: 12px;
+        }
+
+        .pair-topic-label {
+            font-size: 0.75rem;
+            color: var(--turquoise);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .pair-topic-text {
+            font-size: 0.95rem;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        /* Conversation Guide Section */
+        .conversation-section {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 16px;
+            display: none;
+        }
+
+        .conversation-section.visible { display: block; }
+
+        .conversation-section h2 {
+            text-align: center;
+            color: var(--turquoise);
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+        }
+
+        .conversation-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .conversation-card h3 {
+            color: var(--pink);
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .conversation-card h3 svg {
+            width: 20px; height: 20px;
+            flex-shrink: 0;
+        }
+
+        .conversation-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .conversation-card li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 1rem;
+            line-height: 1.6;
+            padding-right: 20px;
+            position: relative;
+        }
+
+        .conversation-card li:last-child { border-bottom: none; }
+
+        .conversation-card li::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 14px;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--cyan);
+            opacity: 0.5;
+        }
+
+        .timer-section {
+            text-align: center;
+            margin: 32px 0;
+        }
+
+        .timer-display {
+            font-size: 3rem;
+            font-weight: 700;
+            font-family: 'Playpen Sans Hebrew', sans-serif;
+            color: var(--turquoise);
+            margin-bottom: 12px;
+        }
+
+        .timer-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-timer {
+            padding: 10px 24px;
+            font-size: 1rem;
+            font-family: 'Assistant', sans-serif;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-timer.start {
+            background: var(--turquoise);
+            color: white;
+        }
+
+        .btn-timer.pause {
+            background: var(--pink);
+            color: white;
+        }
+
+        .btn-timer.reset {
+            background: var(--card-bg);
+            color: var(--text-light);
+            border: 2px solid #e0e0e0;
+        }
+
+        .btn-timer:hover { transform: translateY(-1px); }
+
+        /* Print */
+        .btn-print {
+            background: var(--card-bg);
+            color: var(--text-light);
+            border: 2px solid #e0e0e0;
+            padding: 10px 28px;
+            font-size: 1rem;
+            font-family: 'Assistant', sans-serif;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 12px;
+            margin-right: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-print:hover { background: #f5f5f5; }
+
+        @media print {
+            .lottery-section, .timer-section, .btn-print, .btn-reshuffle { display: none !important; }
+            .pair-card { break-inside: avoid; opacity: 1 !important; transform: none !important; }
+            .conversation-section { display: block !important; }
+            body { padding: 0; }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 { font-size: 1.5rem; }
+            .pairs-grid { grid-template-columns: 1fr; }
+            .timer-display { font-size: 2.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:8px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        הגרלת זוגות צוות
+    </h1>
+    <p>שיחה אישית בין עמיתים | אורט בית הערבה</p>
+</div>
+
+<div class="lottery-section">
+    <button class="btn-lottery" onclick="startLottery()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 4.21 12 6.81 16.5 4.21"/><polyline points="7.5 19.79 7.5 14.6 3 12"/><polyline points="21 12 16.5 14.6 16.5 19.79"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        הגרילו זוגות
+    </button>
+    <div id="reshuffleArea" style="display:none">
+        <button class="btn-reshuffle" onclick="startLottery()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:4px"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+            הגרלה מחדש
+        </button>
+        <button class="btn-print" onclick="window.print()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            הדפסה
+        </button>
+    </div>
+</div>
+
+<div class="shuffle-animation" id="shuffleAnim">
+    <div class="shuffle-names" id="shuffleNames"></div>
+</div>
+
+<div class="pairs-grid" id="pairsGrid"></div>
+
+<div class="conversation-section" id="conversationSection">
+    <h2>
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:8px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        מדריך שיחה
+    </h2>
+
+    <div class="conversation-card">
+        <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec407a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            שלב 1 — חימום (3 דקות)
+        </h3>
+        <ul>
+            <li>מה הדבר הכי טוב שקרה לך השבוע — בעבודה או בחיים?</li>
+            <li>אם היית יכול/ה לקחת יום חופש מחר — מה היית עושה?</li>
+        </ul>
+    </div>
+
+    <div class="conversation-card">
+        <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec407a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            שלב 2 — הכרה אישית (5 דקות)
+        </h3>
+        <ul>
+            <li>מה הביא אותך לעבוד בחינוך / בתחום שלך?</li>
+            <li>מה הרגע שבו הרגשת הכי גאה בעבודה שלך השנה?</li>
+            <li>מה משהו שאנשים לא יודעים עליך ויופתעו לשמוע?</li>
+        </ul>
+    </div>
+
+    <div class="conversation-card">
+        <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec407a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            שלב 3 — העמקה מקצועית (7 דקות)
+        </h3>
+        <ul>
+            <li>מה האתגר הכי גדול שלך עם התלמידים השנה? איך את/ה מתמודד/ת?</li>
+            <li>ספר/י על תלמיד/ה שעשה לך את היום לאחרונה</li>
+            <li>אם היית יכול/ה לשנות דבר אחד בבית הספר — מה היית משנה?</li>
+            <li>מה כישרון או ידע שיש לך שהצוות לא מנצל מספיק?</li>
+        </ul>
+    </div>
+
+    <div class="conversation-card">
+        <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ec407a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            שלב 4 — חיזוק הקשר (5 דקות)
+        </h3>
+        <ul>
+            <li>מה דבר אחד שאת/ה מעריך/ה בבן/בת הזוג שלך לשיחה?</li>
+            <li>איך אנחנו יכולים לעזור אחד לשני יותר? יש משהו שאני יכול/ה לעשות בשבילך?</li>
+            <li>מה דבר אחד שנלקח מהשיחה הזו?</li>
+        </ul>
+    </div>
+
+    <div class="timer-section">
+        <div class="timer-display" id="timerDisplay">20:00</div>
+        <div class="timer-buttons">
+            <button class="btn-timer start" id="btnStart" onclick="toggleTimer()">התחל</button>
+            <button class="btn-timer reset" onclick="resetTimer()">אפס</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const TEAM = [
+    { name: 'אושר אהרוני', role: 'מחנכת ט2' },
+    { name: 'אושרת אסור', role: 'מזכירת מש"א' },
+    { name: 'שי בגלר', role: 'מורה מחשבים' },
+    { name: 'ליאת בנבג\'י רוזנר', role: 'יועצת יא' },
+    { name: 'אפרת בר אשר', role: 'מורה לשון' },
+    { name: 'יעקב גרונספלד', role: 'מחנך יא1 / רכז חברתי' },
+    { name: 'מנו דהאן', role: 'מחנך יב3' },
+    { name: 'יסכה הגר', role: 'רכזת נשירה וטיפול' },
+    { name: 'דורית ויגדור מועלם', role: 'יועצת יב' },
+    { name: 'רעיה יצחקי', role: 'מחנכת י1' },
+    { name: 'מיטל לאלום', role: 'מזכירה' },
+    { name: 'צהיי ממו גטהון', role: 'יועצת יב' },
+    { name: 'גיא נתנאל', role: 'מחנך יא3 / רכז שכבה' },
+    { name: 'אהוד פרידס', role: 'אב בית' },
+    { name: 'משה צברי', role: 'מחנך ט1' },
+    { name: 'נעמה קוסטן', role: 'מחנכת יא2' },
+    { name: 'ויקטוריה קלדרון', role: 'מורה מקצועי' },
+    { name: 'שרה מרציאנו', role: 'עובדת סוציאלית' },
+    { name: 'יוסף רבבשי', role: 'מחנך יב1' },
+    { name: 'פרלה שאזו', role: 'מחנכת י3' },
+    { name: 'אליאל קוסקאס', role: 'מורה מקצועי' },
+    { name: 'לינוי בנג\'י', role: 'רכזת חניכות ותעסוקה' }
+];
+
+const PAIR_TOPICS = [
+    'שתפו זה את זה ברגע מקצועי שגרם לכם גאווה השנה',
+    'דברו על תלמיד/ה שהשפיע/ה עליכם — ומה למדתם ממנו/ה',
+    'מה הכוח הסודי שלכם בעבודה? מה הייתם רוצים לפתח?',
+    'ספרו זה לזה על חלום מקצועי — משהו שהייתם רוצים לעשות בבית הספר',
+    'מה הדבר הכי מפתיע שלמדתם על עצמכם מאז שהתחלתם לעבוד כאן?',
+    'איזה טיפ מקצועי הייתם נותנים לעצמכם של לפני שנה?',
+    'מה הדבר שהכי מטעין אתכם בעבודה? ומה שואב אנרגיה?',
+    'אם הייתם יכולים להחליף תפקיד ליום אחד עם מישהו בצוות — עם מי ולמה?',
+    'ספרו על רגע שהרגשתם שאתם באמת עושים שינוי בחיים של תלמיד/ה',
+    'מה הערך החשוב ביותר שאתם מנסים להעביר לתלמידים — מעבר ללימודים?',
+    'מה משהו שעובד לכם מעולה בכיתה/בתפקיד שכדאי לשתף את כולם?'
+];
+
+function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function startLottery() {
+    const grid = document.getElementById('pairsGrid');
+    const anim = document.getElementById('shuffleAnim');
+    const convSection = document.getElementById('conversationSection');
+
+    grid.innerHTML = '';
+    convSection.classList.remove('visible');
+    anim.classList.add('active');
+
+    // Shuffle animation
+    const namesEl = document.getElementById('shuffleNames');
+    let shuffleCount = 0;
+    const shuffleInterval = setInterval(() => {
+        const idx1 = Math.floor(Math.random() * TEAM.length);
+        const idx2 = Math.floor(Math.random() * TEAM.length);
+        namesEl.textContent = TEAM[idx1].name + ' + ' + TEAM[idx2].name;
+        shuffleCount++;
+        if (shuffleCount > 20) {
+            clearInterval(shuffleInterval);
+            anim.classList.remove('active');
+            showPairs();
+        }
+    }, 100);
+}
+
+function showPairs() {
+    const shuffled = shuffle(TEAM);
+    const topics = shuffle(PAIR_TOPICS);
+    const grid = document.getElementById('pairsGrid');
+    grid.innerHTML = '';
+
+    const pairs = [];
+    for (let i = 0; i < shuffled.length; i += 2) {
+        if (i + 1 < shuffled.length) {
+            pairs.push([shuffled[i], shuffled[i + 1]]);
+        } else {
+            // Odd — add to last pair as trio
+            pairs[pairs.length - 1].push(shuffled[i]);
+        }
+    }
+
+    pairs.forEach((pair, idx) => {
+        const card = document.createElement('div');
+        card.className = 'pair-card';
+
+        const isTrio = pair.length === 3;
+        let namesHTML = '';
+        pair.forEach((p, pi) => {
+            if (pi > 0) namesHTML += '<div class="pair-divider"></div>';
+            namesHTML += `<div class="pair-name">${p.name}</div><div class="pair-role">${p.role}</div>`;
+        });
+
+        card.innerHTML = `
+            <div class="pair-number">${idx + 1}</div>
+            <div class="pair-names">${namesHTML}</div>
+            <div class="pair-topic">
+                <div class="pair-topic-label">נושא לשיחה</div>
+                <div class="pair-topic-text">${topics[idx % topics.length]}</div>
+            </div>
+        `;
+
+        grid.appendChild(card);
+
+        setTimeout(() => card.classList.add('visible'), 200 + idx * 150);
+    });
+
+    document.getElementById('reshuffleArea').style.display = 'block';
+
+    setTimeout(() => {
+        document.getElementById('conversationSection').classList.add('visible');
+    }, 200 + pairs.length * 150 + 300);
+}
+
+// Timer
+let timerSeconds = 20 * 60;
+let timerInterval = null;
+let timerRunning = false;
+
+function updateTimerDisplay() {
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    document.getElementById('timerDisplay').textContent =
+        String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function toggleTimer() {
+    const btn = document.getElementById('btnStart');
+    if (timerRunning) {
+        clearInterval(timerInterval);
+        timerRunning = false;
+        btn.textContent = 'המשך';
+        btn.className = 'btn-timer start';
+    } else {
+        timerRunning = true;
+        btn.textContent = 'עצור';
+        btn.className = 'btn-timer pause';
+        timerInterval = setInterval(() => {
+            timerSeconds--;
+            if (timerSeconds <= 0) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+                timerSeconds = 0;
+                btn.textContent = 'התחל';
+                btn.className = 'btn-timer start';
+                // Alert
+                document.getElementById('timerDisplay').style.color = '#ec407a';
+            }
+            updateTimerDisplay();
+        }, 1000);
+    }
+}
+
+function resetTimer() {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    timerSeconds = 20 * 60;
+    updateTimerDisplay();
+    document.getElementById('timerDisplay').style.color = '';
+    document.getElementById('btnStart').textContent = 'התחל';
+    document.getElementById('btnStart').className = 'btn-timer start';
+}
+</script>
+
+</body>
+</html>
