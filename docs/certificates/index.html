@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מחולל תעודות | אורט בית הערבה</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Rubik:wght@300;400;500;700&family=Suez+One&family=Secular+One&family=Karantina:wght@300;400;700&family=Amatic+SC:wght@400;700&family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+@font-face { font-family: 'Playpen Sans Hebrew'; src: url('../fonts/PlaypenSansHebrew-VariableFont_wght.ttf'); }
+@font-face { font-family: 'Cafe'; src: url('../design-studio/fonts/Cafe.ttf'); }
+@font-face { font-family: 'Gveret Levin'; src: url('../design-studio/fonts/GveretLevinAlefAlefAlef-Regular.otf'); }
+@font-face { font-family: 'Dana Yad'; src: url('../design-studio/fonts/DanaYadAlefAlefAlef-Normal.otf'); }
+@font-face { font-family: 'Nehama'; src: url('../design-studio/fonts/Nehama.ttf'); }
+
+:root {
+  --bg: #F5F0E8;
+  --card: rgba(255,255,255,0.85);
+  --primary: #0d7377;
+  --primary-light: #14a3a8;
+  --primary-dark: #0a5a5e;
+  --accent: #d4a574;
+  --accent-light: #f0dcc4;
+  --text: #1a1a1a;
+  --muted: #64748B;
+  --radius: 16px;
+  --border: #e2e8f0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Heebo', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; direction: rtl; }
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, var(--primary) 100%);
+  background-size: 200% 200%;
+  animation: grad-shift 6s ease infinite;
+  padding: 20px 32px;
+  text-align: center;
+  color: white;
+}
+@keyframes grad-shift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+.header h1 { font-family: 'Rubik', sans-serif; font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.header p { font-size: 14px; opacity: 0.9; }
+
+/* Admin bar */
+.admin-bar {
+  display: none;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  padding: 10px 20px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400e;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.admin-bar.show { display: flex; }
+.admin-bar svg { width: 16px; height: 16px; }
+
+/* Layout */
+.main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Controls */
+.controls {
+  background: var(--card);
+  backdrop-filter: blur(16px);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding-bottom: 40px;
+}
+.controls h2 { font-family: 'Rubik', sans-serif; font-size: 17px; font-weight: 600; margin-bottom: 16px; color: var(--primary-dark); }
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e8e4dc;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.section-title:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.section-title .chevron { margin-right: auto; transition: transform 200ms; font-size: 11px; color: var(--muted); }
+.section-title.collapsed .chevron { transform: rotate(-90deg); }
+.section-content { overflow: hidden; transition: max-height 300ms ease, opacity 200ms; max-height: 2000px; opacity: 1; }
+.section-content.hidden { max-height: 0; opacity: 0; padding: 0; margin: 0; }
+
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: var(--muted); }
+.field input[type="text"], .field textarea, .field select {
+  width: 100%; padding: 8px 12px; border: 2px solid var(--border); border-radius: 10px;
+  font-family: 'Heebo', sans-serif; font-size: 14px; direction: rtl; transition: border-color 200ms; background: white; resize: vertical;
+}
+.field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--primary); }
+
+/* Category chips */
+.cat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.cat-chip {
+  border: 2px solid var(--border); border-radius: 10px; padding: 12px 8px; cursor: pointer;
+  transition: all 200ms; background: white; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.cat-chip:hover { transform: translateY(-1px); border-color: #c0d8d4; }
+.cat-chip.active { border-color: var(--primary); background: #f0faf8; }
+.cat-chip svg { width: 28px; height: 28px; }
+.cat-chip span { font-size: 12px; font-weight: 600; }
+
+/* Type chips */
+.type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.type-chip {
+  border: 2px solid var(--border); border-radius: 10px; padding: 10px 8px; cursor: pointer;
+  transition: all 200ms; background: white; text-align: center;
+}
+.type-chip:hover { border-color: #c0d8d4; }
+.type-chip.active { border-color: var(--primary); background: #f0faf8; }
+.type-chip .type-icon { font-size: 20px; margin-bottom: 4px; }
+.type-chip span { font-size: 11px; font-weight: 500; display: block; }
+
+/* Style cards */
+.style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.style-card {
+  border: 2px solid var(--border); border-radius: 10px; padding: 10px; cursor: pointer;
+  transition: all 200ms; background: white; text-align: center;
+}
+.style-card:hover { transform: translateY(-1px); }
+.style-card.active { border-color: var(--primary); background: #f0faf8; }
+.style-card .preview-mini { height: 40px; border-radius: 6px; margin-bottom: 6px; }
+.style-card span { font-size: 11px; font-weight: 500; }
+
+/* Palette */
+.palette-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.palette-option {
+  border: 2px solid var(--border); border-radius: 8px; padding: 6px; cursor: pointer; transition: all 200ms; background: white; text-align: center;
+}
+.palette-option:hover { border-color: var(--primary); }
+.palette-option.active { border-color: var(--primary); background: #f0faf8; }
+.palette-option .color-dots { display: flex; justify-content: center; gap: 2px; margin-bottom: 3px; }
+.palette-option .color-dots span { width: 14px; height: 14px; border-radius: 50%; display: block; border: 1px solid rgba(0,0,0,0.08); }
+.palette-option .pal-name { font-size: 10px; color: var(--muted); }
+
+/* Font grid */
+.font-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.font-option {
+  border: 2px solid var(--border); border-radius: 8px; padding: 8px 6px; cursor: pointer; transition: all 200ms; background: white; text-align: center;
+}
+.font-option:hover { border-color: var(--primary); }
+.font-option.active { border-color: var(--primary); background: #f0faf8; }
+.font-option .font-preview { font-size: 16px; line-height: 1.2; margin-bottom: 2px; }
+.font-option .font-label { font-size: 9px; color: var(--muted); }
+
+/* Reason presets */
+.reason-grid { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.reason-chip {
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: 16px; font-size: 11px;
+  cursor: pointer; background: white; transition: all 200ms; font-family: 'Heebo', sans-serif;
+}
+.reason-chip:hover { border-color: var(--primary); background: #f0faf8; }
+
+/* Admin batch */
+.batch-area { margin-top: 12px; }
+.batch-area textarea { min-height: 100px; font-size: 13px; line-height: 1.8; }
+.batch-count { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.batch-controls { display: flex; gap: 8px; margin-top: 8px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px;
+  border: none; border-radius: 12px; font-family: 'Heebo', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 200ms; width: 100%;
+}
+.btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(13,115,119,0.35); }
+.btn-print { background: linear-gradient(135deg, #7c3aed, #a78bfa); color: white; }
+.btn-print:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,58,237,0.35); }
+.btn-batch { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #78350f; }
+.btn-batch:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,0.35); }
+.btn-admin { background: linear-gradient(135deg, #dc2626, #f87171); color: white; margin-top: 8px; font-size: 12px; padding: 8px; }
+
+/* Preview */
+.preview-area {
+  background: var(--card); backdrop-filter: blur(16px); border-radius: var(--radius);
+  padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+.preview-area h2 { font-family: 'Rubik', sans-serif; font-size: 17px; font-weight: 600; margin-bottom: 12px; color: var(--primary-dark); }
+
+.cert-frame {
+  width: 100%; max-width: 800px; margin: 0 auto; aspect-ratio: 800/566;
+  position: relative; overflow: hidden; border-radius: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+/* Batch preview grid */
+.batch-preview-grid {
+  display: none;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.batch-preview-grid.show { display: grid; }
+.batch-item { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.batch-item-name { padding: 6px 10px; background: #f8fafc; font-size: 12px; font-weight: 500; text-align: center; }
+
+/* Footer */
+.footer { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
+
+/* Print styles */
+@media print {
+  body { background: white; }
+  .header, .controls, .footer, .admin-bar, .no-print, .preview-area > h2, .preview-area > .action-row { display: none !important; }
+  .main { display: block; padding: 0; max-width: none; }
+  .preview-area { background: none; box-shadow: none; padding: 0; border-radius: 0; }
+  .cert-frame { max-width: none; width: 100%; box-shadow: none; page-break-after: always; }
+  .batch-preview-grid { display: grid !important; }
+  .batch-preview-grid .cert-frame { break-inside: avoid; page-break-after: always; }
+}
+
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .controls { position: static; max-height: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>מחולל תעודות</h1>
+  <p>תעודות הצטיינות, הוקרה וסיום — לתלמידים, צוות ומעסיקים</p>
+</div>
+
+<div class="admin-bar" id="adminBar">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+  מצב אדמין — הפקה המונית של תעודות
+  <button onclick="toggleAdmin()" style="padding:4px 12px;border:1px solid #92400e;border-radius:6px;background:transparent;color:#92400e;cursor:pointer;font-family:'Heebo';font-size:12px;">סגור מצב אדמין</button>
+</div>
+
+<div class="main">
+  <div class="controls">
+    <h2>הגדרות תעודה</h2>
+
+    <!-- Category -->
+    <div class="section-title" onclick="toggleSection(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      קהל יעד
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-content">
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+
+    <!-- Type -->
+    <div class="section-title" onclick="toggleSection(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+      סוג תעודה
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-content">
+      <div class="type-grid" id="typeGrid"></div>
+    </div>
+
+    <!-- Style -->
+    <div class="section-title" onclick="toggleSection(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      סגנון עיצוב
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-content">
+      <div class="style-grid" id="styleGrid"></div>
+    </div>
+
+    <!-- Palette -->
+    <div class="section-title collapsed" onclick="toggleSection(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="8" r="1" fill="currentColor"/><circle cx="8" cy="14" r="1" fill="currentColor"/><circle cx="16" cy="14" r="1" fill="currentColor"/></svg>
+      פלטת צבעים
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-content hidden">
+      <div class="palette-grid" id="paletteGrid"></div>
+    </div>
+
+    <!-- Font -->
+    <div class="section-title collapsed" onclick="toggleSection(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+      גופנים
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-content hidden">
+      <div class="font-grid" id="fontGrid"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="section-title" onclick="toggleSection(this)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+      תוכן התעודה
+      <span class="chevron">&#9660;</span>
+    </div>
+    <div class="section-content">
+      <div class="field">
+        <label>שם המקבל/ת</label>
+        <input type="text" id="nameInput" oninput="render()" placeholder="שם התלמיד/ה, איש/ת הצוות או המעסיק/ה">
+      </div>
+      <div class="field">
+        <label>סיבת ההוקרה / ההצטיינות</label>
+        <div class="reason-grid" id="reasonGrid"></div>
+        <textarea id="reasonInput" rows="2" oninput="render()" placeholder="על מסירות, יצירתיות והשקעה מעבר למצופה"></textarea>
+      </div>
+      <div class="field">
+        <label>תחום / מגמה (אופציונלי)</label>
+        <input type="text" id="fieldInput" oninput="render()" placeholder="עיצוב שיער, מחשבים, אלקטרוניקה...">
+      </div>
+      <div class="field">
+        <label>תאריך</label>
+        <input type="text" id="dateInput" oninput="render()">
+      </div>
+      <div class="field">
+        <label>חותם ראשון (למשל: מנהלת בית הספר)</label>
+        <input type="text" id="sig1Input" oninput="render()" value="מנהלת בית הספר">
+      </div>
+      <div class="field">
+        <label>חותם שני (למשל: מחנכ/ת הכיתה)</label>
+        <input type="text" id="sig2Input" oninput="render()" value="מחנכ/ת הכיתה">
+      </div>
+    </div>
+
+    <!-- Admin: Batch Names -->
+    <div class="batch-area" id="batchArea" style="display:none;">
+      <div class="section-title" style="border-top:2px solid #fbbf24; color:#b45309;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        הפקה המונית — רשימת שמות
+      </div>
+      <div class="field">
+        <label>הזיני שם אחד בכל שורה</label>
+        <textarea id="batchNames" class="batch-area" rows="8" oninput="updateBatchCount()" placeholder="דני כהן&#10;שירה לוי&#10;עומר אברהם&#10;נועה פרידמן"></textarea>
+      </div>
+      <div class="batch-count" id="batchCount">0 שמות</div>
+      <div class="batch-controls">
+        <button class="btn btn-batch" onclick="generateBatch()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          הפק תעודות לכולם
+        </button>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
+      <button class="btn btn-primary" onclick="downloadCert()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        הורד כתמונה (PNG)
+      </button>
+      <button class="btn btn-print" onclick="printCerts()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        הדפס
+      </button>
+      <button class="btn btn-admin no-print" onclick="toggleAdmin()" id="adminToggle" style="background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#78350f;font-size:12px;padding:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        מצב אדמין — הפקה המונית
+      </button>
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-area">
+    <div class="action-row no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2 style="margin-bottom:0;">תצוגה מקדימה</h2>
+    </div>
+    <div class="cert-frame" id="certPreview"></div>
+    <div class="batch-preview-grid" id="batchGrid"></div>
+  </div>
+</div>
+
+<div class="footer no-print">מחולל תעודות | אורט בית הערבה</div>
+
+<script>
+// ============ DATA ============
+
+const categories = [
+  { id: 'student', name: 'תלמידים', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 3 3 6 3s6-1 6-3v-5"/></svg>' },
+  { id: 'staff', name: 'צוות', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>' },
+  { id: 'employer', name: 'מעסיקים', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><path d="M12 12v4M8 12v4M16 12v4"/></svg>' }
+];
+
+const certTypes = {
+  student: [
+    { id: 'excellence', name: 'הצטיינות', icon: '&#11088;' },
+    { id: 'appreciation', name: 'הוקרה', icon: '&#10084;' },
+    { id: 'completion', name: 'סיום', icon: '&#127891;' },
+    { id: 'improvement', name: 'שיפור', icon: '&#128200;' },
+    { id: 'leadership', name: 'מנהיגות', icon: '&#128081;' },
+    { id: 'custom', name: 'חופשי', icon: '&#9998;' }
+  ],
+  staff: [
+    { id: 'appreciation', name: 'הוקרה', icon: '&#10084;' },
+    { id: 'excellence', name: 'הצטיינות', icon: '&#11088;' },
+    { id: 'years', name: 'ותק', icon: '&#127942;' },
+    { id: 'innovation', name: 'חדשנות', icon: '&#128161;' },
+    { id: 'mentor', name: 'חונכות', icon: '&#129309;' },
+    { id: 'custom', name: 'חופשי', icon: '&#9998;' }
+  ],
+  employer: [
+    { id: 'appreciation', name: 'הוקרה', icon: '&#10084;' },
+    { id: 'partnership', name: 'שותפות', icon: '&#129309;' },
+    { id: 'contribution', name: 'תרומה', icon: '&#127775;' },
+    { id: 'custom', name: 'חופשי', icon: '&#9998;' }
+  ]
+};
+
+const typeLabels = {
+  excellence: 'תעודת הצטיינות',
+  appreciation: 'תעודת הוקרה',
+  completion: 'תעודת סיום',
+  improvement: 'תעודת שיפור',
+  leadership: 'תעודת מנהיגות',
+  years: 'תעודת הוקרה על ותק',
+  innovation: 'תעודת חדשנות',
+  mentor: 'תעודת חונכות',
+  partnership: 'תעודת שותפות',
+  contribution: 'תעודת תרומה לקהילה',
+  custom: 'תעודת הוקרה'
+};
+
+const typeSubtitles = {
+  excellence: 'Certificate of Excellence',
+  appreciation: 'Certificate of Appreciation',
+  completion: 'Certificate of Completion',
+  improvement: 'Certificate of Improvement',
+  leadership: 'Certificate of Leadership',
+  years: 'Certificate of Dedication',
+  innovation: 'Certificate of Innovation',
+  mentor: 'Certificate of Mentorship',
+  partnership: 'Certificate of Partnership',
+  contribution: 'Certificate of Contribution',
+  custom: 'Certificate of Appreciation'
+};
+
+const reasonPresets = {
+  student: {
+    excellence: ['הישגים לימודיים מרשימים', 'מצוינות אקדמית', 'ביצועים יוצאי דופן בבחינות'],
+    appreciation: ['מסירות, יצירתיות והשקעה מעבר למצופה', 'תרומה מיוחדת לאווירה הכיתתית', 'יוזמה חברתית מבורכת'],
+    completion: ['סיום מוצלח של מגמת הלימודים', 'השלמת פרויקט גמר בהצטיינות', 'סיום קורס מקצועי'],
+    improvement: ['שיפור משמעותי בהישגים הלימודיים', 'התקדמות מרשימה במהלך השנה', 'מאמץ עקבי ומתמשך'],
+    leadership: ['מנהיגות מעוררת השראה', 'הובלת יוזמה חברתית', 'מודל לחיקוי לעמיתים'],
+    custom: ['']
+  },
+  staff: {
+    appreciation: ['מסירות ונאמנות מעבר לנדרש', 'תרומה ייחודית לרוח בית הספר', 'ליווי תלמידים מופתי'],
+    excellence: ['מצוינות בהוראה', 'ביצועים יוצאי דופן', 'הישג מקצועי מרשים'],
+    years: ['שנים של מסירות ונאמנות לבית הספר', 'מחויבות ארוכת שנים לחינוך'],
+    innovation: ['הטמעת חדשנות פדגוגית', 'יוזמה דיגיטלית מקורית', 'חשיבה יצירתית בהוראה'],
+    mentor: ['חונכות והכוונה מקצועית מעולה', 'ליווי עמיתים חדשים', 'העצמת צוות חינוכי'],
+    custom: ['']
+  },
+  employer: {
+    appreciation: ['שיתוף פעולה פורה ומשמעותי', 'תרומה להכשרה המקצועית של תלמידינו'],
+    partnership: ['שותפות אמיתית בהכשרה מקצועית', 'מחויבות לעתיד המקצועי של הצעירים'],
+    contribution: ['תרומה משמעותית לקהילה החינוכית', 'השקעה בדור העתיד'],
+    custom: ['']
+  }
+};
+
+const visualStyles = [
+  { id: 'watercolor', name: 'אקוורל חלומי', preview: 'linear-gradient(145deg, #fffdf8, #f0e8d8, #e8f4f4)' },
+  { id: 'papercut', name: 'חיתוכי נייר', preview: 'linear-gradient(145deg, #f7f3ee, #fffdf8, #f5f0e8)' },
+  { id: 'elegant', name: 'אלגנטי קלאסי', preview: 'linear-gradient(145deg, #faf5ef, #f0e8dc, #faf5ef)' },
+  { id: 'modern', name: 'מודרני מינימלי', preview: 'linear-gradient(145deg, #f8fafb, #eef2f5, #f8fafb)' }
+];
+
+const palettes = [
+  { id: 'ort', name: 'אורט', primary: '#0d7377', secondary: '#14a3a8', accent: '#d4a574', bg: '#fffdf8', text: '#1a1a1a' },
+  { id: 'gold', name: 'זהב ותכלת', primary: '#b8860b', secondary: '#daa520', accent: '#2a6496', bg: '#fffef5', text: '#1a1a1a' },
+  { id: 'royal', name: 'מלכותי', primary: '#4a2080', secondary: '#7b52ab', accent: '#d4a574', bg: '#faf8ff', text: '#1a1a1a' },
+  { id: 'nature', name: 'טבע', primary: '#2d6a4f', secondary: '#52b788', accent: '#d4a574', bg: '#f5faf5', text: '#1a1a1a' },
+  { id: 'sunset', name: 'שקיעה', primary: '#c0392b', secondary: '#e74c3c', accent: '#f39c12', bg: '#fff8f5', text: '#1a1a1a' },
+  { id: 'ocean', name: 'אוקיינוס', primary: '#1a5276', secondary: '#2980b9', accent: '#e8a87c', bg: '#f5faff', text: '#1a1a1a' }
+];
+
+const fontCombos = [
+  { id: 'suez-heebo', title: 'Suez One', name: 'Karantina', body: 'Heebo', label: 'קלאסי' },
+  { id: 'secular-heebo', title: 'Secular One', name: 'Karantina', body: 'Heebo', label: 'מודרני' },
+  { id: 'suez-cafe', title: 'Suez One', name: 'Cafe', body: 'Heebo', label: 'אלגנטי' },
+  { id: 'karantina-heebo', title: 'Karantina', name: 'Karantina', body: 'Assistant', label: 'דרמטי' },
+  { id: 'playpen-heebo', title: 'Playpen Sans Hebrew', name: 'Playpen Sans Hebrew', body: 'Heebo', label: 'עדין' },
+  { id: 'rubik-assistant', title: 'Rubik', name: 'Rubik', body: 'Assistant', label: 'נקי' }
+];
+
+// ============ STATE ============
+let state = {
+  category: 'student',
+  type: 'excellence',
+  style: 'watercolor',
+  palette: 'ort',
+  fontCombo: 'suez-heebo',
+  adminMode: false,
+  batchNames: []
+};
+
+// ============ HEBREW DATE ============
+function getHebrewDate() {
+  const now = new Date();
+  const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  return now.getDate() + ' ב' + months[now.getMonth()] + ' ' + now.getFullYear();
+}
+
+// ============ BUILD UI ============
+
+function buildCatGrid() {
+  document.getElementById('catGrid').innerHTML = categories.map(c => `
+    <div class="cat-chip ${c.id === state.category ? 'active' : ''}" onclick="setCategory('${c.id}')">
+      ${c.icon}
+      <span>${c.name}</span>
+    </div>
+  `).join('');
+}
+
+function buildTypeGrid() {
+  const types = certTypes[state.category] || certTypes.student;
+  document.getElementById('typeGrid').innerHTML = types.map(t => `
+    <div class="type-chip ${t.id === state.type ? 'active' : ''}" onclick="setType('${t.id}')">
+      <div class="type-icon">${t.icon}</div>
+      <span>${t.name}</span>
+    </div>
+  `).join('');
+}
+
+function buildStyleGrid() {
+  document.getElementById('styleGrid').innerHTML = visualStyles.map(s => `
+    <div class="style-card ${s.id === state.style ? 'active' : ''}" onclick="setStyle('${s.id}')">
+      <div class="preview-mini" style="background:${s.preview};"></div>
+      <span>${s.name}</span>
+    </div>
+  `).join('');
+}
+
+function buildPaletteGrid() {
+  document.getElementById('paletteGrid').innerHTML = palettes.map(p => `
+    <div class="palette-option ${p.id === state.palette ? 'active' : ''}" onclick="setPalette('${p.id}')">
+      <div class="color-dots">
+        <span style="background:${p.primary}"></span>
+        <span style="background:${p.secondary}"></span>
+        <span style="background:${p.accent}"></span>
+      </div>
+      <div class="pal-name">${p.name}</div>
+    </div>
+  `).join('');
+}
+
+function buildFontGrid() {
+  document.getElementById('fontGrid').innerHTML = fontCombos.map(f => `
+    <div class="font-option ${f.id === state.fontCombo ? 'active' : ''}" onclick="setFontCombo('${f.id}')">
+      <div class="font-preview" style="font-family:'${f.title}',serif;font-weight:700;">תעודה</div>
+      <div class="font-label">${f.label}</div>
+    </div>
+  `).join('');
+}
+
+function buildReasonGrid() {
+  const presets = reasonPresets[state.category]?.[state.type] || [''];
+  document.getElementById('reasonGrid').innerHTML = presets.filter(r => r).map(r => `
+    <span class="reason-chip" onclick="useReason(this)">${r}</span>
+  `).join('');
+}
+
+// ============ SETTERS ============
+
+function setCategory(id) {
+  state.category = id;
+  const types = certTypes[id];
+  state.type = types[0].id;
+  buildCatGrid();
+  buildTypeGrid();
+  buildReasonGrid();
+  updateSigLabels();
+  render();
+}
+
+function setType(id) {
+  state.type = id;
+  document.querySelectorAll('.type-chip').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  buildReasonGrid();
+  render();
+}
+
+function setStyle(id) {
+  state.style = id;
+  document.querySelectorAll('.style-card').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  render();
+}
+
+function setPalette(id) {
+  state.palette = id;
+  document.querySelectorAll('.palette-option').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  render();
+}
+
+function setFontCombo(id) {
+  state.fontCombo = id;
+  document.querySelectorAll('.font-option').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  render();
+}
+
+function useReason(el) {
+  document.getElementById('reasonInput').value = el.textContent.trim();
+  render();
+}
+
+function updateSigLabels() {
+  const sig1 = document.getElementById('sig1Input');
+  const sig2 = document.getElementById('sig2Input');
+  if (state.category === 'student') {
+    sig1.value = 'מנהלת בית הספר';
+    sig2.value = 'מחנכ/ת הכיתה';
+  } else if (state.category === 'staff') {
+    sig1.value = 'מנהלת בית הספר';
+    sig2.value = 'סגנית / רכזת';
+  } else {
+    sig1.value = 'מנהלת בית הספר';
+    sig2.value = 'רכז/ת מגמה';
+  }
+}
+
+function toggleSection(titleEl) {
+  titleEl.classList.toggle('collapsed');
+  titleEl.nextElementSibling.classList.toggle('hidden');
+}
+
+function toggleAdmin() {
+  state.adminMode = !state.adminMode;
+  document.getElementById('adminBar').classList.toggle('show', state.adminMode);
+  document.getElementById('batchArea').style.display = state.adminMode ? 'block' : 'none';
+  document.getElementById('batchGrid').classList.toggle('show', false);
+  document.getElementById('adminToggle').innerHTML = state.adminMode
+    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> סגור מצב אדמין'
+    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> מצב אדמין — הפקה המונית';
+}
+
+function updateBatchCount() {
+  const text = document.getElementById('batchNames').value.trim();
+  const names = text ? text.split('\n').filter(n => n.trim()) : [];
+  document.getElementById('batchCount').textContent = names.length + ' שמות';
+}
+
+// ============ RENDER CERTIFICATE ============
+
+function getCertHTML(name, options) {
+  const pal = palettes.find(p => p.id === state.palette);
+  const font = fontCombos.find(f => f.id === state.fontCombo);
+  const title = typeLabels[state.type] || 'תעודת הוקרה';
+  const subtitle = typeSubtitles[state.type] || '';
+  const reason = options?.reason || document.getElementById('reasonInput').value || '';
+  const field = options?.field || document.getElementById('fieldInput').value || '';
+  const date = options?.date || document.getElementById('dateInput').value || '';
+  const sig1 = options?.sig1 || document.getElementById('sig1Input').value || '';
+  const sig2 = options?.sig2 || document.getElementById('sig2Input').value || '';
+
+  const reasonLine = reason + (field ? (reason ? '\n' : '') + 'ב' + field + ' — שנת הלימודים תשפ"ז' : '');
+
+  if (state.style === 'watercolor') return renderWatercolor(name, title, subtitle, reasonLine, date, sig1, sig2, pal, font);
+  if (state.style === 'papercut') return renderPapercut(name, title, subtitle, reasonLine, date, sig1, sig2, pal, font);
+  if (state.style === 'elegant') return renderElegant(name, title, subtitle, reasonLine, date, sig1, sig2, pal, font);
+  return renderModern(name, title, subtitle, reasonLine, date, sig1, sig2, pal, font);
+}
+
+function renderWatercolor(name, title, subtitle, reason, date, sig1, sig2, pal, font) {
+  return `
+  <div style="width:100%;height:100%;position:relative;overflow:hidden;background:${pal.bg};font-family:'Heebo',sans-serif;">
+    <!-- Blobs -->
+    <div style="position:absolute;width:50%;height:62%;border-radius:50%;filter:blur(40px);opacity:0.25;mix-blend-mode:multiply;background:radial-gradient(ellipse,${pal.primary} 0%,${pal.secondary}66 40%,transparent 70%);top:-10%;right:-8%;"></div>
+    <div style="position:absolute;width:44%;height:53%;border-radius:50%;filter:blur(40px);opacity:0.22;mix-blend-mode:multiply;background:radial-gradient(ellipse,${pal.accent} 0%,${pal.accent}66 40%,transparent 70%);bottom:-10%;left:-5%;"></div>
+    <div style="position:absolute;width:30%;height:44%;border-radius:50%;filter:blur(40px);opacity:0.12;mix-blend-mode:multiply;background:radial-gradient(ellipse,${pal.accent} 0%,${pal.accent}44 40%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+    <!-- Frame -->
+    <div style="position:absolute;inset:3.5%;border:2px solid ${pal.primary}33;"></div>
+    <div style="position:absolute;inset:4.5%;border:1px solid ${pal.primary}1a;"></div>
+    <!-- Corner art -->
+    <svg style="position:absolute;top:0;right:0;opacity:0.4;" width="140" height="140" viewBox="0 0 200 200" fill="none">
+      <circle cx="170" cy="30" r="25" fill="${pal.primary}" opacity="0.08"/>
+      <circle cx="150" cy="15" r="15" fill="${pal.secondary}" opacity="0.1"/>
+      <circle cx="160" cy="8" r="3" fill="${pal.accent}" opacity="0.4"/>
+      <circle cx="190" cy="35" r="2" fill="${pal.accent}" opacity="0.3"/>
+    </svg>
+    <svg style="position:absolute;bottom:0;left:0;opacity:0.4;transform:rotate(180deg);" width="140" height="140" viewBox="0 0 200 200" fill="none">
+      <circle cx="170" cy="30" r="25" fill="${pal.accent}" opacity="0.1"/>
+      <circle cx="150" cy="15" r="15" fill="${pal.accent}" opacity="0.12"/>
+      <circle cx="160" cy="8" r="3" fill="${pal.accent}" opacity="0.4"/>
+    </svg>
+    <!-- Brush divider -->
+    <svg style="position:absolute;top:54%;left:50%;transform:translateX(-50%);z-index:2;" width="200" height="10" viewBox="0 0 220 12">
+      <path d="M10 6 Q30 2 55 6 Q80 10 110 6 Q140 2 165 6 Q190 10 210 6" stroke="${pal.primary}" stroke-width="2" fill="none" opacity="0.3" stroke-linecap="round"/>
+      <path d="M30 6 Q55 3 80 6 Q105 9 130 6 Q155 3 180 6" stroke="${pal.accent}" stroke-width="1" fill="none" opacity="0.25" stroke-linecap="round"/>
+    </svg>
+    <!-- Logo -->
+    <div style="position:absolute;top:4.5%;left:4.5%;z-index:3;font-family:'Heebo',sans-serif;font-size:11px;font-weight:500;color:${pal.primary};opacity:0.5;">אורט בית הערבה</div>
+    <!-- Content -->
+    <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:8% 10%;text-align:center;">
+      <div style="font-family:'Amatic SC',cursive;font-size:clamp(14px,2.5vw,22px);font-weight:700;color:${pal.primary};letter-spacing:4px;margin-bottom:2px;">- - - - - - - -</div>
+      <div style="font-family:'${font.title}',serif;font-size:clamp(24px,5vw,44px);color:${pal.text};margin-bottom:4px;line-height:1.2;">${title}</div>
+      <div style="font-family:'Amatic SC',cursive;font-size:clamp(12px,2vw,18px);font-weight:700;color:${pal.accent};letter-spacing:3px;margin-bottom:5%;">${subtitle}</div>
+      <div style="font-family:'${font.name}',cursive;font-size:clamp(28px,6vw,52px);color:${pal.primary};margin-bottom:2%;line-height:1.1;text-shadow:0 2px 8px ${pal.primary}15;">${name || 'שם המקבל/ת'}</div>
+      <div style="font-family:'Heebo',sans-serif;font-size:clamp(10px,1.8vw,16px);font-weight:300;color:#555;max-width:80%;line-height:1.7;margin-bottom:5%;white-space:pre-line;">${reason}</div>
+      <div style="display:flex;gap:15%;margin-bottom:3%;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="width:80px;height:1px;background:${pal.primary}44;"></div>
+          <div style="font-size:clamp(8px,1.2vw,11px);color:#999;font-weight:300;">${sig1}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="width:80px;height:1px;background:${pal.primary}44;"></div>
+          <div style="font-size:clamp(8px,1.2vw,11px);color:#999;font-weight:300;">${sig2}</div>
+        </div>
+      </div>
+      <div style="font-family:'Assistant',sans-serif;font-size:clamp(8px,1.2vw,12px);color:#999;font-weight:300;">${date}</div>
+      <div style="font-family:'Heebo',sans-serif;font-size:clamp(8px,1.1vw,11px);color:${pal.accent};font-weight:500;margin-top:4px;letter-spacing:2px;">אורט בית הערבה</div>
+    </div>
+  </div>`;
+}
+
+function renderPapercut(name, title, subtitle, reason, date, sig1, sig2, pal, font) {
+  return `
+  <div style="width:100%;height:100%;position:relative;overflow:hidden;background:linear-gradient(160deg,${pal.bg} 0%,#fffdf8 50%,${pal.bg} 100%);font-family:'Heebo',sans-serif;">
+    <!-- Paper layers bottom -->
+    <div style="position:absolute;bottom:-5%;left:-3%;right:-3%;height:39%;background:${pal.primary};clip-path:polygon(0% 65%,5% 58%,12% 62%,20% 50%,28% 55%,35% 45%,42% 52%,50% 40%,58% 48%,65% 38%,72% 45%,80% 35%,88% 42%,95% 33%,100% 40%,100% 100%,0% 100%);opacity:0.07;"></div>
+    <div style="position:absolute;bottom:-5%;left:-3%;right:-3%;height:32%;background:${pal.secondary};clip-path:polygon(0% 70%,8% 60%,15% 68%,25% 55%,33% 62%,40% 50%,48% 58%,55% 48%,62% 56%,70% 45%,78% 55%,85% 42%,92% 52%,100% 45%,100% 100%,0% 100%);opacity:0.09;"></div>
+    <div style="position:absolute;bottom:-5%;left:-3%;right:-3%;height:25%;background:linear-gradient(180deg,${pal.accent} 0%,${pal.accent}cc 100%);clip-path:polygon(0% 75%,6% 68%,14% 74%,22% 62%,30% 70%,38% 60%,45% 68%,52% 58%,60% 65%,68% 55%,75% 63%,82% 52%,90% 60%,100% 55%,100% 100%,0% 100%);opacity:0.1;"></div>
+    <!-- Paper layers top -->
+    <div style="position:absolute;top:-5%;left:-3%;right:-3%;height:28%;background:${pal.primary};clip-path:polygon(0% 60%,8% 50%,15% 55%,25% 40%,33% 48%,40% 35%,50% 45%,58% 38%,65% 42%,75% 30%,85% 40%,92% 32%,100% 38%,100% 0%,0% 0%);opacity:0.05;"></div>
+    <div style="position:absolute;top:-5%;left:-3%;right:-3%;height:21%;background:${pal.secondary};clip-path:polygon(0% 65%,10% 55%,20% 60%,30% 48%,40% 55%,50% 42%,60% 50%,70% 40%,80% 48%,90% 38%,100% 45%,100% 0%,0% 0%);opacity:0.07;"></div>
+    <!-- Side cuts -->
+    <div style="position:absolute;top:0;bottom:0;right:-1%;width:10%;background:${pal.accent};clip-path:polygon(40% 0%,50% 8%,35% 15%,48% 22%,32% 30%,45% 38%,30% 45%,42% 52%,28% 60%,40% 68%,25% 75%,38% 82%,22% 90%,35% 100%,100% 100%,100% 0%);opacity:0.07;"></div>
+    <div style="position:absolute;top:0;bottom:0;left:-1%;width:10%;background:${pal.accent};clip-path:polygon(60% 0%,50% 8%,65% 15%,52% 22%,68% 30%,55% 38%,70% 45%,58% 52%,72% 60%,60% 68%,75% 75%,62% 82%,78% 90%,65% 100%,0% 100%,0% 0%);opacity:0.07;"></div>
+    <!-- Main card -->
+    <div style="position:absolute;inset:8.8% 8.7%;background:rgba(255,255,253,0.92);border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 4px 12px rgba(0,0,0,0.06);z-index:2;"></div>
+    <!-- Corner brackets -->
+    <svg style="position:absolute;top:8.8%;right:8.7%;z-index:3;" width="40" height="40" viewBox="0 0 60 60"><path d="M0 0 L20 0 L20 3 L3 3 L3 20 L0 20 Z" fill="${pal.primary}" opacity="0.2"/></svg>
+    <svg style="position:absolute;top:8.8%;left:8.7%;z-index:3;" width="40" height="40" viewBox="0 0 60 60"><path d="M60 0 L40 0 L40 3 L57 3 L57 20 L60 20 Z" fill="${pal.primary}" opacity="0.2"/></svg>
+    <svg style="position:absolute;bottom:8.8%;right:8.7%;z-index:3;" width="40" height="40" viewBox="0 0 60 60"><path d="M0 60 L20 60 L20 57 L3 57 L3 40 L0 40 Z" fill="${pal.primary}" opacity="0.2"/></svg>
+    <svg style="position:absolute;bottom:8.8%;left:8.7%;z-index:3;" width="40" height="40" viewBox="0 0 60 60"><path d="M60 60 L40 60 L40 57 L57 57 L57 40 L60 40 Z" fill="${pal.primary}" opacity="0.2"/></svg>
+    <!-- Diamonds -->
+    <div style="position:absolute;top:7.5%;right:7.7%;width:12px;height:12px;background:${pal.secondary};transform:rotate(45deg);opacity:0.15;z-index:3;"></div>
+    <div style="position:absolute;top:7.5%;left:7.7%;width:12px;height:12px;background:${pal.secondary};transform:rotate(45deg);opacity:0.15;z-index:3;"></div>
+    <div style="position:absolute;bottom:7.5%;right:7.7%;width:12px;height:12px;background:${pal.secondary};transform:rotate(45deg);opacity:0.15;z-index:3;"></div>
+    <div style="position:absolute;bottom:7.5%;left:7.7%;width:12px;height:12px;background:${pal.secondary};transform:rotate(45deg);opacity:0.15;z-index:3;"></div>
+    <!-- Logo -->
+    <div style="position:absolute;top:10.2%;left:9.7%;z-index:4;font-family:'Heebo',sans-serif;font-size:10px;font-weight:500;color:${pal.primary};opacity:0.45;">אורט בית הערבה</div>
+    <!-- Content -->
+    <div style="position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:8% 12%;text-align:center;">
+      <!-- Badge -->
+      <div style="width:48px;height:48px;border-radius:50%;border:2px solid ${pal.primary};display:flex;align-items:center;justify-content:center;margin-bottom:3%;position:relative;">
+        <div style="position:absolute;inset:4px;border-radius:50%;border:1px solid ${pal.primary}44;"></div>
+        <svg width="20" height="20" viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="${pal.primary}" opacity="0.7"/></svg>
+      </div>
+      <div style="font-family:'Amatic SC',cursive;font-size:clamp(13px,2.2vw,20px);font-weight:700;color:${pal.accent};letter-spacing:6px;margin-bottom:1px;">- - -   - - -</div>
+      <div style="font-family:'${font.title}',sans-serif;font-size:clamp(22px,4.5vw,40px);color:${pal.text};margin-bottom:3%;line-height:1.2;">${title}</div>
+      <!-- Divider -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4%;">
+        <div style="width:50px;height:1px;background:linear-gradient(90deg,transparent,${pal.accent},transparent);"></div>
+        <div style="width:7px;height:7px;background:${pal.accent};transform:rotate(45deg);"></div>
+        <div style="width:50px;height:1px;background:linear-gradient(90deg,transparent,${pal.accent},transparent);"></div>
+      </div>
+      <div style="font-family:'${font.name}',cursive;font-size:clamp(26px,5.5vw,48px);color:${pal.primary};margin-bottom:2%;line-height:1.1;">${name || 'שם המקבל/ת'}</div>
+      <div style="font-family:'Heebo',sans-serif;font-size:clamp(10px,1.6vw,15px);font-weight:300;color:#555;max-width:75%;line-height:1.7;margin-bottom:5%;white-space:pre-line;">${reason}</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;width:100%;margin-top:auto;">
+        <div>
+          <div style="font-family:'Assistant',sans-serif;font-size:clamp(8px,1.1vw,11px);color:#aaa;font-weight:300;">${date}</div>
+          <div style="font-family:'Heebo',sans-serif;font-size:clamp(7px,1vw,10px);color:${pal.accent};font-weight:500;letter-spacing:1px;">אורט בית הערבה</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="width:75px;height:1px;background:rgba(0,0,0,0.15);"></div>
+          <div style="font-size:clamp(7px,1vw,9px);color:#aaa;font-weight:300;">${sig1}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="width:75px;height:1px;background:rgba(0,0,0,0.15);"></div>
+          <div style="font-size:clamp(7px,1vw,9px);color:#aaa;font-weight:300;">${sig2}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderElegant(name, title, subtitle, reason, date, sig1, sig2, pal, font) {
+  return `
+  <div style="width:100%;height:100%;position:relative;overflow:hidden;background:${pal.bg};font-family:'Heebo',sans-serif;">
+    <!-- Gold border -->
+    <div style="position:absolute;inset:3%;border:2px solid ${pal.accent};"></div>
+    <div style="position:absolute;inset:4%;border:1px solid ${pal.accent}55;"></div>
+    <!-- Corner ornaments -->
+    <svg style="position:absolute;top:2%;right:2%;z-index:2;" width="80" height="80" viewBox="0 0 100 100" fill="none">
+      <path d="M5 5 L35 5 Q25 15 25 25 L25 35 L22 35 L22 25 Q22 18 15 12 L5 8 Z" fill="${pal.accent}" opacity="0.3"/>
+      <circle cx="15" cy="15" r="3" fill="${pal.accent}" opacity="0.4"/>
+    </svg>
+    <svg style="position:absolute;bottom:2%;left:2%;z-index:2;transform:rotate(180deg);" width="80" height="80" viewBox="0 0 100 100" fill="none">
+      <path d="M5 5 L35 5 Q25 15 25 25 L25 35 L22 35 L22 25 Q22 18 15 12 L5 8 Z" fill="${pal.accent}" opacity="0.3"/>
+      <circle cx="15" cy="15" r="3" fill="${pal.accent}" opacity="0.4"/>
+    </svg>
+    <svg style="position:absolute;top:2%;left:2%;z-index:2;transform:scaleX(-1);" width="80" height="80" viewBox="0 0 100 100" fill="none">
+      <path d="M5 5 L35 5 Q25 15 25 25 L25 35 L22 35 L22 25 Q22 18 15 12 L5 8 Z" fill="${pal.accent}" opacity="0.3"/>
+      <circle cx="15" cy="15" r="3" fill="${pal.accent}" opacity="0.4"/>
+    </svg>
+    <svg style="position:absolute;bottom:2%;right:2%;z-index:2;transform:scaleX(-1) rotate(180deg);" width="80" height="80" viewBox="0 0 100 100" fill="none">
+      <path d="M5 5 L35 5 Q25 15 25 25 L25 35 L22 35 L22 25 Q22 18 15 12 L5 8 Z" fill="${pal.accent}" opacity="0.3"/>
+      <circle cx="15" cy="15" r="3" fill="${pal.accent}" opacity="0.4"/>
+    </svg>
+    <!-- Logo -->
+    <div style="position:absolute;top:5%;left:5%;z-index:3;font-family:'Heebo',sans-serif;font-size:11px;font-weight:500;color:${pal.primary};opacity:0.5;">אורט בית הערבה</div>
+    <!-- Content -->
+    <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:9% 12%;text-align:center;">
+      <div style="font-family:'${font.title}',serif;font-size:clamp(26px,5vw,46px);color:${pal.text};margin-bottom:2%;line-height:1.2;">${title}</div>
+      <div style="font-family:'Assistant',sans-serif;font-size:clamp(10px,1.5vw,14px);font-weight:300;color:${pal.accent};letter-spacing:3px;margin-bottom:4%;">${subtitle}</div>
+      <!-- Ornamental divider -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5%;">
+        <div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,${pal.accent});"></div>
+        <svg width="16" height="16" viewBox="0 0 24 24"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="${pal.accent}" opacity="0.5"/></svg>
+        <div style="width:60px;height:1px;background:linear-gradient(90deg,${pal.accent},transparent);"></div>
+      </div>
+      <div style="font-family:'${font.name}',cursive;font-size:clamp(30px,6.5vw,54px);color:${pal.primary};margin-bottom:3%;line-height:1.1;">${name || 'שם המקבל/ת'}</div>
+      <div style="font-family:'Heebo',sans-serif;font-size:clamp(10px,1.7vw,16px);font-weight:300;color:#555;max-width:80%;line-height:1.7;margin-bottom:6%;white-space:pre-line;">${reason}</div>
+      <div style="display:flex;gap:15%;margin-bottom:3%;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="width:85px;height:1px;background:${pal.accent}66;"></div>
+          <div style="font-size:clamp(7px,1.1vw,10px);color:#999;font-weight:300;">${sig1}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <div style="width:85px;height:1px;background:${pal.accent}66;"></div>
+          <div style="font-size:clamp(7px,1.1vw,10px);color:#999;font-weight:300;">${sig2}</div>
+        </div>
+      </div>
+      <div style="font-family:'Assistant',sans-serif;font-size:clamp(8px,1.1vw,11px);color:#999;font-weight:300;">${date}</div>
+      <div style="font-family:'Heebo',sans-serif;font-size:clamp(8px,1vw,10px);color:${pal.accent};font-weight:500;margin-top:3px;letter-spacing:2px;">אורט בית הערבה</div>
+    </div>
+  </div>`;
+}
+
+function renderModern(name, title, subtitle, reason, date, sig1, sig2, pal, font) {
+  return `
+  <div style="width:100%;height:100%;position:relative;overflow:hidden;background:${pal.bg};font-family:'Heebo',sans-serif;">
+    <!-- Geometric accent -->
+    <div style="position:absolute;top:0;right:0;width:35%;height:100%;background:linear-gradient(180deg,${pal.primary}0d,${pal.primary}05);"></div>
+    <div style="position:absolute;top:0;right:0;width:4px;height:100%;background:${pal.primary};opacity:0.15;"></div>
+    <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${pal.primary},${pal.accent});opacity:0.2;"></div>
+    <!-- Circle accent -->
+    <div style="position:absolute;top:-15%;right:-8%;width:45%;height:60%;border-radius:50%;border:1px solid ${pal.primary}15;"></div>
+    <div style="position:absolute;bottom:-20%;left:-10%;width:40%;height:55%;border-radius:50%;border:1px solid ${pal.accent}15;"></div>
+    <!-- Logo -->
+    <div style="position:absolute;top:6%;left:6%;z-index:3;font-family:'Heebo',sans-serif;font-size:12px;font-weight:600;color:${pal.primary};opacity:0.4;">אורט בית הערבה</div>
+    <!-- Content -->
+    <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:8% 10%;text-align:center;">
+      <div style="font-family:'${font.title}',sans-serif;font-size:clamp(24px,4.8vw,42px);color:${pal.text};margin-bottom:1%;line-height:1.2;font-weight:700;">${title}</div>
+      <div style="width:50px;height:3px;background:${pal.primary};border-radius:2px;margin-bottom:4%;"></div>
+      <div style="font-family:'${font.name}',sans-serif;font-size:clamp(28px,6vw,50px);color:${pal.primary};margin-bottom:3%;line-height:1.1;font-weight:700;">${name || 'שם המקבל/ת'}</div>
+      <div style="font-family:'${font.body}',sans-serif;font-size:clamp(10px,1.6vw,15px);font-weight:300;color:#666;max-width:75%;line-height:1.7;margin-bottom:5%;white-space:pre-line;">${reason}</div>
+      <div style="display:flex;gap:12%;margin-bottom:3%;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="width:80px;height:2px;background:${pal.primary}33;border-radius:1px;"></div>
+          <div style="font-size:clamp(7px,1.1vw,10px);color:#999;font-weight:400;">${sig1}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="width:80px;height:2px;background:${pal.primary}33;border-radius:1px;"></div>
+          <div style="font-size:clamp(7px,1.1vw,10px);color:#999;font-weight:400;">${sig2}</div>
+        </div>
+      </div>
+      <div style="font-family:'${font.body}',sans-serif;font-size:clamp(8px,1.1vw,11px);color:#aaa;font-weight:300;">${date}</div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  const name = document.getElementById('nameInput').value;
+  document.getElementById('certPreview').innerHTML = getCertHTML(name);
+}
+
+// ============ BATCH ============
+
+function generateBatch() {
+  const text = document.getElementById('batchNames').value.trim();
+  const names = text.split('\n').filter(n => n.trim());
+  if (!names.length) return;
+
+  const grid = document.getElementById('batchGrid');
+  grid.innerHTML = '';
+  grid.classList.add('show');
+
+  names.forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'batch-item';
+    item.innerHTML = `
+      <div class="batch-item-name">${name.trim()}</div>
+      <div class="cert-frame" style="aspect-ratio:800/566;">${getCertHTML(name.trim())}</div>
+    `;
+    grid.appendChild(item);
+  });
+}
+
+// ============ DOWNLOAD ============
+
+async function downloadCert() {
+  const frame = document.getElementById('certPreview');
+  const canvas = await html2canvas(frame, { scale: 2, useCORS: true, backgroundColor: null });
+  const link = document.createElement('a');
+  const name = document.getElementById('nameInput').value || 'certificate';
+  link.download = name.replace(/\s+/g, '-') + '-certificate.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// html2canvas CDN fallback - simple approach
+function loadHtml2Canvas() {
+  return new Promise((resolve, reject) => {
+    if (window.html2canvas) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// ============ PRINT ============
+
+function printCerts() {
+  // If in batch mode with generated certs, print the batch grid
+  if (state.adminMode) {
+    const text = document.getElementById('batchNames').value.trim();
+    const names = text.split('\n').filter(n => n.trim());
+    if (names.length > 0) {
+      generateBatch();
+    }
+  }
+  window.print();
+}
+
+// ============ INIT ============
+
+function init() {
+  document.getElementById('dateInput').value = getHebrewDate();
+  buildCatGrid();
+  buildTypeGrid();
+  buildStyleGrid();
+  buildPaletteGrid();
+  buildFontGrid();
+  buildReasonGrid();
+  render();
+  loadHtml2Canvas();
+}
+
+init();
+</script>
+</body>
+</html>
