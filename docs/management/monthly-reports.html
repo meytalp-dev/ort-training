@@ -614,6 +614,7 @@ h1,h2,h3,h4{font-family:'Playpen Sans Hebrew','Heebo',sans-serif}
 </div><!-- /appMain -->
 
 <script src="cloud-storage.js"></script>
+<script src="student-data.js"></script>
 <script>
 // ==================== STAFF DATA ====================
 const STAFF = {
@@ -688,70 +689,50 @@ function isUpperClass(cls){
   return cls.startsWith('יא') || cls.startsWith('יב');
 }
 
-// ==================== DEMO DATA GENERATION ====================
-function generateStudents(className, count){
-  const students = [];
-  for(let i=0;i<count;i++){
-    const isFemale = Math.random()>.45;
-    const first = isFemale ? randomPick(FIRST_NAMES_F) : randomPick(FIRST_NAMES_M);
-    const last = randomPick(LAST_NAMES);
-    const statusRnd = Math.random();
-    const status = statusRnd<.70?'green':statusRnd<.90?'yellow':'red';
-    const attendance = status==='red'?(Math.random()>.5?'בעייתית':'חלקית'):status==='yellow'?randomPick(['חלקית','סדירה']):'סדירה';
-    const track = randomPick(TRACKS);
-    const id = String(200000000+randomInt(1000000,99999999));
-    const year = randomInt(2007,2011);
-    const month = String(randomInt(1,12)).padStart(2,'0');
-    const day = String(randomInt(1,28)).padStart(2,'0');
-    const birthDate = `${year}-${month}-${day}`;
+// ==================== STUDENT DATA FROM student-data.js ====================
+function buildRealStudents(className){
+  // Use real students from STUDENTS (student-data.js) — active only
+  const real = (typeof STUDENTS !== 'undefined' ? STUDENTS : [])
+    .filter(s => s.cls === className && s.status === 'active');
+
+  return real.map(function(s){
+    const track = (typeof MEGAMA !== 'undefined' && s.megama) ? MEGAMA[s.megama] || '' : '';
 
     const lifeSkills = {};
-    LIFE_SKILLS.forEach(sk => {
-      const r = Math.random();
-      lifeSkills[sk] = {status:r<.6?'green':r<.85?'yellow':'red', notes:''};
-    });
+    LIFE_SKILLS.forEach(sk => { lifeSkills[sk] = {status:'green', notes:''}; });
 
     const monthlyData = {};
     MONTH_KEYS.forEach(mk => { monthlyData[mk] = {done:'',goals:'',notes:''}; });
-    const pastMonths = MONTH_KEYS.slice(0,randomInt(2,5));
-    pastMonths.forEach(mk => {
-      monthlyData[mk] = {
-        done:randomPick(['שיחה אישית','מעקב נוכחות','פגישה עם הורים','תכנית התערבות','שיחת מוטיבציה','הפניה לייעוץ','']),
-        goals:randomPick(['שיפור נוכחות','העלאת ציונים','חיזוק מוטיבציה','שיפור התנהגות','חיבור למגמה','']),
-        notes:''
-      };
-    });
 
-    const meetings = [];
-    if(Math.random()>.4){
-      meetings.push({
-        date:`2026-0${randomInt(1,3)}-${String(randomInt(1,28)).padStart(2,'0')}`,
-        summary:randomPick(['שיחה על נוכחות','עדכון הורים','תכנון יעדים','מעקב אחרי אירוע','שיחת חיזוק']),
-        nextSteps:randomPick(['המשך מעקב','פגישה חוזרת','שיחה עם הורים','הפניה ליועצת',''])
-      });
-    }
-
-    students.push({
-      id:`${className}_${i}`, name:`${first} ${last}`, className, track, birthDate,
-      idNumber:id, familyStatus:randomPick(FAMILY_STATUSES),
-      address:randomPick(['ערד','דימונה','באר שבע','ירוחם','אשדוד','אילת']),
-      economicStatus:status==='red'?randomPick(['מאתגר','קשה']):randomPick(ECON_STATUSES),
-      employed:Math.random()>.7,
-      prevSchool:randomPick(['חטיבת אופקים','יסודי רמון','חטיבת ניצנים','בית ספר אלון','חטיבת דקל']),
-      strengths:randomPick(['חברותי/ת ומובילה','יצירתי/ת','מוטיבציה גבוהה','כישורים טכניים','אמפתי/ת','']),
-      attendance, parentContact:randomPick(PARENT_CONTACTS),
-      significantFigure:randomPick(['מחנכ/ת','יועצ/ת','הורה','מדריכ/ת','']),
-      authority:randomPick(AUTHORITY_OPTS),
-      diagnoses:status!=='green'?randomPick(['הפרעות קשב','דיסלקציה','חרדה','','']):'',
-      placementCommittee:Math.random()>.85,
-      therapist:status==='red'?randomPick(['ד"ר כהן','גב\' לוי','מר אברהם','']):'',
-      emotionalTherapy:status==='red'?Math.random()>.4:false,
-      openCases:status==='red'?randomPick(['תיק רווחה','מב"ת','','']):'',
-      monthlyData, meetings, lifeSkills, overallStatus:status,
-      lastUpdate:`2026-0${randomInt(3,4)}-${String(randomInt(1,28)).padStart(2,'0')}`
-    });
-  }
-  return students;
+    return {
+      id: className + '_' + s.id,
+      name: s.first + ' ' + s.last,
+      className: className,
+      track: track,
+      birthDate: s.dob || '',
+      idNumber: s.tz || '',
+      familyStatus: '',
+      address: s.city || '',
+      economicStatus: '',
+      employed: false,
+      prevSchool: '',
+      strengths: '',
+      attendance: 'סדירה',
+      parentContact: '',
+      significantFigure: '',
+      authority: '',
+      diagnoses: '',
+      placementCommittee: false,
+      therapist: '',
+      emotionalTherapy: false,
+      openCases: '',
+      monthlyData: monthlyData,
+      meetings: [],
+      lifeSkills: lifeSkills,
+      overallStatus: 'green',
+      lastUpdate: ''
+    };
+  });
 }
 
 function generateHomeroomReports(){
@@ -883,8 +864,7 @@ function generateHomeVisits(studentData){
 
 function generateDemoData(){
   const studentData = {};
-  const classSizes = {'ט1':20,'ט2':18,'י1':22,'י2':20,'י3':19,'יא1':17,'יא2':16,'יא3':18,'יב1':15,'יב2':17,'יב3':16};
-  CLASSES.forEach(c => { studentData[c] = generateStudents(c, classSizes[c]||18); });
+  CLASSES.forEach(c => { studentData[c] = buildRealStudents(c); });
   const hrReports = generateHomeroomReports();
   // Populate studentTracking with demo data
   CLASSES.forEach(function(c){
@@ -915,7 +895,7 @@ function generateDemoData(){
 }
 
 // ==================== DATA LAYER ====================
-const LS_KEY = 'ort_monthly_reports_v2';
+const LS_KEY = 'ort_monthly_reports_v3';
 const LS_SESSION = 'ort_reports_session';
 let DATA = {};
 
