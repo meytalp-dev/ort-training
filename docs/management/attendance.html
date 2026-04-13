@@ -494,6 +494,20 @@ body::before{content:'';position:fixed;inset:0;
 .trend-section h3{font-size:1.05rem;font-weight:800;font-family:Heebo;display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .trend-section h3 svg{width:18px;height:18px}
 
+/* ===== REPORTING STATUS ===== */
+.report-status{background:var(--card);border-radius:18px;padding:20px 24px;box-shadow:var(--shadow-sm);border:1px solid var(--border);margin-bottom:18px}
+.report-status h3{font-size:1.05rem;font-weight:800;font-family:Heebo;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.report-status h3 svg{width:18px;height:18px}
+.report-status .rs-summary{font-size:.82rem;color:var(--muted);margin-bottom:14px}
+.report-status .rs-summary strong{color:var(--text)}
+.rs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.rs-chip{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;font-size:.84rem;font-weight:700;font-family:Heebo;border:1.5px solid var(--border);transition:all .2s}
+.rs-chip.done{background:rgba(106,159,106,.1);border-color:rgba(106,159,106,.3);color:var(--success)}
+.rs-chip.missing{background:rgba(207,83,83,.08);border-color:rgba(207,83,83,.3);color:var(--danger)}
+.rs-chip svg{width:16px;height:16px;flex-shrink:0}
+.rs-chip .rs-cls{flex:1}
+.rs-chip .rs-time{font-size:.7rem;font-weight:600;color:var(--muted)}
+
 /* ===== TOAST ===== */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--primary);color:#fff;padding:12px 24px;border-radius:12px;box-shadow:var(--shadow-lg);font-weight:700;font-family:Heebo;font-size:.9rem;z-index:200;opacity:0;transition:all .3s}
 .toast.visible{transform:translateX(-50%) translateY(0);opacity:1}
@@ -1215,6 +1229,53 @@ function renderStudent(){
 // ============================================================
 // TAB — DASHBOARD (weekly overview, alerts, champions, rankings, trend)
 // ============================================================
+function getReportingStatus(){
+  var todayStr=toDateKey(new Date());
+  var results=[];
+  CLASS_ORDER.forEach(function(cls){
+    var classStudents=STUDENTS.filter(function(s){return s.cls===cls});
+    var reported=0;
+    var firstTime=null;
+    classStudents.forEach(function(s){
+      var rec=(ATTENDANCE[s.id]||{})[todayStr];
+      if(rec){reported++}
+    });
+    results.push({cls:cls,total:classStudents.length,reported:reported,done:reported>0});
+  });
+  return results;
+}
+
+function renderReportingStatus(){
+  var status=getReportingStatus();
+  var doneCount=status.filter(function(s){return s.done}).length;
+  var missingCount=status.length-doneCount;
+
+  var html='<div class="report-status">';
+  html+='<h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>סטטוס דיווח היום</h3>';
+  html+='<div class="rs-summary">';
+  if(missingCount===0){
+    html+='<strong style="color:var(--success)">כל 11 הכיתות דיווחו היום</strong>';
+  }else if(doneCount===0){
+    html+='<strong style="color:var(--danger)">אף כיתה לא דיווחה עדיין</strong> · 0 מתוך 11';
+  }else{
+    html+='<strong>'+doneCount+' כיתות דיווחו</strong> · <strong style="color:var(--danger)">'+missingCount+' חסרות</strong>';
+  }
+  html+='</div>';
+
+  html+='<div class="rs-grid">';
+  // Show missing first, then done
+  status.sort(function(a,b){return a.done===b.done?0:a.done?1:-1});
+  status.forEach(function(s){
+    if(s.done){
+      html+='<div class="rs-chip done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span class="rs-cls">'+s.cls+'</span><span class="rs-time">'+s.reported+'/'+s.total+'</span></div>';
+    }else{
+      html+='<div class="rs-chip missing"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span class="rs-cls">'+s.cls+'</span><span class="rs-time">חסר</span></div>';
+    }
+  });
+  html+='</div></div>';
+  return html;
+}
+
 function renderDashboard(){
   var ranked=getAllClassWeekStats();
   var top=ranked[0];
@@ -1234,6 +1295,9 @@ function renderDashboard(){
   });
 
   var html='<div class="tab-panel active">';
+
+  // Reporting status — who reported today and who didn't
+  html+=renderReportingStatus();
 
   // Week period header
   html+='<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">';
