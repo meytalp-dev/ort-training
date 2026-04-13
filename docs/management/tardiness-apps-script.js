@@ -41,7 +41,7 @@ var GREEN_API_TOKEN = 'bbe2449cf3f84e11b1fd8dbf79541bc59b827f69e96e4268b3';
 var GREEN_API_URL = 'https://7107.api.greenapi.com';
 
 // טלפון מנו (שומר הכניסה) + מייטל (מנהלת) — לקבלת התראות no-show
-var MANU_PHONE = 'REPLACE_WITH_MANU_PHONE';     // 972XXXXXXXXX
+var MANU_PHONE = '972505852852';     // מנו — עמנואל דהאן
 var MEYTAL_PHONE = '972536256653';
 
 // Gemini לשאלות (נקרא גם מה-frontend אבל אפשר גם מכאן אם צריך)
@@ -905,4 +905,42 @@ function importParentPhonesOnce() {
   if (sheet.getLastRow() > 1) sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).clearContent();
   sheet.getRange(2, 1, DATA.length, 2).setValues(DATA);
   Logger.log('Imported ' + DATA.length + ' parent phones');
+}
+
+// ==================== IMPORT STAFF MAP (one-time) ====================
+// הריצי פעם אחת — ממלא את staff-map עם מחנכות, יועצות, רכזי שכבה + טלפונים.
+// נכון ל-13.4.2026 לפי רשימת הצוות שמייטל שלחה.
+function importStaffMapOnce() {
+  var DATA = [
+    // מחנכים/מחנכות — role, class, grade, name, phone
+    ['teacher', 'ט1', 'ט', 'משה צברי', '972547195033'],
+    ['teacher', 'ט2', 'ט', 'אושר אהרוני', '972508882402'],
+    ['teacher', 'י1', 'י', 'רעיה יצחקי', '972504726066'],
+    ['teacher', 'י2', 'י', 'אופירה מלכה', '972534438414'],
+    ['teacher', 'י3', 'י', 'פרלה שאזו', '972525115337'],
+    ['teacher', 'יא1', 'יא', 'יעקב גרונספלד', '972546995254'],
+    ['teacher', 'יא2', 'יא', 'נעמה קוסטן', '972524295181'],
+    ['teacher', 'יא3', 'יא', 'גיא נתנאל', '972542007155'],
+    ['teacher', 'יב1', 'יב', 'יוסף רבבשי', '972506563344'],
+    ['teacher', 'יב2', 'יב', 'יואב רוט', '972527218003'],
+    ['teacher', 'יב3', 'יב', 'עמנואל דהאן (מנו)', '972505852852'],
+    // יועצות — כל יועצת מכסה כמה שכבות, שורה לכל שכבה
+    ['counselor', '', 'ט', 'ליאת בנבג\'י רוזנר', '972528980191'],
+    ['counselor', '', 'י', 'ליאת בנבג\'י רוזנר', '972528980191'],
+    ['counselor', '', 'ט', 'דורית ויגדור מועלם', '972523464235'],
+    ['counselor', '', 'י', 'דורית ויגדור מועלם', '972523464235'],
+    ['counselor', '', 'יא', 'צהיי ממו גטהון', '972527783903'],
+    ['counselor', '', 'יב', 'צהיי ממו גטהון', '972527783903'],
+    ['counselor', '', 'יא', 'ליאת בנבג\'י רוזנר', '972528980191'],
+    ['counselor', '', 'יב', 'דורית ויגדור מועלם', '972523464235'],
+    // רכזי שכבה
+    ['coordinator', '', 'יא', 'גיא נתנאל', '972542007155'],
+    ['coordinator', '', 'יב', 'יואב רוט', '972527218003']
+  ];
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('staff-map');
+  if (!sheet) { Logger.log('staff-map sheet missing — run setupTardinessSheets first'); return; }
+  if (sheet.getLastRow() > 1) sheet.getRange(2, 1, sheet.getLastRow() - 1, 5).clearContent();
+  sheet.getRange(2, 1, DATA.length, 5).setValues(DATA);
+  Logger.log('Imported ' + DATA.length + ' staff-map rows');
 }
