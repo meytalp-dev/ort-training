@@ -332,6 +332,94 @@ function setupTriggers() {
   Logger.log('טריגרים הוגדרו: 07:00 תזכורות מרכזיות, 14:30 תזכורת למורה של מחר, 16:00 בדיקה על מורה של היום');
 }
 
+// ==================== מילואים — עדכון שיבוצים ====================
+
+/**
+ * הריצי פעם אחת — מעדכן שיבוצים: יואב רוט במילואים עד סוף מאי 2026
+ * שומר על שיבוצים שכבר עברו, מייצר מחדש מ-14.4.2026 והלאה בלי יואב
+ */
+function updateScheduleYoavMiluim() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('שיבוצים');
+  const data = sheet.getDataRange().getValues();
+
+  // שמור שיבוצים שכבר עברו (עד 13.4 כולל)
+  const cutoffDate = '2026-04-14';
+  const keepRows = [];
+  for (let i = 1; i < data.length; i++) {
+    const dateStr = Utilities.formatDate(new Date(data[i][0]), 'Asia/Jerusalem', 'yyyy-MM-dd');
+    if (dateStr < cutoffDate) {
+      keepRows.push([dateStr, data[i][1]]);
+    }
+  }
+
+  // צוות בלי יואב רוט — ממשיך מהמקום שבו הרוטציה הגיעה
+  // אחרי 13.4 (ליאת, idx=4 ברוטציה המקורית) הבא הוא אפרת
+  const staffWithDays = [
+    { name: 'אפרת בר אשר', off: [3] },
+    { name: 'רווית גל', off: [] },
+    { name: 'יעקב גרונספלד', off: [] },
+    { name: 'עמנואל דהאן', off: [] },
+    { name: 'יסכה הגר', off: [] },
+    { name: 'דורית ויגדור', off: [4] },
+    { name: 'מריאן זרצקי', off: [] },
+    { name: 'יעל טטנבאום', off: [] },
+    { name: 'רעיה יצחקי', off: [4] },
+    { name: 'מיטל לאלום', off: [] },
+    { name: 'אופירה מלכה', off: [1] },
+    { name: 'צהיי גטהון', off: [4] },
+    { name: 'גיא נתנאל', off: [] },
+    { name: 'משה צברי', off: [] },
+    { name: 'נעמה קוסטן', off: [] },
+    { name: 'ויקטוריה קלדרון', off: [4] },
+    { name: 'יוסף רבבשי', off: [] },
+    // יואב רוט — במילואים עד סוף מאי
+    { name: 'פרלה שאזו', off: [4] },
+    { name: 'מיטל פלג', off: [] },
+    { name: 'אושר אהרוני', off: [] },
+    { name: 'שי בגלר', off: [] },
+    { name: 'מירב בטיטו', off: [1] },
+    { name: 'ליאת רוזנר', off: [] },
+  ];
+
+  const holidays = getHolidays();
+  const start = new Date(2026, 3, 14); // April 14
+  const end = new Date(2026, 5, 19);   // June 19
+  const newRows = [];
+  let idx = 0;
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const day = d.getDay();
+    if (day === 5 || day === 6) continue;
+    const dateStr = Utilities.formatDate(d, 'Asia/Jerusalem', 'yyyy-MM-dd');
+    if (holidays.includes(dateStr)) continue;
+
+    let attempts = 0;
+    while (attempts < staffWithDays.length) {
+      const staff = staffWithDays[idx % staffWithDays.length];
+      if (!staff.off.includes(day)) {
+        newRows.push([dateStr, staff.name]);
+        idx++;
+        break;
+      }
+      idx++;
+      attempts++;
+    }
+  }
+
+  // כתוב הכל מחדש ל-Sheet
+  const allRows = keepRows.concat(newRows);
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 2).clearContent();
+  }
+  if (allRows.length > 0) {
+    sheet.getRange(2, 1, allRows.length, 2).setValues(allRows);
+  }
+
+  Logger.log('שיבוצים עודכנו! ' + keepRows.length + ' נשמרו, ' + newRows.length + ' נוצרו מחדש (בלי יואב רוט)');
+  SpreadsheetApp.getUi().alert('השיבוצים עודכנו!\n\n' + keepRows.length + ' ימים שעברו — נשמרו\n' + newRows.length + ' ימים חדשים — בלי יואב רוט\n\nהתזכורות האוטומטיות ישלחו לאנשים הנכונים.');
+}
+
 // ==================== בדיקות ====================
 
 /** שלח הודעת בדיקה למיטל */
