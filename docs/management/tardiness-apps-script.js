@@ -45,7 +45,7 @@ var MANU_PHONE = '972505852852';     // מנו — עמנואל דהאן
 var MEYTAL_PHONE = '972536256653';
 
 // Gemini לשאלות (נקרא גם מה-frontend אבל אפשר גם מכאן אם צריך)
-var GEMINI_API_KEY = 'REPLACE_WITH_GEMINI_KEY';
+var GEMINI_API_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
 
 // ==================== Web App ====================
 function doGet(e) {
