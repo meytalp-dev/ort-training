@@ -127,8 +127,10 @@ body::before{content:'';position:fixed;inset:0;
 
 .sc-reason{margin-top:10px;display:none}
 .sc-reason.visible{display:block;animation:slideUp .2s}
-.sc-reason input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.84rem;background:var(--card);color:var(--text)}
-.sc-reason input:focus{outline:none;border-color:var(--primary)}
+.sc-reason select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.84rem;background:var(--card);color:var(--text);-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236E6258' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:12px center}
+.sc-reason select:focus{outline:none;border-color:var(--primary)}
+.sc-reason select.missing{border-color:var(--danger);background-color:rgba(212,92,110,.05)}
+.sc-reason .reason-label{font-size:.72rem;font-weight:700;color:var(--danger);margin-bottom:4px}
 
 /* ===== SAVE BAR ===== */
 .save-bar{position:fixed;bottom:0;left:0;right:0;padding:14px 16px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(245,240,232,0),var(--bg) 40%);z-index:60}
@@ -389,7 +391,19 @@ function renderStudents(){
     html+='</div>';
     var reasonVisible=cur&&cur.status!=='present'?' visible':'';
     var reasonVal=cur?cur.reason||'':'';
-    html+='<div class="sc-reason'+reasonVisible+'" id="rs-'+s.id+'"><input type="text" placeholder="סיבה" value="'+escapeHtml(reasonVal)+'" oninput="setReason('+s.id+',this.value)"></div>';
+    html+='<div class="sc-reason'+reasonVisible+'" id="rs-'+s.id+'">';
+    html+='<div class="reason-label">* סיבה (חובה)</div>';
+    html+='<select onchange="setReason('+s.id+',this.value)">';
+    html+='<option value=""'+(reasonVal===''?' selected':'')+'>— בחרי סיבה —</option>';
+    html+='<option value="לא התעורר/ה"'+(reasonVal==='לא התעורר/ה'?' selected':'')+'>לא התעורר/ה</option>';
+    html+='<option value="לא קם/ה"'+(reasonVal==='לא קם/ה'?' selected':'')+'>לא קם/ה</option>';
+    html+='<option value="מחלה"'+(reasonVal==='מחלה'?' selected':'')+'>מחלה</option>';
+    html+='<option value="אירוע משפחתי"'+(reasonVal==='אירוע משפחתי'?' selected':'')+'>אירוע משפחתי</option>';
+    html+='<option value="תור לרופא"'+(reasonVal==='תור לרופא'?' selected':'')+'>תור לרופא</option>';
+    html+='<option value="בעיית תחבורה"'+(reasonVal==='בעיית תחבורה'?' selected':'')+'>בעיית תחבורה</option>';
+    html+='<option value="לא ידוע"'+(reasonVal==='לא ידוע'?' selected':'')+'>לא ידוע</option>';
+    html+='<option value="אחר"'+(reasonVal==='אחר'?' selected':'')+'>אחר</option>';
+    html+='</select></div>';
     html+='</div>';
   });
   document.getElementById('studentList').innerHTML=html;
@@ -426,6 +440,8 @@ function setStatus(sid,status){
 
 function setReason(sid,reason){
   if(state.entries[sid])state.entries[sid].reason=reason;
+  var sel=document.querySelector('#rs-'+sid+' select');
+  if(sel&&reason)sel.classList.remove('missing');
 }
 
 function markAllPresent(){
@@ -481,6 +497,25 @@ function submitAttendance(){
     document.getElementById('reporterName').focus();
     return;
   }
+  // Validate reasons for non-present students
+  var missingReasons=[];
+  Object.keys(state.entries).forEach(function(sid){
+    var e=state.entries[sid];
+    if(e.status!=='present'&&!e.reason){
+      var s=STUDENTS.find(function(x){return x.id===parseInt(sid)});
+      if(s)missingReasons.push(s.first+' '+s.last);
+    }
+  });
+  if(missingReasons.length>0){
+    showToast('חסרה סיבה ל: '+missingReasons.slice(0,3).join(', ')+(missingReasons.length>3?' (+'+( missingReasons.length-3)+')':''),'error');
+    // Highlight missing selects
+    missingReasons.forEach(function(name){
+      var s=STUDENTS.find(function(x){return x.first+' '+x.last===name});
+      if(s){var sel=document.querySelector('#rs-'+s.id+' select');if(sel)sel.classList.add('missing')}
+    });
+    return;
+  }
+
   if(!state.url){
     showToast('חסר Apps Script URL — פתחי הגדרות','error');
     openSettings();

@@ -508,6 +508,48 @@ body::before{content:'';position:fixed;inset:0;
 .rs-chip .rs-cls{flex:1}
 .rs-chip .rs-time{font-size:.7rem;font-weight:600;color:var(--muted)}
 
+/* ===== CLASS OVERVIEW ===== */
+.class-overview{background:var(--card);border-radius:18px;padding:20px 24px;box-shadow:var(--shadow-sm);border:1px solid var(--border);margin-bottom:18px}
+.class-overview h3{font-size:1.05rem;font-weight:800;font-family:Heebo;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.class-overview h3 svg{width:18px;height:18px}
+.co-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.04);cursor:pointer;transition:background .15s;border-radius:10px;padding:10px 12px;margin:0 -12px}
+.co-row:hover{background:rgba(58,172,160,.04)}
+.co-row:last-child{border-bottom:none}
+.co-cls{font-weight:800;font-family:Heebo;min-width:38px;font-size:1rem}
+.co-bar-wrap{flex:1;height:26px;background:rgba(0,0,0,.04);border-radius:13px;overflow:hidden;display:flex;position:relative}
+.co-bar-present{height:100%;background:linear-gradient(90deg,var(--success),var(--primary));border-radius:13px 0 0 13px;transition:width .5s}
+.co-bar-absent{height:100%;background:var(--danger);opacity:.7;transition:width .5s}
+.co-bar-sick{height:100%;background:var(--warn);opacity:.7;transition:width .5s}
+.co-bar-late{height:100%;background:var(--info);opacity:.7;transition:width .5s}
+.co-bar-none{height:100%;background:rgba(0,0,0,.06);transition:width .5s}
+.co-nums{display:flex;gap:8px;min-width:120px;justify-content:flex-end;font-size:.78rem;font-weight:700}
+.co-nums span{display:flex;align-items:center;gap:3px}
+.co-nums .n-present{color:var(--success)}
+.co-nums .n-absent{color:var(--danger)}
+.co-nums .n-sick{color:var(--accent-dark)}
+.co-nums .n-late{color:var(--info)}
+.co-nums .n-none{color:var(--muted)}
+.co-toggle{width:18px;height:18px;color:var(--muted);transition:transform .2s;flex-shrink:0}
+.co-toggle.open{transform:rotate(90deg)}
+.co-detail{overflow:hidden;max-height:0;transition:max-height .3s;margin:0 -12px}
+.co-detail.open{max-height:1200px}
+.co-detail-inner{padding:8px 16px 14px}
+.co-absent-list{display:flex;flex-direction:column;gap:6px}
+.co-absent-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(212,92,110,.04);border-radius:10px;font-size:.82rem;border:1px solid rgba(212,92,110,.1)}
+.co-absent-item.sick{background:rgba(232,176,96,.06);border-color:rgba(232,176,96,.15)}
+.co-absent-item.late{background:rgba(91,155,213,.06);border-color:rgba(91,155,213,.15)}
+.co-absent-item.early{background:rgba(142,126,212,.06);border-color:rgba(142,126,212,.15)}
+.co-absent-item .ca-name{font-weight:700;min-width:100px}
+.co-absent-item .ca-status{font-weight:600;font-size:.75rem;padding:2px 8px;border-radius:8px;color:#fff}
+.ca-status.absent{background:var(--danger)}
+.ca-status.sick{background:var(--warn)}
+.ca-status.late{background:var(--info)}
+.ca-status.early{background:var(--dream)}
+.co-absent-item .ca-reason{color:var(--muted);flex:1;font-size:.78rem}
+.co-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:.75rem;color:var(--muted)}
+.co-legend span{display:flex;align-items:center;gap:4px}
+.co-legend .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
 /* ===== TOAST ===== */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--primary);color:#fff;padding:12px 24px;border-radius:12px;box-shadow:var(--shadow-lg);font-weight:700;font-family:Heebo;font-size:.9rem;z-index:200;opacity:0;transition:all .3s}
 .toast.visible{transform:translateX(-50%) translateY(0);opacity:1}
@@ -1312,6 +1354,95 @@ function renderReportingStatus(){
   return html;
 }
 
+function toggleClassDetail(cls){
+  var el=document.getElementById('co-detail-'+cls);
+  var icon=document.getElementById('co-toggle-'+cls);
+  if(!el)return;
+  el.classList.toggle('open');
+  if(icon)icon.classList.toggle('open');
+}
+
+function renderClassOverview(){
+  var todayStr=toDateKey(new Date());
+  var STATUS_LABELS={present:'נוכח/ת',absent:'חיסור',sick:'מחלה',late:'איחור',early:'יצא/ה מוקדם'};
+
+  var html='<div class="class-overview">';
+  html+='<h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>סקירת כיתות — היום ('+todayStr+')</h3>';
+  html+='<div class="co-legend">';
+  html+='<span><span class="dot" style="background:var(--success)"></span>נוכחים</span>';
+  html+='<span><span class="dot" style="background:var(--danger)"></span>חיסור</span>';
+  html+='<span><span class="dot" style="background:var(--warn)"></span>מחלה</span>';
+  html+='<span><span class="dot" style="background:var(--info)"></span>איחור</span>';
+  html+='<span><span class="dot" style="background:rgba(0,0,0,.12)"></span>לא דווח</span>';
+  html+='</div>';
+
+  CLASS_ORDER.forEach(function(cls){
+    var students=STUDENTS.filter(function(s){return s.cls===cls});
+    var counts={present:0,absent:0,sick:0,late:0,early:0,none:0};
+    var absentList=[];
+
+    students.forEach(function(s){
+      var rec=(ATTENDANCE[s.id]||{})[todayStr];
+      if(!rec){counts.none++;return}
+      if(counts[rec.status]!==undefined)counts[rec.status]++;
+      if(rec.status!=='present'){
+        absentList.push({s:s,status:rec.status,reason:rec.reason||''});
+      }
+    });
+
+    var total=students.length;
+    var pPresent=total?Math.round(counts.present/total*100):0;
+    var pAbsent=total?Math.round(counts.absent/total*100):0;
+    var pSick=total?Math.round(counts.sick/total*100):0;
+    var pLate=total?Math.round(counts.late/total*100):0;
+    var pNone=total?Math.round(counts.none/total*100):0;
+
+    var hasAbsent=absentList.length>0;
+
+    html+='<div class="co-row" onclick="toggleClassDetail(\''+cls+'\')">';
+    html+='<div class="co-cls">'+cls+'</div>';
+    html+='<div class="co-bar-wrap">';
+    if(pPresent)html+='<div class="co-bar-present" style="width:'+pPresent+'%"></div>';
+    if(pLate)html+='<div class="co-bar-late" style="width:'+pLate+'%"></div>';
+    if(pAbsent)html+='<div class="co-bar-absent" style="width:'+pAbsent+'%"></div>';
+    if(pSick)html+='<div class="co-bar-sick" style="width:'+pSick+'%"></div>';
+    if(pNone)html+='<div class="co-bar-none" style="width:'+pNone+'%"></div>';
+    html+='</div>';
+    html+='<div class="co-nums">';
+    html+='<span class="n-present">'+counts.present+'</span>';
+    if(counts.absent)html+='<span class="n-absent">'+counts.absent+'</span>';
+    if(counts.sick)html+='<span class="n-sick">'+counts.sick+'</span>';
+    if(counts.late)html+='<span class="n-late">'+counts.late+'</span>';
+    if(counts.none)html+='<span class="n-none">'+counts.none+'</span>';
+    html+='</div>';
+    if(hasAbsent)html+='<svg class="co-toggle" id="co-toggle-'+cls+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>';
+    else html+='<div style="width:18px"></div>';
+    html+='</div>';
+
+    // Detail panel — absent/sick/late students
+    if(hasAbsent){
+      html+='<div class="co-detail" id="co-detail-'+cls+'">';
+      html+='<div class="co-detail-inner"><div class="co-absent-list">';
+      absentList.sort(function(a,b){
+        var order={absent:0,sick:1,late:2,early:3};
+        return (order[a.status]||9)-(order[b.status]||9);
+      });
+      absentList.forEach(function(item){
+        html+='<div class="co-absent-item '+item.status+'">';
+        html+='<span class="ca-name">'+item.s.first+' '+item.s.last+'</span>';
+        html+='<span class="ca-status '+item.status+'">'+(STATUS_LABELS[item.status]||item.status)+'</span>';
+        if(item.reason)html+='<span class="ca-reason">'+item.reason+'</span>';
+        else html+='<span class="ca-reason" style="font-style:italic;opacity:.5">ללא סיבה</span>';
+        html+='</div>';
+      });
+      html+='</div></div></div>';
+    }
+  });
+
+  html+='</div>';
+  return html;
+}
+
 function renderDashboard(){
   var ranked=getAllClassWeekStats();
   var top=ranked[0];
@@ -1334,6 +1465,9 @@ function renderDashboard(){
 
   // Reporting status — who reported today and who didn't
   html+=renderReportingStatus();
+
+  // Class overview — bar chart with drilldown
+  html+=renderClassOverview();
 
   // Week period header
   html+='<div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">';
