@@ -127,7 +127,17 @@ tr:hover td { background: var(--hover); }
 <!-- Header -->
 <div class="header">
   <h1>מערכת תקציבית — אורט בית הערבה</h1>
-  <div class="sub">שנת הלימודים תשפ"ו | 1 ש"ש = 6,000 ש"ח | עדכון: <span id="lastUpdate"></span></div>
+  <div class="sub">שנת הלימודים תשפ"ו | 1 ש"ש = 6,000 ש"ח | עדכון: <span id="lastUpdate"></span>
+    <span id="cloudBadge" style="margin-right:8px;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600"></span>
+  </div>
+  <script>
+    (function(){
+      var b = document.getElementById('cloudBadge');
+      var u = localStorage.getItem('budgetCloudUrl');
+      if (u) { b.textContent = 'Google Sheets'; b.style.background = '#E8F5E9'; b.style.color = '#2E7D32'; }
+      else { b.textContent = 'מקומי בלבד'; b.style.background = '#FFF3E0'; b.style.color = '#E65100'; b.style.cursor = 'pointer'; b.onclick = function(){ document.getElementById('settingsModal').style.display='flex'; }; }
+    })();
+  </script>
 </div>
 
 <!-- Summary Cards -->
@@ -307,7 +317,11 @@ tr:hover td { background: var(--hover); }
   <div style="margin-top:14px;text-align:center;font-size:13px;opacity:.75">* 44 ש"ש חינוך מיוחד (14 לרדן+אדיר+תלמידים + 30 קוסקס+בנימין+רובבשי+שאזו) — הועברו מתקציב תפעול לסל חנ"מ</div>
   <div style="margin-top:20px;text-align:center">
     <button class="btn" style="background:rgba(255,255,255,.2);color:#fff;margin-left:8px" onclick="exportExcel()">ייצוא Excel</button>
-    <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="if(confirm('לאפס את כל הנתונים לברירת מחדל?')){localStorage.removeItem('budgetData');location.reload()}">איפוס נתונים</button>
+    <button class="btn" style="background:rgba(255,255,255,.15);color:#fff;margin-left:8px" onclick="document.getElementById('settingsModal').style.display='flex'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" style="vertical-align:middle;margin-left:4px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Google Sheets
+    </button>
+    <button class="btn" style="background:rgba(255,255,255,.1);color:#fff" onclick="if(confirm('לאפס את כל הנתונים לברירת מחדל?')){localStorage.removeItem('budgetData');localStorage.removeItem('budgetCloudUrl');location.reload()}">איפוס נתונים</button>
   </div>
 </div>
 
@@ -329,6 +343,26 @@ tr:hover td { background: var(--hover); }
     <button class="btn btn-outline btn-sm" onclick="document.getElementById('chat-input').value='מה ההמרות שבוצעו השנה?';askExpert()">המרות שבוצעו</button>
     <button class="btn btn-outline btn-sm" onclick="document.getElementById('chat-input').value='מה המצב הכללי של התקציב?';askExpert()">מצב כללי</button>
     <button class="btn btn-outline btn-sm" onclick="document.getElementById('chat-input').value='כמה שעות חינוך מיוחד הועברו?';askExpert()">חנ\"מ</button>
+  </div>
+</div>
+
+<!-- Cloud Sync Status -->
+<div id="syncStatus" style="position:fixed;bottom:16px;left:16px;padding:8px 16px;border-radius:10px;font-size:12px;font-weight:600;z-index:999;display:none;box-shadow:0 2px 8px rgba(0,0,0,.15)"></div>
+
+<!-- Settings Modal -->
+<div id="settingsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:32px;max-width:500px;width:90%;direction:rtl">
+    <h2 style="margin-bottom:16px">הגדרות חיבור Google Sheets</h2>
+    <div class="form-group" style="margin-bottom:16px">
+      <label style="font-weight:600;margin-bottom:6px;display:block">Apps Script URL</label>
+      <input type="url" id="cfgCloudUrl" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:'Courier New',monospace;font-size:12px">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">העתיקי את ה-URL מ-Apps Script → Deploy → Web app</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-start">
+      <button class="btn btn-primary" onclick="saveCloudSettings()">שמור</button>
+      <button class="btn btn-outline" onclick="document.getElementById('settingsModal').style.display='none'">ביטול</button>
+      <button class="btn btn-outline" style="margin-right:auto;color:var(--danger)" onclick="disconnectCloud()">נתק מהענן</button>
+    </div>
   </div>
 </div>
 
@@ -388,6 +422,121 @@ const DEFAULT_DATA = {
   ]
 };
 
+// ===== CLOUD SYNC =====
+let CLOUD_URL = localStorage.getItem('budgetCloudUrl') || '';
+
+function showSync(msg, type) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = type === 'ok' ? 'var(--success-bg)' : type === 'err' ? 'var(--danger-bg)' : 'var(--info-bg)';
+  el.style.color = type === 'ok' ? 'var(--success)' : type === 'err' ? 'var(--danger)' : 'var(--info)';
+  if (type !== 'load') setTimeout(() => el.style.display = 'none', 3000);
+}
+
+function saveCloudSettings() {
+  const url = document.getElementById('cfgCloudUrl').value.trim();
+  if (url && !url.startsWith('https://script.google.com/')) {
+    alert('URL לא תקין — חייב להתחיל ב-https://script.google.com/');
+    return;
+  }
+  CLOUD_URL = url;
+  localStorage.setItem('budgetCloudUrl', url);
+  document.getElementById('settingsModal').style.display = 'none';
+  if (url) {
+    showSync('מחובר! מסנכרן...', 'load');
+    syncToCloud();
+  }
+}
+
+function disconnectCloud() {
+  if (!confirm('לנתק מ-Google Sheets? הנתונים ימשיכו להישמר מקומית.')) return;
+  CLOUD_URL = '';
+  localStorage.removeItem('budgetCloudUrl');
+  document.getElementById('settingsModal').style.display = 'none';
+  showSync('נותק מהענן', 'err');
+}
+
+// Convert current data to flat arrays for Sheet sync
+function dataToSheetArrays() {
+  return {
+    operational: data.operational.rows.map(function(r, i) {
+      return { date: r.date, type: r.type, budget: r.budget, used: r.used, balance: r.balance, notes: r.notes };
+    }),
+    timeline: data.activitiesTimeline.map(function(r) {
+      return { date: r.date, type: r.type, change: r.change, balance: r.balance, notes: r.notes };
+    }),
+    conversions: data.conversions.map(function(c, i) {
+      return { id: 'conv-' + i, date: c.date, hours: c.hours, amount: c.amount, purpose: c.purpose, from: c.from, status: c.status, email: c.email || '' };
+    }),
+    specEd: data.specEd.map(function(s, i) {
+      return { id: 'spec-' + i, type: s.type, hours: s.hours, workers: s.workers, source: s.source, notes: s.notes };
+    })
+  };
+}
+
+// Load data from Sheet into local model
+function sheetDataToLocal(d) {
+  if (d.operational && d.operational.length > 0) {
+    data.operational.rows = d.operational.map(function(r) {
+      return { date: String(r.date || ''), type: String(r.type || ''), budget: Number(r.budget) || 0, used: Number(r.used) || 0, balance: Number(r.balance) || 0, notes: String(r.notes || '') };
+    });
+  }
+  if (d.timeline && d.timeline.length > 0) {
+    data.activitiesTimeline = d.timeline.map(function(r) {
+      return { date: String(r.date || ''), type: String(r.type || ''), change: Number(r.change) || 0, balance: Number(r.balance) || 0, notes: String(r.notes || '') };
+    });
+  }
+  if (d.conversions && d.conversions.length > 0) {
+    data.conversions = d.conversions.map(function(c) {
+      return { date: String(c.date || ''), hours: Number(c.hours) || 0, amount: Number(c.amount) || 0, purpose: String(c.purpose || ''), from: String(c.from || ''), status: String(c.status || 'ממתין'), email: String(c.email || '') };
+    });
+  }
+  if (d.specEd && d.specEd.length > 0) {
+    data.specEd = d.specEd.map(function(s) {
+      return { type: String(s.type || ''), hours: Number(s.hours) || 0, workers: String(s.workers || ''), source: String(s.source || ''), notes: String(s.notes || '') };
+    });
+  }
+}
+
+function syncToCloud() {
+  if (!CLOUD_URL) return;
+  const payload = dataToSheetArrays();
+  payload.action = 'syncAll';
+  fetch(CLOUD_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).then(res => {
+    if (res.result === 'success') showSync('סונכרן: ' + (res.count || 0) + ' שורות', 'ok');
+    else showSync('שגיאה: ' + (res.message || ''), 'err');
+  }).catch(e => showSync('שגיאת רשת', 'err'));
+}
+
+function loadFromCloud() {
+  if (!CLOUD_URL) return;
+  showSync('טוען מהענן...', 'load');
+  const cb = 'budgetCb_' + Date.now();
+  window[cb] = function(res) {
+    delete window[cb];
+    const el = document.getElementById('jsonp_' + cb);
+    if (el) el.remove();
+    if (res.result === 'success' && res.data) {
+      sheetDataToLocal(res.data);
+      localStorage.setItem('budgetData', JSON.stringify(data));
+      render();
+      showSync('נטען מהענן', 'ok');
+    } else {
+      showSync('שגיאה בטעינה', 'err');
+    }
+  };
+  const s = document.createElement('script');
+  s.id = 'jsonp_' + cb;
+  s.src = CLOUD_URL + '?action=getAll&callback=' + cb;
+  s.onerror = function() { delete window[cb]; s.remove(); showSync('שגיאת רשת', 'err'); };
+  document.body.appendChild(s);
+}
+
 // ===== STATE =====
 let data;
 function loadData() {
@@ -397,6 +546,8 @@ function loadData() {
 function saveData() {
   localStorage.setItem('budgetData', JSON.stringify(data));
   document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('he-IL') + ' ' + new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  // Auto-sync to cloud
+  syncToCloud();
 }
 
 // ===== TAB SWITCHING =====
@@ -787,8 +938,13 @@ function formatDate(d) {
 
 // ===== INIT =====
 loadData();
-saveData();
 render();
+document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('he-IL') + ' ' + new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+// Load from cloud if connected (overwrites local with latest Sheet data)
+if (CLOUD_URL) {
+  loadFromCloud();
+  document.getElementById('cfgCloudUrl').value = CLOUD_URL;
+}
 </script>
 </body>
 </html>
