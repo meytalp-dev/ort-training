@@ -50,6 +50,7 @@ LINKEDIN_SEARCHES = [
 ]
 
 ARTIFACT_TIMEOUT = 600.0  # 10 minutes per artifact
+GLOBAL_TIMEOUT = 1200  # 20 minutes max for entire script — prevents zombie processes
 OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Desktop", "AI-Digest")
 
 # Telegram Collect Bot — Google Sheet
@@ -396,9 +397,13 @@ async def create_daily_digest():
     day_dir = os.path.join(OUTPUT_DIR, today)
     os.makedirs(day_dir, exist_ok=True)
 
-    # Connect to NotebookLM
+    # Connect to NotebookLM (with timeout — auth can hang if cookies expired)
     cookies = load_auth_from_storage()
-    csrf_token, session_id = await fetch_tokens(cookies)
+    try:
+        csrf_token, session_id = await asyncio.wait_for(fetch_tokens(cookies), timeout=60)
+    except asyncio.TimeoutError:
+        print("FATAL: NotebookLM auth timed out after 60s — cookies may be expired")
+        sys.exit(1)
     tokens = AuthTokens(cookies=cookies, csrf_token=csrf_token, session_id=session_id)
 
     # Step 0: Collect external sources
@@ -967,5 +972,17 @@ def update_tips_library(date, summary):
     print(f"Tips library updated: {len(existing)} total tips")
 
 
+async def run_with_timeout():
+    """Run digest with global timeout to prevent zombie processes."""
+    try:
+        return await asyncio.wait_for(create_daily_digest(), timeout=GLOBAL_TIMEOUT)
+    except asyncio.TimeoutError:
+        print(f"\nFATAL: Script exceeded {GLOBAL_TIMEOUT}s global timeout — aborting.")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\nFATAL: Unhandled error — {type(e).__name__}: {e}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
-    result = asyncio.run(create_daily_digest())
+    result = asyncio.run(run_with_timeout())
