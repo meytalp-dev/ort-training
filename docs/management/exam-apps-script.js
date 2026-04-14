@@ -15,7 +15,7 @@
 // ============================================
 // Configuration
 // ============================================
-var SHEET_ID = '1WcC44eJI3mGQ4o8BF3Po_y5j21n_9ZsthVkj-eRme3Q';
+var SHEET_ID = 'YOUR_SHEET_ID_HERE';
 
 var GREEN_API_INSTANCE = '7107577196';
 var GREEN_API_TOKEN = 'bbe2449cf3f84e11b1fd8dbf79541bc59b827f69e96e4268b3';
