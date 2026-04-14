@@ -1560,13 +1560,79 @@ const DEFAULT_LESSONS = [
     notes:'הרגע הכי חזק בשנה. לתעד. לצלם. לזכור.' }
 ];
 
+// ===== API =====
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2QOG5BU0ET12IE5hUWMrhlqWDupWWeuiO2l5AoqJqRi8tfoj5mGPXMqPUcZw_pamH/exec';
+
+function apiGet(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    const qs = new URLSearchParams({ callback: cb, action, ...params }).toString();
+    const script = document.createElement('script');
+    window[cb] = data => { delete window[cb]; script.remove(); resolve(data); };
+    script.onerror = () => { delete window[cb]; script.remove(); reject(new Error('network')); };
+    script.src = APPS_SCRIPT_URL + '?' + qs;
+    document.body.appendChild(script);
+  });
+}
+
+function apiPost(payload) {
+  return fetch(APPS_SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(() => {});
+}
+
 // ===== STATE =====
 let pulseData = JSON.parse(localStorage.getItem('fd_pulse') || '[]');
 let lessons = JSON.parse(localStorage.getItem('fd_lessons') || 'null') || [...DEFAULT_LESSONS];
 let editingLessonId = null;
+let apiLoaded = false;
 
 function savePulseData() { localStorage.setItem('fd_pulse', JSON.stringify(pulseData)); }
 function saveLessonsData() { localStorage.setItem('fd_lessons', JSON.stringify(lessons)); }
+
+// טעינה מהשרת בעליה
+(async function loadFromAPI() {
+  try {
+    const res = await apiGet('getAllPulse');
+    if (res.result === 'success' && res.pulses && res.pulses.length > 0) {
+      // מיזוג: נתוני Sheet עוקפים localStorage
+      const remoteIds = new Set(res.pulses.map(p => p.id));
+      const localOnly = pulseData.filter(p => !remoteIds.has(p.id));
+      pulseData = [...res.pulses, ...localOnly];
+      savePulseData();
+      // סנכרון נתונים מקומיים שלא בשרת
+      for (const p of localOnly) {
+        apiPost({ action: 'savePulse', pulse: p });
+      }
+    }
+
+    const lesRes = await apiGet('getLessons');
+    if (lesRes.result === 'success' && lesRes.lessons && lesRes.lessons.length > 0) {
+      const remoteIds = new Set(lesRes.lessons.map(l => l.id));
+      const localCustom = lessons.filter(l => !remoteIds.has(l.id) && !l.id.startsWith('A'));
+      lessons = [...lesRes.lessons, ...localCustom];
+      saveLessonsData();
+      for (const l of localCustom) {
+        apiPost({ action: 'saveLesson', lesson: l });
+      }
+    }
+
+    apiLoaded = true;
+    // רענון תצוגה אם כבר פתוח
+    const active = document.querySelector('.section.active');
+    if (active) {
+      const id = active.id.replace('sec-', '');
+      if (id === 'pulse') renderPulse();
+      if (id === 'teacher') renderTeacherDash();
+      if (id === 'principal') renderPrincipalDash();
+      if (id === 'lessons') renderLessons();
+    }
+  } catch (e) {
+    console.warn('API load failed, using localStorage', e);
+  }
+})();
 
 // ===== NAVIGATION =====
 function showSection(id) {
@@ -1646,6 +1712,7 @@ function submitPulse() {
 
   pulseData.push(entry);
   savePulseData();
+  apiPost({ action: 'savePulse', pulse: entry });
   currentAnswers = {};
   closePulseForm();
   renderPulse();
@@ -2053,6 +2120,7 @@ function saveLesson() {
   }
 
   saveLessonsData();
+  apiPost({ action: 'saveLesson', lesson: data });
   closeLessonModal();
   renderLessons();
 }
@@ -2066,6 +2134,7 @@ function deleteLesson(id) {
   if (!confirm('למחוק את מערך השיעור?')) return;
   lessons = lessons.filter(l => l.id !== id);
   saveLessonsData();
+  apiPost({ action: 'deleteLesson', lessonId: id });
   renderLessons();
 }
 
