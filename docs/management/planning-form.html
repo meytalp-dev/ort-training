@@ -1906,8 +1906,35 @@ function loadData() {
     loadFromSheet(lastRole)
       .then(response => {
         showLoading(false);
-        if (response && (response.result === 'success' || response.status === 'ok') && response.plan && hasRealContent(response.plan)) {
-          const data = applyPlanData(response.plan);
+        const sheetPlan = (response && (response.result === 'success' || response.status === 'ok') && response.plan) ? response.plan : null;
+        const sheetHasContent = sheetPlan && hasRealContent(sheetPlan);
+
+        // Check localStorage for richer data
+        const localKey = 'planning_' + lastRole;
+        let localData = null;
+        try { localData = JSON.parse(localStorage.getItem(localKey)); } catch(e) {}
+        const localHasGoals = localData && localData.areas && Object.keys(localData.areas).some(a => (localData.areas[a].goals || []).length > 0);
+        const localHasActivities = localData && localData.activities && ['A','B','C'].some(t => (localData.activities[t] || []).length > 0);
+        const localIsRicher = localData && (localHasGoals || localHasActivities);
+
+        // Prefer localStorage if it has goals/activities that Sheet doesn't
+        const sheetHasGoals = sheetPlan && sheetPlan.goals && Object.keys(sheetPlan.goals).length > 0;
+        const sheetHasActivities = sheetPlan && sheetPlan.activities && Object.keys(sheetPlan.activities).length > 0;
+        const sheetIsComplete = sheetHasGoals || sheetHasActivities;
+
+        if (localIsRicher && !sheetIsComplete) {
+          // localStorage has more data — use it and sync up to cloud
+          console.log('localStorage richer than Sheet — using local data');
+          onRoleChange(lastRole, true);
+          selectedAreas = localData.selectedAreas || selectedAreas;
+          customAreas = localData.customAreas || customAreas;
+          populateForm(localData);
+          renderAreaPills();
+          renderGoalTabs();
+          updateProgress();
+          scheduleCloudSave();
+        } else if (sheetHasContent) {
+          const data = applyPlanData(sheetPlan);
           onRoleChange(lastRole, true);
           selectedAreas = data.selectedAreas || selectedAreas;
           customAreas = data.customAreas || customAreas;
@@ -1915,19 +1942,16 @@ function loadData() {
           renderAreaPills();
           renderGoalTabs();
           updateProgress();
-          // Also cache in localStorage
-          try { localStorage.setItem('planning_' + lastRole, JSON.stringify(collectFormData())); } catch(e) {}
+          // Cache in localStorage only if Sheet is complete
+          if (sheetIsComplete) {
+            try { localStorage.setItem('planning_' + lastRole, JSON.stringify(collectFormData())); } catch(e) {}
+          }
         } else {
-          // Cloud data empty or missing — use localStorage (may have unsaved work)
+          // Both empty or only local — use localStorage
           loadFromLocalStorage(lastRole);
-          // If localStorage had data and cloud was empty, sync up to cloud
-          const localKey = 'planning_' + lastRole;
-          try {
-            const localData = localStorage.getItem(localKey);
-            if (localData && response && (response.result === 'success' || response.status === 'ok')) {
-              scheduleCloudSave();
-            }
-          } catch(e) {}
+          if (localData && sheetPlan) {
+            scheduleCloudSave();
+          }
         }
       })
       .catch(err => {
