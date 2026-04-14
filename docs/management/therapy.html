@@ -928,7 +928,61 @@ function renderAdminView() {
   const dayOptions = DAY_NAMES.map((d,i) => `<option value="${i}">יום ${d}</option>`).join('');
   const hourOptions = HOURS.map(h => `<option value="${h}">${h}</option>`).join('');
 
+  const colorSwatches = ['#8E7ED4','#E8B060','#C9A0A0','#A89BC5','#4CAF50','#D45C6E','#5B9BD5','#D48A2C','#3AACA0','#6E6258'].map(c =>
+    '<span onclick="pickTherapistColor(this)" data-color="' + c + '" style="width:24px;height:24px;border-radius:50%;background:' + c + ';cursor:pointer;border:2px solid transparent;display:inline-block" title="' + c + '"></span>'
+  ).join('');
+
+  const roleOptions = [
+    {v:'טיפול רגשי',t:'טיפול רגשי'},
+    {v:'טיפול פרטני + קבוצתי',t:'טיפול פרטני + קבוצתי'},
+    {v:'טיפול במוזיקה',t:'טיפול במוזיקה'},
+    {v:'טיפול באומנות',t:'טיפול באומנות'},
+    {v:'טיפול בדרמה',t:'טיפול בדרמה'},
+    {v:'קידום נוער',t:'קידום נוער'},
+    {v:'סטודנט/ית לפסיכולוגיה',t:'סטודנט/ית לפסיכולוגיה/עו"ס'},
+    {v:'אחר',t:'אחר — הקלידי בשדה למטה'},
+  ].map(o => '<option value="' + o.v + '">' + o.t + '</option>').join('');
+
   let html = `
+    <!-- Add Therapist -->
+    <div class="admin-section">
+      <div class="admin-header">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--sage)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <h3>הוספת מטפל/ת חדש/ה</h3>
+      </div>
+      <div class="admin-body">
+        <div class="admin-form">
+          <div class="admin-field">
+            <label>שם מטפל/ת</label>
+            <input type="text" id="newTherapistName" placeholder="שם מלא">
+          </div>
+          <div class="admin-field">
+            <label>תפקיד</label>
+            <select id="newTherapistRole" onchange="toggleCustomRole()">${roleOptions}</select>
+          </div>
+          <div class="admin-field" id="customRoleField" style="display:none">
+            <label>תפקיד מותאם</label>
+            <input type="text" id="newTherapistCustomRole" placeholder="הזיני תפקיד...">
+          </div>
+          <div class="admin-field">
+            <label>ימי עבודה (אופציונלי)</label>
+            <input type="text" id="newTherapistSchedule" placeholder="למשל: ימים ב׳ + ד׳">
+          </div>
+          <div class="admin-field">
+            <label>צבע</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="color" id="newTherapistColor" value="#8E7ED4" style="width:40px;height:34px;border:2px solid var(--border);border-radius:8px;cursor:pointer;padding:2px">
+              <div style="display:flex;gap:4px">${colorSwatches}</div>
+            </div>
+          </div>
+          <button class="admin-btn" style="background:var(--sage);padding:8px 20px;font-size:.85rem" onclick="addTherapist()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            הוסף/י מטפל/ת
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Add Student -->
     <div class="admin-section">
       <div class="admin-header">
@@ -1068,6 +1122,43 @@ function renderAdminView() {
 }
 
 // ==================== ADMIN ACTIONS ====================
+
+function pickTherapistColor(el) {
+  document.getElementById('newTherapistColor').value = el.dataset.color;
+}
+
+function toggleCustomRole() {
+  var sel = document.getElementById('newTherapistRole');
+  var field = document.getElementById('customRoleField');
+  if (field) field.style.display = sel.value === 'אחר' ? '' : 'none';
+}
+
+function addTherapist() {
+  var nameEl = document.getElementById('newTherapistName');
+  var name = nameEl.value.trim();
+  if (!name) { showToast('יש להזין שם מטפל/ת'); return; }
+
+  var existing = THERAPISTS.find(function(t) { return t.name === name; });
+  if (existing) { showToast('מטפל/ת בשם זה כבר קיים/ת'); return; }
+
+  var roleSel = document.getElementById('newTherapistRole');
+  var role = roleSel.value === 'אחר'
+    ? (document.getElementById('newTherapistCustomRole').value.trim() || 'אחר')
+    : roleSel.value;
+  var color = document.getElementById('newTherapistColor').value;
+  var schedule = document.getElementById('newTherapistSchedule').value.trim();
+
+  var newT = { name: name, color: color, role: role, students: [], groups: [] };
+  if (schedule) newT.schedule = schedule;
+
+  THERAPISTS.push(newT);
+  logAction('log-add', 'מטפל/ת חדש/ה: ' + name + ' (' + role + ')');
+  saveData();
+  renderStats();
+  renderTabs();
+  renderContent();
+  showToast(name + ' נוסף/ה כמטפל/ת');
+}
 
 function addStudent() {
   const therapistName = document.getElementById('addTherapist').value;
