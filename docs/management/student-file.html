@@ -200,6 +200,20 @@ body::before{content:'';position:fixed;inset:0;
 /* ===== DEVELOPMENT — HOLISTIC MAP ===== */
 .dev-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
 @media(max-width:700px){.dev-grid{grid-template-columns:1fr}}
+
+/* ===== PLAN TAB — responsive grids ===== */
+.plan-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.plan-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.plan-goals-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:700px){
+  .plan-grid-2,.plan-grid-3{grid-template-columns:1fr}
+  .plan-goals-wrap table{min-width:500px}
+}
+
+/* ===== Touch targets + font fixes ===== */
+.plan-remove-btn{background:none;border:none;cursor:pointer;font-size:.75rem;padding:6px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;transition:background .15s}
+.plan-remove-btn:hover{background:rgba(0,0,0,.06)}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(58,172,160,.12);outline:none}
 .dev-card{background:var(--card);border-radius:16px;padding:18px 20px;border:2px solid var(--border);transition:transform .15s}
 .dev-card:hover{transform:translateY(-2px)}
 .dev-card h4{font-size:.88rem;font-weight:700;font-family:Heebo;margin-bottom:12px;display:flex;align-items:center;gap:8px}
@@ -1223,10 +1237,21 @@ function renderJourney(s) {
   var dims = getDimensions(s.id);
   var html = '';
 
-  html += '<h4 style="font-size:.92rem;font-weight:700;margin-bottom:4px;font-family:Heebo;display:flex;align-items:center;gap:10px">תוכנית אישית מותאמת';
-  html += ' <button class="btn btn-sm" onclick="loadDemoData(\'' + s.id + '\')" style="font-size:.7rem;background:var(--info-bg);color:var(--info);border:1px solid rgba(91,155,213,.3);padding:3px 10px;border-radius:8px;cursor:pointer">טען דמו</button>';
-  html += '</h4>';
-  html += '<p style="font-size:.82rem;color:var(--muted);margin-bottom:18px">מיומנויות, ממדים, מעגל רגשי, חוזקות ונקודות חיזוק, יעדים — נגזר מהדוחות + עריכה ידנית</p>';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">';
+  html += '<div><h4 style="font-size:.92rem;font-weight:700;font-family:Heebo;margin-bottom:0">תוכנית אישית מותאמת</h4>';
+  if (plan.lastUpdated) {
+    html += '<div style="font-size:.68rem;color:var(--muted)">עודכן: ' + esc(plan.lastUpdated) + (plan.lastUpdatedBy ? ' · ' + esc(plan.lastUpdatedBy) : '') + '</div>';
+  }
+  html += '</div>';
+  if (state.role === 'principal' || state.role === 'deputy') {
+    html += '<button class="btn btn-sm" onclick="loadDemoData(\'' + s.id + '\')" style="font-size:.68rem;background:var(--bg-alt);color:var(--muted);border:1px solid var(--border);padding:2px 8px;border-radius:8px;cursor:pointer">דוגמה</button>';
+  }
+  html += '</div>';
+
+  // ══════════════════════════════════════════
+  // SUMMARY CARD — סיכום בן שנייה
+  // ══════════════════════════════════════════
+  html += renderQuickSummary(s, plan, timeline, scores, skills, dims);
 
   // ── Auto-detect strengths & weaknesses ──
   var autoStrengths = [];
@@ -1242,22 +1267,22 @@ function renderJourney(s) {
     else if (latest.personal > 0 && latest.personal < 50) autoWeaknesses.push({text:'מיומנויות אישיות-רגשיות לחיזוק (' + latest.personal + ')', color:'#8B6BC0'});
     if (latest.professional >= 70) autoStrengths.push({text:'ביצועים מקצועיים טובים (' + latest.professional + ')', color:'#7AB648'});
     else if (latest.professional > 0 && latest.professional < 50) autoWeaknesses.push({text:'ביצועים מקצועיים לחיזוק (' + latest.professional + ')', color:'#7AB648'});
-    if (raw.skillLevel >= 3) autoStrengths.push({text:'מיומנות חודשית ברמה גבוהה', color:'var(--warm-gold)'});
-    if (raw.attendanceLevel >= 3) autoStrengths.push({text:'נוכחות טובה', color:'var(--primary)'});
-    if (raw.attendanceLevel && raw.attendanceLevel <= 1) autoWeaknesses.push({text:'נוכחות דורשת שיפור', color:'var(--danger)'});
+    if (raw.skillLevel >= 3) autoStrengths.push({text:'מיומנות חודשית ברמה גבוהה', color:'#E8B060'});
+    if (raw.attendanceLevel >= 3) autoStrengths.push({text:'נוכחות טובה', color:'#3AACA0'});
+    if (raw.attendanceLevel && raw.attendanceLevel <= 1) autoWeaknesses.push({text:'נוכחות דורשת שיפור', color:'#D45C6E'});
   }
   // TACHI auto items
   var fullName = s.last + ' ' + s.first;
   var tachi = SHILUV_TACHI ? SHILUV_TACHI[fullName] : null;
   if (tachi) {
-    if (tachi.cho) autoStrengths.push({text:'תח"י: ' + tachi.cho, color:'var(--primary)'});
-    if (tachi.lec) autoWeaknesses.push({text:'תח"י המלצה: ' + tachi.lec, color:'var(--primary)'});
+    if (tachi.cho) autoStrengths.push({text:'תח"י: ' + tachi.cho, color:'#3AACA0'});
+    if (tachi.lec) autoWeaknesses.push({text:'תח"י המלצה: ' + tachi.lec, color:'#3AACA0'});
   }
 
   // ══════════════════════════════════════════
   // 1. STRENGTHS & WEAKNESSES — pill style
   // ══════════════════════════════════════════
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">';
+  html += '<div class="plan-grid-2" style="margin-bottom:16px">';
 
   // ── Strengths card ──
   html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1.5px solid rgba(76,175,80,.2)">';
@@ -1271,7 +1296,7 @@ function renderJourney(s) {
   (plan.strengths || []).forEach(function(str, idx) {
     html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:.78rem;background:var(--success-bg);color:var(--success);border:1px solid rgba(76,175,80,.2);font-weight:500">';
     html += esc(str);
-    html += ' <button onclick="removePlanItem(\'' + s.id + '\',\'strengths\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:var(--success);font-size:.65rem;padding:0 2px;line-height:1">&#x2715;</button></span>';
+    html += ' <button onclick="removePlanItem(\'' + s.id + '\',\'strengths\',' + idx + ')" class="plan-remove-btn" style="color:var(--success)">&#x2715;</button></span>';
   });
   if (autoStrengths.length === 0 && (!plan.strengths || plan.strengths.length === 0)) {
     html += '<span style="font-size:.78rem;color:var(--muted)">יזוהו אוטומטית מהדוחות</span>';
@@ -1294,7 +1319,7 @@ function renderJourney(s) {
   (plan.weaknesses || []).forEach(function(w, idx) {
     html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:.78rem;background:var(--warn-bg);color:#B8860B;border:1px solid rgba(232,176,96,.2);font-weight:500">';
     html += esc(w);
-    html += ' <button onclick="removePlanItem(\'' + s.id + '\',\'weaknesses\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:#B8860B;font-size:.65rem;padding:0 2px;line-height:1">&#x2715;</button></span>';
+    html += ' <button onclick="removePlanItem(\'' + s.id + '\',\'weaknesses\',' + idx + ')" class="plan-remove-btn" style="color:#B8860B">&#x2715;</button></span>';
   });
   if (autoWeaknesses.length === 0 && (!plan.weaknesses || plan.weaknesses.length === 0)) {
     html += '<span style="font-size:.78rem;color:var(--muted)">יזוהו אוטומטית מהדוחות</span>';
@@ -1310,7 +1335,7 @@ function renderJourney(s) {
   // ══════════════════════════════════════════
   // 2. FIVE DIMENSIONS + FIVE SKILLS — compact
   // ══════════════════════════════════════════
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">';
+  html += '<div class="plan-grid-2" style="margin-bottom:16px">';
 
   // ── 5 Dimensions ──
   var DIM_DEFS = [
@@ -1365,11 +1390,17 @@ function renderJourney(s) {
 
   // ══════════════════════════════════════════
   // 3. EMOTIONAL / THERAPEUTIC CIRCLE
+  // (visible to counselor/treatment/principal/deputy — read-only summary for teacher, hidden from student)
   // ══════════════════════════════════════════
   var emo = plan.emotional || {};
+  var canEditEmotional = ['principal','deputy','treatment','counselor'].indexOf(state.role) > -1;
+
+  if (state.role !== 'student') {
   html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1.5px solid rgba(200,160,160,.25);margin-bottom:16px">';
   html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:12px;font-family:Heebo;color:var(--dusty-rose);display:flex;align-items:center;gap:6px">';
-  html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dusty-rose)" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/></svg> מעגל רגשי-ייעוצי</h4>';
+  html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dusty-rose)" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/></svg> מעגל רגשי-ייעוצי';
+  if (!canEditEmotional) html += ' <span style="font-size:.68rem;font-weight:400;color:var(--muted);background:var(--bg-alt);padding:2px 8px;border-radius:8px">לקריאה בלבד — עריכה ביועצת/רכזת טיפול</span>';
+  html += '</h4>';
 
   // Status indicators
   html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">';
@@ -1383,32 +1414,113 @@ function renderJourney(s) {
     var statusStyle = '';
     if (/מלא|פעיל|כן/.test(val)) statusStyle = 'background:var(--success-bg);color:var(--success);border-color:rgba(76,175,80,.2)';
     else if (/חלקי|משתנה/.test(val)) statusStyle = 'background:var(--warn-bg);color:#B8860B;border-color:rgba(232,176,96,.2)';
-    else if (/מסרב|מנותק|עוין|לא/.test(val)) statusStyle = 'background:var(--danger-bg);color:var(--danger);border-color:rgba(212,92,110,.2)';
+    else if (/מסרב|מנותק|לא/.test(val)) statusStyle = 'background:var(--danger-bg);color:var(--danger);border-color:rgba(212,92,110,.2)';
     else statusStyle = 'background:var(--bg-alt);color:var(--muted);border-color:var(--border)';
 
     html += '<div style="flex:1;min-width:140px;border:1.5px solid var(--border);border-radius:12px;padding:10px;' + statusStyle + '">';
     html += '<div style="font-size:.7rem;font-weight:600;margin-bottom:4px;opacity:.7">' + ef.label + '</div>';
-    html += '<select onchange="saveEmotionalField(\'' + s.id + '\',\'' + ef.key + '\',this.value)" style="width:100%;padding:4px 6px;border:1px solid rgba(0,0,0,.1);border-radius:8px;font-family:Heebo;font-size:.78rem;background:rgba(255,255,255,.7);color:inherit">';
-    html += '<option value="">בחרי...</option>';
-    ef.options.forEach(function(opt) {
-      html += '<option value="' + opt + '"' + (val === opt ? ' selected' : '') + '>' + opt + '</option>';
-    });
-    html += '</select></div>';
+    if (canEditEmotional) {
+      html += '<select onchange="saveEmotionalField(\'' + s.id + '\',\'' + ef.key + '\',this.value)" style="width:100%;padding:6px 8px;border:1px solid rgba(0,0,0,.1);border-radius:8px;font-family:Heebo;font-size:.82rem;background:rgba(255,255,255,.7);color:inherit;min-height:36px">';
+      html += '<option value="">בחרי...</option>';
+      ef.options.forEach(function(opt) {
+        html += '<option value="' + opt + '"' + (val === opt ? ' selected' : '') + '>' + opt + '</option>';
+      });
+      html += '</select>';
+    } else {
+      html += '<div style="font-size:.82rem;font-weight:600">' + esc(val || '—') + '</div>';
+    }
+    html += '</div>';
   });
   html += '</div>';
 
   // Therapist / treatment info
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
+  html += '<div class="plan-grid-2" style="gap:10px;margin-bottom:12px">';
   html += '<div><label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">גורם מטפל</label>';
-  html += '<input type="text" value="' + esc(emo.therapist || '') + '" onchange="saveEmotionalField(\'' + s.id + '\',\'therapist\',this.value)" placeholder="שם הגורם המטפל..." style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem"></div>';
-  html += '<div><label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">סוג טיפול</label>';
-  html += '<input type="text" value="' + esc(emo.treatmentType || '') + '" onchange="saveEmotionalField(\'' + s.id + '\',\'treatmentType\',this.value)" placeholder="CBT, אמנות, פסיכולוג..." style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem"></div>';
+  if (canEditEmotional) {
+    html += '<input type="text" value="' + esc(emo.therapist || '') + '" onchange="saveEmotionalField(\'' + s.id + '\',\'therapist\',this.value)" placeholder="שם הגורם המטפל..." style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem">';
+  } else {
+    html += '<div style="font-size:.82rem;padding:6px 0">' + esc(emo.therapist || '—') + '</div>';
+  }
   html += '</div>';
+  html += '<div><label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">סוג טיפול</label>';
+  if (canEditEmotional) {
+    html += '<input type="text" value="' + esc(emo.treatmentType || '') + '" onchange="saveEmotionalField(\'' + s.id + '\',\'treatmentType\',this.value)" placeholder="CBT, אמנות, פסיכולוג..." style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem">';
+  } else {
+    html += '<div style="font-size:.82rem;padding:6px 0">' + esc(emo.treatmentType || '—') + '</div>';
+  }
+  html += '</div></div>';
 
   // Emotional plan / notes
   html += '<label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">תוכנית רגשית-ייעוצית</label>';
-  html += '<textarea onchange="saveEmotionalField(\'' + s.id + '\',\'plan\',this.value)" placeholder="תוכנית ייעוצית, המלצות, יעדים רגשיים..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem;min-height:60px;resize:vertical">' + esc(emo.plan || '') + '</textarea>';
+  if (canEditEmotional) {
+    html += '<textarea onchange="saveEmotionalField(\'' + s.id + '\',\'plan\',this.value)" placeholder="תוכנית ייעוצית, המלצות, יעדים רגשיים..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem;min-height:60px;resize:vertical">' + esc(emo.plan || '') + '</textarea>';
+  } else {
+    html += '<div style="font-size:.82rem;color:var(--text-light);padding:6px 0;line-height:1.5">' + esc(emo.plan || 'טרם הוזנה תוכנית') + '</div>';
+  }
   html += '</div>';
+  } // end if (state.role !== 'student')
+
+  // ══════════════════════════════════════════
+  // 3.5 RISK & PROTECTION FACTORS + SAFETY NET
+  // (visible to counselor/treatment/principal/deputy only)
+  // ══════════════════════════════════════════
+  if (canEditEmotional || state.role === 'principal' || state.role === 'deputy') {
+    var risk = plan.riskFactors || {};
+    html += '<div class="plan-grid-2" style="margin-bottom:16px">';
+
+    // ── Risk Factors ──
+    html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1.5px solid rgba(212,92,110,.15)">';
+    html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:10px;font-family:Heebo;color:var(--danger);display:flex;align-items:center;gap:6px">';
+    html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> גורמי סיכון</h4>';
+    var riskItems = [
+      {key:'family', label:'מצב משפחתי'},
+      {key:'substances', label:'שימוש בחומרים'},
+      {key:'selfHarm', label:'פגיעה עצמית / מחשבות אובדניות'},
+      {key:'criminal', label:'קשר עם חוק / צו'},
+      {key:'violence', label:'אלימות / הזנחה'},
+      {key:'other', label:'אחר'}
+    ];
+    riskItems.forEach(function(ri) {
+      var val = risk[ri.key] || '';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+      html += '<span style="font-size:.78rem;font-weight:600;width:180px;flex-shrink:0">' + ri.label + '</span>';
+      if (canEditEmotional) {
+        html += '<input type="text" value="' + esc(val) + '" onchange="saveRiskField(\'' + s.id + '\',\'riskFactors\',\'' + ri.key + '\',this.value)" placeholder="פרטי..." style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-family:Heebo;font-size:.78rem">';
+      } else {
+        html += '<span style="font-size:.78rem;color:' + (val ? 'var(--danger)' : 'var(--muted)') + '">' + esc(val || '—') + '</span>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // ── Safety Net ──
+    html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1.5px solid rgba(58,172,160,.15)">';
+    html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:10px;font-family:Heebo;color:var(--primary);display:flex;align-items:center;gap:6px">';
+    html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> רשת ביטחון</h4>';
+    var safetyNet = plan.safetyNet || {};
+    var safetyItems = [
+      {key:'significantAdult', label:'מבוגר משמעותי'},
+      {key:'kabas', label:'קב"ס'},
+      {key:'socialWorker', label:'עו"ס רווחה'},
+      {key:'psychiatrist', label:'פסיכיאטר / פסיכולוג חיצוני'},
+      {key:'probation', label:'קצין מבחן'},
+      {key:'hobby', label:'תחביב / מסגרת חיצונית'}
+    ];
+    safetyItems.forEach(function(si) {
+      var val = safetyNet[si.key] || '';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+      html += '<span style="font-size:.78rem;font-weight:600;width:180px;flex-shrink:0">' + si.label + '</span>';
+      if (canEditEmotional) {
+        html += '<input type="text" value="' + esc(val) + '" onchange="saveRiskField(\'' + s.id + '\',\'safetyNet\',\'' + si.key + '\',this.value)" placeholder="שם + טלפון..." style="flex:1;padding:5px 8px;border:1px solid var(--border);border-radius:8px;font-family:Heebo;font-size:.78rem">';
+      } else {
+        html += '<span style="font-size:.78rem;color:' + (val ? 'var(--primary)' : 'var(--muted)') + '">' + esc(val || '—') + '</span>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+
+    html += '</div>'; // end grid
+  }
 
   // ══════════════════════════════════════════
   // 4. GOALS
@@ -1429,6 +1541,7 @@ function renderJourney(s) {
   html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> יעדים ומטרות</h4>';
 
   if (autoGoals.length > 0 || manualGoals.length > 0) {
+    html += '<div class="plan-goals-wrap">';
     html += '<table style="width:100%;border-collapse:collapse;font-size:.82rem">';
     html += '<thead><tr style="border-bottom:2px solid var(--border)">';
     html += '<th style="text-align:right;padding:8px 6px;font-weight:700">יעד</th>';
@@ -1454,14 +1567,14 @@ function renderJourney(s) {
       html += '<td style="padding:7px 6px;color:var(--muted);font-size:.78rem">' + esc(g.measure || '—') + '</td>';
       html += '<td style="padding:7px 6px;text-align:center"><span style="' + (stC[st] || '') + ';padding:2px 8px;border-radius:8px;font-size:.72rem">' + (stL[st] || st) + '</span></td>';
       html += '<td style="padding:7px 6px;text-align:center;font-size:.76rem">' + esc(g.date || '—') + '</td>';
-      html += '<td><button onclick="removePlanItem(\'' + s.id + '\',\'goals\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.65rem">&#x2715;</button></td></tr>';
+      html += '<td><button onclick="removePlanItem(\'' + s.id + '\',\'goals\',' + idx + ')" class="plan-remove-btn" style="color:var(--muted)">&#x2715;</button></td></tr>';
     });
-    html += '</tbody></table>';
+    html += '</tbody></table></div>'; // close plan-goals-wrap
   } else {
     html += '<div style="color:var(--muted);font-size:.82rem;padding:8px 0">אין יעדים — יופיעו הצעות אוטומטיות כשיזוהו נקודות לחיזוק</div>';
   }
 
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">';
+  html += '<div class="plan-grid-2" style="margin-top:10px;gap:6px">';
   html += '<input type="text" id="newGoalText" placeholder="יעד חדש..." style="padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.78rem">';
   html += '<input type="text" id="newGoalMeasure" placeholder="מדד הצלחה..." style="padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.78rem">';
   html += '</div>';
@@ -1472,6 +1585,119 @@ function renderJourney(s) {
   // 5. WORK PLANS BY TRIMESTER
   // ══════════════════════════════════════════
   html += renderWorkPlans(s, timeline);
+
+  return html;
+}
+
+// ── Quick Summary — סיכום בן שנייה ──
+function renderQuickSummary(s, plan, timeline, scores, skills, dims) {
+  var emo = plan.emotional || {};
+  var manualGoals = plan.goals || [];
+  var activeGoals = manualGoals.filter(function(g) { return g.status === 'active'; }).length;
+  var doneGoals = manualGoals.filter(function(g) { return g.status === 'done'; }).length;
+
+  // Calculate overall score (0-100) from 4 dimensions
+  var dimScores = [scores.academic, scores.social, scores.personal, scores.professional];
+  var validScores = dimScores.filter(function(v) { return v > 0; });
+  var overallScore = validScores.length > 0 ? Math.round(validScores.reduce(function(a,b){return a+b;},0) / validScores.length) : 0;
+
+  // Traffic light
+  var light = 'none'; var lightColor = 'var(--muted)'; var lightBg = 'var(--bg-alt)'; var lightLabel = 'אין נתונים';
+  if (overallScore > 0) {
+    if (overallScore >= 65) { light = 'green'; lightColor = 'var(--success)'; lightBg = 'var(--success-bg)'; lightLabel = 'מצב תקין'; }
+    else if (overallScore >= 45) { light = 'yellow'; lightColor = '#B8860B'; lightBg = 'var(--warn-bg)'; lightLabel = 'דורש תשומת לב'; }
+    else { light = 'red'; lightColor = 'var(--danger)'; lightBg = 'var(--danger-bg)'; lightLabel = 'דורש התערבות'; }
+  }
+
+  // Trend
+  var trend = '';
+  if (timeline.length >= 2) {
+    var first = timeline[0]; var last = timeline[timeline.length - 1];
+    var firstAvg = (first.academic + first.social + first.personal + first.professional) / 4;
+    var lastAvg = (last.academic + last.social + last.personal + last.professional) / 4;
+    if (lastAvg > firstAvg + 5) trend = 'improving';
+    else if (lastAvg < firstAvg - 5) trend = 'declining';
+    else trend = 'stable';
+  }
+
+  // Treatment status
+  var treatLabel = '';
+  if (emo.inTreatment && /כן/.test(emo.inTreatment)) treatLabel = emo.inTreatment;
+
+  // Build summary text
+  var summaryParts = [];
+  if (overallScore > 0) summaryParts.push('ביצועים ' + (overallScore >= 65 ? 'תקינים' : overallScore >= 45 ? 'בינוניים' : 'נמוכים') + ' (' + overallScore + ')');
+  if (trend === 'improving') summaryParts.push('מגמת שיפור');
+  else if (trend === 'declining') summaryParts.push('מגמת ירידה');
+  if (treatLabel) summaryParts.push('בטיפול ' + treatLabel.replace('כן — ',''));
+  if (activeGoals > 0) summaryParts.push(activeGoals + ' יעדים פעילים');
+  if (doneGoals > 0) summaryParts.push(doneGoals + ' הושלמו');
+
+  // TACHI
+  var fullName = s.last + ' ' + s.first;
+  var tachi = SHILUV_TACHI ? SHILUV_TACHI[fullName] : null;
+  if (tachi) summaryParts.push('תח"י');
+
+  var html = '';
+  html += '<div style="background:' + lightBg + ';border:1.5px solid ' + lightColor + '30;border-radius:16px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px">';
+
+  // Traffic light circle
+  html += '<div style="width:44px;height:44px;border-radius:50%;background:' + (light !== 'none' ? lightColor : 'var(--border)') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
+  if (light === 'green') html += '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M9 11l3 3L22 4"/></svg>';
+  else if (light === 'yellow') html += '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  else if (light === 'red') html += '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  else html += '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="1"/></svg>';
+  html += '</div>';
+
+  // Summary text
+  html += '<div style="flex:1;min-width:0">';
+  html += '<div style="font-size:.88rem;font-weight:700;color:' + lightColor + ';margin-bottom:2px">' + s.first + ' ' + s.last + ' — ' + lightLabel + '</div>';
+  if (summaryParts.length > 0) {
+    html += '<div style="font-size:.78rem;color:var(--text-light)">' + summaryParts.join(' · ') + '</div>';
+  } else {
+    html += '<div style="font-size:.78rem;color:var(--muted)">מלאי דוח חודשי ראשון כדי לראות סיכום</div>';
+  }
+  html += '</div>';
+
+  // Quick stats
+  if (overallScore > 0) {
+    html += '<div style="display:flex;gap:10px;flex-shrink:0">';
+    var miniStats = [
+      {val: scores.academic, label:'לימודי', color:'#5B9BD5'},
+      {val: scores.social, label:'חברתי', color:'#E06090'},
+      {val: scores.personal, label:'אישי', color:'#8B6BC0'},
+      {val: scores.professional, label:'מקצועי', color:'#7AB648'}
+    ];
+    miniStats.forEach(function(ms) {
+      if (ms.val > 0) {
+        html += '<div style="text-align:center"><div style="font-size:1rem;font-weight:800;color:' + ms.color + '">' + ms.val + '</div>';
+        html += '<div style="font-size:.62rem;color:var(--muted)">' + ms.label + '</div></div>';
+      }
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+
+  // Onboarding for empty state
+  if (overallScore === 0 && (!plan.strengths || plan.strengths.length === 0) && manualGoals.length === 0) {
+    html += '<div style="background:rgba(91,155,213,.06);border:1px solid rgba(91,155,213,.15);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:.82rem;color:var(--info)">';
+    html += '<div style="font-weight:700;margin-bottom:4px">איך מתחילים?</div>';
+    if (state.role === 'teacher') {
+      html += '1. הוסיפי חוזקות ונקודות לחיזוק למטה<br>';
+      html += '2. הגדירי לפחות יעד אחד<br>';
+      html += '3. ממדים ומיומנויות יתמלאו אוטומטית מהדוחות החודשיים';
+    } else if (state.role === 'counselor' || state.role === 'treatment') {
+      html += '1. מלאי את המעגל הרגשי-ייעוצי<br>';
+      html += '2. הוסיפי חוזקות ונקודות לחיזוק<br>';
+      html += '3. הגדירי יעדים ייעוציים';
+    } else {
+      html += '1. התחילי מחוזקות ונקודות לחיזוק<br>';
+      html += '2. הגדירי יעדים<br>';
+      html += '3. השאר יתמלא אוטומטית מהדוחות';
+    }
+    html += '</div>';
+  }
 
   return html;
 }
@@ -1489,10 +1715,10 @@ function renderWorkPlans(s, timeline) {
   ];
 
   var circles = [
-    {key:'academic', name:'לימודי', color:'#5B9BD5', icon:'&#x1F4DA;'},
-    {key:'social', name:'חברתי-ערכי', color:'#E06090', icon:'&#x1F91D;'},
-    {key:'personal', name:'אישי-רגשי', color:'#8B6BC0', icon:'&#x1F4A1;'},
-    {key:'professional', name:'מקצועי', color:'#7AB648', icon:'&#x2699;'}
+    {key:'academic', name:'לימודי', color:'#5B9BD5'},
+    {key:'social', name:'חברתי-ערכי', color:'#E06090'},
+    {key:'personal', name:'אישי-רגשי', color:'#8B6BC0'},
+    {key:'professional', name:'מקצועי', color:'#7AB648'}
   ];
 
   html += '<div style="background:var(--card);border-radius:16px;padding:20px;border:1px solid var(--border);margin-bottom:16px">';
@@ -1515,7 +1741,7 @@ function renderWorkPlans(s, timeline) {
     }
 
     // Circle cards for this trimester
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    html += '<div class="plan-grid-2" style="gap:10px">';
     circles.forEach(function(c) {
       var avg = 0;
       if (triData.length > 0) {
@@ -1708,7 +1934,7 @@ function renderInvestments(s) {
           '<div style="font-size:.9rem;font-weight:600">' + esc(r.name) + '</div>' +
           '<div style="font-size:.72rem;color:var(--success);font-weight:700;margin-top:2px">' + r.cost + ' פתקים</div>' +
         '</div>' +
-        '<button onclick="redeemReward(' + s.id + ',' + r.cost + ',\'' + esc(r.name).replace(/'/g,"\\'") + '\',\'' + (state.loginName || state.role || 'צוות') + '\')" ' +
+        '<button onclick="redeemReward(' + s.id + ',' + r.cost + ',\'' + esc(r.name).replace(/'/g,"\\'") + '\',\'' + (state.userName || state.role || 'צוות') + '\')" ' +
           'style="background:var(--success);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-family:Heebo;font-size:.78rem;font-weight:700;cursor:pointer;min-height:36px">' +
           'ממשתי ✓</button>' +
       '</div>';
@@ -2200,6 +2426,8 @@ function getPlanData(studentId) {
 }
 
 function savePlanData(studentId, data) {
+  data.lastUpdated = new Date().toLocaleString('he-IL');
+  data.lastUpdatedBy = state.userName || ROLE_LABELS[state.role] || '';
   cloudStorage.set('sf_plan_' + studentId, data);
 }
 
@@ -2267,8 +2495,19 @@ function saveEmotionalField(studentId, field, value) {
   if (!plan.emotional) plan.emotional = {};
   plan.emotional[field] = value;
   savePlanData(studentId, plan);
+  // Re-render to update status colors
+  var s = STUDENTS.find(function(st) { return String(st.id) === String(studentId); });
+  if (s) renderTabContent(s);
 }
 window.saveEmotionalField = saveEmotionalField;
+
+function saveRiskField(studentId, section, field, value) {
+  var plan = getPlanData(studentId);
+  if (!plan[section]) plan[section] = {};
+  plan[section][field] = value;
+  savePlanData(studentId, plan);
+}
+window.saveRiskField = saveRiskField;
 
 // ── DEMO DATA LOADER — נוער בסיכון, קשיי קשב, תח"י ──
 function loadDemoData(studentId) {
@@ -2331,6 +2570,22 @@ function loadDemoData(studentId) {
       therapist: 'צהיי גטהון (יועצת)',
       treatmentType: 'CBT + קבוצה טיפולית',
       plan: 'עבודה על ויסות רגשי ושליטה בכעסים. פגישה שבועית עם יועצת. הפניה לאבחון עדכני (ADHD+LD). שיתוף אמא — מגיבה אך מתקשה ביישום עקבי בבית. טיפול באומנות פעם בשבועיים.'
+    },
+    riskFactors: {
+      family: 'הורים גרושים, אמא חד-הורית, 3 אחים',
+      substances: '',
+      selfHarm: '',
+      criminal: '',
+      violence: 'חשיפה לאלימות מילולית בבית (עבר)',
+      other: 'שינה לא מוסדרת — משחקי מחשב עד 2 בלילה'
+    },
+    safetyNet: {
+      significantAdult: 'סבתא רבקה — 050-1234567',
+      kabas: '',
+      socialWorker: '',
+      psychiatrist: '',
+      probation: '',
+      hobby: 'כדורגל — מועדון הפועל ירושלים, אימונים שלישי+חמישי'
     },
     workPlans: {
       t1: {
