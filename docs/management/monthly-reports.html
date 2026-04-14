@@ -194,20 +194,29 @@ h1,h2,h3,h4{font-family:'Playpen Sans Hebrew','Heebo',sans-serif}
 .data-table tr.current-month td{background:rgba(232,176,96,.08)}
 .data-table input,.data-table textarea{width:100%;border:1px solid transparent;background:transparent;padding:4px 8px;border-radius:8px;font-family:Heebo;font-size:.84rem;color:var(--text);transition:.2s;resize:none}
 .data-table input:focus,.data-table textarea:focus{border-color:var(--primary);background:var(--card);outline:none}
-/* Monthly tracking — wider textareas */
-#cMonthlyTable textarea{min-height:52px;resize:vertical;line-height:1.5;cursor:pointer}
-#cMonthlyTable td:not(:first-child){min-width:180px}
-/* Expand overlay for monthly tracking */
-.expand-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
-.expand-overlay.show{opacity:1}
-.expand-panel{background:var(--card);border-radius:20px;padding:28px;width:min(90vw,600px);max-height:80vh;box-shadow:0 20px 60px rgba(0,0,0,.2);direction:rtl}
-.expand-panel h4{margin:0 0 8px;font-size:1rem;color:var(--primary-dark)}
-.expand-panel .expand-label{font-size:.82rem;color:var(--muted);margin-bottom:12px}
-.expand-panel textarea{width:100%;min-height:180px;border:1px solid var(--border);border-radius:14px;padding:14px 16px;font-family:Heebo;font-size:.95rem;line-height:1.7;color:var(--text);background:#fff;resize:vertical;outline:none;transition:border-color .2s}
-.expand-panel textarea:focus{border-color:var(--primary)}
-.expand-panel .expand-actions{display:flex;gap:10px;justify-content:flex-start;margin-top:16px}
-.expand-panel .btn-close-expand{background:transparent;border:1px solid var(--border);color:var(--text);padding:8px 20px;border-radius:12px;font-family:Heebo;font-size:.85rem;cursor:pointer}
-.expand-panel .btn-save-expand{background:var(--primary);color:#fff;border:none;padding:8px 24px;border-radius:12px;font-family:Heebo;font-size:.85rem;font-weight:600;cursor:pointer}
+/* Monthly tracking — card layout */
+.monthly-cards{display:flex;flex-direction:column;gap:12px}
+.month-card{border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:all .2s}
+.month-card.current{border-color:var(--primary);box-shadow:0 2px 12px rgba(58,172,160,.1)}
+.month-card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;background:rgba(58,172,160,.03);transition:background .2s;gap:10px}
+.month-card.current .month-card-header{background:rgba(232,176,96,.08)}
+.month-card-header:hover{background:rgba(58,172,160,.06)}
+.month-card-header .month-name{font-weight:700;font-size:.92rem;white-space:nowrap}
+.month-card-header .month-preview{flex:1;font-size:.8rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.month-card-header .month-toggle{width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:transform .2s;flex-shrink:0}
+.month-card.open .month-toggle{transform:rotate(180deg)}
+.month-card-body{display:none;padding:16px 18px;border-top:1px solid var(--border)}
+.month-card.open .month-card-body{display:block}
+.month-field{margin-bottom:14px}
+.month-field:last-child{margin-bottom:0}
+.month-field label{display:block;font-size:.82rem;font-weight:600;color:var(--primary-dark);margin-bottom:6px}
+.month-field textarea{width:100%;min-height:80px;border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-family:Heebo;font-size:.9rem;line-height:1.6;color:var(--text);background:#fff;resize:vertical;outline:none;transition:border-color .2s}
+.month-field textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(58,172,160,.1)}
+.month-card.empty .month-card-header{opacity:.5}
+@media(max-width:600px){
+  .month-card-body{padding:12px 14px}
+  .month-field textarea{min-height:70px;font-size:.86rem}
+}
 
 /* Traffic light */
 .traffic-light{display:flex;gap:4px;align-items:center}
@@ -2090,22 +2099,35 @@ function fillCounselorForm(){
     <div class="card" style="margin-bottom:20px">
       <div class="card-header"><h3>ד. מעקב חודשי</h3></div>
       <div class="card-body">
-        <div class="table-scroll">
-          <table class="data-table" id="cMonthlyTable">
-            <thead><tr><th style="width:100px">חודש</th><th>מה נעשה</th><th>יעדים</th><th>הערות</th></tr></thead>
-            <tbody id="cMonthlyTableBody">
-              ${MONTH_KEYS.map(mk => {
-                const d = s.monthlyData[mk] || {done:'',goals:'',notes:''};
-                const isCurrent = mk===currentMonth;
-                return `<tr data-month="${mk}" class="${isCurrent?'current-month':''}">
-                  <td style="font-weight:${isCurrent?700:400};white-space:nowrap">${MONTHS_HE[mk]}</td>
-                  <td><textarea rows="2" ondblclick="openExpandPanel(this,'${MONTHS_HE[mk]}','מה נעשה')">${d.done}</textarea></td>
-                  <td><textarea rows="2" ondblclick="openExpandPanel(this,'${MONTHS_HE[mk]}','יעדים')">${d.goals}</textarea></td>
-                  <td><textarea rows="2" ondblclick="openExpandPanel(this,'${MONTHS_HE[mk]}','הערות')">${d.notes}</textarea></td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
+        <div class="monthly-cards" id="cMonthlyCards">
+          ${MONTH_KEYS.map(mk => {
+            const d = s.monthlyData[mk] || {done:'',goals:'',notes:''};
+            const isCurrent = mk===currentMonth;
+            const hasContent = d.done || d.goals || d.notes;
+            const isOpen = isCurrent;
+            const preview = d.done ? d.done.substring(0,60)+(d.done.length>60?'...':'') : '';
+            return `<div class="month-card ${isCurrent?'current':''} ${isOpen?'open':''} ${!hasContent&&!isCurrent?'empty':''}" data-month="${mk}">
+              <div class="month-card-header" onclick="toggleMonthCard(this)">
+                <span class="month-name">${MONTHS_HE[mk]}${isCurrent?' (נוכחי)':''}</span>
+                <span class="month-preview">${preview}</span>
+                <span class="month-toggle"><svg width="14" height="14" fill="none" stroke="var(--text)" stroke-width="2"><path d="M3 5l4 4 4-4"/></svg></span>
+              </div>
+              <div class="month-card-body">
+                <div class="month-field">
+                  <label>מה נעשה</label>
+                  <textarea data-mfield="done" placeholder="תארי מה עשית עם התלמיד/ה החודש...">${d.done}</textarea>
+                </div>
+                <div class="month-field">
+                  <label>יעדים</label>
+                  <textarea data-mfield="goals" placeholder="מה היעדים לחודש הבא?">${d.goals}</textarea>
+                </div>
+                <div class="month-field">
+                  <label>הערות</label>
+                  <textarea data-mfield="notes" placeholder="הערות נוספות...">${d.notes}</textarea>
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
         </div>
       </div>
     </div>
@@ -2191,46 +2213,10 @@ function fillCounselorForm(){
   setTimeout(()=> attachAutoSaveToContainer(area), 100);
 }
 
-// Expand panel for monthly tracking textareas
-let expandSource = null;
-function openExpandPanel(textarea, monthLabel, fieldLabel){
-  expandSource = textarea;
-  let overlay = document.getElementById('expandOverlay');
-  if(!overlay){
-    overlay = document.createElement('div');
-    overlay.id = 'expandOverlay';
-    overlay.className = 'expand-overlay';
-    overlay.innerHTML = `
-      <div class="expand-panel">
-        <h4 id="expandTitle"></h4>
-        <div class="expand-label" id="expandLabel"></div>
-        <textarea id="expandTextarea"></textarea>
-        <div class="expand-actions">
-          <button class="btn-save-expand" onclick="closeExpandPanel(true)">שמור</button>
-          <button class="btn-close-expand" onclick="closeExpandPanel(false)">ביטול</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', e => { if(e.target===overlay) closeExpandPanel(false); });
-  }
-  document.getElementById('expandTitle').textContent = fieldLabel;
-  document.getElementById('expandLabel').textContent = monthLabel;
-  const ta = document.getElementById('expandTextarea');
-  ta.value = textarea.value;
-  overlay.classList.add('show');
-  overlay.style.display = 'flex';
-  setTimeout(()=> ta.focus(), 50);
-}
-function closeExpandPanel(save){
-  const overlay = document.getElementById('expandOverlay');
-  if(!overlay) return;
-  if(save && expandSource){
-    expandSource.value = document.getElementById('expandTextarea').value;
-    autoSave();
-  }
-  overlay.classList.remove('show');
-  setTimeout(()=>{ overlay.style.display='none'; }, 200);
-  expandSource = null;
+// Monthly tracking — toggle card open/close
+function toggleMonthCard(header){
+  const card = header.closest('.month-card');
+  card.classList.toggle('open');
 }
 
 function setTrafficLight(el){
@@ -2275,15 +2261,17 @@ function collectCounselorFormData(){
     if(el) s[f] = el.checked;
   });
 
-  // Monthly data
-  document.querySelectorAll('#cMonthlyTableBody tr').forEach(row => {
-    const mk = row.dataset.month;
+  // Monthly data — read from card layout
+  document.querySelectorAll('#cMonthlyCards .month-card').forEach(card => {
+    const mk = card.dataset.month;
     if(mk){
       if(!s.monthlyData[mk]) s.monthlyData[mk] = {done:'',goals:'',notes:''};
-      const inputs = row.querySelectorAll('textarea');
-      s.monthlyData[mk].done = inputs[0]?.value || '';
-      s.monthlyData[mk].goals = inputs[1]?.value || '';
-      s.monthlyData[mk].notes = inputs[2]?.value || '';
+      const done = card.querySelector('[data-mfield="done"]');
+      const goals = card.querySelector('[data-mfield="goals"]');
+      const notes = card.querySelector('[data-mfield="notes"]');
+      s.monthlyData[mk].done = done?.value || '';
+      s.monthlyData[mk].goals = goals?.value || '';
+      s.monthlyData[mk].notes = notes?.value || '';
     }
   });
 
