@@ -1221,7 +1221,9 @@ function renderJourney(s) {
   var scores = getCurrentScores(s, timeline);
   var html = '';
 
-  html += '<h4 style="font-size:.92rem;font-weight:700;margin-bottom:4px;font-family:Heebo">תוכנית אישית מותאמת</h4>';
+  html += '<h4 style="font-size:.92rem;font-weight:700;margin-bottom:4px;font-family:Heebo;display:flex;align-items:center;gap:10px">תוכנית אישית מותאמת';
+  html += ' <button class="btn btn-sm" onclick="loadDemoData(\'' + s.id + '\')" style="font-size:.7rem;background:var(--info-bg);color:var(--info);border:1px solid rgba(91,155,213,.3);padding:3px 10px;border-radius:8px;cursor:pointer">טען דמו</button>';
+  html += '</h4>';
   html += '<p style="font-size:.82rem;color:var(--muted);margin-bottom:18px">חוזקות, נקודות לחיזוק, יעדים ומטרות חודשיים — נגזר מהדוחות החודשיים + עריכה ידנית</p>';
 
   // ── Auto-detect strengths & weaknesses from monthly data ──
@@ -2172,6 +2174,74 @@ function saveTrimesterNote(studentId, trimesterId) {
   savePlanData(studentId, plan);
 }
 window.saveTrimesterNote = saveTrimesterNote;
+
+// ── DEMO DATA LOADER ──
+function loadDemoData(studentId) {
+  var s = STUDENTS.find(function(st) { return String(st.id) === String(studentId); });
+  if (!s) return;
+
+  // 1. Inject mock monthly reports (oct, nov, dec, jan, feb, mar)
+  var existing = {};
+  try { existing = JSON.parse(localStorage.getItem('ort_monthly_reports_v2') || '{}'); } catch(e) {}
+  if (!existing.homeroomReports) existing.homeroomReports = {};
+  if (!existing.homeroomReports[s.cls]) existing.homeroomReports[s.cls] = {};
+
+  var demoTracking = {
+    oct: {dimLevel:2, skillLevel:2, academicLevel:2, attendanceLevel:1, performanceLevel:2, name:s.last+' '+s.first},
+    nov: {dimLevel:2, skillLevel:2, academicLevel:2, attendanceLevel:2, performanceLevel:2, name:s.last+' '+s.first},
+    dec: {dimLevel:3, skillLevel:2, academicLevel:3, attendanceLevel:2, performanceLevel:3, name:s.last+' '+s.first},
+    jan: {dimLevel:3, skillLevel:3, academicLevel:3, attendanceLevel:2, performanceLevel:3, name:s.last+' '+s.first},
+    feb: {dimLevel:3, skillLevel:3, academicLevel:3, attendanceLevel:3, performanceLevel:3, name:s.last+' '+s.first},
+    mar: {dimLevel:4, skillLevel:3, academicLevel:3, attendanceLevel:3, performanceLevel:4, name:s.last+' '+s.first}
+  };
+
+  ['oct','nov','dec','jan','feb','mar'].forEach(function(m) {
+    if (!existing.homeroomReports[s.cls][m]) existing.homeroomReports[s.cls][m] = {studentTracking:{}};
+    if (!existing.homeroomReports[s.cls][m].studentTracking) existing.homeroomReports[s.cls][m].studentTracking = {};
+    existing.homeroomReports[s.cls][m].studentTracking[s.id] = demoTracking[m];
+  });
+
+  localStorage.setItem('ort_monthly_reports_v2', JSON.stringify(existing));
+
+  // 2. Inject plan data with manual items
+  var planData = {
+    strengths: ['מנהיגות טבעית בכיתה', 'יכולת עבודת צוות מעולה'],
+    weaknesses: ['קושי בהתמדה במשימות ארוכות', 'ניהול זמן בבחינות'],
+    goals: [
+      {text:'להגיש 100% מהעבודות בזמן', measure:'אפס עבודות חסרות בשליש ג\'', status:'active', date:'14/04/2026'},
+      {text:'שיפור ממוצע ב-8 נקודות', measure:'ממוצע 72 ומעלה', status:'active', date:'14/04/2026'},
+      {text:'להשתתף בפרויקט התנדבות', measure:'לפחות 4 מפגשים', status:'done', date:'01/02/2026'}
+    ],
+    workPlans: {
+      t1: {
+        academic: 'ממוצע 58 — התחלה חלשה, קשיי הסתגלות. נדרש ליווי אישי במתמטיקה ואנגלית',
+        social: 'משתלב חברתית אך נוטה לעימותים. עבודה על תקשורת בינאישית',
+        personal: 'נוכחות נמוכה (68%). שיחה עם הורים, הפניה ליועצת',
+        professional: 'מגלה עניין במגמה, עבודת ידיים טובה. צריך חיזוק בחלק העיוני',
+        notes: 'תלמיד עם פוטנציאל, דורש תשומת לב לנוכחות ולהרגלי למידה'
+      },
+      t2: {
+        academic: 'ממוצע עלה ל-64 — שיפור משמעותי. ממשיך ליווי במתמטיקה',
+        social: 'שיפור ניכר — לקח אחריות על פרויקט כיתתי',
+        personal: 'נוכחות עלתה ל-82%. מגיע בזמן ברוב הימים',
+        professional: 'ציון מגמה 78 — מצטיין בחלק המעשי',
+        notes: 'מגמת שיפור ברורה. להמשיך חיזוק חיובי ולתת אחריות'
+      },
+      t3: {
+        academic: '',
+        social: '',
+        personal: '',
+        professional: '',
+        notes: ''
+      }
+    }
+  };
+
+  cloudStorage.set('sf_plan_' + studentId, planData);
+  renderTabContent(s);
+  alert('נתוני דמו נטענו בהצלחה עבור ' + s.first + ' ' + s.last + '!');
+}
+window.loadDemoData = loadDemoData;
 
 function getDocuments(s) {
   // Check admission docs
