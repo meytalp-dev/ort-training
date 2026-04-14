@@ -1700,23 +1700,29 @@ function saveToSheet() {
   });
   showCloudStatus('saving', 'שומר בענן...');
 
+  // Fire-and-forget POST (mode: no-cors avoids CORS failures on redirect)
   fetch(API_URL, {
     method: 'POST',
+    mode: 'no-cors',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify(payload),
     redirect: 'follow'
   })
-  .then(res => {
-    if (!res.ok && res.type !== 'opaque') throw new Error('HTTP ' + res.status);
-    return res.json();
-  })
-  .then(result => {
-    if (result && (result.result === 'success' || result.status === 'ok')) {
-      showCloudStatus('saved', 'נשמר בענן');
-    } else {
-      showCloudStatus('error', 'שגיאה בשמירה — נשמר מקומית');
-      console.warn('Cloud save response:', result);
-    }
+  .then(() => {
+    // no-cors = opaque response, verify save with JSONP GET after short delay
+    setTimeout(() => {
+      loadFromSheet(role)
+        .then(response => {
+          if (response && response.result === 'success' && response.plan && hasRealContent(response.plan)) {
+            showCloudStatus('saved', 'נשמר בענן');
+          } else {
+            showCloudStatus('error', 'שגיאה בשמירה — נשמר מקומית');
+          }
+        })
+        .catch(() => {
+          showCloudStatus('error', 'שגיאה בשמירה — נשמר מקומית');
+        });
+    }, 2000);
   })
   .catch(err => {
     showCloudStatus('error', 'שגיאה בשמירה — נשמר מקומית');
@@ -1758,17 +1764,19 @@ function showLoading(show) {
 }
 
 function hasRealContent(plan) {
-  // Check if the plan from Sheet has actual content beyond just name/role
+  // Check if the plan from Sheet has any saved content (including profile-only)
   if (!plan) return false;
+  const p = plan.profile || {};
   const g = plan.goals || {};
   const a = plan.activities || {};
   const v = plan.vision || {};
   const e = plan.evaluation || {};
-  return (Object.keys(g).length > 0) ||
+  return (p.name && p.name.length > 0) ||
+         (p.selectedAreas && p.selectedAreas.length > 0) ||
+         (Object.keys(g).length > 0) ||
          (Object.keys(a).length > 0) ||
          (v.vision && v.vision.length > 0) ||
-         (Object.keys(e).length > 0) ||
-         (plan.profile && plan.profile.selectedAreas && plan.profile.selectedAreas.length > 0);
+         (Object.keys(e).length > 0);
 }
 
 function applyPlanData(plan) {
@@ -1877,10 +1885,19 @@ function populateForm(data) {
 
 // ========== LOAD DATA (Sheet first, localStorage fallback) ==========
 function loadData() {
-  const lastRole = localStorage.getItem('planning_last_role') || '';
+  // Support ?role=yaakov URL parameter (works across devices)
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlRole = urlParams.get('role') || '';
+  const lastRole = urlRole || localStorage.getItem('planning_last_role') || '';
   if (lastRole) {
     document.getElementById('f_role').value = lastRole;
     currentRole = lastRole;
+    // Hide welcome overlay if role came from URL
+    if (urlRole) {
+      document.getElementById('welcomeOverlay').style.display = 'none';
+      localStorage.setItem('planning_last_role', lastRole);
+      localStorage.setItem('planning_welcome_shown', '1');
+    }
   }
 
   if (lastRole) {
