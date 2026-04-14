@@ -97,10 +97,15 @@
     var body = { action: 'set', key: key, value: value, updated_by: getUser() };
     return fetch(CLOUD_STORAGE_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body)
     })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        // no-cors returns opaque response (type='opaque', status=0) — treat as success
+        if (r.type === 'opaque' || r.status === 0) return { result: 'success' };
+        return r.json();
+      })
       .catch(function (err) {
         console.warn('[cloud-storage] set failed', key, err);
         return { result: 'error', message: String(err) };
@@ -112,10 +117,14 @@
     var body = { action: 'setMany', items: items, updated_by: getUser() };
     return fetch(CLOUD_STORAGE_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body)
     })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (r.type === 'opaque' || r.status === 0) return { result: 'success' };
+        return r.json();
+      })
       .catch(function (err) {
         console.warn('[cloud-storage] setMany failed', err);
         return { result: 'error', message: String(err) };
@@ -127,10 +136,14 @@
     var body = { action: 'delete', key: key };
     return fetch(CLOUD_STORAGE_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body)
     })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (r.type === 'opaque' || r.status === 0) return { result: 'success' };
+        return r.json();
+      })
       .catch(function (err) { return { result: 'error', message: String(err) }; });
   }
 
