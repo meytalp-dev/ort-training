@@ -194,6 +194,20 @@ h1,h2,h3,h4{font-family:'Playpen Sans Hebrew','Heebo',sans-serif}
 .data-table tr.current-month td{background:rgba(232,176,96,.08)}
 .data-table input,.data-table textarea{width:100%;border:1px solid transparent;background:transparent;padding:4px 8px;border-radius:8px;font-family:Heebo;font-size:.84rem;color:var(--text);transition:.2s;resize:none}
 .data-table input:focus,.data-table textarea:focus{border-color:var(--primary);background:var(--card);outline:none}
+/* Monthly tracking — wider textareas */
+#cMonthlyTable textarea{min-height:52px;resize:vertical;line-height:1.5;cursor:pointer}
+#cMonthlyTable td:not(:first-child){min-width:180px}
+/* Expand overlay for monthly tracking */
+.expand-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.expand-overlay.show{opacity:1}
+.expand-panel{background:var(--card);border-radius:20px;padding:28px;width:min(90vw,600px);max-height:80vh;box-shadow:0 20px 60px rgba(0,0,0,.2);direction:rtl}
+.expand-panel h4{margin:0 0 8px;font-size:1rem;color:var(--primary-dark)}
+.expand-panel .expand-label{font-size:.82rem;color:var(--muted);margin-bottom:12px}
+.expand-panel textarea{width:100%;min-height:180px;border:1px solid var(--border);border-radius:14px;padding:14px 16px;font-family:Heebo;font-size:.95rem;line-height:1.7;color:var(--text);background:#fff;resize:vertical;outline:none;transition:border-color .2s}
+.expand-panel textarea:focus{border-color:var(--primary)}
+.expand-panel .expand-actions{display:flex;gap:10px;justify-content:flex-start;margin-top:16px}
+.expand-panel .btn-close-expand{background:transparent;border:1px solid var(--border);color:var(--text);padding:8px 20px;border-radius:12px;font-family:Heebo;font-size:.85rem;cursor:pointer}
+.expand-panel .btn-save-expand{background:var(--primary);color:#fff;border:none;padding:8px 24px;border-radius:12px;font-family:Heebo;font-size:.85rem;font-weight:600;cursor:pointer}
 
 /* Traffic light */
 .traffic-light{display:flex;gap:4px;align-items:center}
@@ -2085,9 +2099,9 @@ function fillCounselorForm(){
                 const isCurrent = mk===currentMonth;
                 return `<tr data-month="${mk}" class="${isCurrent?'current-month':''}">
                   <td style="font-weight:${isCurrent?700:400};white-space:nowrap">${MONTHS_HE[mk]}</td>
-                  <td><textarea rows="1">${d.done}</textarea></td>
-                  <td><textarea rows="1">${d.goals}</textarea></td>
-                  <td><textarea rows="1">${d.notes}</textarea></td>
+                  <td><textarea rows="2" ondblclick="openExpandPanel(this,'${MONTHS_HE[mk]}','מה נעשה')">${d.done}</textarea></td>
+                  <td><textarea rows="2" ondblclick="openExpandPanel(this,'${MONTHS_HE[mk]}','יעדים')">${d.goals}</textarea></td>
+                  <td><textarea rows="2" ondblclick="openExpandPanel(this,'${MONTHS_HE[mk]}','הערות')">${d.notes}</textarea></td>
                 </tr>`;
               }).join('')}
             </tbody>
@@ -2177,6 +2191,48 @@ function fillCounselorForm(){
   setTimeout(()=> attachAutoSaveToContainer(area), 100);
 }
 
+// Expand panel for monthly tracking textareas
+let expandSource = null;
+function openExpandPanel(textarea, monthLabel, fieldLabel){
+  expandSource = textarea;
+  let overlay = document.getElementById('expandOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'expandOverlay';
+    overlay.className = 'expand-overlay';
+    overlay.innerHTML = `
+      <div class="expand-panel">
+        <h4 id="expandTitle"></h4>
+        <div class="expand-label" id="expandLabel"></div>
+        <textarea id="expandTextarea"></textarea>
+        <div class="expand-actions">
+          <button class="btn-save-expand" onclick="closeExpandPanel(true)">שמור</button>
+          <button class="btn-close-expand" onclick="closeExpandPanel(false)">ביטול</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if(e.target===overlay) closeExpandPanel(false); });
+  }
+  document.getElementById('expandTitle').textContent = fieldLabel;
+  document.getElementById('expandLabel').textContent = monthLabel;
+  const ta = document.getElementById('expandTextarea');
+  ta.value = textarea.value;
+  overlay.classList.add('show');
+  overlay.style.display = 'flex';
+  setTimeout(()=> ta.focus(), 50);
+}
+function closeExpandPanel(save){
+  const overlay = document.getElementById('expandOverlay');
+  if(!overlay) return;
+  if(save && expandSource){
+    expandSource.value = document.getElementById('expandTextarea').value;
+    autoSave();
+  }
+  overlay.classList.remove('show');
+  setTimeout(()=>{ overlay.style.display='none'; }, 200);
+  expandSource = null;
+}
+
 function setTrafficLight(el){
   el.parentElement.querySelectorAll('.tl-dot').forEach(d => d.classList.remove('active'));
   el.classList.add('active');
@@ -2222,7 +2278,8 @@ function collectCounselorFormData(){
   // Monthly data
   document.querySelectorAll('#cMonthlyTableBody tr').forEach(row => {
     const mk = row.dataset.month;
-    if(mk && s.monthlyData[mk]){
+    if(mk){
+      if(!s.monthlyData[mk]) s.monthlyData[mk] = {done:'',goals:'',notes:''};
       const inputs = row.querySelectorAll('textarea');
       s.monthlyData[mk].done = inputs[0]?.value || '';
       s.monthlyData[mk].goals = inputs[1]?.value || '';
