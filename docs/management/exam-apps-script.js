@@ -26,6 +26,27 @@ var MESSAGE_DELAY_MS = 2500;
 var MEYTAL_PHONE = '972536256653';
 var RAVIT_PHONE = '972503993021';
 
+// Form URL — update after deploying to GitHub Pages
+var FORM_BASE_URL = 'https://meytalp-dev.github.io/ort-training/management/exam-prep-form.html';
+
+// Staff phone lookup (name → phone)
+var STAFF_PHONES = {
+  'רעיה יצחקי': '972504726066',
+  'אופירה מלכה': '972534438414',
+  'מירב בטיטו': '972584807906',
+  'נעמה קוסטן': '972524295181',
+  'ויקי קלדרון': '972586528820',
+  'מנו דהאן': '972505852852',
+  'יוסי רבבשי': '972506563344',
+  'אפרת בר אשר': '972522460684',
+  'מריאן זרצקי': '972507596570',
+  'יהודית בן גיגי': '972506476096',
+  'בת-שבע אדלר': '972555695031',
+  'אליאל קוסקאס': '972527902270',
+  'יעקב גרונספלד': '972546995254',
+  'רווית גל': '972503993021'
+};
+
 // ============================================
 // Web App Entry Points
 // ============================================
@@ -789,6 +810,127 @@ function thursdayPrepReminder() {
 }
 
 // ============================================
+// AUTO PREP FORM SENDER — daily at 08:00
+// ============================================
+
+function autoPrepFormReminder() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var examSheet = ss.getSheetByName('בחינות');
+  if (!examSheet || examSheet.getLastRow() < 2) return;
+
+  var prepSheet = ss.getSheetByName('טפסי_הכנה');
+
+  // Get already submitted preps
+  var submitted = {};
+  if (prepSheet && prepSheet.getLastRow() >= 2) {
+    var prepData = prepSheet.getDataRange().getValues();
+    for (var i = 1; i < prepData.length; i++) {
+      // key: examId|teacherName (normalized)
+      submitted[prepData[i][1] + '|' + (prepData[i][2] || '').trim()] = true;
+    }
+  }
+
+  // Get already sent form requests (track in log to avoid spamming)
+  var sentTracker = ss.getSheetByName('שליחות_טפסים');
+  var alreadySent = {};
+  if (sentTracker && sentTracker.getLastRow() >= 2) {
+    var sentData = sentTracker.getDataRange().getValues();
+    for (var s = 1; s < sentData.length; s++) {
+      // key: examId|teacherName|type (first/reminder)
+      alreadySent[sentData[s][0] + '|' + sentData[s][1] + '|' + sentData[s][2]] = true;
+    }
+  } else {
+    sentTracker = ss.insertSheet('שליחות_טפסים');
+    sentTracker.appendRow(['מזהה_בחינה', 'מורה', 'סוג', 'תאריך_שליחה']);
+    sentTracker.getRange(1, 1, 1, 4).setFontWeight('bold');
+    sentTracker.setFrozenRows(1);
+  }
+
+  var today = new Date();
+  var examData = examSheet.getDataRange().getValues();
+  var sentCount = 0;
+  var reminderCount = 0;
+
+  for (var j = 1; j < examData.length; j++) {
+    if (!examData[j][0]) continue;
+    var examDate = examData[j][1];
+    if (!(examDate instanceof Date)) continue;
+
+    var daysUntil = Math.round((examDate - today) / (1000 * 60 * 60 * 24));
+    var examId = examData[j][0];
+    var subject = examData[j][2] || '';
+    var type = examData[j][3] || '';
+    var classes = examData[j][7] || '';
+    var teacherField = examData[j][8] || '';
+
+    if (!teacherField) continue;
+
+    // Parse multiple teachers (comma separated)
+    var teachers = teacherField.split(',').map(function(t) { return t.replace(/\(.*?\)/g, '').trim(); });
+
+    for (var t = 0; t < teachers.length; t++) {
+      var teacherName = teachers[t];
+      if (!teacherName) continue;
+
+      var phone = STAFF_PHONES[teacherName];
+      if (!phone) continue;
+
+      var prepKey = examId + '|' + teacherName;
+      var isSubmitted = submitted[prepKey];
+      if (isSubmitted) continue; // already filled — skip
+
+      var dateStr = Utilities.formatDate(examDate, 'Asia/Jerusalem', 'yyyy-MM-dd');
+      var link = FORM_BASE_URL + '?examId=' + encodeURIComponent(examId)
+        + '&subject=' + encodeURIComponent(subject)
+        + '&type=' + encodeURIComponent(type)
+        + '&date=' + encodeURIComponent(dateStr)
+        + '&classes=' + encodeURIComponent(classes)
+        + '&teacher=' + encodeURIComponent(teacherName);
+
+      // 10 days before — first send
+      if (daysUntil <= 10 && daysUntil > 5) {
+        var firstKey = examId + '|' + teacherName + '|first';
+        if (alreadySent[firstKey]) continue;
+
+        var msg = '📋 בקשה למלא טופס הכנה למבחן\n\n'
+          + '📝 ' + subject + (type ? ' (' + type + ')' : '') + '\n'
+          + '📅 תאריך: ' + Utilities.formatDate(examDate, 'Asia/Jerusalem', 'dd.MM.yyyy') + '\n'
+          + '🏫 כיתות: ' + classes + '\n\n'
+          + '👉 קישור לטופס:\n' + link + '\n\n'
+          + 'תודה!\nאורט בית הערבה';
+
+        sendWhatsApp_(phone, msg);
+        sentTracker.appendRow([examId, teacherName, 'first', new Date()]);
+        sentCount++;
+        Utilities.sleep(MESSAGE_DELAY_MS);
+      }
+
+      // 5 days before — reminder
+      if (daysUntil <= 5 && daysUntil > 0) {
+        var reminderKey = examId + '|' + teacherName + '|reminder';
+        if (alreadySent[reminderKey]) continue;
+
+        var reminderMsg = '⏰ תזכורת — טופס הכנה למבחן טרם מולא\n\n'
+          + '📝 ' + subject + (type ? ' (' + type + ')' : '') + '\n'
+          + '📅 תאריך המבחן: ' + Utilities.formatDate(examDate, 'Asia/Jerusalem', 'dd.MM.yyyy') + '\n'
+          + '🏫 כיתות: ' + classes + '\n\n'
+          + '👉 קישור לטופס:\n' + link + '\n\n'
+          + 'חשוב למלא כדי שהתלמידים יוכלו להתכונן.\nתודה!\nאורט בית הערבה';
+
+        sendWhatsApp_(phone, reminderMsg);
+        sentTracker.appendRow([examId, teacherName, 'reminder', new Date()]);
+        reminderCount++;
+        Utilities.sleep(MESSAGE_DELAY_MS);
+      }
+    }
+  }
+
+  if (sentCount > 0 || reminderCount > 0) {
+    logAction_(ss, 'autoPrepReminder', 'system', sentCount + ' first sends, ' + reminderCount + ' reminders');
+  }
+}
+
+// ============================================
 // HELPERS
 // ============================================
 
@@ -861,11 +1003,21 @@ function setupExamTriggers() {
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
     var fn = triggers[i].getHandlerFunction();
-    if (fn === 'dailyExamReminder' || fn === 'thursdayPrepReminder') {
+    if (fn === 'dailyExamReminder' || fn === 'thursdayPrepReminder' || fn === 'autoPrepFormReminder') {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
-  // Daily at 18:00 — check tomorrow's exams, send reminders
+
+  // Daily at 08:00 — auto send prep forms (10 days before) + reminders (5 days before)
+  ScriptApp.newTrigger('autoPrepFormReminder')
+    .timeBased()
+    .atHour(8)
+    .nearMinute(0)
+    .everyDays(1)
+    .inTimezone('Asia/Jerusalem')
+    .create();
+
+  // Daily at 18:00 — check tomorrow's exams, send reminders to students + teacher
   ScriptApp.newTrigger('dailyExamReminder')
     .timeBased()
     .atHour(18)
@@ -874,7 +1026,7 @@ function setupExamTriggers() {
     .inTimezone('Asia/Jerusalem')
     .create();
 
-  // Thursday at 13:00 — who didn't submit prep forms
+  // Thursday at 13:00 — who didn't submit prep forms summary to management
   ScriptApp.newTrigger('thursdayPrepReminder')
     .timeBased()
     .onWeekDay(ScriptApp.WeekDay.THURSDAY)
@@ -883,7 +1035,7 @@ function setupExamTriggers() {
     .inTimezone('Asia/Jerusalem')
     .create();
 
-  Logger.log('Triggers created: dailyExamReminder 18:00 daily, thursdayPrepReminder Thu 13:00');
+  Logger.log('Triggers: autoPrepFormReminder 08:00, dailyExamReminder 18:00, thursdayPrepReminder Thu 13:00');
 }
 
 function getOrCreate_(ss, name) {
