@@ -252,6 +252,10 @@
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12">W</text></svg>
             שתף בWhatsApp
         </button>
+        <button class="action-btn" style="background:#FFF3E0;color:#E65100;" onclick="sendPrepFormsToTeachers()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            שלח טפסי הכנה למורים
+        </button>
     </div>
     <div class="content">
         <table class="exam-table" id="examTable1">
@@ -616,6 +620,54 @@ function sendScheduleWA() {
         toast('WhatsApp נפתח');
     }
     closeModal('waModal');
+}
+
+// ============================================
+// TAB 1: SEND PREP FORMS TO TEACHERS
+// ============================================
+function sendPrepFormsToTeachers() {
+    const exams = getFilteredExams(1);
+    const examsWithTeachers = exams.filter(e => e.teacher);
+    const examsWithoutTeachers = exams.filter(e => !e.teacher);
+
+    if (examsWithoutTeachers.length > 0 && examsWithTeachers.length === 0) {
+        toast('אין מורים משובצים לבחינות. הוסיפו שם מורה בנתוני הבחינות.');
+        return;
+    }
+
+    // Build WhatsApp links for each teacher
+    const formBaseUrl = window.location.href.replace('exam-schedule.html', 'exam-prep-form.html');
+    let msg = '';
+    let count = 0;
+
+    exams.forEach(e => {
+        const d = new Date(e.date);
+        const dateStr = d.getDate() + '.' + (d.getMonth()+1) + '.' + d.getFullYear();
+        const link = formBaseUrl + '?examId=' + encodeURIComponent(e.id)
+            + '&subject=' + encodeURIComponent(e.subject)
+            + '&type=' + encodeURIComponent(e.type || '')
+            + '&date=' + encodeURIComponent(e.date)
+            + '&classes=' + encodeURIComponent(e.classes.join(', '))
+            + '&teacher=' + encodeURIComponent(e.teacher || '');
+
+        if (e.teacher) {
+            // Open WhatsApp for each teacher
+            const teacherMsg = '📋 בקשה למלא טופס הכנה למבחן\n\n'
+                + '📝 ' + e.subject + (e.type ? ' (' + e.type + ')' : '') + '\n'
+                + '📅 ' + dateStr + '\n'
+                + '🏫 כיתות: ' + e.classes.join(', ') + '\n\n'
+                + '👉 קישור לטופס:\n' + link + '\n\n'
+                + 'תודה!\nאורט בית הערבה';
+            const encoded = encodeURIComponent(teacherMsg);
+            window.open('https://api.whatsapp.com/send?text=' + encoded, '_blank');
+            count++;
+        } else {
+            msg += '⚠ ' + e.subject + ' (' + dateStr + ') — חסר שם מורה\n';
+        }
+    });
+
+    if (count > 0) toast('נפתחו ' + count + ' חלונות WhatsApp — שלחו לכל מורה');
+    if (msg) toast(msg);
 }
 
 // ============================================

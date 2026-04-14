@@ -49,6 +49,9 @@ function doGet(e) {
       case 'getConfirmations':
         result = getConfirmations_();
         break;
+      case 'getPreps':
+        result = getPreps_(e.parameter.examId);
+        break;
       default:
         result = { result: 'ok', message: 'exam-management API active' };
     }
@@ -92,6 +95,12 @@ function doPost(e) {
         break;
       case 'uploadFile':
         result = uploadFile_(data.fileName, data.fileData, data.mimeType, data.examId);
+        break;
+      case 'submitPrepForm':
+        result = submitPrepForm_(data.prep);
+        break;
+      case 'sendPrepForms':
+        result = sendPrepForms_(data.exams, data.formBaseUrl);
         break;
       default:
         result = { result: 'error', message: 'unknown action: ' + action };
@@ -612,6 +621,174 @@ function dailyExamReminder() {
 }
 
 // ============================================
+// PREP FORMS — teacher fills study material
+// ============================================
+
+function getPreps_(examId) {
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('טפסי_הכנה');
+  if (!sheet || sheet.getLastRow() < 2) return { result: 'success', preps: [] };
+  var data = sheet.getDataRange().getValues();
+  var preps = [];
+  for (var i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    var p = {
+      id: data[i][0],
+      examId: data[i][1] || '',
+      teacherName: data[i][2] || '',
+      teacherPhone: data[i][3] || '',
+      topics: data[i][4] || '',
+      questions: data[i][5] || '',
+      notes: data[i][6] || '',
+      submittedAt: data[i][7] || ''
+    };
+    if (!examId || p.examId === examId) preps.push(p);
+  }
+  return { result: 'success', preps: preps };
+}
+
+function submitPrepForm_(prep) {
+  if (!prep || !prep.examId) return { result: 'error', message: 'missing prep data' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('טפסי_הכנה');
+  if (!sheet) return { result: 'error', message: 'missing prep sheet' };
+
+  var now = new Date();
+  var id = 'PR' + Date.now();
+
+  // Check if already submitted for this exam+teacher
+  var data = sheet.getDataRange().getValues();
+  var rowIndex = -1;
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][1] === prep.examId && data[i][2] === prep.teacherName) {
+      rowIndex = i + 1;
+      id = data[i][0];
+      break;
+    }
+  }
+
+  var row = [id, prep.examId, prep.teacherName || '', prep.teacherPhone || '',
+             prep.topics || '', prep.questions || '', prep.notes || '', now];
+
+  if (rowIndex > 0) {
+    sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+  } else {
+    sheet.appendRow(row);
+  }
+
+  // Get exam details for notification
+  var examSheet = ss.getSheetByName('בחינות');
+  var examInfo = '';
+  if (examSheet) {
+    var examData = examSheet.getDataRange().getValues();
+    for (var k = 1; k < examData.length; k++) {
+      if (examData[k][0] === prep.examId) {
+        examInfo = examData[k][2] + (examData[k][3] ? ' (' + examData[k][3] + ')' : '') + ' — ' + examData[k][7];
+        break;
+      }
+    }
+  }
+
+  // Notify management
+  var msg = '📝 טופס הכנה למבחן הוגש\n'
+    + '👨‍🏫 מורה: ' + (prep.teacherName || 'לא צוין') + '\n'
+    + '📋 בחינה: ' + (examInfo || prep.examId) + '\n'
+    + '📅 ' + Utilities.formatDate(now, 'Asia/Jerusalem', 'dd.MM.yyyy HH:mm');
+
+  sendWhatsApp_(MEYTAL_PHONE, msg);
+  Utilities.sleep(MESSAGE_DELAY_MS);
+  sendWhatsApp_(RAVIT_PHONE, msg);
+
+  logAction_(ss, 'submitPrep', prep.teacherName || 'teacher', prep.examId);
+  return { result: 'success', id: id, message: 'Prep form submitted' };
+}
+
+function sendPrepForms_(exams, formBaseUrl) {
+  if (!exams || !exams.length || !formBaseUrl) return { result: 'error', message: 'missing data' };
+  var sent = 0;
+  for (var i = 0; i < exams.length; i++) {
+    var ex = exams[i];
+    if (!ex.teacherPhone) continue;
+    var link = formBaseUrl + '?examId=' + encodeURIComponent(ex.id)
+      + '&subject=' + encodeURIComponent(ex.subject || '')
+      + '&type=' + encodeURIComponent(ex.type || '')
+      + '&date=' + encodeURIComponent(ex.date || '')
+      + '&classes=' + encodeURIComponent(ex.classes || '')
+      + '&teacher=' + encodeURIComponent(ex.teacher || '');
+
+    var msg = '📋 בקשה למלא טופס הכנה למבחן\n\n'
+      + '📝 ' + (ex.subject || '') + (ex.type ? ' (' + ex.type + ')' : '') + '\n'
+      + '📅 תאריך: ' + (ex.date || '') + '\n'
+      + '🏫 כיתות: ' + (ex.classes || '') + '\n\n'
+      + '👉 קישור לטופס:\n' + link + '\n\n'
+      + 'תודה!\nאורט בית הערבה';
+
+    sendWhatsApp_(ex.teacherPhone, msg);
+    sent++;
+    if (i < exams.length - 1) Utilities.sleep(MESSAGE_DELAY_MS);
+  }
+  logAction_(SpreadsheetApp.openById(SHEET_ID), 'sendPrepForms', 'system', sent + ' forms sent');
+  return { result: 'success', sent: sent };
+}
+
+// ============================================
+// THURSDAY REMINDER — who didn't submit prep
+// ============================================
+
+function thursdayPrepReminder() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var examSheet = ss.getSheetByName('בחינות');
+  var prepSheet = ss.getSheetByName('טפסי_הכנה');
+  if (!examSheet || examSheet.getLastRow() < 2) return;
+
+  var today = new Date();
+  var examData = examSheet.getDataRange().getValues();
+
+  // Get all submitted preps
+  var submittedExamIds = {};
+  if (prepSheet && prepSheet.getLastRow() >= 2) {
+    var prepData = prepSheet.getDataRange().getValues();
+    for (var i = 1; i < prepData.length; i++) {
+      submittedExamIds[prepData[i][1] + '|' + prepData[i][2]] = true; // examId|teacherName
+    }
+  }
+
+  // Find upcoming exams (next 14 days) without prep form
+  var missing = [];
+  for (var j = 1; j < examData.length; j++) {
+    if (!examData[j][0]) continue;
+    var examDate = examData[j][1];
+    if (examDate instanceof Date) {
+      var diff = (examDate - today) / (1000 * 60 * 60 * 24);
+      if (diff < 0 || diff > 14) continue;
+    }
+    var teacher = examData[j][8] || '';
+    var key = examData[j][0] + '|' + teacher;
+    if (!submittedExamIds[key] && teacher) {
+      var d = examDate instanceof Date ? Utilities.formatDate(examDate, 'Asia/Jerusalem', 'dd.MM') : examDate;
+      missing.push(teacher + ' — ' + examData[j][2] + ' (' + d + ')');
+    }
+  }
+
+  if (missing.length === 0) {
+    var allGoodMsg = '✅ סיכום שבועי — טפסי הכנה\nכל המורים מילאו טפסי הכנה לבחינות הקרובות!';
+    sendWhatsApp_(MEYTAL_PHONE, allGoodMsg);
+    Utilities.sleep(MESSAGE_DELAY_MS);
+    sendWhatsApp_(RAVIT_PHONE, allGoodMsg);
+  } else {
+    var msg = '⚠️ סיכום שבועי — טפסי הכנה\n'
+      + '📅 ' + Utilities.formatDate(today, 'Asia/Jerusalem', 'dd.MM.yyyy') + '\n\n'
+      + '🔴 טרם מילאו טופס הכנה (' + missing.length + '):\n'
+      + missing.join('\n') + '\n\n'
+      + 'ניתן לשלוח תזכורת דרך מערכת הבחינות.';
+    sendWhatsApp_(MEYTAL_PHONE, msg);
+    Utilities.sleep(MESSAGE_DELAY_MS);
+    sendWhatsApp_(RAVIT_PHONE, msg);
+  }
+
+  logAction_(ss, 'thursdayReminder', 'system', missing.length + ' missing prep forms');
+}
+
+// ============================================
 // HELPERS
 // ============================================
 
@@ -660,7 +837,15 @@ function setupExamSheets() {
     cf.setFrozenRows(1);
   }
 
-  // 5. לוג
+  // 5. טפסי הכנה
+  var pr = getOrCreate_(ss, 'טפסי_הכנה');
+  if (pr.getLastRow() === 0) {
+    pr.appendRow(['מזהה', 'מזהה_בחינה', 'שם_מורה', 'טלפון_מורה', 'נושאי_לימוד', 'שאלות_הכנה', 'הערות', 'תאריך_הגשה']);
+    pr.getRange(1, 1, 1, 8).setFontWeight('bold');
+    pr.setFrozenRows(1);
+  }
+
+  // 6. לוג
   var log = getOrCreate_(ss, 'לוג');
   if (log.getLastRow() === 0) {
     log.appendRow(['תאריך', 'פעולה', 'משתמש', 'פרטים']);
@@ -675,7 +860,8 @@ function setupExamTriggers() {
   // Delete existing triggers for our functions
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'dailyExamReminder') {
+    var fn = triggers[i].getHandlerFunction();
+    if (fn === 'dailyExamReminder' || fn === 'thursdayPrepReminder') {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
@@ -688,7 +874,16 @@ function setupExamTriggers() {
     .inTimezone('Asia/Jerusalem')
     .create();
 
-  Logger.log('Trigger created: dailyExamReminder at 18:00 daily');
+  // Thursday at 13:00 — who didn't submit prep forms
+  ScriptApp.newTrigger('thursdayPrepReminder')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.THURSDAY)
+    .atHour(13)
+    .nearMinute(0)
+    .inTimezone('Asia/Jerusalem')
+    .create();
+
+  Logger.log('Triggers created: dailyExamReminder 18:00 daily, thursdayPrepReminder Thu 13:00');
 }
 
 function getOrCreate_(ss, name) {
