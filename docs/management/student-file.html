@@ -1219,171 +1219,258 @@ function renderJourney(s) {
   var plan = getPlanData(s.id);
   var timeline = getMonthlyData(s);
   var scores = getCurrentScores(s, timeline);
+  var skills = getSkills(s.id);
+  var dims = getDimensions(s.id);
   var html = '';
 
   html += '<h4 style="font-size:.92rem;font-weight:700;margin-bottom:4px;font-family:Heebo;display:flex;align-items:center;gap:10px">תוכנית אישית מותאמת';
   html += ' <button class="btn btn-sm" onclick="loadDemoData(\'' + s.id + '\')" style="font-size:.7rem;background:var(--info-bg);color:var(--info);border:1px solid rgba(91,155,213,.3);padding:3px 10px;border-radius:8px;cursor:pointer">טען דמו</button>';
   html += '</h4>';
-  html += '<p style="font-size:.82rem;color:var(--muted);margin-bottom:18px">חוזקות, נקודות לחיזוק, יעדים ומטרות חודשיים — נגזר מהדוחות החודשיים + עריכה ידנית</p>';
+  html += '<p style="font-size:.82rem;color:var(--muted);margin-bottom:18px">מיומנויות, ממדים, מעגל רגשי, חוזקות ונקודות חיזוק, יעדים — נגזר מהדוחות + עריכה ידנית</p>';
 
-  // ── Auto-detect strengths & weaknesses from monthly data ──
+  // ── Auto-detect strengths & weaknesses ──
   var autoStrengths = [];
   var autoWeaknesses = [];
   if (timeline.length > 0) {
     var latest = timeline[timeline.length - 1];
     var raw = latest.raw || {};
-    // Academic
-    if (latest.academic >= 70) autoStrengths.push('תפקוד לימודי גבוה (' + latest.academic + ')');
-    else if (latest.academic > 0 && latest.academic < 50) autoWeaknesses.push('תפקוד לימודי נמוך (' + latest.academic + ')');
-    // Social
-    if (latest.social >= 70) autoStrengths.push('תפקוד חברתי-ערכי חזק (' + latest.social + ')');
-    else if (latest.social > 0 && latest.social < 50) autoWeaknesses.push('תפקוד חברתי-ערכי דורש חיזוק (' + latest.social + ')');
-    // Personal
-    if (latest.personal >= 70) autoStrengths.push('מיומנויות אישיות-רגשיות גבוהות (' + latest.personal + ')');
-    else if (latest.personal > 0 && latest.personal < 50) autoWeaknesses.push('מיומנויות אישיות-רגשיות לחיזוק (' + latest.personal + ')');
-    // Professional
-    if (latest.professional >= 70) autoStrengths.push('ביצועים מקצועיים טובים (' + latest.professional + ')');
-    else if (latest.professional > 0 && latest.professional < 50) autoWeaknesses.push('ביצועים מקצועיים לחיזוק (' + latest.professional + ')');
-    // Skill levels from raw
-    if (raw.skillLevel >= 3) autoStrengths.push('מיומנות חודשית ברמה גבוהה');
-    if (raw.attendanceLevel >= 3) autoStrengths.push('נוכחות טובה');
-    if (raw.attendanceLevel && raw.attendanceLevel <= 1) autoWeaknesses.push('נוכחות דורשת שיפור');
+    if (latest.academic >= 70) autoStrengths.push({text:'תפקוד לימודי גבוה (' + latest.academic + ')', color:'#5B9BD5'});
+    else if (latest.academic > 0 && latest.academic < 50) autoWeaknesses.push({text:'תפקוד לימודי נמוך (' + latest.academic + ')', color:'#5B9BD5'});
+    if (latest.social >= 70) autoStrengths.push({text:'תפקוד חברתי-ערכי חזק (' + latest.social + ')', color:'#E06090'});
+    else if (latest.social > 0 && latest.social < 50) autoWeaknesses.push({text:'תפקוד חברתי-ערכי לחיזוק (' + latest.social + ')', color:'#E06090'});
+    if (latest.personal >= 70) autoStrengths.push({text:'מיומנויות אישיות-רגשיות גבוהות (' + latest.personal + ')', color:'#8B6BC0'});
+    else if (latest.personal > 0 && latest.personal < 50) autoWeaknesses.push({text:'מיומנויות אישיות-רגשיות לחיזוק (' + latest.personal + ')', color:'#8B6BC0'});
+    if (latest.professional >= 70) autoStrengths.push({text:'ביצועים מקצועיים טובים (' + latest.professional + ')', color:'#7AB648'});
+    else if (latest.professional > 0 && latest.professional < 50) autoWeaknesses.push({text:'ביצועים מקצועיים לחיזוק (' + latest.professional + ')', color:'#7AB648'});
+    if (raw.skillLevel >= 3) autoStrengths.push({text:'מיומנות חודשית ברמה גבוהה', color:'var(--warm-gold)'});
+    if (raw.attendanceLevel >= 3) autoStrengths.push({text:'נוכחות טובה', color:'var(--primary)'});
+    if (raw.attendanceLevel && raw.attendanceLevel <= 1) autoWeaknesses.push({text:'נוכחות דורשת שיפור', color:'var(--danger)'});
+  }
+  // TACHI auto items
+  var fullName = s.last + ' ' + s.first;
+  var tachi = SHILUV_TACHI ? SHILUV_TACHI[fullName] : null;
+  if (tachi) {
+    if (tachi.cho) autoStrengths.push({text:'תח"י: ' + tachi.cho, color:'var(--primary)'});
+    if (tachi.lec) autoWeaknesses.push({text:'תח"י המלצה: ' + tachi.lec, color:'var(--primary)'});
   }
 
-  // ── STRENGTHS ──
-  html += '<div style="background:var(--card);border-radius:16px;padding:20px;border:1px solid var(--border);margin-bottom:16px">';
-  html += '<h4 style="font-size:.92rem;font-weight:700;margin-bottom:12px;font-family:Heebo;display:flex;align-items:center;gap:8px;color:var(--success)">';
-  html += '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
-  html += 'חוזקות</h4>';
+  // ══════════════════════════════════════════
+  // 1. STRENGTHS & WEAKNESSES — pill style
+  // ══════════════════════════════════════════
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">';
 
-  // Auto-detected
-  if (autoStrengths.length > 0) {
-    html += '<div style="margin-bottom:10px">';
-    autoStrengths.forEach(function(str) {
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.85rem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg><span style="color:var(--muted);font-size:.72rem;background:var(--success-bg);padding:2px 8px;border-radius:8px">אוטומטי</span> ' + esc(str) + '</div>';
-    });
-    html += '</div>';
+  // ── Strengths card ──
+  html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1.5px solid rgba(76,175,80,.2)">';
+  html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:10px;font-family:Heebo;color:var(--success);display:flex;align-items:center;gap:6px">';
+  html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> חוזקות</h4>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  autoStrengths.forEach(function(str) {
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:.78rem;background:' + str.color + '12;color:' + str.color + ';border:1px solid ' + str.color + '30;font-weight:500">';
+    html += '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 11l3 3L22 4"/></svg> ' + esc(str.text) + '</span>';
+  });
+  (plan.strengths || []).forEach(function(str, idx) {
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:.78rem;background:var(--success-bg);color:var(--success);border:1px solid rgba(76,175,80,.2);font-weight:500">';
+    html += esc(str);
+    html += ' <button onclick="removePlanItem(\'' + s.id + '\',\'strengths\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:var(--success);font-size:.65rem;padding:0 2px;line-height:1">&#x2715;</button></span>';
+  });
+  if (autoStrengths.length === 0 && (!plan.strengths || plan.strengths.length === 0)) {
+    html += '<span style="font-size:.78rem;color:var(--muted)">יזוהו אוטומטית מהדוחות</span>';
   }
-
-  // Manual strengths
-  var manualStrengths = plan.strengths || [];
-  if (manualStrengths.length > 0) {
-    manualStrengths.forEach(function(str, idx) {
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.85rem">';
-      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>';
-      html += esc(str);
-      html += ' <button onclick="removePlanItem(\'' + s.id + '\',\'strengths\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.7rem;padding:2px 4px" title="הסרה">&#x2715;</button>';
-      html += '</div>';
-    });
-  }
-
-  if (autoStrengths.length === 0 && manualStrengths.length === 0) {
-    html += '<div style="color:var(--muted);font-size:.82rem;padding:8px 0">אין נתונים עדיין — חוזקות יזוהו אוטומטית מהדוחות החודשיים</div>';
-  }
-
-  html += '<div style="display:flex;gap:8px;margin-top:10px">';
-  html += '<input type="text" id="newStrength" placeholder="הוסיפי חוזקה ידנית..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.82rem">';
-  html += '<button class="btn btn-primary btn-sm" onclick="addPlanItem(\'' + s.id + '\',\'strengths\')">הוספה</button>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:6px;margin-top:10px">';
+  html += '<input type="text" id="newStrength" placeholder="+ חוזקה..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:20px;font-family:Heebo;font-size:.78rem">';
+  html += '<button class="btn btn-primary btn-sm" onclick="addPlanItem(\'' + s.id + '\',\'strengths\')" style="border-radius:20px;padding:4px 14px;font-size:.75rem">+</button>';
   html += '</div></div>';
 
-  // ── WEAKNESSES ──
-  html += '<div style="background:var(--card);border-radius:16px;padding:20px;border:1px solid var(--border);margin-bottom:16px">';
-  html += '<h4 style="font-size:.92rem;font-weight:700;margin-bottom:12px;font-family:Heebo;display:flex;align-items:center;gap:8px;color:var(--warn)">';
-  html += '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-  html += 'נקודות לחיזוק</h4>';
-
-  if (autoWeaknesses.length > 0) {
-    html += '<div style="margin-bottom:10px">';
-    autoWeaknesses.forEach(function(w) {
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.85rem"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span style="color:var(--muted);font-size:.72rem;background:var(--warn-bg);padding:2px 8px;border-radius:8px">אוטומטי</span> ' + esc(w) + '</div>';
-    });
-    html += '</div>';
+  // ── Weaknesses card ──
+  html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1.5px solid rgba(232,176,96,.2)">';
+  html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:10px;font-family:Heebo;color:var(--warn);display:flex;align-items:center;gap:6px">';
+  html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> נקודות לחיזוק</h4>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  autoWeaknesses.forEach(function(w) {
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:.78rem;background:' + w.color + '12;color:' + w.color + ';border:1px solid ' + w.color + '30;font-weight:500">';
+    html += '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg> ' + esc(w.text) + '</span>';
+  });
+  (plan.weaknesses || []).forEach(function(w, idx) {
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;font-size:.78rem;background:var(--warn-bg);color:#B8860B;border:1px solid rgba(232,176,96,.2);font-weight:500">';
+    html += esc(w);
+    html += ' <button onclick="removePlanItem(\'' + s.id + '\',\'weaknesses\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:#B8860B;font-size:.65rem;padding:0 2px;line-height:1">&#x2715;</button></span>';
+  });
+  if (autoWeaknesses.length === 0 && (!plan.weaknesses || plan.weaknesses.length === 0)) {
+    html += '<span style="font-size:.78rem;color:var(--muted)">יזוהו אוטומטית מהדוחות</span>';
   }
-
-  var manualWeaknesses = plan.weaknesses || [];
-  if (manualWeaknesses.length > 0) {
-    manualWeaknesses.forEach(function(w, idx) {
-      html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.85rem">';
-      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-      html += esc(w);
-      html += ' <button onclick="removePlanItem(\'' + s.id + '\',\'weaknesses\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.7rem;padding:2px 4px" title="הסרה">&#x2715;</button>';
-      html += '</div>';
-    });
-  }
-
-  if (autoWeaknesses.length === 0 && manualWeaknesses.length === 0) {
-    html += '<div style="color:var(--muted);font-size:.82rem;padding:8px 0">אין נתונים עדיין — נקודות לחיזוק יזוהו אוטומטית מהדוחות</div>';
-  }
-
-  html += '<div style="display:flex;gap:8px;margin-top:10px">';
-  html += '<input type="text" id="newWeakness" placeholder="הוסיפי נקודה לחיזוק..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.82rem">';
-  html += '<button class="btn btn-primary btn-sm" onclick="addPlanItem(\'' + s.id + '\',\'weaknesses\')">הוספה</button>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:6px;margin-top:10px">';
+  html += '<input type="text" id="newWeakness" placeholder="+ נקודה לחיזוק..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:20px;font-family:Heebo;font-size:.78rem">';
+  html += '<button class="btn btn-primary btn-sm" onclick="addPlanItem(\'' + s.id + '\',\'weaknesses\')" style="border-radius:20px;padding:4px 14px;font-size:.75rem">+</button>';
   html += '</div></div>';
 
-  // ── GOALS ──
-  html += '<div style="background:var(--card);border-radius:16px;padding:20px;border:1px solid var(--border);margin-bottom:16px">';
-  html += '<h4 style="font-size:.92rem;font-weight:700;margin-bottom:12px;font-family:Heebo;display:flex;align-items:center;gap:8px;color:var(--primary)">';
-  html += '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
-  html += 'יעדים ומטרות חודשיים</h4>';
+  html += '</div>'; // end grid
 
-  // Auto-suggested goals from weaknesses
+  // ══════════════════════════════════════════
+  // 2. FIVE DIMENSIONS + FIVE SKILLS — compact
+  // ══════════════════════════════════════════
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">';
+
+  // ── 5 Dimensions ──
+  var DIM_DEFS = [
+    {key:'belong',name:'שייכות',color:'var(--dim-belong)'},
+    {key:'respect',name:'כבוד',color:'var(--dim-respect)'},
+    {key:'motivation',name:'מוטיבציה',color:'var(--dim-motiv)'},
+    {key:'capability',name:'מסוגלות',color:'var(--dim-capable)'},
+    {key:'autonomy',name:'אוטונומיה',color:'var(--dim-auto)'}
+  ];
+  html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1px solid var(--border)">';
+  html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:12px;font-family:Heebo;color:var(--dream);display:flex;align-items:center;gap:6px">';
+  html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dream)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> חמשת הממדים</h4>';
+  DIM_DEFS.forEach(function(d) {
+    var val = dims[d.key] || 0;
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    html += '<div style="width:8px;height:8px;border-radius:50%;background:' + d.color + ';flex-shrink:0"></div>';
+    html += '<span style="font-size:.78rem;font-weight:600;width:70px">' + d.name + '</span>';
+    html += '<div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + (val * 25) + '%;background:' + d.color + ';border-radius:4px;transition:width .3s"></div></div>';
+    html += '<span style="font-size:.72rem;font-weight:700;color:' + d.color + ';width:24px;text-align:center">' + (val || '—') + '</span>';
+    html += '</div>';
+  });
+  html += '<div style="font-size:.68rem;color:var(--muted);margin-top:4px">סולם 0–4 | מקור: דוחות חודשיים + בנק השקעות</div>';
+  html += '</div>';
+
+  // ── 5 Skills ──
+  var SKILL_DEFS = [
+    {key:'comm',name:'תקשורת אפקטיבית',color:'var(--dim-belong)'},
+    {key:'resp',name:'אחריות ויוזמה',color:'var(--dim-auto)'},
+    {key:'create',name:'יצירתיות וחדשנות',color:'var(--dim-capable)'},
+    {key:'time',name:'ניהול זמן ועצמי',color:'var(--dim-motiv)'},
+    {key:'tikun',name:'תיקון עולם',color:'var(--dim-respect)'}
+  ];
+  html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1px solid var(--border)">';
+  html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:12px;font-family:Heebo;color:var(--warm-gold);display:flex;align-items:center;gap:6px">';
+  html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gold)" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> מיומנויות לחיים</h4>';
+  SKILL_DEFS.forEach(function(sk) {
+    var val = skills[sk.key] || 0;
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+    html += '<span style="font-size:.78rem;font-weight:600;width:130px">' + sk.name + '</span>';
+    html += '<div style="display:flex;gap:3px">';
+    for (var i = 1; i <= 4; i++) {
+      html += '<div style="width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;' +
+        (i <= val ? 'background:' + sk.color + ';color:#fff' : 'background:var(--border);color:var(--muted)') + '">' + i + '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '<div style="font-size:.68rem;color:var(--muted);margin-top:4px">סולם 1–4 | מקור: דוחות חודשיים + חמשת הממדים</div>';
+  html += '</div>';
+
+  html += '</div>'; // end grid
+
+  // ══════════════════════════════════════════
+  // 3. EMOTIONAL / THERAPEUTIC CIRCLE
+  // ══════════════════════════════════════════
+  var emo = plan.emotional || {};
+  html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1.5px solid rgba(200,160,160,.25);margin-bottom:16px">';
+  html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:12px;font-family:Heebo;color:var(--dusty-rose);display:flex;align-items:center;gap:6px">';
+  html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dusty-rose)" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/></svg> מעגל רגשי-ייעוצי</h4>';
+
+  // Status indicators
+  html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">';
+  var emoFields = [
+    {key:'inTreatment', label:'מטופל/ת?', options:['כן — פנימי','כן — חיצוני','לא','ממתין/ה']},
+    {key:'cooperation', label:'שיתוף פעולה', options:['מלא','חלקי','מסרב/ת','משתנה']},
+    {key:'parentCoop', label:'שיתוף הורים', options:['פעיל','חלקי','מנותק','עוין']}
+  ];
+  emoFields.forEach(function(ef) {
+    var val = emo[ef.key] || '';
+    var statusStyle = '';
+    if (/מלא|פעיל|כן/.test(val)) statusStyle = 'background:var(--success-bg);color:var(--success);border-color:rgba(76,175,80,.2)';
+    else if (/חלקי|משתנה/.test(val)) statusStyle = 'background:var(--warn-bg);color:#B8860B;border-color:rgba(232,176,96,.2)';
+    else if (/מסרב|מנותק|עוין|לא/.test(val)) statusStyle = 'background:var(--danger-bg);color:var(--danger);border-color:rgba(212,92,110,.2)';
+    else statusStyle = 'background:var(--bg-alt);color:var(--muted);border-color:var(--border)';
+
+    html += '<div style="flex:1;min-width:140px;border:1.5px solid var(--border);border-radius:12px;padding:10px;' + statusStyle + '">';
+    html += '<div style="font-size:.7rem;font-weight:600;margin-bottom:4px;opacity:.7">' + ef.label + '</div>';
+    html += '<select onchange="saveEmotionalField(\'' + s.id + '\',\'' + ef.key + '\',this.value)" style="width:100%;padding:4px 6px;border:1px solid rgba(0,0,0,.1);border-radius:8px;font-family:Heebo;font-size:.78rem;background:rgba(255,255,255,.7);color:inherit">';
+    html += '<option value="">בחרי...</option>';
+    ef.options.forEach(function(opt) {
+      html += '<option value="' + opt + '"' + (val === opt ? ' selected' : '') + '>' + opt + '</option>';
+    });
+    html += '</select></div>';
+  });
+  html += '</div>';
+
+  // Therapist / treatment info
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
+  html += '<div><label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">גורם מטפל</label>';
+  html += '<input type="text" value="' + esc(emo.therapist || '') + '" onchange="saveEmotionalField(\'' + s.id + '\',\'therapist\',this.value)" placeholder="שם הגורם המטפל..." style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem"></div>';
+  html += '<div><label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">סוג טיפול</label>';
+  html += '<input type="text" value="' + esc(emo.treatmentType || '') + '" onchange="saveEmotionalField(\'' + s.id + '\',\'treatmentType\',this.value)" placeholder="CBT, אמנות, פסיכולוג..." style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem"></div>';
+  html += '</div>';
+
+  // Emotional plan / notes
+  html += '<label style="font-size:.72rem;color:var(--muted);display:block;margin-bottom:3px">תוכנית רגשית-ייעוצית</label>';
+  html += '<textarea onchange="saveEmotionalField(\'' + s.id + '\',\'plan\',this.value)" placeholder="תוכנית ייעוצית, המלצות, יעדים רגשיים..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.8rem;min-height:60px;resize:vertical">' + esc(emo.plan || '') + '</textarea>';
+  html += '</div>';
+
+  // ══════════════════════════════════════════
+  // 4. GOALS
+  // ══════════════════════════════════════════
   var autoGoals = [];
   autoWeaknesses.forEach(function(w) {
-    if (/לימודי/.test(w)) autoGoals.push({text:'שיפור ממוצע ציונים ב-10 נקודות', source:'auto'});
-    if (/חברתי/.test(w)) autoGoals.push({text:'השתתפות פעילה בפעילות חברתית אחת בשבוע', source:'auto'});
-    if (/אישי/.test(w)) autoGoals.push({text:'פיתוח מיומנות אישית אחת לפי בחירה', source:'auto'});
-    if (/מקצועי/.test(w)) autoGoals.push({text:'הגשת כל עבודות המגמה בזמן', source:'auto'});
-    if (/נוכחות/.test(w)) autoGoals.push({text:'שיפור נוכחות — מעל 80% בחודש הקרוב', source:'auto'});
+    if (/לימודי/.test(w.text)) autoGoals.push({text:'שיפור ממוצע ציונים ב-10 נקודות'});
+    if (/חברתי/.test(w.text)) autoGoals.push({text:'השתתפות פעילה בפעילות חברתית אחת בשבוע'});
+    if (/אישי/.test(w.text)) autoGoals.push({text:'פיתוח מיומנות אישית אחת לפי בחירה'});
+    if (/מקצועי/.test(w.text)) autoGoals.push({text:'הגשת כל עבודות המגמה בזמן'});
+    if (/נוכחות/.test(w.text)) autoGoals.push({text:'שיפור נוכחות — מעל 80% בחודש הקרוב'});
   });
 
   var manualGoals = plan.goals || [];
-  var allGoals = autoGoals.concat(manualGoals.map(function(g) { return {text:g.text,status:g.status,date:g.date,source:'manual',measure:g.measure}; }));
 
-  if (allGoals.length > 0) {
+  html += '<div style="background:var(--card);border-radius:16px;padding:18px;border:1px solid var(--border);margin-bottom:16px">';
+  html += '<h4 style="font-size:.88rem;font-weight:700;margin-bottom:12px;font-family:Heebo;color:var(--primary);display:flex;align-items:center;gap:6px">';
+  html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> יעדים ומטרות</h4>';
+
+  if (autoGoals.length > 0 || manualGoals.length > 0) {
     html += '<table style="width:100%;border-collapse:collapse;font-size:.82rem">';
     html += '<thead><tr style="border-bottom:2px solid var(--border)">';
     html += '<th style="text-align:right;padding:8px 6px;font-weight:700">יעד</th>';
     html += '<th style="text-align:right;padding:8px 6px;font-weight:700;width:140px">מדד הצלחה</th>';
-    html += '<th style="text-align:center;padding:8px 6px;font-weight:700;width:90px">סטטוס</th>';
-    html += '<th style="text-align:center;padding:8px 6px;font-weight:700;width:80px">תאריך</th>';
-    html += '<th style="width:30px"></th>';
-    html += '</tr></thead><tbody>';
+    html += '<th style="text-align:center;padding:8px 6px;font-weight:700;width:80px">סטטוס</th>';
+    html += '<th style="text-align:center;padding:8px 6px;font-weight:700;width:70px">תאריך</th>';
+    html += '<th style="width:26px"></th></tr></thead><tbody>';
 
     autoGoals.forEach(function(g) {
       html += '<tr style="border-bottom:1px solid var(--border)">';
-      html += '<td style="padding:8px 6px">' + esc(g.text) + ' <span style="font-size:.68rem;background:var(--info-bg);color:var(--info);padding:1px 6px;border-radius:6px">הצעה</span></td>';
-      html += '<td style="padding:8px 6px;color:var(--muted)">—</td>';
-      html += '<td style="padding:8px 6px;text-align:center"><span style="background:var(--info-bg);color:var(--info);padding:3px 10px;border-radius:8px;font-size:.75rem">מוצע</span></td>';
-      html += '<td style="padding:8px 6px;text-align:center;color:var(--muted)">—</td>';
-      html += '<td></td></tr>';
+      html += '<td style="padding:7px 6px">' + esc(g.text) + ' <span style="font-size:.65rem;background:var(--info-bg);color:var(--info);padding:1px 6px;border-radius:6px">הצעה</span></td>';
+      html += '<td style="padding:7px 6px;color:var(--muted)">—</td>';
+      html += '<td style="padding:7px 6px;text-align:center"><span style="background:var(--info-bg);color:var(--info);padding:2px 8px;border-radius:8px;font-size:.72rem">מוצע</span></td>';
+      html += '<td style="padding:7px 6px;text-align:center;color:var(--muted)">—</td><td></td></tr>';
     });
 
     manualGoals.forEach(function(g, idx) {
-      var statusColors = {active:'background:var(--primary-light);color:var(--primary-dark)',done:'background:var(--success-bg);color:var(--success)',paused:'background:var(--warn-bg);color:var(--warn)'};
-      var statusLabels = {active:'פעיל',done:'הושלם',paused:'מושהה'};
+      var stC = {active:'background:var(--primary-light);color:var(--primary-dark)',done:'background:var(--success-bg);color:var(--success)',paused:'background:var(--warn-bg);color:var(--warn)'};
+      var stL = {active:'פעיל',done:'הושלם',paused:'מושהה'};
       var st = g.status || 'active';
       html += '<tr style="border-bottom:1px solid var(--border)">';
-      html += '<td style="padding:8px 6px;font-weight:500">' + esc(g.text) + '</td>';
-      html += '<td style="padding:8px 6px;color:var(--muted);font-size:.78rem">' + esc(g.measure || '—') + '</td>';
-      html += '<td style="padding:8px 6px;text-align:center"><span style="' + (statusColors[st] || '') + ';padding:3px 10px;border-radius:8px;font-size:.75rem">' + (statusLabels[st] || st) + '</span></td>';
-      html += '<td style="padding:8px 6px;text-align:center;font-size:.78rem">' + esc(g.date || '—') + '</td>';
-      html += '<td><button onclick="removePlanItem(\'' + s.id + '\',\'goals\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.7rem" title="הסרה">&#x2715;</button></td></tr>';
+      html += '<td style="padding:7px 6px;font-weight:500">' + esc(g.text) + '</td>';
+      html += '<td style="padding:7px 6px;color:var(--muted);font-size:.78rem">' + esc(g.measure || '—') + '</td>';
+      html += '<td style="padding:7px 6px;text-align:center"><span style="' + (stC[st] || '') + ';padding:2px 8px;border-radius:8px;font-size:.72rem">' + (stL[st] || st) + '</span></td>';
+      html += '<td style="padding:7px 6px;text-align:center;font-size:.76rem">' + esc(g.date || '—') + '</td>';
+      html += '<td><button onclick="removePlanItem(\'' + s.id + '\',\'goals\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.65rem">&#x2715;</button></td></tr>';
     });
-
     html += '</tbody></table>';
   } else {
-    html += '<div style="color:var(--muted);font-size:.82rem;padding:8px 0">אין יעדים עדיין — יעדים מוצעים יופיעו אוטומטית כשיזוהו נקודות לחיזוק</div>';
+    html += '<div style="color:var(--muted);font-size:.82rem;padding:8px 0">אין יעדים — יופיעו הצעות אוטומטיות כשיזוהו נקודות לחיזוק</div>';
   }
 
-  // Add goal form
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">';
-  html += '<input type="text" id="newGoalText" placeholder="יעד חדש..." style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.82rem">';
-  html += '<input type="text" id="newGoalMeasure" placeholder="מדד הצלחה..." style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.82rem">';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">';
+  html += '<input type="text" id="newGoalText" placeholder="יעד חדש..." style="padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.78rem">';
+  html += '<input type="text" id="newGoalMeasure" placeholder="מדד הצלחה..." style="padding:6px 10px;border:1px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.78rem">';
   html += '</div>';
-  html += '<button class="btn btn-primary btn-sm" onclick="addGoal(\'' + s.id + '\')" style="margin-top:8px">הוספת יעד</button>';
+  html += '<button class="btn btn-primary btn-sm" onclick="addGoal(\'' + s.id + '\')" style="margin-top:6px;font-size:.78rem">+ יעד</button>';
   html += '</div>';
 
-  // ── WORK PLANS BY TRIMESTER ──
+  // ══════════════════════════════════════════
+  // 5. WORK PLANS BY TRIMESTER
+  // ══════════════════════════════════════════
   html += renderWorkPlans(s, timeline);
 
   return html;
@@ -2175,24 +2262,33 @@ function saveTrimesterNote(studentId, trimesterId) {
 }
 window.saveTrimesterNote = saveTrimesterNote;
 
-// ── DEMO DATA LOADER ──
+function saveEmotionalField(studentId, field, value) {
+  var plan = getPlanData(studentId);
+  if (!plan.emotional) plan.emotional = {};
+  plan.emotional[field] = value;
+  savePlanData(studentId, plan);
+}
+window.saveEmotionalField = saveEmotionalField;
+
+// ── DEMO DATA LOADER — נוער בסיכון, קשיי קשב, תח"י ──
 function loadDemoData(studentId) {
   var s = STUDENTS.find(function(st) { return String(st.id) === String(studentId); });
   if (!s) return;
 
-  // 1. Inject mock monthly reports (oct, nov, dec, jan, feb, mar)
+  // 1. Monthly reports — מגמת שיפור הדרגתית, אופיינית לנוער בסיכון
   var existing = {};
   try { existing = JSON.parse(localStorage.getItem('ort_monthly_reports_v2') || '{}'); } catch(e) {}
   if (!existing.homeroomReports) existing.homeroomReports = {};
   if (!existing.homeroomReports[s.cls]) existing.homeroomReports[s.cls] = {};
 
+  // תלמיד עם ADHD + לקויות למידה: התחלה נמוכה, שיפור איטי בנוכחות ובחברתי
   var demoTracking = {
-    oct: {dimLevel:2, skillLevel:2, academicLevel:2, attendanceLevel:1, performanceLevel:2, name:s.last+' '+s.first},
-    nov: {dimLevel:2, skillLevel:2, academicLevel:2, attendanceLevel:2, performanceLevel:2, name:s.last+' '+s.first},
-    dec: {dimLevel:3, skillLevel:2, academicLevel:3, attendanceLevel:2, performanceLevel:3, name:s.last+' '+s.first},
-    jan: {dimLevel:3, skillLevel:3, academicLevel:3, attendanceLevel:2, performanceLevel:3, name:s.last+' '+s.first},
-    feb: {dimLevel:3, skillLevel:3, academicLevel:3, attendanceLevel:3, performanceLevel:3, name:s.last+' '+s.first},
-    mar: {dimLevel:4, skillLevel:3, academicLevel:3, attendanceLevel:3, performanceLevel:4, name:s.last+' '+s.first}
+    oct: {dimLevel:1, skillLevel:1, academicLevel:1, attendanceLevel:1, performanceLevel:1, name:s.last+' '+s.first},
+    nov: {dimLevel:1, skillLevel:1, academicLevel:1, attendanceLevel:1, performanceLevel:2, name:s.last+' '+s.first},
+    dec: {dimLevel:2, skillLevel:1, academicLevel:2, attendanceLevel:1, performanceLevel:2, name:s.last+' '+s.first},
+    jan: {dimLevel:2, skillLevel:2, academicLevel:2, attendanceLevel:2, performanceLevel:2, name:s.last+' '+s.first},
+    feb: {dimLevel:2, skillLevel:2, academicLevel:2, attendanceLevel:2, performanceLevel:3, name:s.last+' '+s.first},
+    mar: {dimLevel:3, skillLevel:2, academicLevel:2, attendanceLevel:2, performanceLevel:3, name:s.last+' '+s.first}
   };
 
   ['oct','nov','dec','jan','feb','mar'].forEach(function(m) {
@@ -2200,32 +2296,56 @@ function loadDemoData(studentId) {
     if (!existing.homeroomReports[s.cls][m].studentTracking) existing.homeroomReports[s.cls][m].studentTracking = {};
     existing.homeroomReports[s.cls][m].studentTracking[s.id] = demoTracking[m];
   });
-
   localStorage.setItem('ort_monthly_reports_v2', JSON.stringify(existing));
 
-  // 2. Inject plan data with manual items
+  // 2. Dimensions — ציונים אופייניים לתלמיד מתקשה שמתחיל להשתפר
+  cloudStorage.set('sf_dims_' + studentId, {belong:2, respect:1, motivation:2, capability:1, autonomy:1});
+
+  // 3. Skills — מיומנויות נמוכות-בינוניות
+  cloudStorage.set('sf_skills_' + studentId, {comm:2, resp:1, create:2, time:1, tikun:1});
+
+  // 4. Plan — חוזקות, נקודות חיזוק, מעגל רגשי, יעדים, תוכניות עבודה
   var planData = {
-    strengths: ['מנהיגות טבעית בכיתה', 'יכולת עבודת צוות מעולה'],
-    weaknesses: ['קושי בהתמדה במשימות ארוכות', 'ניהול זמן בבחינות'],
-    goals: [
-      {text:'להגיש 100% מהעבודות בזמן', measure:'אפס עבודות חסרות בשליש ג\'', status:'active', date:'14/04/2026'},
-      {text:'שיפור ממוצע ב-8 נקודות', measure:'ממוצע 72 ומעלה', status:'active', date:'14/04/2026'},
-      {text:'להשתתף בפרויקט התנדבות', measure:'לפחות 4 מפגשים', status:'done', date:'01/02/2026'}
+    strengths: [
+      'כישרון ידני יוצא דופן — מצטיין בעבודה מעשית במגמה',
+      'יצירתיות — מביא פתרונות מקוריים כשמתעניין',
+      'נאמנות לחברים קרובים'
     ],
+    weaknesses: [
+      'קושי בריכוז למשימות ארוכות (ADHD — מאובחן)',
+      'דיסגרפיה — כתיבה איטית ולא קריאה',
+      'קושי בקבלת סמכות — מגיב בהתפרצויות',
+      'חוסר ביטחון עצמי בלימודים עיוניים'
+    ],
+    goals: [
+      {text:'הגשת 80% מהעבודות בזמן (עם התאמות)', measure:'לפחות 4 מתוך 5 עבודות בשליש ג\'', status:'active', date:'14/04/2026'},
+      {text:'שיפור נוכחות ל-75%', measure:'לא יותר מ-3 חיסורים בחודש', status:'active', date:'14/04/2026'},
+      {text:'השתתפות בקבוצה טיפולית', measure:'4 מפגשים מתוך 6', status:'active', date:'14/04/2026'},
+      {text:'למידת כלי ויסות עצמי', measure:'שימוש בכרטיס \'זמן מופסק\' במקום התפרצות', status:'active', date:'14/04/2026'},
+      {text:'בניית קשר אמון עם מחנכת', measure:'שיחה אישית שבועית', status:'done', date:'15/01/2026'}
+    ],
+    emotional: {
+      inTreatment: 'כן — פנימי',
+      cooperation: 'חלקי',
+      parentCoop: 'חלקי',
+      therapist: 'צהיי גטהון (יועצת)',
+      treatmentType: 'CBT + קבוצה טיפולית',
+      plan: 'עבודה על ויסות רגשי ושליטה בכעסים. פגישה שבועית עם יועצת. הפניה לאבחון עדכני (ADHD+LD). שיתוף אמא — מגיבה אך מתקשה ביישום עקבי בבית. טיפול באומנות פעם בשבועיים.'
+    },
     workPlans: {
       t1: {
-        academic: 'ממוצע 58 — התחלה חלשה, קשיי הסתגלות. נדרש ליווי אישי במתמטיקה ואנגלית',
-        social: 'משתלב חברתית אך נוטה לעימותים. עבודה על תקשורת בינאישית',
-        personal: 'נוכחות נמוכה (68%). שיחה עם הורים, הפניה ליועצת',
-        professional: 'מגלה עניין במגמה, עבודת ידיים טובה. צריך חיזוק בחלק העיוני',
-        notes: 'תלמיד עם פוטנציאל, דורש תשומת לב לנוכחות ולהרגלי למידה'
+        academic: 'ממוצע 42 — קשיי הסתגלות קשים. מסרב לכתוב, לא מגיש עבודות. התאמות: מבחן בע"פ, הקלטת שיעורים, מחשב נייד. ליווי שילוב 3 שעות שבועיות (מתמטיקה + אנגלית).',
+        social: 'בודד בהתחלה, מעורב ב-2 עימותים עם תלמידים. מגיב בתוקפנות מילולית כשמרגיש מאוים. עובד עם יועצת על כלי תקשורת.',
+        personal: 'נוכחות 58% — חיסורים רבים בימי ראשון ושני. איחורי בוקר כרוניים. לא ישן מספיק (משחקי מחשב). שיחה עם אמא, בקשה להגבלת מסכים.',
+        professional: 'ציון מגמה 61 — מצטיין בעבודה מעשית (78) אבל מתקשה בחלק העיוני (44). מורה המגמה מדווח על עניין אמיתי כשעובד עם הידיים.',
+        notes: 'תלמיד בסיכון — נדרשת תשומת לב מיוחדת. לחזק דרך המגמה שזה המקום שמרגיש מסוגל. לא ללחוץ על כתיבה, לתת חלופות.'
       },
       t2: {
-        academic: 'ממוצע עלה ל-64 — שיפור משמעותי. ממשיך ליווי במתמטיקה',
-        social: 'שיפור ניכר — לקח אחריות על פרויקט כיתתי',
-        personal: 'נוכחות עלתה ל-82%. מגיע בזמן ברוב הימים',
-        professional: 'ציון מגמה 78 — מצטיין בחלק המעשי',
-        notes: 'מגמת שיפור ברורה. להמשיך חיזוק חיובי ולתת אחריות'
+        academic: 'ממוצע עלה ל-51 — שיפור בזכות התאמות. מתחיל להגיש עבודות (3 מתוך 5). מחשב נייד עוזר מאוד. עדיין מתקשה באנגלית ובמתמטיקה.',
+        social: 'שיפור משמעותי — התחבר לקבוצת חברים קטנה. לקח אחריות על סידור הכיתה. ירידה בעימותים (0 החודש). עדיין מתקשה בעבודת קבוצה מובנית.',
+        personal: 'נוכחות עלתה ל-71%. איחורים ירדו. הצליח ללכת לישון לפני 23:00 ב-4 ימים בשבוע (דיווח אמא). משתמש בכרטיס \'זמן מופסק\' — 3 פעמים בחודש.',
+        professional: 'ציון מגמה 72 — שיפור! עיוני עלה ל-56. קיבל תפקיד אחראי על ארגון הכלים בסדנה. מורה המגמה: "רואים את ההשתנות".',
+        notes: 'מגמה חיובית ברורה. הקשר עם המחנכת הוא עוגן. להמשיך ליווי שילוב ולהכין לבחינות עם התאמות מלאות. אמא מגיעה לאסיפות — לחזק.'
       },
       t3: {
         academic: '',
@@ -2239,7 +2359,7 @@ function loadDemoData(studentId) {
 
   cloudStorage.set('sf_plan_' + studentId, planData);
   renderTabContent(s);
-  alert('נתוני דמו נטענו בהצלחה עבור ' + s.first + ' ' + s.last + '!');
+  alert('נתוני דמו נטענו — ' + s.first + ' ' + s.last + '\nתלמיד עם ADHD + לקויות למידה + תח"י\nציונים נמוכים, מגמת שיפור הדרגתית.');
 }
 window.loadDemoData = loadDemoData;
 
