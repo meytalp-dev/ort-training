@@ -582,7 +582,16 @@ function toast(msg) {
     setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+let _unsavedChanges = false;
+function markUnsaved() { _unsavedChanges = true; }
+function closeModal(id) {
+    if (_unsavedChanges && !confirm('יש שינויים שלא נשמרו. לסגור בכל זאת?')) return;
+    document.getElementById(id).classList.remove('show');
+    _unsavedChanges = false;
+}
+window.addEventListener('beforeunload', e => {
+    if (_unsavedChanges) { e.preventDefault(); return e.returnValue = ''; }
+});
 
 function normalizePhone(phone) {
     let p = (phone || '').toString().replace(/[^0-9]/g, '');
@@ -625,8 +634,8 @@ function renderSchedule() {
             prepDone = teachers.some(t => prepStatus[exam.id + '|' + t]);
         }
         const prepIcon = prepDone
-            ? '<span style="color:#2E7D32;font-weight:700;" title="טופס הוגש">V</span>'
-            : (exam.teacher ? '<span style="color:#C62828;" title="ממתין">X</span>' : '—');
+            ? '<span style="color:#2E7D32;font-weight:800;font-size:18px;" title="טופס הוגש" aria-label="טופס הוגש">V</span>'
+            : (exam.teacher ? '<span style="color:#C62828;font-weight:800;font-size:18px;" title="ממתין" aria-label="ממתין להגשה">X</span>' : '—');
 
         html += `<tr class="${rc}" style="cursor:pointer;" onclick="goToGrades('${exam.id}')">
             <td class="date-cell">${d.getDate()}.${d.getMonth()+1} <span class="date-weekday">יום ${wd}</span></td>
@@ -716,10 +725,14 @@ function goToGrades(examId) {
     state[3].grade = state[1].grade;
     state[3].cls = state[1].cls;
     switchMainTab(3);
-    // Select the exam in dropdown
     setTimeout(() => {
         const sel = document.getElementById('examSelect');
         if (sel) { sel.value = examId; onExamSelected(); }
+        // Scroll to grades content
+        setTimeout(() => {
+            const section = document.getElementById('confirmSection');
+            if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
     }, 100);
 }
 
@@ -881,7 +894,12 @@ function openReviewEditor(examId) {
         filesList.innerHTML = '';
     }
 
+    _unsavedChanges = false;
     document.getElementById('reviewModal').classList.add('show');
+    // Track changes in modal
+    document.querySelectorAll('#reviewModal input, #reviewModal textarea').forEach(el => {
+        el.addEventListener('input', markUnsaved, { once: true });
+    });
 }
 
 function addLinkRow() {
@@ -978,6 +996,7 @@ function saveReviewData() {
     } else {
         toast('נשמר מקומית — חבר Apps Script לשמירה בענן');
     }
+    _unsavedChanges = false;
     closeModal('reviewModal');
     renderReview();
 }
