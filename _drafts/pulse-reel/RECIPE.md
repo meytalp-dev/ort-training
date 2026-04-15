@@ -1,0 +1,14 @@
+# Recipe: Pulse System Reel — מנהלת בונה מערכות #1
+- Date: 2026-04-15
+- Template: Storytelling / Personal Experience
+- Opener: Photo Zoom (Meytal photo + blur + question)
+- Hook: Slide Up + Glow (card with "200 students, zero way to know")
+- Feature 1: Morph Transform (circle → emoji slider with 😭😕😐😊🤩)
+- Feature 2: Typewriter Build (3 dashboard lines: low/high/zero)
+- Feature 3: 3D Card Flip (pentagon back → 5 dimension pills)
+- Benefits: Orbit carousel (feelings→data, 30sec→dashboard, no code)
+- Summary: Quote Card ("אני לא מתכנתת. אני פשוט מסרבת לנהל עם ניחושים.")
+- CTA: Photo + Social (with series badge "מנהלת בונה מערכות #1")
+- Color: #E06090 (Pulse belonging pink) + all 5 dimension colors
+- Duration: ~35s (1110 frames @ 30fps minus crossfades)
+- Previous reels: Stitch (Countdown/Particle/Typewriter+Morph+3DFlip/Orbit/Before-After/Fullscreen), Claude Code (Energy/3DFlip/BtnEscape+Messy+Cursor/PillBIG/NumberSlam/Photo), Pomelli (PhotoZoom/SlideUp/Cursor+BtnEscape+Messy/StackBuild/QuoteCard/Card+QR)
