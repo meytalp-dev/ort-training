@@ -88,11 +88,11 @@ const DEFAULT_CONFIG = [
   ['class_יב2','','שם בת השירות של יב2'],
   ['class_יב3','','שם בת השירות של יב3'],
   ['','',''],
-  ['counselor_צהיי_phone','0527783903','טלפון יועצת — צהיי (ממו גטהון)'],
-  ['counselor_ליאת_phone','0528980191','טלפון יועצת — ליאת (בנבג׳י רוזנר)'],
-  ['counselor_דורית_phone','0523464235','טלפון יועצת — דורית (ויגדור מועלם)'],
-  ['yiskah_phone','0526995309','טלפון יסכה — רכזת נשירה וטיפול (הגר)'],
-  ['meytal_phone','0536256653','טלפון מיטל — מנהלת (פלג)'],
+  ['counselor_צהיי_phone','','טלפון יועצת — הריצי fillPhoneNumbers למילוי'],
+  ['counselor_ליאת_phone','','טלפון יועצת — הריצי fillPhoneNumbers למילוי'],
+  ['counselor_דורית_phone','','טלפון יועצת — הריצי fillPhoneNumbers למילוי'],
+  ['yiskah_phone','','טלפון יסכה — הריצי fillPhoneNumbers למילוי'],
+  ['meytal_phone','','טלפון מיטל — הריצי fillPhoneNumbers למילוי'],
   ['daily_summary_enabled','yes','yes/no — האם לשלוח סיכום יומי לחיסורים רצופים']
 ];
 
@@ -144,7 +144,7 @@ function setup() {
 // ============================================================
 function doGet(e) {
   try {
-    setup();
+    // setup() removed — run manually once. Sheets already exist.
     const params = (e && e.parameter) || {};
     const action = params.action || 'all';
 
@@ -177,7 +177,7 @@ function doGet(e) {
 // ============================================================
 function doPost(e) {
   try {
-    setup();
+    // setup() removed — run manually once. Sheets already exist.
     // Body is text/plain JSON (no CORS preflight)
     const body = JSON.parse(e.postData.contents);
     const action = body.action || 'save';
@@ -442,34 +442,58 @@ function getWorkingDays(count) {
   return days; // newest first
 }
 
-function getConsecutiveAbsences(records, studentId) {
-  // records = all attendance records (pre-fetched)
-  // Returns streak count of consecutive absent days (from most recent backward)
+function getClassReportingDays(records) {
+  // Build a map: class → Set of dates where the class reported
+  // A class "reported" if it has at least one record for that date
+  const classDays = {};
+  records.forEach(function(r) {
+    const cls = r.class || r.cls;
+    if (!cls) return;
+    if (!classDays[cls]) classDays[cls] = {};
+    classDays[cls][r.date] = true;
+  });
+  return classDays;
+}
+
+function getConsecutiveAbsences(records, studentId, classReportingDays) {
+  // Returns {streak, startDate, lastReason} — consecutive absent days from most recent backward
+  // KEY LOGIC: skip days where the student's CLASS didn't report at all
+  //   (bat sherut didn't fill) — don't break or count those days.
+  //   Only count days where class DID report and student was absent/sick.
   const days = getWorkingDays(10); // check up to 10 days back
   const studentRecords = {};
+  let studentClass = '';
   records.forEach(function(r) {
     if (String(r.student_id) === String(studentId)) {
-      studentRecords[r.date] = r.status;
+      studentRecords[r.date] = { status: r.status, reason: r.reason || '' };
+      if (!studentClass) studentClass = r.class || r.cls || '';
     }
   });
 
+  const classDays = classReportingDays[studentClass] || {};
+
   let streak = 0;
-  let noDataCount = 0;
+  let startDate = '';
+  let lastReason = '';
   for (let i = 0; i < days.length; i++) {
-    const status = studentRecords[days[i]];
+    const day = days[i];
+    const classReported = classDays[day];
+
+    if (!classReported) {
+      continue; // class didn't report — skip
+    }
+
+    const rec = studentRecords[day];
+    const status = rec ? rec.status : '';
     if (status === 'absent' || status === 'sick') {
       streak++;
-      noDataCount = 0; // reset — we found real data
-    } else if (status === 'present' || status === 'late') {
-      break; // streak broken — student was in school
+      startDate = day; // keeps updating — last one will be the earliest
+      if (!lastReason && rec.reason) lastReason = rec.reason;
     } else {
-      // No data for this day (class didn't report)
-      noDataCount++;
-      if (noDataCount >= 3) break; // too many gaps, stop looking
-      // Otherwise skip this day — don't break or count
+      break; // streak broken
     }
   }
-  return streak;
+  return { streak: streak, startDate: startDate, lastReason: lastReason };
 }
 
 function sendDailySummary() {
@@ -506,20 +530,23 @@ function sendDailySummary() {
     }
   });
 
+  // Build class reporting map — which classes reported on which days
+  const classReportingDays = getClassReportingDays(allRecords);
+
   // Calculate streaks for all students
   const counselorAlerts = {}; // counselor name → [{name, cls, streak}]
   const criticalAlerts = [];  // [{name, cls, streak, counselor}]
 
   Object.values(students).forEach(function(s) {
-    const streak = getConsecutiveAbsences(allRecords, s.id);
+    const result = getConsecutiveAbsences(allRecords, s.id, classReportingDays);
     const counselor = COUNSELOR_BY_CLASS[s.cls] || 'לא מוגדר';
 
-    if (streak >= 3) {
-      criticalAlerts.push({ name: s.name, cls: s.cls, streak: streak, counselor: counselor });
+    if (result.streak >= 3) {
+      criticalAlerts.push({ name: s.name, cls: s.cls, streak: result.streak, counselor: counselor, startDate: result.startDate, reason: result.lastReason });
     }
-    if (streak >= 2) {
+    if (result.streak >= 2) {
       if (!counselorAlerts[counselor]) counselorAlerts[counselor] = [];
-      counselorAlerts[counselor].push({ name: s.name, cls: s.cls, streak: streak });
+      counselorAlerts[counselor].push({ name: s.name, cls: s.cls, streak: result.streak, startDate: result.startDate, reason: result.lastReason });
     }
   });
 
@@ -546,7 +573,10 @@ function sendDailySummary() {
     msg += 'התלמידים הבאים בכיתות שלך עם חיסורים רצופים:\n\n';
     alerts.forEach(function(a) {
       const icon = a.streak >= 3 ? '🚨' : '⚠️';
-      msg += icon + ' ' + a.name + ' (' + a.cls + ') — ' + a.streak + ' ימים רצופים\n';
+      var line = icon + ' ' + a.name + ' (' + a.cls + ') — ' + a.streak + ' ימים';
+      if (a.startDate) line += ' (מ-' + a.startDate.substring(5).replace('-', '/') + ')';
+      if (a.reason) line += ' | ' + a.reason;
+      msg += line + '\n';
     });
     msg += '\nסה"כ: ' + alerts.length + ' תלמידים דורשים תשומת לב\n';
     msg += '\nבבקשה צרי קשר עם ההורים ועדכני במערכת.\n';
@@ -576,10 +606,14 @@ function sendDailySummary() {
     let msg = '🚨 סיכום התראות קריטיות — ' + today + '\n\n';
     msg += 'תלמידים עם 3+ ימי חיסור רצופים:\n\n';
     criticalAlerts.forEach(function(a) {
-      msg += '• ' + a.name + ' (' + a.cls + ') — ' + a.streak + ' ימים רצופים (יועצת: ' + a.counselor + ')\n';
+      var line = '• ' + a.name + ' (' + a.cls + ') — ' + a.streak + ' ימים';
+      if (a.startDate) line += ' (מ-' + a.startDate.substring(5).replace('-', '/') + ')';
+      line += ' | יועצת: ' + a.counselor;
+      if (a.reason) line += ' | ' + a.reason;
+      msg += line + '\n';
     });
-    msg += '\nסה"כ: ' + criticalAlerts.length + ' תלמידים במצב קריטי\n';
-    msg += '\nנדרשת התערבות מיידית — יצירת קשר עם הורים + תיעוד.\n';
+    msg += '\nסה"כ: ' + criticalAlerts.length + ' תלמידים דורשים טיפול מיידי\n';
+    msg += '\nנדרש: יצירת קשר עם הורים + תיעוד בשיחות אישיות.\n';
     msg += 'הודעה אוטומטית — מערכת נוכחות אורט בית הערבה';
 
     [yiskahPhone, meytalPhone].forEach(function(phone) {
@@ -644,14 +678,15 @@ function testDailySummaryDryRun() {
     }
   });
 
+  const classReportingDays = getClassReportingDays(allRecords);
   const results = { counselor: {}, critical: [] };
   Object.values(students).forEach(function(s) {
-    const streak = getConsecutiveAbsences(allRecords, s.id);
+    const result = getConsecutiveAbsences(allRecords, s.id, classReportingDays);
     const counselor = COUNSELOR_BY_CLASS[s.cls] || '?';
-    if (streak >= 3) results.critical.push({ name: s.name, cls: s.cls, streak: streak, counselor: counselor });
-    if (streak >= 2) {
+    if (result.streak >= 3) results.critical.push({ name: s.name, cls: s.cls, streak: result.streak, startDate: result.startDate, reason: result.lastReason, counselor: counselor });
+    if (result.streak >= 2) {
       if (!results.counselor[counselor]) results.counselor[counselor] = [];
-      results.counselor[counselor].push({ name: s.name, cls: s.cls, streak: streak });
+      results.counselor[counselor].push({ name: s.name, cls: s.cls, streak: result.streak, startDate: result.startDate, reason: result.lastReason });
     }
   });
 
