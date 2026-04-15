@@ -185,9 +185,47 @@ body::before{content:'';position:fixed;inset:0;
 .detail-row .dl{font-weight:700;color:var(--muted);min-width:140px;flex-shrink:0}
 .detail-row .dv{color:var(--text);flex:1}
 
+/* Reject modal */
+.reject-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s}
+.reject-modal-inner{background:var(--card);border-radius:20px;padding:28px;width:100%;max-width:420px;text-align:right}
+.reject-modal-inner h3{font-size:1rem;font-weight:800;font-family:Heebo;margin-bottom:14px;color:var(--danger)}
+.reject-modal-inner textarea{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.88rem;min-height:80px;resize:vertical;margin-bottom:14px}
+.reject-modal-inner textarea:focus{outline:none;border-color:var(--danger);box-shadow:0 0 0 3px rgba(212,92,110,.1)}
+.reject-modal-btns{display:flex;gap:8px;justify-content:flex-start}
+
+/* Cloud sync indicator */
+.sync-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(76,175,80,.06);border:1px solid rgba(76,175,80,.15);border-radius:12px;margin-bottom:14px;font-size:.78rem;color:var(--muted)}
+.sync-bar.error{background:rgba(212,92,110,.06);border-color:rgba(212,92,110,.15)}
+.sync-bar svg{width:16px;height:16px;flex-shrink:0}
+.sync-bar.syncing svg{animation:spin 1s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+/* Draft indicator */
+.draft-banner{background:var(--warn-bg);border:1.5px solid rgba(232,176,96,.3);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;animation:slideUp .3s}
+.draft-banner .draft-text{font-size:.85rem;font-weight:600;color:var(--create-dark)}
+.draft-banner button{padding:8px 16px;border-radius:10px;font-family:Heebo;font-size:.82rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--card);transition:.2s}
+.draft-banner .draft-restore{background:var(--create);color:#fff;border-color:var(--create)}
+.draft-banner .draft-discard{background:var(--card);color:var(--muted)}
+
+/* Mobile */
+@media(max-width:480px){
+  .container{padding:16px 14px}
+  .header{padding:0 14px}
+  .login-card{padding:28px 20px}
+  .role-grid{grid-template-columns:1fr}
+  .chip{padding:10px 14px;min-height:44px;display:flex;align-items:center}
+  .pc-btn{padding:10px 16px;min-height:44px}
+  .submit-bar{flex-direction:column;text-align:center}
+  .submit-btn{width:100%;justify-content:center}
+  .detail-row{flex-direction:column;gap:2px}
+  .detail-row .dl{min-width:unset}
+  .modal{padding:20px 16px;border-radius:16px}
+  .form-field label{font-size:.82rem}
+}
+
 /* Print */
 @media print{
-  .header,.tabs,.submit-bar,.pc-actions,.back-link,.toast{display:none!important}
+  .header,.tabs,.submit-bar,.pc-actions,.back-link,.toast,.sync-bar,.draft-banner{display:none!important}
   .modal{max-height:none;overflow:visible;box-shadow:none;border:1px solid #ddd}
   body{background:#fff}
 }
@@ -725,6 +763,10 @@ var state = {
 };
 
 var MONDAY_FORM_URL = 'https://forms.monday.com/forms/242c3d2494853b06a330ad280b89aff6?r=euc1';
+var CLOUD_URL = localStorage.getItem('incident_cloud_url') || '';
+var REPORT_URL = 'https://meytalp-dev.github.io/ort-training/management/incident-report.html';
+var DRAFT_KEY = 'incident_draft';
+var _draftTimer = null;
 
 // ==================== HELPERS ====================
 function esc(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
@@ -740,8 +782,190 @@ function showToast(msg, icon) {
   var t = document.getElementById('toast');
   t.innerHTML = (icon || '') + ' ' + esc(msg);
   t.classList.add('visible');
-  setTimeout(function() { t.classList.remove('visible'); }, 3500);
+  setTimeout(function() { t.classList.remove('visible'); }, 5000);
 }
+
+// ==================== CLOUD SYNC ====================
+function cloudSave(action, data, callback) {
+  if (!CLOUD_URL) { if (callback) callback(null); return; }
+  fetch(CLOUD_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(Object.assign({ action: action }, data))
+  }).then(function(r) { return r.json(); })
+    .then(function(res) { if (callback) callback(res); })
+    .catch(function(err) { console.warn('Cloud save error:', err); if (callback) callback(null); });
+}
+
+function cloudLoad(callback) {
+  if (!CLOUD_URL) { if (callback) callback(null); return; }
+  var cb = 'ir_' + Date.now();
+  window[cb] = function(data) { delete window[cb]; if (callback) callback(data); };
+  var script = document.createElement('script');
+  script.src = CLOUD_URL + '?action=getAllReports&callback=' + cb;
+  script.onerror = function() { delete window[cb]; if (callback) callback(null); };
+  document.head.appendChild(script);
+  setTimeout(function() { try { document.head.removeChild(script); } catch(e) {} }, 10000);
+}
+
+function syncFromCloud() {
+  cloudLoad(function(data) {
+    if (!data || data.result !== 'success' || !data.reports) return;
+    // Merge cloud reports with local
+    var local = getReports();
+    var localIds = {};
+    local.forEach(function(r) { localIds[r.id] = true; });
+    var added = 0;
+    data.reports.forEach(function(cr) {
+      if (!localIds[cr.id]) {
+        local.push(cr);
+        added++;
+      } else {
+        // Update status from cloud (approval may have happened on another device)
+        var idx = local.findIndex(function(lr) { return lr.id === cr.id; });
+        if (idx >= 0 && cr.status !== local[idx].status) {
+          local[idx] = cr;
+        }
+      }
+    });
+    if (added > 0 || data.reports.length > 0) {
+      // Sort by createdAt descending
+      local.sort(function(a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+      saveReports(local);
+      updatePendingBadge();
+      // Re-render if on pending/history tab
+      var activeTab = document.querySelector('.tab-btn.active');
+      if (activeTab) {
+        var tabText = activeTab.textContent;
+        if (tabText.indexOf('ממתינים') >= 0) renderPending();
+        if (tabText.indexOf('היסטוריה') >= 0) renderHistory();
+      }
+    }
+  });
+}
+
+// ==================== AUTO-SAVE DRAFTS ====================
+function saveDraft() {
+  var draft = collectFormData();
+  if (draft) localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+}
+
+function scheduleDraftSave() {
+  if (_draftTimer) clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(saveDraft, 2000);
+}
+
+function checkForDraft() {
+  var raw = localStorage.getItem(DRAFT_KEY);
+  if (!raw) return;
+  try {
+    var draft = JSON.parse(raw);
+    if (!draft || !draft.description) return; // Only restore meaningful drafts
+    var banner = document.createElement('div');
+    banner.className = 'draft-banner';
+    banner.id = 'draftBanner';
+    banner.innerHTML = '<div class="draft-text"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle;margin-left:6px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> נמצאה טיוטה שלא נשלחה</div>' +
+      '<div style="display:flex;gap:8px"><button class="draft-restore" onclick="restoreDraft()">שחזור</button><button class="draft-discard" onclick="discardDraft()">מחיקה</button></div>';
+    var form = document.getElementById('tab-form');
+    form.insertBefore(banner, form.firstChild);
+  } catch(e) {}
+}
+
+function restoreDraft() {
+  var raw = localStorage.getItem(DRAFT_KEY);
+  if (!raw) return;
+  try {
+    var d = JSON.parse(raw);
+    if (d.date) document.getElementById('f_date').value = d.date;
+    if (d.when) document.getElementById('f_when').value = d.when;
+    if (d.location) document.getElementById('f_location').value = d.location;
+    if (d.locationDetails) document.getElementById('f_locationDetails').value = d.locationDetails;
+    if (d.followup) document.getElementById('f_followup').value = d.followup;
+    if (d.followupDetails) document.getElementById('f_followupDetails').value = d.followupDetails;
+    if (d.description) document.getElementById('f_description').value = d.description;
+    if (d.initialResponse) document.getElementById('f_initialResponse').value = d.initialResponse;
+    if (d.futureAction) document.getElementById('f_futureAction').value = d.futureAction;
+    if (d.conclusions) document.getElementById('f_conclusions').value = d.conclusions;
+    if (d.perpName) document.getElementById('f_perpName').value = d.perpName;
+    if (d.perpClass) document.getElementById('f_perpClass').value = d.perpClass;
+    if (d.perpAge) document.getElementById('f_perpAge').value = d.perpAge;
+    if (d.perpGender) document.getElementById('f_perpGender').value = d.perpGender;
+    if (d.perpPrior) document.getElementById('f_perpPrior').value = d.perpPrior;
+    if (d.victimName) document.getElementById('f_victimName').value = d.victimName;
+    if (d.victimClass) document.getElementById('f_victimClass').value = d.victimClass;
+    if (d.victimAge) document.getElementById('f_victimAge').value = d.victimAge;
+    if (d.victimGender) document.getElementById('f_victimGender').value = d.victimGender;
+    if (d.victimPrior) document.getElementById('f_victimPrior').value = d.victimPrior;
+    if (d.treatmentDetails) document.getElementById('f_treatmentDetails').value = d.treatmentDetails;
+    if (d.internalContactDetails) document.getElementById('f_internalContactDetails').value = d.internalContactDetails;
+    if (d.externalContactDetails) document.getElementById('f_externalContactDetails').value = d.externalContactDetails;
+    if (d.consequenceDetails) document.getElementById('f_consequenceDetails').value = d.consequenceDetails;
+    if (d.supportDetails) document.getElementById('f_supportDetails').value = d.supportDetails;
+    // Restore chips
+    if (d.eventTypes) d.eventTypes.forEach(function(val) {
+      var chip = document.querySelector('#eventTypeChips .chip[data-val="' + val + '"]');
+      if (chip) chip.classList.add('selected');
+    });
+    updateSubTypes();
+    if (d.treatment) d.treatment.forEach(function(val) {
+      var chip = document.querySelector('#treatmentChips .chip[data-val="' + val + '"]');
+      if (chip) chip.classList.add('selected');
+    });
+    // Restore conditional visibility
+    toggleLocationDetails();
+    toggleFollowup();
+    showToast('הטיוטה שוחזרה', '<svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>');
+  } catch(e) {}
+  discardDraftBanner();
+}
+
+function discardDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  discardDraftBanner();
+  showToast('הטיוטה נמחקה', '<svg viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" width="18" height="18"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>');
+}
+
+function discardDraftBanner() {
+  var b = document.getElementById('draftBanner');
+  if (b) b.remove();
+}
+
+function collectFormData() {
+  return {
+    date: document.getElementById('f_date').value,
+    when: document.getElementById('f_when').value,
+    location: document.getElementById('f_location').value,
+    locationDetails: document.getElementById('f_locationDetails').value,
+    followup: document.getElementById('f_followup').value,
+    followupDetails: document.getElementById('f_followupDetails').value,
+    eventTypes: getSelectedChips('eventTypeChips'),
+    description: document.getElementById('f_description').value.trim(),
+    initialResponse: document.getElementById('f_initialResponse').value.trim(),
+    futureAction: document.getElementById('f_futureAction').value.trim(),
+    conclusions: document.getElementById('f_conclusions').value.trim(),
+    perpName: document.getElementById('f_perpName').value.trim(),
+    perpClass: document.getElementById('f_perpClass').value,
+    perpAge: document.getElementById('f_perpAge').value,
+    perpGender: document.getElementById('f_perpGender').value,
+    perpPrior: document.getElementById('f_perpPrior').value,
+    victimName: document.getElementById('f_victimName').value.trim(),
+    victimClass: document.getElementById('f_victimClass').value,
+    victimAge: document.getElementById('f_victimAge').value,
+    victimGender: document.getElementById('f_victimGender').value,
+    victimPrior: document.getElementById('f_victimPrior').value,
+    treatment: getSelectedChips('treatmentChips'),
+    treatmentDetails: document.getElementById('f_treatmentDetails').value.trim(),
+    internalContactDetails: document.getElementById('f_internalContactDetails').value.trim(),
+    externalContactDetails: document.getElementById('f_externalContactDetails').value.trim(),
+    consequenceDetails: document.getElementById('f_consequenceDetails').value.trim(),
+    supportDetails: document.getElementById('f_supportDetails').value.trim()
+  };
+}
+
+// Attach auto-save to all form inputs
+document.addEventListener('input', function(e) {
+  if (e.target.closest('#tab-form')) scheduleDraftSave();
+});
 
 function getSelectedChips(containerId) {
   var chips = document.querySelectorAll('#' + containerId + ' .chip.selected');
@@ -772,6 +996,9 @@ function doLogin() {
   state.userName = document.getElementById('loginName').value.trim();
   if (!state.userName) return;
 
+  // Save login for next time
+  localStorage.setItem('incident_login', JSON.stringify({ role: state.role, name: state.userName }));
+
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
 
@@ -783,10 +1010,37 @@ function doLogin() {
   var today = new Date().toISOString().split('T')[0];
   document.getElementById('f_date').value = today;
 
+  // Sync from cloud first, then render
+  syncFromCloud();
   updatePendingBadge();
   renderPending();
   renderHistory();
+
+  // Check for saved draft
+  checkForDraft();
+
+  // If principal, auto-switch to pending tab
+  if (state.role === 'principal') {
+    var pendingBtn = document.getElementById('pendingTabBtn');
+    switchTab('pending', pendingBtn);
+  }
 }
+
+// Auto-login if saved
+function tryAutoLogin() {
+  var saved = localStorage.getItem('incident_login');
+  if (!saved) return;
+  try {
+    var login = JSON.parse(saved);
+    if (login.role && login.name) {
+      state.role = login.role;
+      state.userName = login.name;
+      doLogin();
+    }
+  } catch(e) {}
+}
+// Run on page load
+tryAutoLogin();
 
 // ==================== TABS ====================
 function switchTab(tabId, btn) {
@@ -888,8 +1142,13 @@ function selectVictim(id) {
   if (s.dob) {
     var parts = s.dob.split('/');
     if (parts.length === 3) {
-      var birthYear = parseInt(parts[2]) + (parseInt(parts[2]) < 50 ? 2000 : 1900);
-      var age = new Date().getFullYear() - birthYear;
+      var yr = parseInt(parts[2]);
+      var birthYear = yr < 100 ? (yr < 50 ? 2000 + yr : 1900 + yr) : yr;
+      var now = new Date();
+      var age = now.getFullYear() - birthYear;
+      var birthMonth = parseInt(parts[1]);
+      var birthDay = parseInt(parts[0]);
+      if (now.getMonth() + 1 < birthMonth || (now.getMonth() + 1 === birthMonth && now.getDate() < birthDay)) age--;
       document.getElementById('f_victimAge').value = age;
     }
   }
@@ -1006,19 +1265,34 @@ function submitReport() {
   reports.unshift(report);
   saveReports(reports);
 
+  // Save to cloud
+  cloudSave('saveReport', { report: report }, function(res) {
+    if (res && res.result === 'success') {
+      console.log('Cloud save OK:', report.id);
+    } else {
+      console.warn('Cloud save failed — local copy preserved');
+    }
+  });
+
   // Also save to student file incidents if victim is identified
   if (report.victimStudentId) {
     saveToStudentIncidents(report);
   }
+
+  // Clear draft
+  localStorage.removeItem(DRAFT_KEY);
+  discardDraftBanner();
 
   // Send WhatsApp notification to Meytal
   sendWhatsAppNotification(report);
 
   showToast('הדיווח נשלח לאישור המנהלת', '<svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>');
 
-  // Reset form
+  // Reset form and switch to pending
   resetForm();
   updatePendingBadge();
+  var pendingBtn = document.getElementById('pendingTabBtn');
+  switchTab('pending', pendingBtn);
 }
 
 function saveToStudentIncidents(report) {
@@ -1055,10 +1329,9 @@ function sendWhatsAppNotification(report) {
   msg += 'תאריך: ' + dateStr + '\n';
   msg += 'סוג: ' + types + '\n';
   msg += 'נפגע: ' + (report.victimName || 'לא צוין') + '\n\n';
-  msg += 'היכנסי למערכת לצפייה ואישור';
+  msg += 'לצפייה ואישור:\n' + REPORT_URL;
 
   var encoded = encodeURIComponent(msg);
-  // Open WhatsApp — Meytal's notification
   window.open('https://api.whatsapp.com/send?phone=972526642152&text=' + encoded, '_blank');
 }
 
@@ -1167,6 +1440,7 @@ function renderPending() {
 }
 
 function approveReport(id) {
+  if (state.role !== 'principal') return;
   var reports = getReports();
   var report = reports.find(function(r) { return r.id === id; });
   if (!report) return;
@@ -1176,10 +1450,13 @@ function approveReport(id) {
   report.approvedBy = state.userName;
   saveReports(reports);
 
+  // Sync to cloud
+  cloudSave('approveReport', { reportId: id, approvedBy: state.userName });
+
   // Copy summary to clipboard for Monday.com
   var summary = buildMondaySummary(report);
   navigator.clipboard.writeText(summary).then(function() {
-    showToast('אושר! הסיכום הועתק. טופס מנדיי נפתח', '<svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>');
+    showToast('אושר! הסיכום הועתק — הדביקי בשדה "תיאור" במנדיי', '<svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>');
   }).catch(function() {
     showToast('אושר! טופס מנדיי נפתח', '<svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg>');
   });
@@ -1192,7 +1469,26 @@ function approveReport(id) {
 }
 
 function rejectReport(id) {
-  var reason = prompt('סיבת הדחייה (אופציונלי):');
+  if (state.role !== 'principal') return;
+  // Show styled modal instead of prompt()
+  var html = '<div class="reject-modal" onclick="if(event.target===this)this.remove()">';
+  html += '<div class="reject-modal-inner" dir="rtl">';
+  html += '<h3>דחיית דיווח</h3>';
+  html += '<p style="font-size:.85rem;color:var(--muted);margin-bottom:12px">סיבת הדחייה (אופציונלי)</p>';
+  html += '<textarea id="rejectReason" placeholder="למה הדיווח נדחה? לדוגמה: חסר מידע, טעות בפרטים..."></textarea>';
+  html += '<div class="reject-modal-btns">';
+  html += '<button class="pc-btn reject" onclick="doReject(\'' + id + '\')">דחייה</button>';
+  html += '<button class="pc-btn" onclick="this.closest(\'.reject-modal\').remove()">ביטול</button>';
+  html += '</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+  setTimeout(function() { var ta = document.getElementById('rejectReason'); if (ta) ta.focus(); }, 100);
+}
+
+function doReject(id) {
+  var reason = (document.getElementById('rejectReason') || {}).value || '';
+  var modal = document.querySelector('.reject-modal');
+  if (modal) modal.remove();
+
   var reports = getReports();
   var report = reports.find(function(r) { return r.id === id; });
   if (!report) return;
@@ -1200,8 +1496,11 @@ function rejectReport(id) {
   report.status = 'rejected';
   report.rejectedAt = new Date().toISOString();
   report.rejectedBy = state.userName;
-  report.rejectionReason = reason || '';
+  report.rejectionReason = reason;
   saveReports(reports);
+
+  // Sync to cloud
+  cloudSave('rejectReport', { reportId: id, rejectedBy: state.userName, reason: reason });
 
   showToast('הדיווח נדחה', '<svg viewBox="0 0 24 24" fill="none" stroke="#D45C6E" stroke-width="2" width="18" height="18"><path d="M18 6L6 18M6 6l12 12"/></svg>');
   updatePendingBadge();
@@ -1344,7 +1643,7 @@ function viewReport(id) {
   html += '<div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap">';
   if (r.status === 'pending' && state.role === 'principal') {
     html += '<button class="pc-btn approve" onclick="approveReport(\'' + r.id + '\');this.closest(\'.modal-overlay\').remove()">אישור ושליחה למנדיי</button>';
-    html += '<button class="pc-btn reject" onclick="rejectReport(\'' + r.id + '\');this.closest(\'.modal-overlay\').remove()">דחייה</button>';
+    html += '<button class="pc-btn reject" onclick="this.closest(\'.modal-overlay\').remove();rejectReport(\'' + r.id + '\')">דחייה</button>';
   }
   if (r.status === 'approved') {
     html += '<button class="pc-btn monday" onclick="window.open(\'' + MONDAY_FORM_URL + '\',\'_blank\')">פתיחת טופס מנדיי</button>';
@@ -1393,7 +1692,7 @@ function renderHistory() {
     html += '<span class="pc-badge ' + r.status + '">' + (isApproved ? 'אושר' : 'נדחה') + '</span></div>';
     html += '<div class="pc-details">';
     html += '<strong>נפגע:</strong> ' + esc(r.victimName || 'לא צוין') + '<br>';
-    html += esc(r.description ? r.description.substring(0, 100) + '...' : '');
+    html += esc(r.description ? (r.description.length > 100 ? r.description.substring(0, 100) + '...' : r.description) : '');
     if (!isApproved && r.rejectionReason) html += '<br><strong>סיבת דחייה:</strong> ' + esc(r.rejectionReason);
     html += '</div>';
     html += '<div class="pc-actions">';
