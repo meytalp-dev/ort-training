@@ -3008,9 +3008,69 @@ renderProfile = function(s) {
 };
 
 // ============================================================
+// ATTENDANCE SYNC — טעינת נתוני נוכחות מהענן (דיווחי בנות שירות)
+// ============================================================
+var ATTENDANCE = {};
+var ATTENDANCE_CLOUD_URL = 'https://script.google.com/macros/s/AKfycbzSdKB2gIJSQKgHcGeJ-GJUvnBeyzSTMMOrlqfKFQYIMybbSdr9hLKccmCzsJt989n3fg/exec';
+
+function loadAttendanceFromLocal() {
+  try {
+    var saved = localStorage.getItem('ort-attendance');
+    if (saved) {
+      var parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        ATTENDANCE = parsed;
+        return true;
+      }
+    }
+  } catch(e) {}
+  return false;
+}
+
+function loadAttendanceFromCloud() {
+  return fetch(ATTENDANCE_CLOUD_URL + '?action=all')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      var records = data.records || [];
+      if (records.length === 0) return;
+      // Build ATTENDANCE keyed by student_id → date → {status, reason}
+      records.forEach(function(r) {
+        var sid = r.student_id || r[2]; // column index fallback
+        var date = r.date || r[1];
+        var status = r.status || r[5];
+        var reason = r.reason || r[6] || '';
+        if (!sid || !date || !status) return;
+        sid = parseInt(sid);
+        if (isNaN(sid)) return;
+        if (!ATTENDANCE[sid]) ATTENDANCE[sid] = {};
+        ATTENDANCE[sid][date] = { status: status, reason: reason };
+      });
+      // Cache locally
+      try { localStorage.setItem('ort-attendance', JSON.stringify(ATTENDANCE)); } catch(e) {}
+    })
+    .catch(function(err) {
+      console.warn('Attendance cloud fetch failed:', err.message);
+    });
+}
+
+function syncAttendanceData() {
+  // First load from localStorage as quick cache
+  loadAttendanceFromLocal();
+  // Then fetch from cloud for latest data
+  return loadAttendanceFromCloud();
+}
+
+// ============================================================
 // INIT
 // ============================================================
 cloudStorage.mountStatusBadge();
+syncAttendanceData().then(function() {
+  // Re-render current tab if attendance is showing
+  if (typeof currentStudent !== 'undefined' && currentStudent && typeof currentTab !== 'undefined' && currentTab === 'attendance') {
+    renderTabContent(currentStudent);
+  }
+});
 cloudStorage.prefetchAll(['sf_notes_','sf_convs_','sf_dims_','sf_skills_','sf_journey_','sf_plan_','ort_docs_','investment_bank_','ort_admission_']).then(function(){
   migratePortfolioNotes();
 });
