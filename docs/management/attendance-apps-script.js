@@ -368,8 +368,6 @@ function sendReminderCheck() {
 
   const cfg = fetchConfig();
   const recipientPhones = (cfg.reminder_recipient_phones || '').split(',').map(function(p) { return p.trim(); }).filter(Boolean);
-  const recipientNames = cfg.reminder_recipient_names || 'המנהלת';
-
   const missingDetails = missingClasses.map(function(c) {
     const reporter = cfg['class_' + c] || '(לא הוגדר)';
     return c + ' — ' + reporter;
@@ -456,16 +454,19 @@ function getConsecutiveAbsences(records, studentId) {
   });
 
   let streak = 0;
+  let noDataCount = 0;
   for (let i = 0; i < days.length; i++) {
     const status = studentRecords[days[i]];
     if (status === 'absent' || status === 'sick') {
       streak++;
+      noDataCount = 0; // reset — we found real data
     } else if (status === 'present' || status === 'late') {
-      break; // streak broken
+      break; // streak broken — student was in school
     } else {
-      // No data for this day — don't break streak but don't count
-      // If no data at all, stop counting
-      if (i === 0 && !status) break;
+      // No data for this day (class didn't report)
+      noDataCount++;
+      if (noDataCount >= 3) break; // too many gaps, stop looking
+      // Otherwise skip this day — don't break or count
     }
   }
   return streak;
@@ -491,6 +492,11 @@ function sendDailySummary() {
 
   // Fetch all records
   const allRecords = fetchAll();
+
+  if (allRecords.length === 0) {
+    logInfo('daily-summary', 'no attendance records in sheet — nothing to check', '');
+    return 'no records';
+  }
 
   // Get unique student IDs with their names and classes
   const students = {};
