@@ -710,6 +710,8 @@ function renderStudentHeader(s) {
     '<div class="stats">' +
       '<div class="stat"><div class="val" style="color:' + gradeColor(avg2 || avg1) + '">' + (avg2 || avg1 || '—') + '</div><div class="lbl">ממוצע</div></div>' +
       (avg1 && avg2 ? '<div class="stat"><div class="val" style="color:' + (avg2 > avg1 ? 'var(--success)' : avg2 < avg1 ? 'var(--danger)' : 'var(--muted)') + '">' + (avg2 > avg1 ? '&#x25B2;' : avg2 < avg1 ? '&#x25BC;' : '=') + '</div><div class="lbl">מגמה</div></div>' : '') +
+      '<button onclick="loadDemoAndShow(\'' + s.id + '\')" style="padding:6px 16px;border-radius:12px;border:1.5px solid var(--primary);background:rgba(58,172,160,.08);color:var(--primary-dark);font-family:Heebo;font-size:.78rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s" onmouseenter="this.style.background=\'rgba(58,172,160,.18)\'" onmouseleave="this.style.background=\'rgba(58,172,160,.08)\'">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> דמו תוכנית אישית</button>' +
     '</div>';
 }
 
@@ -1498,9 +1500,7 @@ function renderJourney(s) {
     html += '<div style="font-size:.68rem;color:var(--muted)">עודכן: ' + esc(plan.lastUpdated) + (plan.lastUpdatedBy ? ' · ' + esc(plan.lastUpdatedBy) : '') + '</div>';
   }
   html += '</div>';
-  if (state.role === 'principal' || state.role === 'deputy') {
-    html += '<button class="btn btn-sm" onclick="loadDemoData(\'' + s.id + '\')" style="font-size:.68rem;background:var(--bg-alt);color:var(--muted);border:1px solid var(--border);padding:2px 8px;border-radius:8px;cursor:pointer">דוגמה</button>';
-  }
+  html += '<button class="btn btn-sm" onclick="loadDemoData(\'' + s.id + '\')" style="font-size:.68rem;background:var(--bg-alt);color:var(--muted);border:1px solid var(--border);padding:2px 8px;border-radius:8px;cursor:pointer">טען דמו</button>';
   html += '</div>';
 
   // ══════════════════════════════════════════
@@ -2906,9 +2906,29 @@ function loadDemoData(studentId) {
 
   cloudStorage.set('sf_plan_' + studentId, planData);
   renderTabContent(s);
-  alert('נתוני דמו נטענו — ' + s.first + ' ' + s.last + '\nתלמיד עם ADHD + לקויות למידה + תח"י\nציונים נמוכים, מגמת שיפור הדרגתית.');
+  showToast('נתוני דמו נטענו — ' + s.first + ' ' + s.last, 'תלמיד עם ADHD + לקויות למידה, מגמת שיפור הדרגתית');
 }
 window.loadDemoData = loadDemoData;
+
+function loadDemoAndShow(studentId) {
+  loadDemoData(studentId);
+  switchTab('journey');
+}
+window.loadDemoAndShow = loadDemoAndShow;
+
+function showToast(title, subtitle) {
+  var existing = document.getElementById('demoToast');
+  if (existing) existing.remove();
+  var toast = document.createElement('div');
+  toast.id = 'demoToast';
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:14px 28px;border-radius:16px;z-index:9999;font-family:Heebo;box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;gap:4px;animation:toastIn .4s ease';
+  toast.innerHTML = '<div style="font-weight:700;font-size:.88rem">' + title + '</div>' +
+    (subtitle ? '<div style="font-size:.75rem;opacity:.85">' + subtitle + '</div>' : '');
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; }, 3000);
+  setTimeout(function() { toast.remove(); }, 3400);
+}
+window.showToast = showToast;
 
 function getDocuments(s) {
   // Check admission docs
