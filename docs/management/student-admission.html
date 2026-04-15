@@ -3029,18 +3029,16 @@ function syncFromSheet(action, params, callback) {
   if (!APPS_SCRIPT_URL) { if (callback) callback(null); return; }
   var url = APPS_SCRIPT_URL + '?action=' + action;
   for (var k in params) { url += '&' + k + '=' + encodeURIComponent(params[k]); }
-  // JSONP for CORS
-  var cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-  url += '&callback=' + cbName;
-  window[cbName] = function(data) {
-    delete window[cbName];
-    document.body.removeChild(script);
-    if (callback) callback(data);
-  };
-  var script = document.createElement('script');
-  script.src = url;
-  script.onerror = function() { delete window[cbName]; document.body.removeChild(script); if (callback) callback(null); };
-  document.body.appendChild(script);
+  fetch(url)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      // Strip JSONP wrapper: callback({...}) → {...}
+      var match = text.match(/^[a-zA-Z0-9_]+\(([\s\S]*)\)$/);
+      var json = match ? match[1] : text;
+      try { var data = JSON.parse(json); if (callback) callback(data); }
+      catch(e) { console.warn('syncFromSheet parse error:', e); if (callback) callback(null); }
+    })
+    .catch(function(err) { console.warn('syncFromSheet error:', err); if (callback) callback(null); });
 }
 
 // Wrap saveLead to also sync
