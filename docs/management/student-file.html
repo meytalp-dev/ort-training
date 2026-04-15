@@ -2878,7 +2878,20 @@ function renderActionPlan(s, plan, timeline, scores, skills, dims) {
       html += '<span style="background:' + st.bg + ';color:' + st.color + '">' + st.label + '</span>';
       if (a.owner) html += '<span style="background:var(--bg-alt);color:var(--text-light)">אחראי: ' + esc(a.owner) + '</span>';
       if (a.deadline) html += '<span style="background:var(--bg-alt);color:var(--text-light)">עד: ' + esc(a.deadline) + '</span>';
-      html += '</div></div>';
+      html += '</div>';
+      // WhatsApp buttons for each owner
+      if (a.owner && a.waRecipients && a.waRecipients.length > 0) {
+        html += '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">';
+        a.waRecipients.forEach(function(wr) {
+          html += '<a href="https://api.whatsapp.com/send?phone=' + wr.phone + '&text=' + encodeURIComponent(wr.message) + '" target="_blank" rel="noopener" ';
+          html += 'style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:.7rem;font-weight:600;font-family:Heebo;text-decoration:none;';
+          html += 'background:#25D366;color:#fff;border:none;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity=\'.85\'" onmouseout="this.style.opacity=\'1\'">';
+          html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492a.5.5 0 00.612.638l4.67-1.23A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-2.137 0-4.119-.663-5.752-1.796l-.252-.167-3.298.869.882-3.222-.185-.265A9.946 9.946 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>';
+          html += esc(wr.label) + '</a>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
       html += '<select onchange="updateActionStatus(\'' + s.id + '\',' + idx + ',this.value)" style="padding:4px 6px;border:1px solid var(--border);border-radius:8px;font-family:Heebo;font-size:.7rem;background:var(--card);cursor:pointer">';
       ['pending','active','done','blocked'].forEach(function(st2) {
         html += '<option value="' + st2 + '"' + (a.status === st2 ? ' selected' : '') + '>' + (STATUS_STYLE[st2].label) + '</option>';
@@ -2927,7 +2940,7 @@ function generateActionPlan(studentId) {
   var actions = [];
   var today = new Date().toLocaleDateString('he-IL');
 
-  // Staff mapping
+  // Staff mapping — names + phones
   var STAFF = {
     pedagogy: 'רווית גל (סגנית)',
     treatment: 'יסכה הגר (רכזת טיפול)',
@@ -2937,10 +2950,55 @@ function generateActionPlan(studentId) {
     deputy: 'מנו דהאן',
     principal: 'מיטל פלג'
   };
+  var STAFF_PHONES = {
+    'רווית גל':        '972503993021',
+    'יסכה הגר':        '972526995309',
+    'דורית ויגדור':     '972523464235',
+    'ליאת רוזנר':       '972528980191',
+    'צהיי גטהון':       '972527783903',
+    'מנו דהאן':         '972505852852',
+    'מיטל פלג':         '972536256653',
+    'רעיה יצחקי':       '972504726066',
+    'אושר אהרוני':      '972508882402',
+    'אופירה מלכה':      '972534438414',
+    'שאזו פרלה':       '972525115337',
+    'יעקב גרונספלד':    '972546995254',
+    'נעמה קוסטן':       '972524295181',
+    'גיא נתנאל':        '972542007155',
+    'יוסף רבבשי':       '972506563344',
+    'יואב רוט':         '972527218003',
+    'משה צברי':         '972547195033',
+    'חוה בנימין':       '972506380060'
+  };
   var grade = s.cls.charAt(0) === 'י' && s.cls.charAt(1) !== 'א' && s.cls.charAt(1) !== 'ב' ? 'Y' : (s.cls.indexOf('יא') === 0 ? 'YA' : 'YB');
+  if (s.cls.charAt(0) === 'ט') grade = (s.cls === 'ט1' ? 'YB' : 'YA'); // ט1→צהיי, ט2→ליאת
   var counselor = STAFF['counselor' + grade];
-  var HOMEROOM = {'י1':'רעיה יצחקי','י2':'בתיה גולן','י3':'שירלי כהן','יא1':'ענבל פרץ','יא2':'רוית בן דוד','יא3':'נעמה לוי','יב1':'אלון שמעון','יב2':'ליאור כהן','יב3':'מנו דהאן'};
+  var HOMEROOM = {'ט1':'משה צברי','ט2':'אושר אהרוני','י1':'רעיה יצחקי','י2':'אופירה מלכה','י3':'שאזו פרלה','יא1':'יעקב גרונספלד','יא2':'נעמה קוסטן','יא3':'גיא נתנאל','יב1':'יוסף רבבשי','יב2':'יואב רוט','יב3':'מנו דהאן'};
   var homeroom = HOMEROOM[s.cls] || 'מחנכ/ת';
+  var studentFullName = s.first + ' ' + s.last;
+
+  // Helper — build WhatsApp recipients from names
+  function buildWA(names, actionTitle, extraDetail) {
+    var recipients = [];
+    names.forEach(function(name) {
+      // Find phone by matching any key that contains the name
+      var phone = '';
+      for (var key in STAFF_PHONES) {
+        if (name.indexOf(key) >= 0 || key.indexOf(name) >= 0) {
+          phone = STAFF_PHONES[key]; break;
+        }
+      }
+      if (!phone) return;
+      var firstName = name.split(' ')[0].replace(/\(.*/,'').trim();
+      var msg = 'שלום ' + firstName + ',\n\n';
+      msg += 'בנוגע לתלמיד/ה: *' + studentFullName + '* (' + s.cls + ')\n\n';
+      msg += '*' + actionTitle + '*\n';
+      if (extraDetail) msg += extraDetail + '\n';
+      msg += '\nנא לעדכן כשיש התקדמות.\nתודה!';
+      recipients.push({label: firstName, phone: phone, message: msg});
+    });
+    return recipients;
+  }
 
   // ═══════════════════════════════════════════
   // 1. ACADEMIC — ירידה בציונים / ממוצע נמוך
@@ -2951,30 +3009,37 @@ function generateActionPlan(studentId) {
 
   if (avgLow || (scores.academic > 0 && scores.academic < 50)) {
     var avgText = grades.avg2 ? 'ממוצע ' + grades.avg2 : 'ציון לימודי ' + scores.academic;
+    var t1 = 'ליווי לימודי אישי';
     actions.push({
       category: 'academic', status: 'pending',
-      title: 'ליווי לימודי אישי',
+      title: t1,
       detail: avgText + ' — נדרשת בדיקה עם ' + STAFF.pedagogy + '. לבדוק התאמות, שעות שילוב, ואפשרות לעזרה פרטנית.',
       owner: homeroom + ' + ' + STAFF.pedagogy,
-      deadline: '7 ימים'
+      deadline: '7 ימים',
+      waRecipients: buildWA([homeroom, 'רווית גל'], t1, avgText + ' — צריך בדיקה לגבי התאמות ועזרה פרטנית.')
     });
   }
   if (hasGradeDecline) {
+    var t2 = 'ירידה חדה בציונים';
+    var decDetail = 'ממוצע ירד מ-' + grades.avg1 + ' ל-' + grades.avg2 + ' (ירידה של ' + Math.round(grades.avg1 - grades.avg2) + ' נקודות).';
     actions.push({
       category: 'academic', status: 'pending',
-      title: 'ירידה חדה בציונים',
-      detail: 'ממוצע ירד מ-' + grades.avg1 + ' ל-' + grades.avg2 + ' (ירידה של ' + Math.round(grades.avg1 - grades.avg2) + ' נקודות). לברר סיבות עם מורים מקצועיים ולבנות תוכנית חיזוק.',
+      title: t2,
+      detail: decDetail + ' לברר סיבות עם מורים מקצועיים ולבנות תוכנית חיזוק.',
       owner: homeroom + ' + ' + STAFF.pedagogy,
-      deadline: '7 ימים'
+      deadline: '7 ימים',
+      waRecipients: buildWA([homeroom, 'רווית גל'], t2, decDetail)
     });
   }
   if ((scores.academic > 0 && scores.academic < 60 || (grades.avg2 && grades.avg2 < 60)) && scores.professional > 60) {
+    var t3 = 'חיזוק דרך המגמה';
     actions.push({
       category: 'academic', status: 'pending',
-      title: 'חיזוק דרך המגמה',
+      title: t3,
       detail: 'ציון מגמה ' + scores.professional + ' לעומת לימודי ' + (grades.avg2 || scores.academic) + '. לנצל את החוזקה המקצועית כמנוף — שילוב פרויקטים מעשיים בלמידה.',
       owner: homeroom + ' + מורה מגמה',
-      deadline: '14 ימים'
+      deadline: '14 ימים',
+      waRecipients: buildWA([homeroom], t3, 'ציון מגמה ' + scores.professional + ' גבוה — אפשר לנצל כמנוף. נתאם עם מורה המגמה?')
     });
   }
 
@@ -2994,21 +3059,25 @@ function generateActionPlan(studentId) {
     if (attendance.absentStreak >= 3) {
       attendDetail += 'רצף של ' + attendance.absentStreak + ' ימי היעדרות רצופים! ';
     }
+    var t4 = attendancePercent < 50 ? 'סיכון נשירה — נוכחות קריטית' : 'נוכחות נמוכה — דורש התערבות';
     actions.push({
       category: 'attendance', status: attendancePercent < 50 ? 'active' : 'pending',
-      title: attendancePercent < 50 ? 'סיכון נשירה — נוכחות קריטית' : 'נוכחות נמוכה — דורש התערבות',
+      title: t4,
       detail: attendDetail + STAFF.treatment + ' בודקת: ביקור בית, פגישה עם הורים, זיהוי חסמים.',
       owner: counselor + ' + ' + STAFF.treatment,
-      deadline: attendancePercent < 50 ? '3 ימים' : '7 ימים'
+      deadline: attendancePercent < 50 ? '3 ימים' : '7 ימים',
+      waRecipients: buildWA(['יסכה הגר'], t4, attendDetail + 'צריך ביקור בית, פגישה עם הורים, זיהוי חסמים.')
     });
   }
   if (attendance.absentStreak >= 5) {
+    var t5 = 'ביקור בית דחוף';
     actions.push({
       category: 'family', status: 'active',
-      title: 'ביקור בית דחוף',
+      title: t5,
       detail: attendance.absentStreak + ' ימי היעדרות רצופים. חובה ביקור בית + דיווח לקב"ס אם ממשיך.',
       owner: counselor + ' + ' + STAFF.treatment,
-      deadline: '48 שעות'
+      deadline: '48 שעות',
+      waRecipients: buildWA(['יסכה הגר'], t5, attendance.absentStreak + ' ימי היעדרות רצופים! חובה ביקור בית בהקדם.')
     });
   }
 
@@ -3020,12 +3089,14 @@ function generateActionPlan(studentId) {
     var tardinessDetail = tardiness.totalLates + ' איחורים השנה, ממוצע ' + tardiness.avgMinutes + ' דקות. ';
     if (tardiness.openDebts > 0) tardinessDetail += tardiness.openDebts + ' דקות חוב פתוח למרכז למידה. ';
     if (tardiness.escalationLevel >= 3) tardinessDetail += 'רמת אסקלציה ' + tardiness.escalationLevel + ' — דורש שיחה עם הורים.';
+    var t6 = 'איחורים כרוניים';
     actions.push({
       category: 'attendance', status: tardiness.escalationLevel >= 3 ? 'active' : 'pending',
-      title: 'איחורים כרוניים',
+      title: t6,
       detail: tardinessDetail,
       owner: homeroom + ' + ' + STAFF.deputy,
-      deadline: '7 ימים'
+      deadline: '7 ימים',
+      waRecipients: buildWA([homeroom, 'מנו דהאן'], t6, tardiness.totalLates + ' איחורים, ממוצע ' + tardiness.avgMinutes + ' דקות. צריך שיחה ותוכנית.')
     });
   }
 
@@ -3038,7 +3109,6 @@ function generateActionPlan(studentId) {
     var incDetail = incidents.disciplineCount + ' אירועי משמעת השנה';
     if (openInc.length > 0) incDetail += ', ' + openInc.length + ' פתוחים';
     incDetail += '. ';
-    // List recent open events
     var recentOpen = openInc.slice(0, 3);
     if (recentOpen.length > 0) {
       incDetail += 'אירועים פתוחים: ';
@@ -3048,31 +3118,36 @@ function generateActionPlan(studentId) {
       incDetail += '. ';
     }
     incDetail += 'נדרשת תוכנית התנהגותית עם יעדים ברורים.';
+    var t7 = 'דפוס אירועי משמעת חוזר';
     actions.push({
       category: 'behavioral', status: 'active',
-      title: 'דפוס אירועי משמעת חוזר',
+      title: t7,
       detail: incDetail,
       owner: STAFF.deputy + ' + ' + homeroom,
-      deadline: '5 ימים'
+      deadline: '5 ימים',
+      waRecipients: buildWA(['מנו דהאן', homeroom], t7, incidents.disciplineCount + ' אירועי משמעת, ' + openInc.length + ' פתוחים. צריך לבנות תוכנית התנהגותית.')
     });
   } else if (scores.social > 0 && scores.social < 45) {
+    var t8 = 'תוכנית התנהגותית אישית';
     actions.push({
       category: 'behavioral', status: 'pending',
-      title: 'תוכנית התנהגותית אישית',
+      title: t8,
       detail: 'תפקוד חברתי-ערכי ' + scores.social + '. לבנות תוכנית עם יעדים שבועיים ברורים, כולל חיזוקים חיוביים.',
       owner: homeroom + ' + ' + counselor,
-      deadline: '7 ימים'
+      deadline: '7 ימים',
+      waRecipients: buildWA([homeroom], t8, 'תפקוד חברתי ' + scores.social + '. צריך תוכנית עם יעדים שבועיים ברורים.')
     });
   }
-  // Check for emotional incidents specifically
   var emotionalIncidents = incidents.events.filter(function(e) { return e.type === 'emotional' && e.status === 'open'; });
   if (emotionalIncidents.length > 0) {
+    var t9 = 'אירוע רגשי פתוח — דורש מעקב';
     actions.push({
       category: 'emotional', status: 'active',
-      title: 'אירוע רגשי פתוח — דורש מעקב',
+      title: t9,
       detail: emotionalIncidents.length + ' אירועים רגשיים פתוחים. אחרון: "' + emotionalIncidents[0].title + '" (' + emotionalIncidents[0].date + '). ' + counselor + ' בודקת ומתאמת עם ' + STAFF.treatment + '.',
       owner: counselor + ' + ' + STAFF.treatment,
-      deadline: '3 ימים'
+      deadline: '3 ימים',
+      waRecipients: buildWA(['יסכה הגר'], t9, 'אירוע רגשי: "' + emotionalIncidents[0].title + '" (' + emotionalIncidents[0].date + '). צריך מעקב ותיאום טיפול.')
     });
   }
 
@@ -3081,21 +3156,25 @@ function generateActionPlan(studentId) {
   // מקור: מעגל רגשי-ייעוצי (הזנה ידנית)
   // ═══════════════════════════════════════════
   if (emo.inTreatment && /ממתין/.test(emo.inTreatment)) {
+    var t10 = 'הפניה לטיפול רגשי';
     actions.push({
       category: 'emotional', status: 'pending',
-      title: 'הפניה לטיפול רגשי',
+      title: t10,
       detail: 'התלמיד/ה ממתין/ה לטיפול. ' + STAFF.treatment + ' בודקת מי המטפל/ת המתאים/ה ומתחילה תהליך.',
       owner: STAFF.treatment,
-      deadline: '5 ימים'
+      deadline: '5 ימים',
+      waRecipients: buildWA(['יסכה הגר'], t10, 'ממתין/ה לטיפול רגשי. נא לבדוק מי המטפל/ת המתאים/ה ולעדכן אותנו עם מי ומתי מתחיל.')
     });
   }
   if (emo.inTreatment && /כן/.test(emo.inTreatment) && emo.cooperation && /מסרב|חלקי/.test(emo.cooperation)) {
+    var t11 = 'חיזוק שיתוף פעולה בטיפול';
     actions.push({
       category: 'emotional', status: 'active',
-      title: 'חיזוק שיתוף פעולה בטיפול',
+      title: t11,
       detail: 'שיתוף פעולה ' + (emo.cooperation || '') + '. ' + counselor + ' בשיחה אישית — לבנות אמון. לשקול שינוי גישה טיפולית.',
       owner: counselor + ' + ' + (emo.therapist || STAFF.treatment),
-      deadline: '7 ימים'
+      deadline: '7 ימים',
+      waRecipients: buildWA(['יסכה הגר'], t11, 'שיתוף פעולה בטיפול: ' + (emo.cooperation || '') + '. צריך לשקול שינוי גישה או מטפל/ת.')
     });
   }
 
@@ -3104,20 +3183,26 @@ function generateActionPlan(studentId) {
   // מקור: מעגל רגשי + נוכחות
   // ═══════════════════════════════════════════
   if (emo.parentCoop && /מנותק|עוין/.test(emo.parentCoop)) {
+    var t12 = 'שיקום קשר עם הורים';
+    // Extract counselor first name for WA lookup
+    var counselorName = counselor.replace(/\s*\(.*\)/,'');
     actions.push({
       category: 'family', status: 'pending',
-      title: 'שיקום קשר עם הורים',
+      title: t12,
       detail: 'שיתוף הורים: ' + emo.parentCoop + '. ' + counselor + ' יוזמת קשר טלפוני. אם אין מענה — ביקור בית עם ' + STAFF.treatment + '.',
       owner: counselor + ' + ' + STAFF.treatment,
-      deadline: '10 ימים'
+      deadline: '10 ימים',
+      waRecipients: buildWA([counselorName, 'יסכה הגר'], t12, 'שיתוף הורים: ' + emo.parentCoop + '. צריך ליזום קשר טלפוני. אם אין מענה — ביקור בית.')
     });
   } else if (attendanceLow && (!emo.parentCoop || emo.parentCoop !== 'פעיל')) {
+    var t13 = 'פגישה עם הורים';
     actions.push({
       category: 'family', status: 'pending',
-      title: 'פגישה עם הורים',
+      title: t13,
       detail: 'נוכחות נמוכה — לתאם פגישה עם ההורים להבנת הסיבות לחיסורים ולגבש יחד תוכנית שיפור.',
       owner: homeroom + ' + ' + counselor,
-      deadline: '10 ימים'
+      deadline: '10 ימים',
+      waRecipients: buildWA([homeroom], t13, 'נוכחות נמוכה. צריך לתאם פגישה עם ההורים בהקדם — להבין סיבות ולגבש תוכנית.')
     });
   }
 
@@ -3126,21 +3211,25 @@ function generateActionPlan(studentId) {
   // מקור: חמשת הממדים (פולס + דוחות)
   // ═══════════════════════════════════════════
   if (dims.motivation <= 1 && dims.motivation > 0) {
+    var t14 = 'חיזוק מוטיבציה';
     actions.push({
       category: 'emotional', status: 'pending',
-      title: 'חיזוק מוטיבציה',
+      title: t14,
       detail: 'ממד מוטיבציה ברמה ' + dims.motivation + '/4. שיחה עם ' + homeroom + ' על מטרות אישיות. לחבר לפעילות שהתלמיד/ה אוהב/ת.',
       owner: homeroom,
-      deadline: '7 ימים'
+      deadline: '7 ימים',
+      waRecipients: buildWA([homeroom], t14, 'מוטיבציה ברמה ' + dims.motivation + '/4. אפשר לקיים שיחה על מטרות ולחבר לפעילות שאוהב/ת?')
     });
   }
   if (dims.belong <= 1 && dims.belong > 0) {
+    var t15 = 'חיזוק תחושת שייכות';
     actions.push({
       category: 'behavioral', status: 'pending',
-      title: 'חיזוק תחושת שייכות',
+      title: t15,
       detail: 'שייכות ברמה ' + dims.belong + '/4. לשלב בתפקיד כיתתי, פעילות חברתית, או קבוצה.',
       owner: homeroom + ' + ' + counselor,
-      deadline: '14 ימים'
+      deadline: '14 ימים',
+      waRecipients: buildWA([homeroom], t15, 'שייכות ברמה ' + dims.belong + '/4. אפשר לשלב בתפקיד כיתתי או פעילות חברתית?')
     });
   }
 
@@ -3149,21 +3238,25 @@ function generateActionPlan(studentId) {
   // מקור: גורמי סיכון (הזנה ידנית)
   // ═══════════════════════════════════════════
   if (risk.selfHarm) {
+    var t16 = 'מעקב פגיעה עצמית — דחוף';
     actions.push({
       category: 'emotional', status: 'active',
-      title: 'מעקב פגיעה עצמית — דחוף',
+      title: t16,
       detail: 'דווח על פגיעה עצמית. ' + STAFF.treatment + ' + יועצת בשיחה מיידית. לשקול הפניה לפסיכיאטר.',
       owner: STAFF.treatment + ' + ' + counselor,
-      deadline: 'מיידי'
+      deadline: 'מיידי',
+      waRecipients: buildWA(['יסכה הגר'], t16, 'דווח על פגיעה עצמית — דחוף! צריך שיחה מיידית ולשקול הפניה לפסיכיאטר.')
     });
   }
   if (risk.substances) {
+    var t17 = 'טיפול בשימוש בחומרים';
     actions.push({
       category: 'emotional', status: 'active',
-      title: 'טיפול בשימוש בחומרים',
+      title: t17,
       detail: 'דווח שימוש בחומרים. ' + STAFF.treatment + ' מתאמת פגישה עם הורים + הפניה מקצועית.',
       owner: STAFF.treatment,
-      deadline: '3 ימים'
+      deadline: '3 ימים',
+      waRecipients: buildWA(['יסכה הגר'], t17, 'דווח על שימוש בחומרים. צריך פגישה עם הורים והפניה מקצועית.')
     });
   }
 
