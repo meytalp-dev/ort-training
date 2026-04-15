@@ -249,6 +249,39 @@ input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0
 .note-input-row{display:flex;gap:8px;margin-top:12px}
 .note-input{flex:1;padding:9px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:Heebo;font-size:.85rem;background:#fff;transition:border-color .2s}
 .note-input:focus{outline:none;border-color:var(--primary)}
+/* Expanded conversations */
+.conv-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;position:relative}
+.conv-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.conv-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.conv-badge{font-size:.68rem;padding:2px 8px;border-radius:8px;font-weight:600}
+.conv-badge.purpose{background:#E8F4FD;color:#2980B9}
+.conv-badge.attendees{background:#F0E8F5;color:#7B2D8E}
+.conv-badge.decision{background:#E8F8E8;color:#27A844}
+.conv-date{font-size:.72rem;color:var(--muted);margin-right:auto}
+.conv-body{font-size:.83rem;line-height:1.6;color:var(--text)}
+.conv-field{margin-bottom:6px}
+.conv-field-label{font-size:.72rem;font-weight:700;color:var(--muted);margin-bottom:2px}
+.conv-decision{background:#F0FAF0;border-radius:8px;padding:8px 12px;margin-top:6px;font-size:.83rem;border-right:3px solid #27A844}
+.conv-form{background:var(--bg-alt);border-radius:12px;padding:16px;margin-top:14px}
+.conv-form label{display:block;font-size:.78rem;font-weight:600;margin-bottom:3px;color:var(--text)}
+.conv-form input,.conv-form textarea,.conv-form select{width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:Heebo;font-size:.83rem;background:#fff;box-sizing:border-box;margin-bottom:10px}
+.conv-form textarea{resize:vertical;min-height:60px}
+.conv-form input:focus,.conv-form textarea:focus{outline:none;border-color:var(--primary)}
+.conv-form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.conv-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.conv-toggle-btn{background:none;border:1.5px solid var(--primary);color:var(--primary);padding:6px 14px;border-radius:8px;font-family:Heebo;font-size:.8rem;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s}
+.conv-toggle-btn:hover{background:var(--primary);color:#fff}
+.conv-toggle-btn.active{background:var(--primary);color:#fff}
+/* Recording */
+.rec-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:1.5px solid #E74C3C;color:#E74C3C;background:#fff;font-family:Heebo;font-size:.78rem;cursor:pointer;transition:all .2s}
+.rec-btn:hover{background:#FEF0EF}
+.rec-btn.recording{background:#E74C3C;color:#fff;animation:recPulse 1.2s infinite}
+.rec-btn svg{width:14px;height:14px}
+@keyframes recPulse{0%,100%{opacity:1}50%{opacity:.6}}
+.rec-transcript{background:#FFFBF0;border:1.5px dashed #E8A838;border-radius:8px;padding:10px 14px;margin-top:8px;font-size:.82rem;line-height:1.6;max-height:200px;overflow-y:auto;white-space:pre-wrap}
+.rec-status{font-size:.7rem;color:var(--muted);margin-top:4px}
+.conv-delete{position:absolute;top:8px;left:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 6px;border-radius:4px}
+.conv-delete:hover{color:#E74C3C;background:#FEF0EF}
 .btn{padding:8px 18px;border:none;border-radius:10px;font-family:Heebo;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
 .btn-primary{background:var(--primary);color:#fff}
 .btn-primary:hover{background:var(--primary-dark)}
@@ -1209,23 +1242,149 @@ function drawTimelineChart(timeline) {
 // ===== CONVERSATIONS TAB =====
 function renderConversations(s) {
   var convs = getConversations(s.id);
-  var html = '<h4 style="font-size:.92rem;font-weight:700;margin-bottom:14px;font-family:Heebo">שיחות אישיות והחלטות</h4>';
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">';
+  html += '<h4 style="font-size:.92rem;font-weight:700;font-family:Heebo;margin:0">שיחות אישיות והחלטות</h4>';
+  html += '<button class="conv-toggle-btn" onclick="toggleConvForm()" id="convFormToggle"><svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/></svg> שיחה חדשה</button>';
+  html += '</div>';
 
+  // New conversation form (hidden by default)
+  html += '<div id="convFormWrap" style="display:none">';
+  html += '<div class="conv-form">';
+  html += '<div class="conv-form-row">';
+  html += '<div><label>תאריך</label><input type="date" id="convDate" value="' + new Date().toISOString().split('T')[0] + '"></div>';
+  html += '<div><label>מטרה</label><select id="convPurpose"><option value="מעקב">מעקב</option><option value="היכרות">היכרות</option><option value="משמעת">משמעת</option><option value="רגשי">רגשי</option><option value="לימודי">לימודי</option><option value="הורים">שיחת הורים</option><option value="יוזמת תלמיד">יוזמת תלמיד</option><option value="אחר">אחר</option></select></div>';
+  html += '</div>';
+  html += '<label>נוכחים</label><input type="text" id="convAttendees" placeholder="למשל: מחנכת, יועצת, הורה...">';
+  html += '<label>תקציר השיחה</label>';
+  html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">';
+  html += '<button class="rec-btn" id="recBtn" onclick="toggleRecording()" title="הקלטה ותמלול"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6"/></svg> הקלטה</button>';
+  html += '<span class="rec-status" id="recStatus"></span>';
+  html += '</div>';
+  html += '<textarea id="convSummary" rows="3" placeholder="כתבי תקציר או לחצי הקלטה לתמלול אוטומטי..."></textarea>';
+  html += '<div id="recTranscriptWrap" style="display:none"><div class="conv-field-label">תמלול הקלטה (ניתן לעריכה)</div><div class="rec-transcript" contenteditable="true" id="recTranscript"></div></div>';
+  html += '<label>החלטה / המשך טיפול</label><textarea id="convDecision" rows="2" placeholder="מה הוחלט? מה הצעד הבא?"></textarea>';
+  html += '<div class="conv-form-actions">';
+  html += '<button class="btn btn-sm" onclick="toggleConvForm()" style="background:var(--bg-alt);color:var(--muted);border:1px solid var(--border)">ביטול</button>';
+  html += '<button class="btn btn-primary btn-sm" onclick="addConversation()">שמירה</button>';
+  html += '</div>';
+  html += '</div></div>';
+
+  // Existing conversations
   if (convs.length === 0) {
     html += '<div style="text-align:center;padding:30px;color:var(--muted)">אין שיחות מתועדות</div>';
   } else {
-    convs.slice().reverse().forEach(function(c) {
-      html += '<div class="note-item"><div class="note-text">' + esc(c.text) + '</div><div class="note-meta">' + esc(c.author || '') + '<br>' + (c.date || '') + '</div></div>';
+    convs.slice().reverse().forEach(function(c, idx) {
+      var realIdx = convs.length - 1 - idx;
+      html += '<div class="conv-card">';
+      html += '<button class="conv-delete" onclick="deleteConversation(' + realIdx + ')" title="מחיקה">&times;</button>';
+      html += '<div class="conv-header">';
+      if (c.purpose) html += '<span class="conv-badge purpose">' + esc(c.purpose) + '</span>';
+      if (c.attendees) html += '<span class="conv-badge attendees">' + esc(c.attendees) + '</span>';
+      if (c.decision) html += '<span class="conv-badge decision">יש החלטה</span>';
+      html += '<span class="conv-date">' + esc(c.date || '') + ' · ' + esc(c.author || '') + '</span>';
+      html += '</div>';
+      // Legacy support: old conversations have only .text
+      if (c.text && !c.summary) {
+        html += '<div class="conv-body">' + esc(c.text) + '</div>';
+      } else {
+        if (c.summary) html += '<div class="conv-body">' + esc(c.summary).replace(/\n/g,'<br>') + '</div>';
+        if (c.transcript) {
+          html += '<details style="margin-top:6px"><summary style="font-size:.72rem;color:var(--muted);cursor:pointer">תמלול מלא</summary>';
+          html += '<div style="font-size:.78rem;color:var(--text);line-height:1.5;margin-top:4px;padding:8px;background:#FFFBF0;border-radius:6px">' + esc(c.transcript).replace(/\n/g,'<br>') + '</div></details>';
+        }
+      }
+      if (c.decision) html += '<div class="conv-decision"><strong>החלטה:</strong> ' + esc(c.decision).replace(/\n/g,'<br>') + '</div>';
+      html += '</div>';
     });
   }
 
-  // Add conversation form
-  html += '<div class="note-input-row">';
-  html += '<input type="text" class="note-input" id="convInput" placeholder="הוסיפי שיחה / החלטה...">';
-  html += '<button class="btn btn-primary btn-sm" onclick="addConversation()">הוספה</button>';
-  html += '</div>';
-
   return html;
+}
+
+function toggleConvForm() {
+  var wrap = document.getElementById('convFormWrap');
+  var btn = document.getElementById('convFormToggle');
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block';
+    btn.classList.add('active');
+  } else {
+    wrap.style.display = 'none';
+    btn.classList.remove('active');
+    stopRecording();
+  }
+}
+
+// ===== RECORDING & TRANSCRIPTION =====
+var convRecognition = null;
+var convIsRecording = false;
+var convTranscriptText = '';
+
+function toggleRecording() {
+  if (convIsRecording) { stopRecording(); return; }
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('הדפדפן לא תומך בתמלול קולי. יש להשתמש ב-Chrome.');
+    return;
+  }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  convRecognition = new SR();
+  convRecognition.lang = 'he-IL';
+  convRecognition.continuous = true;
+  convRecognition.interimResults = true;
+  convTranscriptText = '';
+  var finalText = '';
+
+  document.getElementById('recTranscriptWrap').style.display = 'block';
+  document.getElementById('recTranscript').textContent = '';
+
+  convRecognition.onresult = function(e) {
+    var interim = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        finalText += e.results[i][0].transcript + ' ';
+      } else {
+        interim += e.results[i][0].transcript;
+      }
+    }
+    convTranscriptText = finalText;
+    document.getElementById('recTranscript').innerHTML = esc(finalText) + '<span style="color:var(--muted)">' + esc(interim) + '</span>';
+  };
+
+  convRecognition.onerror = function(e) {
+    document.getElementById('recStatus').textContent = 'שגיאה: ' + e.error;
+    stopRecording();
+  };
+
+  convRecognition.onend = function() {
+    if (convIsRecording) convRecognition.start(); // auto-restart
+  };
+
+  convRecognition.start();
+  convIsRecording = true;
+  var btn = document.getElementById('recBtn');
+  btn.classList.add('recording');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> עצירה';
+  document.getElementById('recStatus').textContent = 'מקליט... דברי והתמלול יופיע בזמן אמת';
+}
+
+function stopRecording() {
+  if (convRecognition) { convRecognition.onend = null; convRecognition.abort(); convRecognition = null; }
+  convIsRecording = false;
+  var btn = document.getElementById('recBtn');
+  if (btn) {
+    btn.classList.remove('recording');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6"/></svg> הקלטה';
+  }
+  var status = document.getElementById('recStatus');
+  if (status) status.textContent = convTranscriptText ? 'תמלול הושלם — ניתן לערוך' : '';
+}
+
+function deleteConversation(idx) {
+  if (!confirm('למחוק שיחה זו?')) return;
+  var convs = getConversations(state.selectedStudentId);
+  convs.splice(idx, 1);
+  cloudStorage.set('sf_convs_' + state.selectedStudentId, convs);
+  var s = STUDENTS.find(function(st) { return st.id === state.selectedStudentId; });
+  if (s) renderTabContent(s);
 }
 
 // ===== PERSONAL PLAN TAB (תוכנית אישית מותאמת) =====
@@ -2380,14 +2539,50 @@ function getConversations(studentId) {
 }
 
 function addConversation() {
-  var input = document.getElementById('convInput');
-  var text = input.value.trim();
-  if (!text || !state.selectedStudentId) return;
+  if (!state.selectedStudentId) return;
+
+  var dateEl = document.getElementById('convDate');
+  var purposeEl = document.getElementById('convPurpose');
+  var attendeesEl = document.getElementById('convAttendees');
+  var summaryEl = document.getElementById('convSummary');
+  var decisionEl = document.getElementById('convDecision');
+  var transcriptEl = document.getElementById('recTranscript');
+
+  var summary = summaryEl ? summaryEl.value.trim() : '';
+  var transcript = transcriptEl ? transcriptEl.textContent.trim() : '';
+  var decision = decisionEl ? decisionEl.value.trim() : '';
+
+  if (!summary && !transcript && !decision) {
+    alert('יש למלא לפחות תקציר או החלטה');
+    return;
+  }
+
+  stopRecording();
+
+  var conv = {
+    date: dateEl ? new Date(dateEl.value).toLocaleDateString('he-IL') : new Date().toLocaleDateString('he-IL'),
+    purpose: purposeEl ? purposeEl.value : '',
+    attendees: attendeesEl ? attendeesEl.value.trim() : '',
+    summary: summary,
+    transcript: transcript || '',
+    decision: decision,
+    author: state.userName,
+    createdAt: new Date().toISOString()
+  };
 
   var convs = getConversations(state.selectedStudentId);
-  convs.push({ text: text, author: state.userName, date: new Date().toLocaleDateString('he-IL') });
+  convs.push(conv);
   cloudStorage.set('sf_convs_' + state.selectedStudentId, convs);
-  input.value = '';
+
+  // Reset form
+  if (summaryEl) summaryEl.value = '';
+  if (decisionEl) decisionEl.value = '';
+  if (attendeesEl) attendeesEl.value = '';
+  if (transcriptEl) transcriptEl.textContent = '';
+  document.getElementById('recTranscriptWrap').style.display = 'none';
+  document.getElementById('convFormWrap').style.display = 'none';
+  document.getElementById('convFormToggle').classList.remove('active');
+  convTranscriptText = '';
 
   var s = STUDENTS.find(function(st) { return st.id === state.selectedStudentId; });
   if (s) renderTabContent(s);
