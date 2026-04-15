@@ -340,6 +340,7 @@ body::before{content:'';position:fixed;inset:0;
 <!-- ===== DASHBOARD ===== -->
 <div id="dashView" class="container hidden">
   <div class="kpi-bar" id="kpiBar"></div>
+  <div id="ymTodaySection"></div>
   <div id="meetingsSection"></div>
   <div class="toolbar" id="toolbar">
     <a class="tool-btn" href="monthly-reports.html">
@@ -457,6 +458,38 @@ const DEFAULT_AVAIL={
 };
 const DAY_NAMES=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 
+// Teacher phones for WhatsApp reminders
+const TEACHER_PHONES={
+  'משה צברי':'547195033','אושר אהרוני':'508882402','רעיה יצחקי':'504726066',
+  'אופירה מלכה':'534438414','פרלה שאזו':'525115337','יעקב גרונספלד':'546995254',
+  'נעמה קוסטן':'524295181','גיא נתנאל':'542007155','יוסי רובבשי':'506563344',
+  'יואב רוט':'527218003','מנו דהאן':'505852852'
+};
+const COUNSELOR_PHONES={
+  'צהיי גטהון':'527783903','ליאת רוזנר':'528980191','דורית ויגדור':'523464235'
+};
+
+// Demo counselor-teacher meeting schedule
+const DEMO_YM_SCHEDULE={
+  tzahi:[
+    {cls:'ט1',teacher:'משה צברי',day:'ראשון',time:'09:30',room:'חדר יועצות'},
+    {cls:'יב1',teacher:'יוסי רובבשי',day:'שלישי',time:'10:00',room:'חדר יועצות'},
+    {cls:'יב2',teacher:'יואב רוט',day:'שלישי',time:'11:00',room:'חדר יועצות'},
+    {cls:'יב3',teacher:'מנו דהאן',day:'רביעי',time:'09:00',room:'חדר מנהלת'}
+  ],
+  liat:[
+    {cls:'ט2',teacher:'אושר אהרוני',day:'ראשון',time:'10:30',room:'חדר יועצות'},
+    {cls:'יא1',teacher:'יעקב גרונספלד',day:'שני',time:'09:00',room:'חדר יועצות'},
+    {cls:'יא2',teacher:'נעמה קוסטן',day:'רביעי',time:'10:00',room:'חדר יועצות'},
+    {cls:'יא3',teacher:'גיא נתנאל',day:'רביעי',time:'11:00',room:'חדר יועצות'}
+  ],
+  dorit:[
+    {cls:'י1',teacher:'רעיה יצחקי',day:'שני',time:'10:00',room:'חדר יועצות'},
+    {cls:'י2',teacher:'אופירה מלכה',day:'שלישי',time:'09:00',room:'חדר יועצות'},
+    {cls:'י3',teacher:'פרלה שאזו',day:'חמישי',time:'09:30',room:'חדר יועצות'}
+  ]
+};
+
 // Green API for WhatsApp (same as attendance system)
 const GREEN_API_URL = '';  // Will be configured from settings
 const GREEN_API_TOKEN = '';
@@ -466,6 +499,8 @@ let U=null,students=[],filter='all',detailStudent=null;
 let bgData={},docsData={},lettersData={},plansData={},meetingsData={};
 let monthlyData=null,attData=null,discData=null;
 let availSlots={};
+let ymSchedule={};
+let ymFormUrl=''; // URL of the counselor-teacher form (Meytal will set later)
 let pendingFile=null;
 
 // ==================== INIT ====================
@@ -498,16 +533,19 @@ function logout(){
 
 // ==================== DATA ====================
 async function loadData(){
-  const [bg,docs,letters,plans,meetings,avail]=await Promise.all([
+  const [bg,docs,letters,plans,meetings,avail,ym,ymUrl]=await Promise.all([
     cloudStorage.get('counselor_bg_data',{fallback:{}}),
     cloudStorage.get('counselor_docs_data',{fallback:{}}),
     cloudStorage.get('counselor_letters_data',{fallback:{}}),
     cloudStorage.get('counselor_plans_data',{fallback:{}}),
     cloudStorage.get('counselor_meetings_data',{fallback:{}}),
-    cloudStorage.get('counselor_avail_slots',{fallback:DEFAULT_AVAIL})
+    cloudStorage.get('counselor_avail_slots',{fallback:DEFAULT_AVAIL}),
+    cloudStorage.get('counselor_ym_schedule',{fallback:null}),
+    cloudStorage.get('counselor_ym_form_url',{fallback:''})
   ]);
   bgData=bg||{};docsData=docs||{};lettersData=letters||{};plansData=plans||{};
   meetingsData=meetings||{};availSlots=avail||DEFAULT_AVAIL;
+  ymSchedule=ym||DEMO_YM_SCHEDULE;ymFormUrl=ymUrl||'';
 
   try{monthlyData=JSON.parse(localStorage.getItem('ort_monthly_reports_v3'))||null}catch(e){monthlyData=null}
   try{attData=JSON.parse(localStorage.getItem('ort-attendance'))||null}catch(e){attData=null}
@@ -542,7 +580,7 @@ function enrichStudents(){
 }
 
 // ==================== RENDER ====================
-function render(){renderKPI();renderMeetings();renderCards()}
+function render(){renderKPI();renderYmToday();renderMeetings();renderCards()}
 
 function renderKPI(){
   const t=students.length,r=students.filter(s=>s.status==='red').length,
@@ -555,6 +593,31 @@ function renderKPI(){
     <div class="kpi"><div class="kpi-n" style="color:var(--warn)">${y}</div><div class="kpi-l">דרושי מעקב</div></div>
     <div class="kpi"><div class="kpi-n" style="color:var(--text-light)">${nr}</div><div class="kpi-l">לא דווח החודש</div></div>
     <div class="kpi"><div class="kpi-n" style="color:${la?'var(--danger)':'var(--success)'}">${la}</div><div class="kpi-l">נוכחות נמוכה</div></div>`;
+}
+
+function renderYmToday(){
+  const sec=document.getElementById('ymTodaySection');
+  const todayName=DAY_NAMES[new Date().getDay()];
+  const myYm=(U.id==='principal')
+    ? Object.entries(ymSchedule).flatMap(([cid,arr])=>arr.map(m=>({...m,counselor:COUNSELORS[cid]?.short||cid})))
+    : (ymSchedule[U.id]||[]);
+  const todayMeetings=myYm.filter(m=>m.day===todayName).sort((a,b)=>a.time.localeCompare(b.time));
+  if(!todayMeetings.length){sec.innerHTML='';return;}
+  const nowTime=new Date().getHours().toString().padStart(2,'0')+':'+new Date().getMinutes().toString().padStart(2,'0');
+  let h=`<div class="meetings-bar" style="border-right:4px solid var(--secondary)"><h3><svg viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg> פגישות יועץ-מחנך היום</h3>`;
+  todayMeetings.forEach(m=>{
+    const isNext=m.time>nowTime;
+    const bg=isNext?'var(--success-bg)':'var(--bg-alt)';
+    h+=`<div class="meeting-row" style="background:${bg}">
+      <div class="meeting-time">${m.time}</div>
+      <div class="meeting-info"><strong>${m.cls}</strong> — ${m.teacher}${m.counselor?' <span style="font-size:.72rem;color:var(--muted)">('+m.counselor+')</span>':''}</div>
+      <span style="font-size:.78rem;color:var(--muted)">${m.room||''}</span>
+      <button class="btn btn-o btn-sm" onclick="sendYmReminder('${m.cls}','${m.teacher}','${m.time}','${m.counselor||U.short}')" title="שלח תזכורת">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6"/></svg>
+      </button>
+    </div>`;
+  });
+  h+='</div>';sec.innerHTML=h;
 }
 
 function renderMeetings(){
@@ -640,13 +703,13 @@ function closeDetail(){
   document.body.style.overflow='';detailStudent=null;
 }
 function renderTabs(){
-  const tabs=[{id:'bg',l:'נתוני רקע'},{id:'mo',l:'מעקב חודשי'},{id:'cv',l:'שיחות'},{id:'doc',l:'מסמכים'},{id:'lt',l:'מכתבים'},{id:'pl',l:'תוכנית'},{id:'su',l:'סיכום לתיק'},{id:'mt',l:'פגישות'}];
+  const tabs=[{id:'bg',l:'נתוני רקע'},{id:'mo',l:'מעקב חודשי'},{id:'cv',l:'שיחות'},{id:'doc',l:'מסמכים'},{id:'lt',l:'מכתבים'},{id:'pl',l:'תוכנית'},{id:'su',l:'סיכום לתיק'},{id:'mt',l:'פגישות'},{id:'ym',l:'יועץ-מחנך'}];
   document.getElementById('dTabs').innerHTML=tabs.map(t=>`<button class="d-tab" data-t="${t.id}" onclick="switchTab('${t.id}')">${t.l}</button>`).join('');
 }
 function switchTab(t){
   document.querySelectorAll('.d-tab').forEach(e=>e.classList.toggle('active',e.dataset.t===t));
   const c=document.getElementById('dContent');
-  const r={bg:tabBg,mo:tabMonthly,cv:tabConv,doc:tabDocs,lt:tabLetters,pl:tabPlan,su:tabSummary,mt:tabMeetings};
+  const r={bg:tabBg,mo:tabMonthly,cv:tabConv,doc:tabDocs,lt:tabLetters,pl:tabPlan,su:tabSummary,mt:tabMeetings,ym:tabCounselorTeacher};
   c.innerHTML=(r[t]||tabBg)();
   if(t==='bg')attachBgEvents();
 }
@@ -1047,6 +1110,114 @@ async function sendWhatsApp(phone,msg){
       body:JSON.stringify({chatId:cleanPhone+'@c.us',message:msg})
     });
   }catch(e){console.log('[WhatsApp] Send failed:',e)}
+}
+
+// ==================== COUNSELOR-TEACHER MEETINGS ====================
+
+function tabCounselorTeacher(){
+  const mySchedule=(U.id==='principal')
+    ? Object.entries(ymSchedule).flatMap(([cid,arr])=>arr.map(m=>({...m,counselor:COUNSELORS[cid]?.short||cid})))
+    : (ymSchedule[U.id]||[]).map(m=>({...m,counselor:U.short}));
+
+  let h='<div class="sec"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> לוח פגישות יועץ-מחנך</h4>';
+  h+='<p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">לוח זמנים שבועי קבוע. 10 דקות לפני כל פגישה נשלחת תזכורת WhatsApp ליועצת ולמחנך/ת עם קישור לטופס.</p>';
+
+  if(!mySchedule.length){
+    h+='<p style="color:var(--muted)">אין פגישות מתוכננות</p>';
+  } else {
+    // Group by day
+    const dayOrder={'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4};
+    const byDay={};
+    mySchedule.forEach(m=>{if(!byDay[m.day])byDay[m.day]=[];byDay[m.day].push(m)});
+    const sortedDays=Object.keys(byDay).sort((a,b)=>(dayOrder[a]||0)-(dayOrder[b]||0));
+
+    // Find next upcoming meeting
+    const now=new Date();
+    const todayDayName=DAY_NAMES[now.getDay()];
+    const nowTime=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+
+    sortedDays.forEach(day=>{
+      const isToday=day===todayDayName;
+      h+=`<div style="margin-bottom:16px">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${isToday?'var(--success)':'var(--border)'}"></span>
+          יום ${day} ${isToday?'<span style="font-size:.72rem;color:var(--success);font-weight:600">(היום)</span>':''}
+        </div>`;
+      byDay[day].sort((a,b)=>a.time.localeCompare(b.time));
+      byDay[day].forEach(m=>{
+        const isNext=isToday&&m.time>nowTime;
+        const isPast=isToday&&m.time<=nowTime;
+        const borderColor=isNext?'var(--success)':isPast?'var(--border)':'var(--border)';
+        const bgColor=isNext?'var(--success-bg)':'#fff';
+        h+=`<div class="meeting-row" style="border:1px solid ${borderColor};background:${bgColor};border-radius:10px;margin-bottom:6px">
+          <div class="meeting-time" style="min-width:55px;font-weight:700">${m.time}</div>
+          <div class="meeting-info" style="flex:1">
+            <strong>${m.cls}</strong> — ${m.teacher}
+            ${U.id==='principal'?'<span style="font-size:.72rem;color:var(--muted)"> ('+m.counselor+')</span>':''}
+          </div>
+          <span style="font-size:.78rem;color:var(--muted)">${m.room||''}</span>
+          <button class="btn btn-o btn-sm" onclick="sendYmReminder('${m.cls}','${m.teacher}','${m.time}','${m.counselor||U.short}')" title="שלח תזכורת עכשיו">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+          </button>
+        </div>`;
+      });
+      h+='</div>';
+    });
+  }
+
+  // Settings area
+  h+=`<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+    <h5 style="font-size:.85rem;font-weight:700;margin-bottom:10px">הגדרות</h5>
+    <div class="fr">
+      <div class="fg full"><label>קישור לטופס פגישת יועץ-מחנך (יישלח בתזכורת)</label>
+        <input type="text" id="ymFormUrlInput" value="${ymFormUrl}" placeholder="https://...הקישור לטופס שמיטל בונה..." onchange="saveYmFormUrl()">
+      </div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);margin-top:6px">כשמיטל תגדיר את הלו"ז המדויק — התזכורות יישלחו אוטומטית 10 דקות לפני כל פגישה.</p>
+  </div>`;
+
+  h+='</div>';
+
+  // Demo banner
+  h+=`<div style="background:var(--info-bg);border:1px solid var(--info);border-radius:var(--radius);padding:16px;margin-top:12px">
+    <strong style="font-size:.85rem;color:var(--info)">מצב דמו</strong>
+    <p style="font-size:.82rem;color:var(--text-light);margin-top:4px">הלוח מציג לו"ז לדוגמה. כשתשלחי את הלו"ז המדויק — אעדכן, וכל יועצת תראה את הפגישות שלה בלבד.</p>
+    <button class="btn btn-o btn-sm" onclick="testYmReminder()" style="margin-top:8px">שלח תזכורת לדוגמה (רק לקונסול)</button>
+  </div>`;
+
+  return h;
+}
+
+async function sendYmReminder(cls,teacher,time,counselorName){
+  const formLink=ymFormUrl?('\n\nקישור לטופס: '+ymFormUrl):'';
+  const msg=`תזכורת: פגישת יועץ-מחנך על כיתה ${cls} היום בשעה ${time}.\nנא להגיע מוכנים.${formLink}\n\nאורט בית הערבה`;
+
+  // Send to teacher
+  const teacherPhone=TEACHER_PHONES[teacher];
+  if(teacherPhone){
+    await sendWhatsApp(teacherPhone,`שלום ${teacher},\n${msg}`);
+  }
+
+  // Send to counselor
+  const counselorPhone=COUNSELOR_PHONES[Object.values(COUNSELORS).find(c=>c.short===counselorName)?.name||''];
+  if(counselorPhone){
+    await sendWhatsApp(counselorPhone,`שלום ${counselorName},\n${msg}`);
+  }
+
+  toast(`תזכורת נשלחה ל${teacher} ול${counselorName}`,'success');
+}
+
+function testYmReminder(){
+  const formLink=ymFormUrl||'[טופס טרם הוגדר]';
+  console.log('=== תזכורת לדוגמה ===');
+  console.log(`שלום [מחנך/ת],\nתזכורת: פגישת יועץ-מחנך על כיתה [X] היום בשעה [HH:MM].\nנא להגיע מוכנים.\n\nקישור לטופס: ${formLink}\n\nאורט בית הערבה`);
+  toast('תזכורת לדוגמה נרשמה בקונסול (F12)','success');
+}
+
+async function saveYmFormUrl(){
+  ymFormUrl=document.getElementById('ymFormUrlInput')?.value||'';
+  await cloudStorage.set('counselor_ym_form_url',ymFormUrl);
+  toast('קישור לטופס נשמר','success');
 }
 
 // ==================== MODAL HELPER ====================
