@@ -88,11 +88,11 @@ const DEFAULT_CONFIG = [
   ['class_יב2','','שם בת השירות של יב2'],
   ['class_יב3','','שם בת השירות של יב3'],
   ['','',''],
-  ['counselor_צהיי_phone','','טלפון יועצת — צהיי'],
-  ['counselor_ליאת_phone','','טלפון יועצת — ליאת'],
-  ['counselor_דורית_phone','','טלפון יועצת — דורית'],
-  ['yiskah_phone','','טלפון יסכה — רכזת טיפולית'],
-  ['meytal_phone','','טלפון מיטל — מנהלת'],
+  ['counselor_צהיי_phone','0527783903','טלפון יועצת — צהיי (ממו גטהון)'],
+  ['counselor_ליאת_phone','0528980191','טלפון יועצת — ליאת (בנבג׳י רוזנר)'],
+  ['counselor_דורית_phone','0523464235','טלפון יועצת — דורית (ויגדור מועלם)'],
+  ['yiskah_phone','0526995309','טלפון יסכה — רכזת נשירה וטיפול (הגר)'],
+  ['meytal_phone','0536256653','טלפון מיטל — מנהלת (פלג)'],
   ['daily_summary_enabled','yes','yes/no — האם לשלוח סיכום יומי לחיסורים רצופים']
 ];
 
@@ -596,6 +596,36 @@ function sendDailySummary() {
   const summary = 'counselor alerts: ' + Object.keys(counselorAlerts).map(function(k){return k+'='+counselorAlerts[k].length}).join(',') + ' | critical: ' + criticalAlerts.length + ' | sent: ' + sentCount;
   logInfo('daily-summary', summary, '');
   return summary;
+}
+
+// Run once — fills phone numbers in existing config sheet
+function fillPhoneNumbers() {
+  const phones = [
+    {key: 'counselor_צהיי_phone', value: '0527783903', desc: 'טלפון יועצת — צהיי (ממו גטהון)'},
+    {key: 'counselor_ליאת_phone', value: '0528980191', desc: 'טלפון יועצת — ליאת (בנבג׳י רוזנר)'},
+    {key: 'counselor_דורית_phone', value: '0523464235', desc: 'טלפון יועצת — דורית (ויגדור מועלם)'},
+    {key: 'yiskah_phone', value: '0526995309', desc: 'טלפון יסכה — רכזת נשירה וטיפול (הגר)'},
+    {key: 'meytal_phone', value: '0536256653', desc: 'טלפון מיטל — מנהלת (פלג)'},
+    {key: 'daily_summary_enabled', value: 'yes', desc: 'האם לשלוח סיכום יומי לחיסורים רצופים'}
+  ];
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_CONFIG);
+  const data = sheet.getDataRange().getValues();
+  const existingKeys = data.map(function(row) { return String(row[0]).trim(); });
+
+  phones.forEach(function(p) {
+    const idx = existingKeys.indexOf(p.key);
+    if (idx >= 0) {
+      // Update existing row
+      sheet.getRange(idx + 1, 2).setNumberFormat('@').setValue(p.value);
+      sheet.getRange(idx + 1, 3).setValue(p.desc);
+    } else {
+      // Add new row
+      sheet.appendRow([p.key, p.value, p.desc]);
+    }
+  });
+
+  logInfo('fillPhoneNumbers', 'phone numbers filled', phones.length + ' entries');
+  return 'done — ' + phones.length + ' phone numbers filled';
 }
 
 // Test — run manually to see what the summary would contain
