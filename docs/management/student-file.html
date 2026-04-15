@@ -2832,6 +2832,16 @@ function renderActionPlan(s, plan, timeline, scores, skills, dims) {
   html += '</div>';
 
   if (actions.length > 0) {
+    // Data sources banner
+    var actionSources = plan.actionPlanSources || '';
+    if (actionSources) {
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;padding:8px 14px;background:linear-gradient(135deg,rgba(142,126,212,.06),rgba(58,172,160,.06));border-radius:10px;border:1px solid rgba(142,126,212,.12)">';
+      html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--dream)" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>';
+      html += '<span style="font-size:.72rem;font-weight:600;color:var(--dream)">מקורות נתונים:</span>';
+      html += '<span style="font-size:.7rem;color:var(--text-light)">' + esc(actionSources) + '</span>';
+      if (plan.actionPlanGenerated) html += '<span style="font-size:.68rem;color:var(--muted);margin-right:auto">נוצר: ' + esc(plan.actionPlanGenerated) + '</span>';
+      html += '</div>';
+    }
     // Weekly review header
     var lastReview = plan.lastActionReview || '';
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 12px;background:rgba(58,172,160,.06);border-radius:10px;border:1px solid rgba(58,172,160,.12)">';
@@ -2897,10 +2907,27 @@ function generateActionPlan(studentId) {
   var emo = plan.emotional || {};
   var risk = plan.riskFactors || {};
 
+  // ── שאיבה מכל מקורות הנתונים ──
+  var fullName = s.first + ' ' + s.last;
+  var fullNameRev = s.last + ' ' + s.first;
+  var attendance = getAttendanceData(studentId, fullName, fullNameRev);
+  var tardiness = getTardinessData(studentId, fullName);
+  var incidents = getIncidentsData(studentId);
+  var grades = GRADES[fullNameRev] || GRADES[fullName] || {};
+
+  // ── דוחות חודשיים — מחנכת + יועצת ──
+  var monthlyReports = {};
+  try { monthlyReports = JSON.parse(localStorage.getItem('ort_monthly_reports_v2') || '{}'); } catch(e) {}
+  var counselorReports = {};
+  try {
+    var crKey = 'counselor_reports_' + s.cls;
+    counselorReports = JSON.parse(localStorage.getItem(crKey) || '{}');
+  } catch(e) {}
+
   var actions = [];
   var today = new Date().toLocaleDateString('he-IL');
 
-  // Staff mapping for י classes
+  // Staff mapping
   var STAFF = {
     pedagogy: 'רווית גל (סגנית)',
     treatment: 'יסכה הגר (רכזת טיפול)',
@@ -2910,59 +2937,154 @@ function generateActionPlan(studentId) {
     deputy: 'מנו דהאן',
     principal: 'מיטל פלג'
   };
-  // Pick counselor by grade
   var grade = s.cls.charAt(0) === 'י' && s.cls.charAt(1) !== 'א' && s.cls.charAt(1) !== 'ב' ? 'Y' : (s.cls.indexOf('יא') === 0 ? 'YA' : 'YB');
   var counselor = STAFF['counselor' + grade];
-  // Homeroom teachers by class
   var HOMEROOM = {'י1':'רעיה יצחקי','י2':'בתיה גולן','י3':'שירלי כהן','יא1':'ענבל פרץ','יא2':'רוית בן דוד','יא3':'נעמה לוי','יב1':'אלון שמעון','יב2':'ליאור כהן','יב3':'מנו דהאן'};
   var homeroom = HOMEROOM[s.cls] || 'מחנכ/ת';
 
-  // ── ACADEMIC — ירידה בציונים / ממוצע נמוך ──
-  if (scores.academic > 0 && scores.academic < 50) {
+  // ═══════════════════════════════════════════
+  // 1. ACADEMIC — ירידה בציונים / ממוצע נמוך
+  // מקור: GRADES (ציונים) + דוחות חודשיים
+  // ═══════════════════════════════════════════
+  var hasGradeDecline = grades.avg1 && grades.avg2 && (grades.avg1 - grades.avg2) >= 10;
+  var avgLow = grades.avg2 && grades.avg2 < 55;
+
+  if (avgLow || (scores.academic > 0 && scores.academic < 50)) {
+    var avgText = grades.avg2 ? 'ממוצע ' + grades.avg2 : 'ציון לימודי ' + scores.academic;
     actions.push({
       category: 'academic', status: 'pending',
       title: 'ליווי לימודי אישי',
-      detail: 'ממוצע ' + scores.academic + ' — נדרשת בדיקה עם ' + STAFF.pedagogy + '. לבדוק התאמות, שעות שילוב, ואפשרות לעזרה פרטנית.',
+      detail: avgText + ' — נדרשת בדיקה עם ' + STAFF.pedagogy + '. לבדוק התאמות, שעות שילוב, ואפשרות לעזרה פרטנית.',
       owner: homeroom + ' + ' + STAFF.pedagogy,
       deadline: '7 ימים'
     });
   }
-  if (scores.academic > 0 && scores.academic < 60 && scores.professional > 60) {
+  if (hasGradeDecline) {
+    actions.push({
+      category: 'academic', status: 'pending',
+      title: 'ירידה חדה בציונים',
+      detail: 'ממוצע ירד מ-' + grades.avg1 + ' ל-' + grades.avg2 + ' (ירידה של ' + Math.round(grades.avg1 - grades.avg2) + ' נקודות). לברר סיבות עם מורים מקצועיים ולבנות תוכנית חיזוק.',
+      owner: homeroom + ' + ' + STAFF.pedagogy,
+      deadline: '7 ימים'
+    });
+  }
+  if ((scores.academic > 0 && scores.academic < 60 || (grades.avg2 && grades.avg2 < 60)) && scores.professional > 60) {
     actions.push({
       category: 'academic', status: 'pending',
       title: 'חיזוק דרך המגמה',
-      detail: 'ציון מגמה ' + scores.professional + ' לעומת לימודי ' + scores.academic + '. לנצל את החוזקה המקצועית כמנוף — שילוב פרויקטים מעשיים בלמידה.',
+      detail: 'ציון מגמה ' + scores.professional + ' לעומת לימודי ' + (grades.avg2 || scores.academic) + '. לנצל את החוזקה המקצועית כמנוף — שילוב פרויקטים מעשיים בלמידה.',
       owner: homeroom + ' + מורה מגמה',
       deadline: '14 ימים'
     });
   }
 
-  // ── ATTENDANCE — נוכחות נמוכה / סיכון נשירה ──
+  // ═══════════════════════════════════════════
+  // 2. ATTENDANCE — נוכחות אמיתית מהמערכת
+  // מקור: מערכת נוכחות (sf_attendance) + דוחות חודשיים
+  // ═══════════════════════════════════════════
+  var attendancePercent = attendance.totalDays > 0 ? Math.round((attendance.presentDays / attendance.totalDays) * 100) : -1;
+  var hasAttendanceData = attendance.totalDays > 0;
   var latestReport = timeline.length > 0 ? timeline[timeline.length - 1] : null;
-  var attendanceLow = latestReport && latestReport.raw && latestReport.raw.attendanceLevel <= 1;
+  var attendanceLow = hasAttendanceData ? attendancePercent < 75 : (latestReport && latestReport.raw && latestReport.raw.attendanceLevel <= 1);
+
   if (attendanceLow) {
+    var attendDetail = hasAttendanceData
+      ? 'נוכחות ' + attendancePercent + '% (' + attendance.presentDays + ' מתוך ' + attendance.totalDays + ' ימים). '
+      : 'נוכחות נמוכה מאוד לפי דוח חודשי. ';
+    if (attendance.absentStreak >= 3) {
+      attendDetail += 'רצף של ' + attendance.absentStreak + ' ימי היעדרות רצופים! ';
+    }
     actions.push({
-      category: 'attendance', status: 'pending',
-      title: 'תוכנית מניעת נשירה',
-      detail: 'נוכחות נמוכה מאוד. יסכה הגר בודקת: ביקור בית, פגישה עם הורים, זיהוי חסמים. לעדכן סטטוס תוך שבוע.',
-      owner: STAFF.treatment,
-      deadline: '7 ימים'
+      category: 'attendance', status: attendancePercent < 50 ? 'active' : 'pending',
+      title: attendancePercent < 50 ? 'סיכון נשירה — נוכחות קריטית' : 'נוכחות נמוכה — דורש התערבות',
+      detail: attendDetail + STAFF.treatment + ' בודקת: ביקור בית, פגישה עם הורים, זיהוי חסמים.',
+      owner: counselor + ' + ' + STAFF.treatment,
+      deadline: attendancePercent < 50 ? '3 ימים' : '7 ימים'
     });
+  }
+  if (attendance.absentStreak >= 5) {
     actions.push({
-      category: 'family', status: 'pending',
-      title: 'פגישה עם הורים + ביקור בית',
-      detail: 'לתאם פגישה עם ההורים להבנת הסיבות לחיסורים. אם לא מגיעים — ביקור בית.',
-      owner: homeroom + ' + ' + counselor,
-      deadline: '10 ימים'
+      category: 'family', status: 'active',
+      title: 'ביקור בית דחוף',
+      detail: attendance.absentStreak + ' ימי היעדרות רצופים. חובה ביקור בית + דיווח לקב"ס אם ממשיך.',
+      owner: counselor + ' + ' + STAFF.treatment,
+      deadline: '48 שעות'
     });
   }
 
-  // ── EMOTIONAL — צורך בטיפול רגשי ──
+  // ═══════════════════════════════════════════
+  // 3. TARDINESS — איחורים כרוניים
+  // מקור: מערכת איחורים (sf_tardiness)
+  // ═══════════════════════════════════════════
+  if (tardiness.totalLates >= 10) {
+    var tardinessDetail = tardiness.totalLates + ' איחורים השנה, ממוצע ' + tardiness.avgMinutes + ' דקות. ';
+    if (tardiness.openDebts > 0) tardinessDetail += tardiness.openDebts + ' דקות חוב פתוח למרכז למידה. ';
+    if (tardiness.escalationLevel >= 3) tardinessDetail += 'רמת אסקלציה ' + tardiness.escalationLevel + ' — דורש שיחה עם הורים.';
+    actions.push({
+      category: 'attendance', status: tardiness.escalationLevel >= 3 ? 'active' : 'pending',
+      title: 'איחורים כרוניים',
+      detail: tardinessDetail,
+      owner: homeroom + ' + ' + STAFF.deputy,
+      deadline: '7 ימים'
+    });
+  }
+
+  // ═══════════════════════════════════════════
+  // 4. BEHAVIORAL — אירועי משמעת אמיתיים
+  // מקור: מערכת אירועי משמעת (sf_incidents)
+  // ═══════════════════════════════════════════
+  if (incidents.disciplineCount >= 3) {
+    var openInc = incidents.events.filter(function(e) { return e.status === 'open'; });
+    var incDetail = incidents.disciplineCount + ' אירועי משמעת השנה';
+    if (openInc.length > 0) incDetail += ', ' + openInc.length + ' פתוחים';
+    incDetail += '. ';
+    // List recent open events
+    var recentOpen = openInc.slice(0, 3);
+    if (recentOpen.length > 0) {
+      incDetail += 'אירועים פתוחים: ';
+      recentOpen.forEach(function(e, i) {
+        incDetail += (i > 0 ? ', ' : '') + e.title + ' (' + e.date + ')';
+      });
+      incDetail += '. ';
+    }
+    incDetail += 'נדרשת תוכנית התנהגותית עם יעדים ברורים.';
+    actions.push({
+      category: 'behavioral', status: 'active',
+      title: 'דפוס אירועי משמעת חוזר',
+      detail: incDetail,
+      owner: STAFF.deputy + ' + ' + homeroom,
+      deadline: '5 ימים'
+    });
+  } else if (scores.social > 0 && scores.social < 45) {
+    actions.push({
+      category: 'behavioral', status: 'pending',
+      title: 'תוכנית התנהגותית אישית',
+      detail: 'תפקוד חברתי-ערכי ' + scores.social + '. לבנות תוכנית עם יעדים שבועיים ברורים, כולל חיזוקים חיוביים.',
+      owner: homeroom + ' + ' + counselor,
+      deadline: '7 ימים'
+    });
+  }
+  // Check for emotional incidents specifically
+  var emotionalIncidents = incidents.events.filter(function(e) { return e.type === 'emotional' && e.status === 'open'; });
+  if (emotionalIncidents.length > 0) {
+    actions.push({
+      category: 'emotional', status: 'active',
+      title: 'אירוע רגשי פתוח — דורש מעקב',
+      detail: emotionalIncidents.length + ' אירועים רגשיים פתוחים. אחרון: "' + emotionalIncidents[0].title + '" (' + emotionalIncidents[0].date + '). ' + counselor + ' בודקת ומתאמת עם ' + STAFF.treatment + '.',
+      owner: counselor + ' + ' + STAFF.treatment,
+      deadline: '3 ימים'
+    });
+  }
+
+  // ═══════════════════════════════════════════
+  // 5. EMOTIONAL — צורך בטיפול רגשי
+  // מקור: מעגל רגשי-ייעוצי (הזנה ידנית)
+  // ═══════════════════════════════════════════
   if (emo.inTreatment && /ממתין/.test(emo.inTreatment)) {
     actions.push({
       category: 'emotional', status: 'pending',
       title: 'הפניה לטיפול רגשי',
-      detail: 'התלמיד/ה ממתין/ה לטיפול. יסכה הגר בודקת מי המטפל/ת המתאים/ה ומתחילה תהליך.',
+      detail: 'התלמיד/ה ממתין/ה לטיפול. ' + STAFF.treatment + ' בודקת מי המטפל/ת המתאים/ה ומתחילה תהליך.',
       owner: STAFF.treatment,
       deadline: '5 ימים'
     });
@@ -2977,34 +3099,37 @@ function generateActionPlan(studentId) {
     });
   }
 
-  // ── BEHAVIORAL — אירועי משמעת ──
-  if (scores.social > 0 && scores.social < 45) {
-    actions.push({
-      category: 'behavioral', status: 'pending',
-      title: 'תוכנית התנהגותית אישית',
-      detail: 'תפקוד חברתי-ערכי ' + scores.social + '. לבנות תוכנית עם יעדים שבועיים ברורים, כולל חיזוקים חיוביים.',
-      owner: homeroom + ' + ' + counselor,
-      deadline: '7 ימים'
-    });
-  }
-
-  // ── FAMILY — שיתוף הורים בעייתי ──
+  // ═══════════════════════════════════════════
+  // 6. FAMILY — שיתוף הורים
+  // מקור: מעגל רגשי + נוכחות
+  // ═══════════════════════════════════════════
   if (emo.parentCoop && /מנותק|עוין/.test(emo.parentCoop)) {
     actions.push({
       category: 'family', status: 'pending',
       title: 'שיקום קשר עם הורים',
-      detail: 'שיתוף הורים: ' + emo.parentCoop + '. ' + counselor + ' יוזמת קשר טלפוני. אם אין מענה — ביקור בית עם יסכה.',
+      detail: 'שיתוף הורים: ' + emo.parentCoop + '. ' + counselor + ' יוזמת קשר טלפוני. אם אין מענה — ביקור בית עם ' + STAFF.treatment + '.',
       owner: counselor + ' + ' + STAFF.treatment,
+      deadline: '10 ימים'
+    });
+  } else if (attendanceLow && (!emo.parentCoop || emo.parentCoop !== 'פעיל')) {
+    actions.push({
+      category: 'family', status: 'pending',
+      title: 'פגישה עם הורים',
+      detail: 'נוכחות נמוכה — לתאם פגישה עם ההורים להבנת הסיבות לחיסורים ולגבש יחד תוכנית שיפור.',
+      owner: homeroom + ' + ' + counselor,
       deadline: '10 ימים'
     });
   }
 
-  // ── DIMENSIONS — ממדים נמוכים במיוחד ──
+  // ═══════════════════════════════════════════
+  // 7. DIMENSIONS — ממדים נמוכים
+  // מקור: חמשת הממדים (פולס + דוחות)
+  // ═══════════════════════════════════════════
   if (dims.motivation <= 1 && dims.motivation > 0) {
     actions.push({
       category: 'emotional', status: 'pending',
       title: 'חיזוק מוטיבציה',
-      detail: 'ממד מוטיבציה ברמה ' + dims.motivation + '/4. שיחה עם ' + homeroom + ' על מטרות אישיות. לחבר לפעילות שהתלמיד אוהב.',
+      detail: 'ממד מוטיבציה ברמה ' + dims.motivation + '/4. שיחה עם ' + homeroom + ' על מטרות אישיות. לחבר לפעילות שהתלמיד/ה אוהב/ת.',
       owner: homeroom,
       deadline: '7 ימים'
     });
@@ -3019,12 +3144,15 @@ function generateActionPlan(studentId) {
     });
   }
 
-  // ── RISK — גורמי סיכון ──
+  // ═══════════════════════════════════════════
+  // 8. RISK — גורמי סיכון
+  // מקור: גורמי סיכון (הזנה ידנית)
+  // ═══════════════════════════════════════════
   if (risk.selfHarm) {
     actions.push({
       category: 'emotional', status: 'active',
       title: 'מעקב פגיעה עצמית — דחוף',
-      detail: 'דווח על פגיעה עצמית. יסכה הגר + יועצת בשיחה מיידית. לשקול הפניה לפסיכיאטר.',
+      detail: 'דווח על פגיעה עצמית. ' + STAFF.treatment + ' + יועצת בשיחה מיידית. לשקול הפניה לפסיכיאטר.',
       owner: STAFF.treatment + ' + ' + counselor,
       deadline: 'מיידי'
     });
@@ -3033,18 +3161,31 @@ function generateActionPlan(studentId) {
     actions.push({
       category: 'emotional', status: 'active',
       title: 'טיפול בשימוש בחומרים',
-      detail: 'דווח שימוש בחומרים. יסכה מתאמת פגישה עם הורים + הפניה מקצועית.',
+      detail: 'דווח שימוש בחומרים. ' + STAFF.treatment + ' מתאמת פגישה עם הורים + הפניה מקצועית.',
       owner: STAFF.treatment,
       deadline: '3 ימים'
     });
   }
+
+  // ═══════════════════════════════════════════
+  // SUMMARY — סיכום מקורות
+  // ═══════════════════════════════════════════
+  var sources = [];
+  if (grades.avg1 || grades.avg2) sources.push('ציונים');
+  if (hasAttendanceData) sources.push('נוכחות (' + attendancePercent + '%)');
+  if (tardiness.totalLates > 0) sources.push('איחורים (' + tardiness.totalLates + ')');
+  if (incidents.events.length > 0) sources.push('אירועים (' + incidents.events.length + ')');
+  if (timeline.length > 0) sources.push('דוחות חודשיים (' + timeline.length + ')');
+  if (dims.belong || dims.motivation) sources.push('חמשת הממדים');
+  if (emo.inTreatment) sources.push('מעגל רגשי');
+  plan.actionPlanSources = sources.join(' | ');
 
   // Save the generated plan
   plan.actionPlan = actions;
   plan.actionPlanGenerated = today;
   savePlanData(studentId, plan);
   renderTabContent(s);
-  showToast('תוכנית פעולה נוצרה', actions.length + ' פעולות זוהו עבור ' + s.first + ' ' + s.last);
+  showToast('תוכנית פעולה נוצרה', actions.length + ' פעולות מ-' + sources.length + ' מקורות עבור ' + s.first + ' ' + s.last);
 }
 window.generateActionPlan = generateActionPlan;
 
@@ -3294,8 +3435,69 @@ function loadDemoDataDavidChen() {
   };
 
   cloudStorage.set('sf_plan_' + studentId, planData);
+
+  // 5. Attendance data — נוכחות 45%, רצף חיסורים
+  var attendanceData = {
+    totalDays: 120, presentDays: 54, absentDays: 52, sickDays: 14, absentStreak: 8,
+    months: [
+      {label:'מרץ', total:22, present:8, absent:12, sick:2},
+      {label:'פברואר', total:20, present:7, absent:10, sick:3},
+      {label:'ינואר', total:18, present:8, absent:7, sick:3},
+      {label:'דצמבר', total:20, present:10, absent:7, sick:3},
+      {label:'נובמבר', total:20, present:11, absent:8, sick:1},
+      {label:'אוקטובר', total:20, present:10, absent:8, sick:2}
+    ],
+    recent: [
+      {date:'2026-03-15', status:'absent', reason:''},
+      {date:'2026-03-14', status:'absent', reason:''},
+      {date:'2026-03-13', status:'absent', reason:''},
+      {date:'2026-03-12', status:'absent', reason:''},
+      {date:'2026-03-11', status:'absent', reason:''},
+      {date:'2026-03-10', status:'late', reason:'הגיע שעה 3'},
+      {date:'2026-03-09', status:'absent', reason:''},
+      {date:'2026-03-08', status:'absent', reason:''},
+      {date:'2026-03-07', status:'absent', reason:''},
+      {date:'2026-03-06', status:'late', reason:'הגיע שעה 2'}
+    ]
+  };
+  localStorage.setItem('sf_attendance_' + studentId, JSON.stringify(attendanceData));
+  if (typeof cloudStorage !== 'undefined') cloudStorage.set('sf_attendance_' + studentId, JSON.stringify(attendanceData));
+
+  // 6. Tardiness data — איחורים כרוניים, שעה שנייה
+  var tardinessData = {
+    totalLates: 28, openDebts: 180, completed: 40, avgMinutes: 45, escalationLevel: 3,
+    events: [
+      {date:'15/03/2026', minutes:90, status:'open', learningCenter:false},
+      {date:'13/03/2026', minutes:45, status:'open', learningCenter:false},
+      {date:'10/03/2026', minutes:90, status:'open', learningCenter:false},
+      {date:'06/03/2026', minutes:45, status:'open', learningCenter:false},
+      {date:'03/03/2026', minutes:45, status:'open', learningCenter:false},
+      {date:'27/02/2026', minutes:90, status:'open', learningCenter:false},
+      {date:'25/02/2026', minutes:45, status:'open', learningCenter:false},
+      {date:'20/02/2026', minutes:45, status:'completed', learningCenter:true},
+      {date:'18/02/2026', minutes:45, status:'completed', learningCenter:true},
+      {date:'13/02/2026', minutes:90, status:'open', learningCenter:false}
+    ]
+  };
+  localStorage.setItem('sf_tardiness_' + studentId, JSON.stringify(tardinessData));
+  if (typeof cloudStorage !== 'undefined') cloudStorage.set('sf_tardiness_' + studentId, JSON.stringify(tardinessData));
+
+  // 7. Incidents data — אירועי משמעת חוזרים
+  var incidentsData = {
+    disciplineCount: 4, specialCount: 1, openCount: 3,
+    events: [
+      {id:'inc5', type:'discipline', title:'סירוב להיכנס לשיעור', description:'דוד הגיע לבית הספר אבל סירב להיכנס לשיעור היסטוריה. ישב במסדרון עם אוזניות. כשפנו אליו אמר "מה אכפת לכם".', reporter:'מורה היסטוריה', date:'12/03/2026', status:'open', action_taken:'שיחה עם מנו'},
+      {id:'inc4', type:'emotional', title:'התפרצות רגשית בכיתה', description:'באמצע שיעור עברית דוד קם פתאום, בעט בכיסא ויצא. חזר אחרי 20 דקות ולא דיבר. המורה דיווחה שזה קרה אחרי שביקשה ממנו לקרוא בקול.', reporter:'מורה עברית', date:'05/03/2026', status:'open', action_taken:'דורית ניסתה לדבר — מסרב'},
+      {id:'inc3', type:'discipline', title:'עישון בשטח בית הספר', description:'נתפס מעשן בחצר האחורית בהפסקה. לא שיתף פעולה כשנשאל אם יש עוד מעורבים.', reporter:'תורן הפסקה', date:'24/02/2026', status:'handled', action_taken:'שיחה עם מנו + הודעה להורים (האם לא ענתה)'},
+      {id:'inc2', type:'discipline', title:'היעדרות ממבחן ללא הודעה', description:'לא הגיע למבחן מתמטיקה. לא הודיע מראש. לא ענה לטלפון. למחרת הגיע ואמר "שכחתי".', reporter:'מחנכת — רעיה', date:'10/02/2026', status:'open', action_taken:''},
+      {id:'inc1', type:'discipline', title:'אי הגשת עבודות חוזר', description:'חודש שני ברציפות — לא הגיש שום עבודה בהיסטוריה, ספרות ועברית. מתעלם מתזכורות.', reporter:'מחנכת — רעיה', date:'01/02/2026', status:'handled', action_taken:'רעיה דיברה עם דוד — אמר שיגיש, לא הגיש'}
+    ]
+  };
+  localStorage.setItem('sf_incidents_' + studentId, JSON.stringify(incidentsData));
+  if (typeof cloudStorage !== 'undefined') cloudStorage.set('sf_incidents_' + studentId, JSON.stringify(incidentsData));
+
   renderTabContent(s);
-  showToast('דמו נטען — דוד חן י1', 'ירידה חדה בתפקוד, נוכחות 45%, סגירות רגשית, הורים מנותקים');
+  showToast('דמו נטען — דוד חן י1', 'ירידה חדה בתפקוד, נוכחות 45%, 28 איחורים, 4 אירועי משמעת, סגירות רגשית');
 }
 window.loadDemoDataDavidChen = loadDemoDataDavidChen;
 
