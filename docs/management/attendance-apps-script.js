@@ -86,7 +86,14 @@ const DEFAULT_CONFIG = [
   ['class_יא3','','שם בת השירות של יא3'],
   ['class_יב1','','שם בת השירות של יב1'],
   ['class_יב2','','שם בת השירות של יב2'],
-  ['class_יב3','','שם בת השירות של יב3']
+  ['class_יב3','','שם בת השירות של יב3'],
+  ['','',''],
+  ['counselor_צהיי_phone','','טלפון יועצת — צהיי'],
+  ['counselor_ליאת_phone','','טלפון יועצת — ליאת'],
+  ['counselor_דורית_phone','','טלפון יועצת — דורית'],
+  ['yiskah_phone','','טלפון יסכה — רכזת טיפולית'],
+  ['meytal_phone','','טלפון מיטל — מנהלת'],
+  ['daily_summary_enabled','yes','yes/no — האם לשלוח סיכום יומי לחיסורים רצופים']
 ];
 
 // ============================================================
@@ -393,6 +400,237 @@ function sendReminderCheck() {
 
   logInfo('reminder', 'missing=' + missingClasses.length + ' sent=' + sentCount, missingDetails.join(' / '));
   return 'sent to ' + sentCount + ' recipients; missing: ' + missingClasses.join(',');
+}
+
+// ============================================================
+// DAILY SUMMARY — סיכום יומי חיסורים רצופים ליועצות וליסכה
+// ============================================================
+// מיפוי כיתות ליועצות
+const COUNSELOR_BY_CLASS = {
+  'ט1':'צהיי','ט2':'ליאת',
+  'י1':'דורית','י2':'דורית','י3':'דורית',
+  'יא1':'ליאת','יא2':'ליאת','יא3':'ליאת',
+  'יב1':'צהיי','יב2':'צהיי','יב3':'צהיי'
+};
+
+function setupDailySummaryTrigger() {
+  // Remove any existing trigger
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendDailySummary') ScriptApp.deleteTrigger(t);
+  });
+  // Run daily at 14:00 (after 13:30 reminder, so data is complete)
+  ScriptApp.newTrigger('sendDailySummary')
+    .timeBased()
+    .atHour(14)
+    .nearMinute(0)
+    .everyDays(1)
+    .create();
+  logInfo('trigger', 'daily summary trigger created for 14:00', '');
+  return 'daily summary trigger installed';
+}
+
+function getWorkingDays(count) {
+  // Return last N working days (Sun-Thu) before today, newest first
+  const days = [];
+  const d = new Date();
+  d.setDate(d.getDate() - 1); // start from yesterday
+  while (days.length < count) {
+    const dow = d.getDay();
+    if (dow >= 0 && dow <= 4) { // Sun-Thu
+      days.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return days; // newest first
+}
+
+function getConsecutiveAbsences(records, studentId) {
+  // records = all attendance records (pre-fetched)
+  // Returns streak count of consecutive absent days (from most recent backward)
+  const days = getWorkingDays(10); // check up to 10 days back
+  const studentRecords = {};
+  records.forEach(function(r) {
+    if (String(r.student_id) === String(studentId)) {
+      studentRecords[r.date] = r.status;
+    }
+  });
+
+  let streak = 0;
+  for (let i = 0; i < days.length; i++) {
+    const status = studentRecords[days[i]];
+    if (status === 'absent' || status === 'sick') {
+      streak++;
+    } else if (status === 'present' || status === 'late') {
+      break; // streak broken
+    } else {
+      // No data for this day — don't break streak but don't count
+      // If no data at all, stop counting
+      if (i === 0 && !status) break;
+    }
+  }
+  return streak;
+}
+
+function sendDailySummary() {
+  const now = new Date();
+  const dow = now.getDay();
+  // Skip Friday and Saturday
+  if (dow === 5 || dow === 6) {
+    logInfo('daily-summary', 'skipped weekend', 'dow=' + dow);
+    return 'weekend skipped';
+  }
+
+  const cfg = fetchConfig();
+  const enabled = (cfg.daily_summary_enabled || '').toLowerCase() === 'yes';
+  const greenEnabled = (cfg.green_api_enabled || '').toLowerCase() === 'yes';
+
+  if (!enabled) {
+    logInfo('daily-summary', 'disabled in config', '');
+    return 'daily summary disabled';
+  }
+
+  // Fetch all records
+  const allRecords = fetchAll();
+
+  // Get unique student IDs with their names and classes
+  const students = {};
+  allRecords.forEach(function(r) {
+    if (!students[r.student_id]) {
+      students[r.student_id] = { id: r.student_id, name: r.student_name, cls: r.class };
+    }
+  });
+
+  // Calculate streaks for all students
+  const counselorAlerts = {}; // counselor name → [{name, cls, streak}]
+  const criticalAlerts = [];  // [{name, cls, streak, counselor}]
+
+  Object.values(students).forEach(function(s) {
+    const streak = getConsecutiveAbsences(allRecords, s.id);
+    const counselor = COUNSELOR_BY_CLASS[s.cls] || 'לא מוגדר';
+
+    if (streak >= 3) {
+      criticalAlerts.push({ name: s.name, cls: s.cls, streak: streak, counselor: counselor });
+    }
+    if (streak >= 2) {
+      if (!counselorAlerts[counselor]) counselorAlerts[counselor] = [];
+      counselorAlerts[counselor].push({ name: s.name, cls: s.cls, streak: streak });
+    }
+  });
+
+  const today = now.toLocaleDateString('he-IL');
+  let sentCount = 0;
+
+  // --- Send to each counselor ---
+  const counselors = ['צהיי', 'ליאת', 'דורית'];
+  counselors.forEach(function(name) {
+    const alerts = counselorAlerts[name];
+    if (!alerts || alerts.length === 0) return;
+
+    const phone = cfg['counselor_' + name + '_phone'];
+    if (!phone) {
+      logInfo('daily-summary', 'no phone for counselor ' + name, alerts.length + ' alerts');
+      return;
+    }
+
+    // Sort by streak descending
+    alerts.sort(function(a, b) { return b.streak - a.streak; });
+
+    let msg = 'סיכום נוכחות יומי — ' + today + '\n';
+    msg += 'שלום ' + name + ',\n\n';
+    msg += 'התלמידים הבאים בכיתות שלך עם חיסורים רצופים:\n\n';
+    alerts.forEach(function(a) {
+      const icon = a.streak >= 3 ? '🚨' : '⚠️';
+      msg += icon + ' ' + a.name + ' (' + a.cls + ') — ' + a.streak + ' ימים רצופים\n';
+    });
+    msg += '\nסה"כ: ' + alerts.length + ' תלמידים דורשים תשומת לב\n';
+    msg += '\nבבקשה צרי קשר עם ההורים ועדכני במערכת.\n';
+    msg += 'הודעה אוטומטית — מערכת נוכחות אורט בית הערבה';
+
+    if (greenEnabled) {
+      try {
+        sendGreenApiMessage(phone, msg);
+        sentCount++;
+        logInfo('daily-summary', 'sent to counselor ' + name, alerts.length + ' students');
+      } catch (err) {
+        logError('daily-summary-counselor', err);
+      }
+    } else {
+      logInfo('daily-summary-dry', 'counselor ' + name + ' (' + phone + ')', msg);
+    }
+  });
+
+  // --- Send to Yiskah (critical: 3+ days) ---
+  if (criticalAlerts.length > 0) {
+    const yiskahPhone = cfg.yiskah_phone;
+    const meytalPhone = cfg.meytal_phone;
+
+    // Sort by streak descending
+    criticalAlerts.sort(function(a, b) { return b.streak - a.streak; });
+
+    let msg = '🚨 סיכום התראות קריטיות — ' + today + '\n\n';
+    msg += 'תלמידים עם 3+ ימי חיסור רצופים:\n\n';
+    criticalAlerts.forEach(function(a) {
+      msg += '• ' + a.name + ' (' + a.cls + ') — ' + a.streak + ' ימים רצופים (יועצת: ' + a.counselor + ')\n';
+    });
+    msg += '\nסה"כ: ' + criticalAlerts.length + ' תלמידים במצב קריטי\n';
+    msg += '\nנדרשת התערבות מיידית — יצירת קשר עם הורים + תיעוד.\n';
+    msg += 'הודעה אוטומטית — מערכת נוכחות אורט בית הערבה';
+
+    [yiskahPhone, meytalPhone].forEach(function(phone) {
+      if (!phone) return;
+      if (greenEnabled) {
+        try {
+          sendGreenApiMessage(phone, msg);
+          sentCount++;
+        } catch (err) {
+          logError('daily-summary-critical', err);
+        }
+      } else {
+        logInfo('daily-summary-dry', 'critical to ' + phone, msg);
+      }
+    });
+
+    logInfo('daily-summary', 'critical alerts: ' + criticalAlerts.length, criticalAlerts.map(function(a){return a.name}).join(', '));
+  }
+
+  const summary = 'counselor alerts: ' + Object.keys(counselorAlerts).map(function(k){return k+'='+counselorAlerts[k].length}).join(',') + ' | critical: ' + criticalAlerts.length + ' | sent: ' + sentCount;
+  logInfo('daily-summary', summary, '');
+  return summary;
+}
+
+// Test — run manually to see what the summary would contain
+function testDailySummaryDryRun() {
+  const allRecords = fetchAll();
+  const students = {};
+  allRecords.forEach(function(r) {
+    if (!students[r.student_id]) {
+      students[r.student_id] = { id: r.student_id, name: r.student_name, cls: r.class };
+    }
+  });
+
+  const results = { counselor: {}, critical: [] };
+  Object.values(students).forEach(function(s) {
+    const streak = getConsecutiveAbsences(allRecords, s.id);
+    const counselor = COUNSELOR_BY_CLASS[s.cls] || '?';
+    if (streak >= 3) results.critical.push({ name: s.name, cls: s.cls, streak: streak, counselor: counselor });
+    if (streak >= 2) {
+      if (!results.counselor[counselor]) results.counselor[counselor] = [];
+      results.counselor[counselor].push({ name: s.name, cls: s.cls, streak: streak });
+    }
+  });
+
+  const cfg = fetchConfig();
+  return {
+    today: todayKey(),
+    counselorPhones: {
+      צהיי: cfg['counselor_צהיי_phone'] || '(not set)',
+      ליאת: cfg['counselor_ליאת_phone'] || '(not set)',
+      דורית: cfg['counselor_דורית_phone'] || '(not set)'
+    },
+    yiskahPhone: cfg.yiskah_phone || '(not set)',
+    meytalPhone: cfg.meytal_phone || '(not set)',
+    results: results
+  };
 }
 
 // ============================================================
