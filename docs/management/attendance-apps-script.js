@@ -691,8 +691,10 @@ function testDailySummaryDryRun() {
   });
 
   const cfg = fetchConfig();
-  return {
+  const output = {
     today: todayKey(),
+    totalRecords: allRecords.length,
+    totalStudents: Object.keys(students).length,
     counselorPhones: {
       צהיי: cfg['counselor_צהיי_phone'] || '(not set)',
       ליאת: cfg['counselor_ליאת_phone'] || '(not set)',
@@ -702,6 +704,8 @@ function testDailySummaryDryRun() {
     meytalPhone: cfg.meytal_phone || '(not set)',
     results: results
   };
+  Logger.log(JSON.stringify(output, null, 2));
+  return output;
 }
 
 // ============================================================
