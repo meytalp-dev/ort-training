@@ -1256,12 +1256,17 @@ function renderConversations(s) {
   html += '</div>';
   html += '<label>נוכחים</label><input type="text" id="convAttendees" placeholder="למשל: מחנכת, יועצת, הורה...">';
   html += '<label>תקציר השיחה</label>';
-  html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">';
+  html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap">';
   html += '<button class="rec-btn" id="recBtn" onclick="toggleRecording()" title="הקלטה ותמלול"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6"/></svg> הקלטה</button>';
+  html += '<span id="recTimer" style="font-size:.78rem;font-weight:600;color:#E74C3C;display:none;font-variant-numeric:tabular-nums">00:00</span>';
   html += '<span class="rec-status" id="recStatus"></span>';
   html += '</div>';
   html += '<textarea id="convSummary" rows="3" placeholder="כתבי תקציר או לחצי הקלטה לתמלול אוטומטי..."></textarea>';
-  html += '<div id="recTranscriptWrap" style="display:none"><div class="conv-field-label">תמלול הקלטה (ניתן לעריכה)</div><div class="rec-transcript" contenteditable="true" id="recTranscript"></div></div>';
+  html += '<div id="recTranscriptWrap" style="display:none"><div class="conv-field-label">תמלול הקלטה (ניתן לעריכה)</div><div class="rec-transcript" contenteditable="true" id="recTranscript"></div>';
+  html += '<div style="display:flex;gap:8px;margin-top:8px">';
+  html += '<button class="conv-toggle-btn" id="aiSummarizeBtn" onclick="aiSummarizeConversation()" style="font-size:.78rem"><svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13"><path d="M10 2a1 1 0 011 1v1.323l3.954 1.582a1 1 0 01.589.769l.452 3.166a1 1 0 01-.293.874L12 14.414V17a1 1 0 11-2 0v-2.586l-3.702-3.7a1 1 0 01-.293-.874l.452-3.166a1 1 0 01.59-.769L11 4.323V3a1 1 0 011-1z"/></svg> סכם שיחה (AI)</button>';
+  html += '<span id="aiStatus" style="font-size:.72rem;color:var(--muted);align-self:center"></span>';
+  html += '</div></div>';
   html += '<label>החלטה / המשך טיפול</label><textarea id="convDecision" rows="2" placeholder="מה הוחלט? מה הצעד הבא?"></textarea>';
   html += '<div class="conv-form-actions">';
   html += '<button class="btn btn-sm" onclick="toggleConvForm()" style="background:var(--bg-alt);color:var(--muted);border:1px solid var(--border)">ביטול</button>';
@@ -1318,6 +1323,8 @@ function toggleConvForm() {
 var convRecognition = null;
 var convIsRecording = false;
 var convTranscriptText = '';
+var recTimerInterval = null;
+var recStartTime = null;
 
 function toggleRecording() {
   if (convIsRecording) { stopRecording(); return; }
@@ -1350,23 +1357,38 @@ function toggleRecording() {
   };
 
   convRecognition.onerror = function(e) {
+    if (e.error === 'no-speech') return; // ignore silence
     document.getElementById('recStatus').textContent = 'שגיאה: ' + e.error;
     stopRecording();
   };
 
   convRecognition.onend = function() {
-    if (convIsRecording) convRecognition.start(); // auto-restart
+    if (convIsRecording) convRecognition.start(); // auto-restart for long sessions
   };
 
   convRecognition.start();
   convIsRecording = true;
+
+  // Timer
+  recStartTime = Date.now();
+  var timerEl = document.getElementById('recTimer');
+  timerEl.style.display = 'inline';
+  recTimerInterval = setInterval(function() {
+    var sec = Math.floor((Date.now() - recStartTime) / 1000);
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    timerEl.textContent = (h > 0 ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }, 1000);
+
   var btn = document.getElementById('recBtn');
   btn.classList.add('recording');
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> עצירה';
-  document.getElementById('recStatus').textContent = 'מקליט... דברי והתמלול יופיע בזמן אמת';
+  document.getElementById('recStatus').textContent = 'מקליט... התמלול מופיע בזמן אמת';
 }
 
 function stopRecording() {
+  if (recTimerInterval) { clearInterval(recTimerInterval); recTimerInterval = null; }
   if (convRecognition) { convRecognition.onend = null; convRecognition.abort(); convRecognition = null; }
   convIsRecording = false;
   var btn = document.getElementById('recBtn');
@@ -1375,7 +1397,81 @@ function stopRecording() {
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6"/></svg> הקלטה';
   }
   var status = document.getElementById('recStatus');
-  if (status) status.textContent = convTranscriptText ? 'תמלול הושלם — ניתן לערוך' : '';
+  if (status) status.textContent = convTranscriptText ? 'תמלול הושלם — ניתן לערוך. לחצי "סכם שיחה" למילוי אוטומטי' : '';
+}
+
+// ===== AI SUMMARY (Gemini) =====
+var CONV_GEMINI_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
+var CONV_GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + CONV_GEMINI_KEY;
+
+function aiSummarizeConversation() {
+  var transcriptEl = document.getElementById('recTranscript');
+  var transcript = transcriptEl ? transcriptEl.textContent.trim() : '';
+  if (!transcript || transcript.length < 20) {
+    alert('אין מספיק תמלול לסיכום. הקליטי שיחה קודם.');
+    return;
+  }
+
+  var student = STUDENTS.find(function(st) { return st.id === state.selectedStudentId; });
+  var studentName = student ? student.first + ' ' + student.last : '';
+  var studentClass = student ? student.class : '';
+
+  var statusEl = document.getElementById('aiStatus');
+  var sumBtn = document.getElementById('aiSummarizeBtn');
+  statusEl.textContent = 'מנתח תמלול...';
+  sumBtn.disabled = true;
+  sumBtn.style.opacity = '0.5';
+
+  var prompt = 'אתה עוזר לצוות חינוכי בבית ספר תיכון. קיבלת תמלול של שיחה עם תלמיד/ה.\n';
+  prompt += 'שם התלמיד/ה: ' + studentName + ' (כיתה ' + studentClass + ')\n\n';
+  prompt += 'נתח את התמלול והחזר JSON בלבד (בלי markdown, בלי ```), במבנה הבא:\n';
+  prompt += '{\n';
+  prompt += '  "purpose": "אחת מ: מעקב / היכרות / משמעת / רגשי / לימודי / הורים / יוזמת תלמיד / אחר",\n';
+  prompt += '  "attendees": "מי השתתף בשיחה (לפי מה שעולה מהתמלול)",\n';
+  prompt += '  "summary": "תקציר של 3-5 משפטים — הנקודות המרכזיות שעלו",\n';
+  prompt += '  "decision": "החלטות שהתקבלו וצעדים הבאים. אם אין — כתוב לא צוינה החלטה"\n';
+  prompt += '}\n\n';
+  prompt += '=== תמלול ===\n' + transcript.substring(0, 30000);
+
+  fetch(CONV_GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 1000 }
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var text = '';
+    try { text = data.candidates[0].content.parts[0].text; } catch(e) {}
+    // Strip markdown code fences if present
+    text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    var parsed = JSON.parse(text);
+
+    // Fill form fields
+    if (parsed.purpose) {
+      var sel = document.getElementById('convPurpose');
+      var opts = sel.options;
+      for (var i = 0; i < opts.length; i++) {
+        if (opts[i].value === parsed.purpose) { sel.selectedIndex = i; break; }
+      }
+    }
+    if (parsed.attendees) document.getElementById('convAttendees').value = parsed.attendees;
+    if (parsed.summary) document.getElementById('convSummary').value = parsed.summary;
+    if (parsed.decision) document.getElementById('convDecision').value = parsed.decision;
+
+    statusEl.textContent = 'הסיכום מולא — בדקי ועדכני לפני שמירה';
+    statusEl.style.color = '#27A844';
+  })
+  .catch(function(err) {
+    statusEl.textContent = 'שגיאה בסיכום: ' + (err.message || 'נסי שוב');
+    statusEl.style.color = '#E74C3C';
+  })
+  .finally(function() {
+    sumBtn.disabled = false;
+    sumBtn.style.opacity = '1';
+  });
 }
 
 function deleteConversation(idx) {
