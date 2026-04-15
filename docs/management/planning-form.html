@@ -96,8 +96,12 @@ body::before{content:'';position:fixed;inset:0;
   .main{padding:16px}
   .steps-bar{padding:12px 8px;gap:0}
   .step-dot{width:28px;height:28px;font-size:11px}
-  .step-label{font-size:9px;max-width:60px}
+  .step-label{font-size:11px;max-width:60px}
   .step-connector{width:16px}
+  .activity-card .act-fields{flex-direction:column}
+  .activity-card .act-fields>*{min-width:100%!important;width:100%!important}
+  .subtasks-card{overflow-x:auto}
+  .subtasks-card table{min-width:400px}
 }
 
 /* Page */
@@ -340,6 +344,9 @@ body::before{content:'';position:fixed;inset:0;
   .form-grid{grid-template-columns:1fr}
   .hdr h1{font-size:16px}
   .badge{display:none}
+  .act-fields select,.act-fields input{font-size:13px;padding:10px 12px;min-height:44px}
+  .btn-sm{min-height:44px;padding:10px 14px}
+  .goal-remove{padding:10px;min-width:44px;min-height:44px}
 }
 </style>
 </head>
@@ -1355,6 +1362,7 @@ function addGoalToArea(area) {
 
 function removeGoalFromArea(area, index) {
   if (!areaGoals[area]) return;
+  if (!confirm('להסיר את המטרה?')) return;
   collectGoalDataFromDOM();
   areaGoals[area].splice(index, 1);
   renderGoalAccordions();
@@ -1495,6 +1503,7 @@ function toggleActTaskDone(cb) {
 }
 
 function removeActivity(btn) {
+  if (!confirm('להסיר את הפעילות?')) return;
   const card = btn.closest('.activity-card');
   if (card) card.remove();
   autoSave();
@@ -1704,6 +1713,22 @@ function handleFinish() {
     alert('יש למלא שם ותפקיד לפני שליחה.');
     goToPage(1);
     return;
+  }
+  // Soft validation — warn about missing sections
+  const warnings = [];
+  if (selectedAreas.length === 0) warnings.push('לא נבחרו תחומי אחריות (עמוד 1)');
+  const vision = document.getElementById('f_vision');
+  if (vision && !vision.value.trim()) warnings.push('חזון אישי לא מולא (עמוד 2)');
+  let hasGoal = false;
+  selectedAreas.forEach(area => { (areaGoals[area] || []).forEach(g => { if (g.what && g.what.trim()) hasGoal = true; }); });
+  if (!hasGoal) warnings.push('לא הוגדרו מטרות (עמוד 2)');
+  const actsA = collectActivities('A'), actsB = collectActivities('B'), actsC = collectActivities('C');
+  if (actsA.length === 0) warnings.push('שליש א\' ללא פעילויות (עמוד 3)');
+  if (actsB.length === 0) warnings.push('שליש ב\' ללא פעילויות (עמוד 3)');
+  if (actsC.length === 0) warnings.push('שליש ג\' ללא פעילויות (עמוד 3)');
+  if (warnings.length > 0) {
+    const proceed = confirm('שים לב — עדיין לא מולא:\n\n' + warnings.map(w => '- ' + w).join('\n') + '\n\nלשלוח בכל זאת?');
+    if (!proceed) return;
   }
   if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
   saveToSheet();
