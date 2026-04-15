@@ -3030,7 +3030,7 @@ function syncFromSheet(action, params, callback) {
   var url = APPS_SCRIPT_URL + '?action=' + action;
   for (var k in params) { url += '&' + k + '=' + encodeURIComponent(params[k]); }
   // JSONP for CORS
-  var cbName = 'cb_' + Date.now();
+  var cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
   url += '&callback=' + cbName;
   window[cbName] = function(data) {
     delete window[cbName];
@@ -3502,9 +3502,55 @@ document.querySelectorAll('.nav button').forEach(function(btn) {
 });
 
 // ============================================================
+// SYNC FROM SHEET — merge remote data into localStorage
+// ============================================================
+var _syncInProgress = false;
+function syncAllFromSheet(callback) {
+  if (!APPS_SCRIPT_URL || _syncInProgress) { if (callback) callback(); return; }
+  _syncInProgress = true;
+  var done = 0;
+  var total = 2;
+  function checkDone() { if (++done >= total) { _syncInProgress = false; if (callback) callback(); } }
+
+  // Sync leads
+  syncFromSheet('getLeads', {}, function(data) {
+    if (data && data.leads && data.leads.length > 0) {
+      var local = getLeads();
+      var localMap = {};
+      local.forEach(function(l) { localMap[l.id] = l; });
+      data.leads.forEach(function(l) {
+        if (!localMap[l.id]) { local.push(l); }
+        else { Object.assign(localMap[l.id], l); }
+      });
+      saveLeads(local);
+    }
+    checkDone();
+  });
+
+  // Sync interviews
+  syncFromSheet('getAllInterviews', {}, function(data) {
+    if (data && data.interviews && data.interviews.length > 0) {
+      var local = getInterviews();
+      var localMap = {};
+      local.forEach(function(iv) { localMap[iv.id] = iv; });
+      data.interviews.forEach(function(iv) {
+        if (!localMap[iv.id]) { local.push(iv); }
+        else { Object.assign(localMap[iv.id], iv); }
+      });
+      localStorage.setItem('ort_interviews', JSON.stringify(local));
+    }
+    checkDone();
+  });
+}
+
+// ============================================================
 // DASHBOARD
 // ============================================================
 function renderDashboard() {
+  // First sync from Sheet, then render
+  syncAllFromSheet(function() { _renderDashboardInner(); });
+}
+function _renderDashboardInner() {
   var leads = getLeads();
   var interviews = getInterviews();
 

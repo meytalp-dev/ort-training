@@ -36,6 +36,9 @@ function doGet(e) {
       case 'getStudentNotes':
         result = getStudentNotes_(e.parameter.leadId);
         break;
+      case 'getAllInterviews':
+        result = getAllInterviews_();
+        break;
       case 'getIntros':
         result = getIntros_();
         break;
@@ -266,6 +269,23 @@ function getInterview_(leadId) {
     }
   }
   return { result: 'success', interview: null };
+}
+
+function getAllInterviews_() {
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('ראיונות');
+  if (!sheet || sheet.getLastRow() < 2) return { result: 'success', interviews: [] };
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var interviews = [];
+  for (var i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    var interview = {};
+    for (var c = 0; c < headers.length; c++) {
+      interview[headers[c]] = data[i][c] || '';
+    }
+    interviews.push(interview);
+  }
+  return { result: 'success', interviews: interviews };
 }
 
 function saveInterview_(interview) {
