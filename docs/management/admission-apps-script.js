@@ -275,13 +275,30 @@ function getAllInterviews_() {
   var sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('ראיונות');
   if (!sheet || sheet.getLastRow() < 2) return { result: 'success', interviews: [] };
   var data = sheet.getDataRange().getValues();
-  var headers = data[0];
+
+  // Map Hebrew headers to English field names (same order as saveInterview_)
+  var fields = [
+    'id', 'intFirstName', 'intLastName', 'intIdNum', 'intAge', 'intBirthDate', 'intBirthCountry', 'intTrack',
+    'intCity', 'intStreet', 'intApt', 'intZip', 'intHomePhone', 'intMobile',
+    'intFatherName', 'intFatherId', 'intFatherPhone', 'intFatherBirth', 'intFatherCountry', 'intFatherEdu', 'intFatherWork', 'intFatherEmail',
+    'intMotherName', 'intMotherId', 'intMotherPhone', 'intMotherBirth', 'intMotherCountry', 'intMotherEdu', 'intMotherWork', 'intMotherEmail',
+    'intFamilyStatus', 'intSiblings', 'intBirthOrder', 'intEconomic', 'intHousing', 'intRooms', 'intEntitlements',
+    'intLastSchool', 'intCertificate', 'intClassType', 'intMeds', 'intMedsType', 'intDiagnosis', 'intDiagType', 'intPlacement',
+    'intPrevContactName', 'intPrevContactPhone', 'intPrevOpinion',
+    'intReferrerName', 'intReferrerPhone', 'intKabs', 'intKabsPhone', 'intKabsNotes',
+    'intAcademic', 'intTherapy', 'intSocial', 'intFamily', 'intHealth',
+    'intMotivation', 'intDream', 'intParentView',
+    'chkBounds', 'chkRegistrar', 'chkHomeroom', 'chkCoordination', 'chkGradual',
+    'intRecommendations', 'intPresent', 'intImpression', 'intDecision',
+    'createdAt', 'updatedAt'
+  ];
+
   var interviews = [];
   for (var i = 1; i < data.length; i++) {
     if (!data[i][0]) continue;
     var interview = {};
-    for (var c = 0; c < headers.length; c++) {
-      interview[headers[c]] = data[i][c] || '';
+    for (var c = 0; c < fields.length && c < data[i].length; c++) {
+      interview[fields[c]] = data[i][c] !== undefined ? data[i][c] : '';
     }
     interviews.push(interview);
   }
