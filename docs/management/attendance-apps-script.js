@@ -103,6 +103,8 @@ const DEFAULT_CONFIG = [
   ['','',''],
   ['bnot_reminder_enabled','yes','yes/no — האם לשלוח תזכורת ב-10:30 לבנות השירות'],
   ['','',''],
+  ['holidays','','תאריכי חופשות מופרדים בפסיקים — 2026-04-25,2026-04-26 וכו. גם טווחים: 2026-04-25:2026-05-01'],
+  ['','',''],
   ['counselor_צהיי_phone','','טלפון יועצת — הריצי fillPhoneNumbers למילוי'],
   ['counselor_ליאת_phone','','טלפון יועצת — הריצי fillPhoneNumbers למילוי'],
   ['counselor_דורית_phone','','טלפון יועצת — הריצי fillPhoneNumbers למילוי'],
@@ -387,6 +389,11 @@ function sendBnotReminder() {
     logInfo('bnot-reminder', 'skipped weekend', 'dow=' + dow);
     return 'weekend skipped';
   }
+  // Skip holidays
+  if (isHoliday(todayKey())) {
+    logInfo('bnot-reminder', 'skipped holiday', todayKey());
+    return 'holiday skipped';
+  }
 
   const cfg = fetchConfig();
   const enabled = (cfg.bnot_reminder_enabled || '').toLowerCase() === 'yes';
@@ -452,6 +459,11 @@ function sendReminderCheck() {
   if (dow === 5 || dow === 6) {
     logInfo('reminder', 'skipped weekend', 'dow=' + dow);
     return 'weekend skipped';
+  }
+  // Skip holidays
+  if (isHoliday(todayKey())) {
+    logInfo('reminder', 'skipped holiday', todayKey());
+    return 'holiday skipped';
   }
 
   const today = todayKey();
@@ -603,6 +615,11 @@ function sendDailySummary() {
   if (dow === 5 || dow === 6) {
     logInfo('daily-summary', 'skipped weekend', 'dow=' + dow);
     return 'weekend skipped';
+  }
+  // Skip holidays
+  if (isHoliday(todayKey())) {
+    logInfo('daily-summary', 'skipped holiday', todayKey());
+    return 'holiday skipped';
   }
 
   const cfg = fetchConfig();
@@ -894,6 +911,28 @@ function respond(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function isHoliday(dateStr) {
+  // Check if a date (YYYY-MM-DD) falls on a configured holiday
+  var cfg = fetchConfig();
+  var holidays = (cfg.holidays || '').trim();
+  if (!holidays) return false;
+
+  var parts = holidays.split(',');
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i].trim();
+    if (!part) continue;
+    if (part.indexOf(':') > -1) {
+      // Range: 2026-04-25:2026-05-01
+      var range = part.split(':');
+      if (dateStr >= range[0].trim() && dateStr <= range[1].trim()) return true;
+    } else {
+      // Single date
+      if (dateStr === part) return true;
+    }
+  }
+  return false;
 }
 
 function todayKey() {
