@@ -37,8 +37,8 @@
 // ║           הגדרות                              ║
 // ╚══════════════════════════════════════════════╝
 
-const GREEN_API_INSTANCE = '7107577196';
-const GREEN_API_TOKEN = 'bbe2449cf3f84e11b1fd8dbf79541bc59b827f69e96e4268b3';
+const GREEN_API_INSTANCE = PropertiesService.getScriptProperties().getProperty('GREEN_API_ID_INSTANCE') || '';
+const GREEN_API_TOKEN = PropertiesService.getScriptProperties().getProperty('GREEN_API_TOKEN_INSTANCE') || '';
 const GREEN_API_URL = 'https://7107.api.greenapi.com';
 
 const MEYTAL_PHONE = '972536256653';

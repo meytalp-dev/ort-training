@@ -14,7 +14,7 @@
 // =============================================================
 
 const SPREADSHEET_ID = '1LwEQg4OWZbd06A6mFMDG7MTw_R70GSjMOO3KrncoxKw';
-const GEMINI_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
+const GEMINI_KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '';
 
 // ===== Gemini Proxy — עוקף הגבלת referrer =====
 function geminiProxy(prompt) {

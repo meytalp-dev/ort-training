@@ -17,8 +17,8 @@
 // ============================================
 var SHEET_ID = '1zjZrfAcQajN8U10SSDtIiq7A-IBMab8SVZZtu2tkdOk';
 
-var GREEN_API_INSTANCE = '7107577196';
-var GREEN_API_TOKEN = 'bbe2449cf3f84e11b1fd8dbf79541bc59b827f69e96e4268b3';
+var GREEN_API_INSTANCE = PropertiesService.getScriptProperties().getProperty('GREEN_API_ID_INSTANCE') || '';
+var GREEN_API_TOKEN = PropertiesService.getScriptProperties().getProperty('GREEN_API_TOKEN_INSTANCE') || '';
 var GREEN_API_URL = 'https://7107.api.greenapi.com';
 var MESSAGE_DELAY_MS = 2500;
 

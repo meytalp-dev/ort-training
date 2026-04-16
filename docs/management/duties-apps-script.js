@@ -16,8 +16,8 @@
 // ==================== הגדרות ====================
 
 // Green-API — אותם credentials כמו מערכת פתיחות בוקר
-const DUTY_GREEN_API_INSTANCE = '7107577196';
-const DUTY_GREEN_API_TOKEN = 'bbe2449cf3f84e11b1fd8dbf79541bc59b827f69e96e4268b3';
+const DUTY_GREEN_API_INSTANCE = PropertiesService.getScriptProperties().getProperty('GREEN_API_ID_INSTANCE') || '';
+const DUTY_GREEN_API_TOKEN = PropertiesService.getScriptProperties().getProperty('GREEN_API_TOKEN_INSTANCE') || '';
 const DUTY_GREEN_API_URL = 'https://7107.api.greenapi.com';
 
 const DUTY_PAGE_URL = 'https://meytalp-dev.github.io/ort-training/management/duties.html';

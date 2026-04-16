@@ -36,8 +36,8 @@ var PASSING_SCORE = 70;
 var TASK_CACHE_DAYS = 7;
 
 // Green-API (מאותו חשבון של morning-opening)
-var GREEN_API_INSTANCE = '7107577196';
-var GREEN_API_TOKEN = 'bbe2449cf3f84e11b1fd8dbf79541bc59b827f69e96e4268b3';
+var GREEN_API_INSTANCE = PropertiesService.getScriptProperties().getProperty('GREEN_API_ID_INSTANCE') || '';
+var GREEN_API_TOKEN = PropertiesService.getScriptProperties().getProperty('GREEN_API_TOKEN_INSTANCE') || '';
 var GREEN_API_URL = 'https://7107.api.greenapi.com';
 
 // טלפון מנו (שומר הכניסה) + מייטל (מנהלת) — לקבלת התראות no-show
@@ -45,7 +45,7 @@ var MANU_PHONE = '972505852852';     // מנו — עמנואל דהאן
 var MEYTAL_PHONE = '972536256653';
 
 // Gemini לשאלות (נקרא גם מה-frontend אבל אפשר גם מכאן אם צריך)
-var GEMINI_API_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
+var GEMINI_API_KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '';
 
 // ==================== Web App ====================
 function doGet(e) {

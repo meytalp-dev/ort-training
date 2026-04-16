@@ -23,8 +23,12 @@
 
 // ==================== הגדרות ====================
 
-const BROADCAST_GREEN_API_INSTANCE = '7107577196';
-const BROADCAST_GREEN_API_TOKEN = 'bbe2449cf3f84e11b1fd8dbf79541bc59b827f69e96e4268b3';
+// Green API credentials — stored in Script Properties, not in code
+// Setup: Apps Script → Project Settings → Script Properties →
+//   GREEN_API_ID_INSTANCE = your instance ID
+//   GREEN_API_TOKEN_INSTANCE = your token
+const BROADCAST_GREEN_API_INSTANCE = PropertiesService.getScriptProperties().getProperty('GREEN_API_ID_INSTANCE') || '';
+const BROADCAST_GREEN_API_TOKEN = PropertiesService.getScriptProperties().getProperty('GREEN_API_TOKEN_INSTANCE') || '';
 const BROADCAST_GREEN_API_URL = 'https://7107.api.greenapi.com';
 
 // השהיה בין הודעות (מילישניות) — למנוע חסימה
