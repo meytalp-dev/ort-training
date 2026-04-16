@@ -241,13 +241,15 @@ textarea.note-input{min-height:80px;resize:none;line-height:1.6}
 
 <div class="container">
 
-  <!-- ===== STUDENT NAME ===== -->
+  <!-- ===== STUDENT SELECT ===== -->
   <div class="student-card">
     <h2>
       <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-      שם התלמיד/ה
+      בחירת תלמיד/ה
     </h2>
-    <input type="text" class="student-name-input" id="studentName" placeholder="כתבו את שם התלמיד/ה כאן" oninput="updateDisplay()">
+    <select class="student-name-input" id="studentSelect" onchange="selectStudent()" style="font-size:1.1rem;font-family:Heebo,sans-serif;cursor:pointer;text-align:center;text-align-last:center;appearance:auto">
+      <option value="">-- בחרו תלמיד/ה --</option>
+    </select>
   </div>
 
   <!-- ===== PASSPORT ===== -->
@@ -326,15 +328,61 @@ const AVATAR_COLORS = [
 
 let stamps = [];
 let currentStudent = '';
+let allStudents = [];
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
   loadLocal();
+  loadStudents();
 });
 
+// ===================== LOAD STUDENTS =====================
+function loadStudents() {
+  const script = document.createElement('script');
+  script.src = '../management/student-data.js';
+  script.onload = () => {
+    if (typeof STUDENTS !== 'undefined') {
+      allStudents = STUDENTS.filter(s => s.status === 'active');
+      populateStudentSelect();
+    }
+  };
+  script.onerror = () => {
+    console.warn('student-data.js not loaded, manual input fallback');
+  };
+  document.head.appendChild(script);
+}
+
+function populateStudentSelect() {
+  const select = document.getElementById('studentSelect');
+  // Group by class
+  const classes = {};
+  allStudents.forEach(s => {
+    if (!classes[s.cls]) classes[s.cls] = [];
+    classes[s.cls].push(s);
+  });
+  // Sort classes: יב first, then יא, י, ט
+  const classOrder = ['יב1','יב2','יב3','יא1','יא2','י1','י2','ט1','ט2'];
+  const sortedClasses = Object.keys(classes).sort((a,b) => {
+    const ai = classOrder.indexOf(a), bi = classOrder.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
+  sortedClasses.forEach(cls => {
+    const group = document.createElement('optgroup');
+    group.label = 'כיתה ' + cls;
+    classes[cls].sort((a,b) => a.first.localeCompare(b.first,'he')).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.first + ' ' + s.last;
+      opt.textContent = s.first + ' ' + s.last;
+      group.appendChild(opt);
+    });
+    select.appendChild(group);
+  });
+}
+
 // ===================== DISPLAY =====================
-function updateDisplay() {
-  const name = document.getElementById('studentName').value.trim();
+function selectStudent() {
+  const name = document.getElementById('studentSelect').value;
   currentStudent = name;
   document.getElementById('studentDisplay').textContent = name || '---';
   renderStamps();
@@ -411,14 +459,14 @@ function deleteStamp(id) {
 }
 
 function newStudent() {
-  document.getElementById('studentName').value = '';
+  document.getElementById('studentSelect').value = '';
   document.getElementById('teacherName').value = '';
   document.getElementById('teacherRole').value = '';
   document.getElementById('noteText').value = '';
   currentStudent = '';
   document.getElementById('studentDisplay').textContent = '---';
   renderStamps();
-  document.getElementById('studentName').focus();
+  document.getElementById('studentSelect').focus();
 }
 
 // ===================== SAVE TO SHEET =====================
