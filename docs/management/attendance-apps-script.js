@@ -3,7 +3,8 @@
  * Apps Script Backend
  *
  * תפקידו: קבלת דיווחי נוכחות, שמירה ב-Google Sheet,
- * ושליחת התראות אוטומטיות ב-13:30 אם כיתה לא מילאה.
+ * תזכורת ב-10:30 לבנות השירות שלא מילאו,
+ * והתראה ב-13:30 להנהלה אם כיתה לא מילאה.
  *
  * ═══════════════════════════════════════════════════════════════
  *  הוראות התקנה (פעם אחת):
@@ -47,10 +48,11 @@
  *        GREEN_API_TOKEN_INSTANCE = <ה-Token שלך מ-Green API>
  *    - Save
  *
- * 7) הפעלת טריגר 13:30:
+ * 7) הפעלת טריגרים:
  *    - חזרי לעורך הקוד
- *    - הריצי פעם אחת את הפונקציה "setupReminderTrigger"
- *    - מעכשיו כל יום עבודה ב-13:30 תרוץ ההתראה אוטומטית
+ *    - הריצי פעם אחת את "setupBnotReminderTrigger" — תזכורת 10:30 לבנות שירות
+ *    - הריצי פעם אחת את "setupReminderTrigger" — התראה 13:30 להנהלה
+ *    - מעכשיו שני הטריגרים רצים אוטומטית כל יום עבודה
  *
  * ═══════════════════════════════════════════════════════════════
  */
@@ -77,16 +79,29 @@ const DEFAULT_CONFIG = [
   ['green_api_enabled','no','yes/no — האם לשלוח בפועל דרך Green API'],
   ['','',''],
   ['class_ט1','','שם בת השירות של ט1'],
+  ['class_ט1_phone','','טלפון בת השירות של ט1'],
   ['class_ט2','','שם בת השירות של ט2'],
+  ['class_ט2_phone','','טלפון בת השירות של ט2'],
   ['class_י1','','שם בת השירות של י1'],
+  ['class_י1_phone','','טלפון בת השירות של י1'],
   ['class_י2','','שם בת השירות של י2'],
+  ['class_י2_phone','','טלפון בת השירות של י2'],
   ['class_י3','','שם בת השירות של י3'],
+  ['class_י3_phone','','טלפון בת השירות של י3'],
   ['class_יא1','','שם בת השירות של יא1'],
+  ['class_יא1_phone','','טלפון בת השירות של יא1'],
   ['class_יא2','','שם בת השירות של יא2'],
+  ['class_יא2_phone','','טלפון בת השירות של יא2'],
   ['class_יא3','','שם בת השירות של יא3'],
+  ['class_יא3_phone','','טלפון בת השירות של יא3'],
   ['class_יב1','','שם בת השירות של יב1'],
+  ['class_יב1_phone','','טלפון בת השירות של יב1'],
   ['class_יב2','','שם בת השירות של יב2'],
+  ['class_יב2_phone','','טלפון בת השירות של יב2'],
   ['class_יב3','','שם בת השירות של יב3'],
+  ['class_יב3_phone','','טלפון בת השירות של יב3'],
+  ['','',''],
+  ['bnot_reminder_enabled','yes','yes/no — האם לשלוח תזכורת ב-10:30 לבנות השירות'],
   ['','',''],
   ['counselor_צהיי_phone','','טלפון יועצת — הריצי fillPhoneNumbers למילוי'],
   ['counselor_ליאת_phone','','טלפון יועצת — הריצי fillPhoneNumbers למילוי'],
@@ -343,6 +358,91 @@ function setupReminderTrigger() {
     .create();
   logInfo('trigger', 'reminder trigger created for 13:30 daily', '');
   return 'trigger installed';
+}
+
+// ============================================================
+// BNOT SHERUT REMINDER — runs at 10:30 daily
+// ============================================================
+function setupBnotReminderTrigger() {
+  // Remove any existing trigger for this function
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'sendBnotReminder') ScriptApp.deleteTrigger(t);
+  });
+  // Create new daily trigger at 10:30
+  ScriptApp.newTrigger('sendBnotReminder')
+    .timeBased()
+    .atHour(10)
+    .nearMinute(30)
+    .everyDays(1)
+    .create();
+  logInfo('trigger', 'bnot sherut reminder trigger created for 10:30 daily', '');
+  return 'bnot sherut trigger installed';
+}
+
+function sendBnotReminder() {
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sunday, 6=Saturday
+  // Skip Friday (5) and Saturday (6)
+  if (dow === 5 || dow === 6) {
+    logInfo('bnot-reminder', 'skipped weekend', 'dow=' + dow);
+    return 'weekend skipped';
+  }
+
+  const cfg = fetchConfig();
+  const enabled = (cfg.bnot_reminder_enabled || '').toLowerCase() === 'yes';
+  if (!enabled) {
+    logInfo('bnot-reminder', 'disabled in config', '');
+    return 'bnot reminder disabled';
+  }
+
+  const greenEnabled = (cfg.green_api_enabled || '').toLowerCase() === 'yes';
+
+  const today = todayKey();
+  const records = fetchByDate(today);
+  const loggedClasses = {};
+  records.forEach(function(r) { loggedClasses[r.class] = (loggedClasses[r.class] || 0) + 1; });
+
+  // Send reminder only to bnot sherut whose class hasn't been filled yet
+  const missingClasses = CLASSES.filter(function(c) { return !loggedClasses[c]; });
+
+  if (missingClasses.length === 0) {
+    logInfo('bnot-reminder', 'all classes already logged by 10:30', '');
+    return 'all logged';
+  }
+
+  let sentCount = 0;
+  const skipped = [];
+
+  missingClasses.forEach(function(cls) {
+    const name = cfg['class_' + cls] || '';
+    const phone = cfg['class_' + cls + '_phone'] || '';
+
+    if (!phone) {
+      skipped.push(cls + ' (אין טלפון)');
+      return;
+    }
+
+    const message =
+      'בוקר טוב' + (name ? ' ' + name : '') + '! 🌞\n\n' +
+      'תזכורת — בבקשה מלאי את טופס הנוכחות של כיתה ' + cls + ' להיום.\n\n' +
+      'תודה רבה! 💙\n' +
+      'הודעה אוטומטית — מערכת נוכחות אורט בית הערבה';
+
+    if (greenEnabled) {
+      try {
+        sendGreenApiMessage(phone, message);
+        sentCount++;
+      } catch (err) {
+        logError('sendBnotReminder', err);
+      }
+    } else {
+      logInfo('bnot-reminder-dry', cls + ' ' + name + ' (' + phone + ')', message);
+    }
+  });
+
+  const summary = 'missing=' + missingClasses.length + ' sent=' + sentCount + (skipped.length ? ' skipped=' + skipped.join(',') : '');
+  logInfo('bnot-reminder', summary, '');
+  return summary;
 }
 
 function sendReminderCheck() {
