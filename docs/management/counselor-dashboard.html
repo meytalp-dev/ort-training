@@ -6,7 +6,7 @@
 <title>דשבורד יועצת — אורט בית הערבה</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playpen+Sans+Hebrew:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://script.google.com/macros/s/AKfycbzIr--0e7so0uhjBwEwlauA0_toLwutvW_RW-2zLSWa0vQxIwpS8bs0nQZOr8bu9kS7/exec?action=students-js"></script>
+<script src="student-data.js"></script>
 <script src="cloud-storage.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -378,6 +378,7 @@ body::before{content:'';position:fixed;inset:0;
 
 <!-- ===== DASHBOARD ===== -->
 <div id="dashView" class="container hidden">
+  <div id="counselorSummary"></div>
   <div class="kpi-bar" id="kpiBar"></div>
   <div id="ymTodaySection"></div>
   <div id="meetingsSection"></div>
@@ -416,18 +417,19 @@ body::before{content:'';position:fixed;inset:0;
     <span class="filter-chip" onclick="setFilter(this,'low-att')">נוכחות נמוכה</span>
     <input type="text" class="search-box" placeholder="חיפוש תלמיד/ה..." oninput="renderCards()">
   </div>
+  <div class="class-filters" id="classFilters"></div>
   <div class="s-grid" id="sGrid"></div>
 </div>
 
 <!-- ===== DETAIL PANEL ===== -->
-<div id="dOverlay" class="d-overlay hidden" onclick="closeDetail()"></div>
+<div id="dOverlay" class="d-overlay hidden" onclick="tryCloseDetail()"></div>
 <div id="dPanel" class="d-panel hidden">
   <div class="d-close">
     <h2 id="dTitle"></h2>
-    <button class="x-btn" onclick="closeDetail()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <button class="x-btn" onclick="tryCloseDetail()" aria-label="סגור פאנל"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
   </div>
   <div class="d-body">
-    <div class="d-tabs" id="dTabs"></div>
+    <div class="d-tabs" id="dTabs" role="tablist" aria-label="טאבים של תלמיד"></div>
     <div id="dContent"></div>
   </div>
 </div>
@@ -455,7 +457,13 @@ const BG_FIELDS=[
   {key:'prevSchool',label:'בי"ס קודם',type:'text',section:'edu'},
   {key:'academicCircle',label:'מעגל לימודי',type:'textarea',section:'edu'},
   {key:'attendanceIssues',label:'בעיות נוכחות',type:'textarea',section:'edu'},
-  {key:'workplace',label:'מקום עבודה',type:'text',section:'edu'},
+  {key:'workplace',label:'מקום עבודה (תלמיד/ה)',type:'text',section:'edu'},
+  {key:'referralReason',label:'סיבת הפנייה ליועצת',type:'textarea',section:'family'},
+  {key:'livingStatus',label:'מגורים',type:'select',options:['','שני הורים','הורה אחד','אומנה','פנימייה','אחר'],section:'family'},
+  {key:'originCountry',label:'ארץ מוצא / שנת עלייה',type:'text',section:'family'},
+  {key:'homeLanguage',label:'שפת בית',type:'text',section:'family'},
+  {key:'siblings',label:'אחים (מספר + אחים בביה"ס)',type:'text',section:'family'},
+  {key:'medicalCondition',label:'מצב רפואי כרוני',type:'textarea',section:'diag'},
   {key:'diagnosis',label:'אבחונים',type:'textarea',section:'diag',placeholder:'סוג, תאריך, ממצאים'},
   {key:'diagnosisDate',label:'תאריך אבחון',type:'date',section:'diag'},
   {key:'eligibilityCommittee',label:'ועדת זכאות ואיפיון',type:'select',options:['לא','כן — בתהליך','כן — אושר'],section:'diag'},
@@ -466,8 +474,8 @@ const BG_FIELDS=[
   {key:'authorityAcceptance',label:'קבלת סמכות',type:'select',options:['','גבוה','בינוני','נמוך'],section:'diag'},
   {key:'policeFile',label:'תיק במשטרה',type:'toggle',section:'ext'},
   {key:'policeDetails',label:'פרטי תיק',type:'text',section:'ext',cond:'policeFile'},
-  {key:'probationOfficer',label:'קצין מבחן — שם',type:'text',section:'ext'},
-  {key:'probationPhone',label:'קצין מבחן — טלפון',type:'text',section:'ext'},
+  {key:'probationOfficer',label:'קצין מבחן — שם',type:'text',section:'ext',cond:'policeFile'},
+  {key:'probationPhone',label:'קצין מבחן — טלפון',type:'text',section:'ext',cond:'policeFile'},
   {key:'kabas',label:'קב"ס — שם',type:'text',section:'ext'},
   {key:'kabasPhone',label:'קב"ס — טלפון',type:'text',section:'ext'},
   {key:'welfareInvolved',label:'מעורבות רווחה',type:'toggle',section:'ext'},
@@ -481,6 +489,8 @@ const LETTER_TMPL=[
   {id:'welfare',title:'מכתב לרווחה',desc:'פנייה לשירותי הרווחה',color:'var(--accent)'},
   {id:'community',title:'מכתב לקהילה',desc:'בקשת שיתוף פעולה',color:'var(--secondary)'},
   {id:'recommendation',title:'המלצה על תלמיד/ה',desc:'מכתב המלצה',color:'var(--create)'},
+  {id:'therapist',title:'הפניה לגורם טיפולי',desc:'פסיכולוג / פסיכיאטר',color:'var(--info)'},
+  {id:'parents',title:'מכתב להורים',desc:'זימון / עדכון / הודעה',color:'var(--lead-dark)'},
   {id:'incident',title:'אירוע חריג (מנדיי)',desc:'טופס דיווח',color:'var(--danger)',link:'incident-report.html'}
 ];
 
@@ -529,23 +539,34 @@ const DEMO_YM_SCHEDULE={
   ]
 };
 
-// Green API for WhatsApp (same as attendance system)
-const GREEN_API_URL = '';  // Will be configured from settings
-const GREEN_API_TOKEN = '';
-
 // ==================== STATE ====================
-let U=null,students=[],filter='all',detailStudent=null;
+let U=null,students=[],filter='all',classFilter='all',detailStudent=null;
 let bgData={},docsData={},lettersData={},plansData={},meetingsData={};
 let monthlyData=null,attData=null,discData=null;
 let availSlots={};
 let ymSchedule={};
-let ymFormUrl=''; // URL of the counselor-teacher form (Meytal will set later)
+let ymFormUrl='';
 let pendingFile=null;
+let dirtyState=false; // track unsaved changes in detail panel
+
+// ==================== UTILS: XSS + File size ====================
+function esc(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+const MAX_FILE_SIZE=5*1024*1024; // 5MB
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded',()=>{
+  // Restore session
   const s=sessionStorage.getItem('cd_session');
   if(s){try{const p=JSON.parse(s);if(p&&p.id&&COUNSELORS[p.id]){doLogin(p.id);return;}}catch(e){}}
+  // Cloud status badge
+  setTimeout(()=>{try{cloudStorage.mountStatusBadge()}catch(e){}},500);
+});
+// Keyboard: Escape to close panel/modal
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('appModal')){closeModal();return}
+    if(detailStudent){tryCloseDetail();return}
+  }
 });
 
 // ==================== LOGIN ====================
@@ -553,7 +574,8 @@ function loginAs(id){doLogin(id)}
 async function doLogin(id){
   U={id,...COUNSELORS[id]};
   sessionStorage.setItem('cd_session',JSON.stringify({id}));
-  cloudStorage.setUser(U.name);
+  try{cloudStorage.setUser(U.name)}catch(e){console.warn('cloudStorage not available',e)}
+  try{cloudStorage.mountStatusBadge()}catch(e){}
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('dashView').classList.remove('hidden');
   document.getElementById('logoutBtn').classList.remove('hidden');
@@ -619,7 +641,50 @@ function enrichStudents(){
 }
 
 // ==================== RENDER ====================
-function render(){renderKPI();renderYmToday();renderMeetings();renderCards()}
+function render(){renderCounselorSummary();renderKPI();renderClassFilters();renderYmToday();renderMeetings();renderCards()}
+
+function renderCounselorSummary(){
+  const sec=document.getElementById('counselorSummary');
+  if(U.id!=='principal'){sec.innerHTML='';return}
+  const cm=new Date().toISOString().slice(0,7);
+  let html=`<div class="counselor-summary"><h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> סיכום יועצות</h3>`;
+  html+='<table class="cs-table"><thead><tr><th>יועצת</th><th>כיתות</th><th>תלמידים</th><th>דווח החודש</th><th>% דיווח</th><th>דרושי התערבות</th></tr></thead><tbody>';
+  ['tzahi','liat','dorit'].forEach(cid=>{
+    const c=COUNSELORS[cid];
+    const myStudents=students.filter(s=>c.classes.includes(s.cls));
+    const reported=myStudents.filter(s=>s.reported).length;
+    const total=myStudents.length;
+    const pct=total?Math.round(reported/total*100):0;
+    const red=myStudents.filter(s=>s.status==='red').length;
+    const pctClass=pct>=80?'good':pct>=50?'mid':'bad';
+    html+=`<tr onclick="filterByCounselor('${cid}')" style="cursor:pointer"><td style="font-weight:700">${c.short}</td><td>${c.classes.join(', ')}</td><td>${total}</td><td>${reported}/${total}</td><td><span class="cs-pct ${pctClass}">${pct}%</span></td><td style="color:${red?'var(--danger)':'var(--success)'};font-weight:700">${red}</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  sec.innerHTML=html;
+}
+
+function filterByCounselor(cid){
+  const c=COUNSELORS[cid];if(!c)return;
+  classFilter='counselor_'+cid;
+  document.querySelectorAll('.class-chip').forEach(ch=>ch.classList.remove('active'));
+  renderCards();
+}
+
+function renderClassFilters(){
+  const sec=document.getElementById('classFilters');
+  let chips='<span class="class-chip active" onclick="setClassFilter(this,\'all\')">כל הכיתות</span>';
+  if(U.id==='principal'){
+    ['tzahi','liat','dorit'].forEach(cid=>{
+      chips+=`<span class="class-chip" onclick="setClassFilter(this,'counselor_${cid}')">${COUNSELORS[cid].short}</span>`;
+    });
+  }
+  U.classes.forEach(cls=>{
+    chips+=`<span class="class-chip" onclick="setClassFilter(this,'${cls}')">${cls}</span>`;
+  });
+  sec.innerHTML=chips;
+}
+
+function setClassFilter(el,f){classFilter=f;document.querySelectorAll('.class-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderCards()}
 
 function renderKPI(){
   const t=students.length,r=students.filter(s=>s.status==='red').length,
@@ -643,7 +708,7 @@ function renderYmToday(){
   const todayMeetings=myYm.filter(m=>m.day===todayName).sort((a,b)=>a.time.localeCompare(b.time));
   if(!todayMeetings.length){sec.innerHTML='';return;}
   const nowTime=new Date().getHours().toString().padStart(2,'0')+':'+new Date().getMinutes().toString().padStart(2,'0');
-  let h=`<div class="meetings-bar" style="border-right:4px solid var(--secondary)"><h3><svg viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg> פגישות יועץ-מחנך היום</h3>`;
+  let h=`<div class="meetings-bar" style="border-right:4px solid var(--secondary)"><h3><svg viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> פגישות יועץ-מחנך היום</h3>`;
   todayMeetings.forEach(m=>{
     const isNext=m.time>nowTime;
     const bg=isNext?'var(--success-bg)':'var(--bg-alt)';
@@ -651,8 +716,8 @@ function renderYmToday(){
       <div class="meeting-time">${m.time}</div>
       <div class="meeting-info"><strong>${m.cls}</strong> — ${m.teacher}${m.counselor?' <span style="font-size:.72rem;color:var(--muted)">('+m.counselor+')</span>':''}</div>
       <span style="font-size:.78rem;color:var(--muted)">${m.room||''}</span>
-      <button class="btn btn-o btn-sm" onclick="sendYmReminder('${m.cls}','${m.teacher}','${m.time}','${m.counselor||U.short}')" title="שלח תזכורת">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6"/></svg>
+      <button class="btn btn-o btn-sm" onclick="sendYmReminder('${m.cls}','${m.teacher}','${m.time}','${m.counselor||U.short}')" title="שלח תזכורת" aria-label="שלח תזכורת WhatsApp">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
       </button>
     </div>`;
   });
@@ -694,6 +759,13 @@ function renderCards(){
   else if(filter==='yellow')f=f.filter(s=>s.status==='yellow');
   else if(filter==='no-report')f=f.filter(s=>!s.reported);
   else if(filter==='low-att')f=f.filter(s=>s.att!==null&&s.att<75);
+  // Class/counselor filter
+  if(classFilter&&classFilter!=='all'){
+    if(classFilter.startsWith('counselor_')){
+      const cid=classFilter.replace('counselor_','');
+      const cc=COUNSELORS[cid];if(cc)f=f.filter(s=>cc.classes.includes(s.cls));
+    } else f=f.filter(s=>s.cls===classFilter);
+  }
   const q=(document.querySelector('.search-box')?.value||'').trim();
   if(q)f=f.filter(s=>s.fn.includes(q)||s.cls.includes(q));
   const so={red:0,yellow:1,green:2,none:3};
@@ -736,14 +808,29 @@ function openDetail(id){
   document.body.style.overflow='hidden';
   renderTabs();switchTab('bg');
 }
+function tryCloseDetail(){
+  if(dirtyState&&!confirm('יש שינויים שלא נשמרו. לצאת בכל זאת?'))return;
+  closeDetail();
+}
 function closeDetail(){
+  dirtyState=false;
   document.getElementById('dOverlay').classList.add('hidden');
   document.getElementById('dPanel').classList.add('hidden');
   document.body.style.overflow='';detailStudent=null;
 }
 function renderTabs(){
-  const tabs=[{id:'bg',l:'נתוני רקע'},{id:'mo',l:'מעקב חודשי'},{id:'cv',l:'שיחות'},{id:'doc',l:'מסמכים'},{id:'lt',l:'מכתבים'},{id:'pl',l:'תוכנית'},{id:'su',l:'סיכום לתיק'},{id:'mt',l:'פגישות'},{id:'ym',l:'יועץ-מחנך'}];
-  document.getElementById('dTabs').innerHTML=tabs.map(t=>`<button class="d-tab" data-t="${t.id}" onclick="switchTab('${t.id}')">${t.l}</button>`).join('');
+  const tabs=[
+    {id:'bg',l:'נתוני רקע',tip:'מילוי חד-פעמי — משפחה, אבחונים, גורמים חיצוניים'},
+    {id:'mo',l:'מעקב חודשי',tip:'דוחות היועצת והמחנכ/ת'},
+    {id:'cv',l:'שיחות',tip:'שיחות אישיות מתועדות'},
+    {id:'doc',l:'מסמכים',tip:'אבחונים, פרוטוקולים, קבצים מצורפים'},
+    {id:'lt',l:'מכתבים',tip:'תבניות מכתבים — רווחה, קהילה, המלצה, הפניה'},
+    {id:'pl',l:'תוכנית',tip:'תוכנית עבודה מותאמת עם יעדים והמלצות'},
+    {id:'su',l:'סיכום לתיק',tip:'סיכום חודשי שעובר לתיק התלמיד אחרי אישור'},
+    {id:'mt',l:'פגישות',tip:'קביעת פגישות עם הורים + תזכורות WhatsApp'},
+    {id:'ym',l:'יועץ-מחנך',tip:'לוח פגישות שבועי קבוע עם מחנכ/ת'}
+  ];
+  document.getElementById('dTabs').innerHTML=tabs.map(t=>`<button class="d-tab" role="tab" data-t="${t.id}" onclick="switchTab('${t.id}')" title="${t.tip}" aria-label="${t.l} — ${t.tip}">${t.l}</button>`).join('');
 }
 function switchTab(t){
   document.querySelectorAll('.d-tab').forEach(e=>e.classList.toggle('active',e.dataset.t===t));
@@ -778,8 +865,9 @@ function attachBgEvents(){
   document.querySelectorAll('[data-bg]').forEach(el=>{
     if(el.type==='checkbox')el.addEventListener('change',()=>{
       const lbl=el.closest('.tog')?.querySelector('.tog-lbl');if(lbl)lbl.textContent=el.checked?'כן':'לא';
-      collectBg();switchTab('bg');
+      dirtyState=true;collectBg();switchTab('bg');
     });
+    else el.addEventListener('input',()=>{dirtyState=true});
   });
 }
 function collectBg(){
@@ -787,7 +875,7 @@ function collectBg(){
   document.querySelectorAll('[data-bg]').forEach(el=>{bg[el.dataset.bg]=el.type==='checkbox'?el.checked:el.value});
   bgData[s.sid]={...(bgData[s.sid]||{}),...bg};
 }
-async function saveBg(){collectBg();await cloudStorage.set('counselor_bg_data',bgData);toast('נתוני רקע נשמרו','success')}
+async function saveBg(){collectBg();await cloudStorage.set('counselor_bg_data',bgData);dirtyState=false;toast('נתוני רקע נשמרו','success')}
 
 // ===== TAB: Monthly =====
 function tabMonthly(){
@@ -862,7 +950,9 @@ function tabDocs(){
   </div></div>`;
   return h;
 }
-function handleFile(inp){const f=inp.files[0];if(!f)return;document.getElementById('fileLabel').textContent='קובץ: '+f.name;
+function handleFile(inp){const f=inp.files[0];if(!f)return;
+  if(f.size>MAX_FILE_SIZE){toast('קובץ גדול מדי (מקסימום 5MB)','error');inp.value='';return}
+  document.getElementById('fileLabel').textContent='קובץ: '+f.name;
   const r=new FileReader();r.onload=e=>{pendingFile={name:f.name,data:e.target.result}};r.readAsDataURL(f)}
 async function saveDoc(){
   const s=detailStudent,n=document.getElementById('docN').value.trim(),t=document.getElementById('docT').value,
@@ -872,7 +962,7 @@ async function saveDoc(){
   docsData[s.sid].push({name:n,type:t,date:d,link:l,fileData:pendingFile?.data||null,fileName:pendingFile?.name||''});
   await cloudStorage.set('counselor_docs_data',docsData);pendingFile=null;toast('מסמך נשמר','success');switchTab('doc');
 }
-async function removeDoc(i){const s=detailStudent;if(!docsData[s.sid])return;docsData[s.sid].splice(i,1);await cloudStorage.set('counselor_docs_data',docsData);switchTab('doc')}
+async function removeDoc(i){if(!confirm('למחוק את המסמך?'))return;const s=detailStudent;if(!docsData[s.sid])return;docsData[s.sid].splice(i,1);await cloudStorage.set('counselor_docs_data',docsData);switchTab('doc')}
 
 // ===== TAB: Letters =====
 function tabLetters(){
@@ -893,14 +983,16 @@ function openLetterEditor(type){
   const bodies={
     welfare:`לכבוד שירותי הרווחה,\n\nהנדון: ${s.fn}, כיתה ${s.cls}\n\nאנו פונים אליכם בעניין התלמיד/ה ${s.fn} הלומד/ת בבית ספר אורט בית הערבה, ירושלים.\n\n[תיאור הסיטואציה]\n\n[מה נעשה עד כה]\n\n[הבקשה]\n\nבברכה,\n${U.name}\nיועצת חינוכית\nאורט בית הערבה — ירושלים\nמנהלת: מיטל פלג`,
     community:`לכבוד,\n\nהנדון: שיתוף פעולה בעניין ${s.fn}\n\nאנו פונים מבית ספר אורט בית הערבה, ירושלים.\n\n[פירוט]\n\n[מה נדרש]\n\nבברכה,\n${U.name}\nיועצת חינוכית`,
-    recommendation:`לכבוד,\n\nהנדון: המלצה על ${s.fn}\n\nאני שמחה להמליץ על ${s.fn}, תלמיד/ה בכיתה ${s.cls} בבית ספר אורט בית הערבה.\n\n[חוזקות]\n\n[הישגים]\n\nבברכה,\n${U.name}\nיועצת חינוכית\nמנהלת: מיטל פלג`
+    recommendation:`לכבוד,\n\nהנדון: המלצה על ${s.fn}\n\nאני שמחה להמליץ על ${s.fn}, תלמיד/ה בכיתה ${s.cls} בבית ספר אורט בית הערבה.\n\n[חוזקות]\n\n[הישגים]\n\nבברכה,\n${U.name}\nיועצת חינוכית\nמנהלת: מיטל פלג`,
+    therapist:`לכבוד,\n\nהנדון: הפניה לאבחון/טיפול — ${s.fn}, ת.ז. ${s.tz||'[ת.ז.]'}\n\nתלמיד/ה בכיתה ${s.cls}, בית ספר אורט בית הערבה, ירושלים.\n\nסיבת ההפניה:\n[תיאור הקושי / התסמינים]\n\nרקע:\n[היסטוריה רלוונטית]\n\nפעולות שננקטו בבית הספר:\n[מה נעשה עד כה]\n\nבברכה,\n${U.name}\nיועצת חינוכית\nאורט בית הערבה — ירושלים\nמנהלת: מיטל פלג`,
+    parents:`לכבוד הורי ${s.fn},\n\nשלום רב,\n\nאנו מבקשים לזמן אתכם לפגישה בבית ספר אורט בית הערבה.\n\nנושא: [נושא הפגישה]\nתאריך: [תאריך]\nשעה: [שעה]\nמקום: [חדר]\n\nנוכחים: ${U.name} (יועצת), ${HOMEROOM[s.cls]||''} (מחנכ/ת)\n\nנודה לאישורכם.\n\nבברכה,\n${U.name}\nיועצת חינוכית\nאורט בית הערבה — ירושלים`
   };
-  const titles={welfare:'מכתב לרווחה',community:'מכתב לקהילה',recommendation:'המלצה'};
+  const titles={welfare:'מכתב לרווחה',community:'מכתב לקהילה',recommendation:'המלצה',therapist:'הפניה לגורם טיפולי',parents:'מכתב להורים'};
   const recip=type==='welfare'&&bg.welfareName?`עו"ס ${bg.welfareName}`:'';
   showModal(titles[type],`
     <div class="fr"><div class="fg"><label>נמען</label><input type="text" id="ltR" value="${recip}"></div><div class="fg"><label>תאריך</label><input type="date" id="ltD" value="${new Date().toISOString().slice(0,10)}"></div></div>
     <div class="fg"><label>תוכן</label><textarea id="ltB" style="min-height:220px">${bodies[type]||''}</textarea></div>`,
-    `<button class="btn btn-o" onclick="closeModal()">ביטול</button><button class="btn btn-p" onclick="saveLetter('${type}',false)">שמור טיוטה</button><button class="btn btn-s" onclick="saveLetter('${type}',true)">סמן כנשלח</button>`);
+    `<button class="btn btn-o" onclick="closeModal()">ביטול</button><button class="btn btn-o" onclick="printModal()">הדפסה</button><button class="btn btn-p" onclick="saveLetter('${type}',false)">שמור טיוטה</button><button class="btn btn-s" onclick="saveLetter('${type}',true)">סמן כבוצע (לא שולח אוטומטית)</button>`);
 }
 async function saveLetter(type,sent){
   const s=detailStudent;
@@ -922,7 +1014,11 @@ function tabPlan(){
   let h='<div class="sec"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> תוכנית מותאמת</h4>';
   h+='<p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">אוסף את כל הנתונים (רקע, דוחות, שיחות, נוכחות, אירועים) ומייצר תוכנית עם יעדים והמלצות.</p>';
   h+=`<button class="btn btn-p" onclick="genPlan()" id="gpBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ${plan?'עדכן':'צור'} תוכנית</button>`;
-  if(plan)h+=`<div class="plan-card"><div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">נוצרה: ${plan.date}</div><h5>תמונת מצב</h5><p style="font-size:.85rem;line-height:1.6;margin-bottom:12px">${plan.summary}</p><h5>יעדים</h5><ul>${(plan.goals||[]).map(g=>'<li>'+g+'</li>').join('')}</ul><h5 style="margin-top:12px">המלצות</h5><p style="font-size:.85rem;line-height:1.6">${plan.recommendations}</p>${plan.stakeholders?'<h5 style="margin-top:12px">גורמים לשיתוף</h5><p style="font-size:.85rem">'+plan.stakeholders+'</p>':''}</div>`;
+  if(plan){
+    const planHtml=`<div class="plan-card" id="planContent"><div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">נוצרה: ${plan.date}</div><h5>תמונת מצב</h5><p style="font-size:.85rem;line-height:1.6;margin-bottom:12px">${plan.summary}</p><h5>יעדים</h5><ul>${(plan.goals||[]).map(g=>'<li>'+g+'</li>').join('')}</ul><h5 style="margin-top:12px">המלצות</h5><p style="font-size:.85rem;line-height:1.6">${plan.recommendations}</p>${plan.stakeholders?'<h5 style="margin-top:12px">גורמים לשיתוף</h5><p style="font-size:.85rem">'+plan.stakeholders+'</p>':''}</div>`;
+    h+=planHtml;
+    h+=`<button class="btn btn-o btn-sm" onclick="printContent(document.getElementById('planContent').innerHTML)" style="margin-top:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> הדפסת תוכנית</button>`;
+  }
   h+='</div>';return h;
 }
 async function genPlan(){
@@ -937,6 +1033,9 @@ async function genPlan(){
   if(bg.welfareInvolved){goals.push('קשר רציף עם רווחה');recs.push('עדכון עו"ס חודשי')}
   if(bg.policeFile)goals.push('ליווי צמוד בשיתוף קצין מבחן');
   if(bg.diagnosis)goals.push('התאמת דרישות לימודיות לאבחון');
+  if(s.att!==null&&s.att<60){goals.push('מניעת נשירה — תוכנית ליווי מוגברת');recs.push('פגישה דחופה עם הורים + רכזת נשירה')}
+  if(s.disc>0&&s.att!==null&&s.att<75){goals.push('זיהוי מצוקה — משמעת+נוכחות חוצים סף');recs.push('ועדה בין-מקצועית')}
+  if(bg.medicalCondition)goals.push('מעקב מצב רפואי + התאמות');
   if(!goals.length){goals.push('מעקב שוטף ותיעוד');goals.push('חיזוק מעגל חברתי')}
   const plan={date:new Date().toISOString().slice(0,10),
     summary:`${s.fn} — ${s.cls}. סטטוס: ${s.status==='red'?'דרוש התערבות':s.status==='yellow'?'דרוש מעקב':'תקין'}. נוכחות: ${s.att!==null?s.att+'%':'לא זמין'}. אירועי משמעת: ${s.disc}.`,
@@ -949,7 +1048,8 @@ async function genPlan(){
 // ===== TAB: Summary =====
 function tabSummary(){
   const s=detailStudent,cm=new Date().toISOString().slice(0,7);
-  let sums=[];try{sums=(JSON.parse(localStorage.getItem('counselor_monthly_summaries'))||{})[s.sid]||[]}catch(e){}
+  let allSums={};try{allSums=JSON.parse(localStorage.getItem('counselor_monthly_summaries'))||{}}catch(e){}
+  let sums=allSums[s.sid]||[];
   let h='<div class="sec"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--dream)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> סיכום חודשי לתיק תלמיד</h4>';
   h+='<p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">אוסף את כל מה שכתבת החודש, מייצר טיוטה שתוכלי לערוך ולאשר.</p>';
   h+=`<button class="btn btn-a" onclick="genSummary()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> צור סיכום חודשי</button>`;
@@ -1126,7 +1226,7 @@ async function saveMeeting(){
       await sendWhatsApp(parentPhone,msg);
       meeting.reminderSent=true;
       await cloudStorage.set('counselor_meetings_data',meetingsData);
-    }
+    } else {toast('לא נמצא טלפון הורה — תזכורת לא נשלחה','error')}
   }
 
   closeModal();toast('פגישה נקבעה בהצלחה','success');
@@ -1259,6 +1359,19 @@ async function saveYmFormUrl(){
   toast('קישור לטופס נשמר','success');
 }
 
+// ==================== PRINT ====================
+function printModal(){
+  const modal=document.querySelector('.modal');if(!modal)return;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>הדפסה</title><style>body{font-family:'Heebo',sans-serif;padding:40px;direction:rtl;line-height:1.8}h3{margin-bottom:16px}.fg textarea,.fg input{border:none;font-size:inherit;font-family:inherit}@media print{body{padding:20px}}</style></head><body>${modal.querySelector('.modal-b').innerHTML}</body></html>`);
+  w.document.close();setTimeout(()=>{w.print();w.close()},300);
+}
+function printContent(html){
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>הדפסה</title><style>body{font-family:'Heebo',sans-serif;padding:40px;direction:rtl;line-height:1.8}h5{margin:12px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px}ul{padding-right:20px}.plan-card{padding:16px;border:1px solid #ddd;border-radius:8px;margin:12px 0}@media print{body{padding:20px}}</style></head><body>${html}</body></html>`);
+  w.document.close();setTimeout(()=>{w.print();w.close()},300);
+}
+
 // ==================== MODAL HELPER ====================
 function showModal(title,body,footer){
   const m=document.createElement('div');m.className='modal-bg';m.id='appModal';
@@ -1271,11 +1384,12 @@ function closeModal(){document.getElementById('appModal')?.remove()}
 function toast(msg,type){
   const t=document.querySelector('.toast');if(t)t.remove();
   const el=document.createElement('div');el.className='toast '+(type||'');
-  el.innerHTML=(type==='success'?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>':'')+msg;
-  document.body.appendChild(el);setTimeout(()=>el.remove(),3500);
+  el.setAttribute('role','alert');el.setAttribute('aria-live','polite');
+  el.innerHTML=(type==='success'?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>':'')+esc(msg);
+  document.body.appendChild(el);setTimeout(()=>el.remove(),5000);
 }
 
-document.addEventListener('DOMContentLoaded',()=>{setTimeout(()=>cloudStorage.mountStatusBadge(),500)});
+// Toast: longer duration (5s) + role="alert"
 </script>
 </body>
 </html>
