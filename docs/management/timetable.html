@@ -446,6 +446,8 @@ body > *{position:relative;z-index:1}
   <input type="hidden" id="editLesson">
   <div class="edit-actions">
     <button class="btn btn-outline" style="font-size:.82rem;padding:6px 14px;color:var(--danger)" onclick="deleteCell()">מחק</button>
+    <button class="btn btn-outline" style="font-size:.82rem;padding:6px 14px" onclick="copyCellToClipboard()" id="copyBtn" title="העתק מקצוע+מורה">העתק</button>
+    <button class="btn btn-outline" style="font-size:.82rem;padding:6px 14px;display:none" onclick="pasteCellFromClipboard()" id="pasteBtn" title="הדבק מקצוע+מורה">הדבק</button>
     <button class="btn btn-outline" style="font-size:.82rem;padding:6px 14px" onclick="closeEditPopover()">ביטול</button>
     <button class="btn btn-primary" style="font-size:.82rem;padding:6px 14px" onclick="saveEditCell()">שמור</button>
   </div>
@@ -1072,16 +1074,17 @@ function handleTeacherClick(teacher, lesson, cls) {
 }
 
 function handleCellClick2(event, lesson, cls, cellText) {
-  // If cell has absent teacher — always prioritize substitution
+  // Edit mode takes priority — admin is editing the timetable structure
+  if (editMode && adminSession) {
+    openEditPopover(currentDay, cls, lesson, cellText, event.currentTarget);
+    return;
+  }
+  // If cell has absent teacher — open substitution
   const teachers = extractTeachers(cellText);
   const absentHere = teachers.filter(t => absentTeachers.has(t));
   const alreadySub = subLog.find(s => s.lesson === lesson && s.cls === cls && s.day === currentDay);
   if (absentHere.length > 0 && !alreadySub) {
     handleCellClick(lesson, cls, cellText);
-    return;
-  }
-  if (editMode && adminSession) {
-    openEditPopover(currentDay, cls, lesson, cellText, event.currentTarget);
     return;
   }
   handleCellClick(lesson, cls, cellText);
@@ -1298,10 +1301,12 @@ function shareWhatsApp() {
   const table = document.getElementById('mainTable');
   if (!table) return;
 
-  // Show loading
   const btn = event.target.closest('button');
   btn.textContent = 'מכין תמונה...';
   btn.disabled = true;
+
+  const fileName = `מערכת-שעות-${currentDay}-${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.png`;
+  const msg = `מערכת שעות — ${currentDay}\n אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}`;
 
   html2canvas(table, {
     scale: 1.5,
@@ -1310,29 +1315,43 @@ function shareWhatsApp() {
     logging: false
   }).then(canvas => {
     canvas.toBlob(blob => {
-      // Download image
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `מערכת-שעות-${currentDay}-${new Date().toLocaleDateString('he-IL').replace(/\//g,'-')}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      // Open WhatsApp
-      const msg = `📅 מערכת שעות — ${currentDay}\n🏫 אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}\n\nמצורפת תמונת מערכת השעות להיום.`;
-      setTimeout(() => {
-        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
-      }, 500);
-
-      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg> שלח לווטסאפ`;
-      btn.disabled = false;
+      // Try Web Share API (sends image directly to WhatsApp)
+      if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+        const file = new File([blob], fileName, { type: 'image/png' });
+        navigator.share({ files: [file], text: msg }).catch(() => {
+          // Fallback: download + open WhatsApp
+          downloadAndOpenWA(blob, fileName, msg);
+        }).finally(() => {
+          btn.innerHTML = waButtonHTML;
+          btn.disabled = false;
+        });
+      } else {
+        // Fallback for desktop: download image + open WhatsApp
+        downloadAndOpenWA(blob, fileName, msg);
+        btn.innerHTML = waButtonHTML;
+        btn.disabled = false;
+      }
     }, 'image/png');
   }).catch(err => {
     console.error(err);
     btn.textContent = 'שגיאה — נסי שנית';
     btn.disabled = false;
-    setTimeout(() => { btn.innerHTML = `שלח לווטסאפ`; }, 2000);
+    setTimeout(() => { btn.innerHTML = waButtonHTML; }, 2000);
   });
+}
+
+const waButtonHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg> שלח לווטסאפ`;
+
+function downloadAndOpenWA(blob, fileName, msg) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg + '\n\n(התמונה הורדה — צרפי אותה)'), '_blank');
+  }, 500);
 }
 
 // ============================================================
@@ -1459,6 +1478,7 @@ function openEditPopover(day, cls, lesson, cellText, cellEl) {
   pop.style.top = Math.min(rect.bottom + 4, window.innerHeight - 260) + 'px';
   pop.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
   pop.classList.add('show');
+  updatePasteButton();
   document.getElementById('editSubject').focus();
 }
 
@@ -1501,6 +1521,34 @@ function deleteCell() {
   document.getElementById('editSubject').value = '';
   document.getElementById('editTeacher').value = '';
   saveEditCell();
+}
+
+// ============================================================
+// COPY / PASTE CELL
+// ============================================================
+let cellClipboard = null;
+
+function copyCellToClipboard() {
+  const subject = document.getElementById('editSubject').value.trim();
+  const teacher = document.getElementById('editTeacher').value.trim();
+  const room = document.getElementById('editRoom').value;
+  cellClipboard = { subject, teacher, room };
+  const copyBtn = document.getElementById('copyBtn');
+  copyBtn.textContent = 'הועתק!';
+  copyBtn.style.color = 'var(--primary-dark)';
+  setTimeout(() => { copyBtn.textContent = 'העתק'; copyBtn.style.color = ''; }, 1200);
+}
+
+function pasteCellFromClipboard() {
+  if (!cellClipboard) return;
+  document.getElementById('editSubject').value = cellClipboard.subject;
+  document.getElementById('editTeacher').value = cellClipboard.teacher;
+  document.getElementById('editRoom').value = cellClipboard.room;
+}
+
+function updatePasteButton() {
+  const pasteBtn = document.getElementById('pasteBtn');
+  if (pasteBtn) pasteBtn.style.display = cellClipboard ? '' : 'none';
 }
 
 // ============================================================
@@ -1670,16 +1718,15 @@ function enterTeacherView(teacher) {
 function shareTeacherViewImg() {
   const table = document.getElementById('mainTable');
   if (!table) return;
+  const fileName = `מערכת-${teacherViewMode}-${currentDay}.png`;
+  const msg = `מערכת שעות — ${teacherViewMode}\nיום ${currentDay} | אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}`;
   html2canvas(table, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }).then(canvas => {
     canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `מערכת-${teacherViewMode}-${currentDay}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-      const msg = `מערכת שעות — ${teacherViewMode}\nיום ${currentDay} | אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}`;
-      setTimeout(() => window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank'), 500);
+      if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+        navigator.share({ files: [new File([blob], fileName, { type: 'image/png' })], text: msg }).catch(() => downloadAndOpenWA(blob, fileName, msg));
+      } else {
+        downloadAndOpenWA(blob, fileName, msg);
+      }
     }, 'image/png');
   });
 }
@@ -1694,6 +1741,9 @@ function shareClassView() {
   btn.textContent = 'מכין תמונה...';
   btn.disabled = true;
 
+  const fileName = `מערכת-כיתה-${classViewMode}-${currentDay}.png`;
+  const msg = `מערכת שעות — כיתה ${classViewMode}\nיום ${currentDay} | אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}`;
+
   html2canvas(table, {
     scale: 2,
     backgroundColor: '#ffffff',
@@ -1701,19 +1751,15 @@ function shareClassView() {
     logging: false
   }).then(canvas => {
     canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `מערכת-כיתה-${classViewMode}-${currentDay}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      const msg = `מערכת שעות — כיתה ${classViewMode}\nיום ${currentDay} | אורט בית הערבה\n${new Date().toLocaleDateString('he-IL')}`;
-      setTimeout(() => {
-        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
-      }, 500);
-      btn.innerHTML = origHTML;
-      btn.disabled = false;
+      if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+        navigator.share({ files: [new File([blob], fileName, { type: 'image/png' })], text: msg })
+          .catch(() => downloadAndOpenWA(blob, fileName, msg))
+          .finally(() => { btn.innerHTML = origHTML; btn.disabled = false; });
+      } else {
+        downloadAndOpenWA(blob, fileName, msg);
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+      }
     }, 'image/png');
   });
 }
