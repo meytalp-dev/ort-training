@@ -1,0 +1,2432 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>שתיים — ערכת מיתוג</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@100;300;400;500;600;700;900&family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --plum: #7B5EA7;
+            --plum-dark: #5A3D8A;
+            --plum-deep: #3E2668;
+            --plum-light: #F3EEF9;
+            --coral: #E8836B;
+            --coral-dark: #D06A52;
+            --coral-light: #FDF0ED;
+            --sand: #F9F6F1;
+            --cream: #FFFCF8;
+            --charcoal: #2D2B3A;
+            --gray: #6B6980;
+            --gray-light: #A8A5B5;
+            --mint: #5BBF9E;
+            --gold: #D4A843;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            overflow-y: scroll;
+        }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: #0D0A14;
+            color: var(--cream);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ===== FULLSCREEN SLIDE SYSTEM ===== */
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide-inner {
+            width: 100%;
+            max-width: 1200px;
+            padding: 60px 80px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ===== NAVIGATION ===== */
+        .nav-dots {
+            position: fixed;
+            left: 28px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .nav-dot:hover, .nav-dot.active {
+            background: var(--coral);
+            border-color: var(--coral);
+            transform: scale(1.4);
+            box-shadow: 0 0 12px rgba(232,131,107,0.5);
+        }
+
+        /* ===== AMBIENT BACKGROUNDS ===== */
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .bg-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(123,94,167,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(123,94,167,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+
+        .bg-noise {
+            position: absolute;
+            inset: 0;
+            opacity: 0.025;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.85); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(60px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideLeft {
+            from { opacity: 0; transform: translateX(-60px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.15; transform: scale(1); }
+            50% { opacity: 0.25; transform: scale(1.1); }
+        }
+
+        @keyframes orbMove {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(30px, -20px); }
+            50% { transform: translate(-10px, 30px); }
+            75% { transform: translate(-30px, -10px); }
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes borderGlow {
+            0%, 100% { border-color: rgba(123,94,167,0.2); }
+            50% { border-color: rgba(232,131,107,0.4); }
+        }
+
+        @keyframes typewriter {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes drawLine {
+            from { stroke-dashoffset: 1000; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        .anim {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .slide.visible .anim {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .slide.visible .anim-d1 { transition-delay: 0.08s; }
+        .slide.visible .anim-d2 { transition-delay: 0.16s; }
+        .slide.visible .anim-d3 { transition-delay: 0.24s; }
+        .slide.visible .anim-d4 { transition-delay: 0.32s; }
+        .slide.visible .anim-d5 { transition-delay: 0.40s; }
+        .slide.visible .anim-d6 { transition-delay: 0.48s; }
+        .slide.visible .anim-d7 { transition-delay: 0.56s; }
+        .slide.visible .anim-d8 { transition-delay: 0.64s; }
+
+        .anim-scale {
+            transform: scale(0.9) !important;
+        }
+        .slide.visible .anim-scale {
+            transform: scale(1) !important;
+        }
+
+        .anim-right {
+            transform: translateX(40px) !important;
+        }
+        .slide.visible .anim-right {
+            transform: translateX(0) !important;
+        }
+
+        /* Cover animations */
+        #cover .cover-logo-mark { animation: fadeIn 1.2s ease forwards; opacity: 0; }
+        #cover .cover-title { animation: fadeUp 1s 0.3s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; }
+        #cover .cover-tagline { animation: fadeUp 1s 0.5s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; }
+        #cover .cover-badge { animation: fadeUp 1s 0.7s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; }
+        #cover .cover-founders { animation: fadeUp 1s 0.9s cubic-bezier(0.16,1,0.3,1) forwards; opacity: 0; }
+
+        /* ===== COMMON ELEMENTS ===== */
+        .section-tag {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--coral);
+            margin-bottom: 16px;
+        }
+
+        .section-tag::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 1px;
+            background: var(--coral);
+            margin-left: 12px;
+            vertical-align: middle;
+        }
+
+        .slide-title {
+            font-family: 'Rubik', sans-serif;
+            font-size: 52px;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .slide-subtitle {
+            font-size: 18px;
+            font-weight: 300;
+            color: rgba(255,255,255,0.5);
+            max-width: 600px;
+            line-height: 1.8;
+        }
+
+        .glass-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 32px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .slide-num {
+            position: absolute;
+            bottom: 32px;
+            left: 40px;
+            font-size: 13px;
+            font-weight: 300;
+            color: rgba(255,255,255,0.15);
+            font-family: 'Rubik', sans-serif;
+        }
+
+        .mini-logo {
+            position: absolute;
+            bottom: 32px;
+            right: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mini-dot-p { width: 8px; height: 8px; border-radius: 50%; background: var(--plum); }
+        .mini-dot-c { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); }
+
+        .mini-logo-text {
+            font-family: 'Rubik', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.25);
+        }
+
+        /* ===== SLIDE 1: COVER ===== */
+        #cover {
+            background: radial-gradient(ellipse at 30% 40%, rgba(123,94,167,0.3) 0%, transparent 60%),
+                        radial-gradient(ellipse at 70% 60%, rgba(232,131,107,0.2) 0%, transparent 50%),
+                        #0D0A14;
+        }
+
+        .cover-content {
+            text-align: center;
+            position: relative;
+        }
+
+        .cover-logo-mark {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 48px;
+            animation: fadeIn 1.2s ease forwards;
+        }
+
+        .cover-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.4);
+            position: relative;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .cover-circle:first-child {
+            background: radial-gradient(circle at 30% 30%, rgba(123,94,167,0.6), rgba(123,94,167,0.1));
+            animation-delay: 0s;
+        }
+
+        .cover-circle:last-child {
+            background: radial-gradient(circle at 30% 30%, rgba(232,131,107,0.6), rgba(232,131,107,0.1));
+            animation-delay: -3s;
+        }
+
+        .cover-bridge {
+            width: 48px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--plum), var(--coral));
+            border-radius: 1px;
+            position: relative;
+        }
+
+        .cover-bridge::after {
+            content: '';
+            position: absolute;
+            inset: -4px -8px;
+            background: linear-gradient(90deg, rgba(123,94,167,0.3), rgba(232,131,107,0.3));
+            filter: blur(8px);
+            border-radius: 4px;
+        }
+
+        .cover-title {
+            font-family: 'Rubik', sans-serif;
+            font-size: 120px;
+            font-weight: 900;
+            letter-spacing: -3px;
+            line-height: 1;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.85) 50%, rgba(232,131,107,0.9) 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 8s ease infinite;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .cover-tagline {
+            font-size: 24px;
+            font-weight: 300;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 64px;
+            letter-spacing: 1px;
+        }
+
+        .cover-badge {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.35);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 28px;
+            border-radius: 30px;
+            margin-bottom: 32px;
+        }
+
+        .cover-founders {
+            font-size: 15px;
+            font-weight: 300;
+            color: rgba(255,255,255,0.35);
+            margin-top: 16px;
+        }
+
+        .cover-founders span {
+            color: rgba(255,255,255,0.55);
+            font-weight: 500;
+        }
+
+        /* ===== SLIDE 2: STORY ===== */
+        #story { background: #0D0A14; }
+
+        .story-layout {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 64px;
+            align-items: center;
+        }
+
+        .story-text {
+            font-size: 20px;
+            line-height: 2;
+            color: rgba(255,255,255,0.55);
+            font-weight: 300;
+        }
+
+        .story-text strong {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .story-text .glow {
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .story-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .founder-card {
+            padding: 28px 32px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .founder-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Rubik', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            color: #fff;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .founder-card:first-child .founder-avatar {
+            background: linear-gradient(135deg, var(--plum), var(--plum-dark));
+            box-shadow: 0 8px 24px rgba(123,94,167,0.4);
+        }
+
+        .founder-card:last-child .founder-avatar {
+            background: linear-gradient(135deg, var(--coral), var(--coral-dark));
+            box-shadow: 0 8px 24px rgba(232,131,107,0.4);
+        }
+
+        .founder-info h4 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .founder-info p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            font-weight: 300;
+        }
+
+        .founder-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 20px;
+            margin-top: 8px;
+        }
+
+        .founder-card:first-child .founder-badge {
+            background: rgba(123,94,167,0.15);
+            color: var(--plum);
+            border: 1px solid rgba(123,94,167,0.2);
+        }
+
+        .founder-card:last-child .founder-badge {
+            background: rgba(232,131,107,0.15);
+            color: var(--coral);
+            border: 1px solid rgba(232,131,107,0.2);
+        }
+
+        .connector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 4px 0;
+        }
+
+        .connector-line {
+            width: 40px;
+            height: 1px;
+            background: linear-gradient(90deg, var(--plum), var(--coral));
+        }
+
+        .connector-text {
+            font-family: 'Rubik', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ===== SLIDE 3: PAIN ===== */
+        #pain { background: #0D0A14; }
+
+        .pain-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .pain-card {
+            padding: 28px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pain-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 2px;
+        }
+
+        .pain-card:nth-child(1)::before { background: linear-gradient(90deg, #E06050, transparent); }
+        .pain-card:nth-child(2)::before { background: linear-gradient(90deg, #D48040, transparent); }
+        .pain-card:nth-child(3)::before { background: linear-gradient(90deg, #C09030, transparent); }
+
+        .pain-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .pain-card:nth-child(1) .pain-icon { background: rgba(224,96,80,0.12); }
+        .pain-card:nth-child(2) .pain-icon { background: rgba(212,128,64,0.12); }
+        .pain-card:nth-child(3) .pain-icon { background: rgba(192,144,48,0.12); }
+
+        .pain-card h3 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .pain-card p {
+            font-size: 14px;
+            color: rgba(255,255,255,0.45);
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .pain-tag {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 14px;
+            border-radius: 8px;
+        }
+
+        .pain-card:nth-child(1) .pain-tag { background: rgba(224,96,80,0.1); color: #E8836B; }
+        .pain-card:nth-child(2) .pain-tag { background: rgba(212,128,64,0.1); color: #D48040; }
+        .pain-card:nth-child(3) .pain-tag { background: rgba(192,144,48,0.1); color: #C09030; }
+
+        .solution-bar {
+            background: linear-gradient(135deg, var(--plum), var(--plum-dark));
+            border-radius: 20px;
+            padding: 28px 40px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            border: 1px solid rgba(123,94,167,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .solution-bar::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(232,131,107,0.15));
+            pointer-events: none;
+        }
+
+        .solution-bar h3 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .solution-bar p {
+            font-size: 15px;
+            color: rgba(255,255,255,0.7);
+            font-weight: 300;
+            margin-top: 4px;
+        }
+
+        /* ===== SLIDE 4: POSITIONING ===== */
+        #positioning { background: #0D0A14; }
+
+        .pos-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .pos-card { padding: 28px; }
+
+        .pos-card h3 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pos-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .pos-card ul {
+            list-style: none;
+            font-size: 13.5px;
+            color: rgba(255,255,255,0.5);
+            line-height: 2;
+        }
+
+        .pos-card ul li::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .onliness-box {
+            background: linear-gradient(135deg, rgba(123,94,167,0.08), rgba(232,131,107,0.08));
+            border: 1px solid rgba(123,94,167,0.15);
+            border-radius: 20px;
+            padding: 32px 40px;
+            text-align: center;
+        }
+
+        .onliness-box .onliness-label {
+            font-size: 11px;
+            letter-spacing: 4px;
+            font-weight: 600;
+            color: var(--coral);
+            margin-bottom: 16px;
+        }
+
+        .onliness-box blockquote {
+            font-size: 18px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.75);
+            line-height: 1.9;
+            font-style: normal;
+        }
+
+        /* ===== SLIDE 5: BRANDSCRIPT ===== */
+        #brandscript { background: #0D0A14; }
+
+        .bs-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .bs-card {
+            padding: 24px;
+            position: relative;
+        }
+
+        .bs-num {
+            position: absolute;
+            top: 16px;
+            left: 20px;
+            font-family: 'Rubik', sans-serif;
+            font-size: 36px;
+            font-weight: 900;
+            color: rgba(255,255,255,0.04);
+        }
+
+        .bs-card h4 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--coral);
+            margin-bottom: 10px;
+        }
+
+        .bs-card p {
+            font-size: 12.5px;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.8;
+        }
+
+        .bs-card p strong {
+            color: rgba(255,255,255,0.75);
+        }
+
+        .bs-steps {
+            grid-column: span 3;
+            display: flex;
+            gap: 0;
+            align-items: center;
+            padding: 24px 32px;
+            background: linear-gradient(135deg, rgba(123,94,167,0.1), rgba(232,131,107,0.06));
+            border: 1px solid rgba(123,94,167,0.12);
+        }
+
+        .bs-step {
+            flex: 1;
+            text-align: center;
+        }
+
+        .bs-step-num {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Rubik', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            margin: 0 auto 10px;
+        }
+
+        .bs-step h5 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .bs-step p {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .bs-arrow {
+            font-size: 20px;
+            color: rgba(255,255,255,0.15);
+            padding: 0 8px;
+        }
+
+        .bs-bottom-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+        }
+
+        .bs-success {
+            background: rgba(91,191,158,0.06);
+            border-color: rgba(91,191,158,0.12);
+        }
+
+        .bs-success h4 { color: var(--mint); }
+
+        .bs-fail {
+            background: rgba(224,96,80,0.06);
+            border-color: rgba(224,96,80,0.12);
+        }
+
+        .bs-fail h4 { color: #E06050; }
+
+        .bs-cta {
+            background: linear-gradient(135deg, var(--plum), var(--plum-dark));
+            border-color: rgba(123,94,167,0.3);
+        }
+
+        .bs-cta h4 { color: rgba(255,255,255,0.7); }
+        .bs-cta p { color: rgba(255,255,255,0.8); font-size: 14px; }
+
+        /* ===== SLIDE 6: TAGLINES ===== */
+        #taglines { background: #0D0A14; }
+
+        .taglines-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .tagline-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 28px 36px;
+        }
+
+        .tagline-letter {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Rubik', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .tagline-row:nth-child(1) .tagline-letter { background: linear-gradient(135deg, var(--plum), var(--plum-dark)); }
+        .tagline-row:nth-child(2) .tagline-letter { background: linear-gradient(135deg, var(--coral), var(--coral-dark)); }
+        .tagline-row:nth-child(3) .tagline-letter { background: linear-gradient(135deg, var(--mint), #3DA87E); }
+
+        .tagline-body h3 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .tagline-body p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .oneliner-banner {
+            background: linear-gradient(135deg, var(--plum), #9B7BC7, var(--coral));
+            border-radius: 24px;
+            padding: 32px 44px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .oneliner-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1), transparent 50%);
+            pointer-events: none;
+        }
+
+        .oneliner-banner .label {
+            font-size: 11px;
+            letter-spacing: 4px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 14px;
+        }
+
+        .oneliner-banner p {
+            font-size: 18px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.9);
+            line-height: 1.9;
+        }
+
+        .oneliner-banner strong {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        /* ===== SLIDE 7: PILLARS ===== */
+        #pillars { background: #0D0A14; }
+
+        .pillars-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .pillar-card {
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .pillar-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+
+        .pillar-card:nth-child(1) .pillar-icon-wrap { background: rgba(123,94,167,0.12); }
+        .pillar-card:nth-child(2) .pillar-icon-wrap { background: rgba(232,131,107,0.12); }
+        .pillar-card:nth-child(3) .pillar-icon-wrap { background: rgba(91,191,158,0.12); }
+        .pillar-card:nth-child(4) .pillar-icon-wrap { background: rgba(212,168,67,0.12); }
+
+        .pillar-card h4 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .pillar-card p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            line-height: 1.8;
+            flex: 1;
+        }
+
+        .pillar-quote {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--plum);
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            font-style: italic;
+        }
+
+        /* ===== SLIDE 8: COLORS ===== */
+        #colors { background: #0D0A14; }
+
+        .colors-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+        }
+
+        .swatches {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .swatch {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .swatch-block {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .swatch h4 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .swatch .hex {
+            font-family: 'Rubik', monospace;
+            font-size: 12px;
+            color: rgba(255,255,255,0.3);
+            margin-top: 2px;
+        }
+
+        .swatch .usage {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            margin-top: 2px;
+        }
+
+        .combos {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .combo {
+            border-radius: 16px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .combo h4 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 3px;
+        }
+
+        .combo p {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .combo-circles {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .combo-c {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        /* ===== SLIDE 9: TYPOGRAPHY ===== */
+        #typography { background: #0D0A14; }
+
+        .typo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+        }
+
+        .typo-box {
+            padding: 28px;
+        }
+
+        .typo-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            color: var(--coral);
+            margin-bottom: 16px;
+        }
+
+        .typo-rubik {
+            font-family: 'Rubik', sans-serif;
+            font-size: 36px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .typo-rubik-sub {
+            font-family: 'Rubik', sans-serif;
+            font-size: 15px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.45);
+        }
+
+        .typo-heebo-body {
+            font-family: 'Heebo', sans-serif;
+            font-size: 16px;
+            font-weight: 400;
+            color: rgba(255,255,255,0.55);
+            line-height: 2;
+        }
+
+        .typo-heebo-light {
+            font-family: 'Heebo', sans-serif;
+            font-size: 14px;
+            font-weight: 300;
+            color: rgba(255,255,255,0.3);
+            margin-top: 12px;
+        }
+
+        .typo-hierarchy-card {
+            padding: 28px;
+        }
+
+        .hier-row {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .hier-row:last-child { border: none; }
+
+        .hier-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--coral);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .hier-h1 { font-family: 'Rubik'; font-size: 30px; font-weight: 800; color: #fff; }
+        .hier-h2 { font-family: 'Rubik'; font-size: 24px; font-weight: 600; color: rgba(255,255,255,0.85); }
+        .hier-h3 { font-family: 'Heebo'; font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.7); }
+        .hier-body { font-family: 'Heebo'; font-size: 15px; font-weight: 400; color: rgba(255,255,255,0.5); }
+        .hier-cap { font-family: 'Heebo'; font-size: 12px; font-weight: 300; color: rgba(255,255,255,0.3); }
+
+        .typo-numbers {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(123,94,167,0.08), rgba(232,131,107,0.06));
+            border-color: rgba(123,94,167,0.12);
+            grid-column: span 2;
+        }
+
+        .numbers-row {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+        }
+
+        .num-item .num-val {
+            font-family: 'Rubik', sans-serif;
+            font-size: 44px;
+            font-weight: 900;
+        }
+
+        .num-item:nth-child(1) .num-val { color: var(--plum); }
+        .num-item:nth-child(2) .num-val { color: var(--coral); }
+        .num-item:nth-child(3) .num-val { color: var(--mint); }
+
+        .num-item .num-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+            margin-top: 4px;
+        }
+
+        /* ===== SLIDE 10: LOGO ===== */
+        #logo { background: #0D0A14; }
+
+        .logo-concepts {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .logo-card {
+            padding: 32px;
+            text-align: center;
+        }
+
+        .logo-preview-area {
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        /* Concept 1: Two dots */
+        .l-dots {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .l-dot {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .l-dot:first-child { background: linear-gradient(135deg, var(--plum), var(--plum-dark)); }
+        .l-dot:last-child { background: linear-gradient(135deg, var(--coral), var(--coral-dark)); }
+
+        .l-bridge {
+            width: 28px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--plum), var(--coral));
+        }
+
+        .l-name {
+            font-family: 'Rubik', sans-serif;
+            font-size: 34px;
+            font-weight: 800;
+            color: #fff;
+            margin-top: 14px;
+        }
+
+        /* Concept 2: Overlap */
+        .l-overlap {
+            position: relative;
+            width: 110px;
+            height: 80px;
+            margin: 0 auto;
+        }
+
+        .l-overlap-c {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            position: absolute;
+            top: 6px;
+        }
+
+        .l-overlap-c:first-child {
+            right: 4px;
+            background: var(--plum);
+            opacity: 0.85;
+        }
+
+        .l-overlap-c:last-child {
+            left: 4px;
+            background: var(--coral);
+            opacity: 0.85;
+        }
+
+        /* Concept 3: Typographic */
+        .l-typo-num {
+            font-family: 'Rubik', sans-serif;
+            font-size: 64px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+
+        .l-typo-text {
+            font-family: 'Rubik', sans-serif;
+            font-size: 28px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            letter-spacing: 8px;
+        }
+
+        .logo-card h4 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .logo-card p {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            line-height: 1.7;
+        }
+
+        .logo-variants {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .logo-variant {
+            border-radius: 16px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .lv-dots {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .lv-d { width: 18px; height: 18px; border-radius: 50%; }
+        .lv-b { width: 10px; height: 2px; border-radius: 1px; }
+
+        .logo-variant h5 {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .logo-variant p {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 2px;
+        }
+
+        /* ===== SLIDE 11: VOICE ===== */
+        #voice { background: #0D0A14; }
+
+        .voice-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .voice-section {
+            padding: 28px;
+        }
+
+        .voice-section h3 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .voice-do h3 { color: var(--mint); }
+        .voice-dont h3 { color: #E06050; }
+
+        .voice-ex {
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-size: 13.5px;
+            line-height: 1.7;
+            border-right: 3px solid;
+        }
+
+        .voice-do .voice-ex {
+            background: rgba(91,191,158,0.06);
+            color: rgba(255,255,255,0.6);
+            border-right-color: var(--mint);
+        }
+
+        .voice-dont .voice-ex {
+            background: rgba(224,96,80,0.06);
+            color: rgba(255,255,255,0.4);
+            border-right-color: #E06050;
+            text-decoration: line-through;
+            text-decoration-color: rgba(224,96,80,0.3);
+        }
+
+        .voice-dims-card {
+            padding: 24px 32px;
+            grid-column: span 2;
+        }
+
+        .voice-dims-card h3 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .dims-row {
+            display: flex;
+            gap: 28px;
+        }
+
+        .dim-item {
+            flex: 1;
+        }
+
+        .dim-item h5 {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--coral);
+            margin-bottom: 8px;
+        }
+
+        .dim-track {
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .dim-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--plum), var(--coral));
+            border-radius: 3px;
+        }
+
+        .dim-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: rgba(255,255,255,0.25);
+        }
+
+        /* ===== SLIDE 12: BUSINESS ===== */
+        #business { background: #0D0A14; }
+
+        .biz-models {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .biz-card {
+            padding: 28px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .biz-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 2px;
+        }
+
+        .biz-card:nth-child(1)::before { background: linear-gradient(90deg, var(--plum), transparent); }
+        .biz-card:nth-child(2)::before { background: linear-gradient(90deg, var(--coral), transparent); }
+        .biz-card:nth-child(3)::before { background: linear-gradient(90deg, var(--mint), transparent); }
+
+        .biz-card h4 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 14px;
+        }
+
+        .biz-price {
+            font-family: 'Rubik', sans-serif;
+            font-size: 36px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+
+        .biz-unit {
+            font-size: 13px;
+            color: rgba(255,255,255,0.35);
+            margin-top: 4px;
+            margin-bottom: 14px;
+        }
+
+        .biz-desc {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            line-height: 1.7;
+        }
+
+        .revenue-bar {
+            padding: 24px 32px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .rev-block {
+            text-align: center;
+            position: relative;
+        }
+
+        .rev-block:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20%;
+            height: 60%;
+            width: 1px;
+            background: rgba(255,255,255,0.06);
+        }
+
+        .rev-block h5 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--coral);
+            margin-bottom: 6px;
+        }
+
+        .rev-num {
+            font-family: 'Rubik', sans-serif;
+            font-size: 28px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .rev-unit {
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+            margin-top: 2px;
+        }
+
+        .rev-detail {
+            font-size: 11px;
+            color: rgba(255,255,255,0.25);
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+
+        /* ===== SLIDE 13: NEXT STEPS ===== */
+        #nextsteps { background: #0D0A14; }
+
+        .steps-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .step-card {
+            padding: 28px;
+        }
+
+        .step-num-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Rubik', sans-serif;
+            font-size: 17px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 16px;
+        }
+
+        .step-card:nth-child(1) .step-num-badge { background: linear-gradient(135deg, var(--plum), var(--plum-dark)); }
+        .step-card:nth-child(2) .step-num-badge { background: linear-gradient(135deg, var(--coral), var(--coral-dark)); }
+        .step-card:nth-child(3) .step-num-badge { background: linear-gradient(135deg, var(--mint), #3DA87E); }
+        .step-card:nth-child(4) .step-num-badge { background: linear-gradient(135deg, var(--gold), #B8922C); }
+
+        .step-card h4 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .step-card p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            line-height: 1.7;
+        }
+
+        .step-card .step-date {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--coral);
+            margin-top: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            background: rgba(232,131,107,0.1);
+            border: 1px solid rgba(232,131,107,0.15);
+        }
+
+        .cta-final {
+            background: linear-gradient(135deg, var(--plum), #9B7BC7, var(--coral));
+            border-radius: 24px;
+            padding: 40px 48px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-final::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1), transparent 60%);
+            pointer-events: none;
+        }
+
+        .cta-final h3 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 36px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .cta-final p {
+            font-size: 16px;
+            color: rgba(255,255,255,0.7);
+            font-weight: 300;
+        }
+
+        /* ===== KEYBOARD NAV HINT ===== */
+        .kb-hint {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: rgba(255,255,255,0.2);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 2s 3s forwards;
+            opacity: 0;
+        }
+
+        .kb-key {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 22px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px;
+            font-size: 10px;
+        }
+
+        @media print {
+            html { scroll-snap-type: none; }
+            .slide { page-break-after: always; height: auto; min-height: 100vh; }
+            .nav-dots, .kb-hint { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation Dots -->
+<nav class="nav-dots" id="navDots"></nav>
+
+<!-- Keyboard hint -->
+<div class="kb-hint">
+    <span class="kb-key">&#8595;</span>
+    <span class="kb-key">&#8593;</span>
+    ניווט בין שקפים
+</div>
+
+<!-- ==================== SLIDE 1: COVER ==================== -->
+<section class="slide" id="cover">
+    <div class="bg-orb" style="width:600px;height:600px;background:var(--plum);top:-200px;right:-100px;animation:pulse 8s ease infinite, orbMove 20s ease infinite;"></div>
+    <div class="bg-orb" style="width:500px;height:500px;background:var(--coral);bottom:-200px;left:-100px;animation:pulse 8s ease infinite 4s, orbMove 25s ease infinite 5s;"></div>
+    <div class="bg-noise"></div>
+
+    <div class="cover-content">
+        <div class="cover-logo-mark anim anim-d1">
+            <div class="cover-circle"></div>
+            <div class="cover-bridge"></div>
+            <div class="cover-circle"></div>
+        </div>
+        <h1 class="cover-title anim anim-d2">שתיים</h1>
+        <div class="cover-tagline anim anim-d3">מערכות דיגיטליות לעמותות — בעזרת AI</div>
+        <div class="cover-badge anim anim-d4">ערכת מיתוג</div>
+        <div class="cover-founders anim anim-d5">
+            <span>מיטל פלג</span>  ·  <span>לירון</span>  ·  אפריל 2026
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SLIDE 2: STORY ==================== -->
+<section class="slide" id="story">
+    <div class="bg-orb" style="width:400px;height:400px;background:var(--plum);top:20%;right:-100px;opacity:0.08;animation:orbMove 18s ease infinite;"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">מי אנחנו</div>
+        <h2 class="slide-title anim anim-d1">הסיפור שלנו</h2>
+
+        <div class="story-layout">
+            <div class="story-text anim anim-d2">
+                <p>שתי מנהלות. שתי עמותות. <strong>אותו כאב.</strong></p>
+                <br>
+                <p>מיטל ניהלה בית ספר עם 200 תלמידים — על דפים, אקסלים וזיכרון. לירון ניהלה עמותה — עם אותו בלגן.</p>
+                <br>
+                <p>במקום להמתין לחברת תוכנה ולתקציב שאין, <span class="glow">כל אחת בנתה מערכות בעצמה</span> — בשיחה עם Claude, יועץ AI.</p>
+                <br>
+                <p>מיטל בנתה <strong>21+ מערכות</strong>. לירון בנתה מערכות שהפכו את העמותה שלה.</p>
+                <br>
+                <p>עכשיו אנחנו עושות את זה <span class="glow">לכולן</span>.</p>
+            </div>
+
+            <div class="story-cards">
+                <div class="glass-card founder-card anim anim-d3 anim-right">
+                    <div class="founder-avatar">מ</div>
+                    <div class="founder-info">
+                        <h4>מיטל פלג</h4>
+                        <p>מנהלת אורט בית הערבה | מייסדת Learni</p>
+                        <span class="founder-badge">21+ מערכות נבנו</span>
+                    </div>
+                </div>
+
+                <div class="connector anim anim-d4">
+                    <div class="connector-line"></div>
+                    <span class="connector-text">שתיים</span>
+                    <div class="connector-line"></div>
+                </div>
+
+                <div class="glass-card founder-card anim anim-d5 anim-right">
+                    <div class="founder-avatar">ל</div>
+                    <div class="founder-info">
+                        <h4>לירון</h4>
+                        <p>מנכ"לית עמותת הופה</p>
+                        <span class="founder-badge">מערכות AI בשטח</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">02</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 3: PAIN ==================== -->
+<section class="slide" id="pain">
+    <div class="bg-orb" style="width:350px;height:350px;background:#E06050;bottom:10%;left:5%;opacity:0.06;animation:orbMove 22s ease infinite;"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">הבעיה</div>
+        <h2 class="slide-title anim anim-d1">הכאב של עמותות</h2>
+
+        <div class="pain-grid">
+            <div class="glass-card pain-card anim anim-d2">
+                <div class="pain-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E06050" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <h3>מערכות יקרות</h3>
+                <p>CRM, ניהול תורמים, דשבורדים — כל אחד מספק אחר, כל אחד עולה אלפים</p>
+                <span class="pain-tag">25-120K ש"ח בשנה</span>
+            </div>
+
+            <div class="glass-card pain-card anim anim-d3">
+                <div class="pain-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D48040" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <h3>תהליכים ידניים</h3>
+                <p>דפים שעוברים בין ידיים, אקסלים שלא מדברים, ווטסאפ כמערכת ניהול</p>
+                <span class="pain-tag">שעות עבודה מבוזבזות</span>
+            </div>
+
+            <div class="glass-card pain-card anim anim-d4">
+                <div class="pain-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C09030" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                </div>
+                <h3>מידע שנופל</h3>
+                <p>תורם שלא חזרו אליו, מתנדבת שנשכחה, דוח שלא הוגש בזמן</p>
+                <span class="pain-tag">אובדן תורמים ואמון</span>
+            </div>
+        </div>
+
+        <div class="solution-bar anim anim-d5">
+            <div>
+                <h3>שתיים פותרות את זה אחרת</h3>
+                <p>מערכות מותאמות אישית, בעזרת AI, בעלות של שבריר — ותוך ימים, לא חודשים</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">03</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 4: POSITIONING ==================== -->
+<section class="slide" id="positioning">
+    <div class="bg-orb" style="width:400px;height:400px;background:var(--plum);top:-100px;left:30%;opacity:0.06;animation:orbMove 20s ease infinite;"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">למה אנחנו</div>
+        <h2 class="slide-title anim anim-d1">מיצוב</h2>
+
+        <div class="pos-grid">
+            <div class="glass-card pos-card anim anim-d2">
+                <h3><div class="pos-dot" style="background:var(--plum)"></div>מה הן עושות היום?</h3>
+                <ul>
+                    <li>אקסלים וגוגל שיטס — מתפרקים בסקייל</li>
+                    <li>Monday / Salesforce — 5-15K ש"ח/חודש</li>
+                    <li>פיתוח מותאם — 80-300K ש"ח</li>
+                    <li>לא עושות כלום — שחיקה וטעויות</li>
+                </ul>
+            </div>
+
+            <div class="glass-card pos-card anim anim-d3">
+                <h3><div class="pos-dot" style="background:var(--coral)"></div>מה שונה אצלנו?</h3>
+                <ul>
+                    <li>מנהלות שבנו את זה לעצמן — לא תיאוריה</li>
+                    <li>AI בונה, לא צוות פיתוח — עלות של עשירית</li>
+                    <li>תוך ימים, לא חודשים</li>
+                    <li>מותאם אישית, לא תוכנה מדף</li>
+                </ul>
+            </div>
+
+            <div class="glass-card pos-card anim anim-d4">
+                <h3><div class="pos-dot" style="background:var(--mint)"></div>מה הערך?</h3>
+                <ul>
+                    <li>חיסכון של עשרות אלפי ש"ח בשנה</li>
+                    <li>צוות חוזר לעבודה משמעותית</li>
+                    <li>שקיפות לתורמים ולדירקטוריון</li>
+                    <li>עצמאות — המערכת שלכם, לא של ספק</li>
+                </ul>
+            </div>
+
+            <div class="glass-card pos-card anim anim-d5">
+                <h3><div class="pos-dot" style="background:var(--gold)"></div>למי?</h3>
+                <ul>
+                    <li>עמותות קטנות-בינוניות (5-50 עובדים)</li>
+                    <li>חינוך, רווחה, קהילה</li>
+                    <li>תקציב 10-40K ש"ח (לא 100K+)</li>
+                    <li>מנכ"לית שמרגישה שטובעת בניירת</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="onliness-box anim anim-d6">
+            <div class="onliness-label">הצהרת ייחודיות</div>
+            <blockquote>שתיים היא השותפות הטכנולוגיות היחידות לעמותות בישראל שבונות מערכות ניהול מותאמות בעזרת AI — מתוך ניסיון ניהולי אמיתי בשטח, בעלות של עשירית, עם חיסכון מוכח מהחודש הראשון.</blockquote>
+        </div>
+    </div>
+    <div class="slide-num">04</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 5: BRANDSCRIPT ==================== -->
+<section class="slide" id="brandscript">
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">מסרים</div>
+        <h2 class="slide-title anim anim-d1" style="font-size:42px;">BrandScript</h2>
+
+        <div class="bs-grid">
+            <div class="glass-card bs-card anim anim-d2">
+                <div class="bs-num">1</div>
+                <h4>הגיבורה — העמותה</h4>
+                <p>רוצה להשפיע יותר, לנהל מסודר, להוכיח לתורמים שהכסף עובד. טובעת בניירת במקום לעשות את השליחות.</p>
+            </div>
+
+            <div class="glass-card bs-card anim anim-d3">
+                <div class="bs-num">2</div>
+                <h4>הבעיה</h4>
+                <p><strong>חיצונית:</strong> אין מערכות, הכל ידני<br>
+                <strong>פנימית:</strong> "אנחנו תמיד צעד אחורה"<br>
+                <strong>פילוסופית:</strong> ארגון שמשנה חיים לא צריך לבזבז זמן על ניירת</p>
+            </div>
+
+            <div class="glass-card bs-card anim anim-d4">
+                <div class="bs-num">3</div>
+                <h4>המדריכה — שתיים</h4>
+                <p><strong>אמפתיה:</strong> בנינו את זה לעצמנו קודם<br>
+                <strong>סמכות:</strong> 21+ מערכות עובדות בשטח, שתי מנהלות שחיות את הכאב</p>
+            </div>
+
+            <div class="glass-card bs-steps anim anim-d5">
+                <div class="bs-step">
+                    <div class="bs-step-num">1</div>
+                    <h5>ספרו מה כואב</h5>
+                    <p>שיחת היכרות. בלי שפה טכנית.</p>
+                </div>
+                <div class="bs-arrow">&larr;</div>
+                <div class="bs-step">
+                    <div class="bs-step-num">2</div>
+                    <h5>אנחנו בונות</h5>
+                    <p>מערכת עובדת תוך ימים.</p>
+                </div>
+                <div class="bs-arrow">&larr;</div>
+                <div class="bs-step">
+                    <div class="bs-step-num">3</div>
+                    <h5>הצוות עובד עם זה</h5>
+                    <p>הדרכה, ליווי, התאמה.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bs-bottom-row">
+            <div class="glass-card bs-card bs-success anim anim-d6">
+                <h4>הצלחה</h4>
+                <p>דוחות בדקות. מידע לא נופל. הצוות חוזר לשליחות. העמותה נראית מקצועית — בתקציב של עמותה.</p>
+            </div>
+            <div class="glass-card bs-card bs-fail anim anim-d7">
+                <h4>כישלון</h4>
+                <p>ילדים נופלים בין הכיסאות. עובדים שוחקים. תורמים מאבדים אמון. עמותות אחרות ימשכו את המימון.</p>
+            </div>
+            <div class="glass-card bs-card bs-cta anim anim-d8">
+                <h4>קריאה לפעולה</h4>
+                <p>"קבעו שיחת היכרות — בחינם, בלי התחייבות"</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">05</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 6: TAGLINES ==================== -->
+<section class="slide" id="taglines">
+    <div class="bg-orb" style="width:300px;height:300px;background:var(--coral);top:10%;left:10%;opacity:0.06;animation:orbMove 15s ease infinite;"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">שפה</div>
+        <h2 class="slide-title anim anim-d1">סלוגן ו-One Liner</h2>
+
+        <div class="taglines-stack">
+            <div class="glass-card tagline-row anim anim-d2">
+                <div class="tagline-letter">א</div>
+                <div class="tagline-body">
+                    <h3>פחות תקציב. יותר מערכת.</h3>
+                    <p>ישירה, חדה — מדברת על הכאב המרכזי. עובדת בכל מדיום.</p>
+                </div>
+            </div>
+
+            <div class="glass-card tagline-row anim anim-d3">
+                <div class="tagline-letter">ב</div>
+                <div class="tagline-body">
+                    <h3>שהשליחות שלכם תרוץ על מערכות, לא על ניירות</h3>
+                    <p>רגשית, מחברת בין המשימה לפתרון. חזקה בפוסטים ובמצגות.</p>
+                </div>
+            </div>
+
+            <div class="glass-card tagline-row anim anim-d4">
+                <div class="tagline-letter">ג</div>
+                <div class="tagline-body">
+                    <h3>שתיים בונות — עמותות גדלות</h3>
+                    <p>משחק מילים עם השם. מחזקת את המותג. עובדת כמוטו קבוע.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="oneliner-banner anim anim-d5">
+            <div class="label">ONE-LINER</div>
+            <p>רוב העמותות בישראל מנהלות את הפעילות על אקסלים, ניירות וקבוצות ווטסאפ — ומבזבזות שעות על עבודה ידנית במקום על השליחות. <strong>שתיים</strong> בונות מערכות ניהול דיגיטליות בהתאמה אישית, באמצעות AI, בעלות כמעט אפסית — כדי שהצוות שלכם יחזור לעשות את מה שהוא הכי טוב בו.</p>
+        </div>
+    </div>
+    <div class="slide-num">06</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 7: PILLARS ==================== -->
+<section class="slide" id="pillars">
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">תקשורת</div>
+        <h2 class="slide-title anim anim-d1">עמודי מסרים</h2>
+
+        <div class="pillars-row">
+            <div class="glass-card pillar-card anim anim-d2">
+                <div class="pillar-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B5EA7" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <h4>עלות אפסית</h4>
+                <p>המערכות נבנות עם AI, לא עם צוותי פיתוח. המחיר הוא שבריר ממה שחברות תוכנה גובות.</p>
+                <div class="pillar-quote">"לא חייבים תקציב כדי להתקדם"</div>
+            </div>
+
+            <div class="glass-card pillar-card anim anim-d3">
+                <div class="pillar-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8836B" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <h4>תוך ימים</h4>
+                <p>אין מסמכי דרישות, אין ישיבות סטטוס. מספרים מה כואב, אנחנו בונות — כמעט מיד.</p>
+                <div class="pillar-quote">"ימים, לא חודשים"</div>
+            </div>
+
+            <div class="glass-card pillar-card anim anim-d4">
+                <div class="pillar-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5BBF9E" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h4>מותאם אישית</h4>
+                <p>לא תוכנה מדף. מקשיבות ובונות בדיוק את מה שצריך — בשפה שלכם, עם התהליכים שלכם.</p>
+                <div class="pillar-quote">"לא דוחפות מוצר — פותרות בעיה"</div>
+            </div>
+
+            <div class="glass-card pillar-card anim anim-d5">
+                <div class="pillar-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <h4>ליווי אנושי</h4>
+                <p>לא נעלמות אחרי הבנייה. מלוות, מדריכות, מוודאות שהצוות באמת משתמש.</p>
+                <div class="pillar-quote">"אנחנו לא נעלמות אחרי ההתקנה"</div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">07</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 8: COLORS ==================== -->
+<section class="slide" id="colors">
+    <div class="bg-orb" style="width:300px;height:300px;background:var(--plum);top:20%;right:5%;opacity:0.08;animation:orbMove 16s ease infinite;"></div>
+    <div class="bg-orb" style="width:250px;height:250px;background:var(--coral);bottom:20%;left:5%;opacity:0.06;animation:orbMove 20s ease infinite 3s;"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">זהות ויזואלית</div>
+        <h2 class="slide-title anim anim-d1">פלטת צבעים</h2>
+
+        <div class="colors-layout">
+            <div class="swatches">
+                <div class="swatch anim anim-d2">
+                    <div class="swatch-block" style="background:linear-gradient(135deg,#7B5EA7,#5A3D8A);"></div>
+                    <div><h4>סגול שזיף — Plum</h4><div class="hex">#7B5EA7</div><div class="usage">צבע ראשי — מייטל, Learni, סמכות</div></div>
+                </div>
+                <div class="swatch anim anim-d3">
+                    <div class="swatch-block" style="background:linear-gradient(135deg,#E8836B,#D06A52);"></div>
+                    <div><h4>קורל — Coral</h4><div class="hex">#E8836B</div><div class="usage">צבע משני — לירון, הופה, חום ואנרגיה</div></div>
+                </div>
+                <div class="swatch anim anim-d4">
+                    <div class="swatch-block" style="background:linear-gradient(135deg,#5BBF9E,#3DA87E);"></div>
+                    <div><h4>מנטה — Mint</h4><div class="hex">#5BBF9E</div><div class="usage">הצלחה, אישורים, צמיחה</div></div>
+                </div>
+                <div class="swatch anim anim-d5">
+                    <div class="swatch-block" style="background:linear-gradient(135deg,#D4A843,#B8922C);"></div>
+                    <div><h4>זהב — Gold</h4><div class="hex">#D4A843</div><div class="usage">הדגשות, CTA, ערך כספי</div></div>
+                </div>
+                <div class="swatch anim anim-d6">
+                    <div class="swatch-block" style="background:#F9F6F1;border:1px solid rgba(255,255,255,0.1);"></div>
+                    <div><h4>חול — Sand</h4><div class="hex">#F9F6F1</div><div class="usage">רקע, כרטיסיות, אזורי תוכן</div></div>
+                </div>
+                <div class="swatch anim anim-d7">
+                    <div class="swatch-block" style="background:#2D2B3A;border:1px solid rgba(255,255,255,0.1);"></div>
+                    <div><h4>פחם — Charcoal</h4><div class="hex">#2D2B3A</div><div class="usage">טקסט ראשי — רך, עם גוון סגול</div></div>
+                </div>
+            </div>
+
+            <div class="combos">
+                <div class="combo anim anim-d3" style="background:linear-gradient(135deg,#7B5EA7,#9B7BC7);color:#fff;">
+                    <div><h4>מצב Plum</h4><p>מצגות, הרצאות, חומר מקצועי</p></div>
+                    <div class="combo-circles"><div class="combo-c" style="background:#7B5EA7;"></div><div class="combo-c" style="background:#F3EEF9;"></div><div class="combo-c" style="background:#fff;"></div></div>
+                </div>
+                <div class="combo anim anim-d4" style="background:linear-gradient(135deg,#E8836B,#F0A090);color:#fff;">
+                    <div><h4>מצב Coral</h4><p>סושיאל, פוסטים, תוכן קליל</p></div>
+                    <div class="combo-circles"><div class="combo-c" style="background:#E8836B;"></div><div class="combo-c" style="background:#FDF0ED;"></div><div class="combo-c" style="background:#fff;"></div></div>
+                </div>
+                <div class="combo anim anim-d5" style="background:linear-gradient(135deg,#7B5EA7,#E8836B);color:#fff;">
+                    <div><h4>מצב Duo</h4><p>הגרדיינט המלא של שתיים — כיסויים ולוגו</p></div>
+                    <div class="combo-circles"><div class="combo-c" style="background:#7B5EA7;"></div><div class="combo-c" style="background:#B87DB0;"></div><div class="combo-c" style="background:#E8836B;"></div></div>
+                </div>
+                <div class="combo anim anim-d6" style="background:rgba(255,255,255,0.04);color:#fff;border:1px solid rgba(255,255,255,0.08);">
+                    <div><h4>מצב Sand</h4><p>מסמכים, הצעות מחיר, דירקטוריון</p></div>
+                    <div class="combo-circles"><div class="combo-c" style="background:#F9F6F1;"></div><div class="combo-c" style="background:#7B5EA7;"></div><div class="combo-c" style="background:#2D2B3A;"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">08</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 9: TYPOGRAPHY ==================== -->
+<section class="slide" id="typography">
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">זהות ויזואלית</div>
+        <h2 class="slide-title anim anim-d1">טיפוגרפיה</h2>
+
+        <div class="typo-grid">
+            <div class="glass-card typo-box anim anim-d2">
+                <div class="typo-label">כותרות — RUBIK</div>
+                <div class="typo-rubik">שתיים בונות מערכות</div>
+                <div class="typo-rubik-sub">גיאומטרי, מודרני, בנוי טוב לעברית. לא גנרי, לא קיצוני — בדיוק מה שצריך.</div>
+            </div>
+
+            <div class="glass-card typo-box anim anim-d3">
+                <div class="typo-label">גוף טקסט — HEEBO</div>
+                <div class="typo-heebo-body">עמותות משלמות אלפי שקלים בשנה על מערכות שלא מדברות ביניהן. אנחנו בונות את הכל — במקום אחד, בשבריר העלות.</div>
+                <div class="typo-heebo-light">Heebo Light — לטקסט משני, תיאורים, והערות שוליים.</div>
+            </div>
+
+            <div class="glass-card typo-hierarchy-card anim anim-d4">
+                <div class="typo-label">היררכיית גדלים</div>
+                <div class="hier-row"><div class="hier-label">H1</div><div class="hier-h1">מערכות דיגיטליות לעמותות</div></div>
+                <div class="hier-row"><div class="hier-label">H2</div><div class="hier-h2">שלוש דרכים לחסוך תקציב</div></div>
+                <div class="hier-row"><div class="hier-label">H3</div><div class="hier-h3">CRM לניהול תורמים</div></div>
+                <div class="hier-row"><div class="hier-label">BODY</div><div class="hier-body">כל עמותה מקבלת מערכת שנבנית בדיוק לצרכים שלה.</div></div>
+                <div class="hier-row"><div class="hier-label">CAPTION</div><div class="hier-cap">עלות מערכת CRM: 5-15K ש"ח · זמן אספקה: 3-5 ימים</div></div>
+            </div>
+
+            <div class="glass-card typo-numbers anim anim-d5">
+                <div class="typo-label" style="margin-bottom:16px;">מספרים — RUBIK BOLD</div>
+                <div class="numbers-row">
+                    <div class="num-item"><div class="num-val">21+</div><div class="num-label">מערכות</div></div>
+                    <div class="num-item"><div class="num-val">1/10</div><div class="num-label">מהעלות</div></div>
+                    <div class="num-item"><div class="num-val">5</div><div class="num-label">ימי אספקה</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">09</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 10: LOGO ==================== -->
+<section class="slide" id="logo">
+    <div class="bg-orb" style="width:350px;height:350px;background:var(--plum);top:50%;right:10%;opacity:0.05;animation:orbMove 18s ease infinite;"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">זהות ויזואלית</div>
+        <h2 class="slide-title anim anim-d1">קונספטים ללוגו</h2>
+
+        <div class="logo-concepts">
+            <div class="glass-card logo-card anim anim-d2 anim-scale">
+                <div class="logo-preview-area">
+                    <div style="text-align:center;">
+                        <div class="l-dots">
+                            <div class="l-dot"></div>
+                            <div class="l-bridge"></div>
+                            <div class="l-dot"></div>
+                        </div>
+                        <div class="l-name">שתיים</div>
+                    </div>
+                </div>
+                <h4>שתי נקודות + גשר</h4>
+                <p>שתי מייסדות, שתי עמותות, חיבור. פשוט, נקי, עובד בכל גודל.</p>
+            </div>
+
+            <div class="glass-card logo-card anim anim-d3 anim-scale">
+                <div class="logo-preview-area">
+                    <div style="text-align:center;">
+                        <div class="l-overlap">
+                            <div class="l-overlap-c"></div>
+                            <div class="l-overlap-c"></div>
+                        </div>
+                        <div class="l-name" style="margin-top:12px;">שתיים</div>
+                    </div>
+                </div>
+                <h4>חפיפה — Venn</h4>
+                <p>מפגש בין טכנולוגיה לשליחות, בין שתי נקודות מבט. מודרני ודינמי.</p>
+            </div>
+
+            <div class="glass-card logo-card anim anim-d4 anim-scale">
+                <div class="logo-preview-area">
+                    <div style="text-align:center;">
+                        <div class="l-typo-num">2</div>
+                        <div class="l-typo-text">שתיים</div>
+                    </div>
+                </div>
+                <h4>טיפוגרפי — המספר 2</h4>
+                <p>חזק, זכיר. עובד כ-favicon (רק ה-2) וכלוגו מלא.</p>
+            </div>
+        </div>
+
+        <div class="logo-variants">
+            <div class="logo-variant anim anim-d5" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;">
+                <div class="lv-dots">
+                    <div class="lv-d" style="background:var(--plum);"></div>
+                    <div class="lv-b" style="background:linear-gradient(90deg,var(--plum),var(--coral));"></div>
+                    <div class="lv-d" style="background:var(--coral);"></div>
+                </div>
+                <div><h5 style="color:#fff;">Favicon</h5><p style="color:rgba(255,255,255,0.4);">ניתן לזיהוי גם ב-16px</p></div>
+            </div>
+            <div class="logo-variant anim anim-d6" style="background:var(--charcoal);border-radius:14px;">
+                <div class="lv-dots">
+                    <div class="lv-d" style="background:rgba(255,255,255,0.3);border:2px solid rgba(255,255,255,0.5);"></div>
+                    <div class="lv-b" style="background:rgba(255,255,255,0.3);"></div>
+                    <div class="lv-d" style="background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.5);"></div>
+                </div>
+                <div><h5 style="color:#fff;">גרסת לבן</h5><p style="color:rgba(255,255,255,0.4);">רקעים כהים, סרטונים</p></div>
+            </div>
+            <div class="logo-variant anim anim-d7" style="background:#F9F6F1;border-radius:14px;">
+                <div class="lv-dots">
+                    <div class="lv-d" style="background:var(--plum);"></div>
+                    <div class="lv-b" style="background:linear-gradient(90deg,var(--plum),var(--coral));"></div>
+                    <div class="lv-d" style="background:var(--coral);"></div>
+                    <span style="font-family:Rubik;font-size:15px;font-weight:700;color:var(--plum-dark);margin-right:8px;">שתיים</span>
+                </div>
+                <div><h5 style="color:var(--charcoal);">לוגו + טקסט</h5><p style="color:var(--gray);">שימוש יומיומי</p></div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">10</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 11: VOICE ==================== -->
+<section class="slide" id="voice">
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">שפה וטון</div>
+        <h2 class="slide-title anim anim-d1">קול המותג</h2>
+
+        <div class="voice-layout">
+            <div class="glass-card voice-section voice-do anim anim-d2">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5BBF9E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    ככה מדברים
+                </h3>
+                <div class="voice-ex">"ספרו לנו מה כואב — בלי שפה טכנית. פשוט תגידו."</div>
+                <div class="voice-ex">"בנינו את זה לעצמנו קודם. היא עובדת. עכשיו אנחנו בונות לכם."</div>
+                <div class="voice-ex">"חסכנו 12 שעות בשבוע. לא כי אנחנו גאוניות — כי ידענו איפה כואב."</div>
+            </div>
+
+            <div class="glass-card voice-section voice-dont anim anim-d3">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E06050" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    לא ככה
+                </h3>
+                <div class="voice-ex">"פתרון end-to-end לאופטימיזציה של תהליכים ארגוניים."</div>
+                <div class="voice-ex">"ב-leverage של AI cutting-edge אנחנו מביאים disruption."</div>
+                <div class="voice-ex">"המובילים בטרנספורמציה הדיגיטלית למגזר השלישי."</div>
+            </div>
+
+            <div class="glass-card voice-dims-card anim anim-d4">
+                <h3>ארבעה ממדי קול</h3>
+                <div class="dims-row">
+                    <div class="dim-item">
+                        <h5>רשמי — אישי</h5>
+                        <div class="dim-track"><div class="dim-fill" style="width:75%;"></div></div>
+                        <div class="dim-labels"><span>רשמי</span><span>אישי</span></div>
+                    </div>
+                    <div class="dim-item">
+                        <h5>רציני — שמח</h5>
+                        <div class="dim-track"><div class="dim-fill" style="width:55%;"></div></div>
+                        <div class="dim-labels"><span>רציני</span><span>שמח</span></div>
+                    </div>
+                    <div class="dim-item">
+                        <h5>מכובד — עממי</h5>
+                        <div class="dim-track"><div class="dim-fill" style="width:65%;"></div></div>
+                        <div class="dim-labels"><span>מכובד</span><span>עממי</span></div>
+                    </div>
+                    <div class="dim-item">
+                        <h5>זהיר — בטוח</h5>
+                        <div class="dim-track"><div class="dim-fill" style="width:80%;"></div></div>
+                        <div class="dim-labels"><span>זהיר</span><span>בטוח</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">11</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 12: BUSINESS ==================== -->
+<section class="slide" id="business">
+    <div class="bg-orb" style="width:300px;height:300px;background:var(--gold);bottom:15%;right:5%;opacity:0.05;animation:orbMove 18s ease infinite;"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">עסקים</div>
+        <h2 class="slide-title anim anim-d1">מודל עסקי</h2>
+
+        <div class="biz-models">
+            <div class="glass-card biz-card anim anim-d2">
+                <h4>חבילת מערכות</h4>
+                <div class="biz-price">20-40K</div>
+                <div class="biz-unit">ש"ח / עמותה</div>
+                <div class="biz-desc">6-7 מערכות מותאמות אישית.<br>חוסך ללקוח 25-80K ש"ח בשנה.<br>ליווי + הדרכה כלולים.</div>
+            </div>
+            <div class="glass-card biz-card anim anim-d3">
+                <h4>תבניות + התאמה</h4>
+                <div class="biz-price">5-10K</div>
+                <div class="biz-unit">ש"ח / עמותה</div>
+                <div class="biz-desc">תבניות מוכנות שמותאמות.<br>סקייל גבוה, מהיר.<br>מושלם לעמותות קטנות.</div>
+            </div>
+            <div class="glass-card biz-card anim anim-d4">
+                <h4>קורסים + ליווי</h4>
+                <div class="biz-price">3-5K</div>
+                <div class="biz-unit">ש"ח / משתתף</div>
+                <div class="biz-desc">"בני מערכות בעצמך עם AI"<br>+ ליווי חודשי 500 ש"ח.<br>מייצר לקוחות עתידיים.</div>
+            </div>
+        </div>
+
+        <div class="glass-card revenue-bar anim anim-d5">
+            <div class="rev-block">
+                <h5>שנה 1 — בסיס</h5>
+                <div class="rev-num">150-300K</div>
+                <div class="rev-unit">ש"ח לכל שותפה</div>
+                <div class="rev-detail">5 לקוחות חבילה<br>2 קורסים · פיילוט הופה</div>
+            </div>
+            <div class="rev-block">
+                <h5>שנה 2 — צמיחה</h5>
+                <div class="rev-num">300-500K</div>
+                <div class="rev-unit">ש"ח לכל שותפה</div>
+                <div class="rev-detail">10 לקוחות<br>4 קורסים · הפניות</div>
+            </div>
+            <div class="rev-block">
+                <h5>שנה 3 — סקייל</h5>
+                <div class="rev-num">500-800K</div>
+                <div class="rev-unit">ש"ח לכל שותפה</div>
+                <div class="rev-detail">20 לקוחות + תבניות<br>6 קורסים · הכנסה חוזרת</div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">12</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<!-- ==================== SLIDE 13: NEXT STEPS ==================== -->
+<section class="slide" id="nextsteps">
+    <div class="bg-orb" style="width:500px;height:500px;background:var(--plum);top:30%;left:40%;opacity:0.06;animation:pulse 10s ease infinite;"></div>
+    <div class="bg-noise"></div>
+
+    <div class="slide-inner">
+        <div class="section-tag anim">תוכנית</div>
+        <h2 class="slide-title anim anim-d1">הצעדים הבאים</h2>
+
+        <div class="steps-row">
+            <div class="glass-card step-card anim anim-d2">
+                <div class="step-num-badge">1</div>
+                <h4>אישור מיתוג</h4>
+                <p>סלוגן, לוגו, כיוון ויזואלי. התאמת ה-one-pager למיתוג.</p>
+                <div class="step-date">שבוע 1</div>
+            </div>
+            <div class="glass-card step-card anim anim-d3">
+                <div class="step-num-badge">2</div>
+                <h4>פיילוט הופה</h4>
+                <p>2-3 מערכות לעמותת הופה כ-case study ראשון. תיעוד תוצאות.</p>
+                <div class="step-date">שבועות 2-4</div>
+            </div>
+            <div class="glass-card step-card anim anim-d4">
+                <div class="step-num-badge">3</div>
+                <h4>נוכחות דיגיטלית</h4>
+                <p>דף נחיתה, לינקדאין משותף, 3 פוסטי תוכן ראשונים.</p>
+                <div class="step-date">שבועות 3-5</div>
+            </div>
+            <div class="glass-card step-card anim anim-d5">
+                <div class="step-num-badge">4</div>
+                <h4>לקוחות ראשונים</h4>
+                <p>case study + הפניות + פנייה ישירה. יעד: 2 לקוחות משלמים.</p>
+                <div class="step-date">חודשים 2-3</div>
+            </div>
+        </div>
+
+        <div class="cta-final anim anim-d6 anim-scale">
+            <h3>שתיים בונות — עמותות גדלות</h3>
+            <p>מיטל פלג  ·  לירון  ·  2026</p>
+        </div>
+    </div>
+    <div class="slide-num">13</div>
+    <div class="mini-logo"><div class="mini-dot-p"></div><div class="mini-dot-c"></div><span class="mini-logo-text">שתיים</span></div>
+</section>
+
+<script>
+    // Slide visibility & animations
+    const slides = document.querySelectorAll('.slide');
+    const navDotsContainer = document.getElementById('navDots');
+
+    // Create nav dots
+    slides.forEach((slide, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'nav-dot';
+        dot.addEventListener('click', () => {
+            slide.scrollIntoView({ behavior: 'smooth' });
+        });
+        navDotsContainer.appendChild(dot);
+    });
+
+    const navDots = document.querySelectorAll('.nav-dot');
+
+    // Mark first slide visible immediately
+    slides[0].classList.add('visible');
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                const idx = [...slides].indexOf(entry.target);
+                navDots.forEach((d, i) => d.classList.toggle('active', i === idx));
+                currentSlide = idx;
+            }
+        });
+    }, { threshold: 0.15 });
+
+    slides.forEach(s => observer.observe(s));
+
+    // Keyboard navigation
+    let currentSlide = 0;
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') {
+            e.preventDefault();
+            currentSlide = Math.min(currentSlide + 1, slides.length - 1);
+            slides[currentSlide].scrollIntoView({ behavior: 'smooth' });
+            // Force visible class after scroll
+            setTimeout(() => slides[currentSlide].classList.add('visible'), 300);
+        } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+            e.preventDefault();
+            currentSlide = Math.max(currentSlide - 1, 0);
+            slides[currentSlide].scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+
+    // Hide keyboard hint after first interaction
+    const kbHint = document.querySelector('.kb-hint');
+    const hideHint = () => { if (kbHint) kbHint.style.opacity = '0'; };
+    setTimeout(() => {
+        document.addEventListener('scroll', hideHint, { once: true });
+    }, 5000);
+</script>
+</body>
+</html>
