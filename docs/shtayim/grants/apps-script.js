@@ -342,13 +342,13 @@ function updateProfile_(ss, profile) {
 }
 
 // ╔══════════════════════════════════════════════╗
-// ║           צ'קליסט + הערות קרנות              ║
+// ║           checklist + הערות קרנות              ║
 // ╚══════════════════════════════════════════════╝
 
 function saveChecklist_(ss, checklist) {
-  let sheet = ss.getSheetByName('צ'קליסט');
+  let sheet = ss.getSheetByName('checklist');
   if (!sheet) {
-    sheet = ss.insertSheet('צ'קליסט');
+    sheet = ss.insertSheet('checklist');
     sheet.getRange(1, 1, 1, 3).setValues([['מסמך', 'מוכן', 'עדכון']]);
     sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#E8F7F1');
   }
@@ -364,7 +364,7 @@ function saveChecklist_(ss, checklist) {
 }
 
 function getChecklist_(ss) {
-  const sheet = ss.getSheetByName('צ'קליסט');
+  const sheet = ss.getSheetByName('checklist');
   if (!sheet || sheet.getLastRow() <= 1) return {};
   const data = sheet.getDataRange().getValues();
   const result = {};
