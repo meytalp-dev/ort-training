@@ -330,6 +330,12 @@ function clearDemoData_(ss) {
   Logger.log('נתוני דמו נוקו: הגשות, פרויקטים, תקציב');
 }
 
+/** הריצי פעם אחת — מנקה נתוני דמו (הגשות, פרויקטים, תקציב) */
+function clearDemoData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  clearDemoData_(ss);
+}
+
 // ╔══════════════════════════════════════════════╗
 // ║           פונקציות עזר                        ║
 // ╚══════════════════════════════════════════════╝
