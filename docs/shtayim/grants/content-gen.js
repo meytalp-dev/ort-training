@@ -7,6 +7,16 @@
 
 const APPS_SCRIPT = 'https://script.google.com/macros/s/AKfycbzl7LLZIXFtFBXN8b3K0VBXZMoPzAYwokbPgdVU-WLVHr20i_Pbng9Sb94X8FOkY89m/exec';
 
+// Safe Sheet save — uses image beacon to avoid CORS (fire-and-forget)
+function saveToSheetSafe(action, data) {
+    const payload = encodeURIComponent(JSON.stringify({ action, ...data }));
+    const img = new Image();
+    img.src = APPS_SCRIPT + '?callback=img&payload=' + payload;
+    // Also save to localStorage as backup
+    const key = 'sheet-pending-' + Date.now();
+    localStorage.setItem(key, JSON.stringify({ action, ...data }));
+}
+
 let _waitAttempts = 0;
 function waitForOrg(cb) {
     if (window.ORG) return cb(window.ORG);
@@ -138,11 +148,7 @@ function enhanceFundsResearch(D) {
         if (!fund) return;
 
         // Save to Sheet
-        fetch(APPS_SCRIPT, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'saveFundNotes', fundName: fund.name, notes: notes }),
-            mode: 'no-cors'
-        });
+        saveToSheetSafe('saveFundNotes', { fundName: fund.name, notes: notes });
 
         // Visual feedback
         const btn = document.querySelector('#fundResearchPanel .btn-primary:last-child');
@@ -483,11 +489,7 @@ function enhanceDocumentsChecklist(D) {
         // Debounced save to Sheet
         clearTimeout(window._checklistTimer);
         window._checklistTimer = setTimeout(() => {
-            fetch(APPS_SCRIPT, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'saveChecklist', checklist: state }),
-                mode: 'no-cors'
-            });
+            saveToSheetSafe('saveChecklist', { checklist: state });
         }, 1500);
 
         // Update counter
@@ -572,11 +574,8 @@ function saveToSheet() {
         notes: 'נוצר במחולל תוכן'
     };
 
-    fetch(APPS_SCRIPT, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'saveSubmission', submission: submission }),
-        mode: 'no-cors'
-    }).then(() => {
+    saveToSheetSafe('saveSubmission', { submission: submission });
+    Promise.resolve().then(() => {
         const btn = result.querySelector('.save-sheet-btn');
         if (btn) {
             btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> נשמר ב-Sheet!';
@@ -613,12 +612,7 @@ window._saveNewCall = function() {
     
     if (!call.name) { alert('חסר שם קול קורא'); return; }
     
-    fetch(APPS_SCRIPT, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'saveCall', call: call }),
-        mode: 'no-cors'
-    }).then(() => {
-        closeModal('addCall');
-        location.reload();
-    }).catch(err => console.error('Save failed:', err));
+    saveToSheetSafe('saveCall', { call: call });
+    closeModal('addCall');
+    location.reload();
 };
