@@ -9,61 +9,72 @@ const MEGAMA = {"90306":"מחשבים","90603":"עיצוב שיער","91206":"א
 // ============================================================
 var STUDENTS = [];
 
-(function loadStudentsFromAPI() {
+// Promise that resolves when student data is ready (for async-aware systems)
+var STUDENTS_READY = (function loadStudentsFromAPI() {
   var API_URL = 'https://script.google.com/macros/s/AKfycbzIr--0e7so0uhjBwEwlauA0_toLwutvW_RW-2zLSWa0vQxIwpS8bs0nQZOr8bu9kS7/exec';
   var CACHE_KEY = 'ort-students-secure-cache';
   var CACHE_TIME_KEY = 'ort-students-secure-cache-time';
-  var CACHE_MAX_AGE = 1000 * 60 * 60; // 1 hour
 
-  // Try API first (synchronous to maintain compatibility with all systems)
-  var xhr = new XMLHttpRequest();
-  try {
-    xhr.open('GET', API_URL + '?action=students', false);
-    xhr.send();
-    if (xhr.status === 200) {
-      var data = JSON.parse(xhr.responseText);
-      STUDENTS = data.students || data || [];
-      // Normalize fields to match expected format
-      STUDENTS.forEach(function(s) {
-        // cls: "י"א 1" -> "יא1", "י"ב 3" -> "יב3"
-        if (s.cls) s.cls = s.cls.replace(/["\u05F3\u05F4\u2033\u201D\u2018\u2019]/g, '').replace(/\s+/g, '');
-        // dob: "Sun Aug 21 2011 00:00:00 GMT..." -> "21/08/11"
-        if (s.dob && s.dob.length > 10) {
-          try {
-            var d = new Date(s.dob);
-            if (!isNaN(d)) {
-              s.dob = ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + String(d.getFullYear()).slice(-2);
-            }
-          } catch(e) {}
-        }
-      });
-      if (STUDENTS.length > 0) {
-        console.log('[student-data] Loaded ' + STUDENTS.length + ' students from secure API');
-        // Update cache
+  function normalizeStudents(arr) {
+    arr.forEach(function(s) {
+      if (s.cls) s.cls = s.cls.replace(/["\u05F3\u05F4\u2033\u201D\u2018\u2019]/g, '').replace(/\s+/g, '');
+      if (s.dob && s.dob.length > 10) {
         try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(STUDENTS));
-          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-        } catch (e) {}
+          var d = new Date(s.dob);
+          if (!isNaN(d)) {
+            s.dob = ('0'+d.getDate()).slice(-2) + '/' + ('0'+(d.getMonth()+1)).slice(-2) + '/' + String(d.getFullYear()).slice(-2);
+          }
+        } catch(e) {}
       }
-      return;
-    }
-  } catch (e) {
-    console.warn('[student-data] API unavailable, trying cache...', e.message || e);
+    });
   }
 
-  // Fallback: localStorage cache
-  try {
-    var cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      STUDENTS = JSON.parse(cached);
-      var cacheTime = localStorage.getItem(CACHE_TIME_KEY);
-      var age = cacheTime ? Math.round((Date.now() - parseInt(cacheTime)) / 60000) : '?';
-      console.warn('[student-data] Using cached data (' + STUDENTS.length + ' students, ' + age + ' min old)');
-      return;
-    }
-  } catch (e) {}
+  function loadFromCache() {
+    try {
+      var cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        STUDENTS = JSON.parse(cached);
+        var cacheTime = localStorage.getItem(CACHE_TIME_KEY);
+        var age = cacheTime ? Math.round((Date.now() - parseInt(cacheTime)) / 60000) : '?';
+        console.warn('[student-data] Using cached data (' + STUDENTS.length + ' students, ' + age + ' min old)');
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
 
-  console.error('[student-data] No data available — API failed and no cache found');
+  function saveToCache() {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(STUDENTS));
+      localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+    } catch (e) {}
+  }
+
+  // Step 1: Load from cache immediately (non-blocking) so page can render
+  loadFromCache();
+
+  // Step 2: Fetch fresh data from API asynchronously (won't freeze the page)
+  return fetch(API_URL + '?action=students')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arr = data.students || data || [];
+      if (arr.length > 0) {
+        normalizeStudents(arr);
+        STUDENTS = arr;
+        saveToCache();
+        console.log('[student-data] Loaded ' + STUDENTS.length + ' students from secure API');
+      } else if (STUDENTS.length === 0) {
+        loadFromCache();
+      }
+    })
+    .catch(function(e) {
+      console.warn('[student-data] API unavailable:', e.message || e);
+      if (STUDENTS.length === 0) {
+        if (!loadFromCache()) {
+          console.error('[student-data] No data available — API failed and no cache found');
+        }
+      }
+    });
 })();
 
 // Legacy static array removed — data now served from Google Sheet API
