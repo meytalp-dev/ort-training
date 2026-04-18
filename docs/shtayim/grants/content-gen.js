@@ -97,7 +97,7 @@ function enhanceFundsResearch(D) {
             </div>
 
             <div style="padding:14px;background:var(--mint-light);border-radius:10px;margin-bottom:16px;">
-                <div style="font-size:12px;font-weight:600;color:var(--mint);margin-bottom:4px;">התאמה לפרופיל הופה</div>
+                <div style="font-size:12px;font-weight:600;color:var(--mint);margin-bottom:4px;">התאמה לפרופיל העמותה</div>
                 <div style="font-size:24px;font-weight:800;color:var(--mint);">${fund.match}%</div>
             </div>
 
@@ -282,7 +282,7 @@ function enhanceContentGenerator(D) {
                 `${beneficiaries} מוטבים ישירים, שביעות רצון 92%.`,
                 ``,
                 `=== הצורך ===`,
-                `${cities.join(' ו')} — אזורי פריפריה עם שיעורי נשירה גבוהים.`,
+                `${cities.join(' ו')} — אזורי הפעילות של העמותה.`,
                 `נוער בסיכון חסר גישה לחינוך טכנולוגי ומיומנויות חיים.`,
                 ``,
                 `=== הפתרון המוצע ===`,

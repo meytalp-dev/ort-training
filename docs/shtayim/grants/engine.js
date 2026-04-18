@@ -172,7 +172,8 @@
     }
 
     function matchBar(m) {
-        return `${m}% <div class="match-bar"><div class="fill" style="width:${m}%;background:${matchColor(m)};"></div></div>`;
+        const tip = m >= 75 ? 'תחום+אזור+ותק תואמים' : m >= 50 ? 'תחום תואם, חלקית אזור/ותק' : 'התאמה חלקית';
+        return `<span title="${tip}">${m}%</span> <div class="match-bar"><div class="fill" style="width:${m}%;background:${matchColor(m)};"></div></div>`;
     }
 
     function statusBadge(status, label) {
@@ -287,11 +288,15 @@
             tabs[3].textContent = `הוגשו (${counts.submitted})`;
         }
 
+        if (!D.calls.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray);"><div style="font-size:14px;font-weight:600;margin-bottom:4px;">אין קולות קוראים עדיין</div><div style="font-size:12px;">הסוכן סורק פעמיים בשבוע — קולות חדשים יופיעו כאן</div></td></tr>';
+            return;
+        }
         tbody.innerHTML = D.calls.map(c => {
             const actionBtn = c.status === 'submitted'
                 ? '<button class="btn btn-sm btn-ghost">צפה</button>'
                 : c.status === 'open'
-                    ? `<button class="btn btn-sm btn-outline" onclick="showPage('ai-analysis')">נתח AI</button>`
+                    ? `<button class="btn btn-sm btn-outline" onclick="showPage('ai-analysis')">נתח התאמה</button>`
                     : '<button class="btn btn-sm btn-ghost">בדוק</button>';
 
             const linkCol = c.link
