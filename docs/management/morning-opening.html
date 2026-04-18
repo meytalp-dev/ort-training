@@ -667,6 +667,15 @@ async function loadScheduleFromSheet() {
     const res = await fetch(APPS_SCRIPT_URL + '?action=getSchedule');
     const data = await res.json();
     if (data.ok && data.schedule && data.schedule.length > 0) {
+      // בדיקת תקינות: אם תאריך נופל על שבת — ה-API שבור (באג timezone)
+      const hasWeekend = data.schedule.some(s => {
+        const d = parseDate(s.date);
+        return d.getDay() === 5 || d.getDay() === 6;
+      });
+      if (hasWeekend) {
+        console.log('Sheet API dates are shifted (timezone bug) — skipping');
+        return false;
+      }
       // המרת שמות ל-staffId
       schedule = data.schedule.map(s => {
         const staff = STAFF.find(st => st.name === s.name);
@@ -718,15 +727,12 @@ const DIM_COLORS = {
 };
 
 const HOLIDAYS = [
-  // Passover: March 24 - April 5, 2026 (school resumed April 6)
-  ...Array.from({length:13}, (_,i) => {
-    const d = new Date(2026, 2, 24+i); // March 24 to April 5
-    return d.toISOString().slice(0,10);
-  }),
-  // Yom HaZikaron: April 21, 2026
-  '2026-04-21',
-  // Yom HaAtzmaut: April 22, 2026
-  '2026-04-22'
+  // Passover: March 24 - April 5 (school resumed April 6)
+  '2026-03-24','2026-03-25','2026-03-26','2026-03-27','2026-03-28',
+  '2026-03-29','2026-03-30','2026-03-31',
+  '2026-04-01','2026-04-02','2026-04-03','2026-04-04','2026-04-05',
+  // Yom HaZikaron + Yom HaAtzmaut
+  '2026-04-21','2026-04-22'
 ];
 
 const DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי'];
@@ -789,7 +795,7 @@ const DEFAULT_IDEAS = [
 
 // ==================== STATE ====================
 // v2: ניקוי localStorage ישן — מעתה Sheet הוא מקור האמת
-const SCHEDULE_VERSION = 2;
+const SCHEDULE_VERSION = 3;
 if (Number(localStorage.getItem('morning_schedule_version')) < SCHEDULE_VERSION) {
   localStorage.removeItem('morning_schedule');
   localStorage.setItem('morning_schedule_version', SCHEDULE_VERSION);
