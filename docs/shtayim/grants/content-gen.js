@@ -7,8 +7,10 @@
 
 const APPS_SCRIPT = 'https://script.google.com/macros/s/AKfycbzl7LLZIXFtFBXN8b3K0VBXZMoPzAYwokbPgdVU-WLVHr20i_Pbng9Sb94X8FOkY89m/exec';
 
+let _waitAttempts = 0;
 function waitForOrg(cb) {
     if (window.ORG) return cb(window.ORG);
+    if (++_waitAttempts > 50) { console.error('Timeout: ORG data not loaded'); return; }
     setTimeout(() => waitForOrg(cb), 200);
 }
 
@@ -478,13 +480,16 @@ function enhanceDocumentsChecklist(D) {
 
         // Save
         localStorage.setItem('hoppa-docs-checklist', JSON.stringify(state));
-        // Also save to Sheet
-        fetch(APPS_SCRIPT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'saveChecklist', checklist: state }),
-            redirect: 'follow'
-        });
+        // Debounced save to Sheet
+        clearTimeout(window._checklistTimer);
+        window._checklistTimer = setTimeout(() => {
+            fetch(APPS_SCRIPT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'saveChecklist', checklist: state }),
+                redirect: 'follow'
+            });
+        }, 1500);
 
         // Update counter
         const progressEl = document.getElementById('docsProgress');
@@ -583,3 +588,40 @@ function saveToSheet() {
         }
     }).catch(err => console.error('Save failed:', err));
 }
+
+
+// ══════════════════════════════════════════
+//  הוספת קול קורא ידנית
+// ══════════════════════════════════════════
+
+window._saveNewCall = function() {
+    const modal = document.getElementById('modal-addCall');
+    if (!modal) return;
+    const inputs = modal.querySelectorAll('.form-input');
+    const textarea = modal.querySelector('textarea');
+    
+    const call = {
+        name: inputs[0] ? inputs[0].value : '',
+        source: inputs[1] ? inputs[1].value : '',
+        deadline: inputs[2] ? inputs[2].value : '',
+        link: inputs[3] ? inputs[3].value : '',
+        match: 50,
+        status: 'open',
+        eligibility: '',
+        amount: '',
+        category: '',
+        notes: textarea ? textarea.value : ''
+    };
+    
+    if (!call.name) { alert('חסר שם קול קורא'); return; }
+    
+    fetch(APPS_SCRIPT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'saveCall', call: call }),
+        redirect: 'follow'
+    }).then(() => {
+        closeModal('addCall');
+        location.reload();
+    }).catch(err => console.error('Save failed:', err));
+};

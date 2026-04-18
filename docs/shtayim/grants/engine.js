@@ -63,7 +63,10 @@
                 return { name: c.name + ' — ' + c.source, sub: c.eligibility || c.source, date: c.deadline,
                     urgency: daysLeft <= 14 ? 'urgent' : daysLeft <= 45 ? 'soon' : 'ok' };
             })
-            .sort((a,b) => a.date > b.date ? 1 : -1);
+            .sort((a,b) => {
+                const parseDate = d => { const p = d.split('.'); return p.length===3 ? new Date(p[2],p[1]-1,p[0]) : new Date(9999,0); };
+                return parseDate(a.date) - parseDate(b.date);
+            });
 
         // High match
         const highMatch = [...calls].sort((a,b) => b.match - a.match).slice(0,3)
@@ -354,6 +357,10 @@
         const tbody = document.querySelector('#submissionsTable tbody');
         if (!tbody) return;
         const statusLabels = { draft: 'טיוטה', pending: 'בכתיבה', submitted: 'הוגש' };
+        if (!D.submissions.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--gray);"><div style="font-size:14px;font-weight:600;margin-bottom:4px;">אין הגשות עדיין</div><div style="font-size:12px;">בחרו קול קורא ולחצו "כתוב הגשה" כדי להתחיל</div></td></tr>';
+            return;
+        }
         tbody.innerHTML = D.submissions.map(s => `
             <tr>
                 <td><strong>${s.name}</strong></td>
@@ -372,6 +379,10 @@
         const progressColor = p => p >= 100 ? 'var(--mint)' : p >= 60 ? 'var(--plum)' : p >= 30 ? 'var(--gold)' : 'var(--gray-light)';
         const statusStyle = s => s === 'approved' ? 'background:rgba(91,191,158,0.1);color:#2D8A6A;' : '';
 
+        if (!D.projects.length) {
+            grid.innerHTML = '<div class="panel" style="margin:0;text-align:center;padding:40px;color:var(--gray);"><div style="font-size:14px;font-weight:600;margin-bottom:4px;">אין פרויקטים עדיין</div><div style="font-size:12px;">פרויקטים ייווצרו אוטומטית מהגשות שאושרו</div></div>';
+            return;
+        }
         grid.innerHTML = D.projects.map(p => `
             <div class="panel" style="margin:0;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
@@ -417,6 +428,10 @@
         }
         const tbody = document.querySelector('#budgetTable tbody');
         if (!tbody) return;
+        if (!b.items.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--gray);"><div style="font-size:14px;font-weight:600;margin-bottom:4px;">אין נתוני תקציב</div><div style="font-size:12px;">תקציב ייבנה מתוך פרויקטים והגשות</div></td></tr>';
+            return;
+        }
         tbody.innerHTML = b.items.map(i => `
             <tr>
                 <td><strong>${i.project}</strong></td>
@@ -437,6 +452,10 @@
         if (!container) return;
         const colorMap = { red: 'var(--red-light)', mint: 'var(--mint-light)', plum: 'var(--plum-light)', gold: 'var(--gold-light)' };
         const textMap = { red: 'var(--red)', mint: 'var(--mint)', plum: 'var(--plum)', gold: 'var(--gold)' };
+        if (!D.documents.length) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray);"><div style="font-size:14px;font-weight:600;margin-bottom:4px;">אין מסמכים עדיין</div><div style="font-size:12px;">העלו מסמכים דרך הכפתור למעלה</div></div>';
+            return;
+        }
         container.innerHTML = D.documents.map(d => `
             <div class="doc-item">
                 <div class="doc-icon" style="background:${colorMap[d.color]};color:${textMap[d.color]};">${d.type}</div>
@@ -474,6 +493,10 @@
     function renderPartners(D) {
         const tbody = document.querySelector('#partnersTable tbody');
         if (!tbody) return;
+        if (!D.partners.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:var(--gray);"><div style="font-size:14px;font-weight:600;margin-bottom:4px;">אין שותפים עדיין</div><div style="font-size:12px;">שותפים יתווספו תוך כדי עבודה</div></td></tr>';
+            return;
+        }
         tbody.innerHTML = D.partners.map(p => `
             <tr>
                 <td><strong>${p.name}</strong></td>
