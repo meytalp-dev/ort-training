@@ -97,14 +97,17 @@ function doPost(e) {
 function doGet(e) {
   const action = e.parameter.action;
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tz = ss.getSpreadsheetTimeZone();
 
   if (action === 'getSchedule') {
     const sheet = ss.getSheetByName('שיבוצים');
     const data = sheet.getDataRange().getValues();
-    const schedule = data.slice(1).map(row => ({
-      date: Utilities.formatDate(new Date(row[0]), 'Asia/Jerusalem', 'yyyy-MM-dd'),
-      name: row[1]
-    }));
+    const schedule = data.slice(1)
+      .filter(row => row[0] && row[1])
+      .map(row => ({
+        date: Utilities.formatDate(row[0], tz, 'yyyy-MM-dd'),
+        name: String(row[1]).trim()
+      }));
     return ContentService.createTextOutput(JSON.stringify({ok: true, schedule}))
       .setMimeType(ContentService.MimeType.JSON);
   }
