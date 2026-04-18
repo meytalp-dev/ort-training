@@ -155,12 +155,13 @@ const REPORTS = {
 
 // ==================== ROLE CONFIG ====================
 
-const COUNSELORS = [
+// var (not const) — allows systems like counselor-dashboard to redefine COUNSELORS with their own structure
+var COUNSELORS = [
   {name:"צהיי גטהון",classes:["ט1","יב1","יב2","יב3"]},
   {name:"ליאת רוזנר",classes:["ט2","יא1","יא2","יא3"]},
   {name:"דורית ויגדור",classes:["י1","י2","י3"]}
 ];
-const TEACHERS = [
+var TEACHERS = [
   {name:"משה צברי",classes:["ט1"]},
   {name:"מחנכת ט2",classes:["ט2"]},
   {name:"מנו דהאן",classes:["י1"]},
