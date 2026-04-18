@@ -172,8 +172,8 @@
     }
 
     function matchBar(m) {
-        const tip = m >= 75 ? 'תחום+אזור+ותק תואמים' : m >= 50 ? 'תחום תואם, חלקית אזור/ותק' : 'התאמה חלקית';
-        return `<span title="${tip}">${m}%</span> <div class="match-bar"><div class="fill" style="width:${m}%;background:${matchColor(m)};"></div></div>`;
+        const tip = m >= 75 ? 'תחום+אזור+ותק' : m >= 50 ? 'תחום, חלקית אזור' : 'חלקי';
+        return `${m}% <div class="match-bar"><div class="fill" style="width:${m}%;background:${matchColor(m)};"></div></div><div style="font-size:10px;color:var(--gray-light);margin-top:2px;">${tip}</div>`;
     }
 
     function statusBadge(status, label) {
