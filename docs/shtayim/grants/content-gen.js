@@ -485,9 +485,8 @@ function enhanceDocumentsChecklist(D) {
         window._checklistTimer = setTimeout(() => {
             fetch(APPS_SCRIPT, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'saveChecklist', checklist: state }),
-                redirect: 'follow'
+                mode: 'no-cors'
             });
         }, 1500);
 
@@ -616,9 +615,8 @@ window._saveNewCall = function() {
     
     fetch(APPS_SCRIPT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'saveCall', call: call }),
-        redirect: 'follow'
+        mode: 'no-cors'
     }).then(() => {
         closeModal('addCall');
         location.reload();
