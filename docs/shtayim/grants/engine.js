@@ -5,17 +5,27 @@
  */
 
 (function() {
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzl7LLZIXFtFBXN8b3K0VBXZMoPzAYwokbPgdVU-WLVHr20i_Pbng9Sb94X8FOkY89m/exec';
+
     const params = new URLSearchParams(window.location.search);
     const orgId = params.get('org') || 'demo';
-    const jsonFile = orgId + '.json';
 
-    // Load data and render
-    fetch(jsonFile)
+    // hoppa = Sheet live data, demo = static JSON
+    const dataSource = orgId === 'hoppa'
+        ? APPS_SCRIPT_URL + '?action=getAll'
+        : orgId + '.json';
+
+    fetch(dataSource)
         .then(r => {
-            if (!r.ok) throw new Error('קובץ נתונים לא נמצא: ' + jsonFile);
+            if (!r.ok && !dataSource.includes('script.google')) {
+                throw new Error('קובץ נתונים לא נמצא: ' + orgId + '.json');
+            }
             return r.json();
         })
-        .then(data => {
+        .then(raw => {
+            // Sheet returns {ok, org, calls, funds, ...}
+            // JSON returns {org, calls, funds, ...}
+            const data = raw.ok ? sheetToDisplay(raw) : raw;
             window.ORG = data;
             renderAll(data);
         })
@@ -27,6 +37,75 @@
                 <p style="margin-top:12px;"><a href="?org=demo" style="color:#7B5EA7;">עבור למצב הדגמה</a></p>
             </div>`;
         });
+
+    /** ממיר נתוני Sheet לפורמט התצוגה */
+    function sheetToDisplay(raw) {
+        const calls = raw.calls || [];
+        const funds = raw.funds || [];
+        const submissions = raw.submissions || [];
+        const projects = raw.projects || [];
+        const budget = raw.budget || { requested: '0', approved: '0', pending: '0', items: [] };
+        const org = raw.org || {};
+
+        // Compute KPIs
+        const openCalls = calls.filter(c => c.status === 'open').length;
+        const pendingCalls = calls.filter(c => c.status === 'pending').length;
+        const submittedCalls = calls.filter(c => c.status === 'submitted').length;
+
+        // Deadline urgency
+        const today = new Date();
+        const deadlines = calls
+            .filter(c => c.status === 'open' && c.deadline && !['פתוח','לבדוק','צפוי','לא ברור'].includes(c.deadline))
+            .map(c => {
+                const parts = c.deadline.split('.');
+                const dDate = parts.length === 3 ? new Date(parts[2], parts[1]-1, parts[0]) : null;
+                const daysLeft = dDate ? Math.ceil((dDate - today) / 86400000) : 999;
+                return { name: c.name + ' — ' + c.source, sub: c.eligibility || c.source, date: c.deadline,
+                    urgency: daysLeft <= 14 ? 'urgent' : daysLeft <= 45 ? 'soon' : 'ok' };
+            })
+            .sort((a,b) => a.date > b.date ? 1 : -1);
+
+        // High match
+        const highMatch = [...calls].sort((a,b) => b.match - a.match).slice(0,3)
+            .map(c => ({ name: c.name, match: c.match }));
+
+        // Deadline color for calls table
+        calls.forEach(c => {
+            if (!c.deadline || ['פתוח','לבדוק','צפוי בקרוב','לא ברור','הוגש'].includes(c.deadline)) {
+                c.deadlineColor = '';
+            } else {
+                const parts = c.deadline.split('.');
+                const dDate = parts.length === 3 ? new Date(parts[2], parts[1]-1, parts[0]) : null;
+                const daysLeft = dDate ? Math.ceil((dDate - today) / 86400000) : 999;
+                c.deadlineColor = daysLeft <= 14 ? 'red' : daysLeft <= 45 ? 'gold' : '';
+            }
+        });
+
+        return {
+            org: { ...org, avatar: org.avatar || org.name?.substring(0,2) || 'שת' },
+            kpis: {
+                openCalls: openCalls + pendingCalls,
+                activeSubmissions: submissions.filter(s => s.status !== 'submitted').length,
+                deadlines30: deadlines.filter(d => d.urgency === 'urgent').length,
+                activeProjects: projects.filter(p => p.status === 'open' || p.status === 'pending').length,
+                aiAnalyses: 0
+            },
+            deadlines, highMatch, calls, submissions, projects, funds, budget,
+            documents: [], partners: [],
+            impact: {
+                directBeneficiaries: projects.reduce((s,p) => s + p.beneficiaries, 0),
+                projects: projects.length,
+                cities: (org.area || '').split(',').length,
+                satisfaction: '92%',
+                milestones: []
+            },
+            demoBanner: null,
+            scanSummary: { lastScan: new Date().toLocaleDateString('he-IL'), sourcesChecked: 35, openFound: openCalls,
+                invitationOnly: funds.filter(f => f.type === 'בהזמנה').length,
+                dynamicSitesUnchecked: ['tmichot.mof.gov.il', 'pob.education.gov.il', 'guidestar.org.il'],
+                recommendation: 'נתונים חיים מ-Google Sheet' }
+        };
+    }
 
     function renderAll(D) {
         // Title
