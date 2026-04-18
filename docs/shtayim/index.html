@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>שתיים — מערכת ניהול</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@100;300;400;500;600;700;900&family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --plum: #7B5EA7;
+            --plum-dark: #5A3D8A;
+            --plum-deep: #3E2668;
+            --plum-light: #F3EEF9;
+            --coral: #E8836B;
+            --coral-dark: #D06A52;
+            --coral-light: #FDF0ED;
+            --sand: #F9F6F1;
+            --cream: #FFFCF8;
+            --charcoal: #2D2B3A;
+            --gray: #6B6980;
+            --gray-light: #A8A5B5;
+            --mint: #5BBF9E;
+            --gold: #D4A843;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background: #0D0A14;
+            color: var(--cream);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== AMBIENT ===== */
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(123,94,167,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(123,94,167,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-noise {
+            position: fixed;
+            inset: 0;
+            opacity: 0.025;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ===== HEADER ===== */
+        header {
+            position: relative;
+            z-index: 2;
+            padding: 48px 60px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-dots {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+
+        .logo-dot.p { background: var(--plum); box-shadow: 0 0 12px rgba(123,94,167,0.4); }
+        .logo-dot.c { background: var(--coral); box-shadow: 0 0 12px rgba(232,131,107,0.4); }
+
+        .logo-bridge {
+            width: 16px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--plum), var(--coral));
+            border-radius: 1px;
+        }
+
+        .logo-name {
+            font-family: 'Rubik', sans-serif;
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff, rgba(255,255,255,0.7));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-meta {
+            font-size: 13px;
+            color: rgba(255,255,255,0.3);
+            text-align: left;
+        }
+
+        .header-meta span {
+            color: rgba(255,255,255,0.5);
+            font-weight: 500;
+        }
+
+        /* ===== TAGLINE ===== */
+        .tagline-bar {
+            position: relative;
+            z-index: 2;
+            padding: 0 60px 40px;
+        }
+
+        .tagline-bar p {
+            font-size: 18px;
+            font-weight: 300;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .tagline-bar .glow {
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
+        }
+
+        /* ===== STATS BAR ===== */
+        .stats-bar {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            gap: 16px;
+            padding: 0 60px 40px;
+        }
+
+        .stat-pill {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            padding: 16px 24px;
+            flex: 1;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+
+        .stat-pill:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+
+        .stat-pill .sp-num {
+            font-family: 'Rubik', sans-serif;
+            font-size: 28px;
+            font-weight: 900;
+        }
+
+        .stat-pill:nth-child(1) .sp-num { color: var(--plum); }
+        .stat-pill:nth-child(2) .sp-num { color: var(--coral); }
+        .stat-pill:nth-child(3) .sp-num { color: var(--mint); }
+        .stat-pill:nth-child(4) .sp-num { color: var(--gold); }
+
+        .stat-pill .sp-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+            margin-top: 2px;
+        }
+
+        /* ===== SECTION TITLE ===== */
+        .section-header {
+            position: relative;
+            z-index: 2;
+            padding: 24px 60px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-header h2 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .section-header .section-line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.1), transparent);
+        }
+
+        .section-header .section-tag {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--coral);
+        }
+
+        /* ===== CARDS GRID ===== */
+        .cards-grid {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+            padding: 0 60px 32px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            padding: 28px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .card.plum::before { background: var(--plum); }
+        .card.coral::before { background: var(--coral); }
+        .card.mint::before { background: var(--mint); }
+        .card.gold::before { background: var(--gold); }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .card.plum .card-icon { background: rgba(123,94,167,0.15); }
+        .card.coral .card-icon { background: rgba(232,131,107,0.15); }
+        .card.mint .card-icon { background: rgba(91,191,158,0.15); }
+        .card.gold .card-icon { background: rgba(212,168,67,0.15); }
+
+        .card h3 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .card .card-desc {
+            font-size: 13px;
+            color: rgba(255,255,255,0.4);
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .card .card-status {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+        }
+
+        .status-ready {
+            background: rgba(91,191,158,0.12);
+            color: var(--mint);
+        }
+
+        .status-wip {
+            background: rgba(212,168,67,0.12);
+            color: var(--gold);
+        }
+
+        .status-planned {
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.35);
+        }
+
+        .card .card-arrow {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .card:hover .card-arrow {
+            background: rgba(255,255,255,0.1);
+            transform: translateX(-4px);
+        }
+
+        /* ===== FOUNDERS ===== */
+        .founders-bar {
+            position: relative;
+            z-index: 2;
+            padding: 16px 60px 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+        }
+
+        .founder-chip {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 40px;
+            padding: 8px 20px 8px 8px;
+        }
+
+        .founder-av {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Rubik', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .founder-chip:first-child .founder-av {
+            background: linear-gradient(135deg, var(--plum), var(--plum-dark));
+        }
+
+        .founder-chip:last-child .founder-av {
+            background: linear-gradient(135deg, var(--coral), var(--coral-dark));
+        }
+
+        .founder-chip .fc-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .founder-chip .fc-role {
+            font-size: 11px;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .founders-connector {
+            font-family: 'Rubik', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ===== QUICK ACTIONS ===== */
+        .quick-actions {
+            position: relative;
+            z-index: 2;
+            padding: 0 60px 40px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .qa-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+            font-family: 'Heebo', sans-serif;
+        }
+
+        .qa-btn.primary {
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            color: #fff;
+        }
+
+        .qa-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(123,94,167,0.3);
+        }
+
+        .qa-btn.secondary {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
+        }
+
+        .qa-btn.secondary:hover {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        /* ===== CHECKLIST ===== */
+        .checklist {
+            position: relative;
+            z-index: 2;
+            padding: 0 60px 40px;
+        }
+
+        .check-list {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .check-item:last-child { border-bottom: none; }
+
+        .check-item:hover {
+            padding-right: 8px;
+        }
+
+        .check-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 2px solid rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .check-item.done .check-box {
+            background: var(--mint);
+            border-color: var(--mint);
+        }
+
+        .check-item.done .check-box::after {
+            content: '';
+            width: 6px;
+            height: 10px;
+            border: 2px solid #fff;
+            border-top: none;
+            border-right: none;
+            transform: rotate(-45deg);
+            margin-top: -2px;
+        }
+
+        .check-item .check-text {
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            flex: 1;
+        }
+
+        .check-item.done .check-text {
+            text-decoration: line-through;
+            color: rgba(255,255,255,0.25);
+        }
+
+        .check-item .check-date {
+            font-size: 11px;
+            color: rgba(255,255,255,0.2);
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            position: relative;
+            z-index: 2;
+            padding: 24px 60px;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255,255,255,0.15);
+            border-top: 1px solid rgba(255,255,255,0.04);
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+        }
+
+        .fade-in:nth-child(1) { animation-delay: 0.05s; }
+        .fade-in:nth-child(2) { animation-delay: 0.1s; }
+        .fade-in:nth-child(3) { animation-delay: 0.15s; }
+        .fade-in:nth-child(4) { animation-delay: 0.2s; }
+        .fade-in:nth-child(5) { animation-delay: 0.25s; }
+        .fade-in:nth-child(6) { animation-delay: 0.3s; }
+    </style>
+</head>
+<body>
+
+<!-- Ambient -->
+<div class="bg-orb" style="width:500px;height:500px;background:var(--plum);top:-150px;right:-100px;opacity:0.1;"></div>
+<div class="bg-orb" style="width:400px;height:400px;background:var(--coral);bottom:-100px;left:-50px;opacity:0.07;"></div>
+<div class="bg-grid"></div>
+<div class="bg-noise"></div>
+
+<!-- Header -->
+<header>
+    <div class="logo-area">
+        <div class="logo-dots">
+            <div class="logo-dot p"></div>
+            <div class="logo-bridge"></div>
+            <div class="logo-dot c"></div>
+        </div>
+        <div class="logo-name">שתיים</div>
+    </div>
+    <div class="header-meta">
+        <span>מיטל פלג</span> · <span>לירון</span><br>
+        מערכות דיגיטליות לעמותות
+    </div>
+</header>
+
+<!-- Tagline -->
+<div class="tagline-bar">
+    <p><span class="glow">שתיים בונות</span> — עמותות גדלות. פחות תקציב. יותר מערכת.</p>
+</div>
+
+<!-- Stats -->
+<div class="stats-bar">
+    <div class="stat-pill fade-in">
+        <div class="sp-num">2</div>
+        <div class="sp-label">מסמכים מוכנים</div>
+    </div>
+    <div class="stat-pill fade-in">
+        <div class="sp-num">10</div>
+        <div class="sp-label">מערכות בקטלוג</div>
+    </div>
+    <div class="stat-pill fade-in">
+        <div class="sp-num">0</div>
+        <div class="sp-label">לקוחות (טרם התחלנו)</div>
+    </div>
+    <div class="stat-pill fade-in">
+        <div class="sp-num">90</div>
+        <div class="sp-label">ימים לתוכנית ראשונה</div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="quick-actions">
+    <a href="proposal.html" class="qa-btn primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        צפייה בהצעה העסקית
+    </a>
+    <a href="brand-book.html" class="qa-btn secondary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        ערכת מיתוג
+    </a>
+</div>
+
+<!-- Documents -->
+<div class="section-header">
+    <h2>מסמכים</h2>
+    <div class="section-line"></div>
+    <span class="section-tag">תוצרים</span>
+</div>
+
+<div class="cards-grid">
+    <a href="proposal.html" class="card coral fade-in">
+        <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8836B" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <h3>הצעה עסקית</h3>
+        <div class="card-desc">מצגת 10 שקפים — שוק, מערכות, מודל עסקי, תחזית הכנסות, תוכנית 90 ימים</div>
+        <span class="card-status status-ready">מוכן</span>
+        <div class="card-arrow">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+    </a>
+
+    <a href="brand-book.html" class="card plum fade-in">
+        <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B5EA7" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+        </div>
+        <h3>ערכת מיתוג</h3>
+        <div class="card-desc">13 שקפים — סיפור, מיצוב, BrandScript, סלוגן, צבעים, טיפוגרפיה, לוגו, קול המותג</div>
+        <span class="card-status status-ready">מוכן</span>
+        <div class="card-arrow">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+    </a>
+
+    <div class="card mint fade-in">
+        <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5BBF9E" stroke-width="1.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <h3>Case Study — הופה</h3>
+        <div class="card-desc">תיעוד פיילוט: לפני / אחרי, מערכות שנבנו, חיסכון שהושג</div>
+        <span class="card-status status-planned">מתוכנן — שבוע 3</span>
+    </div>
+
+    <div class="card gold fade-in">
+        <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A843" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+        </div>
+        <h3>דף נחיתה</h3>
+        <div class="card-desc">דף שיווקי לעמותות — מי אנחנו, מה אנחנו בונות, טופס יצירת קשר</div>
+        <span class="card-status status-planned">מתוכנן — שבוע 5</span>
+    </div>
+
+    <div class="card plum fade-in">
+        <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7B5EA7" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>קטלוג מערכות</h3>
+        <div class="card-desc">10 מערכות שאנחנו בונות — CRM, מתנדבים, אימפקט, מענקים, אירועים ועוד</div>
+        <span class="card-status status-planned">מתוכנן — שבוע 4</span>
+    </div>
+
+    <div class="card coral fade-in">
+        <div class="card-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E8836B" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </div>
+        <h3>חומרי קורס</h3>
+        <div class="card-desc">"AI לעמותות — בני מערכות בעצמך" — תוכנית 5 מפגשים + חומרים</div>
+        <span class="card-status status-planned">מתוכנן — חודש 3</span>
+    </div>
+</div>
+
+<!-- Checklist -->
+<div class="section-header">
+    <h2>רשימת משימות — 90 ימים</h2>
+    <div class="section-line"></div>
+    <span class="section-tag">תוכנית</span>
+</div>
+
+<div class="checklist">
+    <div class="check-list">
+        <div class="check-item done" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">מחקר שוק — עמותות בישראל</span>
+            <span class="check-date">17.4.2026</span>
+        </div>
+        <div class="check-item done" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">מיפוי 10 מערכות לעמותות</span>
+            <span class="check-date">17.4.2026</span>
+        </div>
+        <div class="check-item done" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">ערכת מיתוג "שתיים"</span>
+            <span class="check-date">17.4.2026</span>
+        </div>
+        <div class="check-item done" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">הצעה עסקית — 10 שקפים</span>
+            <span class="check-date">17.4.2026</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">פגישה עם לירון — אישור כיוון</span>
+            <span class="check-date">שבוע 1</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">מיפוי מערכות שכל אחת בנתה — חפיפות ופערים</span>
+            <span class="check-date">שבוע 1-2</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">חלוקת תפקידים + הקמת עוסק/שותפות</span>
+            <span class="check-date">שבוע 2</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">פיילוט הופה — 2-3 מערכות</span>
+            <span class="check-date">שבוע 3-4</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">case study + צילומי מסך לפני/אחרי</span>
+            <span class="check-date">שבוע 4</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">3 תבניות סטנדרטיות</span>
+            <span class="check-date">שבוע 5-6</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">דף נחיתה + נוכחות דיגיטלית</span>
+            <span class="check-date">שבוע 5</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">3 עמותות פיילוט — testimonials</span>
+            <span class="check-date">שבוע 7-8</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">קורס ראשון "AI לעמותות"</span>
+            <span class="check-date">חודש 3</span>
+        </div>
+        <div class="check-item" onclick="this.classList.toggle('done')">
+            <div class="check-box"></div>
+            <span class="check-text">2 לקוחות חבילה משלמים</span>
+            <span class="check-date">חודש 3</span>
+        </div>
+    </div>
+</div>
+
+<!-- Founders -->
+<div class="founders-bar">
+    <div class="founder-chip">
+        <div class="founder-av">מ</div>
+        <div>
+            <div class="fc-name">מיטל פלג</div>
+            <div class="fc-role">Learni · אורט בית הערבה</div>
+        </div>
+    </div>
+    <div class="founders-connector">שתיים</div>
+    <div class="founder-chip">
+        <div class="founder-av">ל</div>
+        <div>
+            <div class="fc-name">לירון</div>
+            <div class="fc-role">מנכ"לית עמותת הופה</div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    שתיים · מערכות דיגיטליות לעמותות · 2026
+</footer>
+
+</body>
+</html>
