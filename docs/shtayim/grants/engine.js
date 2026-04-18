@@ -103,7 +103,8 @@
             scanSummary: { lastScan: new Date().toLocaleDateString('he-IL'), sourcesChecked: 35, openFound: openCalls,
                 invitationOnly: funds.filter(f => f.type === 'בהזמנה').length,
                 dynamicSitesUnchecked: ['tmichot.mof.gov.il', 'pob.education.gov.il', 'guidestar.org.il'],
-                recommendation: 'נתונים חיים מ-Google Sheet' }
+                recommendation: 'נתונים חיים מ-Google Sheet',
+                routineUrl: 'https://claude.ai/code/scheduled/trig_01LvA9d931yr6xEgEq5XSFkV' }
         };
     }
 
@@ -259,7 +260,8 @@
                 ${D.scanSummary.dynamicSitesUnchecked ? `<p style="font-size:12px;color:var(--gold);background:var(--gold-light);padding:8px 12px;border-radius:8px;margin-bottom:10px;">
                     <strong>לבדוק ידנית:</strong> ${D.scanSummary.dynamicSitesUnchecked.join(', ')}
                 </p>` : ''}
-                <p style="font-size:12px;color:var(--gray);">${D.scanSummary.recommendation || ''}</p>`;
+                <p style="font-size:12px;color:var(--gray);">${D.scanSummary.recommendation || ''}</p>
+                ${D.scanSummary.routineUrl ? '<a href="'+D.scanSummary.routineUrl+'" target="_blank" class="btn btn-sm btn-outline" style="margin-top:10px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2"/></svg> מעקב סוכן סריקה</a>' : ''}`;
         } else if (scanPanel) {
             scanPanel.style.display = 'none';
         }
