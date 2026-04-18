@@ -380,7 +380,7 @@ body::before{content:'';position:fixed;inset:0;
 <div id="dashView" class="container hidden">
   <div id="counselorSummary"></div>
   <div class="kpi-bar" id="kpiBar"></div>
-  <div id="ymTodaySection"></div>
+  <div id="ymFullSection"></div>
   <div id="meetingsSection"></div>
   <div class="toolbar" id="toolbar">
     <a class="tool-btn" href="monthly-reports.html">
@@ -643,7 +643,7 @@ async function enrichStudents(){
 }
 
 // ==================== RENDER ====================
-function render(){renderCounselorSummary();renderKPI();renderClassFilters();renderYmToday();renderMeetings();renderCards()}
+function render(){renderCounselorSummary();renderKPI();renderClassFilters();renderYmFull();renderMeetings();renderCards()}
 
 function renderCounselorSummary(){
   const sec=document.getElementById('counselorSummary');
@@ -701,29 +701,67 @@ function renderKPI(){
     <div class="kpi"><div class="kpi-n" style="color:${la?'var(--danger)':'var(--success)'}">${la}</div><div class="kpi-l">נוכחות נמוכה</div></div>`;
 }
 
-function renderYmToday(){
-  const sec=document.getElementById('ymTodaySection');
+function renderYmFull(){
+  const sec=document.getElementById('ymFullSection');
   const todayName=DAY_NAMES[new Date().getDay()];
+  const nowTime=new Date().getHours().toString().padStart(2,'0')+':'+new Date().getMinutes().toString().padStart(2,'0');
   const myYm=(U.id==='principal')
     ? Object.entries(ymSchedule).flatMap(([cid,arr])=>arr.map(m=>({...m,counselor:COUNSELORS[cid]?.short||cid})))
-    : (ymSchedule[U.id]||[]);
-  const todayMeetings=myYm.filter(m=>m.day===todayName).sort((a,b)=>a.time.localeCompare(b.time));
-  if(!todayMeetings.length){sec.innerHTML='';return;}
-  const nowTime=new Date().getHours().toString().padStart(2,'0')+':'+new Date().getMinutes().toString().padStart(2,'0');
-  let h=`<div class="meetings-bar" style="border-right:4px solid var(--secondary)"><h3><svg viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> פגישות יועץ-מחנך היום</h3>`;
-  todayMeetings.forEach(m=>{
-    const isNext=m.time>nowTime;
-    const bg=isNext?'var(--success-bg)':'var(--bg-alt)';
-    h+=`<div class="meeting-row" style="background:${bg}">
-      <div class="meeting-time">${m.time}</div>
-      <div class="meeting-info"><strong>${m.cls}</strong> — ${m.teacher}${m.counselor?' <span style="font-size:.72rem;color:var(--muted)">('+m.counselor+')</span>':''}</div>
-      <span style="font-size:.78rem;color:var(--muted)">${m.room||''}</span>
-      <button class="btn btn-o btn-sm" onclick="sendYmReminder('${m.cls}','${m.teacher}','${m.time}','${m.counselor||U.short}')" title="שלח תזכורת" aria-label="שלח תזכורת WhatsApp">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-      </button>
+    : (ymSchedule[U.id]||[]).map(m=>({...m,counselor:U.short}));
+
+  let h=`<div style="background:linear-gradient(135deg,rgba(58,172,160,.06),rgba(142,126,212,.06));border:2px solid var(--secondary);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px;animation:fadeInUp .4s ease">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+      <h3 style="font-family:var(--font-heading);font-size:1.15rem;font-weight:900;display:flex;align-items:center;gap:10px;margin:0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        פגישות יועץ-מחנך
+      </h3>
+      <span style="font-size:.78rem;color:var(--muted)">לוח שבועי קבוע</span>
     </div>`;
-  });
-  h+='</div>';sec.innerHTML=h;
+
+  if(!myYm.length){
+    h+='<p style="color:var(--muted);text-align:center;padding:20px">אין פגישות מתוכננות</p>';
+  } else {
+    const dayOrder={'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4};
+    const byDay={};
+    myYm.forEach(m=>{if(!byDay[m.day])byDay[m.day]=[];byDay[m.day].push(m)});
+    const sortedDays=Object.keys(byDay).sort((a,b)=>(dayOrder[a]||0)-(dayOrder[b]||0));
+
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">';
+    sortedDays.forEach(day=>{
+      const isToday=day===todayName;
+      h+=`<div style="background:#fff;border-radius:var(--radius);border:2px solid ${isToday?'var(--success)':'var(--border)'};padding:14px;${isToday?'box-shadow:0 0 0 3px rgba(76,175,80,.15)':''}">
+        <div style="font-weight:800;font-size:.9rem;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          <span style="width:10px;height:10px;border-radius:50%;background:${isToday?'var(--success)':'var(--border)'}"></span>
+          יום ${day} ${isToday?'<span style="font-size:.68rem;color:var(--success);font-weight:700;background:var(--success-bg);padding:2px 8px;border-radius:10px">היום</span>':''}
+        </div>`;
+      byDay[day].sort((a,b)=>a.time.localeCompare(b.time));
+      byDay[day].forEach(m=>{
+        const isNext=isToday&&m.time>nowTime;
+        const isPast=isToday&&m.time<=nowTime;
+        h+=`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;margin-bottom:4px;background:${isNext?'var(--success-bg)':isPast?'var(--bg-alt)':'var(--bg-alt)'};border:1px solid ${isNext?'var(--success)':'transparent'}">
+          <span style="font-weight:800;font-size:.85rem;min-width:42px;color:${isNext?'var(--success)':'var(--text)'}">${m.time}</span>
+          <div style="flex:1;font-size:.82rem">
+            <strong>${m.cls}</strong> <span style="color:var(--muted)">—</span> ${m.teacher}
+            ${U.id==='principal'?'<div style="font-size:.7rem;color:var(--muted)">'+m.counselor+'</div>':''}
+          </div>
+          <button class="btn btn-o btn-sm" style="padding:4px 8px" onclick="sendYmReminder('${m.cls}','${m.teacher}','${m.time}','${m.counselor||U.short}')" title="שלח תזכורת WhatsApp">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+          </button>
+        </div>`;
+      });
+      h+='</div>';
+    });
+    h+='</div>';
+  }
+
+  // Form link settings
+  h+=`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <label style="font-size:.8rem;font-weight:600;color:var(--muted);white-space:nowrap">קישור לטופס דוח:</label>
+    <input type="text" id="ymFormUrlInput" value="${ymFormUrl}" placeholder="https://..." style="flex:1;min-width:200px;padding:6px 12px;border:1px solid var(--border);border-radius:8px;font-size:.82rem;font-family:var(--font-body)" onchange="saveYmFormUrl()">
+  </div>`;
+
+  h+='</div>';
+  sec.innerHTML=h;
 }
 
 function renderMeetings(){
@@ -830,14 +868,13 @@ function renderTabs(){
     {id:'pl',l:'תוכנית',tip:'תוכנית עבודה מותאמת עם יעדים והמלצות'},
     {id:'su',l:'סיכום לתיק',tip:'סיכום חודשי שעובר לתיק התלמיד אחרי אישור'},
     {id:'mt',l:'פגישות',tip:'קביעת פגישות עם הורים + תזכורות WhatsApp'},
-    {id:'ym',l:'יועץ-מחנך',tip:'לוח פגישות שבועי קבוע עם מחנכ/ת'}
   ];
   document.getElementById('dTabs').innerHTML=tabs.map(t=>`<button class="d-tab" role="tab" data-t="${t.id}" onclick="switchTab('${t.id}')" title="${t.tip}" aria-label="${t.l} — ${t.tip}">${t.l}</button>`).join('');
 }
 function switchTab(t){
   document.querySelectorAll('.d-tab').forEach(e=>e.classList.toggle('active',e.dataset.t===t));
   const c=document.getElementById('dContent');
-  const r={bg:tabBg,mo:tabMonthly,cv:tabConv,doc:tabDocs,lt:tabLetters,pl:tabPlan,su:tabSummary,mt:tabMeetings,ym:tabCounselorTeacher};
+  const r={bg:tabBg,mo:tabMonthly,cv:tabConv,doc:tabDocs,lt:tabLetters,pl:tabPlan,su:tabSummary,mt:tabMeetings};
   c.innerHTML=(r[t]||tabBg)();
   if(t==='bg')attachBgEvents();
 }
