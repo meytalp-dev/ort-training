@@ -41,7 +41,7 @@ body::before{content:'';position:fixed;inset:0;
 @keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
 
 /* ===== HEADER ===== */
 .header{background:#fff;padding:0 28px;display:flex;align-items:center;justify-content:space-between;
@@ -154,8 +154,8 @@ body::before{content:'';position:fixed;inset:0;
 
 /* ===== DETAIL PANEL ===== */
 .d-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:150;animation:fadeIn .2s}
-.d-panel{position:fixed;top:0;left:0;width:min(720px,92vw);height:100vh;background:#fff;
-  z-index:151;overflow-y:auto;box-shadow:-8px 0 40px rgba(0,0,0,.12);animation:slideIn .3s ease}
+.d-panel{position:fixed;top:0;right:0;width:min(720px,92vw);height:100vh;background:#fff;
+  z-index:151;overflow-y:auto;box-shadow:8px 0 40px rgba(0,0,0,.12);animation:slideIn .3s ease}
 .d-close{position:sticky;top:0;background:#fff;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;
   border-bottom:1px solid var(--border);z-index:10}
 .d-close h2{font-family:var(--font-heading);font-size:1.15rem;font-weight:800}
@@ -589,6 +589,7 @@ async function doLogin(id){
   document.getElementById('logoutBtn').classList.remove('hidden');
   document.getElementById('hUser').textContent=U.name;
   document.getElementById('hBadge').textContent=U.classes.length+' כיתות';
+  document.getElementById('sGrid').innerHTML='<div style="text-align:center;padding:60px;color:var(--muted)"><span style="display:inline-block;width:20px;height:20px;border:3px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite"></span><div style="margin-top:12px;font-size:.88rem">טוען נתונים...</div></div>';
   await loadData();
   render();
 }
@@ -904,11 +905,12 @@ function renderTabs(){
   ];
   document.getElementById('dTabs').innerHTML=tabs.map(t=>`<button class="d-tab" role="tab" data-t="${t.id}" onclick="switchTab('${t.id}')" title="${t.tip}" aria-label="${t.l} — ${t.tip}">${t.l}</button>`).join('');
 }
-function switchTab(t){
+async function switchTab(t){
   document.querySelectorAll('.d-tab').forEach(e=>e.classList.toggle('active',e.dataset.t===t));
   const c=document.getElementById('dContent');
   const r={bg:tabBg,mo:tabMonthly,cv:tabConv,doc:tabDocs,lt:tabLetters,pl:tabPlan,su:tabSummary,mt:tabMeetings};
-  c.innerHTML=(r[t]||tabBg)();
+  const result=(r[t]||tabBg)();
+  c.innerHTML=(result instanceof Promise)?await result:result;
   if(t==='bg')attachBgEvents();
 }
 
@@ -984,9 +986,11 @@ function tabMonthly(){
 }
 
 // ===== TAB: Conversations =====
-function tabConv(){
+async function tabConv(){
   const s=detailStudent;let convs=[];
-  try{const raw=localStorage.getItem('personal_conversations');convs=(raw?JSON.parse(raw):[]).filter(c=>c.studentName===s.fn||c.studentId===s.sid)}catch(e){}
+  try{let raw=null;try{raw=await cloudStorage.get('personal_conversations',{fallback:null})}catch(e){}
+    if(!raw)raw=JSON.parse(localStorage.getItem('personal_conversations'));
+    convs=(raw||[]).filter(c=>c.studentName===s.fn||c.studentId===s.sid)}catch(e){}
   let h='<div class="sec"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> שיחות מתועדות</h4>';
   if(!convs.length)h+='<p style="color:var(--muted);font-size:.85rem">אין שיחות</p>';
   else{convs.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -1118,9 +1122,9 @@ async function genPlan(){
 }
 
 // ===== TAB: Summary =====
-function tabSummary(){
+async function tabSummary(){
   const s=detailStudent,cm=new Date().toISOString().slice(0,7);
-  let allSums={};try{allSums=JSON.parse(localStorage.getItem('counselor_monthly_summaries'))||{}}catch(e){}
+  let allSums={};try{allSums=await cloudStorage.get('counselor_monthly_summaries',{fallback:null})||JSON.parse(localStorage.getItem('counselor_monthly_summaries'))||{}}catch(e){}
   let sums=allSums[s.sid]||[];
   let h='<div class="sec"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--dream)" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> סיכום חודשי לתיק תלמיד</h4>';
   h+='<p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">אוסף את כל מה שכתבת החודש, מייצר טיוטה שתוכלי לערוך ולאשר.</p>';
@@ -1147,12 +1151,12 @@ function genSummary(){
 }
 async function saveSummary(month,approved){
   const s=detailStudent,txt=document.getElementById('sumTxt').value;
-  let all={};try{all=JSON.parse(localStorage.getItem('counselor_monthly_summaries'))||{}}catch(e){}
+  let all={};try{all=await cloudStorage.get('counselor_monthly_summaries',{fallback:null})||JSON.parse(localStorage.getItem('counselor_monthly_summaries'))||{}}catch(e){}
   if(!all[s.sid])all[s.sid]=[];
   const sum={month,text:txt,approved,date:new Date().toISOString(),by:U.name};
   const ex=all[s.sid].findIndex(x=>x.month===month);if(ex>=0)all[s.sid][ex]=sum;else all[s.sid].push(sum);
-  localStorage.setItem('counselor_monthly_summaries',JSON.stringify(all));
   await cloudStorage.set('counselor_monthly_summaries',all);
+  try{localStorage.setItem('counselor_monthly_summaries',JSON.stringify(all))}catch(e){}
   if(approved){let sh=await cloudStorage.get('counselor_approved_summaries',{fallback:{}})||{};
     if(!sh[s.sid])sh[s.sid]=[];const exi=sh[s.sid].findIndex(x=>x.month===month);if(exi>=0)sh[s.sid][exi]=sum;else sh[s.sid].push(sum);
     await cloudStorage.set('counselor_approved_summaries',sh);}
@@ -1323,81 +1327,7 @@ async function sendWhatsApp(phone,msg){
   }catch(e){console.log('[WhatsApp] Send failed:',e)}
 }
 
-// ==================== COUNSELOR-TEACHER MEETINGS ====================
-
-function tabCounselorTeacher(){
-  const mySchedule=(U.id==='principal')
-    ? Object.entries(ymSchedule).flatMap(([cid,arr])=>arr.map(m=>({...m,counselor:COUNSELORS[cid]?.short||cid})))
-    : (ymSchedule[U.id]||[]).map(m=>({...m,counselor:U.short}));
-
-  let h='<div class="sec"><h4><svg viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> לוח פגישות יועץ-מחנך</h4>';
-  h+='<p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">לוח זמנים שבועי קבוע. 10 דקות לפני כל פגישה נשלחת תזכורת WhatsApp ליועצת ולמחנך/ת עם קישור לטופס.</p>';
-
-  if(!mySchedule.length){
-    h+='<p style="color:var(--muted)">אין פגישות מתוכננות</p>';
-  } else {
-    // Group by day
-    const dayOrder={'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4};
-    const byDay={};
-    mySchedule.forEach(m=>{if(!byDay[m.day])byDay[m.day]=[];byDay[m.day].push(m)});
-    const sortedDays=Object.keys(byDay).sort((a,b)=>(dayOrder[a]||0)-(dayOrder[b]||0));
-
-    // Find next upcoming meeting
-    const now=new Date();
-    const todayDayName=DAY_NAMES[now.getDay()];
-    const nowTime=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-
-    sortedDays.forEach(day=>{
-      const isToday=day===todayDayName;
-      h+=`<div style="margin-bottom:16px">
-        <div style="font-weight:700;font-size:.88rem;margin-bottom:8px;display:flex;align-items:center;gap:8px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${isToday?'var(--success)':'var(--border)'}"></span>
-          יום ${day} ${isToday?'<span style="font-size:.72rem;color:var(--success);font-weight:600">(היום)</span>':''}
-        </div>`;
-      byDay[day].sort((a,b)=>a.time.localeCompare(b.time));
-      byDay[day].forEach(m=>{
-        const isNext=isToday&&m.time>nowTime;
-        const isPast=isToday&&m.time<=nowTime;
-        const borderColor=isNext?'var(--success)':isPast?'var(--border)':'var(--border)';
-        const bgColor=isNext?'var(--success-bg)':'#fff';
-        h+=`<div class="meeting-row" style="border:1px solid ${borderColor};background:${bgColor};border-radius:10px;margin-bottom:6px">
-          <div class="meeting-time" style="min-width:55px;font-weight:700">${m.time}</div>
-          <div class="meeting-info" style="flex:1">
-            <strong>${m.cls}</strong> — ${m.teacher}
-            ${U.id==='principal'?'<span style="font-size:.72rem;color:var(--muted)"> ('+m.counselor+')</span>':''}
-          </div>
-          <span style="font-size:.78rem;color:var(--muted)">${m.room||''}</span>
-          <button class="btn btn-o btn-sm" onclick="sendYmReminder('${m.cls}','${m.teacher}','${m.time}','${m.counselor||U.short}')" title="שלח תזכורת עכשיו">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-          </button>
-        </div>`;
-      });
-      h+='</div>';
-    });
-  }
-
-  // Settings area
-  h+=`<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-    <h5 style="font-size:.85rem;font-weight:700;margin-bottom:10px">הגדרות</h5>
-    <div class="fr">
-      <div class="fg full"><label>קישור לטופס פגישת יועץ-מחנך (יישלח בתזכורת)</label>
-        <input type="text" id="ymFormUrlInput" value="${ymFormUrl}" placeholder="https://...הקישור לטופס שמיטל בונה..." onchange="saveYmFormUrl()">
-      </div>
-    </div>
-    <p style="font-size:.78rem;color:var(--muted);margin-top:6px">כשמיטל תגדיר את הלו"ז המדויק — התזכורות יישלחו אוטומטית 10 דקות לפני כל פגישה.</p>
-  </div>`;
-
-  h+='</div>';
-
-  // Demo banner
-  h+=`<div style="background:var(--info-bg);border:1px solid var(--info);border-radius:var(--radius);padding:16px;margin-top:12px">
-    <strong style="font-size:.85rem;color:var(--info)">מצב דמו</strong>
-    <p style="font-size:.82rem;color:var(--text-light);margin-top:4px">הלוח מציג לו"ז לדוגמה. כשתשלחי את הלו"ז המדויק — אעדכן, וכל יועצת תראה את הפגישות שלה בלבד.</p>
-    <button class="btn btn-o btn-sm" onclick="testYmReminder()" style="margin-top:8px">שלח תזכורת לדוגמה (רק לקונסול)</button>
-  </div>`;
-
-  return h;
-}
+// ==================== COUNSELOR-TEACHER REMINDERS ====================
 
 async function sendYmReminder(cls,teacher,time,counselorName){
   if(!confirm(`לשלוח תזכורת WhatsApp?\n\nפגישת יועץ-מחנך — כיתה ${cls}\nשעה: ${time}\n\nיישלח ל:\n• ${teacher} (מחנך/ת)\n• ${counselorName} (יועצת)`))return;
@@ -1459,7 +1389,7 @@ function openYmMeeting(cls,teacher,counselor){
   clsStudents.forEach(s=>{
     const ac=s.att===null?'—':s.att+'%';
     const acColor=s.att===null?'var(--muted)':s.att>=85?'var(--success)':s.att>=70?'var(--warn)':'var(--danger)';
-    const avg=GRADES[s.fn]?GRADES[s.fn].avg2||GRADES[s.fn].avg1||null:null;
+    const avg=GRADES[s.last+' '+s.first]?(GRADES[s.last+' '+s.first].avg2||GRADES[s.last+' '+s.first].avg1||null):null;
     const avgStr=avg!==null?avg.toFixed(0):'—';
     const avgColor=avg===null?'var(--muted)':avg>=70?'var(--success)':avg>=55?'var(--warn)':'var(--danger)';
     const topLine=s.status==='red'?'var(--danger)':s.status==='yellow'?'var(--warn)':'var(--border)';
@@ -1536,7 +1466,7 @@ async function genYmPlan(sid,cls,teacher,counselor,today){
   await new Promise(r=>setTimeout(r,800));
 
   const goals=[],recs=[],actions=[];
-  const avg=GRADES[s.fn]?GRADES[s.fn].avg2||GRADES[s.fn].avg1||null:null;
+  const avg=GRADES[s.last+' '+s.first]?(GRADES[s.last+' '+s.first].avg2||GRADES[s.last+' '+s.first].avg1||null):null;
 
   // Academic
   if(avg!==null&&avg<55){goals.push('שיפור ממוצע ציונים מ-'+avg.toFixed(0)+' ל-60+');actions.push({act:'בניית תוכנית לימודית מותאמת',owner:teacher,cat:'לימודי'})}
