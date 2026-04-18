@@ -98,6 +98,11 @@ function doPost(e) {
       return respond({ ok: true, saved: count });
     }
 
+    if (action === 'clearDemo') {
+      clearDemoData_(ss);
+      return respond({ ok: true, cleared: ['הגשות', 'פרויקטים', 'תקציב'] });
+    }
+
     return respond({ error: 'unknown action' });
   } catch (err) {
     return respond({ error: err.message });
@@ -308,6 +313,21 @@ function updateProfile_(ss, profile) {
       sheet.getRange(i + 1, 2).setValue(fields[key]);
     }
   }
+}
+
+// ╔══════════════════════════════════════════════╗
+// ║           ניקוי נתוני דמו                     ║
+// ╚══════════════════════════════════════════════╝
+
+/** מנקה הגשות, פרויקטים ותקציב — משאיר רק כותרות */
+function clearDemoData_(ss) {
+  ['הגשות', 'פרויקטים', 'תקציב'].forEach(name => {
+    const sheet = ss.getSheetByName(name);
+    if (sheet && sheet.getLastRow() > 1) {
+      sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+    }
+  });
+  Logger.log('נתוני דמו נוקו: הגשות, פרויקטים, תקציב');
 }
 
 // ╔══════════════════════════════════════════════╗
