@@ -616,9 +616,31 @@ async function loadData(){
   meetingsData=meetings||{};availSlots=avail||DEFAULT_AVAIL;
   ymSchedule=ym||DEMO_YM_SCHEDULE;ymFormUrl=ymUrl||'';
 
-  try{monthlyData=JSON.parse(localStorage.getItem('ort_monthly_reports_v3'))||null}catch(e){monthlyData=null}
-  try{attData=JSON.parse(localStorage.getItem('ort-attendance'))||null}catch(e){attData=null}
-  try{discData=JSON.parse(localStorage.getItem('discipline_events'))||null}catch(e){discData=null}
+  // Load cross-system data from cloudStorage (fallback: localStorage)
+  // Monthly reports: new format stores per-class (ort_reports_class_ט1, etc.)
+  const classIds=U.classes;
+  const classKeys=classIds.map(c=>'ort_reports_class_'+c);
+  const [classReports,cloudAtt,cloudDisc]=await Promise.all([
+    cloudStorage.getMany?cloudStorage.getMany(classKeys):Promise.resolve({}),
+    cloudStorage.get('ort-attendance',{fallback:null}),
+    cloudStorage.get('discipline_events',{fallback:null})
+  ]);
+  // Merge per-class reports into monthlyData format
+  monthlyData={students:{}};
+  classIds.forEach(cls=>{
+    const d=classReports['ort_reports_class_'+cls];
+    if(d&&d.students){Object.entries(d.students).forEach(([k,v])=>{monthlyData.students[k]=v})}
+  });
+  if(!Object.keys(monthlyData.students).length){
+    // Fallback: legacy key in cloud or localStorage
+    const legacy=await cloudStorage.get('ort_monthly_reports_v3',{fallback:null});
+    if(legacy)monthlyData=legacy;
+    else{try{monthlyData=JSON.parse(localStorage.getItem('ort_monthly_reports_v3'))||null}catch(e){monthlyData=null}}
+  }
+  attData=cloudAtt;
+  if(!attData){try{attData=JSON.parse(localStorage.getItem('ort-attendance'))||null}catch(e){attData=null}}
+  discData=cloudDisc;
+  if(!discData){try{discData=JSON.parse(localStorage.getItem('discipline_events'))||null}catch(e){discData=null}}
 
   await enrichStudents();
 }
