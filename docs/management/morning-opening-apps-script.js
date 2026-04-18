@@ -39,6 +39,16 @@ const FORM_URL = 'https://meytalp-dev.github.io/ort-training/management/morning-
 const DAY_NAMES_HEB = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
 
 // ╔══════════════════════════════════════════════╗
+// ║           פונקציית עזר — תאריך בטוח          ║
+// ╚══════════════════════════════════════════════╝
+
+/** מחזיר תאריך בפורמט yyyy-MM-dd לפי timezone של ה-Sheet (בלי באגי UTC) */
+function formatDateSafe_(date) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  return Utilities.formatDate(date, ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd');
+}
+
+// ╔══════════════════════════════════════════════╗
 // ║           WhatsApp — Green-API                ║
 // ╚══════════════════════════════════════════════╝
 
@@ -165,7 +175,7 @@ function sendDailyReminder() {
   const tomorrow = getNextSchoolDay_();
   if (!tomorrow) { Logger.log('אין יום לימודים מחר'); return; }
 
-  const tomorrowStr = Utilities.formatDate(tomorrow, 'Asia/Jerusalem', 'yyyy-MM-dd');
+  const tomorrowStr = formatDateSafe_(tomorrow);
   const tomorrowTeacher = getTeacherForDate_(ss, tomorrowStr);
   if (!tomorrowTeacher) { Logger.log('אין שיבוץ למחר: ' + tomorrowStr); return; }
 
@@ -173,7 +183,7 @@ function sendDailyReminder() {
   if (!phone) { Logger.log('חסר טלפון עבור: ' + tomorrowTeacher); return; }
 
   const dimText = getDimensionForDate_(tomorrow);
-  const dayName = formatDateHebrew_(tomorrowStr);
+  const dayName = formatDateHebrew_(tomorrow);
 
   const message = `שלום ${tomorrowTeacher},\n\nתזכורת: מחר (${dayName}) את/ה מעביר/ה פתיחת בוקר.${dimText ? '\nהממד: ' + dimText : ''}\n\nמה צריך לעשות?\nלתעד מה תהיה הפתיחה שלך מחר — נושא, סוג פעילות וממד.\nלחצ/י על הקישור, הוא ייפתח ישר בטופס התיעוד:\n${FORM_URL}?tab=form\n\nצריכ/ה רעיונות והשראה?\nיש טאב "בנק רעיונות" ממש ליד טופס התיעוד — שווה להציץ!\n\nבהצלחה!`;
 
@@ -186,7 +196,7 @@ function checkAndNotifyManager() {
   const dayOfWeek = new Date().getDay();
   if (dayOfWeek === 5 || dayOfWeek === 6) return;
 
-  const today = getTodayString_();
+  const today = formatDateSafe_(new Date());
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (getHolidays_().includes(today)) return;
 
@@ -198,7 +208,7 @@ function checkAndNotifyManager() {
     return;
   }
 
-  const msg = `${todayTeacher} לא מילא/ה את טופס פתיחת הבוקר של היום (${formatDateHebrew_(today)}).\n\nקישור לטופס:\n${FORM_URL}`;
+  const msg = `${todayTeacher} לא מילא/ה את טופס פתיחת הבוקר של היום (${formatDateHebrew_(new Date())}).\n\nקישור לטופס:\n${FORM_URL}`;
   sendWhatsApp(MEYTAL_PHONE, msg);
   Logger.log('עדכון נשלח למיטל: ' + todayTeacher + ' לא מילא/ה');
 }
@@ -209,10 +219,12 @@ function checkAndNotifyManager() {
 
 function getTeacherForDate_(ss, dateStr) {
   const sheet = ss.getSheetByName('שיבוצים');
+  const tz = ss.getSpreadsheetTimeZone();
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    const rowDate = Utilities.formatDate(new Date(data[i][0]), 'Asia/Jerusalem', 'yyyy-MM-dd');
-    if (rowDate === dateStr) return data[i][1];
+    if (!data[i][0]) continue;
+    const rowDate = Utilities.formatDate(data[i][0], tz, 'yyyy-MM-dd');
+    if (rowDate === dateStr) return String(data[i][1]).trim();
   }
   return null;
 }
@@ -249,7 +261,7 @@ function getNextSchoolDay_() {
 
   const holidays = getHolidays_();
   for (let i = 0; i < 30; i++) {
-    const checkStr = Utilities.formatDate(next, 'Asia/Jerusalem', 'yyyy-MM-dd');
+    const checkStr = formatDateSafe_(next);
     const checkDay = next.getDay();
     if (checkDay >= 0 && checkDay <= 4 && !holidays.includes(checkStr)) return next;
     next.setDate(next.getDate() + 1);
@@ -277,13 +289,9 @@ function getDimensionForDate_(date) {
   return '';
 }
 
-function getTodayString_() {
-  return Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'yyyy-MM-dd');
-}
-
-function formatDateHebrew_(dateStr) {
-  const d = new Date(dateStr);
-  return `יום ${DAY_NAMES_HEB[d.getDay()]}, ${d.getDate()}/${d.getMonth() + 1}`;
+/** מקבל אובייקט Date, מחזיר "יום ראשון, 19/4" */
+function formatDateHebrew_(date) {
+  return `יום ${DAY_NAMES_HEB[date.getDay()]}, ${date.getDate()}/${date.getMonth() + 1}`;
 }
 
 // ╔══════════════════════════════════════════════╗
@@ -295,12 +303,14 @@ function formatDateHebrew_(dateStr) {
  */
 function updateScheduleYoavMiluim() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tz = ss.getSpreadsheetTimeZone();
   const sheet = ss.getSheetByName('שיבוצים');
   const data = sheet.getDataRange().getValues();
 
   const keepRows = [];
   for (let i = 1; i < data.length; i++) {
-    const dateStr = Utilities.formatDate(new Date(data[i][0]), 'Asia/Jerusalem', 'yyyy-MM-dd');
+    if (!data[i][0]) continue;
+    const dateStr = Utilities.formatDate(data[i][0], tz, 'yyyy-MM-dd');
     if (dateStr < '2026-04-14') keepRows.push([dateStr, data[i][1]]);
   }
 
@@ -457,7 +467,7 @@ function initialSetup() {
   ];
 
   const holidays = getHolidays_();
-  const schedRows = generateScheduleRows_(staffWithDays, new Date(2026,3,9), new Date(2026,5,19), holidays);
+  const schedRows = generateScheduleRows_(staffWithDays, new Date(2026,3,6), new Date(2026,5,19), holidays);
 
   if (schedRows.length > 0) {
     schedSheet.getRange(2, 1, schedRows.length, 2).setValues(schedRows);
@@ -497,7 +507,10 @@ function testManagerNotify() { checkAndNotifyManager(); }
 
 function showSchedule() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tz = ss.getSpreadsheetTimeZone();
   const sheet = ss.getSheetByName('שיבוצים');
   const data = sheet.getDataRange().getValues();
-  data.slice(1).forEach(row => Logger.log(row[0] + ' → ' + row[1]));
+  data.slice(1).forEach(row => {
+    if (row[0]) Logger.log(Utilities.formatDate(row[0], tz, 'yyyy-MM-dd') + ' → ' + row[1]);
+  });
 }
