@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>שתיים — מערכת גיוס משאבים</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@100;300;400;500;600;700;800;900&family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --plum: #7B5EA7;
+            --plum-dark: #5A3D8A;
+            --plum-deep: #3E2668;
+            --plum-light: #F3EEF9;
+            --plum-muted: #9B85BE;
+            --coral: #E8836B;
+            --coral-dark: #D06A52;
+            --coral-light: #FDF0ED;
+            --sand: #F9F6F1;
+            --cream: #FFFCF8;
+            --charcoal: #2D2B3A;
+            --gray: #6B6980;
+            --gray-light: #A8A5B5;
+            --gray-lighter: #E8E6EE;
+            --mint: #5BBF9E;
+            --mint-light: #E8F7F1;
+            --gold: #D4A843;
+            --gold-light: #FDF5E3;
+            --red: #E85B5B;
+            --red-light: #FDEDED;
+            --bg-dark: #0D0A14;
+            --sidebar-w: 260px;
+            --header-h: 64px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Heebo', sans-serif; background: var(--sand); color: var(--charcoal); line-height: 1.6; overflow-x: hidden; }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--bg-dark);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto;
+        }
+        .sidebar.collapsed { transform: translateX(100%); }
+
+        .sidebar-logo {
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sidebar-logo .circles { display: flex; align-items: center; gap: 6px; }
+        .sidebar-logo .circle {
+            width: 24px; height: 24px; border-radius: 50%;
+            border: 1.5px solid rgba(255,255,255,0.25);
+        }
+        .sidebar-logo .circle.p { background: radial-gradient(circle at 30% 30%, rgba(123,94,167,0.7), rgba(123,94,167,0.15)); }
+        .sidebar-logo .circle.c { background: radial-gradient(circle at 30% 30%, rgba(232,131,107,0.7), rgba(232,131,107,0.15)); }
+        .sidebar-logo .bridge { width: 12px; height: 1.5px; background: linear-gradient(90deg, var(--plum), var(--coral)); border-radius: 1px; }
+        .sidebar-logo .brand { font-family: 'Rubik', sans-serif; font-size: 18px; font-weight: 800; color: white; }
+        .sidebar-logo .sub { font-size: 11px; color: rgba(255,255,255,0.35); font-weight: 300; }
+
+        .sidebar-org {
+            padding: 14px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-org .avatar {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Rubik', sans-serif; font-size: 13px; font-weight: 700; color: white;
+        }
+        .sidebar-org .org-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); }
+        .sidebar-org .org-plan { font-size: 10px; color: var(--coral); font-weight: 500; }
+
+        .sidebar-section { padding: 16px 0 8px; }
+        .sidebar-section-title {
+            padding: 0 24px;
+            font-size: 10px; font-weight: 600;
+            letter-spacing: 2px; text-transform: uppercase;
+            color: rgba(255,255,255,0.2);
+            margin-bottom: 6px;
+        }
+
+        .sidebar-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 24px;
+            color: rgba(255,255,255,0.45);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            font-weight: 400;
+            border-right: 3px solid transparent;
+            position: relative;
+        }
+        .sidebar-item:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.03); }
+        .sidebar-item.active {
+            color: white;
+            background: rgba(123,94,167,0.12);
+            border-right-color: var(--coral);
+            font-weight: 600;
+        }
+        .sidebar-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.6; }
+        .sidebar-item.active svg { opacity: 1; }
+        .sidebar-item .badge {
+            margin-right: auto;
+            font-size: 10px; font-weight: 700;
+            padding: 2px 8px; border-radius: 10px;
+            background: rgba(232,131,107,0.15); color: var(--coral);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 16px 24px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            font-size: 10px; color: rgba(255,255,255,0.15);
+            text-align: center;
+        }
+
+        /* ===== MAIN ===== */
+        .main-wrapper {
+            margin-right: var(--sidebar-w);
+            min-height: 100vh;
+            transition: margin-right 0.3s;
+        }
+        .main-wrapper.full { margin-right: 0; }
+
+        .header {
+            height: var(--header-h);
+            background: white;
+            border-bottom: 1px solid var(--gray-lighter);
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .header-toggle {
+            display: none;
+            width: 36px; height: 36px; border-radius: 10px;
+            border: 1px solid var(--gray-lighter);
+            background: white; cursor: pointer;
+            align-items: center; justify-content: center;
+        }
+        .header-toggle svg { width: 18px; height: 18px; color: var(--gray); }
+
+        .header-title {
+            font-family: 'Rubik', sans-serif;
+            font-size: 18px; font-weight: 700; color: var(--charcoal);
+        }
+        .header-breadcrumb {
+            font-size: 12px; color: var(--gray-light);
+            margin-right: auto;
+        }
+        .header-user {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .header-user .avatar-sm {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--plum-light);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700; color: var(--plum);
+        }
+
+        .content { padding: 28px 32px; max-width: 1200px; }
+
+        /* ===== CARDS ===== */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .kpi-card {
+            background: white;
+            border: 1px solid rgba(123,94,167,0.06);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(123,94,167,0.08); }
+        .kpi-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .kpi-icon.plum { background: var(--plum-light); }
+        .kpi-icon.coral { background: var(--coral-light); }
+        .kpi-icon.mint { background: var(--mint-light); }
+        .kpi-icon.gold { background: var(--gold-light); }
+        .kpi-icon.red { background: var(--red-light); }
+        .kpi-icon svg { width: 20px; height: 20px; }
+        .kpi-num { font-family: 'Rubik', sans-serif; font-size: 26px; font-weight: 800; line-height: 1; }
+        .kpi-label { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+        /* ===== PANELS ===== */
+        .panel {
+            background: white;
+            border: 1px solid rgba(123,94,167,0.06);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+        }
+        .panel-header {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--gray-lighter);
+        }
+        .panel-title { font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 700; }
+        .panel-subtitle { font-size: 12px; color: var(--gray-light); margin-right: auto; }
+
+        /* ===== TABLE ===== */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            text-align: right;
+            padding: 10px 14px;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray);
+            border-bottom: 2px solid var(--gray-lighter);
+        }
+        tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+            vertical-align: middle;
+        }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: rgba(123,94,167,0.02); }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 11px; font-weight: 600;
+        }
+        .status-open { background: var(--mint-light); color: var(--mint); }
+        .status-pending { background: var(--gold-light); color: var(--gold); }
+        .status-submitted { background: var(--plum-light); color: var(--plum); }
+        .status-approved { background: var(--mint-light); color: #2D8A6A; }
+        .status-rejected { background: var(--red-light); color: var(--red); }
+        .status-draft { background: rgba(0,0,0,0.04); color: var(--gray); }
+
+        .match-bar {
+            width: 60px; height: 6px; border-radius: 3px;
+            background: var(--gray-lighter);
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+        .match-bar .fill { height: 100%; border-radius: 3px; }
+
+        .link-ext { color: var(--plum); text-decoration: none; font-weight: 500; }
+        .link-ext:hover { text-decoration: underline; }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex; gap: 4px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--gray-lighter);
+            padding-bottom: 0;
+        }
+        .tab {
+            padding: 10px 20px;
+            font-size: 13px; font-weight: 500;
+            color: var(--gray);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+            border-radius: 8px 8px 0 0;
+        }
+        .tab:hover { color: var(--charcoal); background: rgba(123,94,167,0.03); }
+        .tab.active { color: var(--plum); border-bottom-color: var(--plum); font-weight: 700; }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-family: 'Heebo', sans-serif;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn svg { width: 16px; height: 16px; }
+        .btn-primary { background: linear-gradient(135deg, var(--plum), var(--plum-dark)); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(123,94,167,0.25); }
+        .btn-coral { background: linear-gradient(135deg, var(--coral), var(--coral-dark)); color: white; }
+        .btn-coral:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(232,131,107,0.25); }
+        .btn-outline { background: white; color: var(--plum); border: 1.5px solid var(--plum); }
+        .btn-outline:hover { background: var(--plum-light); }
+        .btn-ghost { background: transparent; color: var(--gray); }
+        .btn-ghost:hover { color: var(--charcoal); background: rgba(0,0,0,0.03); }
+        .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+
+        /* ===== AI MODULE ===== */
+        .ai-input-area {
+            background: var(--plum-light);
+            border: 2px dashed rgba(123,94,167,0.2);
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .ai-input-area.drag-over { border-color: var(--plum); background: rgba(123,94,167,0.08); }
+        .ai-input-area h3 { font-family: 'Rubik', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .ai-input-area p { font-size: 13px; color: var(--gray); margin-bottom: 16px; }
+
+        .ai-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; }
+        .ai-tab {
+            padding: 8px 18px; border-radius: 20px;
+            font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 1.5px solid var(--gray-lighter);
+            color: var(--gray); background: white;
+            transition: all 0.2s;
+        }
+        .ai-tab.active { border-color: var(--plum); color: var(--plum); background: var(--plum-light); }
+
+        textarea.ai-text {
+            width: 100%;
+            min-height: 180px;
+            padding: 16px;
+            border: 1.5px solid var(--gray-lighter);
+            border-radius: 12px;
+            font-family: 'Heebo', sans-serif;
+            font-size: 14px;
+            line-height: 1.7;
+            resize: vertical;
+            color: var(--charcoal);
+            transition: border-color 0.2s;
+        }
+        textarea.ai-text:focus { outline: none; border-color: var(--plum); }
+
+        input.ai-url {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid var(--gray-lighter);
+            border-radius: 12px;
+            font-family: 'Heebo', sans-serif;
+            font-size: 14px;
+            direction: ltr;
+            text-align: left;
+            color: var(--charcoal);
+        }
+        input.ai-url:focus { outline: none; border-color: var(--plum); }
+
+        .ai-result {
+            background: white;
+            border: 1px solid rgba(123,94,167,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 20px;
+        }
+        .ai-result h4 { font-family: 'Rubik', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--plum); }
+        .ai-section { margin-bottom: 16px; padding: 14px; background: var(--sand); border-radius: 10px; }
+        .ai-section-title { font-size: 12px; font-weight: 700; color: var(--plum); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .ai-section p { font-size: 13px; line-height: 1.8; }
+
+        /* Editable section */
+        .ai-section[contenteditable="true"] { cursor: text; border: 1.5px solid transparent; }
+        .ai-section[contenteditable="true"]:hover { border-color: rgba(123,94,167,0.2); }
+        .ai-section[contenteditable="true"]:focus { border-color: var(--plum); outline: none; background: white; }
+        .ai-section .edit-hint {
+            font-size: 10px; color: var(--gray-light);
+            float: left; cursor: pointer;
+        }
+
+        /* Content generator */
+        .tone-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .tone-chip {
+            padding: 6px 16px; border-radius: 20px;
+            font-size: 12px; font-weight: 500;
+            cursor: pointer; border: 1.5px solid var(--gray-lighter);
+            color: var(--gray); background: white;
+            transition: all 0.2s;
+        }
+        .tone-chip.active { border-color: var(--coral); color: var(--coral); background: var(--coral-light); }
+
+        /* ===== LOADING ===== */
+        .ai-loading { text-align: center; padding: 40px; }
+        .ai-loading .spinner {
+            width: 40px; height: 40px; margin: 0 auto 16px;
+            border: 3px solid var(--gray-lighter);
+            border-top-color: var(--plum);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .ai-loading p { font-size: 13px; color: var(--gray); }
+
+        /* ===== DEADLINES ===== */
+        .deadline-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .deadline-item:last-child { border: none; }
+        .deadline-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .deadline-dot.urgent { background: var(--red); }
+        .deadline-dot.soon { background: var(--gold); }
+        .deadline-dot.ok { background: var(--mint); }
+        .deadline-info { flex: 1; }
+        .deadline-name { font-size: 13px; font-weight: 600; }
+        .deadline-org { font-size: 11px; color: var(--gray-light); }
+        .deadline-date { font-size: 12px; font-weight: 600; color: var(--gray); }
+
+        /* ===== FORM FIELDS ===== */
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--charcoal); margin-bottom: 6px; }
+        .form-input {
+            width: 100%; padding: 10px 14px;
+            border: 1.5px solid var(--gray-lighter);
+            border-radius: 10px;
+            font-family: 'Heebo', sans-serif;
+            font-size: 13px; color: var(--charcoal);
+        }
+        .form-input:focus { outline: none; border-color: var(--plum); }
+        select.form-input { appearance: none; background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6980' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat left 14px center; padding-left: 36px; }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(13,10,20,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden;
+            transition: all 0.3s;
+        }
+        .modal-overlay.open { opacity: 1; visibility: visible; }
+        .modal {
+            background: white;
+            border-radius: 20px;
+            width: 90%; max-width: 640px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 32px;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+        .modal-overlay.open .modal { transform: translateY(0); }
+        .modal h3 { font-family: 'Rubik', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center; padding: 60px 24px;
+            color: var(--gray);
+        }
+        .empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.3; }
+        .empty-state h4 { font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--charcoal); }
+        .empty-state p { font-size: 13px; margin-bottom: 16px; }
+
+        /* ===== TWO COLUMNS ===== */
+        .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .sidebar { transform: translateX(100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-wrapper { margin-right: 0 !important; }
+            .header-toggle { display: flex; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .two-cols { grid-template-columns: 1fr; }
+            .content { padding: 20px 16px; }
+        }
+        @media (max-width: 500px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ===== PAGE SECTIONS ===== */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ===== ANIMATIONS ===== */
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ===== WATERMARK ===== */
+        .powered-by {
+            position: fixed; bottom: 12px; left: 12px;
+            font-size: 10px; color: rgba(0,0,0,0.15);
+            display: flex; align-items: center; gap: 4px;
+            z-index: 10;
+        }
+        .powered-by .dots { display: flex; gap: 2px; }
+        .powered-by .dot-p { width: 5px; height: 5px; border-radius: 50%; background: var(--plum); opacity: 0.3; }
+        .powered-by .dot-c { width: 5px; height: 5px; border-radius: 50%; background: var(--coral); opacity: 0.3; }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+        <div class="circles">
+            <div class="circle p"></div>
+            <div class="bridge"></div>
+            <div class="circle c"></div>
+        </div>
+        <div>
+            <div class="brand">שתיים</div>
+            <div class="sub">מערכת גיוס משאבים</div>
+        </div>
+    </div>
+
+    <div class="sidebar-org">
+        <div class="avatar">הפ</div>
+        <div>
+            <div class="org-name">עמותת הדגמה</div>
+            <div class="org-plan">חבילת פרו</div>
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">ראשי</div>
+        <div class="sidebar-item active" data-page="dashboard" onclick="showPage('dashboard')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            דף הבית
+        </div>
+        <div class="sidebar-item" data-page="calls" onclick="showPage('calls')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            קולות קוראים
+            <span class="badge">8</span>
+        </div>
+        <div class="sidebar-item" data-page="submissions" onclick="showPage('submissions')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            הגשות שלנו
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">AI</div>
+        <div class="sidebar-item" data-page="ai-analysis" onclick="showPage('ai-analysis')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            ניתוח וכתיבה AI
+        </div>
+        <div class="sidebar-item" data-page="content" onclick="showPage('content')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            מחולל תוכן
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">ניהול</div>
+        <div class="sidebar-item" data-page="projects" onclick="showPage('projects')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 20h20M5 20V10l7-7 7 7v10"/><rect x="9" y="14" width="6" height="6"/></svg>
+            פרויקטים
+            <span class="badge">5</span>
+        </div>
+        <div class="sidebar-item" data-page="funds" onclick="showPage('funds')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8M8 14h8"/></svg>
+            קרנות ומקורות
+        </div>
+        <div class="sidebar-item" data-page="budget" onclick="showPage('budget')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            תקציב
+        </div>
+        <div class="sidebar-item" data-page="documents" onclick="showPage('documents')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+            מסמכי הגשה
+        </div>
+        <div class="sidebar-item" data-page="impact" onclick="showPage('impact')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            אימפקט
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">כלים</div>
+        <div class="sidebar-item" data-page="partners" onclick="showPage('partners')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            שותפים וממאנדי
+        </div>
+        <div class="sidebar-item" data-page="settings" onclick="showPage('settings')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            הגדרות
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;">
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--plum);"></span>
+            <span style="width:5px;height:5px;border-radius:50%;background:var(--coral);"></span>
+            <span style="font-size:11px;color:rgba(255,255,255,0.3);font-weight:600;">שתיים</span>
+        </div>
+        מערכות דיגיטליות לעמותות
+    </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main-wrapper" id="mainWrapper">
+    <header class="header">
+        <button class="header-toggle" onclick="toggleSidebar()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="header-title" id="headerTitle">דף הבית</div>
+        <div class="header-breadcrumb" id="headerBreadcrumb"></div>
+        <div class="header-user">
+            <div class="avatar-sm">מנ</div>
+        </div>
+    </header>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="content">
+        <div class="page active fade-in" id="page-dashboard">
+            <div class="kpi-grid">
+                <div class="kpi-card" onclick="showPage('calls')">
+                    <div class="kpi-icon plum"><svg viewBox="0 0 24 24" fill="none" stroke="var(--plum)" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                    <div><div class="kpi-num" style="color:var(--plum);">8</div><div class="kpi-label">קולות קוראים פתוחים</div></div>
+                </div>
+                <div class="kpi-card" onclick="showPage('submissions')">
+                    <div class="kpi-icon coral"><svg viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                    <div><div class="kpi-num" style="color:var(--coral);">3</div><div class="kpi-label">הגשות בתהליך</div></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                    <div><div class="kpi-num" style="color:var(--red);">2</div><div class="kpi-label">דדליינים ב-30 יום</div></div>
+                </div>
+                <div class="kpi-card" onclick="showPage('projects')">
+                    <div class="kpi-icon mint"><svg viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.5"><path d="M2 20h20M5 20V10l7-7 7 7v10"/></svg></div>
+                    <div><div class="kpi-num" style="color:var(--mint);">5</div><div class="kpi-label">פרויקטים פעילים</div></div>
+                </div>
+                <div class="kpi-card" onclick="showPage('ai-analysis')">
+                    <div class="kpi-icon gold"><svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2"/></svg></div>
+                    <div><div class="kpi-num" style="color:var(--gold);">&#8734;</div><div class="kpi-label">ניתוחי AI — ללא הגבלה</div></div>
+                </div>
+            </div>
+
+            <div class="two-cols">
+                <div class="panel">
+                    <div class="panel-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <div class="panel-title">דדליינים קרובים</div>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-dot urgent"></div>
+                        <div class="deadline-info">
+                            <div class="deadline-name">קרן ברנקו וייס — חינוך וחברה</div>
+                            <div class="deadline-org">הגשה מקוונת</div>
+                        </div>
+                        <div class="deadline-date" style="color:var(--red);">25.4.2026</div>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-dot soon"></div>
+                        <div class="deadline-info">
+                            <div class="deadline-name">משרד החינוך — תוכניות חדשנות</div>
+                            <div class="deadline-org">שפ"י — שירות פסיכולוגי ייעוצי</div>
+                        </div>
+                        <div class="deadline-date" style="color:var(--gold);">15.5.2026</div>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-dot ok"></div>
+                        <div class="deadline-info">
+                            <div class="deadline-name">קרן רשי — פיתוח קהילתי</div>
+                            <div class="deadline-org">מחזור שנתי 2026</div>
+                        </div>
+                        <div class="deadline-date">30.6.2026</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--plum)" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <div class="panel-title">התאמה גבוהה</div>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-info">
+                            <div class="deadline-name">קרן ברנקו וייס — חינוך</div>
+                            <div class="deadline-org">תוכניות חינוכיות חדשניות</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:13px;font-weight:700;color:var(--mint);">85%</span>
+                            <div class="match-bar"><div class="fill" style="width:85%;background:var(--mint);"></div></div>
+                        </div>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-info">
+                            <div class="deadline-name">JDC — פיתוח נוער</div>
+                            <div class="deadline-org">מניעת נשירה</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:13px;font-weight:700;color:var(--mint);">78%</span>
+                            <div class="match-bar"><div class="fill" style="width:78%;background:var(--mint);"></div></div>
+                        </div>
+                    </div>
+                    <div class="deadline-item">
+                        <div class="deadline-info">
+                            <div class="deadline-name">קרן גנדיר — חינוך טכנולוגי</div>
+                            <div class="deadline-org">STEM לפריפריה</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span style="font-size:13px;font-weight:700;color:var(--gold);">65%</span>
+                            <div class="match-bar"><div class="fill" style="width:65%;background:var(--gold);"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                    <div class="panel-title">פעילות אחרונה</div>
+                </div>
+                <div style="font-size:13px;">
+                    <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.04);align-items:center;">
+                        <div style="width:6px;height:6px;border-radius:50%;background:var(--plum);flex-shrink:0;"></div>
+                        <div style="flex:1;"><strong>ניתוח AI</strong> — קול קורא "קרן ברנקו וייס" נותח בהצלחה</div>
+                        <div style="font-size:11px;color:var(--gray-light);">לפני 2 שעות</div>
+                    </div>
+                    <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.04);align-items:center;">
+                        <div style="width:6px;height:6px;border-radius:50%;background:var(--coral);flex-shrink:0;"></div>
+                        <div style="flex:1;"><strong>הגשה</strong> — טיוטה ראשונה הושלמה לקרן רשי</div>
+                        <div style="font-size:11px;color:var(--gray-light);">אתמול</div>
+                    </div>
+                    <div style="display:flex;gap:12px;padding:10px 0;align-items:center;">
+                        <div style="width:6px;height:6px;border-radius:50%;background:var(--mint);flex-shrink:0;"></div>
+                        <div style="flex:1;"><strong>קול קורא חדש</strong> — משרד החינוך פתח הגשה לתוכניות חדשנות</div>
+                        <div style="font-size:11px;color:var(--gray-light);">לפני 3 ימים</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== CALLS ===== -->
+        <div class="page" id="page-calls">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <div></div>
+                <button class="btn btn-primary" onclick="openModal('addCall')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    הוסף קול קורא
+                </button>
+            </div>
+            <div class="tabs">
+                <div class="tab active" onclick="filterCalls('all', this)">הכל (8)</div>
+                <div class="tab" onclick="filterCalls('open', this)">פתוחים (4)</div>
+                <div class="tab" onclick="filterCalls('pending', this)">ממתינים (3)</div>
+                <div class="tab" onclick="filterCalls('submitted', this)">הוגשו (1)</div>
+            </div>
+            <div class="panel" style="padding:0;">
+                <div class="table-wrap">
+                    <table id="callsTable">
+                        <thead>
+                            <tr>
+                                <th>שם הקול קורא</th>
+                                <th>מקור</th>
+                                <th>דדליין</th>
+                                <th>התאמה</th>
+                                <th>סטטוס</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr data-status="open">
+                                <td><strong>חינוך וחברה — מחזור 2026</strong></td>
+                                <td>קרן ברנקו וייס</td>
+                                <td style="color:var(--red);font-weight:600;">25.4.2026</td>
+                                <td>85% <div class="match-bar"><div class="fill" style="width:85%;background:var(--mint);"></div></div></td>
+                                <td><span class="status-badge status-open">פתוח</span></td>
+                                <td><button class="btn btn-sm btn-outline" onclick="showPage('ai-analysis')">נתח AI</button></td>
+                            </tr>
+                            <tr data-status="open">
+                                <td><strong>תוכניות חדשנות בחינוך</strong></td>
+                                <td>משרד החינוך</td>
+                                <td style="color:var(--gold);font-weight:600;">15.5.2026</td>
+                                <td>78% <div class="match-bar"><div class="fill" style="width:78%;background:var(--mint);"></div></div></td>
+                                <td><span class="status-badge status-open">פתוח</span></td>
+                                <td><button class="btn btn-sm btn-outline" onclick="showPage('ai-analysis')">נתח AI</button></td>
+                            </tr>
+                            <tr data-status="open">
+                                <td><strong>פיתוח קהילתי</strong></td>
+                                <td>קרן רשי</td>
+                                <td>30.6.2026</td>
+                                <td>72% <div class="match-bar"><div class="fill" style="width:72%;background:var(--gold);"></div></div></td>
+                                <td><span class="status-badge status-open">פתוח</span></td>
+                                <td><button class="btn btn-sm btn-outline" onclick="showPage('ai-analysis')">נתח AI</button></td>
+                            </tr>
+                            <tr data-status="pending">
+                                <td><strong>פיתוח נוער בסיכון</strong></td>
+                                <td>JDC</td>
+                                <td>—</td>
+                                <td>78% <div class="match-bar"><div class="fill" style="width:78%;background:var(--mint);"></div></div></td>
+                                <td><span class="status-badge status-pending">ממתין לבדיקה</span></td>
+                                <td><button class="btn btn-sm btn-ghost">בדוק</button></td>
+                            </tr>
+                            <tr data-status="pending">
+                                <td><strong>STEM לפריפריה</strong></td>
+                                <td>קרן גנדיר</td>
+                                <td>—</td>
+                                <td>65% <div class="match-bar"><div class="fill" style="width:65%;background:var(--gold);"></div></div></td>
+                                <td><span class="status-badge status-pending">ממתין לבדיקה</span></td>
+                                <td><button class="btn btn-sm btn-ghost">בדוק</button></td>
+                            </tr>
+                            <tr data-status="pending">
+                                <td><strong>העצמת נשים בפריפריה</strong></td>
+                                <td>קרן שוסטרמן</td>
+                                <td>—</td>
+                                <td>60% <div class="match-bar"><div class="fill" style="width:60%;background:var(--gold);"></div></div></td>
+                                <td><span class="status-badge status-pending">ממתין לבדיקה</span></td>
+                                <td><button class="btn btn-sm btn-ghost">בדוק</button></td>
+                            </tr>
+                            <tr data-status="open">
+                                <td><strong>מניעת אלימות בבי"ס</strong></td>
+                                <td>שפ"י</td>
+                                <td>1.7.2026</td>
+                                <td>55% <div class="match-bar"><div class="fill" style="width:55%;background:var(--gold);"></div></div></td>
+                                <td><span class="status-badge status-open">פתוח</span></td>
+                                <td><button class="btn btn-sm btn-outline" onclick="showPage('ai-analysis')">נתח AI</button></td>
+                            </tr>
+                            <tr data-status="submitted">
+                                <td><strong>מענק לימודים — ביטוח לאומי</strong></td>
+                                <td>ביטוח לאומי</td>
+                                <td style="color:var(--gray-light);">הוגש</td>
+                                <td>90% <div class="match-bar"><div class="fill" style="width:90%;background:var(--mint);"></div></div></td>
+                                <td><span class="status-badge status-submitted">הוגש</span></td>
+                                <td><button class="btn btn-sm btn-ghost">צפה</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== AI ANALYSIS ===== -->
+        <div class="page" id="page-ai-analysis">
+            <div class="panel">
+                <div class="panel-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--plum)" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2"/></svg>
+                    <div class="panel-title">ניתוח קול קורא עם AI</div>
+                    <div class="panel-subtitle">הדביקו טקסט, לינק, או העלו קובץ — וה-AI ינתח ויכתוב הגשה</div>
+                </div>
+
+                <div class="ai-tabs" id="aiInputTabs">
+                    <div class="ai-tab active" onclick="switchAiInput('text')">הדבק טקסט</div>
+                    <div class="ai-tab" onclick="switchAiInput('url')">לינק לקול קורא</div>
+                    <div class="ai-tab" onclick="switchAiInput('file')">העלה קובץ</div>
+                </div>
+
+                <div id="aiInputText">
+                    <textarea class="ai-text" id="aiTextArea" placeholder="הדביקו כאן את טקסט הקול הקורא...&#10;&#10;אפשר להדביק את כל הטקסט, או רק את החלקים הרלוונטיים — תנאי סף, קריטריונים, דרישות ההגשה."></textarea>
+                </div>
+                <div id="aiInputUrl" style="display:none;">
+                    <input class="ai-url" id="aiUrlInput" type="url" placeholder="https://example.gov.il/call-for-proposals">
+                    <p style="font-size:11px;color:var(--gray-light);margin-top:8px;">המערכת תשלוף אוטומטית את הטקסט מהדף ותנתח אותו.</p>
+                </div>
+                <div id="aiInputFile" style="display:none;">
+                    <div class="ai-input-area" id="fileDropArea">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--plum-muted)" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <h3>גררו קובץ לכאן</h3>
+                        <p>PDF, Word, Excel — עד 10MB</p>
+                        <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" style="display:none;">
+                        <button class="btn btn-outline btn-sm" onclick="document.getElementById('fileInput').click()">בחרו קובץ</button>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:16px;">
+                    <button class="btn btn-primary" onclick="runAiAnalysis()" id="analyzeBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42"/></svg>
+                        נתח קול קורא
+                    </button>
+                    <button class="btn btn-coral" onclick="runAiWrite()" id="writeBtn" style="display:none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        כתוב הגשה
+                    </button>
+                </div>
+            </div>
+
+            <div id="aiResultArea"></div>
+        </div>
+
+        <!-- ===== CONTENT GENERATOR ===== -->
+        <div class="page" id="page-content">
+            <div class="panel">
+                <div class="panel-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="1.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <div class="panel-title">מחולל תוכן</div>
+                    <div class="panel-subtitle">ללא הגבלת שימוש — כתבו כמה שתרצו</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">מה לכתוב?</label>
+                    <select class="form-input" id="contentType">
+                        <option value="">בחרו סוג תוכן...</option>
+                        <option value="proposal">הצעת פרויקט לקרן</option>
+                        <option value="impact">דוח אימפקט</option>
+                        <option value="letter">מכתב פנייה לתורם</option>
+                        <option value="summary">סיכום פרויקט</option>
+                        <option value="budget">נימוק תקציב</option>
+                        <option value="thankyou">מכתב תודה</option>
+                        <option value="custom">טקסט חופשי</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">טון הכתיבה</label>
+                    <div class="tone-chips">
+                        <div class="tone-chip active" onclick="selectTone(this)">מקצועי</div>
+                        <div class="tone-chip" onclick="selectTone(this)">רגשי</div>
+                        <div class="tone-chip" onclick="selectTone(this)">ישיר</div>
+                        <div class="tone-chip" onclick="selectTone(this)">משכנע</div>
+                        <div class="tone-chip" onclick="selectTone(this)">אקדמי</div>
+                        <div class="tone-chip" onclick="selectTone(this)">ידידותי</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">הנחיות ופרטים</label>
+                    <textarea class="ai-text" id="contentPrompt" style="min-height:120px;" placeholder="תארו מה אתם צריכים...&#10;&#10;דוגמה: כתוב מכתב פנייה לקרן ברנקו וייס בנושא תוכנית לחינוך דיגיטלי בפריפריה. העמותה שלנו עובדת עם 500 נוער בסיכון ב-3 ערים."></textarea>
+                </div>
+
+                <button class="btn btn-coral" onclick="generateContent()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    צור תוכן
+                </button>
+            </div>
+
+            <div id="contentResultArea"></div>
+        </div>
+
+        <!-- ===== SUBMISSIONS ===== -->
+        <div class="page" id="page-submissions">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">הגשות שלנו</div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>שם ההגשה</th><th>קרן</th><th>סכום מבוקש</th><th>תאריך הגשה</th><th>סטטוס</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>תוכנית "אור בקצה"</strong></td><td>קרן ברנקו וייס</td><td>250,000 &#8362;</td><td>—</td><td><span class="status-badge status-draft">טיוטה</span></td></tr>
+                            <tr><td><strong>מניעת נשירה — שנה ב'</strong></td><td>JDC</td><td>180,000 &#8362;</td><td>—</td><td><span class="status-badge status-pending">בכתיבה</span></td></tr>
+                            <tr><td><strong>מענק לימודים — מחזור 2026</strong></td><td>ביטוח לאומי</td><td>45,000 &#8362;</td><td>12.3.2026</td><td><span class="status-badge status-submitted">הוגש</span></td></tr>
+                            <tr><td><strong>מעבדת מחשבים</strong></td><td>קרן גנדיר</td><td>120,000 &#8362;</td><td>—</td><td><span class="status-badge status-draft">טיוטה</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PROJECTS ===== -->
+        <div class="page" id="page-projects">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <div></div>
+                <button class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    פרויקט חדש
+                </button>
+            </div>
+            <div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr));">
+                <div class="panel" style="margin:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div><h3 style="font-family:'Rubik',sans-serif;font-size:15px;font-weight:700;">תוכנית "אור בקצה"</h3><p style="font-size:11px;color:var(--gray-light);">חינוך לנוער בסיכון</p></div>
+                        <span class="status-badge status-open">פעיל</span>
+                    </div>
+                    <div style="display:flex;gap:20px;font-size:12px;color:var(--gray);margin-bottom:12px;">
+                        <div><strong style="color:var(--charcoal);">120</strong> מוטבים</div>
+                        <div><strong style="color:var(--charcoal);">3</strong> הגשות</div>
+                    </div>
+                    <div style="height:4px;background:var(--gray-lighter);border-radius:2px;"><div style="height:100%;width:65%;background:var(--plum);border-radius:2px;"></div></div>
+                    <p style="font-size:10px;color:var(--gray-light);margin-top:4px;">65% מהיעד התקציבי</p>
+                </div>
+                <div class="panel" style="margin:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div><h3 style="font-family:'Rubik',sans-serif;font-size:15px;font-weight:700;">מעבדת מחשבים</h3><p style="font-size:11px;color:var(--gray-light);">STEM לפריפריה</p></div>
+                        <span class="status-badge status-pending">בהקמה</span>
+                    </div>
+                    <div style="display:flex;gap:20px;font-size:12px;color:var(--gray);margin-bottom:12px;">
+                        <div><strong style="color:var(--charcoal);">80</strong> מוטבים</div>
+                        <div><strong style="color:var(--charcoal);">1</strong> הגשה</div>
+                    </div>
+                    <div style="height:4px;background:var(--gray-lighter);border-radius:2px;"><div style="height:100%;width:30%;background:var(--gold);border-radius:2px;"></div></div>
+                    <p style="font-size:10px;color:var(--gray-light);margin-top:4px;">30% מהיעד התקציבי</p>
+                </div>
+                <div class="panel" style="margin:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div><h3 style="font-family:'Rubik',sans-serif;font-size:15px;font-weight:700;">מניעת נשירה</h3><p style="font-size:11px;color:var(--gray-light);">שנה ב' — המשך</p></div>
+                        <span class="status-badge status-open">פעיל</span>
+                    </div>
+                    <div style="display:flex;gap:20px;font-size:12px;color:var(--gray);margin-bottom:12px;">
+                        <div><strong style="color:var(--charcoal);">200</strong> מוטבים</div>
+                        <div><strong style="color:var(--charcoal);">2</strong> הגשות</div>
+                    </div>
+                    <div style="height:4px;background:var(--gray-lighter);border-radius:2px;"><div style="height:100%;width:85%;background:var(--mint);border-radius:2px;"></div></div>
+                    <p style="font-size:10px;color:var(--gray-light);margin-top:4px;">85% מהיעד התקציבי</p>
+                </div>
+                <div class="panel" style="margin:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div><h3 style="font-family:'Rubik',sans-serif;font-size:15px;font-weight:700;">העצמת נשים</h3><p style="font-size:11px;color:var(--gray-light);">שיתוף פעולה עם שוסטרמן</p></div>
+                        <span class="status-badge status-draft">תכנון</span>
+                    </div>
+                    <div style="display:flex;gap:20px;font-size:12px;color:var(--gray);margin-bottom:12px;">
+                        <div><strong style="color:var(--charcoal);">50</strong> מוטבים</div>
+                        <div><strong style="color:var(--charcoal);">0</strong> הגשות</div>
+                    </div>
+                    <div style="height:4px;background:var(--gray-lighter);border-radius:2px;"><div style="height:100%;width:10%;background:var(--gray-light);border-radius:2px;"></div></div>
+                    <p style="font-size:10px;color:var(--gray-light);margin-top:4px;">10% מהיעד התקציבי</p>
+                </div>
+                <div class="panel" style="margin:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                        <div><h3 style="font-family:'Rubik',sans-serif;font-size:15px;font-weight:700;">ספרייה קהילתית</h3><p style="font-size:11px;color:var(--gray-light);">השאלת ספרים + חוגים</p></div>
+                        <span class="status-badge status-approved" style="background:rgba(91,191,158,0.1);color:#2D8A6A;">מאושר</span>
+                    </div>
+                    <div style="display:flex;gap:20px;font-size:12px;color:var(--gray);margin-bottom:12px;">
+                        <div><strong style="color:var(--charcoal);">300</strong> מוטבים</div>
+                        <div><strong style="color:var(--charcoal);">1</strong> הגשה</div>
+                    </div>
+                    <div style="height:4px;background:var(--gray-lighter);border-radius:2px;"><div style="height:100%;width:100%;background:var(--mint);border-radius:2px;"></div></div>
+                    <p style="font-size:10px;color:var(--mint);margin-top:4px;font-weight:600;">100% — מימון מלא!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FUNDS ===== -->
+        <div class="page" id="page-funds">
+            <div class="panel">
+                <div class="panel-header"><div class="panel-title">קרנות ומקורות מימון</div></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>שם הקרן</th><th>תחום</th><th>סכום מקסימלי</th><th>תדירות</th><th>התאמה</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>קרן ברנקו וייס</strong></td><td>חינוך, חברה</td><td>500,000 &#8362;</td><td>שנתי</td><td>85% <div class="match-bar"><div class="fill" style="width:85%;background:var(--mint);"></div></div></td></tr>
+                            <tr><td><strong>JDC ישראל</strong></td><td>נוער, רווחה</td><td>300,000 &#8362;</td><td>שנתי</td><td>78% <div class="match-bar"><div class="fill" style="width:78%;background:var(--mint);"></div></div></td></tr>
+                            <tr><td><strong>קרן רשי</strong></td><td>פיתוח קהילתי</td><td>200,000 &#8362;</td><td>שנתי</td><td>72% <div class="match-bar"><div class="fill" style="width:72%;background:var(--gold);"></div></div></td></tr>
+                            <tr><td><strong>קרן גנדיר</strong></td><td>STEM, טכנולוגיה</td><td>150,000 &#8362;</td><td>דו-שנתי</td><td>65% <div class="match-bar"><div class="fill" style="width:65%;background:var(--gold);"></div></div></td></tr>
+                            <tr><td><strong>קרן שוסטרמן</strong></td><td>העצמה, נשים</td><td>250,000 &#8362;</td><td>שנתי</td><td>60% <div class="match-bar"><div class="fill" style="width:60%;background:var(--gold);"></div></div></td></tr>
+                            <tr><td><strong>שפ"י — משרד החינוך</strong></td><td>חינוך, מניעה</td><td>100,000 &#8362;</td><td>שנתי</td><td>55% <div class="match-bar"><div class="fill" style="width:55%;background:var(--gold);"></div></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== BUDGET ===== -->
+        <div class="page" id="page-budget">
+            <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+                <div class="panel" style="margin:0;text-align:center;">
+                    <div style="font-size:11px;color:var(--gray);margin-bottom:4px;">סה"כ מבוקש</div>
+                    <div style="font-family:'Rubik',sans-serif;font-size:28px;font-weight:800;color:var(--plum);">595,000 &#8362;</div>
+                </div>
+                <div class="panel" style="margin:0;text-align:center;">
+                    <div style="font-size:11px;color:var(--gray);margin-bottom:4px;">מאושר</div>
+                    <div style="font-family:'Rubik',sans-serif;font-size:28px;font-weight:800;color:var(--mint);">120,000 &#8362;</div>
+                </div>
+                <div class="panel" style="margin:0;text-align:center;">
+                    <div style="font-size:11px;color:var(--gray);margin-bottom:4px;">ממתין</div>
+                    <div style="font-family:'Rubik',sans-serif;font-size:28px;font-weight:800;color:var(--gold);">475,000 &#8362;</div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header"><div class="panel-title">פירוט תקציבי לפי פרויקט</div></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>פרויקט</th><th>מבוקש</th><th>מאושר</th><th>התקדמות</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>תוכנית "אור בקצה"</strong></td><td>250,000 &#8362;</td><td>0</td><td><div class="match-bar" style="width:100px;"><div class="fill" style="width:0%;background:var(--gray-light);"></div></div></td></tr>
+                            <tr><td><strong>מניעת נשירה</strong></td><td>180,000 &#8362;</td><td>0</td><td><div class="match-bar" style="width:100px;"><div class="fill" style="width:0%;background:var(--gray-light);"></div></div></td></tr>
+                            <tr><td><strong>מעבדת מחשבים</strong></td><td>120,000 &#8362;</td><td>0</td><td><div class="match-bar" style="width:100px;"><div class="fill" style="width:0%;background:var(--gray-light);"></div></div></td></tr>
+                            <tr><td><strong>מענק לימודים</strong></td><td>45,000 &#8362;</td><td>45,000 &#8362;</td><td><div class="match-bar" style="width:100px;"><div class="fill" style="width:100%;background:var(--mint);"></div></div> <span style="font-size:11px;color:var(--mint);font-weight:600;">מלא</span></td></tr>
+                            <tr><td><strong>ספרייה קהילתית</strong></td><td>75,000 &#8362;</td><td>75,000 &#8362;</td><td><div class="match-bar" style="width:100px;"><div class="fill" style="width:100%;background:var(--mint);"></div></div> <span style="font-size:11px;color:var(--mint);font-weight:600;">מלא</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== DOCUMENTS ===== -->
+        <div class="page" id="page-documents">
+            <div class="panel">
+                <div class="panel-header"><div class="panel-title">מסמכי הגשה</div><button class="btn btn-sm btn-primary">העלה מסמך</button></div>
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                    <h4>אין מסמכים עדיין</h4>
+                    <p>העלו מסמכים כמו דוחות כספיים, אישורי ניהול תקין, ותעודת עמותה.</p>
+                    <button class="btn btn-outline btn-sm">העלה מסמך ראשון</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== IMPACT ===== -->
+        <div class="page" id="page-impact">
+            <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+                <div class="panel" style="margin:0;text-align:center;">
+                    <div style="font-family:'Rubik',sans-serif;font-size:32px;font-weight:800;color:var(--plum);">750</div>
+                    <div style="font-size:12px;color:var(--gray);">מוטבים ישירים</div>
+                </div>
+                <div class="panel" style="margin:0;text-align:center;">
+                    <div style="font-family:'Rubik',sans-serif;font-size:32px;font-weight:800;color:var(--coral);">5</div>
+                    <div style="font-size:12px;color:var(--gray);">פרויקטים</div>
+                </div>
+                <div class="panel" style="margin:0;text-align:center;">
+                    <div style="font-family:'Rubik',sans-serif;font-size:32px;font-weight:800;color:var(--mint);">3</div>
+                    <div style="font-size:12px;color:var(--gray);">ערים</div>
+                </div>
+                <div class="panel" style="margin:0;text-align:center;">
+                    <div style="font-family:'Rubik',sans-serif;font-size:32px;font-weight:800;color:var(--gold);">92%</div>
+                    <div style="font-size:12px;color:var(--gray);">שביעות רצון</div>
+                </div>
+            </div>
+            <div class="panel" style="margin-top:20px;">
+                <div class="panel-header"><div class="panel-title">סיפורי הצלחה</div></div>
+                <p style="font-size:13px;color:var(--gray);text-align:center;padding:30px;">הוסיפו סיפורי הצלחה ונתוני אימפקט כדי לחזק את ההגשות שלכם.</p>
+            </div>
+        </div>
+
+        <!-- ===== PARTNERS ===== -->
+        <div class="page" id="page-partners">
+            <div class="panel">
+                <div class="panel-header"><div class="panel-title">שותפים וממאנדי</div></div>
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    <h4>הוסיפו את השותפים שלכם</h4>
+                    <p>תורמים, קרנות, רשויות מקומיות — כל מי שתומך בעמותה.</p>
+                    <button class="btn btn-outline btn-sm">הוסף שותף</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SETTINGS ===== -->
+        <div class="page" id="page-settings">
+            <div class="panel">
+                <div class="panel-header"><div class="panel-title">פרטי העמותה</div></div>
+                <div class="two-cols">
+                    <div class="form-group"><label class="form-label">שם העמותה</label><input class="form-input" value="עמותת הדגמה"></div>
+                    <div class="form-group"><label class="form-label">מספר עמותה</label><input class="form-input" value="58-0123456"></div>
+                    <div class="form-group"><label class="form-label">תחום פעילות</label><input class="form-input" value="חינוך, נוער, קהילה"></div>
+                    <div class="form-group"><label class="form-label">אזור פעילות</label><input class="form-input" value="ירושלים, באר שבע, נתיבות"></div>
+                    <div class="form-group"><label class="form-label">אימייל</label><input class="form-input" value="info@demo-amuta.org.il" dir="ltr" style="text-align:left;"></div>
+                    <div class="form-group"><label class="form-label">טלפון</label><input class="form-input" value="02-1234567" dir="ltr" style="text-align:left;"></div>
+                </div>
+                <button class="btn btn-primary" style="margin-top:16px;">שמור שינויים</button>
+            </div>
+            <div class="panel">
+                <div class="panel-header"><div class="panel-title">תיאור העמותה (ל-AI)</div></div>
+                <p style="font-size:12px;color:var(--gray);margin-bottom:12px;">התיאור הזה ישמש את ה-AI לכתיבת הגשות מותאמות. ככל שתפרטו יותר — כך התוצאות יהיו טובות יותר.</p>
+                <textarea class="ai-text" style="min-height:150px;" placeholder="ספרו על העמותה: מה המטרות, מי קהל היעד, מה ההישגים, כמה מוטבים, איפה פועלים...">עמותת הדגמה פועלת מ-2015 בירושלים, באר שבע ונתיבות. אנחנו מפעילים תוכניות חינוכיות לנוער בסיכון, עם דגש על מניעת נשירה, חינוך טכנולוגי ופיתוח מיומנויות חיים. ב-2025 הגענו ל-750 מוטבים ישירים ו-2,000 מוטבים עקיפים. 92% שביעות רצון בקרב המשתתפים.</textarea>
+                <button class="btn btn-primary" style="margin-top:12px;">שמור</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-addCall" onclick="if(event.target===this)closeModal('addCall')">
+    <div class="modal">
+        <h3>הוספת קול קורא חדש</h3>
+        <div class="form-group"><label class="form-label">שם הקול קורא</label><input class="form-input" placeholder="לדוגמה: קרן ברנקו וייס — חינוך וחברה 2026"></div>
+        <div class="two-cols">
+            <div class="form-group"><label class="form-label">מקור / קרן</label><input class="form-input" placeholder="שם הקרן או הגוף"></div>
+            <div class="form-group"><label class="form-label">דדליין</label><input class="form-input" type="date"></div>
+        </div>
+        <div class="form-group"><label class="form-label">לינק לקול קורא</label><input class="form-input" placeholder="https://" dir="ltr" style="text-align:left;"></div>
+        <div class="form-group"><label class="form-label">הערות</label><textarea class="ai-text" style="min-height:80px;" placeholder="מידע נוסף..."></textarea></div>
+        <div style="display:flex;gap:10px;justify-content:flex-start;margin-top:20px;">
+            <button class="btn btn-primary" onclick="closeModal('addCall')">הוסף</button>
+            <button class="btn btn-ghost" onclick="closeModal('addCall')">ביטול</button>
+        </div>
+    </div>
+</div>
+
+<!-- POWERED BY -->
+<div class="powered-by">
+    <div class="dots"><div class="dot-p"></div><div class="dot-c"></div></div>
+    <span>מערכת שתיים</span>
+</div>
+
+<script>
+// ===== NAVIGATION =====
+const pageTitles = {
+    'dashboard': 'דף הבית',
+    'calls': 'קולות קוראים',
+    'submissions': 'הגשות שלנו',
+    'ai-analysis': 'ניתוח וכתיבה AI',
+    'content': 'מחולל תוכן',
+    'projects': 'פרויקטים',
+    'funds': 'קרנות ומקורות',
+    'budget': 'תקציב',
+    'documents': 'מסמכי הגשה',
+    'impact': 'אימפקט',
+    'partners': 'שותפים וממאנדי',
+    'settings': 'הגדרות'
+};
+
+function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+
+    const page = document.getElementById('page-' + id);
+    if (page) {
+        page.classList.add('active');
+        page.classList.remove('fade-in');
+        void page.offsetWidth;
+        page.classList.add('fade-in');
+    }
+
+    const item = document.querySelector(`.sidebar-item[data-page="${id}"]`);
+    if (item) item.classList.add('active');
+
+    document.getElementById('headerTitle').textContent = pageTitles[id] || '';
+
+    // Close sidebar on mobile
+    if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.remove('open');
+    }
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ===== AI INPUT TABS =====
+function switchAiInput(type) {
+    document.querySelectorAll('#aiInputTabs .ai-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('aiInputText').style.display = type === 'text' ? '' : 'none';
+    document.getElementById('aiInputUrl').style.display = type === 'url' ? '' : 'none';
+    document.getElementById('aiInputFile').style.display = type === 'file' ? '' : 'none';
+}
+
+// ===== AI ANALYSIS =====
+function runAiAnalysis() {
+    const area = document.getElementById('aiResultArea');
+    area.innerHTML = `<div class="ai-loading"><div class="spinner"></div><p>מנתח את הקול הקורא...</p></div>`;
+
+    setTimeout(() => {
+        area.innerHTML = `
+        <div class="ai-result fade-in">
+            <h4>תוצאות הניתוח</h4>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--plum)" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/></svg>
+                    סיכום הקול הקורא
+                    <span class="edit-hint">לחצו לעריכה</span>
+                </div>
+                <p>הקול הקורא מחפש עמותות שפועלות בתחום החינוך הלא-פורמלי לנוער בסיכון. דגש על תוכניות חדשניות שמשלבות טכנולוגיה, מדידת אימפקט, ושיתופי פעולה עם הרשות המקומית. תקציב מקסימלי: 500,000 ש"ח לתוכנית. משך: 3 שנים.</p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    תנאי סף
+                    <span class="edit-hint">לחצו לעריכה</span>
+                </div>
+                <p>
+                    &#x2705; עמותה רשומה לפחות 3 שנים — <strong style="color:var(--mint);">עומדים</strong><br>
+                    &#x2705; ניהול תקין — <strong style="color:var(--mint);">עומדים</strong><br>
+                    &#x2705; פעילות עם נוער — <strong style="color:var(--mint);">עומדים</strong><br>
+                    &#x26A0;&#xFE0F; דוח מבוקר לשנה אחרונה — <strong style="color:var(--gold);">לבדוק</strong><br>
+                    &#x2705; שיתוף פעולה עם רשות מקומית — <strong style="color:var(--mint);">עומדים</strong>
+                </p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    אחוז התאמה
+                    <span class="edit-hint">לחצו לעריכה</span>
+                </div>
+                <p>
+                    <strong style="font-size:24px;color:var(--mint);">85%</strong> התאמה גבוהה<br><br>
+                    <strong>חוזקות:</strong> ניסיון עשיר עם נוער בסיכון, פעילות ב-3 ערים, 750 מוטבים, שיתופי פעולה קיימים עם רשויות.<br>
+                    <strong>חולשות:</strong> חסר דוח אימפקט כמותי מהשנה האחרונה, אין ניסיון קודם עם הקרן.
+                </p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    המלצות
+                    <span class="edit-hint">לחצו לעריכה</span>
+                </div>
+                <p>
+                    1. <strong>להגיש</strong> — ההתאמה גבוהה מאוד<br>
+                    2. להכין דוח אימפקט כמותי לפני ההגשה<br>
+                    3. לשים דגש על חדשנות טכנולוגית (נקודת הבידול שלכם)<br>
+                    4. לצרף מכתב המלצה מראש הרשות
+                </p>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button class="btn btn-coral" onclick="runAiWrite()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    כתוב הגשה על בסיס הניתוח
+                </button>
+                <button class="btn btn-outline" onclick="copyResult()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    העתק
+                </button>
+            </div>
+        </div>`;
+        document.getElementById('writeBtn').style.display = '';
+    }, 2200);
+}
+
+function runAiWrite() {
+    const area = document.getElementById('aiResultArea');
+    const existing = area.innerHTML;
+    area.innerHTML += `<div class="ai-loading" id="writeLoading"><div class="spinner"></div><p>כותב טיוטת הגשה...</p></div>`;
+
+    setTimeout(() => {
+        const loading = document.getElementById('writeLoading');
+        if (loading) loading.remove();
+        area.innerHTML += `
+        <div class="ai-result fade-in" style="border-color:var(--coral);border-width:2px;">
+            <h4 style="color:var(--coral);">טיוטת הגשה</h4>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">שם הפרויקט <span class="edit-hint">לחצו לעריכה</span></div>
+                <p><strong style="font-size:16px;">"אור בקצה" — תוכנית לחינוך דיגיטלי וחדשנות לנוער בפריפריה</strong></p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">תקציר מנהלים <span class="edit-hint">לחצו לעריכה</span></div>
+                <p>עמותת הדגמה מפעילה מ-2015 תוכניות חינוכיות חדשניות לנוער בסיכון בירושלים, באר שבע ונתיבות. התוכנית המוצעת "אור בקצה" תשלב חינוך טכנולוגי (STEM) עם פיתוח מיומנויות חיים, תוך שימוש בכלים דיגיטליים חדשניים. נגיע ל-200 בני נוער בשנה הראשונה ול-400 עד סוף התוכנית. שיעור ההצלחה הצפוי: 85% השלמת התוכנית, 70% שיפור בהישגים הלימודיים.</p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">הבעיה <span class="edit-hint">לחצו לעריכה</span></div>
+                <p>בערי הפריפריה ירושלים מזרח, באר שבע ונתיבות, שיעור הנשירה מהמערכת החינוכית עומד על 15-20%. נערים ונערות רבים חסרים גישה לחינוך טכנולוגי, מיומנויות דיגיטליות ומסגרות חינוכיות מותאמות. המצב מביא לנשירה, מעורבות ברחוב, ופגיעה בסיכויי התעסוקה העתידיים.</p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">הפתרון המוצע <span class="edit-hint">לחצו לעריכה</span></div>
+                <p>תוכנית "אור בקצה" מציעה מודל חדשני המשלב:<br>
+                1. <strong>מעבדות טכנולוגיה</strong> — סדנאות שבועיות בתכנות, רובוטיקה ו-AI<br>
+                2. <strong>מנטורינג אישי</strong> — כל משתתף מקבל מנטור מקצועי מהתעשייה<br>
+                3. <strong>פרויקט גמר</strong> — כל קבוצה מפתחת מוצר טכנולוגי שפותר בעיה קהילתית<br>
+                4. <strong>תמיכה רגשית</strong> — ליווי של יועצת חינוכית לאורך כל התוכנית</p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">תקציב מבוקש <span class="edit-hint">לחצו לעריכה</span></div>
+                <p>
+                    <strong>סה"כ מבוקש: 250,000 ש"ח</strong><br><br>
+                    כוח אדם (מדריכים, יועצת, רכז): 140,000 ש"ח<br>
+                    ציוד ותשתיות: 50,000 ש"ח<br>
+                    הסעות ולוגיסטיקה: 30,000 ש"ח<br>
+                    הכשרות והשתלמויות: 15,000 ש"ח<br>
+                    הערכה ומדידה: 15,000 ש"ח
+                </p>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button class="btn btn-primary" onclick="alert('ההגשה נשמרה בטיוטות!')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    שמור כטיוטה
+                </button>
+                <button class="btn btn-outline" onclick="copyResult()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    העתק הכל
+                </button>
+                <button class="btn btn-ghost" onclick="window.print()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    הדפס
+                </button>
+            </div>
+        </div>`;
+    }, 3000);
+}
+
+// ===== CONTENT GENERATOR =====
+function selectTone(el) {
+    document.querySelectorAll('.tone-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function generateContent() {
+    const area = document.getElementById('contentResultArea');
+    const type = document.getElementById('contentType').value;
+    const prompt = document.getElementById('contentPrompt').value;
+    const tone = document.querySelector('.tone-chip.active')?.textContent || 'מקצועי';
+
+    if (!prompt) { alert('כתבו מה אתם צריכים'); return; }
+
+    area.innerHTML = `<div class="ai-loading"><div class="spinner"></div><p>כותב ${type ? 'תוכן' : 'טקסט'}... טון: ${tone}</p></div>`;
+
+    setTimeout(() => {
+        area.innerHTML = `
+        <div class="ai-result fade-in">
+            <h4 style="color:var(--coral);">תוכן שנוצר</h4>
+            <p style="font-size:11px;color:var(--gray-light);margin-bottom:16px;">טון: ${tone} | לחצו על כל קטע כדי לערוך אותו ישירות</p>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">כותרת <span class="edit-hint">לחצו לעריכה</span></div>
+                <p><strong style="font-size:16px;">פנייה לקרן ברנקו וייס — תוכנית "אור בקצה" לחינוך דיגיטלי בפריפריה</strong></p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">פסקה ראשונה — הצגת העמותה <span class="edit-hint">לחצו לעריכה</span></div>
+                <p>עמותת הדגמה פועלת מזה 11 שנים בשלוש ערי פריפריה — ירושלים, באר שבע ונתיבות. אנו מפעילים תוכניות חינוכיות חדשניות לנוער בסיכון, עם דגש על שילוב טכנולוגיה ופיתוח מיומנויות לחיים. בשנה האחרונה הגענו ל-750 מוטבים ישירים, עם שביעות רצון של 92% בקרב המשתתפים.</p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">פסקה שנייה — הבעיה <span class="edit-hint">לחצו לעריכה</span></div>
+                <p>נערים ונערות רבים בערי הפריפריה חסרים גישה לחינוך טכנולוגי איכותי. שיעור הנשירה גבוה, והפער הדיגיטלי בין המרכז לפריפריה ממשיך לגדול. מחקר שפרסמנו בשיתוף האוניברסיטה העברית מראה ש-68% מבני הנוער בערים אלו לא נחשפו לשום תוכנית STEM מחוץ לביה"ס.</p>
+            </div>
+
+            <div class="ai-section" contenteditable="true">
+                <div class="ai-section-title">פסקה שלישית — הבקשה <span class="edit-hint">לחצו לעריכה</span></div>
+                <p>אנו פונים לקרן ברנקו וייס בבקשה לתמוך בהרחבת תוכנית "אור בקצה" לשנים 2026-2029. בתמיכתכם, נוכל להגיע ל-400 בני נוער נוספים, להקים 3 מעבדות טכנולוגיה חדשות, ולהכשיר 20 מנטורים מקצועיים מהתעשייה. התקציב המבוקש: 250,000 ש"ח לשנה.</p>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="alert('נשמר!')">שמור</button>
+                <button class="btn btn-outline" onclick="copyResult()">העתק</button>
+                <button class="btn btn-ghost" onclick="generateContent()">צור גרסה נוספת</button>
+            </div>
+        </div>`;
+    }, 2000);
+}
+
+// ===== CALLS FILTER =====
+function filterCalls(status, el) {
+    document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#callsTable tbody tr').forEach(row => {
+        row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+    });
+}
+
+// ===== MODALS =====
+function openModal(id) {
+    document.getElementById('modal-' + id).classList.add('open');
+}
+function closeModal(id) {
+    document.getElementById('modal-' + id).classList.remove('open');
+}
+
+// ===== COPY =====
+function copyResult() {
+    const sections = document.querySelectorAll('.ai-result .ai-section p');
+    let text = '';
+    sections.forEach(p => { text += p.textContent + '\n\n'; });
+    navigator.clipboard.writeText(text).then(() => {
+        alert('הועתק!');
+    });
+}
+
+// ===== FILE DROP =====
+const dropArea = document.getElementById('fileDropArea');
+if (dropArea) {
+    ['dragenter', 'dragover'].forEach(ev => {
+        dropArea.addEventListener(ev, e => { e.preventDefault(); dropArea.classList.add('drag-over'); });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+        dropArea.addEventListener(ev, e => { e.preventDefault(); dropArea.classList.remove('drag-over'); });
+    });
+    dropArea.addEventListener('drop', e => {
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            dropArea.innerHTML = `<p style="font-size:14px;font-weight:600;color:var(--plum);">&#x2705; ${files[0].name}</p><p style="font-size:12px;color:var(--gray);">הקובץ מוכן לניתוח</p>`;
+        }
+    });
+    document.getElementById('fileInput').addEventListener('change', function() {
+        if (this.files.length) {
+            dropArea.innerHTML = `<p style="font-size:14px;font-weight:600;color:var(--plum);">&#x2705; ${this.files[0].name}</p><p style="font-size:12px;color:var(--gray);">הקובץ מוכן לניתוח</p>`;
+        }
+    });
+}
+
+// ===== INIT =====
+// Persist data in localStorage
+window.addEventListener('beforeunload', () => {
+    const settings = {};
+    document.querySelectorAll('#page-settings .form-input').forEach(input => {
+        settings[input.previousElementSibling?.textContent] = input.value;
+    });
+    localStorage.setItem('shtayim-grants-settings', JSON.stringify(settings));
+});
+</script>
+</body>
+</html>
