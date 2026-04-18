@@ -660,6 +660,26 @@ async function syncToSheet(action, payload) {
   } catch(e) { console.log('Sync error:', e); }
 }
 
+// טעינת שיבוצים מ-Google Sheet (מקור האמת)
+async function loadScheduleFromSheet() {
+  if (!APPS_SCRIPT_URL) return false;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?action=getSchedule');
+    const data = await res.json();
+    if (data.ok && data.schedule && data.schedule.length > 0) {
+      // המרת שמות ל-staffId
+      schedule = data.schedule.map(s => {
+        const staff = STAFF.find(st => st.name === s.name);
+        return { date: s.date, staffId: staff ? staff.id : null };
+      }).filter(s => s.staffId !== null);
+      saveSchedule();
+      console.log('שיבוצים נטענו מ-Google Sheet: ' + schedule.length + ' ימים');
+      return true;
+    }
+  } catch(e) { console.log('Sheet load error (fallback to localStorage):', e); }
+  return false;
+}
+
 // ==================== DATA ====================
 const STAFF = [
   { id: 1, name: 'אושר אהרוני', phone: '972508882402', daysOff: [] },
@@ -1421,7 +1441,7 @@ function exportText() {
 }
 
 // ==================== INIT ====================
-function init() {
+async function init() {
   // Set today's date
   document.getElementById('docDate').valueAsDate = new Date();
 
@@ -1443,11 +1463,14 @@ function init() {
     }
   });
 
-  // Auto-generate schedule if empty
-  // אם הלוח ישן (מ-14 אנשי צוות) — ייצר מחדש
-  if (schedule.length === 0 || (schedule.length > 0 && !STAFF.find(s => s.id === schedule[0].staffId))) {
-    schedule = [];
-    generateSchedule();
+  // טעינת שיבוצים: Sheet = מקור אמת, localStorage = גיבוי
+  const loadedFromSheet = await loadScheduleFromSheet();
+  if (!loadedFromSheet) {
+    // Fallback: localStorage או יצירה מחדש
+    if (schedule.length === 0 || (schedule.length > 0 && !STAFF.find(s => s.id === schedule[0].staffId))) {
+      schedule = [];
+      generateSchedule();
+    }
   }
 
   // Render
