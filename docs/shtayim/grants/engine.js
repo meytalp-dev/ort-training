@@ -15,12 +15,12 @@
         ? APPS_SCRIPT_URL + '?action=getAll'
         : orgId + '.json';
 
-    fetch(dataSource)
+    fetch(dataSource, { redirect: 'follow' })
         .then(r => {
             if (!r.ok && !dataSource.includes('script.google')) {
                 throw new Error('קובץ נתונים לא נמצא: ' + orgId + '.json');
             }
-            return r.json();
+            return r.text().then(t => { try { return JSON.parse(t); } catch(e) { console.error('Parse error:', t.substring(0,200)); throw e; } });
         })
         .then(raw => {
             // Sheet returns {ok, org, calls, funds, ...}
