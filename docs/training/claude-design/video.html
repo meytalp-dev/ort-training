@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>קלוד · עיצוב — סרטון | Learni</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; overflow: hidden; font-family: "Heebo", system-ui, sans-serif; }
+  #root { position: absolute; inset: 0; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+// ═══════════════════════════════════════════════════════════════════════════
+// animations.jsx — Stage, Timeline, Sprite, easing helpers
+// ═══════════════════════════════════════════════════════════════════════════
+
+const Easing = {
+  linear: (t) => t,
+  easeInQuad:    (t) => t * t,
+  easeOutQuad:   (t) => t * (2 - t),
+  easeInOutQuad: (t) => (t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t),
+  easeInCubic:    (t) => t * t * t,
+  easeOutCubic:   (t) => (--t) * t * t + 1,
+  easeInOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1),
+  easeInQuart:    (t) => t * t * t * t,
+  easeOutQuart:   (t) => 1 - (--t) * t * t * t,
+  easeInOutQuart: (t) => (t < 0.5 ? 8 * t * t * t * t : 1 - 8 * (--t) * t * t * t),
+  easeInExpo:  (t) => (t === 0 ? 0 : Math.pow(2, 10 * (t - 1))),
+  easeOutExpo: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+  easeInOutExpo: (t) => {
+    if (t === 0) return 0; if (t === 1) return 1;
+    if (t < 0.5) return 0.5 * Math.pow(2, 20 * t - 10);
+    return 1 - 0.5 * Math.pow(2, -20 * t + 10);
+  },
+  easeInSine:    (t) => 1 - Math.cos((t * Math.PI) / 2),
+  easeOutSine:   (t) => Math.sin((t * Math.PI) / 2),
+  easeInOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+  easeOutBack: (t) => {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  },
+  easeInBack: (t) => {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return c3 * t * t * t - c1 * t * t;
+  },
+  easeInOutBack: (t) => {
+    const c1 = 1.70158, c2 = c1 * 1.525;
+    return t < 0.5
+      ? (Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
+      : (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
+  },
+  easeOutElastic: (t) => {
+    const c4 = (2 * Math.PI) / 3;
+    if (t === 0) return 0; if (t === 1) return 1;
+    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+  },
+};
+
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+function interpolate(input, output, ease = Easing.linear) {
+  return (t) => {
+    if (t <= input[0]) return output[0];
+    if (t >= input[input.length - 1]) return output[output.length - 1];
+    for (let i = 0; i < input.length - 1; i++) {
+      if (t >= input[i] && t <= input[i + 1]) {
+        const span = input[i + 1] - input[i];
+        const local = span === 0 ? 0 : (t - input[i]) / span;
+        const easeFn = Array.isArray(ease) ? (ease[i] || Easing.linear) : ease;
+        const eased = easeFn(local);
+        return output[i] + (output[i + 1] - output[i]) * eased;
+      }
+    }
+    return output[output.length - 1];
+  };
+}
+
+function animate({ from = 0, to = 1, start = 0, end = 1, ease = Easing.easeInOutCubic }) {
+  return (t) => {
+    if (t <= start) return from;
+    if (t >= end) return to;
+    const local = (t - start) / (end - start);
+    return from + (to - from) * ease(local);
+  };
+}
+
+const TimelineContext = React.createContext({ time: 0, duration: 10, playing: false });
+const useTime = () => React.useContext(TimelineContext).time;
+const useTimeline = () => React.useContext(TimelineContext);
+
+const SpriteContext = React.createContext({ localTime: 0, progress: 0, duration: 0 });
+const useSprite = () => React.useContext(SpriteContext);
+
+function Sprite({ start = 0, end = Infinity, children, keepMounted = false }) {
+  const { time } = useTimeline();
+  const visible = time >= start && time <= end;
+  if (!visible && !keepMounted) return null;
+  const duration = end - start;
+  const localTime = Math.max(0, time - start);
+  const progress = duration > 0 && isFinite(duration) ? clamp(localTime / duration, 0, 1) : 0;
+  const value = { localTime, progress, duration, visible };
+  return (
+    <SpriteContext.Provider value={value}>
+      {typeof children === 'function' ? children(value) : children}
+    </SpriteContext.Provider>
+  );
+}
+
+function IconButton({ children, onClick, title }) {
+  const [hover, setHover] = React.useState(false);
+  return (
+    <button onClick={onClick} title={title}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{
+        width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: hover ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6,
+        color: '#f6f4ef', cursor: 'pointer', padding: 0, transition: 'background 120ms',
+      }}>
+      {children}
+    </button>
+  );
+}
+
+function PlaybackBar({ time, duration, playing, onPlayPause, onReset, onSeek, onHover }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  const timeFromEvent = React.useCallback((e) => {
+    const rect = trackRef.current.getBoundingClientRect();
+    const x = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+    return x * duration;
+  }, [duration]);
+  const onTrackMove = (e) => { if (!trackRef.current) return; const t = timeFromEvent(e); if (dragging) onSeek(t); else onHover(t); };
+  const onTrackLeave = () => { if (!dragging) onHover(null); };
+  const onTrackDown = (e) => { setDragging(true); onSeek(timeFromEvent(e)); onHover(null); };
+  React.useEffect(() => {
+    if (!dragging) return;
+    const onUp = () => setDragging(false);
+    const onMove = (e) => { if (trackRef.current) onSeek(timeFromEvent(e)); };
+    window.addEventListener('mouseup', onUp); window.addEventListener('mousemove', onMove);
+    return () => { window.removeEventListener('mouseup', onUp); window.removeEventListener('mousemove', onMove); };
+  }, [dragging, timeFromEvent, onSeek]);
+  const pct = duration > 0 ? (time / duration) * 100 : 0;
+  const fmt = (t) => { const total = Math.max(0, t); const m = Math.floor(total / 60); const s = Math.floor(total % 60); const cs = Math.floor((total * 100) % 100); return `${String(m).padStart(1, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`; };
+  const mono = 'JetBrains Mono, ui-monospace, SFMono-Regular, monospace';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 16px', background: 'rgba(20,20,20,0.92)', borderTop: '1px solid rgba(255,255,255,0.08)', width: '100%', maxWidth: 680, alignSelf: 'center', borderRadius: 8, color: '#f6f4ef', fontFamily: 'Inter, system-ui, sans-serif', userSelect: 'none', flexShrink: 0 }}>
+      <IconButton onClick={onReset} title="Return to start (0)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 2v10M12 2L5 7l7 5V2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/></svg>
+      </IconButton>
+      <IconButton onClick={onPlayPause} title="Play/pause (space)">
+        {playing ? (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="2" width="3" height="10" fill="currentColor"/><rect x="8" y="2" width="3" height="10" fill="currentColor"/></svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 2l9 5-9 5V2z" fill="currentColor"/></svg>
+        )}
+      </IconButton>
+      <div style={{ fontFamily: mono, fontSize: 12, fontVariantNumeric: 'tabular-nums', width: 64, textAlign: 'right', color: '#f6f4ef' }}>{fmt(time)}</div>
+      <div ref={trackRef} onMouseMove={onTrackMove} onMouseLeave={onTrackLeave} onMouseDown={onTrackDown} style={{ flex: 1, height: 22, position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, height: 4, background: 'rgba(255,255,255,0.12)', borderRadius: 2 }}/>
+        <div style={{ position: 'absolute', left: 0, width: `${pct}%`, height: 4, background: 'oklch(72% 0.12 250)', borderRadius: 2 }}/>
+        <div style={{ position: 'absolute', left: `${pct}%`, top: '50%', width: 12, height: 12, marginLeft: -6, marginTop: -6, background: '#fff', borderRadius: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.4)' }}/>
+      </div>
+      <div style={{ fontFamily: mono, fontSize: 12, fontVariantNumeric: 'tabular-nums', width: 64, textAlign: 'left', color: 'rgba(246,244,239,0.55)' }}>{fmt(duration)}</div>
+    </div>
+  );
+}
+
+function Stage({ width = 1280, height = 720, duration = 10, background = '#f6f4ef', loop = true, autoplay = true, persistKey = 'animstage', children }) {
+  const [time, setTime] = React.useState(() => { try { const v = parseFloat(localStorage.getItem(persistKey + ':t') || '0'); return isFinite(v) ? clamp(v, 0, duration) : 0; } catch { return 0; } });
+  const [playing, setPlaying] = React.useState(autoplay);
+  const [hoverTime, setHoverTime] = React.useState(null);
+  const [scale, setScale] = React.useState(1);
+  const stageRef = React.useRef(null);
+  const rafRef = React.useRef(null);
+  const lastTsRef = React.useRef(null);
+
+  React.useEffect(() => { try { localStorage.setItem(persistKey + ':t', String(time)); } catch {} }, [time, persistKey]);
+
+  React.useEffect(() => {
+    if (!stageRef.current) return;
+    const el = stageRef.current;
+    const measure = () => { const barH = 44; const s = Math.min(el.clientWidth / width, (el.clientHeight - barH) / height); setScale(Math.max(0.05, s)); };
+    measure();
+    const ro = new ResizeObserver(measure); ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, [width, height]);
+
+  React.useEffect(() => {
+    if (!playing) { lastTsRef.current = null; return; }
+    const step = (ts) => {
+      if (lastTsRef.current == null) lastTsRef.current = ts;
+      const dt = (ts - lastTsRef.current) / 1000; lastTsRef.current = ts;
+      setTime((t) => { let next = t + dt; if (next >= duration) { if (loop) next = next % duration; else { next = duration; setPlaying(false); } } return next; });
+      rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); lastTsRef.current = null; };
+  }, [playing, duration, loop]);
+
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e.code === 'Space') { e.preventDefault(); setPlaying(p => !p); }
+      else if (e.code === 'ArrowLeft') { setTime(t => clamp(t - (e.shiftKey ? 1 : 0.1), 0, duration)); }
+      else if (e.code === 'ArrowRight') { setTime(t => clamp(t + (e.shiftKey ? 1 : 0.1), 0, duration)); }
+      else if (e.key === '0' || e.code === 'Home') { setTime(0); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [duration]);
+
+  const displayTime = hoverTime != null ? hoverTime : time;
+  const ctxValue = React.useMemo(() => ({ time: displayTime, duration, playing, setTime, setPlaying }), [displayTime, duration, playing]);
+
+  return (
+    <div ref={stageRef} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#0a0a0a', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', minHeight: 0 }}>
+        <div style={{ width, height, background, position: 'relative', transform: `scale(${scale})`, transformOrigin: 'center', flexShrink: 0, boxShadow: '0 20px 60px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+          <TimelineContext.Provider value={ctxValue}>{children}</TimelineContext.Provider>
+        </div>
+      </div>
+      <PlaybackBar time={displayTime} actualTime={time} duration={duration} playing={playing}
+        onPlayPause={() => setPlaying(p => !p)} onReset={() => setTime(0)} onSeek={(t) => setTime(t)} onHover={(t) => setHoverTime(t)} />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// scenes.jsx — Scenes 1 & 2
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PALETTE = {
+  bg: '#F4EEE2', bgDark: '#1A1714', ink: '#1A1714', ink2: '#6B6458',
+  caramel: '#C96442', caramelLight: '#E8A07A', clay: '#B8694A',
+  cream: '#FAF6ED', line: '#D4CCBC', gold: '#D4A85E',
+};
+const FONT_SANS = '"Heebo", "Inter", system-ui, sans-serif';
+const FONT_MONO = '"JetBrains Mono", ui-monospace, monospace';
+
+function SceneIntro() {
+  const { progress, localTime } = useSprite();
+  const shapes = React.useMemo(() => [
+    { type: 'circle', color: PALETTE.caramel, size: 96, tx: 0, ty: 0 },
+    { type: 'square', color: PALETTE.ink, size: 80, tx: -220, ty: -60 },
+    { type: 'circle', color: PALETTE.gold, size: 56, tx: 220, ty: -80 },
+    { type: 'square', color: PALETTE.caramelLight, size: 64, tx: -360, ty: 80 },
+    { type: 'circle', color: PALETTE.clay, size: 72, tx: 340, ty: 90 },
+    { type: 'square', color: PALETTE.ink2, size: 48, tx: 0, ty: -200 },
+    { type: 'circle', color: PALETTE.caramel, size: 40, tx: 0, ty: 200 },
+    { type: 'square', color: PALETTE.gold, size: 56, tx: -480, ty: -180 },
+    { type: 'circle', color: PALETTE.caramelLight, size: 44, tx: 480, ty: 180 },
+  ], []);
+  const phaseA = clamp(progress / 0.6, 0, 1);
+  const phaseB = clamp((progress - 0.6) / 0.4, 0, 1);
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: PALETTE.bg }}>
+      <div style={{ position: 'absolute', left: '50%', top: '50%' }}>
+        {shapes.map((s, i) => {
+          const delay = i * 0.04;
+          const p = clamp((phaseA - delay) / (1 - delay), 0, 1);
+          const eased = Easing.easeOutCubic(p);
+          const startR = 1400;
+          const ang = (i / shapes.length) * Math.PI * 2 + 0.3;
+          const startX = Math.cos(ang) * startR;
+          const startY = Math.sin(ang) * startR;
+          const x = startX + (s.tx - startX) * eased;
+          const y = startY + (s.ty - startY) * eased;
+          const breathe = 1 + Math.sin(localTime * 2 + i) * 0.02 * phaseB;
+          return (<div key={i} style={{ position: 'absolute', left: x, top: y, width: s.size, height: s.size, marginLeft: -s.size / 2, marginTop: -s.size / 2, background: s.color, borderRadius: s.type === 'circle' ? '50%' : 8, opacity: eased, transform: `scale(${breathe})` }}/>);
+        })}
+      </div>
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 80, textAlign: 'center', fontFamily: FONT_SANS, fontSize: 22, fontWeight: 400, color: PALETTE.ink2, letterSpacing: '0.08em', opacity: clamp((progress - 0.7) * 3, 0, 1), direction: 'rtl' }}>
+        קלוד · עיצוב
+      </div>
+    </div>
+  );
+}
+
+function SlideLayoutA() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, padding: 56, direction: 'rtl' }}>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.caramel, letterSpacing: '0.2em' }}>01</div>
+      <div style={{ fontFamily: FONT_SANS, fontSize: 72, fontWeight: 800, color: PALETTE.ink, lineHeight: 1.0, marginTop: 28, letterSpacing: '-0.03em' }}>סיפור.<br/>חזק.</div>
+      <div style={{ position: 'absolute', right: 56, bottom: 56, width: 120, height: 120, background: PALETTE.caramel, borderRadius: 60 }}/>
+      <div style={{ position: 'absolute', right: 56, bottom: 200, fontFamily: FONT_SANS, fontSize: 16, color: PALETTE.ink2, maxWidth: 360 }}>פריסות מודולריות. היררכיה ברורה. סיפור שזורם.</div>
+    </div>
+  );
+}
+
+function SlideLayoutB() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, padding: 56, direction: 'rtl' }}>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.caramel, letterSpacing: '0.2em' }}>02</div>
+      <div style={{ fontFamily: FONT_SANS, fontSize: 40, fontWeight: 700, color: PALETTE.ink, marginTop: 20, letterSpacing: '-0.02em' }}>נתונים שמרגישים נכון</div>
+      <div style={{ position: 'absolute', left: 56, bottom: 56, display: 'flex', alignItems: 'flex-end', gap: 20, height: 240 }}>
+        {[0.55, 0.75, 0.45, 0.9, 0.62, 0.82].map((h, i) => (
+          <div key={i} style={{ width: 48, height: h * 240, background: i === 3 ? PALETTE.caramel : PALETTE.ink, borderRadius: '6px 6px 0 0', opacity: i === 3 ? 1 : 0.85 }}/>
+        ))}
+      </div>
+      <div style={{ position: 'absolute', right: 56, bottom: 80, padding: '16px 20px', background: PALETTE.bg, border: `1px solid ${PALETTE.line}`, borderRadius: 10, maxWidth: 240 }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: PALETTE.caramel, letterSpacing: '0.15em' }}>שיא</div>
+        <div style={{ fontFamily: FONT_SANS, fontSize: 32, fontWeight: 700, color: PALETTE.ink, marginTop: 4, letterSpacing: '-0.02em' }}>90%</div>
+      </div>
+    </div>
+  );
+}
+
+function SlideLayoutC() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, display: 'flex', direction: 'rtl' }}>
+      <div style={{ flex: 1, padding: 56, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.caramel, letterSpacing: '0.2em' }}>03</div>
+        <div>
+          <div style={{ fontFamily: FONT_SANS, fontSize: 28, fontWeight: 500, color: PALETTE.ink, lineHeight: 1.3, letterSpacing: '-0.01em' }}>"עיצוב טוב<br/>הוא שקוף —<br/>הוא פשוט עובד."</div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.ink2, marginTop: 16, letterSpacing: '0.1em' }}>— עקרון מנחה</div>
+        </div>
+      </div>
+      <div style={{ width: 340, background: 'repeating-linear-gradient(135deg, #E8DFCF 0 14px, #DED4C1 14px 28px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: PALETTE.ink2, letterSpacing: '0.2em', textTransform: 'uppercase', transform: 'rotate(-90deg)' }}>image · 16:9</div>
+      </div>
+    </div>
+  );
+}
+
+function MiniSlide({ idx, start, end, progress }) {
+  const visible = progress >= start && progress <= end;
+  const localP = clamp((progress - start) / (end - start), 0, 1);
+  let opacity, tx, scale;
+  if (localP < 0.2) { const t = Easing.easeOutCubic(localP / 0.2); opacity = t; tx = (1 - t) * 40; scale = 0.96 + 0.04 * t; }
+  else if (localP > 0.8) { const t = Easing.easeInCubic((localP - 0.8) / 0.2); opacity = 1 - t; tx = -t * 40; scale = 1 - 0.04 * t; }
+  else { opacity = 1; tx = 0; scale = 1; }
+  if (!visible) return null;
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: PALETTE.cream, borderRadius: 18, boxShadow: '0 24px 60px rgba(26,23,20,0.12), 0 2px 6px rgba(26,23,20,0.06)', border: `1px solid ${PALETTE.line}`, opacity, transform: `translateX(${tx}px) scale(${scale})`, overflow: 'hidden' }}>
+      {idx === 0 && <SlideLayoutA />}
+      {idx === 1 && <SlideLayoutB />}
+      {idx === 2 && <SlideLayoutC />}
+    </div>
+  );
+}
+
+function SceneDecks() {
+  const { progress } = useSprite();
+  const slides = [{ idx: 0, start: 0.00, end: 0.35 }, { idx: 1, start: 0.30, end: 0.65 }, { idx: 2, start: 0.60, end: 1.00 }];
+  const labelP = clamp(progress * 3, 0, 1);
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: PALETTE.bg }}>
+      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, textAlign: 'center', direction: 'rtl' }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.caramel, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: labelP, transform: `translateY(${(1 - labelP) * 8}px)` }}>01 — DECKS</div>
+        <div style={{ fontFamily: FONT_SANS, fontSize: 48, fontWeight: 700, color: PALETTE.ink, letterSpacing: '-0.02em', marginTop: 8, opacity: labelP, transform: `translateY(${(1 - labelP) * 12}px)` }}>דקים שמספרים סיפור</div>
+      </div>
+      <div style={{ position: 'absolute', left: '50%', top: '52%', transform: 'translate(-50%, -50%)', width: 900, height: 500 }}>
+        {slides.map((s, i) => <MiniSlide key={i} {...s} progress={progress} />)}
+      </div>
+      <div style={{ position: 'absolute', bottom: 50, left: 0, right: 0, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.ink2, letterSpacing: '0.15em', opacity: labelP }}>
+        {progress < 0.35 ? '01 / 03' : progress < 0.65 ? '02 / 03' : '03 / 03'}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// scenes2.jsx — Scenes 3-6
+// ═══════════════════════════════════════════════════════════════════════════
+
+function WireToHiFi({ wireP, morphP, confirmP }) {
+  const lerpColor = (a, b, t) => {
+    const parse = (h) => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+    const [r1,g1,b1] = parse(a); const [r2,g2,b2] = parse(b);
+    const m = (x,y) => Math.round(x + (y-x) * t);
+    return `rgb(${m(r1,r2)},${m(g1,g2)},${m(b1,b2)})`;
+  };
+  const wireGrey = '#CFC6B4'; const wireBg = '#EDE6D6';
+  const headerH = 60 * clamp(wireP * 2, 0, 1);
+  const avatarR = 48 * clamp((wireP - 0.1) * 2, 0, 1);
+  const titleW = 240 * clamp((wireP - 0.15) * 2, 0, 1);
+  const subW = 180 * clamp((wireP - 0.22) * 2, 0, 1);
+  const row1 = clamp((wireP - 0.3) * 2.5, 0, 1);
+  const row2 = clamp((wireP - 0.38) * 2.5, 0, 1);
+  const btnS = clamp((wireP - 0.55) * 3, 0, 1);
+  const headerColor = lerpColor(wireGrey, PALETTE.ink, morphP);
+  const avatarColor = lerpColor(wireGrey, PALETTE.caramel, morphP);
+  const titleColor = lerpColor(wireGrey, PALETTE.ink, morphP);
+  const subColor = lerpColor(wireGrey, PALETTE.ink2, morphP);
+  const btnColor = lerpColor(wireGrey, PALETTE.caramel, morphP);
+  const rowBg = lerpColor(wireBg, PALETTE.bg, morphP);
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: PALETTE.cream }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: headerH, background: headerColor }}/>
+      <div style={{ position: 'absolute', top: 22, right: 24, fontFamily: FONT_SANS, fontSize: 15, fontWeight: 600, color: PALETTE.cream, opacity: morphP, letterSpacing: '-0.01em' }}>הפרויקט שלי</div>
+      <div style={{ position: 'absolute', top: 24, left: 24, width: 20, height: 12, opacity: morphP }}>
+        <div style={{ width: '100%', height: 2, background: PALETTE.cream, marginBottom: 3 }}/>
+        <div style={{ width: '100%', height: 2, background: PALETTE.cream, marginBottom: 3 }}/>
+        <div style={{ width: '100%', height: 2, background: PALETTE.cream }}/>
+      </div>
+      <div style={{ position: 'absolute', top: 92, right: 32, left: 32, padding: 20, background: rowBg, borderRadius: 14, border: `1px solid ${PALETTE.line}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: avatarR, height: avatarR, borderRadius: '50%', background: avatarColor, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_SANS, fontSize: 18, fontWeight: 700, color: '#fff' }}>
+            <span style={{ opacity: morphP }}>א</span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ height: 14, width: titleW, background: titleColor, borderRadius: 4, opacity: morphP < 0.7 ? 1 : 0 }}/>
+            <div style={{ fontFamily: FONT_SANS, fontSize: 18, fontWeight: 700, color: PALETTE.ink, opacity: morphP > 0.7 ? (morphP - 0.7) / 0.3 : 0, marginTop: morphP > 0.7 ? -14 : 0, letterSpacing: '-0.01em' }}>דשבורד ראשי</div>
+            <div style={{ height: 10, width: subW, marginTop: 10, background: subColor, borderRadius: 3, opacity: morphP < 0.7 ? 1 : 0 }}/>
+            <div style={{ fontFamily: FONT_SANS, fontSize: 13, color: PALETTE.ink2, opacity: morphP > 0.7 ? (morphP - 0.7) / 0.3 : 0, marginTop: morphP > 0.7 ? -10 : 0 }}>12 משימות פעילות · עודכן עכשיו</div>
+          </div>
+        </div>
+      </div>
+      <div style={{ position: 'absolute', top: 212, right: 32, left: 32 }}>
+        {[row1, row2].map((op, i) => (
+          <div key={i} style={{ marginTop: i === 0 ? 0 : 12, padding: 14, background: rowBg, border: `1px solid ${PALETTE.line}`, borderRadius: 10, opacity: op, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 6, background: i === 0 ? lerpColor(wireGrey, PALETTE.gold, morphP) : lerpColor(wireGrey, PALETTE.clay, morphP) }}/>
+            <div style={{ flex: 1 }}>
+              <div style={{ height: 8, width: '70%', background: titleColor, borderRadius: 3, opacity: morphP < 0.7 ? 1 : 0 }}/>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 13, fontWeight: 600, color: PALETTE.ink, opacity: morphP > 0.7 ? (morphP - 0.7) / 0.3 : 0, marginTop: morphP > 0.7 ? -8 : 0 }}>{i === 0 ? 'בדיקת עיצוב שבועית' : 'סקירת פרוטוטייפ'}</div>
+              <div style={{ height: 6, width: '50%', marginTop: 6, background: subColor, borderRadius: 2, opacity: morphP < 0.7 ? 1 : 0 }}/>
+              <div style={{ fontFamily: FONT_SANS, fontSize: 11, color: PALETTE.ink2, opacity: morphP > 0.7 ? (morphP - 0.7) / 0.3 : 0, marginTop: morphP > 0.7 ? -6 : 2 }}>{i === 0 ? 'היום · 14:00' : 'מחר · 10:30'}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ position: 'absolute', bottom: 28, right: 32, left: 32, height: 48 * btnS, background: btnColor, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_SANS, fontSize: 16, fontWeight: 600, color: PALETTE.cream, letterSpacing: '-0.01em', transform: confirmP > 0 ? `scale(${1 - confirmP * 0.04})` : 'scale(1)' }}>
+        <span style={{ opacity: morphP }}>אשר ושלח ←</span>
+      </div>
+      {confirmP > 0 && (
+        <div style={{ position: 'absolute', bottom: 90, right: 32, left: 32, padding: '12px 16px', background: PALETTE.ink, borderRadius: 10, fontFamily: FONT_SANS, fontSize: 13, fontWeight: 500, color: PALETTE.cream, opacity: confirmP, transform: `translateY(${(1 - confirmP) * 12}px)`, display: 'flex', alignItems: 'center', gap: 10, direction: 'rtl' }}>
+          <div style={{ width: 16, height: 16, borderRadius: '50%', background: PALETTE.gold, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: PALETTE.ink, fontWeight: 800 }}>&#10003;</div>
+          נשלח בהצלחה
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScenePrototypes() {
+  const { progress } = useSprite();
+  const labelP = clamp(progress / 0.15, 0, 1);
+  const wireP = clamp((progress - 0.10) / 0.35, 0, 1);
+  const morphP = clamp((progress - 0.45) / 0.25, 0, 1);
+  const cursorP = clamp((progress - 0.55) / 0.35, 0, 1);
+  const clickP = clamp((progress - 0.78) / 0.08, 0, 1);
+  const confirmP = clamp((progress - 0.82) / 0.15, 0, 1);
+  const cursorStart = { x: 780, y: 560 }; const cursorEnd = { x: 690, y: 420 };
+  const cEased = Easing.easeInOutCubic(cursorP);
+  const cursorX = cursorStart.x + (cursorEnd.x - cursorStart.x) * cEased;
+  const cursorY = cursorStart.y + (cursorEnd.y - cursorStart.y) * cEased;
+  const ripple = clickP > 0 ? clickP : 0;
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: PALETTE.bg }}>
+      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, textAlign: 'center', direction: 'rtl' }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.caramel, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: labelP, transform: `translateY(${(1 - labelP) * 8}px)` }}>02 — PROTOTYPES</div>
+        <div style={{ fontFamily: FONT_SANS, fontSize: 48, fontWeight: 700, color: PALETTE.ink, letterSpacing: '-0.02em', marginTop: 8, opacity: labelP, transform: `translateY(${(1 - labelP) * 12}px)` }}>פרוטוטייפים חיים</div>
+      </div>
+      <div style={{ position: 'absolute', left: '50%', top: '55%', transform: 'translate(-50%, -50%)', width: 540, height: 420, background: PALETTE.cream, borderRadius: 20, boxShadow: '0 30px 70px rgba(26,23,20,0.14), 0 2px 8px rgba(26,23,20,0.06)', border: `1px solid ${PALETTE.line}`, overflow: 'hidden', direction: 'rtl' }}>
+        <WireToHiFi wireP={wireP} morphP={morphP} confirmP={confirmP} />
+      </div>
+      {cursorP > 0 && (
+        <div style={{ position: 'absolute', left: cursorX, top: cursorY, width: 22, height: 22, pointerEvents: 'none', zIndex: 10 }}>
+          {ripple > 0 && ripple < 1 && (
+            <div style={{ position: 'absolute', left: 0, top: 0, width: 60, height: 60, marginLeft: -30 + 11, marginTop: -30 + 11, borderRadius: '50%', border: `2px solid ${PALETTE.caramel}`, opacity: 1 - ripple, transform: `scale(${0.3 + ripple * 1.3})` }}/>
+          )}
+          <svg width="22" height="22" viewBox="0 0 22 22"><path d="M2 2 L2 18 L6.5 14 L9.5 20 L12 18.5 L9 12.5 L15 12.5 Z" fill={PALETTE.ink} stroke={PALETTE.cream} strokeWidth="1.5" strokeLinejoin="round"/></svg>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AnimCanvas({ playTime }) {
+  const ballX = 60 + playTime * 700;
+  const ballY = 280 - Math.abs(Math.sin(playTime * Math.PI * 3)) * 200;
+  const barH = 20 + playTime * 240;
+  const rot = playTime * 360;
+  const captionOpacity = playTime > 0.5 ? clamp((playTime - 0.5) * 4, 0, 1) : 0;
+  return (
+    <div style={{ position: 'absolute', inset: 0 }}>
+      <div style={{ position: 'absolute', left: ballX, top: ballY, width: 44, height: 44, marginLeft: -22, marginTop: -22, borderRadius: '50%', background: PALETTE.caramel, boxShadow: '0 8px 20px rgba(201,100,66,0.3)' }}/>
+      <div style={{ position: 'absolute', left: 60, bottom: 40, width: 40, height: barH, background: PALETTE.ink, borderRadius: '6px 6px 0 0' }}/>
+      <div style={{ position: 'absolute', right: 80, top: 80, width: 56, height: 56, background: PALETTE.gold, borderRadius: 8, transform: `rotate(${rot}deg)`, transformOrigin: 'center' }}/>
+      {[0.0, 0.33, 0.66, 1.0].map((kf, i) => {
+        const kx = 60 + kf * 700; const ky = 280 - Math.abs(Math.sin(kf * Math.PI * 3)) * 200;
+        const active = Math.abs(playTime - kf) < 0.06;
+        return (<div key={i} style={{ position: 'absolute', left: kx, top: ky, width: active ? 12 : 8, height: active ? 12 : 8, marginLeft: active ? -6 : -4, marginTop: active ? -6 : -4, borderRadius: '50%', border: `2px solid ${PALETTE.caramel}`, background: active ? PALETTE.caramel : 'transparent', opacity: 0.6 }}/>);
+      })}
+      <div style={{ position: 'absolute', left: '50%', bottom: 30, transform: 'translateX(-50%)', fontFamily: FONT_MONO, fontSize: 11, color: PALETTE.ink2, letterSpacing: '0.15em', opacity: captionOpacity }}>EASE · IN · OUT · CUBIC</div>
+    </div>
+  );
+}
+
+function TimelineVis({ playTime, labelP }) {
+  const tracks = [
+    { name: 'ball', keyframes: [0.00, 0.33, 0.66, 1.00], color: PALETTE.caramel },
+    { name: 'bar', keyframes: [0.10, 0.50, 0.95], color: PALETTE.ink },
+    { name: 'square', keyframes: [0.00, 1.00], color: PALETTE.gold },
+  ];
+  return (
+    <div style={{ background: PALETTE.cream, border: `1px solid ${PALETTE.line}`, borderRadius: 10, padding: '14px 20px', opacity: labelP, position: 'relative' }}>
+      {tracks.map((t, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, height: 22, position: 'relative' }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: PALETTE.ink2, width: 60, textAlign: 'left', letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0 }}>{t.name}</div>
+          <div style={{ flex: 1, height: 2, background: PALETTE.line, borderRadius: 1, position: 'relative' }}>
+            {t.keyframes.map((kf, j) => {
+              const active = Math.abs(playTime - kf) < 0.04;
+              return (<div key={j} style={{ position: 'absolute', left: `${kf * 100}%`, top: '50%', width: active ? 12 : 8, height: active ? 12 : 8, marginLeft: active ? -6 : -4, marginTop: active ? -6 : -4, background: t.color, borderRadius: 2, transform: 'rotate(45deg)', boxShadow: active ? `0 0 0 4px ${t.color}33` : 'none' }}/>);
+            })}
+          </div>
+        </div>
+      ))}
+      <div style={{ position: 'absolute', left: `calc(20px + 60px + 12px + ${playTime * 708}px)`, top: 8, bottom: 8, width: 2, background: PALETTE.caramel, boxShadow: `0 0 0 1px ${PALETTE.bg}`, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: -4, left: -5, width: 12, height: 8, background: PALETTE.caramel, clipPath: 'polygon(0 0, 100% 0, 50% 100%)' }}/>
+      </div>
+    </div>
+  );
+}
+
+function SceneAnimations() {
+  const { progress } = useSprite();
+  const labelP = clamp(progress * 5, 0, 1);
+  const scrubP = clamp((progress - 0.1) / 0.8, 0, 1);
+  const playTime = Easing.easeInOutCubic(scrubP);
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: PALETTE.bg }}>
+      <div style={{ position: 'absolute', top: 60, left: 0, right: 0, textAlign: 'center', direction: 'rtl' }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.caramel, letterSpacing: '0.2em', textTransform: 'uppercase', opacity: labelP }}>03 — ANIMATIONS</div>
+        <div style={{ fontFamily: FONT_SANS, fontSize: 48, fontWeight: 700, color: PALETTE.ink, letterSpacing: '-0.02em', marginTop: 8, opacity: labelP }}>אנימציות שמדברות</div>
+      </div>
+      <div style={{ position: 'absolute', left: '50%', top: '44%', transform: 'translate(-50%, -50%)', width: 820, height: 340, background: PALETTE.cream, borderRadius: 16, border: `1px solid ${PALETTE.line}`, boxShadow: '0 20px 50px rgba(26,23,20,0.1)', overflow: 'hidden' }}>
+        <AnimCanvas playTime={playTime} />
+      </div>
+      <div style={{ position: 'absolute', left: '50%', bottom: 80, transform: 'translateX(-50%)', width: 820 }}>
+        <TimelineVis playTime={playTime} labelP={labelP} />
+      </div>
+    </div>
+  );
+}
+
+function SceneConverge() {
+  const { progress, localTime } = useSprite();
+  const labels = ['דקים', 'פרוטוטייפים', 'אנימציות'];
+  const startX = [-300, 0, 300];
+  const colors = [PALETTE.caramel, PALETTE.ink, PALETTE.gold];
+  const aP = clamp(progress / 0.4, 0, 1);
+  const bP = clamp((progress - 0.4) / 0.45, 0, 1);
+  const cP = clamp((progress - 0.85) / 0.15, 0, 1);
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: PALETTE.bg }}>
+      {labels.map((label, i) => {
+        const bEased = Easing.easeInOutCubic(bP);
+        const x = startX[i] * (1 - bEased);
+        const w = 200 - 120 * bEased; const h = 260 - 180 * bEased;
+        const radius = 18 + bEased * 60;
+        const labelOpacity = (1 - bP) * aP;
+        return (
+          <div key={i} style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(calc(-50% + ${x}px), -50%)` }}>
+            <div style={{ width: w, height: h, background: colors[i], borderRadius: radius, opacity: 1 - cP * 0.3, transform: `scale(${0.3 + aP * 0.7})` }}/>
+            <div style={{ position: 'absolute', left: '50%', top: h + 12, transform: 'translateX(-50%)', fontFamily: FONT_SANS, fontSize: 20, fontWeight: 600, color: PALETTE.ink, letterSpacing: '-0.01em', opacity: labelOpacity, whiteSpace: 'nowrap', direction: 'rtl' }}>{label}</div>
+          </div>
+        );
+      })}
+      {cP > 0 && (
+        <div style={{ position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%, -50%) scale(${1 + cP * 0.2})`, width: 120, height: 120, borderRadius: '50%', background: PALETTE.caramel, boxShadow: `0 0 0 ${cP * 40}px ${PALETTE.caramel}22, 0 0 0 ${cP * 80}px ${PALETTE.caramel}11` }}/>
+      )}
+      <div style={{ position: 'absolute', bottom: 80, left: 0, right: 0, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.ink2, letterSpacing: '0.2em', opacity: aP * (1 - cP) }}>ONE · TOOL</div>
+    </div>
+  );
+}
+
+function SceneOutro() {
+  const { progress, localTime } = useSprite();
+  const dotP = clamp(progress / 0.3, 0, 1);
+  const wordP = clamp((progress - 0.2) / 0.4, 0, 1);
+  const subP = clamp((progress - 0.55) / 0.3, 0, 1);
+  const holdPulse = Math.sin(localTime * 2) * 0.5 + 0.5;
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: PALETTE.bgDark }}>
+      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', display: 'flex', alignItems: 'center', gap: 28, direction: 'rtl' }}>
+        <div style={{ width: 80, height: 80, borderRadius: '50%', background: PALETTE.caramel, transform: `scale(${Easing.easeOutBack(dotP)})`, boxShadow: `0 0 0 ${2 + holdPulse * 6}px ${PALETTE.caramel}22` }}/>
+        <div style={{ fontFamily: FONT_SANS, fontSize: 96, fontWeight: 800, color: PALETTE.cream, letterSpacing: '-0.04em', lineHeight: 1.0, opacity: wordP, transform: `translateX(${(1 - wordP) * 40}px)`, direction: 'rtl' }}>קלוד · עיצוב</div>
+      </div>
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 120, textAlign: 'center', fontFamily: FONT_MONO, fontSize: 14, color: PALETTE.caramelLight, letterSpacing: '0.25em', textTransform: 'uppercase', opacity: subP, transform: `translateY(${(1 - subP) * 10}px)` }}>DESIGN · SHIPPED · FAST</div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Main Video component
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Video() {
+  return (
+    <div style={{position:'absolute', inset:0}}>
+      <Stage width={1920} height={1080} duration={30} background={PALETTE.bg} persistKey="claude-design-video">
+        <Sprite start={0} end={4.2}><SceneIntro /></Sprite>
+        <Sprite start={4} end={9.2}><SceneDecks /></Sprite>
+        <Sprite start={9} end={15.2}><ScenePrototypes /></Sprite>
+        <Sprite start={15} end={21.2}><SceneAnimations /></Sprite>
+        <Sprite start={21} end={26.2}><SceneConverge /></Sprite>
+        <Sprite start={26} end={30}><SceneOutro /></Sprite>
+      </Stage>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<Video />);
+  </script>
+</body>
+</html>
