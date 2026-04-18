@@ -107,16 +107,16 @@ function doPost(e) {
 function doGet(e) {
   const action = e.parameter.action;
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const tz = ss.getSpreadsheetTimeZone();
 
   if (action === 'getSchedule') {
     const sheet = ss.getSheetByName('שיבוצים');
-    const data = sheet.getDataRange().getValues();
+    // getDisplayValues — קורא טקסט בדיוק כמו שמוצג, בלי באגי timezone
+    const data = sheet.getDataRange().getDisplayValues();
     const schedule = data.slice(1)
       .filter(row => row[0] && row[1])
       .map(row => ({
-        date: Utilities.formatDate(row[0], tz, 'yyyy-MM-dd'),
-        name: String(row[1]).trim()
+        date: row[0].trim(),
+        name: row[1].trim()
       }));
     return ContentService.createTextOutput(JSON.stringify({ok: true, schedule}))
       .setMimeType(ContentService.MimeType.JSON);
@@ -219,12 +219,10 @@ function checkAndNotifyManager() {
 
 function getTeacherForDate_(ss, dateStr) {
   const sheet = ss.getSheetByName('שיבוצים');
-  const tz = ss.getSpreadsheetTimeZone();
-  const data = sheet.getDataRange().getValues();
+  const data = sheet.getDataRange().getDisplayValues();
   for (let i = 1; i < data.length; i++) {
     if (!data[i][0]) continue;
-    const rowDate = Utilities.formatDate(data[i][0], tz, 'yyyy-MM-dd');
-    if (rowDate === dateStr) return String(data[i][1]).trim();
+    if (data[i][0].trim() === dateStr) return data[i][1].trim();
   }
   return null;
 }
@@ -303,14 +301,13 @@ function formatDateHebrew_(date) {
  */
 function updateScheduleYoavMiluim() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const tz = ss.getSpreadsheetTimeZone();
   const sheet = ss.getSheetByName('שיבוצים');
-  const data = sheet.getDataRange().getValues();
+  const data = sheet.getDataRange().getDisplayValues();
 
   const keepRows = [];
   for (let i = 1; i < data.length; i++) {
     if (!data[i][0]) continue;
-    const dateStr = Utilities.formatDate(data[i][0], tz, 'yyyy-MM-dd');
+    const dateStr = data[i][0].trim();
     if (dateStr < '2026-04-14') keepRows.push([dateStr, data[i][1]]);
   }
 
@@ -507,10 +504,9 @@ function testManagerNotify() { checkAndNotifyManager(); }
 
 function showSchedule() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const tz = ss.getSpreadsheetTimeZone();
   const sheet = ss.getSheetByName('שיבוצים');
-  const data = sheet.getDataRange().getValues();
+  const data = sheet.getDataRange().getDisplayValues();
   data.slice(1).forEach(row => {
-    if (row[0]) Logger.log(Utilities.formatDate(row[0], tz, 'yyyy-MM-dd') + ' → ' + row[1]);
+    if (row[0]) Logger.log(row[0] + ' → ' + row[1]);
   });
 }
