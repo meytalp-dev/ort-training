@@ -1445,11 +1445,11 @@ async function runSync(){
 // ═══════════════════════════════════════════════════
 // ADMIN — הרשאות הוספת אירועים
 // ═══════════════════════════════════════════════════
-const ADMIN_USERS = {
-  'מיטל': '2024',
-  'רוית': '2024',
-  'מיטל המזכירה': '2024'
+// PINs stored as SHA-256 hashes — not visible in source code
+const ADMIN_HASHES = {
+  '6557739a67283a8de383fc5c0997fbec7c5721a46f28f3235fc9607598d9016b': ['מיטל','רוית','מיטל המזכירה']
 };
+async function hashPin(p){var d=new TextEncoder().encode(p);var b=await crypto.subtle.digest('SHA-256',d);return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');}
 let adminUser = sessionStorage.getItem('gantt_admin') || '';
 
 function adminAddEvent(){
@@ -1465,18 +1465,16 @@ function adminAddEvent(){
   setTimeout(()=>document.getElementById('adminPin').focus(),100);
 }
 
-function checkAdmin(){
+async function checkAdmin(){
   const pin=document.getElementById('adminPin').value.trim();
-  // Check against all users
-  for(const [name,code] of Object.entries(ADMIN_USERS)){
-    if(pin===code){
-      adminUser=name;
-      sessionStorage.setItem('gantt_admin',name);
-      closeAdminModal();
-      updateAdminUI();
-      openAddBlank();
-      return;
-    }
+  const hashed=await hashPin(pin);
+  if(ADMIN_HASHES[hashed]){
+    adminUser=ADMIN_HASHES[hashed][0];
+    sessionStorage.setItem('gantt_admin',adminUser);
+    closeAdminModal();
+    updateAdminUI();
+    openAddBlank();
+    return;
   }
   document.getElementById('adminErr').textContent='קוד שגוי';
   document.getElementById('adminPin').value='';
