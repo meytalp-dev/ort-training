@@ -918,24 +918,112 @@ function generateDemoData(){
 }
 
 // ==================== DATA LAYER ====================
-const LS_KEY = 'ort_monthly_reports_v3';
+const LS_KEY = 'ort_monthly_reports_v3'; // legacy — used for migration only
 const LS_SESSION = 'ort_reports_session';
+const CLASS_KEY_PREFIX = 'ort_reports_class_';
 let DATA = {};
+let ALL_CLASS_IDS = []; // populated after student-data loads
+
+function getClassKey(classId){ return CLASS_KEY_PREFIX + classId; }
+
+function getStudentsByClass(){
+  // Build map from STUDENTS global array
+  var map = {};
+  if(typeof STUDENTS !== 'undefined' && STUDENTS.length){
+    STUDENTS.forEach(function(s){ if(s.cls){ if(!map[s.cls]) map[s.cls]=[]; map[s.cls].push(s); } });
+  }
+  return map;
+}
 
 function loadData(){
-  return cloudStorage.get(LS_KEY).then(function(stored){
-    if(stored && stored.students && stored.homeroomReports){
-      DATA = stored;
-      if(!DATA.homeVisits) DATA.homeVisits = generateHomeVisits(DATA.students);
+  // Collect all class IDs from student-data
+  var studentMap = getStudentsByClass();
+  ALL_CLASS_IDS = Object.keys(studentMap);
+  if(!ALL_CLASS_IDS.length) ALL_CLASS_IDS = ['ט1','ט2','י1','י2','י3','יא1','יא2','יא3','יב1','יב2','יב3'];
+
+  // Try loading per-class keys first
+  const classKeys = ALL_CLASS_IDS.map(c => getClassKey(c));
+  return cloudStorage.getMany(classKeys).then(function(results){
+    // Check if any per-class key exists
+    const hasPerClass = classKeys.some(k => results[k] && results[k].students);
+
+    if(hasPerClass){
+      // Merge per-class data into DATA
+      DATA = { students:{}, homeroomReports:{}, homeVisits:{} };
+      ALL_CLASS_IDS.forEach(function(cls){
+        const d = results[getClassKey(cls)];
+        if(d && d.students){
+          DATA.students[cls] = d.students;
+          if(d.homeroomReports) DATA.homeroomReports[cls] = d.homeroomReports;
+          if(d.homeVisits) DATA.homeVisits[cls] = d.homeVisits;
+        }
+      });
+      // Fill missing classes from student-data
+      ALL_CLASS_IDS.forEach(function(cls){
+        if(!DATA.students[cls]) DATA.students[cls] = buildClassStudents(cls);
+        if(!DATA.homeroomReports[cls]) DATA.homeroomReports[cls] = {};
+        if(!DATA.homeVisits[cls]) DATA.homeVisits[cls] = {};
+      });
       return;
     }
-    DATA = generateDemoData();
-    saveData();
+
+    // Migration: try loading old single key
+    return cloudStorage.get(LS_KEY).then(function(stored){
+      if(stored && stored.students && stored.homeroomReports){
+        DATA = stored;
+        if(!DATA.homeVisits) DATA.homeVisits = generateHomeVisits(DATA.students);
+        // Migrate: save each class separately
+        console.log('[monthly-reports] Migrating from single key to per-class keys...');
+        ALL_CLASS_IDS.forEach(function(cls){
+          if(DATA.students[cls]) saveClassData(cls);
+        });
+        return;
+      }
+      // No data at all — generate demo
+      DATA = generateDemoData();
+      ALL_CLASS_IDS.forEach(function(cls){
+        if(DATA.students[cls]) saveClassData(cls);
+      });
+    });
   });
 }
 
-function saveData(){
-  cloudStorage.set(LS_KEY, DATA);
+function buildClassStudents(cls){
+  var map = getStudentsByClass();
+  if(map[cls]){
+    return map[cls].map(function(s){
+      return { id: s.id || s.name, name: s.name, class: cls };
+    });
+  }
+  return [];
+}
+
+function saveClassData(classId){
+  if(!classId) return;
+  const classData = {
+    students: DATA.students[classId] || [],
+    homeroomReports: DATA.homeroomReports[classId] || {},
+    homeVisits: (DATA.homeVisits && DATA.homeVisits[classId]) || {}
+  };
+  cloudStorage.set(getClassKey(classId), classData);
+}
+
+function saveData(classId){
+  // If classId given — save only that class
+  if(classId){ saveClassData(classId); return; }
+  // Infer class from current context
+  if(currentUser){
+    if(currentUser.role === 'teacher' && currentUser.class){
+      saveClassData(currentUser.class);
+      return;
+    }
+    if(currentUser.role === 'counselor' && currentCounselorClass){
+      saveClassData(currentCounselorClass);
+      return;
+    }
+  }
+  // Fallback (principal / unknown) — save all classes
+  ALL_CLASS_IDS.forEach(function(cls){ saveClassData(cls); });
 }
 
 function getAllStudents(){
@@ -957,7 +1045,7 @@ function getHomeroomReport(classId, month){
 function setHomeroomReport(classId, month, report){
   if(!DATA.homeroomReports[classId]) DATA.homeroomReports[classId] = {};
   DATA.homeroomReports[classId][month] = report;
-  saveData();
+  saveData(classId);
 }
 
 function getHomeVisits(classId, month){
@@ -970,7 +1058,7 @@ function setHomeVisits(classId, month, visits){
   if(!DATA.homeVisits) DATA.homeVisits = {};
   if(!DATA.homeVisits[classId]) DATA.homeVisits[classId] = {};
   DATA.homeVisits[classId][month] = visits;
-  saveData();
+  saveData(classId);
 }
 
 function addHomeVisit(classId, month, visit){
@@ -1156,8 +1244,8 @@ let currentView = '';
 
 function switchView(view){
   // Flush pending data before leaving current view
-  if(currentView==='counselorForm' && currentCounselorStudent){ collectCounselorFormData(); saveData(); }
-  if(currentView==='homeroomForm'){ collectHomeroomForm(); saveData(); }
+  if(currentView==='counselorForm' && currentCounselorStudent){ collectCounselorFormData(); saveData(currentCounselorClass); }
+  if(currentView==='homeroomForm'){ collectHomeroomForm(); saveData(currentUser ? currentUser.class : undefined); }
   currentView = view;
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
 
@@ -2015,7 +2103,7 @@ function renderCounselorFormView(){
 
 function onCFormClassChange(){
   // Save current student before switching class
-  if(currentCounselorStudent){ collectCounselorFormData(); saveData(); }
+  if(currentCounselorStudent){ collectCounselorFormData(); saveData(currentCounselorClass); }
   currentCounselorClass = document.getElementById('cFormClass').value;
   const studentSel = document.getElementById('cFormStudent');
   studentSel.innerHTML = '<option value="">-- בחר תלמיד/ה --</option>';
@@ -2030,7 +2118,7 @@ function onCFormClassChange(){
 
 function onCFormStudentChange(){
   // Save current student before switching to another
-  if(currentCounselorStudent){ collectCounselorFormData(); saveData(); }
+  if(currentCounselorStudent){ collectCounselorFormData(); saveData(currentCounselorClass); }
   currentCounselorStudent = document.getElementById('cFormStudent').value;
   if(!currentCounselorStudent){
     document.getElementById('counselorFormArea').style.display = 'none';
@@ -2311,7 +2399,7 @@ function collectCounselorFormData(){
 
 function saveCounselorForm(){
   collectCounselorFormData();
-  saveData();
+  saveData(currentCounselorClass);
   showToast('הדוח נשמר בהצלחה');
 }
 
@@ -3107,9 +3195,9 @@ function sendReportToTeacher(cls, month){
 
 // Save data before browser close/navigate away
 window.addEventListener('beforeunload', function(){
-  if(currentView==='counselorForm' && currentCounselorStudent) collectCounselorFormData();
-  if(currentView==='homeroomForm') collectHomeroomForm();
-  saveData();
+  if(currentView==='counselorForm' && currentCounselorStudent){ collectCounselorFormData(); saveData(currentCounselorClass); }
+  else if(currentView==='homeroomForm'){ collectHomeroomForm(); saveData(currentUser ? currentUser.class : undefined); }
+  else { saveData(); }
 });
 
 function init(){

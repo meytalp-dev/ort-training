@@ -5,7 +5,7 @@
 
 const AIService = (() => {
   // ── API Configuration (single place for updates) ──
-  const API_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
+  const API_KEY = 'AIzaSyAZNwwPvxKjtkr43TIA1c2zLLAnvua7L3Y';
   const MODEL = 'gemini-2.5-flash';
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
