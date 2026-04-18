@@ -64,6 +64,14 @@ function doGet(e) {
     return respond({ ok: true, org: getProfile_(ss) });
   }
 
+  if (action === 'getChecklist') {
+    return respond({ ok: true, checklist: getChecklist_(ss) });
+  }
+
+  if (action === 'getFundNotes') {
+    return respond({ ok: true, notes: getFundNotes_(ss) });
+  }
+
   return respond({ error: 'unknown action: ' + action });
 }
 
@@ -96,6 +104,24 @@ function doPost(e) {
     if (action === 'saveFunds') {
       const count = saveFunds_(ss, data.funds);
       return respond({ ok: true, saved: count });
+    }
+
+    if (action === 'saveChecklist') {
+      saveChecklist_(ss, data.checklist);
+      return respond({ ok: true });
+    }
+
+    if (action === 'saveFundNotes') {
+      saveFundNotes_(ss, data.fundName, data.notes);
+      return respond({ ok: true });
+    }
+
+    if (action === 'getChecklist') {
+      return respond({ ok: true, checklist: getChecklist_(ss) });
+    }
+
+    if (action === 'getFundNotes') {
+      return respond({ ok: true, notes: getFundNotes_(ss) });
     }
 
     if (action === 'clearDemo') {
@@ -313,6 +339,62 @@ function updateProfile_(ss, profile) {
       sheet.getRange(i + 1, 2).setValue(fields[key]);
     }
   }
+}
+
+// ╔══════════════════════════════════════════════╗
+// ║           צ'קליסט + הערות קרנות              ║
+// ╚══════════════════════════════════════════════╝
+
+function saveChecklist_(ss, checklist) {
+  let sheet = ss.getSheetByName('צ'קליסט');
+  if (!sheet) {
+    sheet = ss.insertSheet('צ'קליסט');
+    sheet.getRange(1, 1, 1, 3).setValues([['מסמך', 'מוכן', 'עדכון']]);
+    sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#E8F7F1');
+  }
+  // Clear and rewrite
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).clearContent();
+  }
+  const now = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'yyyy-MM-dd');
+  const rows = Object.entries(checklist).map(([key, val]) => [key, val ? 'כן' : 'לא', now]);
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+  }
+}
+
+function getChecklist_(ss) {
+  const sheet = ss.getSheetByName('צ'קליסט');
+  if (!sheet || sheet.getLastRow() <= 1) return {};
+  const data = sheet.getDataRange().getValues();
+  const result = {};
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) result[String(data[i][0]).trim()] = String(data[i][1]) === 'כן';
+  }
+  return result;
+}
+
+function saveFundNotes_(ss, fundName, notes) {
+  const sheet = ss.getSheetByName('קרנות');
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(fundName).trim()) {
+      sheet.getRange(i + 1, 8).setValue(notes); // column 8 = הערות
+      return;
+    }
+  }
+}
+
+function getFundNotes_(ss) {
+  const sheet = ss.getSheetByName('קרנות');
+  const data = sheet.getDataRange().getValues();
+  const result = {};
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][7]) {
+      result[String(data[i][0]).trim()] = String(data[i][7]);
+    }
+  }
+  return result;
 }
 
 // ╔══════════════════════════════════════════════╗

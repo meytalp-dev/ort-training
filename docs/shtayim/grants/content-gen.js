@@ -135,9 +135,13 @@ function enhanceFundsResearch(D) {
         const fund = D.funds[idx];
         if (!fund) return;
 
-        // Save to localStorage
-        const key = 'fund-notes-' + fund.name;
-        localStorage.setItem(key, notes);
+        // Save to Sheet
+        fetch(APPS_SCRIPT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'saveFundNotes', fundName: fund.name, notes: notes }),
+            redirect: 'follow'
+        });
 
         // Visual feedback
         const btn = document.querySelector('#fundResearchPanel .btn-primary:last-child');
@@ -400,8 +404,20 @@ function enhanceDocumentsChecklist(D) {
         { id: 'bituach', name: 'אישור ביטוח', desc: 'ביטוח צד שלישי / מתנדבים', critical: false },
     ];
 
-    // Load saved state from localStorage
-    const savedState = JSON.parse(localStorage.getItem('hoppa-docs-checklist') || '{}');
+    // Load saved state - try Sheet first, fallback to localStorage
+    let savedState = JSON.parse(localStorage.getItem('hoppa-docs-checklist') || '{}');
+    // Async load from Sheet (will update checkboxes when ready)
+    fetch(APPS_SCRIPT + '?action=getChecklist').then(r => r.json()).then(data => {
+        if (data.ok && data.checklist && Object.keys(data.checklist).length > 0) {
+            const sheetState = data.checklist;
+            document.querySelectorAll('input[data-doc-id]').forEach(cb => {
+                if (sheetState[cb.dataset.docId] !== undefined) {
+                    cb.checked = sheetState[cb.dataset.docId];
+                }
+            });
+            updateDocsProgress();
+        }
+    }).catch(() => {});
 
     const checklistHtml = `
         <div class="panel" style="margin-top:20px;">
@@ -462,6 +478,13 @@ function enhanceDocumentsChecklist(D) {
 
         // Save
         localStorage.setItem('hoppa-docs-checklist', JSON.stringify(state));
+        // Also save to Sheet
+        fetch(APPS_SCRIPT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'saveChecklist', checklist: state }),
+            redirect: 'follow'
+        });
 
         // Update counter
         const progressEl = document.getElementById('docsProgress');
