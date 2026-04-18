@@ -118,7 +118,8 @@ function doGet(e) {
         date: row[0].trim(),
         name: row[1].trim()
       }));
-    return ContentService.createTextOutput(JSON.stringify({ok: true, schedule}))
+    // v2 = getDisplayValues version
+    return ContentService.createTextOutput(JSON.stringify({ok: true, v: 2, schedule}))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
