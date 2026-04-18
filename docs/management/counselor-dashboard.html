@@ -744,6 +744,10 @@ function renderYmFull(){
             <strong>${m.cls}</strong> <span style="color:var(--muted)">—</span> ${m.teacher}
             ${U.id==='principal'?'<div style="font-size:.7rem;color:var(--muted)">'+m.counselor+'</div>':''}
           </div>
+          <button class="btn btn-p btn-sm" style="padding:4px 10px;font-size:.75rem" onclick="openYmMeeting('${m.cls}','${m.teacher}','${m.counselor||U.short}')" title="פתח טופס פגישה">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            פגישה
+          </button>
           <button class="btn btn-o btn-sm" style="padding:4px 8px" onclick="sendYmReminder('${m.cls}','${m.teacher}','${m.time}','${m.counselor||U.short}')" title="שלח תזכורת WhatsApp">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
           </button>
@@ -1398,6 +1402,227 @@ async function saveYmFormUrl(){
   ymFormUrl=document.getElementById('ymFormUrlInput')?.value||'';
   await cloudStorage.set('counselor_ym_form_url',ymFormUrl);
   toast('קישור לטופס נשמר','success');
+}
+
+// ==================== MEETING FORM ====================
+let ymMeetingData={};
+
+function openYmMeeting(cls,teacher,counselor){
+  const clsStudents=students.filter(s=>s.cls===cls).sort((a,b)=>{
+    const so={red:0,yellow:1,green:2,none:3};
+    return (so[a.status]||3)-(so[b.status]||3)||a.fn.localeCompare(b.fn);
+  });
+  const today=new Date().toISOString().slice(0,10);
+  const meetingKey='ym_meeting_'+cls+'_'+today;
+
+  // Load existing meeting data
+  const saved=ymMeetingData[meetingKey]||{};
+
+  let body=`<div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1">
+      <div style="font-size:.82rem;color:var(--muted)">כיתה <strong>${cls}</strong> · מחנכ/ת: <strong>${teacher}</strong> · יועצת: <strong>${counselor}</strong></div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:2px">${today} · ${clsStudents.length} תלמידים</div>
+    </div>
+    <span style="font-size:.72rem;padding:4px 12px;border-radius:10px;background:var(--info-bg);color:var(--info);font-weight:600">נתונים נשאבים מתיק התלמיד</span>
+  </div>`;
+
+  body+='<div id="ymStudentsList">';
+  clsStudents.forEach(s=>{
+    const ac=s.att===null?'—':s.att+'%';
+    const acColor=s.att===null?'var(--muted)':s.att>=85?'var(--success)':s.att>=70?'var(--warn)':'var(--danger)';
+    const avg=GRADES[s.fn]?GRADES[s.fn].avg2||GRADES[s.fn].avg1||null:null;
+    const avgStr=avg!==null?avg.toFixed(0):'—';
+    const avgColor=avg===null?'var(--muted)':avg>=70?'var(--success)':avg>=55?'var(--warn)':'var(--danger)';
+    const topLine=s.status==='red'?'var(--danger)':s.status==='yellow'?'var(--warn)':'var(--border)';
+    const sData=saved[s.sid]||{};
+    const hasNotes=sData.notes||sData.decisions||sData.actions;
+
+    body+=`<div style="border:2px solid ${hasNotes?'var(--primary)':'var(--border)'};border-radius:var(--radius);margin-bottom:8px;overflow:hidden;border-top:3px solid ${topLine}" id="ymS${s.sid}">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;transition:background .2s" onclick="toggleYmStudent('${s.sid}')" onmouseover="this.style.background='var(--bg-alt)'" onmouseout="this.style.background=''">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,${s.gender==='נ'?'var(--accent),var(--spark-dark)':'var(--primary),var(--dream-dark)'});display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.85rem;flex-shrink:0">${s.first[0]}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:.9rem">${s.fn} ${hasNotes?'<span style="font-size:.68rem;color:var(--primary);font-weight:600">נדון</span>':''}</div>
+          <div style="font-size:.75rem;color:var(--muted)">${s.cls} · ${HOMEROOM[s.cls]||''}</div>
+        </div>
+        <div style="display:flex;gap:16px;font-size:.78rem;text-align:center">
+          <div><div style="font-weight:800;color:${avgColor}">${avgStr}</div><div style="color:var(--muted);font-size:.68rem">ממוצע</div></div>
+          <div><div style="font-weight:800;color:${acColor}">${ac}</div><div style="color:var(--muted);font-size:.68rem">נוכחות</div></div>
+          <div><div style="font-weight:800;color:${s.disc>3?'var(--danger)':s.disc>0?'var(--warn)':'var(--success)'}">${s.disc}</div><div style="color:var(--muted);font-size:.68rem">משמעת</div></div>
+          <div><div style="font-weight:800;color:${s.reported?'var(--success)':'var(--danger)'}">${s.reported?'V':'X'}</div><div style="color:var(--muted);font-size:.68rem">דוח</div></div>
+        </div>
+        ${s.status==='red'?'<span style="padding:2px 8px;border-radius:8px;background:var(--danger-bg);color:var(--danger);font-size:.68rem;font-weight:600">דרוש התערבות</span>':s.status==='yellow'?'<span style="padding:2px 8px;border-radius:8px;background:var(--warn-bg);color:var(--create-dark);font-size:.68rem;font-weight:600">מעקב</span>':''}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" id="ymArr${s.sid}" style="transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div id="ymExp${s.sid}" style="display:none;padding:0 16px 16px;border-top:1px solid var(--border)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+          <div class="fg"><label>מה נדון</label><textarea id="ymN${s.sid}" rows="3" placeholder="נושאים שעלו בפגישה..." style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:.85rem;font-family:var(--font-body);resize:vertical" oninput="markYmDirty('${s.sid}','${cls}','${today}')">${esc(sData.notes||'')}</textarea></div>
+          <div class="fg"><label>החלטות</label><textarea id="ymD${s.sid}" rows="3" placeholder="מה הוחלט..." style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:.85rem;font-family:var(--font-body);resize:vertical" oninput="markYmDirty('${s.sid}','${cls}','${today}')">${esc(sData.decisions||'')}</textarea></div>
+        </div>
+        <div class="fg" style="margin-top:10px"><label>משימות / פעולות נדרשות</label><textarea id="ymA${s.sid}" rows="2" placeholder="פעולה — אחראי — דדליין" style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:.85rem;font-family:var(--font-body);resize:vertical" oninput="markYmDirty('${s.sid}','${cls}','${today}')">${esc(sData.actions||'')}</textarea></div>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+          <button class="btn btn-p btn-sm" onclick="genYmPlan('${s.sid}','${cls}','${teacher}','${counselor}','${today}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            צור תוכנית מותאמת
+          </button>
+          <span style="font-size:.72rem;color:var(--muted)">שואב נתונים מ-7 מקורות ובונה תוכנית פעולה</span>
+        </div>
+        <div id="ymPlan${s.sid}" style="margin-top:12px"></div>
+      </div>
+    </div>`;
+  });
+  body+='</div>';
+
+  const footer=`<button class="btn btn-s" onclick="saveYmMeeting('${cls}','${today}','${teacher}','${counselor}')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    שמור פגישה
+  </button>
+  <button class="btn btn-o" onclick="closeModal()">סגור</button>`;
+
+  showModal(`פגישת יועץ-מחנך — ${cls}`,body,footer);
+}
+
+function toggleYmStudent(sid){
+  const exp=document.getElementById('ymExp'+sid);
+  const arr=document.getElementById('ymArr'+sid);
+  if(exp.style.display==='none'){exp.style.display='block';arr.style.transform='rotate(180deg)'}
+  else{exp.style.display='none';arr.style.transform=''}
+}
+
+function markYmDirty(sid,cls,today){
+  const key='ym_meeting_'+cls+'_'+today;
+  if(!ymMeetingData[key])ymMeetingData[key]={};
+  ymMeetingData[key][sid]={
+    notes:document.getElementById('ymN'+sid)?.value||'',
+    decisions:document.getElementById('ymD'+sid)?.value||'',
+    actions:document.getElementById('ymA'+sid)?.value||''
+  };
+}
+
+async function genYmPlan(sid,cls,teacher,counselor,today){
+  const s=students.find(x=>String(x.id)===sid||x.sid===sid);if(!s)return;
+  const bg=bgData[s.sid]||{};
+  const container=document.getElementById('ymPlan'+sid);
+  container.innerHTML='<div style="text-align:center;padding:12px;color:var(--muted)"><span style="display:inline-block;width:16px;height:16px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite"></span> מייצר תוכנית...</div>';
+
+  await new Promise(r=>setTimeout(r,800));
+
+  const goals=[],recs=[],actions=[];
+  const avg=GRADES[s.fn]?GRADES[s.fn].avg2||GRADES[s.fn].avg1||null:null;
+
+  // Academic
+  if(avg!==null&&avg<55){goals.push('שיפור ממוצע ציונים מ-'+avg.toFixed(0)+' ל-60+');actions.push({act:'בניית תוכנית לימודית מותאמת',owner:teacher,cat:'לימודי'})}
+  else if(avg!==null&&avg<70){goals.push('חיזוק לימודי — ממוצע '+avg.toFixed(0));actions.push({act:'מעקב ציונים שבועי',owner:teacher,cat:'לימודי'})}
+
+  // Attendance
+  if(s.att!==null&&s.att<60){goals.push('מניעת נשירה — נוכחות '+s.att+'%');actions.push({act:'פגישת הורים דחופה + שיחה עם רכזת נשירה',owner:counselor,cat:'נוכחות'});actions.push({act:'שיחת טלפון יומית עם ההורה',owner:teacher,cat:'נוכחות'})}
+  else if(s.att!==null&&s.att<75){goals.push('שיפור נוכחות מ-'+s.att+'% ל-80%');actions.push({act:'בירור סיבות היעדרות + פגישה עם הורים',owner:counselor,cat:'נוכחות'})}
+
+  // Discipline
+  if(s.disc>3){goals.push('הפחתת אירועי משמעת ('+s.disc+' אירועים)');actions.push({act:'תוכנית התנהגותית + חיזוקים חיוביים',owner:counselor,cat:'התנהגותי'});actions.push({act:'שיחה אישית שבועית',owner:teacher,cat:'התנהגותי'})}
+  else if(s.disc>0){actions.push({act:'מעקב התנהגותי — '+s.disc+' אירועים',owner:teacher,cat:'התנהגותי'})}
+
+  // Emotional / external
+  if(s.status==='red'){goals.push('ייצוב רגשי — ליווי צמוד');actions.push({act:'פגישות שבועיות קבועות',owner:counselor,cat:'רגשי'})}
+  if(bg.welfareInvolved){actions.push({act:'עדכון עו"ס '+(bg.welfareName||''),owner:counselor,cat:'גורמים חיצוניים'})}
+  if(bg.policeFile){actions.push({act:'תיאום עם קצין מבחן '+(bg.probationOfficer||''),owner:counselor,cat:'גורמים חיצוניים'})}
+  if(bg.diagnosis){actions.push({act:'בדיקת התאמות בחינה לפי אבחון',owner:teacher,cat:'לימודי'})}
+  if(bg.parentCooperation==='קשה'||bg.parentCooperation==='אין קשר'){goals.push('יצירת קשר עם הורים');actions.push({act:'שיחת טלפון ליצירת קשר ראשוני',owner:counselor,cat:'הורים'})}
+
+  if(!goals.length){goals.push('המשך מעקב שוטף');actions.push({act:'תיעוד חודשי',owner:teacher,cat:'כללי'})}
+
+  // Notes from meeting
+  const meetNotes=document.getElementById('ymN'+sid)?.value||'';
+  const meetDecisions=document.getElementById('ymD'+sid)?.value||'';
+
+  // Build plan object
+  const plan={
+    date:today, createdBy:U.name, meetingWith:teacher,
+    summary:`${s.fn} — ${s.cls}. ממוצע: ${avg!==null?avg.toFixed(0):'—'}. נוכחות: ${s.att!==null?s.att+'%':'—'}. משמעת: ${s.disc}. סטטוס: ${s.status==='red'?'דרוש התערבות':s.status==='yellow'?'מעקב':'תקין'}.`,
+    goals, actions, meetingNotes:meetNotes, meetingDecisions:meetDecisions,
+    recommendations:actions.map(a=>a.act+' ('+a.owner+')').join('. '),
+    stakeholders:[teacher,counselor,bg.welfareName,bg.probationOfficer,'מיטל פלג'].filter(Boolean).join(' · ')
+  };
+
+  // Render
+  let h=`<div style="background:linear-gradient(135deg,rgba(58,172,160,.05),rgba(142,126,212,.05));border:1px solid var(--secondary-light);border-radius:var(--radius);padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <strong style="font-size:.88rem;color:var(--secondary-dark)">תוכנית פעולה — ${s.fn}</strong>
+      <span style="font-size:.68rem;color:var(--muted)">7 מקורות נתונים</span>
+    </div>
+    <div style="font-size:.82rem;color:var(--text-light);margin-bottom:10px">${plan.summary}</div>
+    <div style="font-weight:700;font-size:.82rem;margin-bottom:6px">יעדים:</div>
+    <ul style="padding-right:18px;font-size:.82rem;margin-bottom:12px">${goals.map(g=>'<li>'+g+'</li>').join('')}</ul>
+    <div style="font-weight:700;font-size:.82rem;margin-bottom:6px">פעולות:</div>`;
+  actions.forEach(a=>{
+    const catColors={לימודי:'var(--info)',נוכחות:'var(--warn)',התנהגותי:'var(--danger)',רגשי:'var(--primary)','גורמים חיצוניים':'var(--muted)',הורים:'var(--create)',כללי:'var(--secondary)'};
+    h+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border-radius:8px;margin-bottom:4px;border:1px solid var(--border)">
+      <span style="width:8px;height:8px;border-radius:50%;background:${catColors[a.cat]||'var(--muted)'};flex-shrink:0"></span>
+      <span style="flex:1;font-size:.82rem">${a.act}</span>
+      <span style="font-size:.72rem;font-weight:600;color:var(--primary-dark)">${a.owner}</span>
+    </div>`;
+  });
+  h+=`<div style="margin-top:10px;display:flex;gap:8px">
+    <button class="btn btn-s btn-sm" onclick="saveYmPlanToFile('${s.sid}','${cls}','${today}')">שמור לתיק תלמיד</button>
+  </div></div>`;
+
+  container.innerHTML=h;
+
+  // Store plan temporarily
+  if(!ymMeetingData['ym_meeting_'+cls+'_'+today])ymMeetingData['ym_meeting_'+cls+'_'+today]={};
+  if(!ymMeetingData['ym_meeting_'+cls+'_'+today][s.sid])ymMeetingData['ym_meeting_'+cls+'_'+today][s.sid]={};
+  ymMeetingData['ym_meeting_'+cls+'_'+today][s.sid].plan=plan;
+}
+
+async function saveYmPlanToFile(sid,cls,today){
+  const key='ym_meeting_'+cls+'_'+today;
+  const plan=ymMeetingData[key]?.[sid]?.plan;
+  if(!plan){toast('אין תוכנית לשמור','error');return}
+
+  // Save to counselor plans (visible in dashboard student detail)
+  plansData[sid]=plan;
+  await cloudStorage.set('counselor_plans_data',plansData);
+
+  // Save to student-file format (sf_plan_ID)
+  await cloudStorage.set('sf_plan_'+sid,plan);
+
+  toast('תוכנית נשמרה לתיק התלמיד','success');
+}
+
+async function saveYmMeeting(cls,today,teacher,counselor){
+  const key='ym_meeting_'+cls+'_'+today;
+
+  // Collect all data from form
+  const clsStudents=students.filter(s=>s.cls===cls);
+  clsStudents.forEach(s=>{
+    const notes=document.getElementById('ymN'+s.sid)?.value||'';
+    const decisions=document.getElementById('ymD'+s.sid)?.value||'';
+    const actions=document.getElementById('ymA'+s.sid)?.value||'';
+    if(notes||decisions||actions){
+      if(!ymMeetingData[key])ymMeetingData[key]={};
+      ymMeetingData[key][s.sid]={notes,decisions,actions,plan:ymMeetingData[key]?.[s.sid]?.plan||null};
+    }
+  });
+
+  // Save meeting log
+  const meetingLog={date:today,cls,teacher,counselor,createdBy:U.name,students:ymMeetingData[key]||{}};
+  let allMeetings=await cloudStorage.get('counselor_ym_meetings_log',{fallback:[]})||[];
+  // Replace if same date+class exists
+  allMeetings=allMeetings.filter(m=>!(m.date===today&&m.cls===cls));
+  allMeetings.push(meetingLog);
+  await cloudStorage.set('counselor_ym_meetings_log',allMeetings);
+
+  // Save per-student plans to both stores
+  for(const sid of Object.keys(ymMeetingData[key]||{})){
+    const sd=ymMeetingData[key][sid];
+    if(sd.plan){
+      plansData[sid]=sd.plan;
+      await cloudStorage.set('sf_plan_'+sid,sd.plan);
+    }
+  }
+  await cloudStorage.set('counselor_plans_data',plansData);
+
+  toast('פגישה נשמרה — נתונים עודכנו בתיק התלמיד','success');
+  closeModal();
 }
 
 // ==================== PRINT ====================
