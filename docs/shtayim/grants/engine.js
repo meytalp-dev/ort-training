@@ -10,17 +10,13 @@
     const params = new URLSearchParams(window.location.search);
     const orgId = params.get('org') || 'demo';
 
-    // hoppa = Sheet live data, demo = static JSON
-    const dataSource = orgId === 'hoppa'
-        ? APPS_SCRIPT_URL + '?action=getAll'
-        : orgId + '.json';
+    // Load from JSON file (works everywhere, no CORS issues)
+    const jsonFile = orgId + '.json';
 
-    fetch(dataSource, { redirect: 'follow' })
+    fetch(jsonFile)
         .then(r => {
-            if (!r.ok && !dataSource.includes('script.google')) {
-                throw new Error('קובץ נתונים לא נמצא: ' + orgId + '.json');
-            }
-            return r.text().then(t => { try { return JSON.parse(t); } catch(e) { console.error('Parse error:', t.substring(0,200)); throw e; } });
+            if (!r.ok) throw new Error('קובץ נתונים לא נמצא: ' + jsonFile);
+            return r.json();
         })
         .then(raw => {
             // Sheet returns {ok, org, calls, funds, ...}

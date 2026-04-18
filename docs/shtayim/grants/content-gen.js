@@ -140,9 +140,8 @@ function enhanceFundsResearch(D) {
         // Save to Sheet
         fetch(APPS_SCRIPT, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'saveFundNotes', fundName: fund.name, notes: notes }),
-            redirect: 'follow'
+            mode: 'no-cors'
         });
 
         // Visual feedback
@@ -409,7 +408,8 @@ function enhanceDocumentsChecklist(D) {
     // Load saved state - try Sheet first, fallback to localStorage
     let savedState = JSON.parse(localStorage.getItem('hoppa-docs-checklist') || '{}');
     // Async load from Sheet (will update checkboxes when ready)
-    fetch(APPS_SCRIPT + '?action=getChecklist').then(r => r.json()).then(data => {
+    /* Sheet checklist disabled due to CORS - using localStorage only */
+    void(0 && fetch(APPS_SCRIPT + '?action=getChecklist').then(r => r.json()).then(data => {
         if (data.ok && data.checklist && Object.keys(data.checklist).length > 0) {
             const sheetState = data.checklist;
             document.querySelectorAll('input[data-doc-id]').forEach(cb => {
@@ -419,7 +419,7 @@ function enhanceDocumentsChecklist(D) {
             });
             updateDocsProgress();
         }
-    }).catch(() => {});
+    }).catch(() => {}));
 
     const checklistHtml = `
         <div class="panel" style="margin-top:20px;">
@@ -575,9 +575,8 @@ function saveToSheet() {
 
     fetch(APPS_SCRIPT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'saveSubmission', submission: submission }),
-        redirect: 'follow'
+        mode: 'no-cors'
     }).then(() => {
         const btn = result.querySelector('.save-sheet-btn');
         if (btn) {
