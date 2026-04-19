@@ -36,29 +36,63 @@ description: סקיל-על ליצירת הדרכה מלאה על כלי דיגי
 - צבעי הכלי נמצאים ב: `docs/marketing/ai-tools.html`
 - החלף את ה-placeholders (`{TOOL_NAME}`, `{HOOK_LINE}` וכו') בתוכן אמיתי
 
+**עיצוב: Dream Theme + כרטיסיות צפות**
+- פלטת Dream קבועה: dream (סגול), create (זהב), lead (טורקיז), spark (ורוד)
+- `--tool` = צבע הכלי הספציפי (progress bar, כותרת shimmer, brand-word)
+- כרטיסיות צפות עם `backdrop-filter: blur(28px)`, סיבוב קל, border-top צבעוני
+- גופנים: Playpen Sans Hebrew (כותרות), Assistant (גוף), Heebo (בסיס)
+- **לא Karantina, לא Rubik** — הוסרו מהתבנית
+
+#### מיפוי Classes (חדש ← ישן)
+
+| חדש | ישן | הערה |
+|-----|-----|------|
+| `float-card` | `slide-inner` | כרטיס צף עם blur + סיבוב |
+| `float-card.accent-dream` | — | border-top סגול |
+| `float-card.tilt-right` | — | סיבוב לימין (0.4deg) |
+| `float-card.no-tilt` | — | בלי סיבוב |
+| `section-head` | `section-header` | כותרת סקשן |
+| `section-icon.dream` | `section-icon.violet` | אייקון סגול |
+| `section-icon.create` | `section-icon.orange` | אייקון זהב |
+| `section-icon.lead` | `section-icon.green` | אייקון טורקיז |
+| `section-icon.spark` | `section-icon.purple` | אייקון ורוד |
+| `section-sub` | `section-subtitle` | תת-כותרת |
+| `cards-grid` | `grid-3` | גריד 3 עמודות |
+| `cards-grid-2` | `grid-2` | גריד 2 עמודות |
+| `mini-card` | `g-card` | כרטיס מיני צף |
+| `mc-icon` / `mc-title` / `mc-desc` | `g-icon` / `g-title` / `g-desc` | תוכן כרטיס |
+| `step-num` | `step-number` | מספר שלב |
+| `step-num.dream` | `step-number.violet` | מספר סגול |
+| `topic-pills` | `topics-preview` | כפתורי נושאים בשקף כותרת |
+| `topic-pill` | `topic-item` | כפתור נושא בודד |
+| `divider-blob` | `divider-circle` | עיגול מפריד צף |
+| `tip-icon` | `tip-icon-sm` | אייקון tip box |
+| `split-grid` + `split-col` | inline styles | יתרונות/מגבלות |
+| `brand` | `brand-word` | שם הכלי מודגש |
+
 #### מבנה שקפים
 
 | # | סוג שקף | class | חובה? |
 |---|---------|-------|-------|
-| 1 | **כותרת** — לוגו SVG + brand-word + hook + badge + 4 topics | `title-slide` | חובה |
-| 2 | **מה זה?** — 3 כרטיסים + צילום מסך + tip-box מחיר | `slide-inner` + `grid-3` | חובה |
-| 3 | **איך מתחילים** — 3 step-cards + צילום מסך | `slide-inner` + `step-card` | חובה |
-| 4 | **מפריד** — "איך עובדים" | `divider-slide` | חובה |
-| 5-8 | **איך עובדים** — שקף לכל שלב + צילומי מסך + copy-prompts | `slide-inner` | חובה (4-6 שקפים) |
-| 9 | **מפריד** — "יתרונות ומגבלות" | `divider-slide` | חובה |
-| 10 | **יתרונות + מגבלות** — **שקף אחד**, שתי עמודות (ירוק/ענבר) | `slide-inner` + grid 2 cols | חובה |
-| 11 | **השוואה** — כלי מול Canva/מתחרה, compare-cols + highlights | `slide-inner` + `compare-cols` | חובה |
-| 12 | **מפריד** — "Claude Code + {כלי}" | `divider-slide` | חובה |
-| 13 | **חיבור CC** — flow-container, CC בצד שמאל + כלי בצד ימין | `slide-inner` + `flow-container` | חובה |
-| 14 | **תרחישים מהחיים** — 3 תרחישים שכולם מזדהים איתם (ראה פירוט למטה) | `slide-inner` + `scenario-cards` | חובה |
-| 15 | **דוגמאות תוצרים** — 2-3 תוצרים אמיתיים שנוצרו עם הכלי (ראה פירוט למטה) | `slide-inner` + `product-gallery` | חובה |
-| 16 | **טיפים** — 3-5 טיפים מעשיים לשימוש חכם בכלי (ראה פירוט למטה) | `slide-inner` + `tips-grid` | חובה |
-| 17 | **שאלות ותשובות** — 4-6 שאלות נפוצות באקורדיון (ראה פירוט למטה) | `slide-inner` + `faq-accordion` | חובה |
-| 18 | **תרגול** — משימה מעשית שהמשתתפים עושים עכשיו (ראה פירוט למטה) | `slide-inner` + `practice-block` | חובה |
-| 19 | **אינפוגרפיקת סיכום** — strip קומפקטי של השלבים, לא שקף שלם (ראה פירוט למטה) | `slide-inner` | חובה |
-| 20 | **מפריד** — "סיכום" | `divider-slide` | חובה |
-| 21 | **סיכום** — 3 כרטיסים + tip ירוק | `slide-inner` + `grid-3` | חובה |
-| 22 | **CTA** — 2 שלבים + אתגר 5 דק' + WhatsApp + Facebook Learni + mail | `slide-inner` | חובה |
+| 1 | **כותרת** — לוגו SVG + title-h1 + badge + 4 topic-pills | `title-slide` | חובה |
+| 2 | **מה זה?** — 3 mini-cards + צילום מסך + tip-box מחיר | `float-card accent-dream` + `cards-grid` | חובה |
+| 3 | **איך מתחילים** — 3 step-cards + צילום מסך | `float-card tilt-right accent-lead` + `step-card` | חובה |
+| 4 | **מפריד** — "איך עובדים" | `divider-slide` + `divider-blob create` | חובה |
+| 5-8 | **איך עובדים** — שקף לכל שלב + צילומי מסך + copy-prompts | `float-card accent-*` | חובה (4-6 שקפים) |
+| 9 | **מפריד** — "יתרונות ומגבלות" | `divider-slide` + `divider-blob lead` | חובה |
+| 10 | **יתרונות + מגבלות** — **שקף אחד**, split-grid (lead/create) | `float-card no-tilt accent-lead` + `split-grid` | חובה |
+| 11 | **השוואה** — כלי מול Canva/מתחרה, compare-cols | `compare-wrap` + `compare-cols` | חובה |
+| 12 | **מפריד** — "Claude Code + {כלי}" | `divider-slide` + `divider-blob spark` | חובה |
+| 13 | **חיבור CC** — flow-container, CC בצד שמאל + כלי בצד ימין | `float-card no-tilt accent-create` + `flow-container` | חובה |
+| 14 | **תרחישים מהחיים** — 3 תרחישים שכולם מזדהים איתם (ראה פירוט למטה) | `float-card accent-dream` + `scenario-cards` | חובה |
+| 15 | **דוגמאות תוצרים** — 2-3 תוצרים אמיתיים שנוצרו עם הכלי (ראה פירוט למטה) | `float-card tilt-right accent-create` + `carousel-wrap` | חובה |
+| 16 | **טיפים** — 3-5 טיפים מעשיים לשימוש חכם בכלי (ראה פירוט למטה) | `float-card accent-dream` + `tips-grid` | חובה |
+| 17 | **שאלות ותשובות** — 4-6 שאלות נפוצות באקורדיון (ראה פירוט למטה) | `float-card tilt-right accent-lead` + `faq-accordion` | חובה |
+| 18 | **תרגול** — משימה מעשית שהמשתתפים עושים עכשיו (ראה פירוט למטה) | `float-card accent-create` + `practice-block` | חובה |
+| 19 | **אינפוגרפיקת סיכום** — strip קומפקטי של השלבים, לא שקף שלם (ראה פירוט למטה) | `float-card no-tilt accent-dream` + `h-flow` | חובה |
+| 20 | **מפריד** — "סיכום" | `divider-slide` + `divider-blob dream` | חובה |
+| 21 | **סיכום** — 3 mini-cards + tip lead | `float-card no-tilt accent-dream` + `cards-grid` | חובה |
+| 22 | **CTA** — 2 שלבים + אתגר 5 דק' + WhatsApp + Facebook Learni + mail | `float-card accent-lead` + `cta-group` | חובה |
 
 **סה"כ: 21-25 שקפים** (תלוי בכמות שקפי "איך עובדים")
 
@@ -235,11 +269,12 @@ description: סקיל-על ליצירת הדרכה מלאה על כלי דיגי
 - כל URL חייב להיות `<a href target="_blank">`, לא טקסט בלבד
 - **כל "הכנסו ל-X" חייב להיות כבר קישור לחיץ** — לא רק טקסט עם שם האתר
 
-#### כללי עיצוב (כבר ב-template, רק אל תשבור)
+#### כללי עיצוב (Dream Theme + כרטיסיות צפות)
 
-- **רקע:** גרדיאנט קרם→מנטה. **לא כהה. אף פעם.**
-- **גופנים — חובה, אל תחליף!** `Playpen Sans Hebrew` (כותרות/כתב יד) + `Assistant` (גוף/תוכן). **לא Heebo, לא Karantina.**
-- **brand-word:** `font-size:1.3em`, צבע `var(--tool)`, **בלי** underline::after
+- **רקע:** Dream mesh gradient (סגול/זהב/טורקיז/ורוד). **לא כהה. אף פעם.**
+- **גופנים — חובה, אל תחליף!** `Playpen Sans Hebrew` (כותרות/כתב יד) + `Assistant` (גוף/תוכן). Heebo כבסיס. **לא Karantina, לא Rubik.**
+- **כרטיסיות צפות:** כל `float-card` עם סיבוב קל (-0.3deg או 0.4deg) + `backdrop-filter:blur(28px)` + `border-top` צבעוני
+- **brand:** class `brand` (לא brand-word), צבע `var(--tool)`
 - **פונט מינימום:** 14px (גם tip-text, copy-prompt, topic-item)
 - **SVG icons בלבד** — בלי אימוג'ים
 - **תוכן ממלא את השקף** — אסור שקף חצי ריק עם כרטיס קטן באמצע
@@ -399,9 +434,10 @@ docs/training/{tool-name}/
 ## Reference — מצגות מאושרות
 
 כשמשהו לא ברור — תסתכל על אלה:
-- `docs/training/pomelli/presentation.html` — הכי עדכנית ומלוטשת (20 שקפים)
-- `docs/training/stitch/presentation.html` — BA slider, flow chart, copy prompts
-- `docs/training/claude-code/intro.html` — קרוסלה + lightbox, v-flow, יתרונות כגריד
+- **`docs/training/claude-design/presentation.html`** — הכי עדכנית! Dream Theme + כרטיסיות צפות (22 שקפים, אפריל 2026)
+- `docs/training/pomelli/presentation.html` — BA slider, flow chart, copy prompts (עיצוב ישן)
+- `docs/training/stitch/presentation.html` — BA slider, flow chart (עיצוב ישן)
+- `docs/training/claude-code/intro.html` — קרוסלה + lightbox (עיצוב ישן)
 
 ---
 
