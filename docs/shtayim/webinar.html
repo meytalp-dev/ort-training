@@ -511,23 +511,42 @@
     }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
     document.querySelectorAll('.anim').forEach(el => io.observe(el));
 
-    // form
+    // form — Google Sheets integration
+    const APPS_SCRIPT_URL = 'REPLACE_WITH_APPS_SCRIPT_URL';
+
     const form = document.getElementById('signupForm');
-    form?.addEventListener('submit', (ev) => {
+    const submitBtn = form?.querySelector('.form-btn');
+
+    form?.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       const data = new FormData(ev.target);
       const registration = {
         name: data.get('name'),
         email: data.get('email'),
         org: data.get('org'),
-        role: data.get('role'),
-        timestamp: new Date().toISOString()
+        role: data.get('role')
       };
 
       // Save to localStorage as backup
       const saved = JSON.parse(localStorage.getItem('shtayim_registrations') || '[]');
-      saved.push(registration);
+      saved.push({ ...registration, timestamp: new Date().toISOString() });
       localStorage.setItem('shtayim_registrations', JSON.stringify(saved));
+
+      // Send to Google Sheets
+      if (APPS_SCRIPT_URL && !APPS_SCRIPT_URL.startsWith('REPLACE')) {
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.pointerEvents = 'none';
+        try {
+          await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(registration)
+          });
+        } catch (e) {
+          // localStorage backup covers failures
+        }
+      }
 
       document.getElementById('formBody').style.display = 'none';
       document.getElementById('formSuccess').classList.add('show');
