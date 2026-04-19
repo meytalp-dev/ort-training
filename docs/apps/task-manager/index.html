@@ -830,7 +830,7 @@ function StatusBar() {
 }
 
 // ── ScreenDashboard ────────────────────────────────────────────
-function ScreenDashboard({ tasks, onToggle, goto }) {
+function ScreenDashboard({ tasks, onToggle, goto, userName }) {
   const today = tasks.filter(t => t.due === "היום");
   const doneToday = today.filter(t => t.done).length;
   const totalToday = today.length;
@@ -848,7 +848,7 @@ function ScreenDashboard({ tasks, onToggle, goto }) {
               יום שני · 19 באפריל
             </div>
             <h1 className="app-display" style={{ margin: "4px 0 0", fontSize: 30, fontWeight: 800, color: "var(--brand-ink)", lineHeight: 1.1 }}>
-              בוקר טוב, מיטל <span style={{ display: "inline-block", animation: "float 4s ease-in-out infinite" }}>&#9788;</span>
+              בוקר טוב, {userName} <span style={{ display: "inline-block", animation: "float 4s ease-in-out infinite" }}>&#9788;</span>
             </h1>
           </div>
           <div style={{
@@ -857,7 +857,7 @@ function ScreenDashboard({ tasks, onToggle, goto }) {
             display: "grid", placeItems: "center",
             color: "#1e3a5f", fontWeight: 800, fontSize: 16,
             boxShadow: "0 6px 16px rgba(123,171,212,0.3)",
-          }}>מ</div>
+          }}>{userName.charAt(0)}</div>
         </div>
       </div>
 
@@ -1010,7 +1010,7 @@ function ScreenDashboard({ tasks, onToggle, goto }) {
 }
 
 // ── ScreenList ─────────────────────────────────────────────────
-function SwipeRow({ task, onToggle, onDelete }) {
+function SwipeRow({ task, onToggle, onDelete, onEdit }) {
   const [dx, setDx] = useState(0);
   const [startX, setStartX] = useState(null);
   const [settled, setSettled] = useState(false);
@@ -1089,12 +1089,16 @@ function SwipeRow({ task, onToggle, onDelete }) {
             </span>
           </div>
         </div>
+        <button onClick={(e) => { e.stopPropagation(); onEdit(task); }}
+                style={{ border: 0, background: "transparent", cursor: "pointer", color: "var(--fg-3)", padding: 4, flexShrink: 0 }}>
+          <Icons.Edit size={16} />
+        </button>
       </div>
     </div>
   );
 }
 
-function ScreenList({ tasks, onToggle, onDelete, goto }) {
+function ScreenList({ tasks, onToggle, onDelete, onEdit, goto }) {
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
 
@@ -1170,7 +1174,7 @@ function ScreenList({ tasks, onToggle, onDelete, goto }) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {g.items.map(t => (
-                <SwipeRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} />
+                <SwipeRow key={t.id} task={t} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
               ))}
             </div>
           </div>
@@ -1185,25 +1189,25 @@ function ScreenList({ tasks, onToggle, onDelete, goto }) {
 }
 
 // ── ScreenAdd ──────────────────────────────────────────────────
-function ScreenAdd({ onAdd, goto }) {
-  const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
-  const [due, setDue] = useState("היום");
-  const [time, setTime] = useState("09:00");
-  const [priority, setPriority] = useState("med");
-  const [category, setCategory] = useState("teach");
+function ScreenAdd({ onAdd, onUpdate, editTask, goto }) {
+  const isEdit = !!editTask;
+  const [title, setTitle] = useState(isEdit ? editTask.title : "");
+  const [note, setNote] = useState(isEdit ? (editTask.note || "") : "");
+  const [due, setDue] = useState(isEdit ? editTask.due : "היום");
+  const [time, setTime] = useState(isEdit ? (editTask.time || "09:00") : "09:00");
+  const [priority, setPriority] = useState(isEdit ? editTask.priority : "med");
+  const [category, setCategory] = useState(isEdit ? editTask.category : "teach");
   const [reminder, setReminder] = useState(true);
 
   const canSubmit = title.trim().length > 0;
 
   const submit = () => {
     if (!canSubmit) return;
-    onAdd({
-      title: title.trim(),
-      note: note.trim(),
-      due, time, priority, category,
-      reminder,
-    });
+    if (isEdit) {
+      onUpdate({ id: editTask.id, title: title.trim(), note: note.trim(), due, time, priority, category });
+    } else {
+      onAdd({ title: title.trim(), note: note.trim(), due, time, priority, category, reminder });
+    }
     goto("list");
   };
 
@@ -1217,8 +1221,8 @@ function ScreenAdd({ onAdd, goto }) {
   return (
     <div className="screen">
       <ScreenHeader
-        eyebrow="משימה חדשה"
-        title="בואו נוסיף משימה"
+        eyebrow={isEdit ? "עריכת משימה" : "משימה חדשה"}
+        title={isEdit ? "עדכון משימה" : "בואו נוסיף משימה"}
         right={
           <button className="btn-ghost" onClick={() => goto("dashboard")}
                   style={{ width: 40, height: 40, borderRadius: 14, padding: 0, display: "grid", placeItems: "center" }}>
@@ -1358,7 +1362,7 @@ function ScreenAdd({ onAdd, goto }) {
         <div style={{ marginTop: 6 }} className="fade-up">
           <button className="btn-primary" disabled={!canSubmit} onClick={submit}
                   style={{ opacity: canSubmit ? 1 : 0.5 }}>
-            <Icons.Plus size={18} /> הוסיפו משימה
+            {isEdit ? <><Icons.Check size={18} /> עדכון משימה</> : <><Icons.Plus size={18} /> הוסיפו משימה</>}
           </button>
         </div>
       </div>
@@ -1367,7 +1371,11 @@ function ScreenAdd({ onAdd, goto }) {
 }
 
 // ── ScreenProfile ──────────────────────────────────────────────
-function ScreenProfile({ tasks, goto }) {
+function ScreenProfile({ tasks, goto, userName, setUserName, userRole, setUserRole }) {
+  const [editing, setEditing] = useState(false);
+  const [tempName, setTempName] = useState(userName);
+  const [tempRole, setTempRole] = useState(userRole);
+  const saveProfile = () => { setUserName(tempName); setUserRole(tempRole); setEditing(false); };
   const completed = tasks.filter(t => t.done).length;
   const open = tasks.length - completed;
 
@@ -1391,9 +1399,10 @@ function ScreenProfile({ tasks, goto }) {
         eyebrow="החשבון שלי"
         title="הפרופיל"
         right={
-          <button className="btn-ghost" style={{
-            width: 40, height: 40, borderRadius: 14, background: "rgba(255,255,255,0.7)",
-            border: "1px solid var(--line)", padding: 0, display: "grid", placeItems: "center"
+          <button className="btn-ghost" onClick={() => { setTempName(userName); setTempRole(userRole); setEditing(!editing); }} style={{
+            width: 40, height: 40, borderRadius: 14, background: editing ? "var(--brand-ink)" : "rgba(255,255,255,0.7)",
+            border: "1px solid var(--line)", padding: 0, display: "grid", placeItems: "center",
+            color: editing ? "#fff" : "var(--fg-2)",
           }}>
             <Icons.Edit size={16} />
           </button>
@@ -1419,14 +1428,30 @@ function ScreenProfile({ tasks, goto }) {
               fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 800,
               color: "var(--brand-ink)",
               boxShadow: "0 8px 20px rgba(30,58,95,0.15)",
-            }}>מ</div>
+            }}>{userName.charAt(0)}</div>
             <div style={{ flex: 1 }}>
-              <div className="app-display" style={{ fontSize: 22, fontWeight: 800, color: "var(--brand-ink)", lineHeight: 1.15 }}>
-                מיטל פרידמן
-              </div>
-              <div style={{ fontSize: 13, color: "var(--brand-ink)", opacity: 0.75, fontWeight: 600 }}>
-                מורה למדעים · חטיבת ביניים
-              </div>
+              {editing ? (
+                <>
+                  <input className="input" value={tempName} onChange={e => setTempName(e.target.value)}
+                         placeholder="השם שלך" style={{ fontSize: 16, fontWeight: 700, padding: "8px 12px", marginBottom: 6, background: "rgba(255,255,255,0.8)" }} />
+                  <input className="input" value={tempRole} onChange={e => setTempRole(e.target.value)}
+                         placeholder="תפקיד" style={{ fontSize: 13, padding: "6px 12px", background: "rgba(255,255,255,0.8)" }} />
+                  <button onClick={saveProfile} style={{
+                    marginTop: 8, border: 0, padding: "6px 16px", borderRadius: 12,
+                    background: "var(--brand-ink)", color: "#fff",
+                    fontFamily: "var(--font-body)", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  }}>שמירה</button>
+                </>
+              ) : (
+                <>
+                  <div className="app-display" style={{ fontSize: 22, fontWeight: 800, color: "var(--brand-ink)", lineHeight: 1.15 }}>
+                    {userName}
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--brand-ink)", opacity: 0.75, fontWeight: 600 }}>
+                    {userRole}
+                  </div>
+                </>
+              )}
               <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 8,
                             padding: "4px 10px", borderRadius: 999,
                             background: "rgba(255,255,255,0.6)",
@@ -1600,10 +1625,19 @@ function TweaksPanel({ tweaks, setTweaks }) {
 // ── App ────────────────────────────────────────────────────────
 function App() {
   const [screen, setScreen] = useState("dashboard");
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState(() => {
+    try { const s = localStorage.getItem("lerani_tasks"); return s ? JSON.parse(s) : initialTasks; }
+    catch(e) { return initialTasks; }
+  });
+  const [userName, setUserName] = useState(() => localStorage.getItem("lerani_name") || "מיטל");
+  const [userRole, setUserRole] = useState(() => localStorage.getItem("lerani_role") || "מורה למדעים · חטיבת ביניים");
   const [tweaks, setTweaks] = useState({ navStyle: "dots", titleFont: "liron" });
+  const [editTask, setEditTask] = useState(null); // task to edit
 
   useEffect(() => { document.body.dataset.titleFont = tweaks.titleFont; }, [tweaks.titleFont]);
+  useEffect(() => { localStorage.setItem("lerani_tasks", JSON.stringify(tasks)); }, [tasks]);
+  useEffect(() => { localStorage.setItem("lerani_name", userName); }, [userName]);
+  useEffect(() => { localStorage.setItem("lerani_role", userRole); }, [userRole]);
 
   const onToggle = (id) => {
     setTasks(ts => ts.map(t => t.id === id ? { ...t, done: !t.done } : t));
@@ -1614,12 +1648,20 @@ function App() {
   const onAdd = (t) => {
     setTasks(ts => [{ id: Date.now(), done: false, ...t }, ...ts]);
   };
+  const onEdit = (task) => {
+    setEditTask(task);
+    setScreen("add");
+  };
+  const onUpdate = (updated) => {
+    setTasks(ts => ts.map(t => t.id === updated.id ? { ...t, ...updated } : t));
+    setEditTask(null);
+  };
 
   let content = null;
-  if (screen === "dashboard") content = <ScreenDashboard tasks={tasks} onToggle={onToggle} goto={setScreen} />;
-  else if (screen === "list") content = <ScreenList tasks={tasks} onToggle={onToggle} onDelete={onDelete} goto={setScreen} />;
-  else if (screen === "add") content = <ScreenAdd onAdd={onAdd} goto={setScreen} />;
-  else if (screen === "profile") content = <ScreenProfile tasks={tasks} goto={setScreen} />;
+  if (screen === "dashboard") content = <ScreenDashboard tasks={tasks} onToggle={onToggle} goto={setScreen} userName={userName} />;
+  else if (screen === "list") content = <ScreenList tasks={tasks} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} goto={setScreen} />;
+  else if (screen === "add") content = <ScreenAdd onAdd={onAdd} onUpdate={onUpdate} editTask={editTask} goto={(s) => { setEditTask(null); setScreen(s); }} />;
+  else if (screen === "profile") content = <ScreenProfile tasks={tasks} goto={setScreen} userName={userName} setUserName={setUserName} userRole={userRole} setUserRole={setUserRole} />;
 
   return (
     <div className="stage">
