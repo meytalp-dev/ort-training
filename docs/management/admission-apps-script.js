@@ -668,14 +668,30 @@ var YISKA_EMAIL = 'iskah@bethaarava.ort.org.il';
 function notifySecretary_(data) {
   if (!data || !data.studentName) return { result: 'error', message: 'missing data' };
 
+  var baseUrl = 'https://meytalp-dev.github.io/ort-training/management/student-admission.html';
+  var studentFileLink = baseUrl + '#student-file';
+  var registrationLink = baseUrl + '#registration';
+
   var subject = 'תלמיד/ה חדש/ה התקבל/ה — ' + data.studentName;
   var body = 'שלום מיטל,\n\n';
   body += 'תלמיד/ה חדש/ה התקבל/ה לבית הספר:\n\n';
   body += 'שם: ' + data.studentName + '\n';
   if (data.studentClass) body += 'כיתה: ' + data.studentClass + '\n';
   if (data.studentTrack) body += 'מגמה: ' + data.studentTrack + '\n';
-  body += '\nיש לרשום במנב"ס.\n';
-  body += 'קישור למערכת: https://meytalp-dev.github.io/ort-training/management/student-admission.html\n\n';
+  body += '\n';
+  body += '── איך לצפות בפרטים ובמסמכים ──\n\n';
+  body += '1. היכנסי למערכת:\n';
+  body += '   ' + studentFileLink + '\n\n';
+  body += '2. בטאב "תיק תלמיד" — בחרי את שם התלמיד/ה מהרשימה.\n';
+  body += '   שם תמצאי את כל הפרטים שמילאה יסכה בראיון:\n';
+  body += '   - פרטים אישיים (ת.ז., כתובת, בית ספר קודם)\n';
+  body += '   - פרטי הורים (טלפונים, אימייל)\n';
+  body += '   - מסמכים מצורפים (ת.ז., תעודות, אבחונים)\n\n';
+  body += '3. בטאב "רישום" — תמצאי את התלמיד/ה ברשימת הממתינים לרישום במנב"ס.\n';
+  body += '   ' + registrationLink + '\n\n';
+  body += '── מה צריך לעשות ──\n\n';
+  body += '- לרשום את התלמיד/ה במנב"ס\n';
+  body += '- לסמן "בוצע" במערכת אחרי הרישום\n\n';
   body += 'בברכה,\nמערכת קבלת תלמידים';
 
   try {
