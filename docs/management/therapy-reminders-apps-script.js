@@ -12,9 +12,10 @@
  *   מטיאס — פסיכולוג — רביעי 14:00 — 0544611004
  *   דבורה — קידום נוער — רביעי 14:00 — 0508466018
  *
+ * Sheet: https://docs.google.com/spreadsheets/d/15PTx5jfvEp3C4xXEsa4Ia9zb0guzT1jL9XBW8vRFCmw
+ *
  * הוראות התקנה:
- *   1. צרי Sheet חדש (או השתמשי בקיים)
- *   2. Extensions > Apps Script
+ *   1. פתחי את ה-Sheet > Extensions > Apps Script
  *   3. הדביקי את הקוד הזה
  *   4. הגדירי Script Properties:
  *      - GREEN_API_ID_INSTANCE
@@ -124,12 +125,13 @@ function sendTherapyTrackingReminders() {
   let sentCount = 0;
 
   todayStaff.forEach(staff => {
+    const personalLink = `${TRACKING_FORM_URL}?view=tracking&therapist=${encodeURIComponent(staff.name)}`;
     const message =
       `שלום ${staff.fullName},\n\n` +
       `תזכורת: היום (יום ${dayName}) יום מעקב טיפול.\n\n` +
-      `נא למלא עדכון שבועי על התלמידים שלך בטופס המעקב:\n` +
-      `${TRACKING_FORM_URL}\n\n` +
-      `(היכנס/י > טאב "מעקב טיפול" > בחר/י את שמך > כתוב/י עדכון לכל תלמיד/ה)\n\n` +
+      `נא למלא עדכון שבועי על התלמידים שלך:\n` +
+      `${personalLink}\n\n` +
+      `(הקישור ייפתח ישירות על רשימת התלמידים שלך)\n\n` +
       `תודה רבה!`;
 
     const ok = sendWhatsApp(staff.phone, message);
