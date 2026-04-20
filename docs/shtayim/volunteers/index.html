@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת ניהול מתנדבים — הופה</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@100;300;400;500;600;700;800;900&family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --plum: #7B5EA7;
+            --plum-dark: #5A3D8A;
+            --plum-deep: #3E2668;
+            --plum-light: #F3EEF9;
+            --plum-muted: #9B85BE;
+            --coral: #E8836B;
+            --coral-dark: #D06A52;
+            --coral-light: #FDF0ED;
+            --sand: #FAF8F5;
+            --cream: #FFFCF8;
+            --charcoal: #2D2B3A;
+            --gray: #6B6980;
+            --gray-light: #A8A5B5;
+            --gray-lighter: #E8E6EE;
+            --mint: #5BBF9E;
+            --mint-light: #E8F7F1;
+            --gold: #D4A843;
+            --gold-light: #FDF5E3;
+            --red: #E85B5B;
+            --red-light: #FDEDED;
+            --bg-dark: #0D0A14;
+            --sidebar-w: 260px;
+            --header-h: 64px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Heebo', sans-serif; background: var(--sand); color: var(--charcoal); line-height: 1.6; overflow-x: hidden; }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: fixed; top: 0; right: 0;
+            width: var(--sidebar-w); height: 100vh;
+            background: var(--bg-dark); z-index: 100;
+            display: flex; flex-direction: column;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto;
+        }
+        .sidebar.collapsed { transform: translateX(100%); }
+
+        .sidebar-logo {
+            padding: 20px 24px;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sidebar-logo .circles { display: flex; align-items: center; gap: 6px; }
+        .sidebar-logo .circle { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.25); }
+        .sidebar-logo .circle.p { background: radial-gradient(circle at 30% 30%, rgba(123,94,167,0.7), rgba(123,94,167,0.15)); }
+        .sidebar-logo .circle.c { background: radial-gradient(circle at 30% 30%, rgba(232,131,107,0.7), rgba(232,131,107,0.15)); }
+        .sidebar-logo .bridge { width: 12px; height: 1.5px; background: linear-gradient(90deg, var(--plum), var(--coral)); border-radius: 1px; }
+        .sidebar-logo .brand { font-family: 'Rubik', sans-serif; font-size: 18px; font-weight: 800; color: white; }
+        .sidebar-logo .sub { font-size: 11px; color: rgba(255,255,255,0.35); font-weight: 300; }
+
+        .sidebar-org {
+            padding: 14px 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sidebar-org .avatar {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: linear-gradient(135deg, var(--plum), var(--coral));
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Rubik', sans-serif; font-size: 13px; font-weight: 700; color: white;
+        }
+        .sidebar-org .org-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); }
+        .sidebar-org .org-plan { font-size: 10px; color: var(--coral); font-weight: 500; }
+
+        .sidebar-section { padding: 16px 0 8px; }
+        .sidebar-section-title {
+            padding: 0 24px; font-size: 10px; font-weight: 600;
+            letter-spacing: 2px; text-transform: uppercase;
+            color: rgba(255,255,255,0.2); margin-bottom: 6px;
+        }
+
+        .sidebar-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 24px;
+            color: rgba(255,255,255,0.45); cursor: pointer;
+            transition: all 0.2s; font-size: 13px; font-weight: 400;
+            border-right: 3px solid transparent; position: relative;
+        }
+        .sidebar-item:hover { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.03); }
+        .sidebar-item.active { color: white; background: rgba(123,94,167,0.12); border-right-color: var(--coral); font-weight: 600; }
+        .sidebar-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.6; }
+        .sidebar-item.active svg { opacity: 1; }
+        .sidebar-item .badge {
+            margin-right: auto; font-size: 10px; font-weight: 700;
+            padding: 2px 8px; border-radius: 10px;
+            background: rgba(232,131,107,0.15); color: var(--coral);
+        }
+
+        .sidebar-footer {
+            margin-top: auto; padding: 16px 24px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            font-size: 10px; color: rgba(255,255,255,0.15); text-align: center;
+        }
+
+        /* ===== MAIN ===== */
+        .main-wrapper { margin-right: var(--sidebar-w); min-height: 100vh; transition: margin-right 0.3s; }
+        .main-wrapper.full { margin-right: 0; }
+
+        .header {
+            height: var(--header-h); background: white;
+            border-bottom: 1px solid var(--gray-lighter);
+            display: flex; align-items: center;
+            padding: 0 32px; gap: 16px;
+            position: sticky; top: 0; z-index: 50;
+        }
+        .header-toggle {
+            display: none; width: 36px; height: 36px; border-radius: 10px;
+            border: 1px solid var(--gray-lighter); background: white; cursor: pointer;
+            align-items: center; justify-content: center;
+        }
+        .header-toggle svg { width: 18px; height: 18px; color: var(--gray); }
+        .header-title {
+            font-family: 'Rubik', sans-serif; font-size: 18px; font-weight: 700;
+            background: linear-gradient(135deg, var(--plum-deep), var(--plum), var(--coral));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .header-breadcrumb { font-size: 12px; color: var(--gray-light); margin-right: auto; }
+
+        .content { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
+
+        /* ===== KPI CARDS ===== */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .kpi-card {
+            background: white; border: 1px solid rgba(123,94,167,0.06);
+            border-radius: 16px; padding: 20px;
+            display: flex; align-items: flex-start; gap: 14px;
+            transition: all 0.3s; cursor: pointer;
+        }
+        .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(123,94,167,0.12); }
+        .kpi-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .kpi-icon.plum { background: var(--plum-light); }
+        .kpi-icon.coral { background: var(--coral-light); }
+        .kpi-icon.mint { background: var(--mint-light); }
+        .kpi-icon.gold { background: var(--gold-light); }
+        .kpi-icon.red { background: var(--red-light); }
+        .kpi-icon svg { width: 20px; height: 20px; }
+        .kpi-num { font-family: 'Rubik', sans-serif; font-size: 28px; font-weight: 800; line-height: 1; }
+        .kpi-label { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+        /* ===== PANELS ===== */
+        .panel {
+            background: white; border: 1px solid rgba(123,94,167,0.08);
+            border-radius: 16px; padding: 24px; margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .panel-header {
+            display: flex; align-items: center; gap: 10px;
+            margin-bottom: 18px; padding-bottom: 14px;
+            border-bottom: 1px solid var(--gray-lighter);
+        }
+        .panel-title {
+            font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 700;
+            background: linear-gradient(135deg, var(--plum-deep), var(--plum));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .panel-subtitle { font-size: 12px; color: var(--gray-light); margin-right: auto; }
+
+        /* ===== TABLE ===== */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th {
+            text-align: right; padding: 10px 14px; font-weight: 600;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--gray); border-bottom: 2px solid var(--gray-lighter);
+        }
+        tbody td { padding: 12px 14px; border-bottom: 1px solid rgba(0,0,0,0.04); vertical-align: middle; }
+        tbody tr { transition: background 0.15s; }
+        tbody tr:hover { background: rgba(123,94,167,0.02); }
+
+        /* ===== STATUS BADGES ===== */
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 11px; font-weight: 600;
+        }
+        .status-active { background: var(--mint-light); color: var(--mint); }
+        .status-paused { background: var(--gold-light); color: var(--gold); }
+        .status-alumni { background: var(--plum-light); color: var(--plum); }
+        .status-searching { background: var(--coral-light); color: var(--coral); }
+        .status-in-program { background: var(--mint-light); color: var(--mint); }
+        .status-graduated { background: var(--plum-light); color: var(--plum); }
+        .status-dropped { background: var(--red-light); color: var(--red); }
+        .status-ended { background: rgba(0,0,0,0.04); color: var(--gray); }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 20px; border-radius: 10px;
+            font-family: 'Heebo', sans-serif; font-size: 13px; font-weight: 600;
+            cursor: pointer; border: none; transition: all 0.2s;
+        }
+        .btn svg { width: 16px; height: 16px; }
+        .btn-primary { background: linear-gradient(135deg, var(--plum), var(--plum-dark)); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(123,94,167,0.25); }
+        .btn-coral { background: linear-gradient(135deg, var(--coral), var(--coral-dark)); color: white; }
+        .btn-coral:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(232,131,107,0.25); }
+        .btn-outline { background: white; color: var(--plum); border: 1.5px solid var(--plum); }
+        .btn-outline:hover { background: var(--plum-light); }
+        .btn-ghost { background: transparent; color: var(--gray); }
+        .btn-ghost:hover { color: var(--charcoal); background: rgba(0,0,0,0.03); }
+        .btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 8px; }
+        .btn-mint { background: linear-gradient(135deg, var(--mint), #4AAF8E); color: white; }
+        .btn-mint:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(91,191,158,0.25); }
+
+        /* ===== FORM ===== */
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--charcoal); margin-bottom: 6px; }
+        .form-input {
+            width: 100%; padding: 10px 14px;
+            border: 1.5px solid var(--gray-lighter); border-radius: 10px;
+            font-family: 'Heebo', sans-serif; font-size: 13px; color: var(--charcoal);
+        }
+        .form-input:focus { outline: none; border-color: var(--plum); }
+        select.form-input {
+            appearance: none; background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6980' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 14px center;
+            padding-right: 36px;
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        textarea.form-input { min-height: 80px; resize: vertical; }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(13,10,20,0.5); backdrop-filter: blur(4px);
+            z-index: 200; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        .modal-overlay.open { opacity: 1; visibility: visible; }
+        .modal {
+            background: white; border-radius: 20px;
+            width: 90%; max-width: 640px; max-height: 85vh;
+            overflow-y: auto; padding: 32px;
+            transform: translateY(20px); transition: transform 0.3s;
+        }
+        .modal-overlay.open .modal { transform: translateY(0); }
+        .modal h3 {
+            font-family: 'Rubik', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 20px;
+        }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-start; margin-top: 24px; }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state { text-align: center; padding: 60px 24px; color: var(--gray); }
+        .empty-state svg { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.3; }
+        .empty-state h4 { font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--charcoal); }
+        .empty-state p { font-size: 13px; margin-bottom: 16px; }
+
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed; bottom: 24px; left: 24px;
+            background: var(--charcoal); color: white;
+            padding: 14px 24px; border-radius: 12px;
+            font-size: 13px; font-weight: 500;
+            transform: translateY(100px); opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+            z-index: 300;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: var(--mint); }
+        .toast.error { background: var(--red); }
+
+        /* ===== TWO COLS ===== */
+        .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+        /* ===== SEARCH BAR ===== */
+        .search-bar {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1; min-width: 200px; padding: 10px 16px 10px 40px;
+            border: 1.5px solid var(--gray-lighter); border-radius: 10px;
+            font-family: 'Heebo', sans-serif; font-size: 13px;
+            background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23A8A5B5' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 12px center;
+        }
+        .search-input:focus { outline: none; border-color: var(--plum); }
+        .filter-select {
+            padding: 10px 36px 10px 14px; border: 1.5px solid var(--gray-lighter);
+            border-radius: 10px; font-family: 'Heebo', sans-serif; font-size: 13px;
+            background: white; appearance: none; cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6980' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 14px center;
+        }
+
+        /* ===== TIMELINE ===== */
+        .timeline-item {
+            display: flex; gap: 14px; padding: 14px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .timeline-item:last-child { border: none; }
+        .timeline-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .timeline-icon.meeting { background: var(--plum-light); }
+        .timeline-icon.call { background: var(--coral-light); }
+        .timeline-icon.referral { background: var(--mint-light); }
+        .timeline-icon.other { background: rgba(0,0,0,0.04); }
+        .timeline-icon svg { width: 16px; height: 16px; }
+        .timeline-content { flex: 1; }
+        .timeline-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .timeline-names { font-size: 13px; font-weight: 600; }
+        .timeline-type { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+        .timeline-desc { font-size: 13px; color: var(--gray); }
+        .timeline-meta { font-size: 11px; color: var(--gray-light); margin-top: 4px; }
+
+        /* ===== ASSIGNMENT CARDS ===== */
+        .assignment-card {
+            background: white; border: 1px solid rgba(123,94,167,0.08);
+            border-radius: 16px; padding: 20px;
+            display: flex; flex-direction: column; gap: 12px;
+            transition: all 0.3s;
+        }
+        .assignment-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(123,94,167,0.12); }
+        .assignment-pair {
+            display: flex; align-items: center; gap: 12px; justify-content: center;
+        }
+        .assignment-person {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+        }
+        .assignment-avatar {
+            width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Rubik', sans-serif; font-size: 14px; font-weight: 700; color: white;
+        }
+        .assignment-avatar.volunteer { background: linear-gradient(135deg, var(--plum), var(--plum-dark)); }
+        .assignment-avatar.graduate { background: linear-gradient(135deg, var(--coral), var(--coral-dark)); }
+        .assignment-arrow { font-size: 20px; color: var(--gray-light); }
+        .assignment-name { font-size: 12px; font-weight: 600; text-align: center; }
+        .assignment-date { font-size: 11px; color: var(--gray-light); text-align: center; }
+        .assignment-actions { display: flex; gap: 8px; justify-content: center; }
+
+        /* ===== PROGRAM CARD ===== */
+        .program-card {
+            background: white; border: 1px solid rgba(123,94,167,0.08);
+            border-radius: 16px; padding: 20px;
+            transition: all 0.3s;
+        }
+        .program-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(123,94,167,0.12); }
+        .program-card h4 { font-family: 'Rubik', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .program-institution { font-size: 12px; color: var(--gray); margin-bottom: 10px; }
+        .program-meta { font-size: 12px; color: var(--gray); }
+        .program-type-badge { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-bottom: 8px; }
+        .type-academic { background: var(--plum-light); color: var(--plum); }
+        .type-vocational { background: var(--coral-light); color: var(--coral); }
+        .type-workshop { background: var(--mint-light); color: var(--mint); }
+        .type-other { background: var(--gold-light); color: var(--gold); }
+
+        /* ===== REPORT TABS ===== */
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--gray-lighter); }
+        .tab {
+            padding: 10px 20px; font-size: 13px; font-weight: 500;
+            color: var(--gray); cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -2px;
+            transition: all 0.2s; border-radius: 8px 8px 0 0;
+        }
+        .tab:hover { color: var(--charcoal); background: rgba(123,94,167,0.03); }
+        .tab.active { color: var(--plum); border-bottom-color: var(--plum); font-weight: 700; }
+
+        /* ===== UNMATCHED LIST ===== */
+        .unmatched-section { margin-top: 24px; }
+        .unmatched-title { font-family: 'Rubik', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--charcoal); }
+        .unmatched-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 10px;
+            background: white; border: 1px solid rgba(0,0,0,0.04);
+            margin-bottom: 8px; transition: all 0.2s;
+        }
+        .unmatched-item:hover { border-color: var(--plum); }
+        .unmatched-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .unmatched-name { font-size: 13px; font-weight: 500; flex: 1; }
+
+        /* ===== SETTINGS ===== */
+        .settings-section { margin-bottom: 32px; }
+        .settings-section h4 { font-family: 'Rubik', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+        .cloud-status { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 8px; }
+        .cloud-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .cloud-dot.connected { background: var(--mint); }
+        .cloud-dot.disconnected { background: var(--red); }
+
+        /* ===== WHATSAPP ===== */
+        .wa-link {
+            display: inline-flex; align-items: center; gap: 4px;
+            color: #25D366; text-decoration: none; font-weight: 500;
+        }
+        .wa-link:hover { text-decoration: underline; }
+
+        /* ===== PAGE ===== */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ===== ANIMATIONS ===== */
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== FOCUS ===== */
+        .btn:focus-visible, .tab:focus-visible, .sidebar-item:focus-visible, .kpi-card:focus-visible {
+            outline: 2px solid var(--plum); outline-offset: 2px;
+        }
+
+        /* ===== SIDEBAR OVERLAY ===== */
+        .sidebar-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            z-index: 99; opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        .sidebar-overlay.open { opacity: 1; visibility: visible; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .sidebar { transform: translateX(100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-wrapper { margin-right: 0 !important; }
+            .header-toggle { display: flex; }
+            .header { padding: 0 16px; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+            .two-cols { grid-template-columns: 1fr; }
+            .content { padding: 20px 16px; }
+            .sidebar-item { padding: 12px 24px; min-height: 44px; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 500px) {
+            .kpi-grid { grid-template-columns: 1fr; }
+            .grid-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+        <div class="circles"><div class="circle p"></div><div class="bridge"></div><div class="circle c"></div></div>
+        <div><div class="brand">שתיים</div><div class="sub">מתנדבים</div></div>
+    </div>
+
+    <div class="sidebar-org">
+        <div class="avatar" id="sidebarAvatar">הפ</div>
+        <div><div class="org-name" id="sidebarOrgName">עמותת הופה</div><div class="org-plan">ניהול מתנדבים</div></div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">ראשי</div>
+        <div class="sidebar-item active" data-page="dashboard" onclick="showPage('dashboard')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            דשבורד
+        </div>
+        <div class="sidebar-item" data-page="volunteers" onclick="showPage('volunteers')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            מתנדבים / מלגאים
+            <span class="badge" id="volCount">0</span>
+        </div>
+        <div class="sidebar-item" data-page="graduates" onclick="showPage('graduates')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            בוגרים
+            <span class="badge" id="gradCount">0</span>
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">ניהול</div>
+        <div class="sidebar-item" data-page="assignments" onclick="showPage('assignments')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            שיבוצים
+        </div>
+        <div class="sidebar-item" data-page="activities" onclick="showPage('activities')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            פעילויות
+        </div>
+        <div class="sidebar-item" data-page="programs" onclick="showPage('programs')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            תוכניות
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">מידע</div>
+        <div class="sidebar-item" data-page="reports" onclick="showPage('reports')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            דוחות
+        </div>
+        <div class="sidebar-item" data-page="settings" onclick="showPage('settings')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            הגדרות
+        </div>
+    </div>
+
+    <div class="sidebar-footer">שתיים — מתנדבים v1.0</div>
+</nav>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- ===== MAIN ===== -->
+<div class="main-wrapper" id="mainWrapper">
+
+    <!-- HEADER -->
+    <header class="header">
+        <button class="header-toggle" onclick="toggleSidebar()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="header-title" id="headerTitle">דשבורד</div>
+        <div class="header-breadcrumb" id="headerBreadcrumb"></div>
+    </header>
+
+    <!-- ===== PAGE: DASHBOARD ===== -->
+    <div class="page active" id="page-dashboard">
+        <div class="content fade-in">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="openModal('volunteer')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    הוסף מתנדב
+                </button>
+                <button class="btn btn-coral" onclick="openModal('graduate')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    הוסף בוגר
+                </button>
+                <button class="btn btn-outline" onclick="openModal('activity')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    רשום פעילות
+                </button>
+            </div>
+
+            <div class="kpi-grid" id="dashKpis"></div>
+
+            <div class="two-cols">
+                <div class="panel">
+                    <div class="panel-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--plum)" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <div class="panel-title">פעילות אחרונה</div>
+                    </div>
+                    <div id="dashTimeline"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <div class="panel-title">טעוני טיפול</div>
+                    </div>
+                    <div id="dashAlerts"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PAGE: VOLUNTEERS ===== -->
+    <div class="page" id="page-volunteers">
+        <div class="content fade-in">
+            <div class="search-bar">
+                <input type="text" class="search-input" placeholder="חיפוש מתנדב..." id="volSearch" oninput="renderVolunteers()">
+                <select class="filter-select" id="volFilter" onchange="renderVolunteers()">
+                    <option value="all">כל הסטטוסים</option>
+                    <option value="active">פעיל</option>
+                    <option value="paused">מושהה</option>
+                    <option value="alumni">בוגר מלגה</option>
+                </select>
+                <button class="btn btn-primary" onclick="openModal('volunteer')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    הוסף מתנדב
+                </button>
+            </div>
+            <div class="panel">
+                <div class="table-wrap" id="volTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PAGE: GRADUATES ===== -->
+    <div class="page" id="page-graduates">
+        <div class="content fade-in">
+            <div class="search-bar">
+                <input type="text" class="search-input" placeholder="חיפוש בוגר..." id="gradSearch" oninput="renderGraduates()">
+                <select class="filter-select" id="gradFilter" onchange="renderGraduates()">
+                    <option value="all">כל הסטטוסים</option>
+                    <option value="searching">מחפש</option>
+                    <option value="in-program">בתוכנית</option>
+                    <option value="graduated">סיים</option>
+                    <option value="dropped">נשר</option>
+                </select>
+                <button class="btn btn-coral" onclick="openModal('graduate')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    הוסף בוגר
+                </button>
+            </div>
+            <div class="panel">
+                <div class="table-wrap" id="gradTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PAGE: ASSIGNMENTS ===== -->
+    <div class="page" id="page-assignments">
+        <div class="content fade-in">
+            <div class="search-bar">
+                <select class="filter-select" id="assignFilter" onchange="renderAssignments()">
+                    <option value="active">שיבוצים פעילים</option>
+                    <option value="ended">שיבוצים שהסתיימו</option>
+                    <option value="all">הכל</option>
+                </select>
+                <button class="btn btn-primary" onclick="openModal('assignment')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    שיבוץ חדש
+                </button>
+            </div>
+            <div class="grid-3" id="assignGrid"></div>
+            <div class="two-cols unmatched-section" id="unmatchedSection"></div>
+        </div>
+    </div>
+
+    <!-- ===== PAGE: ACTIVITIES ===== -->
+    <div class="page" id="page-activities">
+        <div class="content fade-in">
+            <div class="search-bar">
+                <select class="filter-select" id="actVolFilter" onchange="renderActivities()">
+                    <option value="all">כל המתנדבים</option>
+                </select>
+                <select class="filter-select" id="actTypeFilter" onchange="renderActivities()">
+                    <option value="all">כל הסוגים</option>
+                    <option value="meeting">פגישה</option>
+                    <option value="call">שיחה</option>
+                    <option value="referral">הפניה</option>
+                    <option value="other">אחר</option>
+                </select>
+                <button class="btn btn-outline" onclick="openModal('activity')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    רשום פעילות
+                </button>
+            </div>
+            <div class="panel">
+                <div id="actTimeline"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PAGE: PROGRAMS ===== -->
+    <div class="page" id="page-programs">
+        <div class="content fade-in">
+            <div class="search-bar">
+                <input type="text" class="search-input" placeholder="חיפוש תוכנית..." id="progSearch" oninput="renderPrograms()">
+                <select class="filter-select" id="progFilter" onchange="renderPrograms()">
+                    <option value="all">כל הסוגים</option>
+                    <option value="academic">אקדמי</option>
+                    <option value="vocational">מקצועי</option>
+                    <option value="workshop">סדנה</option>
+                    <option value="other">אחר</option>
+                </select>
+                <button class="btn btn-primary" onclick="openModal('program')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    הוסף תוכנית
+                </button>
+            </div>
+            <div class="grid-3" id="progGrid"></div>
+        </div>
+    </div>
+
+    <!-- ===== PAGE: REPORTS ===== -->
+    <div class="page" id="page-reports">
+        <div class="content fade-in">
+            <div class="tabs">
+                <div class="tab active" onclick="switchReportTab('hours', this)">סיכום שעות</div>
+                <div class="tab" onclick="switchReportTab('activities', this)">סיכום פעילויות</div>
+                <div class="tab" onclick="switchReportTab('success', this)">מדדי הצלחה</div>
+            </div>
+            <div id="reportContent"></div>
+            <div style="margin-top:16px;">
+                <button class="btn btn-outline" onclick="exportCSV()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    ייצוא CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== PAGE: SETTINGS ===== -->
+    <div class="page" id="page-settings">
+        <div class="content fade-in">
+            <div class="panel">
+                <div class="settings-section">
+                    <h4>חיבור ענן</h4>
+                    <div class="form-group">
+                        <label class="form-label">כתובת Apps Script (Web App URL)</label>
+                        <input type="text" class="form-input" id="cloudUrl" placeholder="https://script.google.com/macros/s/..." style="direction:ltr;text-align:left;">
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button class="btn btn-primary" onclick="saveCloudUrl()">שמור</button>
+                        <button class="btn btn-outline" onclick="testCloudConnection()">בדוק חיבור</button>
+                    </div>
+                    <div class="cloud-status" id="cloudStatus">
+                        <div class="cloud-dot disconnected"></div>
+                        <span>לא מחובר</span>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="settings-section">
+                    <h4>פרטי ארגון</h4>
+                    <div id="orgInfo"></div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="settings-section">
+                    <h4>ניהול נתונים</h4>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-outline" onclick="syncFromCloud()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            סנכרן מהענן
+                        </button>
+                        <button class="btn btn-ghost" onclick="clearLocalData()" style="color:var(--red);">נקה נתונים מקומיים</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Volunteer Modal -->
+<div class="modal-overlay" id="modal-volunteer" onclick="if(event.target===this)closeModal('volunteer')">
+    <div class="modal">
+        <h3 id="volModalTitle">הוסף מתנדב חדש</h3>
+        <input type="hidden" id="volEditIdx" value="-1">
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">שם מלא *</label><input type="text" class="form-input" id="fVolName"></div>
+            <div class="form-group"><label class="form-label">תעודת זהות</label><input type="text" class="form-input" id="fVolId" style="direction:ltr;text-align:left;"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">טלפון *</label><input type="tel" class="form-input" id="fVolPhone" style="direction:ltr;text-align:left;"></div>
+            <div class="form-group"><label class="form-label">אימייל</label><input type="email" class="form-input" id="fVolEmail" style="direction:ltr;text-align:left;"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">מוסד לימודים</label><input type="text" class="form-input" id="fVolInstitution"></div>
+            <div class="form-group"><label class="form-label">תחום לימודים</label><input type="text" class="form-input" id="fVolField"></div>
+        </div>
+        <div class="form-group"><label class="form-label">זמינות</label><textarea class="form-input" id="fVolAvailability" rows="2"></textarea></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">סטטוס</label>
+                <select class="form-input" id="fVolStatus">
+                    <option value="active">פעיל</option>
+                    <option value="paused">מושהה</option>
+                    <option value="alumni">בוגר מלגה</option>
+                </select>
+            </div>
+            <div class="form-group"><label class="form-label">תאריך התחלה</label><input type="text" class="form-input" id="fVolStartDate" placeholder="DD.MM.YYYY"></div>
+        </div>
+        <div class="form-group"><label class="form-label">הערות</label><textarea class="form-input" id="fVolNotes" rows="2"></textarea></div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="saveVolunteer()">שמור</button>
+            <button class="btn btn-ghost" onclick="closeModal('volunteer')">ביטול</button>
+        </div>
+    </div>
+</div>
+
+<!-- Graduate Modal -->
+<div class="modal-overlay" id="modal-graduate" onclick="if(event.target===this)closeModal('graduate')">
+    <div class="modal">
+        <h3 id="gradModalTitle">הוסף בוגר חדש</h3>
+        <input type="hidden" id="gradEditIdx" value="-1">
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">שם מלא *</label><input type="text" class="form-input" id="fGradName"></div>
+            <div class="form-group"><label class="form-label">גיל</label><input type="number" class="form-input" id="fGradAge" style="direction:ltr;text-align:left;"></div>
+        </div>
+        <div class="form-group"><label class="form-label">טלפון</label><input type="tel" class="form-input" id="fGradPhone" style="direction:ltr;text-align:left;"></div>
+        <div class="form-group"><label class="form-label">רקע</label><textarea class="form-input" id="fGradBackground" rows="2"></textarea></div>
+        <div class="form-group">
+            <label class="form-label">סטטוס</label>
+            <select class="form-input" id="fGradStatus">
+                <option value="searching">מחפש תוכנית</option>
+                <option value="in-program">בתוכנית</option>
+                <option value="graduated">סיים בהצלחה</option>
+                <option value="dropped">נשר</option>
+            </select>
+        </div>
+        <div class="form-group"><label class="form-label">הערות</label><textarea class="form-input" id="fGradNotes" rows="2"></textarea></div>
+        <div class="modal-actions">
+            <button class="btn btn-coral" onclick="saveGraduate()">שמור</button>
+            <button class="btn btn-ghost" onclick="closeModal('graduate')">ביטול</button>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Modal -->
+<div class="modal-overlay" id="modal-activity" onclick="if(event.target===this)closeModal('activity')">
+    <div class="modal">
+        <h3>רישום פעילות</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">מתנדב *</label>
+                <select class="form-input" id="fActVol"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">בוגר *</label>
+                <select class="form-input" id="fActGrad"></select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">תאריך *</label><input type="text" class="form-input" id="fActDate" placeholder="DD.MM.YYYY"></div>
+            <div class="form-group">
+                <label class="form-label">סוג</label>
+                <select class="form-input" id="fActType">
+                    <option value="meeting">פגישה</option>
+                    <option value="call">שיחה</option>
+                    <option value="referral">הפניה</option>
+                    <option value="other">אחר</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group"><label class="form-label">משך (שעות) *</label><input type="number" class="form-input" id="fActHours" step="0.5" style="direction:ltr;text-align:left;"></div>
+        <div class="form-group"><label class="form-label">תיאור</label><textarea class="form-input" id="fActDesc" rows="3"></textarea></div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="saveActivity()">שמור</button>
+            <button class="btn btn-ghost" onclick="closeModal('activity')">ביטול</button>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Modal -->
+<div class="modal-overlay" id="modal-assignment" onclick="if(event.target===this)closeModal('assignment')">
+    <div class="modal">
+        <h3>שיבוץ חדש</h3>
+        <div class="form-group">
+            <label class="form-label">מתנדב *</label>
+            <select class="form-input" id="fAssignVol"></select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">בוגר *</label>
+            <select class="form-input" id="fAssignGrad"></select>
+        </div>
+        <div class="form-group"><label class="form-label">הערות</label><textarea class="form-input" id="fAssignNotes" rows="2"></textarea></div>
+        <div class="modal-actions">
+            <button class="btn btn-coral" onclick="saveAssignment()">שבץ</button>
+            <button class="btn btn-ghost" onclick="closeModal('assignment')">ביטול</button>
+        </div>
+    </div>
+</div>
+
+<!-- Program Modal -->
+<div class="modal-overlay" id="modal-program" onclick="if(event.target===this)closeModal('program')">
+    <div class="modal">
+        <h3 id="progModalTitle">הוסף תוכנית חדשה</h3>
+        <input type="hidden" id="progEditIdx" value="-1">
+        <div class="form-group"><label class="form-label">שם התוכנית *</label><input type="text" class="form-input" id="fProgName"></div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">מוסד</label><input type="text" class="form-input" id="fProgInstitution"></div>
+            <div class="form-group">
+                <label class="form-label">סוג</label>
+                <select class="form-input" id="fProgType">
+                    <option value="academic">אקדמי</option>
+                    <option value="vocational">מקצועי</option>
+                    <option value="workshop">סדנה</option>
+                    <option value="other">אחר</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group"><label class="form-label">דרישות</label><textarea class="form-input" id="fProgReqs" rows="2"></textarea></div>
+        <div class="form-group"><label class="form-label">הערות</label><textarea class="form-input" id="fProgNotes" rows="2"></textarea></div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="saveProgram()">שמור</button>
+            <button class="btn btn-ghost" onclick="closeModal('program')">ביטול</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DATA =====
+var DATA = { volunteers: [], graduates: [], assignments: [], activities: [], programs: [], org: {} };
+var CLOUD_URL = '';
+var currentReportTab = 'hours';
+
+// ===== INIT =====
+(function init() {
+    // Load cloud URL
+    try { CLOUD_URL = localStorage.getItem('shtayim-vol-cloud-url') || ''; } catch(e) {}
+    if (CLOUD_URL) {
+        document.getElementById('cloudUrl').value = CLOUD_URL;
+        updateCloudStatus(true);
+    }
+
+    // Load cached data
+    try {
+        var cached = localStorage.getItem('shtayim-vol-data');
+        if (cached) {
+            DATA = JSON.parse(cached);
+            renderAll();
+        }
+    } catch(e) {}
+
+    // Fetch JSON fallback
+    fetch('hoppa-volunteers.json')
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+            if (!localStorage.getItem('shtayim-vol-data')) {
+                DATA = json;
+                saveLocal();
+                renderAll();
+            }
+        })
+        .catch(function() {});
+})();
+
+function saveLocal() {
+    try { localStorage.setItem('shtayim-vol-data', JSON.stringify(DATA)); } catch(e) {}
+}
+
+function renderAll() {
+    renderDashboard();
+    renderVolunteers();
+    renderGraduates();
+    renderAssignments();
+    renderActivities();
+    renderPrograms();
+    renderReports();
+    renderSettings();
+    updateCounts();
+    populateDropdowns();
+}
+
+function updateCounts() {
+    var activeVols = DATA.volunteers.filter(function(v) { return v.status === 'active'; }).length;
+    document.getElementById('volCount').textContent = activeVols;
+    document.getElementById('gradCount').textContent = DATA.graduates.length;
+}
+
+// ===== PAGE NAVIGATION =====
+var pageTitles = {
+    'dashboard': 'דשבורד',
+    'volunteers': 'מתנדבים / מלגאים',
+    'graduates': 'בוגרים',
+    'assignments': 'שיבוצים',
+    'activities': 'פעילויות',
+    'programs': 'תוכניות',
+    'reports': 'דוחות',
+    'settings': 'הגדרות'
+};
+
+function showPage(id) {
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.sidebar-item').forEach(function(i) { i.classList.remove('active'); });
+    var page = document.getElementById('page-' + id);
+    if (page) {
+        page.classList.add('active');
+        page.classList.remove('fade-in');
+        void page.offsetWidth;
+        page.classList.add('fade-in');
+    }
+    var item = document.querySelector('.sidebar-item[data-page="' + id + '"]');
+    if (item) item.classList.add('active');
+    document.getElementById('headerTitle').textContent = pageTitles[id] || '';
+    document.getElementById('headerBreadcrumb').textContent = id !== 'dashboard' ? 'שתיים / ' + (pageTitles[id] || '') : '';
+    if (window.innerWidth <= 900) {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('open');
+    }
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+// ===== HELPERS =====
+var statusLabels = {
+    'active': 'פעיל', 'paused': 'מושהה', 'alumni': 'בוגר מלגה',
+    'searching': 'מחפש', 'in-program': 'בתוכנית', 'graduated': 'סיים', 'dropped': 'נשר',
+    'ended': 'הסתיים'
+};
+var typeLabels = { 'meeting': 'פגישה', 'call': 'שיחה', 'referral': 'הפניה', 'other': 'אחר' };
+var typeLabelsProgram = { 'academic': 'אקדמי', 'vocational': 'מקצועי', 'workshop': 'סדנה', 'other': 'אחר' };
+
+function waLink(phone) {
+    if (!phone) return '#';
+    var clean = phone.replace(/\D/g, '').replace(/^0/, '972');
+    return 'https://api.whatsapp.com/send?phone=' + clean;
+}
+
+function getInitials(name) {
+    if (!name) return '?';
+    var parts = name.split(' ');
+    return parts.length > 1 ? parts[0][0] + parts[1][0] : name.substring(0, 2);
+}
+
+function todayStr() {
+    var d = new Date();
+    return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+}
+
+// ===== RENDER: DASHBOARD =====
+function renderDashboard() {
+    var activeVols = DATA.volunteers.filter(function(v) { return v.status === 'active'; }).length;
+    var totalGrads = DATA.graduates.length;
+    var activeAssign = DATA.assignments.filter(function(a) { return a.status === 'active'; }).length;
+    var inProgram = DATA.graduates.filter(function(g) { return g.status === 'in-program' || g.status === 'graduated'; }).length;
+
+    document.getElementById('dashKpis').innerHTML =
+        kpiCard('plum', '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>', activeVols, 'מתנדבים פעילים', 'volunteers') +
+        kpiCard('coral', '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>', totalGrads, 'בוגרים במערכת', 'graduates') +
+        kpiCard('mint', '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', activeAssign, 'שיבוצים פעילים', 'assignments') +
+        kpiCard('gold', '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', inProgram, 'בתוכנית / סיימו', 'programs');
+
+    // Recent activities
+    var recent = (DATA.activities || []).slice(0, 8);
+    if (recent.length === 0) {
+        document.getElementById('dashTimeline').innerHTML = '<div class="empty-state"><p>אין פעילויות עדיין</p></div>';
+    } else {
+        document.getElementById('dashTimeline').innerHTML = recent.map(function(a) {
+            return timelineItem(a);
+        }).join('');
+    }
+
+    // Alerts: unmatched graduates + idle volunteers
+    var unmatchedGrads = DATA.graduates.filter(function(g) {
+        return g.status === 'searching' && !DATA.assignments.some(function(a) { return a.graduate === g.name && a.status === 'active'; });
+    });
+    var idleVols = DATA.volunteers.filter(function(v) {
+        return v.status === 'active' && !DATA.assignments.some(function(a) { return a.volunteer === v.name && a.status === 'active'; });
+    });
+
+    var alertsHtml = '';
+    unmatchedGrads.forEach(function(g) {
+        alertsHtml += '<div class="unmatched-item"><div class="unmatched-dot" style="background:var(--coral);"></div><span class="unmatched-name">' + g.name + ' — מחפש תוכנית, לא משובץ</span></div>';
+    });
+    idleVols.forEach(function(v) {
+        alertsHtml += '<div class="unmatched-item"><div class="unmatched-dot" style="background:var(--gold);"></div><span class="unmatched-name">' + v.name + ' — מתנדב פנוי</span></div>';
+    });
+    if (!alertsHtml) alertsHtml = '<div class="empty-state"><p>הכל תקין</p></div>';
+    document.getElementById('dashAlerts').innerHTML = alertsHtml;
+}
+
+function kpiCard(color, svgPath, num, label, page) {
+    return '<div class="kpi-card" onclick="showPage(\'' + page + '\')">' +
+        '<div class="kpi-icon ' + color + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' + svgPath + '</svg></div>' +
+        '<div><div class="kpi-num">' + num + '</div><div class="kpi-label">' + label + '</div></div></div>';
+}
+
+function timelineItem(a) {
+    var typeColors = { meeting: 'var(--plum)', call: 'var(--coral)', referral: 'var(--mint)', other: 'var(--gray)' };
+    var typeBg = { meeting: 'var(--plum-light)', call: 'var(--coral-light)', referral: 'var(--mint-light)', other: 'rgba(0,0,0,0.04)' };
+    var typeIcons = {
+        meeting: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+        call: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>',
+        referral: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+        other: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+    };
+    var t = a.type || 'other';
+    return '<div class="timeline-item">' +
+        '<div class="timeline-icon ' + t + '"><svg viewBox="0 0 24 24" fill="none" stroke="' + typeColors[t] + '" stroke-width="2">' + typeIcons[t] + '</svg></div>' +
+        '<div class="timeline-content">' +
+        '<div class="timeline-header"><span class="timeline-names">' + (a.volunteer || '') + ' &rarr; ' + (a.graduate || '') + '</span>' +
+        '<span class="timeline-type" style="background:' + typeBg[t] + ';color:' + typeColors[t] + ';">' + (typeLabels[t] || t) + '</span></div>' +
+        '<div class="timeline-desc">' + (a.description || '') + '</div>' +
+        '<div class="timeline-meta">' + (a.date || '') + ' &middot; ' + (a.hours || 0) + ' שעות</div></div></div>';
+}
+
+// ===== RENDER: VOLUNTEERS =====
+function renderVolunteers() {
+    var search = (document.getElementById('volSearch').value || '').toLowerCase();
+    var filter = document.getElementById('volFilter').value;
+    var list = DATA.volunteers.filter(function(v) {
+        if (filter !== 'all' && v.status !== filter) return false;
+        if (search && v.name.toLowerCase().indexOf(search) === -1 && (v.institution || '').toLowerCase().indexOf(search) === -1 && (v.field || '').toLowerCase().indexOf(search) === -1) return false;
+        return true;
+    });
+
+    if (list.length === 0) {
+        document.getElementById('volTable').innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><h4>אין מתנדבים</h4><p>לחצו "הוסף מתנדב" כדי להתחיל</p></div>';
+        return;
+    }
+
+    var html = '<table><thead><tr><th>שם</th><th>טלפון</th><th>מוסד</th><th>תחום</th><th>זמינות</th><th>סטטוס</th><th>שעות</th><th>פעולות</th></tr></thead><tbody>';
+    list.forEach(function(v, i) {
+        var realIdx = DATA.volunteers.indexOf(v);
+        html += '<tr>' +
+            '<td style="font-weight:600;">' + v.name + '</td>' +
+            '<td><a href="' + waLink(v.phone) + '" target="_blank" class="wa-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>' + (v.phone || '') + '</a></td>' +
+            '<td>' + (v.institution || '') + '</td>' +
+            '<td>' + (v.field || '') + '</td>' +
+            '<td>' + (v.availability || '') + '</td>' +
+            '<td><span class="status-badge status-' + v.status + '">' + (statusLabels[v.status] || v.status) + '</span></td>' +
+            '<td style="font-family:Rubik,sans-serif;font-weight:700;">' + (v.hours || 0) + '</td>' +
+            '<td><button class="btn btn-sm btn-ghost" onclick="editVolunteer(' + realIdx + ')" title="ערוך"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('volTable').innerHTML = html;
+}
+
+// ===== RENDER: GRADUATES =====
+function renderGraduates() {
+    var search = (document.getElementById('gradSearch').value || '').toLowerCase();
+    var filter = document.getElementById('gradFilter').value;
+    var list = DATA.graduates.filter(function(g) {
+        if (filter !== 'all' && g.status !== filter) return false;
+        if (search && g.name.toLowerCase().indexOf(search) === -1 && (g.background || '').toLowerCase().indexOf(search) === -1) return false;
+        return true;
+    });
+
+    if (list.length === 0) {
+        document.getElementById('gradTable').innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg><h4>אין בוגרים</h4><p>לחצו "הוסף בוגר" כדי להתחיל</p></div>';
+        return;
+    }
+
+    var html = '<table><thead><tr><th>שם</th><th>גיל</th><th>סטטוס</th><th>מתנדב אחראי</th><th>תוכניות</th><th>טלפון</th><th>פעולות</th></tr></thead><tbody>';
+    list.forEach(function(g, i) {
+        var realIdx = DATA.graduates.indexOf(g);
+        var volunteer = g.volunteer || '';
+        var volDisplay = volunteer ? volunteer : '<span style="color:var(--gray-light);">לא משובץ</span>';
+        html += '<tr>' +
+            '<td style="font-weight:600;">' + g.name + '</td>' +
+            '<td>' + (g.age || '') + '</td>' +
+            '<td><span class="status-badge status-' + g.status + '">' + (statusLabels[g.status] || g.status) + '</span></td>' +
+            '<td>' + volDisplay + '</td>' +
+            '<td style="font-size:12px;">' + (g.programs || '-') + '</td>' +
+            '<td>' + (g.phone ? '<a href="' + waLink(g.phone) + '" target="_blank" class="wa-link">' + g.phone + '</a>' : '') + '</td>' +
+            '<td><button class="btn btn-sm btn-ghost" onclick="editGraduate(' + realIdx + ')" title="ערוך"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button></td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('gradTable').innerHTML = html;
+}
+
+// ===== RENDER: ASSIGNMENTS =====
+function renderAssignments() {
+    var filter = document.getElementById('assignFilter').value;
+    var list = DATA.assignments.filter(function(a) {
+        if (filter === 'all') return true;
+        return a.status === filter;
+    });
+
+    if (list.length === 0) {
+        document.getElementById('assignGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><h4>אין שיבוצים</h4><p>לחצו "שיבוץ חדש" כדי לחבר מתנדב לבוגר</p></div>';
+    } else {
+        document.getElementById('assignGrid').innerHTML = list.map(function(a, i) {
+            var realIdx = DATA.assignments.indexOf(a);
+            return '<div class="assignment-card">' +
+                '<div class="assignment-pair">' +
+                '<div class="assignment-person"><div class="assignment-avatar volunteer">' + getInitials(a.volunteer) + '</div><div class="assignment-name">' + a.volunteer + '</div></div>' +
+                '<div class="assignment-arrow">&harr;</div>' +
+                '<div class="assignment-person"><div class="assignment-avatar graduate">' + getInitials(a.graduate) + '</div><div class="assignment-name">' + a.graduate + '</div></div>' +
+                '</div>' +
+                '<div class="assignment-date">משובץ מ-' + a.date + (a.status === 'ended' ? ' | הסתיים ' + a.endDate : '') + '</div>' +
+                '<span class="status-badge status-' + a.status + '" style="align-self:center;">' + (statusLabels[a.status] || a.status) + '</span>' +
+                (a.notes ? '<div style="font-size:12px;color:var(--gray);text-align:center;">' + a.notes + '</div>' : '') +
+                (a.status === 'active' ? '<div class="assignment-actions"><button class="btn btn-sm btn-ghost" onclick="endAssignment(' + realIdx + ')" style="color:var(--red);">סיים שיבוץ</button></div>' : '') +
+                '</div>';
+        }).join('');
+    }
+
+    // Unmatched section
+    var unmatchedGrads = DATA.graduates.filter(function(g) {
+        return g.status === 'searching' && !DATA.assignments.some(function(a) { return a.graduate === g.name && a.status === 'active'; });
+    });
+    var idleVols = DATA.volunteers.filter(function(v) {
+        return v.status === 'active' && !DATA.assignments.some(function(a) { return a.volunteer === v.name && a.status === 'active'; });
+    });
+
+    var html = '';
+    if (unmatchedGrads.length > 0 || idleVols.length > 0) {
+        html += '<div><div class="unmatched-title" style="color:var(--coral);">בוגרים ממתינים (' + unmatchedGrads.length + ')</div>';
+        unmatchedGrads.forEach(function(g) {
+            html += '<div class="unmatched-item"><div class="unmatched-dot" style="background:var(--coral);"></div><span class="unmatched-name">' + g.name + '</span><button class="btn btn-sm btn-outline" onclick="openAssignmentFor(\'' + g.name.replace(/'/g, "\\'") + '\',\'grad\')">שבץ</button></div>';
+        });
+        html += '</div><div><div class="unmatched-title" style="color:var(--plum);">מתנדבים פנויים (' + idleVols.length + ')</div>';
+        idleVols.forEach(function(v) {
+            html += '<div class="unmatched-item"><div class="unmatched-dot" style="background:var(--plum);"></div><span class="unmatched-name">' + v.name + '</span></div>';
+        });
+        html += '</div>';
+    }
+    document.getElementById('unmatchedSection').innerHTML = html;
+}
+
+// ===== RENDER: ACTIVITIES =====
+function renderActivities() {
+    var volFilter = document.getElementById('actVolFilter').value;
+    var typeFilter = document.getElementById('actTypeFilter').value;
+    var list = DATA.activities.filter(function(a) {
+        if (volFilter !== 'all' && a.volunteer !== volFilter) return false;
+        if (typeFilter !== 'all' && a.type !== typeFilter) return false;
+        return true;
+    });
+
+    if (list.length === 0) {
+        document.getElementById('actTimeline').innerHTML = '<div class="empty-state"><p>אין פעילויות עדיין</p></div>';
+        return;
+    }
+
+    document.getElementById('actTimeline').innerHTML = list.map(function(a) {
+        return timelineItem(a);
+    }).join('');
+}
+
+// ===== RENDER: PROGRAMS =====
+function renderPrograms() {
+    var search = (document.getElementById('progSearch').value || '').toLowerCase();
+    var filter = document.getElementById('progFilter').value;
+    var list = DATA.programs.filter(function(p) {
+        if (filter !== 'all' && p.type !== filter) return false;
+        if (search && p.name.toLowerCase().indexOf(search) === -1 && (p.institution || '').toLowerCase().indexOf(search) === -1) return false;
+        return true;
+    });
+
+    if (list.length === 0) {
+        document.getElementById('progGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><h4>אין תוכניות</h4><p>לחצו "הוסף תוכנית" כדי להוסיף</p></div>';
+        return;
+    }
+
+    document.getElementById('progGrid').innerHTML = list.map(function(p, i) {
+        var realIdx = DATA.programs.indexOf(p);
+        var enrolled = DATA.graduates.filter(function(g) { return (g.programs || '').indexOf(p.name) !== -1; }).length;
+        return '<div class="program-card">' +
+            '<span class="program-type-badge type-' + p.type + '">' + (typeLabelsProgram[p.type] || p.type) + '</span>' +
+            '<h4>' + p.name + '</h4>' +
+            '<div class="program-institution">' + (p.institution || '') + '</div>' +
+            (p.requirements ? '<div class="program-meta"><strong>דרישות:</strong> ' + p.requirements + '</div>' : '') +
+            '<div class="program-meta" style="margin-top:8px;">' + enrolled + ' בוגרים רשומים</div>' +
+            (p.notes ? '<div class="program-meta" style="margin-top:4px;color:var(--gray-light);">' + p.notes + '</div>' : '') +
+            '<button class="btn btn-sm btn-ghost" onclick="editProgram(' + realIdx + ')" style="margin-top:10px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> ערוך</button>' +
+            '</div>';
+    }).join('');
+}
+
+// ===== RENDER: REPORTS =====
+function renderReports() {
+    var container = document.getElementById('reportContent');
+    if (currentReportTab === 'hours') {
+        var volHours = {};
+        DATA.activities.forEach(function(a) {
+            if (!volHours[a.volunteer]) volHours[a.volunteer] = 0;
+            volHours[a.volunteer] += (a.hours || 0);
+        });
+        var html = '<div class="panel"><div class="table-wrap"><table><thead><tr><th>מתנדב</th><th>שעות סה"כ (מפעילויות)</th><th>שעות רשומות</th></tr></thead><tbody>';
+        DATA.volunteers.forEach(function(v) {
+            html += '<tr><td style="font-weight:600;">' + v.name + '</td>' +
+                '<td style="font-family:Rubik,sans-serif;font-weight:700;">' + (volHours[v.name] || 0).toFixed(1) + '</td>' +
+                '<td style="font-family:Rubik,sans-serif;">' + (v.hours || 0) + '</td></tr>';
+        });
+        html += '</tbody></table></div></div>';
+        container.innerHTML = html;
+    } else if (currentReportTab === 'activities') {
+        var counts = { meeting: 0, call: 0, referral: 0, other: 0 };
+        var hoursByType = { meeting: 0, call: 0, referral: 0, other: 0 };
+        DATA.activities.forEach(function(a) {
+            var t = a.type || 'other';
+            counts[t] = (counts[t] || 0) + 1;
+            hoursByType[t] = (hoursByType[t] || 0) + (a.hours || 0);
+        });
+        var html = '<div class="panel"><div class="table-wrap"><table><thead><tr><th>סוג פעילות</th><th>כמות</th><th>שעות</th></tr></thead><tbody>';
+        ['meeting', 'call', 'referral', 'other'].forEach(function(t) {
+            html += '<tr><td>' + typeLabels[t] + '</td><td style="font-family:Rubik,sans-serif;font-weight:700;">' + counts[t] + '</td><td style="font-family:Rubik,sans-serif;">' + hoursByType[t].toFixed(1) + '</td></tr>';
+        });
+        html += '</tbody></table></div></div>';
+        container.innerHTML = html;
+    } else if (currentReportTab === 'success') {
+        var total = DATA.graduates.length || 1;
+        var inProg = DATA.graduates.filter(function(g) { return g.status === 'in-program'; }).length;
+        var graduated = DATA.graduates.filter(function(g) { return g.status === 'graduated'; }).length;
+        var dropped = DATA.graduates.filter(function(g) { return g.status === 'dropped'; }).length;
+        var searching = DATA.graduates.filter(function(g) { return g.status === 'searching'; }).length;
+
+        var html = '<div class="kpi-grid">' +
+            kpiCard('mint', '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', Math.round(inProg / total * 100) + '%', 'בתוכנית כרגע', 'graduates') +
+            kpiCard('plum', '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>', Math.round(graduated / total * 100) + '%', 'סיימו בהצלחה', 'graduates') +
+            kpiCard('red', '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>', Math.round(dropped / total * 100) + '%', 'נשרו', 'graduates') +
+            kpiCard('coral', '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>', searching, 'מחפשים תוכנית', 'graduates') +
+            '</div>';
+        container.innerHTML = html;
+    }
+}
+
+function switchReportTab(tab, el) {
+    currentReportTab = tab;
+    document.querySelectorAll('#page-reports .tab').forEach(function(t) { t.classList.remove('active'); });
+    if (el) el.classList.add('active');
+    renderReports();
+}
+
+// ===== RENDER: SETTINGS =====
+function renderSettings() {
+    var org = DATA.org || {};
+    document.getElementById('orgInfo').innerHTML =
+        '<p><strong>שם:</strong> ' + (org.name || '-') + '</p>' +
+        '<p><strong>אימייל:</strong> ' + (org.email || '-') + '</p>' +
+        '<p><strong>טלפון:</strong> ' + (org.phone || '-') + '</p>' +
+        '<p style="margin-top:8px;color:var(--gray);font-size:13px;">' + (org.description || '') + '</p>';
+}
+
+// ===== POPULATE DROPDOWNS =====
+function populateDropdowns() {
+    // Activity vol filter
+    var actVolFilter = document.getElementById('actVolFilter');
+    var current = actVolFilter.value;
+    actVolFilter.innerHTML = '<option value="all">כל המתנדבים</option>';
+    DATA.volunteers.forEach(function(v) {
+        actVolFilter.innerHTML += '<option value="' + v.name + '">' + v.name + '</option>';
+    });
+    actVolFilter.value = current || 'all';
+}
+
+function populateModalDropdowns() {
+    // Activity modal
+    var fActVol = document.getElementById('fActVol');
+    var fActGrad = document.getElementById('fActGrad');
+    fActVol.innerHTML = '<option value="">בחר מתנדב</option>';
+    fActGrad.innerHTML = '<option value="">בחר בוגר</option>';
+    DATA.volunteers.filter(function(v) { return v.status === 'active'; }).forEach(function(v) {
+        fActVol.innerHTML += '<option value="' + v.name + '">' + v.name + '</option>';
+    });
+    DATA.graduates.forEach(function(g) {
+        fActGrad.innerHTML += '<option value="' + g.name + '">' + g.name + '</option>';
+    });
+
+    // Assignment modal
+    var fAssignVol = document.getElementById('fAssignVol');
+    var fAssignGrad = document.getElementById('fAssignGrad');
+    fAssignVol.innerHTML = '<option value="">בחר מתנדב</option>';
+    fAssignGrad.innerHTML = '<option value="">בחר בוגר</option>';
+    DATA.volunteers.filter(function(v) { return v.status === 'active'; }).forEach(function(v) {
+        fAssignVol.innerHTML += '<option value="' + v.name + '">' + v.name + '</option>';
+    });
+    DATA.graduates.filter(function(g) {
+        return g.status === 'searching' && !DATA.assignments.some(function(a) { return a.graduate === g.name && a.status === 'active'; });
+    }).forEach(function(g) {
+        fAssignGrad.innerHTML += '<option value="' + g.name + '">' + g.name + '</option>';
+    });
+}
+
+// ===== MODALS =====
+function openModal(type) {
+    populateModalDropdowns();
+    if (type === 'volunteer') {
+        document.getElementById('volModalTitle').textContent = 'הוסף מתנדב חדש';
+        document.getElementById('volEditIdx').value = '-1';
+        ['fVolName','fVolPhone','fVolEmail','fVolId','fVolInstitution','fVolField','fVolAvailability','fVolNotes','fVolStartDate'].forEach(function(id) { document.getElementById(id).value = ''; });
+        document.getElementById('fVolStatus').value = 'active';
+    } else if (type === 'graduate') {
+        document.getElementById('gradModalTitle').textContent = 'הוסף בוגר חדש';
+        document.getElementById('gradEditIdx').value = '-1';
+        ['fGradName','fGradPhone','fGradAge','fGradBackground','fGradNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
+        document.getElementById('fGradStatus').value = 'searching';
+    } else if (type === 'activity') {
+        document.getElementById('fActDate').value = todayStr();
+        document.getElementById('fActHours').value = '';
+        document.getElementById('fActDesc').value = '';
+        document.getElementById('fActType').value = 'meeting';
+    } else if (type === 'program') {
+        document.getElementById('progModalTitle').textContent = 'הוסף תוכנית חדשה';
+        document.getElementById('progEditIdx').value = '-1';
+        ['fProgName','fProgInstitution','fProgReqs','fProgNotes'].forEach(function(id) { document.getElementById(id).value = ''; });
+        document.getElementById('fProgType').value = 'academic';
+    }
+    document.getElementById('modal-' + type).classList.add('open');
+}
+
+function closeModal(type) {
+    document.getElementById('modal-' + type).classList.remove('open');
+}
+
+function openAssignmentFor(name, type) {
+    populateModalDropdowns();
+    if (type === 'grad') {
+        document.getElementById('fAssignGrad').value = name;
+    }
+    document.getElementById('fAssignNotes').value = '';
+    document.getElementById('modal-assignment').classList.add('open');
+}
+
+// ===== SAVE ACTIONS =====
+function saveVolunteer() {
+    var name = document.getElementById('fVolName').value.trim();
+    var phone = document.getElementById('fVolPhone').value.trim();
+    if (!name || !phone) { showToast('שם וטלפון הם שדות חובה', 'error'); return; }
+
+    var vol = {
+        name: name,
+        phone: phone,
+        email: document.getElementById('fVolEmail').value.trim(),
+        id: document.getElementById('fVolId').value.trim(),
+        institution: document.getElementById('fVolInstitution').value.trim(),
+        field: document.getElementById('fVolField').value.trim(),
+        availability: document.getElementById('fVolAvailability').value.trim(),
+        status: document.getElementById('fVolStatus').value,
+        startDate: document.getElementById('fVolStartDate').value.trim() || todayStr(),
+        hours: 0,
+        notes: document.getElementById('fVolNotes').value.trim()
+    };
+
+    var editIdx = parseInt(document.getElementById('volEditIdx').value);
+    if (editIdx >= 0) {
+        vol.hours = DATA.volunteers[editIdx].hours || 0;
+        DATA.volunteers[editIdx] = vol;
+        showToast('המתנדב עודכן בהצלחה', 'success');
+    } else {
+        DATA.volunteers.push(vol);
+        showToast('המתנדב נוסף בהצלחה', 'success');
+    }
+
+    saveLocal();
+    postToCloud({ action: 'saveVolunteer', volunteer: vol });
+    closeModal('volunteer');
+    renderAll();
+}
+
+function saveGraduate() {
+    var name = document.getElementById('fGradName').value.trim();
+    if (!name) { showToast('שם הוא שדה חובה', 'error'); return; }
+
+    var grad = {
+        name: name,
+        age: parseInt(document.getElementById('fGradAge').value) || '',
+        background: document.getElementById('fGradBackground').value.trim(),
+        status: document.getElementById('fGradStatus').value,
+        volunteer: '',
+        programs: '',
+        phone: document.getElementById('fGradPhone').value.trim(),
+        notes: document.getElementById('fGradNotes').value.trim()
+    };
+
+    var editIdx = parseInt(document.getElementById('gradEditIdx').value);
+    if (editIdx >= 0) {
+        grad.volunteer = DATA.graduates[editIdx].volunteer || '';
+        grad.programs = DATA.graduates[editIdx].programs || '';
+        DATA.graduates[editIdx] = grad;
+        showToast('הבוגר עודכן בהצלחה', 'success');
+    } else {
+        DATA.graduates.push(grad);
+        showToast('הבוגר נוסף בהצלחה', 'success');
+    }
+
+    saveLocal();
+    postToCloud({ action: 'saveGraduate', graduate: grad });
+    closeModal('graduate');
+    renderAll();
+}
+
+function saveActivity() {
+    var vol = document.getElementById('fActVol').value;
+    var grad = document.getElementById('fActGrad').value;
+    var date = document.getElementById('fActDate').value.trim();
+    var hours = parseFloat(document.getElementById('fActHours').value);
+    if (!vol || !grad || !date || isNaN(hours)) { showToast('יש למלא את כל שדות החובה', 'error'); return; }
+
+    var act = {
+        date: date,
+        volunteer: vol,
+        graduate: grad,
+        type: document.getElementById('fActType').value,
+        hours: hours,
+        description: document.getElementById('fActDesc').value.trim()
+    };
+
+    DATA.activities.unshift(act);
+
+    // Update volunteer hours
+    var volObj = DATA.volunteers.find(function(v) { return v.name === vol; });
+    if (volObj) volObj.hours = (volObj.hours || 0) + hours;
+
+    saveLocal();
+    postToCloud({ action: 'saveActivity', activity: act });
+    closeModal('activity');
+    showToast('הפעילות נרשמה בהצלחה', 'success');
+    renderAll();
+}
+
+function saveAssignment() {
+    var vol = document.getElementById('fAssignVol').value;
+    var grad = document.getElementById('fAssignGrad').value;
+    if (!vol || !grad) { showToast('יש לבחור מתנדב ובוגר', 'error'); return; }
+
+    var assignment = {
+        volunteer: vol,
+        graduate: grad,
+        date: todayStr(),
+        status: 'active',
+        endDate: '',
+        notes: document.getElementById('fAssignNotes').value.trim()
+    };
+
+    DATA.assignments.push(assignment);
+
+    // Update graduate's volunteer
+    var gradObj = DATA.graduates.find(function(g) { return g.name === grad; });
+    if (gradObj) gradObj.volunteer = vol;
+
+    saveLocal();
+    postToCloud({ action: 'saveAssignment', assignment: assignment });
+    closeModal('assignment');
+    showToast('השיבוץ נוצר בהצלחה', 'success');
+    renderAll();
+}
+
+function endAssignment(idx) {
+    if (!confirm('לסיים את השיבוץ?')) return;
+    DATA.assignments[idx].status = 'ended';
+    DATA.assignments[idx].endDate = todayStr();
+    saveLocal();
+    postToCloud({ action: 'endAssignment', assignment: DATA.assignments[idx] });
+    showToast('השיבוץ הסתיים', 'success');
+    renderAll();
+}
+
+function saveProgram() {
+    var name = document.getElementById('fProgName').value.trim();
+    if (!name) { showToast('שם התוכנית הוא שדה חובה', 'error'); return; }
+
+    var prog = {
+        name: name,
+        institution: document.getElementById('fProgInstitution').value.trim(),
+        type: document.getElementById('fProgType').value,
+        requirements: document.getElementById('fProgReqs').value.trim(),
+        enrolled: 0,
+        notes: document.getElementById('fProgNotes').value.trim()
+    };
+
+    var editIdx = parseInt(document.getElementById('progEditIdx').value);
+    if (editIdx >= 0) {
+        DATA.programs[editIdx] = prog;
+        showToast('התוכנית עודכנה בהצלחה', 'success');
+    } else {
+        DATA.programs.push(prog);
+        showToast('התוכנית נוספה בהצלחה', 'success');
+    }
+
+    saveLocal();
+    postToCloud({ action: 'saveProgram', program: prog });
+    closeModal('program');
+    renderAll();
+}
+
+// ===== EDIT ACTIONS =====
+function editVolunteer(idx) {
+    var v = DATA.volunteers[idx];
+    document.getElementById('volModalTitle').textContent = 'ערוך מתנדב';
+    document.getElementById('volEditIdx').value = idx;
+    document.getElementById('fVolName').value = v.name || '';
+    document.getElementById('fVolPhone').value = v.phone || '';
+    document.getElementById('fVolEmail').value = v.email || '';
+    document.getElementById('fVolId').value = v.id || '';
+    document.getElementById('fVolInstitution').value = v.institution || '';
+    document.getElementById('fVolField').value = v.field || '';
+    document.getElementById('fVolAvailability').value = v.availability || '';
+    document.getElementById('fVolStatus').value = v.status || 'active';
+    document.getElementById('fVolStartDate').value = v.startDate || '';
+    document.getElementById('fVolNotes').value = v.notes || '';
+    document.getElementById('modal-volunteer').classList.add('open');
+}
+
+function editGraduate(idx) {
+    var g = DATA.graduates[idx];
+    document.getElementById('gradModalTitle').textContent = 'ערוך בוגר';
+    document.getElementById('gradEditIdx').value = idx;
+    document.getElementById('fGradName').value = g.name || '';
+    document.getElementById('fGradAge').value = g.age || '';
+    document.getElementById('fGradPhone').value = g.phone || '';
+    document.getElementById('fGradBackground').value = g.background || '';
+    document.getElementById('fGradStatus').value = g.status || 'searching';
+    document.getElementById('fGradNotes').value = g.notes || '';
+    document.getElementById('modal-graduate').classList.add('open');
+}
+
+function editProgram(idx) {
+    var p = DATA.programs[idx];
+    document.getElementById('progModalTitle').textContent = 'ערוך תוכנית';
+    document.getElementById('progEditIdx').value = idx;
+    document.getElementById('fProgName').value = p.name || '';
+    document.getElementById('fProgInstitution').value = p.institution || '';
+    document.getElementById('fProgType').value = p.type || 'academic';
+    document.getElementById('fProgReqs').value = p.requirements || '';
+    document.getElementById('fProgNotes').value = p.notes || '';
+    document.getElementById('modal-program').classList.add('open');
+}
+
+// ===== CSV EXPORT =====
+function exportCSV() {
+    var rows = [];
+    if (currentReportTab === 'hours') {
+        rows.push(['מתנדב', 'שעות מפעילויות', 'שעות רשומות']);
+        var volHours = {};
+        DATA.activities.forEach(function(a) { volHours[a.volunteer] = (volHours[a.volunteer] || 0) + (a.hours || 0); });
+        DATA.volunteers.forEach(function(v) {
+            rows.push([v.name, (volHours[v.name] || 0).toFixed(1), v.hours || 0]);
+        });
+    } else if (currentReportTab === 'activities') {
+        rows.push(['תאריך', 'מתנדב', 'בוגר', 'סוג', 'שעות', 'תיאור']);
+        DATA.activities.forEach(function(a) {
+            rows.push([a.date, a.volunteer, a.graduate, typeLabels[a.type] || a.type, a.hours, a.description]);
+        });
+    } else {
+        rows.push(['בוגר', 'סטטוס', 'מתנדב', 'תוכניות']);
+        DATA.graduates.forEach(function(g) {
+            rows.push([g.name, statusLabels[g.status] || g.status, g.volunteer || '', g.programs || '']);
+        });
+    }
+
+    var BOM = '\uFEFF';
+    var csv = BOM + rows.map(function(r) {
+        return r.map(function(cell) {
+            return '"' + String(cell).replace(/"/g, '""') + '"';
+        }).join(',');
+    }).join('\n');
+
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'hoppa-' + currentReportTab + '-' + todayStr().replace(/\./g, '-') + '.csv';
+    a.click();
+    showToast('הקובץ הורד בהצלחה', 'success');
+}
+
+// ===== CLOUD =====
+function saveCloudUrl() {
+    CLOUD_URL = document.getElementById('cloudUrl').value.trim();
+    try { localStorage.setItem('shtayim-vol-cloud-url', CLOUD_URL); } catch(e) {}
+    updateCloudStatus(!!CLOUD_URL);
+    showToast('כתובת הענן נשמרה', 'success');
+}
+
+function testCloudConnection() {
+    if (!CLOUD_URL) { showToast('לא הוגדרה כתובת ענן', 'error'); return; }
+    fetch(CLOUD_URL + '?action=ping')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                updateCloudStatus(true);
+                showToast('החיבור תקין', 'success');
+            } else {
+                updateCloudStatus(false);
+                showToast('שגיאה בחיבור', 'error');
+            }
+        })
+        .catch(function() {
+            updateCloudStatus(false);
+            showToast('לא ניתן להתחבר', 'error');
+        });
+}
+
+function updateCloudStatus(connected) {
+    var el = document.getElementById('cloudStatus');
+    el.innerHTML = '<div class="cloud-dot ' + (connected ? 'connected' : 'disconnected') + '"></div><span>' + (connected ? 'מחובר' : 'לא מחובר') + '</span>';
+}
+
+function postToCloud(data) {
+    if (!CLOUD_URL) return;
+    fetch(CLOUD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).catch(function() {});
+}
+
+function syncFromCloud() {
+    if (!CLOUD_URL) { showToast('לא הוגדרה כתובת ענן', 'error'); return; }
+    fetch(CLOUD_URL + '?action=getAll')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                DATA = d;
+                saveLocal();
+                renderAll();
+                showToast('הנתונים סונכרנו בהצלחה', 'success');
+            }
+        })
+        .catch(function() { showToast('שגיאה בסנכרון', 'error'); });
+}
+
+function clearLocalData() {
+    if (!confirm('למחוק את כל הנתונים המקומיים? הפעולה בלתי הפיכה.')) return;
+    try { localStorage.removeItem('shtayim-vol-data'); } catch(e) {}
+    DATA = { volunteers: [], graduates: [], assignments: [], activities: [], programs: [], org: {} };
+    renderAll();
+    showToast('הנתונים המקומיים נמחקו', 'success');
+}
+
+// ===== TOAST =====
+function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast ' + (type || '') + ' show';
+    setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+</script>
+</body>
+</html>
