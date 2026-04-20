@@ -662,7 +662,7 @@ function getOrCreate_(ss, name) {
 // SECRETARY NOTIFICATION — Email when student accepted
 // ============================================
 
-var SECRETARY_EMAIL = 'iskah@bethaarava.ort.org.il'; // מיטל המזכירה — ישתנה אם צריך
+var SECRETARY_EMAIL = 'meital.lalom@gmail.com'; // מיטל לאלום — מזכירת בית הספר
 var YISKA_EMAIL = 'iskah@bethaarava.ort.org.il';
 
 function notifySecretary_(data) {
