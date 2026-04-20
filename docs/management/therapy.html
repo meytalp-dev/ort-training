@@ -1434,6 +1434,8 @@ function showToast(msg) {
 // ==================== TRACKING VIEW ====================
 
 const TRACKING_KEY = 'ort_therapy_tracking';
+// *** הגדירי כאן את ה-URL של Web App אחרי Deploy ***
+const TRACKING_APPS_SCRIPT_URL = '';
 let trackingData = {}; // { weekKey: { therapistName: { studentName: { text, date, author } } } }
 let trackingWeekOffset = 0;
 let trackingFilterTherapist = '';
@@ -1467,6 +1469,42 @@ function loadTracking() {
 
 function saveTracking() {
   cloudStorage.set(TRACKING_KEY, trackingData);
+}
+
+function saveTrackingToSheet(week, therapist, student, text, author) {
+  if (!TRACKING_APPS_SCRIPT_URL) return;
+  fetch(TRACKING_APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({
+      action: 'saveTracking',
+      week: week,
+      therapist: therapist,
+      student: student,
+      text: text,
+      author: author
+    })
+  }).catch(function(err) { console.log('Sheet save error:', err); });
+}
+
+function loadTrackingFromSheet() {
+  if (!TRACKING_APPS_SCRIPT_URL) return Promise.resolve();
+  return fetch(TRACKING_APPS_SCRIPT_URL + '?action=getTracking')
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+      if (result.status === 'ok' && result.data) {
+        result.data.forEach(function(row) {
+          const wk = row.week;
+          const t = row.therapist;
+          const s = row.student;
+          if (!trackingData[wk]) trackingData[wk] = {};
+          if (!trackingData[wk][t]) trackingData[wk][t] = {};
+          trackingData[wk][t][s] = { text: row.text, date: row.date, author: row.author };
+        });
+      }
+    })
+    .catch(function(err) { console.log('Sheet load error:', err); });
 }
 
 function renderTrackingView() {
@@ -1649,12 +1687,14 @@ function saveTrackingNote(therapistEnc, studentEnc, cardId, authorEnc) {
 
   if (!trackingData[weekKey]) trackingData[weekKey] = {};
   if (!trackingData[weekKey][author]) trackingData[weekKey][author] = {};
+  const authorLabel = author === '__yiskah__' ? 'יסכה' : therapistName;
   trackingData[weekKey][author][studentName] = {
     text: text,
     date: new Date().toISOString(),
-    author: author === '__yiskah__' ? 'יסכה' : therapistName
+    author: authorLabel
   };
   saveTracking();
+  saveTrackingToSheet(weekKey, author, studentName, text, authorLabel);
 
   const btn = document.getElementById('btn_' + cardId);
   if (btn) {
@@ -1962,6 +2002,12 @@ Promise.all([
     if (saved.log) adminLog = saved.log;
   }
   if (trackingSaved) trackingData = trackingSaved;
+
+  // טעינה מ-Google Sheets (משלים את cloudStorage)
+  loadTrackingFromSheet().then(function() {
+    // שמור את המיזוג חזרה ל-cloudStorage
+    saveTracking();
+  });
 
   // קריאת פרמטרים מה-URL — פתיחה ישירה מתזכורת WhatsApp
   const urlParams = new URLSearchParams(window.location.search);

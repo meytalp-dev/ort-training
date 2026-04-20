@@ -174,6 +174,109 @@ function setupTherapyTriggers() {
 }
 
 // ╔══════════════════════════════════════════════╗
+// ║      Web App — קריאה/כתיבה מ-therapy.html     ║
+// ╚══════════════════════════════════════════════╝
+
+const SHEET_ID = '15PTx5jfvEp3C4xXEsa4Ia9zb0guzT1jL9XBW8vRFCmw';
+const TRACKING_SHEET_NAME = 'מעקב';
+
+/**
+ * יוצר את גיליון המעקב אם לא קיים
+ * עמודות: תאריך | שבוע | מטפל | תלמיד | עדכון | כותב
+ */
+function ensureTrackingSheet_() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName(TRACKING_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(TRACKING_SHEET_NAME);
+    sheet.appendRow(['תאריך', 'שבוע', 'מטפל', 'תלמיד', 'עדכון', 'כותב']);
+    sheet.getRange('1:1').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/** GET — קריאת כל נתוני המעקב */
+function doGet(e) {
+  const action = (e && e.parameter && e.parameter.action) || 'getTracking';
+
+  if (action === 'getTracking') {
+    const sheet = ensureTrackingSheet_();
+    const data = sheet.getDataRange().getValues();
+    const rows = [];
+    for (let i = 1; i < data.length; i++) {
+      rows.push({
+        date: data[i][0],
+        week: data[i][1],
+        therapist: data[i][2],
+        student: data[i][3],
+        text: data[i][4],
+        author: data[i][5]
+      });
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: rows }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'unknown action' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/** POST — שמירת עדכון מעקב */
+function doPost(e) {
+  try {
+    const body = JSON.parse(e.postData.contents);
+    const action = body.action || 'saveTracking';
+
+    if (action === 'saveTracking') {
+      const sheet = ensureTrackingSheet_();
+      const { week, therapist, student, text, author } = body;
+
+      if (!therapist || !student || !text) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'missing fields' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // בדוק אם כבר יש רשומה לאותו שבוע+מטפל+תלמיד — עדכן במקום להוסיף
+      const data = sheet.getDataRange().getValues();
+      let found = false;
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][1]) === String(week) &&
+            String(data[i][2]) === String(therapist) &&
+            String(data[i][3]) === String(student)) {
+          // עדכון שורה קיימת
+          sheet.getRange(i + 1, 1).setValue(new Date());
+          sheet.getRange(i + 1, 5).setValue(text);
+          sheet.getRange(i + 1, 6).setValue(author || therapist);
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        sheet.appendRow([
+          new Date(),
+          week,
+          therapist,
+          student,
+          text,
+          author || therapist
+        ]);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'unknown action' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ╔══════════════════════════════════════════════╗
 // ║           בדיקות                              ║
 // ╚══════════════════════════════════════════════╝
 
