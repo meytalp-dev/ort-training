@@ -283,11 +283,14 @@ h1, h2, h3 { font-family: 'Suez One', serif; font-weight: 400; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
-  .map-container {
+  body:not(.desktop-forced) .map-container {
     min-height: auto;
     padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
-  .node {
+  body:not(.desktop-forced) .node {
     position: relative !important;
     top: auto !important;
     left: auto !important;
@@ -297,14 +300,60 @@ h1, h2, h3 { font-family: 'Suez One', serif; font-weight: 400; }
     opacity: 1;
     transform: none;
   }
-  .connections-svg { display: none; }
-  .edge-label { display: none; }
-  .map-container {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
+  body:not(.desktop-forced) .connections-svg { display: none; }
+  body:not(.desktop-forced) .edge-label { display: none; }
 }
+
+/* ── DESKTOP-VIEW-ON-MOBILE toggle ── */
+.view-toggle {
+  display: none;
+  margin: 0.75rem auto;
+  padding: 0.6rem 1.25rem;
+  border-radius: 50px;
+  border: 1.5px solid var(--teal);
+  background: var(--white);
+  color: var(--teal);
+  font-family: 'Heebo', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+.view-toggle svg { width: 16px; height: 16px; }
+.view-toggle:hover { background: var(--teal); color: #fff; }
+.view-toggle.active { background: var(--teal); color: #fff; }
+
+@media (max-width: 900px) {
+  .view-toggle { display: inline-flex; }
+}
+
+/* When forced-desktop on mobile: horizontal scroll + desktop positioning */
+.desktop-forced .map-scroll-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 1rem;
+}
+.desktop-forced .map-container {
+  min-width: 1300px;
+  min-height: 900px !important;
+  margin: 1rem auto !important;
+}
+
+.scroll-hint {
+  display: none;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--teal-dark);
+  background: rgba(46,125,140,0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  margin: 0.5rem auto;
+  max-width: 320px;
+}
+.desktop-forced .scroll-hint { display: block; }
 </style>
 </head>
 <body>
@@ -332,6 +381,15 @@ h1, h2, h3 { font-family: 'Suez One', serif; font-weight: 400; }
   <button class="control-btn" data-filter="outcome">תוצאות</button>
 </div>
 
+<div style="text-align:center">
+  <button class="view-toggle" id="viewToggle" aria-pressed="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    <span>תצוגת מפה מלאה</span>
+  </button>
+</div>
+<div class="scroll-hint">גלילה אופקית ←→ כדי לראות את כל המפה</div>
+
+<div class="map-scroll-wrap">
 <div class="map-container" id="mapContainer">
   <svg class="connections-svg" id="connectionsSvg">
     <defs>
@@ -537,6 +595,7 @@ h1, h2, h3 { font-family: 'Suez One', serif; font-weight: 400; }
     <div class="node-title">מועדון ההכלה הירושלמי</div>
     <div class="node-subtitle">מאסה קריטית לשינוי</div>
   </div>
+</div>
 </div>
 
 <div class="tooltip" id="tooltip">
@@ -835,6 +894,23 @@ window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(drawConnections, 150);
 });
+
+// ── Desktop-view-on-mobile toggle ──
+const viewToggle = document.getElementById('viewToggle');
+if (viewToggle) {
+  const label = viewToggle.querySelector('span');
+  viewToggle.addEventListener('click', () => {
+    const forced = document.body.classList.toggle('desktop-forced');
+    viewToggle.classList.toggle('active', forced);
+    viewToggle.setAttribute('aria-pressed', forced ? 'true' : 'false');
+    if (label) label.textContent = forced ? 'חזור לתצוגת רשימה' : 'תצוגת מפה מלאה';
+    setTimeout(drawConnections, 120);
+    if (forced) {
+      const wrap = document.querySelector('.map-scroll-wrap');
+      if (wrap) wrap.scrollLeft = (wrap.scrollWidth - wrap.clientWidth) / 2;
+    }
+  });
+}
 
 // ── Init ──
 animateEntrance();
