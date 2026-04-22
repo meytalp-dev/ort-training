@@ -93,7 +93,7 @@ def check_audience(html):
     text_only = re.sub(r"<[^>]+>", " ", html)
     text_only = re.sub(r"\s+", " ", text_only)
     long_paragraphs = [
-        p for p in re.findall(r"<p[^>]*>(.*?)</p>", html, re.IGNORECASE | re.DOTALL)
+        p for p in re.findall(r"<p(?:\s[^>]*)?>(.*?)</p>", html, re.IGNORECASE | re.DOTALL)
         if len(re.sub(r"<[^>]+>", "", p)) > 400
     ]
     if long_paragraphs:
