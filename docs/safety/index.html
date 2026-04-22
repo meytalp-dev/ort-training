@@ -566,6 +566,24 @@ footer .note{font-size:13px;opacity:.6;max-width:640px;margin:16px auto 0}
   .parent-note{padding:28px}
 }
 
+/* PDF MODE (html2pdf rendering) */
+body.pdf-mode .emergency,
+body.pdf-mode .nav-pills,
+body.pdf-mode .print-btn{display:none!important}
+body.pdf-mode .hero::before{display:none!important}
+body.pdf-mode .scenario .a{max-height:none!important;overflow:visible!important}
+body.pdf-mode .why-card .why-body{max-height:none!important;overflow:visible!important;display:block!important}
+body.pdf-mode .scenario .toggle,
+body.pdf-mode .why-card .why-chevron{display:none!important}
+body.pdf-mode section,
+body.pdf-mode .tl-card,
+body.pdf-mode .scenario,
+body.pdf-mode .phrase,
+body.pdf-mode .resource,
+body.pdf-mode .why-card,
+body.pdf-mode .after-card,
+body.pdf-mode .parent-note{break-inside:avoid;page-break-inside:avoid}
+
 /* PRINT */
 @media print{
   @page{size:A4;margin:14mm}
@@ -620,9 +638,9 @@ footer .note{font-size:13px;opacity:.6;max-width:640px;margin:16px auto 0}
       <a href="#people" class="pill">למי לפנות</a>
       <a href="#after" class="pill">אם משהו קרה</a>
       <a href="#help" class="pill">עזרה דחופה</a>
-      <button type="button" class="pill print-btn" onclick="window.print()" aria-label="הדפסת המדריך">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-        הדפסה / שמירה כ-PDF
+      <button type="button" class="pill print-btn" id="download-pdf-btn" aria-label="הורדת המדריך כ-PDF">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+        <span class="btn-label">הורדה כ-PDF</span>
       </button>
     </nav>
   </div>
@@ -1239,7 +1257,38 @@ footer .note{font-size:13px;opacity:.6;max-width:640px;margin:16px auto 0}
   </div>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
+document.getElementById('download-pdf-btn').addEventListener('click',async()=>{
+  const btn=document.getElementById('download-pdf-btn');
+  const label=btn.querySelector('.btn-label');
+  const original=label.textContent;
+  label.textContent='מייצר PDF…';
+  btn.disabled=true;
+
+  document.querySelectorAll('.scenario').forEach(s=>s.classList.add('open'));
+  document.querySelectorAll('.why-card').forEach(c=>c.classList.add('open'));
+  document.body.classList.add('pdf-mode');
+
+  try{
+    const el=document.querySelector('main')||document.body;
+    await html2pdf().set({
+      margin:[10,10,10,10],
+      filename:'מדריך-בטיחות-לבנות-על-הרצף.pdf',
+      image:{type:'jpeg',quality:.95},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy'],avoid:['.tl-card','.scenario','.phrase','.resource','.why-card','.after-card','.parent-note']}
+    }).from(document.body).save();
+  }catch(e){
+    alert('שגיאה בהורדת ה-PDF. אפשר להשתמש ב-Ctrl+P כגיבוי.');
+  }finally{
+    document.body.classList.remove('pdf-mode');
+    label.textContent=original;
+    btn.disabled=false;
+  }
+});
+
 document.querySelectorAll('.scenario').forEach(s=>{
   s.addEventListener('click',()=>{
     s.classList.toggle('open');
