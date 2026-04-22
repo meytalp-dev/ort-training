@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הופה — מחולל פוסטים לסושיאל</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --yellow:#FFF200; --yellow-2:#F5C800;
+    --pink:#E8358A; --pink-2:#C2185B;
+    --bg:#F7F7F7; --card:#FFFFFF; --ink:#111111; --muted:#666; --border:#E5E5E5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Heebo',sans-serif}
+  .wrap{max-width:1280px;margin:0 auto;padding:24px 20px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+  h1{font-size:28px;font-weight:900;margin:0}
+  h1 .hl{background:var(--yellow);padding:0 8px;border-radius:6px}
+  .sub{color:var(--muted);font-size:14px}
+  .grid{display:grid;grid-template-columns:380px 1fr;gap:24px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px}
+  .card h2{font-size:16px;font-weight:700;margin:0 0 14px}
+  label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:6px;margin-top:12px}
+  label:first-child{margin-top:0}
+  input[type=text],textarea,select{width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--ink);direction:rtl}
+  textarea{min-height:72px;resize:vertical}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .chip{padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:#fff;font-size:13px;cursor:pointer;font-family:inherit}
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip-yellow.active{background:var(--yellow);color:#000;border-color:var(--yellow-2)}
+  .chip-pink.active{background:var(--pink);color:#fff;border-color:var(--pink-2)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:12px;border:none;font-weight:700;font-family:inherit;font-size:14px;cursor:pointer;transition:transform .05s}
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--ink);color:#fff;width:100%;margin-top:16px;padding:14px}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+  .btn-ghost{background:#fff;border:1px solid var(--border);color:var(--ink)}
+  .status{font-size:13px;color:var(--muted);margin-top:10px;min-height:18px}
+  .err{color:#b00020}
+  .ok{color:#0a7a3b}
+  .results{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media(max-width:640px){.results{grid-template-columns:1fr}}
+  .post{background:#fff;border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .post-canvas{width:100%;aspect-ratio:1/1;display:block;background:#eee}
+  .post-actions{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)}
+  .post-actions .btn{flex:1;padding:8px 10px;font-size:13px}
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
+  details{margin-top:14px;background:#fafafa;border:1px solid var(--border);border-radius:10px;padding:10px 14px}
+  details summary{cursor:pointer;font-size:13px;font-weight:500}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .key-input{font-family:monospace;font-size:12px}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--ink);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span class="hl">הופה</span> מחולל פוסטים</h1>
+      <div class="sub">תמונת רקע + משפט + פס צד — בסגנון "הגיע זמן חינוך"</div>
+    </div>
+    <button class="btn btn-ghost" onclick="location.href='./'">חזרה</button>
+  </header>
+
+  <div class="grid">
+    <!-- CONTROLS -->
+    <section class="card">
+      <h2>הגדרות פוסט</h2>
+
+      <label>קטגוריה</label>
+      <div class="chips" id="categoryChips"></div>
+
+      <label>קהל יעד</label>
+      <div class="chips">
+        <button class="chip chip-pink active" data-audience="youth">נוער · 14-18 · ורוד</button>
+        <button class="chip chip-yellow" data-audience="adults">בוגרים · 18-26 · צהוב</button>
+      </div>
+
+      <label>משפט הפוסט</label>
+      <textarea id="sentence" placeholder="משפט קצר, חזק, בגובה העיניים"></textarea>
+
+      <label>הנחיית תמונה (פרומפט)</label>
+      <textarea id="prompt" placeholder="תיאור התמונה שתיווצר"></textarea>
+      <div class="hint">מלא אוטומטית לפי הקטגוריה — אפשר לערוך.</div>
+
+      <label>מספר וריאציות</label>
+      <select id="count">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="4" selected>4</option>
+      </select>
+
+      <button class="btn btn-primary" id="generateBtn">ייצר תמונות</button>
+      <div class="status" id="status"></div>
+
+      <details>
+        <summary>מפתח Gemini API</summary>
+        <div class="hint">המפתח שמור ב-localStorage. מוגבל ל-<code>meytalmaytal.github.io</code>. אם הדף רץ מקומית — החלף למפתח לא מוגבל.</div>
+        <label>API Key</label>
+        <input class="key-input" type="text" id="apiKey" placeholder="AIzaSy...">
+        <label>מודל</label>
+        <select id="model">
+          <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image (Nano Banana)</option>
+          <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image (Nano Banana 2)</option>
+        </select>
+      </details>
+    </section>
+
+    <!-- RESULTS -->
+    <section>
+      <div class="card" style="margin-bottom:16px">
+        <h2>תוצאות</h2>
+        <div class="hint">בחרי וריאציה → הורידי PNG מוכן לפרסום (1080×1080). פס צבעוני + משפט משתלבים אוטומטית.</div>
+      </div>
+      <div id="results" class="results">
+        <div class="empty" style="grid-column:1/-1">עוד לא נוצרו תמונות. מלאי משפט ולחצי "ייצר תמונות".</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const CATEGORIES = [
+  {
+    id:'program',
+    label:'תוכנית חדשה',
+    sample:'פתחנו תוכנית חדשה. בשבילך.',
+    prompt:'A warm documentary-style photograph of young adults sitting in a circle in a bright community space, natural daylight, focused and engaged, authentic Israeli setting, shallow depth of field, candid moment, no text, no logos, 1:1 square'
+  },
+  {
+    id:'scholarship',
+    label:'מלגה',
+    sample:'השנה נתנו 42 מלגות. 42 התחלות חדשות.',
+    prompt:'A warm close-up photograph of a young person smiling gently while holding a certificate or envelope, soft natural window light, warm tones, Israeli community center background blurred, hopeful atmosphere, candid and authentic, no text, no logos, 1:1 square'
+  },
+  {
+    id:'course',
+    label:'קורס שנפתח',
+    sample:'קורס חדש נפתח. הצטרפת?',
+    prompt:'A bright photograph of a hands-on learning environment, young people working together at a shared table with laptops or tools, soft daylight from a window, authentic Israeli vocational setting, warm and inviting, candid shot, no text, no logos, 1:1 square'
+  },
+  {
+    id:'alumni',
+    label:'בוגר שעזרנו לו',
+    sample:'אמיר היה בלי כיוון. היום הוא מנהל משמרת.',
+    prompt:'A portrait-style photograph of a young adult standing confidently in a workplace — cafe kitchen, workshop, or office — wearing professional attire, warm natural light, proud but humble expression, authentic Israeli setting, candid and documentary, no text, no logos, 1:1 square'
+  },
+  {
+    id:'personal',
+    label:'משהו אישי',
+    sample:'לפעמים כל מה שצריך זה שמישהו יאמין בך.',
+    prompt:'An emotionally warm photograph — two people in a candid supportive moment, one listening to the other, soft afternoon light, Israeli community setting, intimate and real, shallow depth of field, no text, no logos, 1:1 square'
+  }
+];
+
+const state = { category: CATEGORIES[0], audience:'youth' };
+
+const catChips = document.getElementById('categoryChips');
+CATEGORIES.forEach((c,i)=>{
+  const b = document.createElement('button');
+  b.className = 'chip' + (i===0?' active':'');
+  b.textContent = c.label;
+  b.onclick = ()=>{
+    state.category = c;
+    [...catChips.children].forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('prompt').value = c.prompt;
+    if(!document.getElementById('sentence').value) document.getElementById('sentence').value = c.sample;
+  };
+  catChips.appendChild(b);
+});
+document.getElementById('prompt').value = CATEGORIES[0].prompt;
+document.getElementById('sentence').value = CATEGORIES[0].sample;
+
+document.querySelectorAll('[data-audience]').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('[data-audience]').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    state.audience = btn.dataset.audience;
+    rerenderAll();
+  };
+});
+
+// API key persistence
+const KEY_STORAGE = 'hofa_gemini_key';
+const apiKeyEl = document.getElementById('apiKey');
+apiKeyEl.value = localStorage.getItem(KEY_STORAGE) || 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
+apiKeyEl.addEventListener('change', ()=> localStorage.setItem(KEY_STORAGE, apiKeyEl.value.trim()));
+
+const status = (msg, cls='')=>{
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + cls;
+};
+
+async function generateOne(prompt, apiKey, model){
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { responseModalities: ['IMAGE'] }
+  };
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error(`HTTP ${res.status}: ${t.slice(0,200)}`);
+  }
+  const data = await res.json();
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const img = parts.find(p => p.inlineData || p.inline_data);
+  if(!img) throw new Error('No image in response');
+  const inline = img.inlineData || img.inline_data;
+  return `data:${inline.mimeType || inline.mime_type};base64,${inline.data}`;
+}
+
+const results = [];
+
+document.getElementById('generateBtn').onclick = async ()=>{
+  const btn = document.getElementById('generateBtn');
+  const prompt = document.getElementById('prompt').value.trim();
+  const sentence = document.getElementById('sentence').value.trim();
+  const count = parseInt(document.getElementById('count').value, 10);
+  const apiKey = apiKeyEl.value.trim();
+  const model = document.getElementById('model').value;
+  if(!prompt){ status('צריך פרומפט לתמונה', 'err'); return; }
+  if(!sentence){ status('צריך משפט לפוסט', 'err'); return; }
+  if(!apiKey){ status('צריך מפתח API', 'err'); return; }
+  localStorage.setItem(KEY_STORAGE, apiKey);
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> מייצר...';
+  status('מתחיל ייצור ' + count + ' וריאציות...');
+
+  try{
+    const promises = Array.from({length:count}, ()=> generateOne(prompt, apiKey, model));
+    const settled = await Promise.allSettled(promises);
+    const ok = [];
+    settled.forEach((r, i)=>{
+      if(r.status === 'fulfilled'){
+        ok.push({ src: r.value, sentence, audience: state.audience, category: state.category.id });
+      } else {
+        console.error('gen ' + i + ':', r.reason);
+      }
+    });
+    if(ok.length === 0){
+      const firstErr = settled.find(r=>r.status==='rejected')?.reason?.message || 'לא ידוע';
+      status('כל הייצורים נכשלו. ' + firstErr, 'err');
+    } else {
+      results.unshift(...ok);
+      status('נוצרו ' + ok.length + ' תמונות' + (settled.length-ok.length?` (${settled.length-ok.length} נכשלו)`:''), 'ok');
+      rerenderAll();
+    }
+  } catch(e){
+    status('שגיאה: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'ייצר תמונות';
+  }
+};
+
+function rerenderAll(){
+  const container = document.getElementById('results');
+  if(results.length === 0){
+    container.innerHTML = '<div class="empty" style="grid-column:1/-1">עוד לא נוצרו תמונות.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  results.forEach((r, idx)=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'post';
+    const canvas = document.createElement('canvas');
+    canvas.className = 'post-canvas';
+    canvas.width = 1080; canvas.height = 1080;
+    wrap.appendChild(canvas);
+    const actions = document.createElement('div');
+    actions.className = 'post-actions';
+    actions.innerHTML = `
+      <button class="btn btn-ghost" data-act="download">הורדה PNG</button>
+      <button class="btn btn-ghost" data-act="remove">הסרה</button>
+    `;
+    wrap.appendChild(actions);
+    container.appendChild(wrap);
+
+    renderPost(canvas, r).then(()=>{
+      actions.querySelector('[data-act=download]').onclick = ()=>{
+        const a = document.createElement('a');
+        a.download = `hofa-${r.category}-${r.audience}-${Date.now()}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      };
+      actions.querySelector('[data-act=remove]').onclick = ()=>{
+        results.splice(idx,1);
+        rerenderAll();
+      };
+    });
+  });
+}
+
+async function renderPost(canvas, r){
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  // bg image
+  await new Promise((res, rej)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const s = Math.max(W/img.width, H/img.height);
+      const dw = img.width*s, dh = img.height*s;
+      ctx.drawImage(img, (W-dw)/2, (H-dh)/2, dw, dh);
+      res();
+    };
+    img.onerror = rej;
+    img.src = r.src;
+  });
+  // gradient for legibility (bottom)
+  const grad = ctx.createLinearGradient(0, H*0.35, 0, H);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.72)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  // side bar
+  const barColor = r.audience === 'adults' ? '#FFF200' : '#E8358A';
+  const barWidth = 28;
+  ctx.fillStyle = barColor;
+  ctx.fillRect(W - barWidth, 0, barWidth, H);
+
+  // logo / wordmark (top-left)
+  ctx.save();
+  ctx.fillStyle = '#FFF200';
+  const tagW = 140, tagH = 56;
+  roundRect(ctx, 48, 48, tagW, tagH, 12, true, false);
+  ctx.fillStyle = '#000';
+  ctx.font = '900 36px Heebo, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('הופה', 48 + tagW/2, 48 + tagH/2 + 2);
+  ctx.restore();
+
+  // sentence (bottom)
+  ctx.save();
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+  ctx.direction = 'rtl';
+  const padX = 72, bottom = 110;
+  const maxWidth = W - padX*2 - barWidth;
+  const fontSize = pickFontSize(ctx, r.sentence, maxWidth, 78);
+  ctx.font = `900 ${fontSize}px Heebo, sans-serif`;
+  const lines = wrapText(ctx, r.sentence, maxWidth);
+  const lineHeight = fontSize * 1.15;
+  const startY = H - bottom - (lines.length-1)*lineHeight;
+  // subtle shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2;
+  lines.forEach((line, i)=>{
+    ctx.fillText(line, W - padX - barWidth/2, startY + i*lineHeight);
+  });
+  ctx.restore();
+
+  // small caption — audience + hofa.org.il style tag
+  ctx.save();
+  ctx.fillStyle = barColor;
+  ctx.font = '700 22px Heebo, sans-serif';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+  const tagTxt = r.audience === 'adults' ? 'הופה · בוגרים 18-26' : 'הופה · נוער 14-18';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 8;
+  ctx.fillText(tagTxt, W - padX - barWidth/2, H - 54);
+  ctx.restore();
+}
+
+function pickFontSize(ctx, text, maxWidth, base){
+  let size = base;
+  while(size > 36){
+    ctx.font = `900 ${size}px Heebo, sans-serif`;
+    const lines = wrapText(ctx, text, maxWidth);
+    if(lines.length <= 3 && lines.every(l => ctx.measureText(l).width <= maxWidth)) return size;
+    size -= 4;
+  }
+  return size;
+}
+
+function wrapText(ctx, text, maxWidth){
+  const words = text.split(/\s+/);
+  const lines = [];
+  let current = '';
+  for(const w of words){
+    const trial = current ? current + ' ' + w : w;
+    if(ctx.measureText(trial).width > maxWidth && current){
+      lines.push(current);
+      current = w;
+    } else {
+      current = trial;
+    }
+  }
+  if(current) lines.push(current);
+  return lines;
+}
+
+function roundRect(ctx, x, y, w, h, r, fill, stroke){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  if(fill) ctx.fill();
+  if(stroke) ctx.stroke();
+}
+</script>
+</body>
+</html>
