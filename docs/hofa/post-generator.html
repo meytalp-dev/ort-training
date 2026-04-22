@@ -163,10 +163,12 @@
         <h2><span class="n">5</span> סגנון ולייאאוט</h2>
         <label>סגנון פוסט</label>
         <div class="chips" id="styleChips">
-          <button class="chip active" data-style="image-bottom">תמונה + טקסט למטה</button>
+          <button class="chip active" data-style="hofa-bars">פסי הופה ⭐</button>
+          <button class="chip" data-style="image-bottom">תמונה + טקסט למטה</button>
           <button class="chip" data-style="image-center">תמונה + טקסט במרכז</button>
           <button class="chip" data-style="poster">כרזה (בלי תמונה)</button>
         </div>
+        <div class="hint">"פסי הופה" = הסגנון הייחודי — מלבני צהוב/ורוד עם קצה ריסוס + חץ לבן, כמו בפוסטים הקיימים.</div>
 
         <label>צבע כרזה (כשאין תמונה)</label>
         <div class="chips" id="posterChips">
@@ -259,12 +261,12 @@ const SIZES = {
   landscape: { w:1200, h:628,  label:'1200×628 · LinkedIn/FB אופקי' }
 };
 
-const STYLE_SUFFIX = ' Flat editorial illustration, warm muted palette (terracotta, cream, olive, dusty blue, soft pink, warm yellow), rounded shapes, minimal faces, gentle paper grain texture, subtle shadows, clean uncluttered background, Israeli social-impact poster aesthetic, 1:1 or portrait composition, NO text, NO logos, NO letters anywhere in the image.';
+const STYLE_SUFFIX = ' Style: cinematic documentary photograph, heavy film grain and noise texture, HIGH CONTRAST, often single-color duotone cast (cold teal-blue, warm pink, desaturated sepia, or black-and-white with slight warm tint), moody dramatic lighting, raw unpolished gritty energy, authentic Israeli outdoor or urban setting, real human subject caught in motion or a powerful quiet moment (silhouette against open sky, action frozen mid-air, backlight, shallow focus), no studio look, no smiling-to-camera, no posed feel. Cinematic framing — negative space on the right side so a text block can be placed there. Square 1:1. Absolutely NO text, NO letters, NO writing, NO logos, NO captions, NO watermarks anywhere in the image.';
 
 /* ========= STATE ========= */
 const state = {
   audience: 'youth',
-  style: 'image-bottom',
+  style: 'hofa-bars',
   posterBg: '#FFF200',
   size: 'square',
   font: 'Heebo',
@@ -419,27 +421,29 @@ const HOFA_VOICE = {
 
 async function generateCopy(brief, audience, apiKey){
   const model = document.getElementById('textModel').value;
-  const system = `את/ה כותב/ת קופי לעמותת "הופה" — ליווי ילדי ונוער ובוגרים צעירים שהתמודדו עם חוסן חסר.
+  const system = `את/ה כותב/ת קופי לעמותת "הופה" — עמותה שמלווה צעירים שיצאו ממסגרות טיפול ומשפחות בשבר.
 ${HOFA_VOICE[audience]}
-סגנון אידאלי: כמו "הגיע זמן חינוך" — משפט חד, קצר, שאומר אמת בלי להתנצל. עד 10 מילים. עם "נקודה" בסוף שעוצרת.
-אסור: סיסמאות, "יחד ננצח", "אנחנו מאמינים ש...". מותר: שמות, מספרים, פעלים חזקים, אמירה אישית.
 
-הפלט חייב להיות JSON תקני בלבד:
+**סגנון הופה:** משפטים **קצרים מאוד**, 2-5 מילים סה"כ, בשורה אחת או שתיים. דוגמאות קיימות שלהם:
+- "חזרנו לשגרה?"
+- "מאגר מלגות"
+- "מודל הרדאר"
+- "אתר המטענים הגדול בישראל"
+
+המבנה: מילה חזקה אחת או שתיים בשורה הראשונה + הבהרה/פואנטה בשורה השנייה. שורה 2 יכולה להיות ריקה אם המשפט עומד לבד.
+
+אסור: סיסמאות סוכריות ("יחד ננצח"), "אנחנו מאמינים ש...", מילוי. מותר: שמות, מספרים, פעלים חזקים, אמירה חדה.
+
+הפלט — JSON בלבד:
 {
   "variants": [
-    { "sentence": "משפט לפוסט 1", "prompt": "image prompt in English" },
-    { "sentence": "משפט לפוסט 2", "prompt": "image prompt in English" },
-    { "sentence": "משפט לפוסט 3", "prompt": "image prompt in English" }
+    { "line1": "שורה 1 (2-4 מילים)", "line2": "שורה 2 (0-4 מילים, יכול להיות ריק)", "prompt": "image prompt in English describing the SCENE (subject, action, setting) — NOT the style. Style will be appended automatically. 1-2 sentences." }
   ]
 }
 
-על הפרומפט (באנגלית):
-- תאר איור (illustration) שמייצג את הרגש של המשפט, לא את המילים שלו מילולית.
-- דמויות סכמטיות בלי פנים מפורטים.
-- הסוף של הפרומפט יוסף אוטומטית — אל תחזור על סגנון.
-- 1-2 משפטים בלבד.`;
+תן 3 וריאציות. לכל וריאציה prompt תמונה שונה לחלוטין — סצנה אחרת.`;
 
-  const user = `ברייף: ${brief}\nקהל יעד: ${audience === 'youth' ? 'נוער 14-18' : 'בוגרים 18-26'}\nצור 3 וריאציות.`;
+  const user = `ברייף: ${brief}\nקהל יעד: ${audience === 'youth' ? 'נוער 14-18 (ורוד)' : 'בוגרים 18-26 (צהוב)'}`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const body = {
@@ -471,12 +475,15 @@ function renderVariants(variants){
   variants.forEach((v, i)=>{
     const el = document.createElement('div');
     el.className = 'variant';
-    el.textContent = v.sentence;
+    const l1 = v.line1 || v.sentence || '';
+    const l2 = v.line2 || '';
+    el.textContent = l2 ? `${l1} / ${l2}` : l1;
     el.onclick = ()=>{
       document.querySelectorAll('#variants .variant').forEach(x=>x.classList.remove('selected'));
       el.classList.add('selected');
-      document.getElementById('sentence').value = v.sentence;
-      document.getElementById('prompt').value = v.prompt + STYLE_SUFFIX;
+      const combined = l2 ? `${l1}\n${l2}` : l1;
+      document.getElementById('sentence').value = combined;
+      document.getElementById('prompt').value = (v.prompt || '') + STYLE_SUFFIX;
       livePreview();
     };
     c.appendChild(el);
@@ -649,7 +656,7 @@ async function renderPost(canvas, r){
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
 
-  // BG
+  // ===== BG LAYER =====
   if(r.style === 'poster'){
     ctx.fillStyle = r.posterBg; ctx.fillRect(0,0,W,H);
   } else if(r.src){
@@ -662,16 +669,15 @@ async function renderPost(canvas, r){
       ctx.fillStyle='#bbb'; ctx.fillRect(0,0,W,H);
     }
   } else {
-    // placeholder gradient
     const g = ctx.createLinearGradient(0,0,W,H);
-    g.addColorStop(0,'#E8D5C4'); g.addColorStop(.5,'#EDCBB1'); g.addColorStop(1,'#AA8976');
+    g.addColorStop(0,'#222'); g.addColorStop(1,'#555');
     ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.font = `500 ${W*0.03}px Heebo`;
+    ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.font = `500 ${W*0.025}px Heebo`;
     ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.direction='rtl';
-    ctx.fillText('תצוגה מקדימה · תמונה אמיתית תופיע אחרי ייצור', W/2, H*0.5);
+    ctx.fillText('תצוגה מקדימה · כאן תופיע התמונה', W/2, H*0.5);
   }
 
-  // dark gradient for legibility (only if image & text-bottom)
+  // dim overlay for legibility (not in poster, not in hofa-bars — bars do their own work)
   if(r.style === 'image-bottom' && r.src){
     const grad = ctx.createLinearGradient(0, H*0.35, 0, H);
     grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.7)');
@@ -681,23 +687,27 @@ async function renderPost(canvas, r){
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0,0,W,H);
   }
 
-  // side bar
   const barColor = r.audience === 'adults' ? '#FFF200' : '#E8358A';
+  const barTextColor = r.audience === 'adults' ? '#000000' : '#FFFFFF';
+
+  // ===== HOFA-BARS STYLE =====
+  if(r.style === 'hofa-bars'){
+    const lines = (r.sentence || '').split('\n').map(s=>s.trim()).filter(Boolean);
+    const show = lines.length ? lines : ['כאן יופיע','המשפט'];
+    drawHofaBars(ctx, W, H, show, barColor, barTextColor, r);
+    drawArrow(ctx, W, H, barColor);
+    drawHopaLogo(ctx, W, H, 'top-right');
+    drawAudienceTag(ctx, W, H, r, 'bottom-right');
+    return;
+  }
+
+  // ===== OTHER STYLES — side bar + logo tag + bottom text =====
   const barWidth = Math.round(W*0.026);
   ctx.fillStyle = barColor;
   ctx.fillRect(W - barWidth, 0, barWidth, H);
 
-  // logo tag
-  const pad = W*0.044;
-  const tagW = W*0.14, tagH = W*0.055;
-  ctx.fillStyle = '#FFF200';
-  roundRect(ctx, pad, pad, tagW, tagH, tagH*0.22, true, false);
-  ctx.fillStyle = '#000';
-  ctx.font = `900 ${tagH*0.6}px Heebo, sans-serif`;
-  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.direction='rtl';
-  ctx.fillText('הופה', pad + tagW/2, pad + tagH/2 + tagH*0.04);
+  drawHopaLogo(ctx, W, H, 'top-left');
 
-  // TEXT
   const text = r.sentence;
   const isPoster = r.style === 'poster';
   const textColor = isPoster ? (r.posterBg === '#FFFFFF' ? '#111' : (r.posterBg === '#FFF200' ? '#111' : '#fff')) : '#fff';
@@ -707,15 +717,15 @@ async function renderPost(canvas, r){
   const baseFontSize = Math.round(W * (isPoster ? 0.095 : 0.075) * r.fontSizeMul);
   const fontSize = pickFontSize(ctx, text, maxWidth, baseFontSize, r.font, r.fontWeight);
   ctx.font = `${r.fontWeight} ${fontSize}px '${r.font}', Heebo, sans-serif`;
-  const lines = wrapText(ctx, text, maxWidth);
+  const explicitLines = text.split('\n');
+  const lines = [];
+  explicitLines.forEach(ln => wrapText(ctx, ln, maxWidth).forEach(w => lines.push(w)));
   const lineHeight = fontSize * 1.13;
   const blockH = lines.length * lineHeight;
 
   let startY;
   if(r.style === 'image-center' || isPoster){
     startY = (H - blockH)/2 + fontSize*0.85;
-  } else if(r.style === 'image-bottom'){
-    startY = H - W*0.12 - blockH + fontSize*0.85;
   } else {
     startY = H - W*0.12 - blockH + fontSize*0.85;
   }
@@ -724,19 +734,176 @@ async function renderPost(canvas, r){
   ctx.fillStyle = textColor;
   if(!isPoster && r.src){
     ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = W*0.014; ctx.shadowOffsetY = 2;
-  } else { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; }
+  }
   lines.forEach((line, i)=>{
     ctx.fillText(line, W - padX - barWidth/2, startY + i*lineHeight);
   });
   ctx.shadowColor='transparent'; ctx.shadowBlur=0;
 
-  // small audience tag
-  const tagTxt = r.audience === 'adults' ? 'הופה · בוגרים 18-26' : 'הופה · נוער 14-18';
-  ctx.fillStyle = isPoster ? textColor : barColor;
-  ctx.font = `700 ${W*0.022}px Heebo, sans-serif`;
-  if(!isPoster) { ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = W*0.008; }
-  ctx.fillText(tagTxt, W - padX - barWidth/2, H - W*0.055);
-  ctx.shadowColor='transparent';
+  drawAudienceTag(ctx, W, H, r, 'bottom-right-bar');
+}
+
+// ===== HOFA BARS: yellow/pink strips with grainy edge + big bold Hebrew text =====
+function drawHofaBars(ctx, W, H, lines, barColor, textColor, r){
+  // font scales with bar height
+  const desiredLines = Math.max(1, lines.length);
+  const barH = Math.round((W * (desiredLines === 1 ? 0.17 : 0.15)) * r.fontSizeMul);
+  const gap = Math.round(barH * 0.18);
+  const totalH = barH*desiredLines + gap*(desiredLines-1);
+  const padX = Math.round(W * 0.075);
+  const padY = Math.round(H * 0.08);
+
+  // position: top quarter area, right-aligned
+  const startY = Math.round(H * 0.22);
+
+  // pre-measure widest line
+  const fontSize = Math.round(barH * 0.62);
+  const fontFamily = r.font || 'Heebo';
+  const weight = r.fontWeight || 900;
+  ctx.font = `${weight} ${fontSize}px '${fontFamily}', Heebo, sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.direction = 'rtl';
+
+  lines.forEach((line, i)=>{
+    const y = startY + i*(barH + gap);
+    const textW = ctx.measureText(line).width;
+    const barInnerPadX = Math.round(barH * 0.35);
+    const barWidth = textW + barInnerPadX*2;
+    const xRight = W - padX;
+    const xLeft = xRight - barWidth;
+
+    // grainy fade extension to the left
+    const fadeWidth = Math.round(barH * 1.2);
+    const fadeLeft = xLeft - fadeWidth;
+
+    // solid bar
+    ctx.fillStyle = barColor;
+    ctx.fillRect(xLeft, y, barWidth, barH);
+
+    // grainy edge: draw noise rectangles fading to the left
+    drawGrainyFade(ctx, fadeLeft, y, fadeWidth, barH, barColor, 'left');
+
+    // text
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'right';
+    ctx.fillText(line, xRight - barInnerPadX, y + barH*0.76);
+  });
+}
+
+function drawGrainyFade(ctx, x, y, w, h, color, dir){
+  // build a noise pattern: random dots of color fading out
+  const steps = 140;
+  for(let i=0; i<steps; i++){
+    const rx = Math.random();
+    const ry = Math.random();
+    const px = x + rx*w;
+    const py = y + ry*h;
+    // probability of drawing decreases toward left (dir === 'left')
+    const t = dir === 'left' ? rx : 1-rx; // 0 at left edge, 1 near bar
+    const prob = Math.pow(t, 1.4);
+    if(Math.random() < prob){
+      const size = 2 + Math.random()*4;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.5 + Math.random()*0.5;
+      ctx.fillRect(px, py, size, size);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawArrow(ctx, W, H, color){
+  // hand-drawn arrow pointing from text area downward toward image subject
+  ctx.save();
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = Math.max(2, W*0.004);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const sx = W*0.58, sy = H*0.30;
+  const ex = W*0.40, ey = H*0.55;
+  const cp1x = W*0.52, cp1y = H*0.48;
+  const cp2x = W*0.38, cp2y = H*0.40;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, ex, ey);
+  ctx.stroke();
+  // arrow head
+  const ang = Math.atan2(ey - cp2y, ex - cp2x);
+  const ah = W*0.035;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - ah*Math.cos(ang - Math.PI/7), ey - ah*Math.sin(ang - Math.PI/7));
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - ah*Math.cos(ang + Math.PI/7), ey - ah*Math.sin(ang + Math.PI/7));
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHopaLogo(ctx, W, H, pos){
+  // Hofa wordmark — black "Hופa!" with yellow circle-O replaced by striped dot
+  const fontSize = Math.round(W * 0.055);
+  ctx.font = `900 ${fontSize}px 'Heebo', sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+  const pad = Math.round(W * 0.045);
+  const text = 'Hopa!';
+  ctx.fillStyle = '#000';
+  let x, y;
+  if(pos === 'top-right'){ ctx.textAlign='right'; x = W - pad; y = pad + fontSize*0.9; }
+  else { ctx.textAlign='left'; x = pad; y = pad + fontSize*0.9; }
+  // circular dot background
+  const dotSize = fontSize * 0.85;
+  const dotX = (pos === 'top-right') ? x - ctx.measureText('opa!').width - dotSize*0.2 : x + ctx.measureText('H').width + dotSize*0.1;
+  ctx.beginPath();
+  ctx.fillStyle = '#FFF200';
+  ctx.arc(dotX, y - fontSize*0.33, dotSize/2, 0, Math.PI*2);
+  ctx.fill();
+  // stripes on the dot
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(dotX, y - fontSize*0.33, dotSize/2, 0, Math.PI*2);
+  ctx.clip();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = Math.max(1, dotSize*0.05);
+  for(let s = -dotSize; s <= dotSize; s += dotSize*0.14){
+    ctx.beginPath();
+    ctx.moveTo(dotX - dotSize + s, y - fontSize*0.33 - dotSize);
+    ctx.lineTo(dotX + dotSize + s, y - fontSize*0.33 + dotSize);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // text letters (over/around the dot)
+  ctx.fillStyle = '#000';
+  if(pos === 'top-right'){
+    ctx.textAlign='right';
+    ctx.fillText('Hopa!', x, y);
+  } else {
+    ctx.textAlign='left';
+    ctx.fillText('Hopa!', x, y);
+  }
+}
+
+function drawAudienceTag(ctx, W, H, r, pos){
+  const tagTxt = r.audience === 'adults' ? 'לגילאי 18-26' : 'לגילאי 14-18';
+  const color = r.audience === 'adults' ? '#FFF200' : '#E8358A';
+  const textColor = r.audience === 'adults' ? '#000' : '#FFF';
+  ctx.font = `800 ${W*0.026}px 'Heebo', sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+  const pad = W * 0.05;
+  const metrics = ctx.measureText(tagTxt);
+  const tw = metrics.width + W*0.03;
+  const th = W*0.05;
+  let x, y;
+  if(pos === 'bottom-right-bar'){
+    x = W - pad - tw - W*0.026;
+    y = H - pad - th;
+  } else {
+    x = W - pad - tw;
+    y = H - pad - th;
+  }
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, tw, th);
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'right';
+  ctx.fillText(tagTxt, x + tw - W*0.015, y + th*0.68);
 }
 
 function pickFontSize(ctx, text, maxWidth, base, font, weight){
