@@ -72,6 +72,17 @@
   .slider-row{display:flex;align-items:center;gap:10px}
   .slider-row input[type=range]{flex:1}
   .slider-row span{font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);min-width:36px;text-align:left}
+  .drop{border:2px dashed #bbb;border-radius:12px;padding:16px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;transition:all .15s;background:#fafafa}
+  .drop:hover,.drop.over{border-color:var(--ink);color:var(--ink);background:#fff}
+  .drop input{display:none}
+  .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .thumb{position:relative;border-radius:10px;overflow:hidden;border:2px solid transparent;background:#eee;aspect-ratio:1/1}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb.bg{border-color:var(--ink)}
+  .thumb.inspire{border-color:var(--pink)}
+  .thumb .role{position:absolute;top:4px;right:4px;background:rgba(255,255,255,.95);color:#000;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700}
+  .thumb .del{position:absolute;top:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:14px;line-height:1;padding:0}
+  .thumb select{position:absolute;bottom:4px;left:4px;right:4px;font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid #ccc;background:#fff}
 </style>
 </head>
 <body>
@@ -113,9 +124,23 @@
         <textarea id="prompt" placeholder="תיאור התמונה שתיווצר"></textarea>
       </section>
 
-      <!-- 3. TYPOGRAPHY -->
+      <!-- 3. USER IMAGES -->
       <section class="card">
-        <h2><span class="n">3</span> טיפוגרפיה</h2>
+        <h2><span class="n">3</span> תמונות שלך (אופציונלי)</h2>
+        <label class="drop" id="dropZone">
+          <input type="file" id="fileInput" accept="image/*" multiple>
+          גררי תמונות לכאן · או לחצי לבחירה
+        </label>
+        <div class="thumbs" id="thumbs"></div>
+        <div class="hint">
+          <strong>רקע ישיר</strong> — משתמש בתמונה כמות שהיא, דולג על ייצור AI.<br>
+          <strong>השראה</strong> — Gemini יראה את התמונה ויחקה את הסגנון בייצור.
+        </div>
+      </section>
+
+      <!-- 4. TYPOGRAPHY -->
+      <section class="card">
+        <h2><span class="n">4</span> טיפוגרפיה</h2>
         <label>פונט</label>
         <select id="fontFamily"></select>
         <label>משקל</label>
@@ -133,9 +158,9 @@
         </div>
       </section>
 
-      <!-- 4. LAYOUT -->
+      <!-- 5. LAYOUT -->
       <section class="card">
-        <h2><span class="n">4</span> סגנון ולייאאוט</h2>
+        <h2><span class="n">5</span> סגנון ולייאאוט</h2>
         <label>סגנון פוסט</label>
         <div class="chips" id="styleChips">
           <button class="chip active" data-style="image-bottom">תמונה + טקסט למטה</button>
@@ -160,9 +185,9 @@
         <div class="hint">PNG יורד אוטומטית בכל ה-3 הגדלים בלחיצה על "הורד לכל הפלטפורמות".</div>
       </section>
 
-      <!-- 5. GENERATE -->
+      <!-- 6. GENERATE -->
       <section class="card">
-        <h2><span class="n">5</span> יצירה</h2>
+        <h2><span class="n">6</span> יצירה</h2>
         <label>מספר וריאציות תמונה</label>
         <select id="count">
           <option value="1" selected>1</option>
@@ -249,6 +274,7 @@ const state = {
 };
 
 const results = [];
+const userImages = []; // { dataUrl, mime, role: 'bg'|'inspire' }
 
 /* ========= INIT ========= */
 const fontSel = document.getElementById('fontFamily');
@@ -307,6 +333,56 @@ document.querySelectorAll('.platform-toggle button').forEach(b=>{
 
 document.getElementById('sentence').oninput = livePreview;
 document.getElementById('prompt').oninput = ()=>{};
+
+/* ========= USER IMAGES ========= */
+const drop = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+drop.addEventListener('click', e=>{ if(e.target.tagName !== 'INPUT') fileInput.click(); });
+['dragenter','dragover'].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e=>{ handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', e=> handleFiles(e.target.files));
+
+function handleFiles(files){
+  [...files].forEach(f=>{
+    if(!f.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      userImages.push({ dataUrl: reader.result, mime: f.type, role: 'inspire' });
+      renderThumbs();
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+function renderThumbs(){
+  const c = document.getElementById('thumbs');
+  c.innerHTML = '';
+  userImages.forEach((img, i)=>{
+    const el = document.createElement('div');
+    el.className = 'thumb ' + (img.role === 'bg' ? 'bg' : 'inspire');
+    const imgEl = document.createElement('img');
+    imgEl.alt = '';
+    imgEl.src = img.dataUrl;
+    const del = document.createElement('button');
+    del.className = 'del'; del.title = 'הסר'; del.textContent = '×';
+    const sel = document.createElement('select');
+    const optI = new Option('השראה','inspire', img.role==='inspire', img.role==='inspire');
+    const optB = new Option('רקע ישיר','bg', img.role==='bg', img.role==='bg');
+    sel.appendChild(optI); sel.appendChild(optB);
+    el.appendChild(imgEl); el.appendChild(del); el.appendChild(sel);
+    del.onclick = (e)=>{ e.stopPropagation(); userImages.splice(i,1); renderThumbs(); livePreview(); };
+    sel.onchange = (e)=>{
+      const newRole = e.target.value;
+      if(newRole === 'bg') userImages.forEach((x,j)=>{ if(j!==i && x.role==='bg') x.role = 'inspire'; });
+      img.role = newRole;
+      renderThumbs();
+      livePreview();
+    };
+    c.appendChild(el);
+  });
+  livePreview();
+}
 
 /* ========= API KEY ========= */
 const KEY_STORAGE = 'hofa_gemini_key';
@@ -408,10 +484,19 @@ function renderVariants(variants){
 }
 
 /* ========= IMAGE GENERATION ========= */
-async function generateImage(prompt, apiKey, model){
+async function generateImage(prompt, apiKey, model, inspireImages){
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const parts = [];
+  (inspireImages || []).forEach(img=>{
+    const b64 = img.dataUrl.split(',')[1];
+    parts.push({ inline_data: { mime_type: img.mime, data: b64 } });
+  });
+  const finalPrompt = (inspireImages && inspireImages.length)
+    ? `Reference images attached. Match their style — palette, shapes, mood, illustration technique. Create a NEW illustration in the same visual language. ${prompt}`
+    : prompt;
+  parts.push({ text: finalPrompt });
   const body = {
-    contents: [{ parts: [{ text: prompt }] }],
+    contents: [{ parts }],
     generationConfig: { responseModalities: ['IMAGE'] }
   };
   const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
@@ -432,23 +517,32 @@ document.getElementById('generateBtn').onclick = async ()=>{
   const apiKey = apiKeyEl.value.trim();
   const model = document.getElementById('imageModel').value;
 
+  const bgImage = userImages.find(x=>x.role==='bg');
+  const inspireImages = userImages.filter(x=>x.role==='inspire');
+
   if(!sentence){ setStatus('צריך משפט', 'err'); return; }
-  if(state.style !== 'poster' && !prompt){ setStatus('צריך פרומפט תמונה (או לעבור ל"כרזה")', 'err'); return; }
-  if(state.style !== 'poster' && !apiKey){ setStatus('צריך מפתח API', 'err'); return; }
+  const needsGen = state.style !== 'poster' && !bgImage;
+  if(needsGen && !prompt){ setStatus('צריך פרומפט תמונה (או להעלות רקע ישיר / לעבור לכרזה)', 'err'); return; }
+  if(needsGen && !apiKey){ setStatus('צריך מפתח API', 'err'); return; }
 
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> מייצר...';
 
   try {
     if(state.style === 'poster'){
-      // no image, just compose
       const post = { src: null, sentence, audience: state.audience, size: state.size, style: state.style, posterBg: state.posterBg, font: state.font, fontWeight: state.fontWeight, fontSizeMul: state.fontSizeMul };
       results.unshift(post);
       setStatus('כרזה נוצרה', 'ok');
       renderResults();
+    } else if(bgImage){
+      const post = { src: bgImage.dataUrl, sentence, audience: state.audience, size: state.size, style: state.style, posterBg: state.posterBg, font: state.font, fontWeight: state.fontWeight, fontSizeMul: state.fontSizeMul };
+      results.unshift(post);
+      setStatus('פוסט נוצר מתמונה שהעלית', 'ok');
+      renderResults();
     } else {
-      setStatus(`מייצר ${count} וריאציות...`);
+      const modeMsg = inspireImages.length ? ` (עם ${inspireImages.length} השראה)` : '';
+      setStatus(`מייצר ${count} וריאציות${modeMsg}...`);
       const settled = await Promise.allSettled(
-        Array.from({length:count}, ()=> generateImage(prompt, apiKey, model))
+        Array.from({length:count}, ()=> generateImage(prompt, apiKey, model, inspireImages))
       );
       const ok = [];
       settled.forEach(r=>{
@@ -480,8 +574,9 @@ function livePreview(){
   const size = SIZES[state.size];
   cv.width = size.w; cv.height = size.h;
   document.getElementById('sizeInfo').textContent = size.label;
+  const bg = userImages.find(x=>x.role==='bg');
   const post = {
-    src: null, // preview uses placeholder gradient
+    src: bg ? bg.dataUrl : null,
     sentence: document.getElementById('sentence').value.trim() || 'כאן יופיע המשפט',
     audience: state.audience,
     size: state.size,
