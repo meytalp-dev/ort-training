@@ -223,6 +223,19 @@
         .empty-state h3 { font-size: 16px; margin-bottom: 6px; }
 
         /* ===== Print ===== */
+        /* Print range view styles */
+        #printRangeView { font-family: 'Heebo', sans-serif; }
+        #printRangeView .pr-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #00838F; padding-bottom: 12px; }
+        #printRangeView .pr-header h1 { font-size: 22px; color: #00838F; margin: 0; }
+        #printRangeView .pr-header .pr-sub { font-size: 14px; color: #546E7A; margin-top: 4px; }
+        #printRangeView .pr-grade { margin-top: 22px; page-break-inside: avoid; }
+        #printRangeView .pr-grade h2 { font-size: 18px; color: #00838F; background: #E0F7FA; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; }
+        #printRangeView table.pr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        #printRangeView table.pr-table th { background: #00838F; color: white; padding: 8px; text-align: right; font-weight: 600; }
+        #printRangeView table.pr-table td { border-bottom: 1px solid #E0E0E0; padding: 7px 8px; text-align: right; vertical-align: top; }
+        #printRangeView table.pr-table tr.month-sep td { background: #F5F5F5; font-weight: 700; color: #00838F; }
+        #printRangeView .pr-empty { text-align: center; padding: 20px; color: #78909C; font-style: italic; }
+
         @media print {
             .main-tabs, .action-bar, .class-bar, .modal-overlay, .toast, .review-actions, .btn-wa, .btn-print { display: none !important; }
             .header { padding: 12px; }
@@ -231,6 +244,21 @@
             .exam-table { box-shadow: none; }
             .exam-table tr.past { opacity: 1; }
             .content { padding: 8px; }
+        }
+
+        /* Print range mode — hide everything except printRangeView */
+        body.printing-range .header,
+        body.printing-range .main-tabs,
+        body.printing-range [id^="tab"],
+        body.printing-range .modal-overlay,
+        body.printing-range .toast { display: none !important; }
+        body.printing-range #printRangeView { display: block !important; padding: 20px; }
+        @media print {
+            body.printing-range .header,
+            body.printing-range .main-tabs,
+            body.printing-range [id^="tab"],
+            body.printing-range .modal-overlay { display: none !important; }
+            body.printing-range #printRangeView { display: block !important; padding: 0; }
         }
 
         /* ===== Accessibility ===== */
@@ -325,6 +353,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
             הדפסה
         </button>
+        <button class="action-btn btn-print" onclick="openPrintRangeModal()" aria-label="הדפסה לפי תאריכים">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            הדפסה לפי תאריכים
+        </button>
         <button class="action-btn btn-wa" onclick="openWhatsAppModal()" aria-label="שיתוף לוח בWhatsApp">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><circle cx="12" cy="12" r="10"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="12">W</text></svg>
             שתף בWhatsApp
@@ -388,6 +420,37 @@
 <!-- ============================================ -->
 <!-- MODALS -->
 <!-- ============================================ -->
+
+<!-- Print Range Modal -->
+<div class="modal-overlay" id="printRangeModal">
+    <div class="modal">
+        <h2>הדפסה לפי טווח תאריכים</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+                <label>מתאריך</label>
+                <input type="date" id="printFromDate">
+            </div>
+            <div>
+                <label>עד תאריך</label>
+                <input type="date" id="printToDate">
+            </div>
+        </div>
+        <label>שכבות לכלול</label>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
+            <label><input type="checkbox" class="print-grade-cb" value="י" checked> שכבה י'</label>
+            <label><input type="checkbox" class="print-grade-cb" value="יא" checked> שכבה יא'</label>
+            <label><input type="checkbox" class="print-grade-cb" value="יב" checked> שכבה יב'</label>
+        </div>
+        <label style="margin-top:14px;"><input type="checkbox" id="printGroupByGrade" checked> הפרדה לפי שכבה</label>
+        <div class="modal-actions">
+            <button class="action-btn btn-save" onclick="executePrintRange()">הדפס</button>
+            <button class="action-btn" style="background:#ECEFF1;color:#37474F;" onclick="closeModal('printRangeModal')">ביטול</button>
+        </div>
+    </div>
+</div>
+
+<!-- Print Range Container (hidden, shown during print) -->
+<div id="printRangeView" style="display:none;"></div>
 
 <!-- WhatsApp Modal -->
 <div class="modal-overlay" id="waModal">
@@ -1583,6 +1646,115 @@ function renderAnalytics(examId) {
     }
 
     container.innerHTML = html;
+}
+
+// ============================================
+// PRINT BY DATE RANGE
+// ============================================
+function openPrintRangeModal() {
+    // Default range: today → +30 days
+    const today = new Date();
+    const plus30 = new Date(today.getTime() + 30*24*3600*1000);
+    const fmt = d => d.toISOString().slice(0,10);
+    const fromEl = document.getElementById('printFromDate');
+    const toEl = document.getElementById('printToDate');
+    if (!fromEl.value) fromEl.value = fmt(today);
+    if (!toEl.value) toEl.value = fmt(plus30);
+    document.getElementById('printRangeModal').classList.add('show');
+}
+
+function executePrintRange() {
+    const from = document.getElementById('printFromDate').value;
+    const to = document.getElementById('printToDate').value;
+    if (!from || !to) { toast('יש לבחור תאריכי התחלה וסיום'); return; }
+    if (from > to) { toast('תאריך התחלה מאוחר מתאריך הסיום'); return; }
+    const grades = Array.from(document.querySelectorAll('.print-grade-cb'))
+        .filter(cb => cb.checked).map(cb => cb.value);
+    if (grades.length === 0) { toast('יש לבחור לפחות שכבה אחת'); return; }
+    const groupByGrade = document.getElementById('printGroupByGrade').checked;
+
+    const fromD = new Date(from); const toD = new Date(to);
+    const fmtHeb = d => {
+        const dd = new Date(d);
+        return dd.getDate() + '.' + (dd.getMonth()+1) + '.' + dd.getFullYear();
+    };
+    const weekday = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+    const buildRow = (e, grade) => {
+        const dObj = new Date(e.date);
+        const dayName = weekday[dObj.getDay()];
+        const classes = (e.classes || []).join(', ');
+        return `<tr>
+            <td>${fmtHeb(e.date)} (${dayName})</td>
+            ${groupByGrade ? '' : `<td>${grade}</td>`}
+            <td>${e.subject||''}</td>
+            <td>${e.type||''}</td>
+            <td>${e.time||''}</td>
+            <td>${e.code||''}</td>
+            <td>${classes}</td>
+            <td>${e.teacher||''}</td>
+            <td>${e.note||''}</td>
+        </tr>`;
+    };
+
+    const tableHeader = groupByGrade
+        ? `<tr><th>תאריך</th><th>מקצוע</th><th>סוג</th><th>שעה</th><th>סמל שאלון</th><th>כיתות</th><th>מורה</th><th>הערות</th></tr>`
+        : `<tr><th>תאריך</th><th>שכבה</th><th>מקצוע</th><th>סוג</th><th>שעה</th><th>סמל שאלון</th><th>כיתות</th><th>מורה</th><th>הערות</th></tr>`;
+
+    let html = `<div class="pr-header">
+        <h1>לוח בחינות — ${fmtHeb(from)} עד ${fmtHeb(to)}</h1>
+        <div class="pr-sub">בית ספר אורט בית הערבה • נוצר ${fmtHeb(new Date())}</div>
+    </div>`;
+
+    let totalCount = 0;
+    if (groupByGrade) {
+        grades.forEach(g => {
+            const gd = examData[g]; if (!gd) return;
+            const exams = gd.exams
+                .filter(e => e.date >= from && e.date <= to)
+                .sort((a,b) => a.date.localeCompare(b.date));
+            if (exams.length === 0) return;
+            totalCount += exams.length;
+            html += `<div class="pr-grade">
+                <h2>שכבה ${g}' — ${exams.length} בחינות</h2>
+                <table class="pr-table">
+                    <thead>${tableHeader}</thead>
+                    <tbody>${exams.map(e => buildRow(e, g)).join('')}</tbody>
+                </table>
+            </div>`;
+        });
+    } else {
+        const combined = [];
+        grades.forEach(g => {
+            const gd = examData[g]; if (!gd) return;
+            gd.exams.filter(e => e.date >= from && e.date <= to)
+                .forEach(e => combined.push({...e, _grade: g}));
+        });
+        combined.sort((a,b) => a.date.localeCompare(b.date));
+        totalCount = combined.length;
+        if (combined.length > 0) {
+            html += `<div class="pr-grade">
+                <h2>כל השכבות — ${combined.length} בחינות</h2>
+                <table class="pr-table">
+                    <thead>${tableHeader}</thead>
+                    <tbody>${combined.map(e => buildRow(e, e._grade)).join('')}</tbody>
+                </table>
+            </div>`;
+        }
+    }
+
+    if (totalCount === 0) {
+        html += `<div class="pr-empty">אין בחינות בטווח התאריכים שנבחר</div>`;
+    }
+
+    document.getElementById('printRangeView').innerHTML = html;
+    closeModal('printRangeModal');
+    document.body.classList.add('printing-range');
+
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => document.body.classList.remove('printing-range'), 500);
+    }, 100);
 }
 
 // ============================================
