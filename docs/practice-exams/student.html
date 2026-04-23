@@ -464,21 +464,36 @@
   <!-- SCREEN 1: LOGIN -->
   <div id="screen-login">
     <div class="login-card">
-      <h1>כניסת תלמיד</h1>
-      <p class="sub">הזן/י את הפרטים כדי להתחיל תרגול</p>
+      <div id="teacher-banner" class="hidden" style="background:linear-gradient(135deg,#ecfeff,#fce7f3);padding:14px;border-radius:10px;margin-bottom:20px;text-align:center;font-size:14px;">
+        <div style="color:var(--muted);font-size:12px;margin-bottom:2px;">מורה:</div>
+        <div id="teacher-name-display" style="font-weight:700;font-size:16px;">—</div>
+      </div>
+
+      <div id="no-teacher-warning" class="hidden" style="background:#fef2f2;border:1px solid #fca5a5;padding:14px;border-radius:10px;margin-bottom:20px;font-size:14px;">
+        <strong style="color:#991b1b;">חסר קישור ממורה</strong>
+        <div style="color:#7f1d1d;margin-top:4px;">בקשי מהמורה שלך את הקישור האישי שלה ותכנסי דרכו.</div>
+      </div>
+
+      <h1>כניסת תלמיד/ה</h1>
+      <p class="sub">פעם ראשונה → רישום. פעם הבאה → כניסה עם אותם שם+PIN.</p>
+
       <label for="student-name">שם מלא</label>
       <input id="student-name" type="text" placeholder="לדוגמה: יעל כהן" autocomplete="name">
+
       <label for="student-class">כיתה</label>
       <select id="student-class">
         <option value="">בחרי כיתה…</option>
-        <option>ט1</option><option>ט2</option>
-        <option>י1</option><option>י2</option><option>י3</option>
-        <option>יא1</option><option>יא2</option><option>יא3</option>
-        <option>יב1</option><option>יב2</option><option>יב3</option>
+        <option>ט</option><option>ט1</option><option>ט2</option>
+        <option>י</option><option>י1</option><option>י2</option><option>י3</option>
+        <option>יא</option><option>יא1</option><option>יא2</option><option>יא3</option>
+        <option>יב</option><option>יב1</option><option>יב2</option><option>יב3</option>
       </select>
-      <label for="student-id">תעודת זהות (אופציונלי)</label>
-      <input id="student-id" type="text" placeholder="לזיהוי במערכת" inputmode="numeric" maxlength="9">
-      <button class="btn-primary" onclick="login()">המשך לבחירת מבחן</button>
+
+      <label for="student-pin">PIN אישי (4+ ספרות)</label>
+      <input id="student-pin" type="password" inputmode="numeric" maxlength="8" placeholder="לזכור! יידרש בפעם הבאה">
+
+      <button class="btn-primary" onclick="login()">כניסה</button>
+      <div id="login-error" style="color:var(--red);font-size:13px;margin-top:10px;text-align:center;"></div>
     </div>
   </div>
 
@@ -547,17 +562,43 @@
   let CATALOG = null;
   let CURRENT_EXAM = null;
   let USER = null;
+  let TEACHER = null;
   let answers = {};
   let startTime = null;
 
   // ---------- init ----------
   async function init() {
-    // Restore session if exists
+    // Parse teacher code from URL
+    const params = new URLSearchParams(location.search);
+    const teacherCode = params.get('t');
+
+    if (teacherCode && APPS_SCRIPT_URL) {
+      try {
+        const res = await fetch(APPS_SCRIPT_URL + '?action=teacher-info&teacherCode=' + encodeURIComponent(teacherCode));
+        const data = await res.json();
+        if (data.teacher) {
+          TEACHER = data.teacher;
+          document.getElementById('teacher-banner').classList.remove('hidden');
+          document.getElementById('teacher-name-display').textContent = TEACHER.name;
+        } else {
+          document.getElementById('no-teacher-warning').classList.remove('hidden');
+        }
+      } catch (e) {
+        document.getElementById('no-teacher-warning').classList.remove('hidden');
+      }
+    } else if (!teacherCode) {
+      document.getElementById('no-teacher-warning').classList.remove('hidden');
+    }
+
+    // Restore session if exists AND teacher code matches
     const saved = localStorage.getItem('pe_user');
     if (saved) {
-      USER = JSON.parse(saved);
-      await loadCatalog();
-      showScreen('picker');
+      const savedUser = JSON.parse(saved);
+      if (savedUser.teacherCode === teacherCode) {
+        USER = savedUser;
+        await loadCatalog();
+        showScreen('picker');
+      }
     }
   }
 
@@ -567,19 +608,42 @@
     CATALOG = await res.json();
   }
 
-  // ---------- login ----------
+  // ---------- login / register ----------
   async function login() {
     const name = document.getElementById('student-name').value.trim();
     const cls = document.getElementById('student-class').value;
-    const id = document.getElementById('student-id').value.trim();
-    if (!name || !cls) {
-      alert('יש למלא שם וכיתה');
+    const pin = document.getElementById('student-pin').value.trim();
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = '';
+
+    if (!name || !cls || !pin) { errEl.textContent = 'יש למלא שם, כיתה ו-PIN'; return; }
+    if (pin.length < 4) { errEl.textContent = 'PIN חייב 4 ספרות לפחות'; return; }
+    if (!TEACHER) { errEl.textContent = 'חסר קישור ממורה. בקשי קישור אישי ונסי שוב.'; return; }
+
+    if (!APPS_SCRIPT_URL) {
+      // Fallback
+      USER = { name, class: cls, pin, teacherCode: TEACHER.teacherCode, teacherName: TEACHER.name, loginAt: new Date().toISOString() };
+      localStorage.setItem('pe_user', JSON.stringify(USER));
+      await loadCatalog();
+      showScreen('picker');
       return;
     }
-    USER = { name, class: cls, id, loginAt: new Date().toISOString() };
-    localStorage.setItem('pe_user', JSON.stringify(USER));
-    await loadCatalog();
-    showScreen('picker');
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'register-or-login-student', name, class: cls, pin, teacherCode: TEACHER.teacherCode })
+      });
+      const data = await res.json();
+      if (!data.ok) { errEl.textContent = data.error || 'שגיאה'; return; }
+
+      USER = { name, class: cls, pin, teacherCode: TEACHER.teacherCode, teacherName: TEACHER.name, mode: data.mode, loginAt: new Date().toISOString() };
+      localStorage.setItem('pe_user', JSON.stringify(USER));
+      await loadCatalog();
+      showScreen('picker');
+    } catch (e) {
+      errEl.textContent = 'תקלה ברשת. נסי שוב.';
+    }
   }
 
   // ---------- picker ----------
@@ -803,7 +867,9 @@
       examTitle: CURRENT_EXAM.title,
       sector: CURRENT_EXAM.sector,
       subject: CURRENT_EXAM.subjectName,
-      student: USER,
+      student: { name: USER.name, class: USER.class, id: USER.id || '' },
+      teacherCode: USER.teacherCode || '',
+      teacherName: USER.teacherName || '',
       startTime: startTime.toISOString(),
       endTime: new Date().toISOString(),
       durationSec: Math.round((Date.now() - startTime.getTime()) / 1000),

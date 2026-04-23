@@ -423,16 +423,62 @@
 </div>
 
 <div class="page">
-  <!-- SCREEN 1: LOGIN -->
+  <!-- SCREEN 1: LOGIN / REGISTER -->
   <div id="screen-login">
     <div class="login-card">
-      <h1>כניסת מורה</h1>
-      <p class="sub">הזן/י קוד גישה לדשבורד</p>
-      <label for="teacher-name">שם המורה</label>
-      <input id="teacher-name" type="text" placeholder="לדוגמה: מיטל פלג">
-      <label for="teacher-pin">קוד גישה</label>
-      <input id="teacher-pin" type="password" placeholder="PIN" autocomplete="current-password">
-      <button class="btn-primary" onclick="teacherLogin()">כניסה</button>
+      <div style="display:flex;gap:4px;margin-bottom:20px;background:var(--bg);padding:4px;border-radius:10px;">
+        <div id="tab-login" class="tab active" style="flex:1;text-align:center;" onclick="switchAuthTab('login')">יש לי חשבון</div>
+        <div id="tab-register" class="tab" style="flex:1;text-align:center;" onclick="switchAuthTab('register')">רישום חדש</div>
+      </div>
+
+      <div id="pane-login">
+        <h1>כניסת מורה</h1>
+        <p class="sub">הזיני את השם ו-PIN שבחרת בעת הרישום</p>
+        <label for="login-name">שם מלא</label>
+        <input id="login-name" type="text" placeholder="לדוגמה: מיטל פלג">
+        <label for="login-pin">PIN</label>
+        <input id="login-pin" type="password" inputmode="numeric" maxlength="8" placeholder="4+ ספרות" autocomplete="current-password">
+        <button class="btn-primary" onclick="teacherLogin()">כניסה לדשבורד</button>
+        <div id="login-error" style="color:var(--red);font-size:13px;margin-top:10px;text-align:center;"></div>
+      </div>
+
+      <div id="pane-register" class="hidden">
+        <h1>רישום מורה חדש</h1>
+        <p class="sub">רישום חד-פעמי. אחרי הרישום תקבלי קוד אישי לשיתוף עם הכיתה שלך.</p>
+        <label for="reg-name">שם מלא</label>
+        <input id="reg-name" type="text" placeholder="לדוגמה: מיטל פלג">
+        <label for="reg-email">מייל (אופציונלי)</label>
+        <input id="reg-email" type="email" placeholder="לשחזור גישה עתידי">
+        <label for="reg-pin">בחרי PIN</label>
+        <input id="reg-pin" type="password" inputmode="numeric" maxlength="8" placeholder="4+ ספרות, לזכור">
+        <button class="btn-primary" onclick="teacherRegister()">רישום</button>
+        <div id="reg-error" style="color:var(--red);font-size:13px;margin-top:10px;text-align:center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Registration success (share link) -->
+  <div id="screen-welcome" class="hidden">
+    <div class="login-card" style="max-width:620px;">
+      <h1>ברוכה הבאה!</h1>
+      <p class="sub">הרישום הצליח. הנה הקוד האישי שלך והקישור לשיתוף עם התלמידים.</p>
+
+      <div style="background:linear-gradient(135deg,#ecfeff,#fce7f3);padding:24px;border-radius:14px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">הקוד האישי שלך</div>
+        <div id="welcome-code" style="font-size:32px;font-weight:800;color:var(--pink);letter-spacing:2px;font-family:'Heebo',monospace;">—</div>
+      </div>
+
+      <label>קישור לשיתוף עם הכיתה</label>
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <input id="welcome-link" type="text" readonly style="margin:0;flex:1;font-size:13px;">
+        <button class="btn-small btn-secondary" onclick="copyShareLink()">העתק</button>
+      </div>
+
+      <div style="background:#fef9c3;border:1px solid #fde047;padding:12px;border-radius:10px;font-size:13px;margin-bottom:20px;">
+        <strong>חשוב:</strong> שלחי את הקישור הזה לתלמידים דרך WhatsApp/מייל. רק תלמידים שנכנסים דרך הקישור הזה יופיעו בדשבורד שלך. לא צריך לשלוח את ה-PIN!
+      </div>
+
+      <button class="btn-primary" onclick="goToDashboard()">המשך לדשבורד</button>
     </div>
   </div>
 
@@ -523,7 +569,6 @@
 
 <script>
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw83vpmGZHpVeq3qs6hMXXtP8v6BNiFqNxElIU2azI9ML-uisdcaLuiR72cpsSZ4xjP/exec';
-  const DEFAULT_PIN = '2024';
 
   let TEACHER = null;
   let CATALOG = null;
@@ -533,7 +578,7 @@
   let CURRENT_VIEW = 'all';
 
   async function init() {
-    const saved = sessionStorage.getItem('pe_teacher');
+    const saved = localStorage.getItem('pe_teacher');
     if (saved) {
       TEACHER = JSON.parse(saved);
       await loadAll();
@@ -541,34 +586,105 @@
     }
   }
 
+  function switchAuthTab(tab) {
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+    document.getElementById('pane-login').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('pane-register').classList.toggle('hidden', tab !== 'register');
+  }
+
   async function teacherLogin() {
-    const name = document.getElementById('teacher-name').value.trim();
-    const pin = document.getElementById('teacher-pin').value.trim();
-    if (!name) { alert('יש להזין שם'); return; }
-    if (pin !== DEFAULT_PIN) {
-      alert('קוד שגוי');
-      return;
+    const name = document.getElementById('login-name').value.trim();
+    const pin = document.getElementById('login-pin').value.trim();
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = '';
+    if (!name || !pin) { errEl.textContent = 'יש למלא שם ו-PIN'; return; }
+    if (!APPS_SCRIPT_URL) { errEl.textContent = 'המערכת לא מחוברת ל-Apps Script'; return; }
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'login-teacher', name, pin })
+      });
+      const data = await res.json();
+      if (!data.ok) { errEl.textContent = data.error || 'שגיאת כניסה'; return; }
+      TEACHER = { name: data.name, teacherCode: data.teacherCode, email: data.email, loginAt: new Date().toISOString() };
+      localStorage.setItem('pe_teacher', JSON.stringify(TEACHER));
+      await loadAll();
+      showScreen('dash');
+    } catch (e) {
+      errEl.textContent = 'תקלה ברשת. נסי שוב.';
     }
-    TEACHER = { name, loginAt: new Date().toISOString() };
-    sessionStorage.setItem('pe_teacher', JSON.stringify(TEACHER));
+  }
+
+  async function teacherRegister() {
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pin = document.getElementById('reg-pin').value.trim();
+    const errEl = document.getElementById('reg-error');
+    errEl.textContent = '';
+    if (!name || !pin) { errEl.textContent = 'שם ו-PIN חובה'; return; }
+    if (pin.length < 4) { errEl.textContent = 'PIN חייב 4 ספרות לפחות'; return; }
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'register-teacher', name, email, pin })
+      });
+      const data = await res.json();
+      if (!data.ok) { errEl.textContent = data.error || 'שגיאת רישום'; return; }
+      TEACHER = { name: data.name, teacherCode: data.teacherCode, email: data.email, loginAt: new Date().toISOString() };
+      localStorage.setItem('pe_teacher', JSON.stringify(TEACHER));
+      showWelcome();
+    } catch (e) {
+      errEl.textContent = 'תקלה ברשת. נסי שוב.';
+    }
+  }
+
+  function showWelcome() {
+    document.getElementById('welcome-code').textContent = TEACHER.teacherCode;
+    const shareUrl = location.origin + location.pathname.replace(/teacher\.html$/, 'student.html') + '?t=' + TEACHER.teacherCode;
+    document.getElementById('welcome-link').value = shareUrl;
+    showScreen('welcome');
+  }
+
+  function copyShareLink() {
+    const inp = document.getElementById('welcome-link');
+    inp.select();
+    navigator.clipboard.writeText(inp.value).then(() => {
+      alert('הקישור הועתק!');
+    }).catch(() => {
+      document.execCommand('copy');
+      alert('הקישור הועתק!');
+    });
+  }
+
+  async function goToDashboard() {
     await loadAll();
     showScreen('dash');
   }
 
   function showScreen(s) {
     document.getElementById('screen-login').classList.toggle('hidden', s !== 'login');
+    document.getElementById('screen-welcome').classList.toggle('hidden', s !== 'welcome');
     document.getElementById('screen-dash').classList.toggle('hidden', s !== 'dash');
     if (s === 'dash') {
       const actions = document.getElementById('topbar-actions');
+      const shareUrl = location.origin + location.pathname.replace(/teacher\.html$/, 'student.html') + '?t=' + TEACHER.teacherCode;
       actions.innerHTML = `
-        <span style="font-size:13px;color:var(--muted);">${TEACHER.name}</span>
+        <button onclick="copyDashLink('${shareUrl}')" title="העתקת קישור לשיתוף">קישור לתלמידים</button>
+        <span style="font-size:13px;color:var(--muted);">${TEACHER.name} · ${TEACHER.teacherCode}</span>
         <button onclick="logout()">יציאה</button>
       `;
     }
   }
 
+  function copyDashLink(url) {
+    navigator.clipboard.writeText(url).then(() => alert('קישור הועתק! שלחי לתלמידים שלך דרך WhatsApp'));
+  }
+
   function logout() {
-    sessionStorage.removeItem('pe_teacher');
+    localStorage.removeItem('pe_teacher');
     location.reload();
   }
 
@@ -586,17 +702,17 @@
 
   async function loadSubmissions() {
     if (!APPS_SCRIPT_URL) {
-      // Fallback: localStorage
       SUBMISSIONS = JSON.parse(localStorage.getItem('pe_submissions') || '[]');
       return;
     }
     try {
-      const res = await fetch(APPS_SCRIPT_URL + '?action=submissions');
+      const url = APPS_SCRIPT_URL + '?action=submissions&teacherCode=' + encodeURIComponent(TEACHER.teacherCode);
+      const res = await fetch(url);
       const data = await res.json();
       SUBMISSIONS = data.submissions || [];
     } catch (e) {
       console.error(e);
-      SUBMISSIONS = JSON.parse(localStorage.getItem('pe_submissions') || '[]');
+      SUBMISSIONS = [];
     }
   }
 
