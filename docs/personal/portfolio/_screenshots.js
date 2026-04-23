@@ -10,7 +10,7 @@ const targets = [
   { id: 'student-file',    url: `${BASE}/management/student-file.html` },
   { id: 'attendance',      url: `${BASE}/management/attendance-report.html`,  wait: 3000 },
   { id: 'practice-exams',  url: `${BASE}/practice-exams/` },
-  { id: 'counselor-hub',   url: `${BASE}/management/counselor-hub.html` },
+  { id: 'counselor-hub',   url: `${BASE}/management/monthly-reports.html?report=${encodeURIComponent('י1')}&month=2026-03`, wait: 9000, dismissPin: true },
   { id: 'student-risk',    url: `${BASE}/management/student-risk.html` },
   { id: 'lesson-demo',     url: `${BASE}/lessons/hitpael-nifal/` },
   { id: 'five-dimensions', url: `${BASE}/management/five-dimensions.html` },
@@ -23,11 +23,17 @@ const targets = [
 
 async function dismissOverlays(page) {
   await page.evaluate(() => {
-    // PIN modals
-    document.querySelectorAll('.pin-modal, [id*="pinModal" i], [class*="pin-modal" i]').forEach(el => {
+    // PIN + login screens
+    document.querySelectorAll(
+      '.pin-modal, [id*="pinModal" i], [class*="pin-modal" i], ' +
+      '.login-screen, [id*="loginScreen" i], [class*="login-screen" i]'
+    ).forEach(el => {
       el.style.display = 'none';
       el.classList.remove('show');
     });
+    // Show the app main if it exists
+    const main = document.getElementById('appMain') || document.querySelector('.app-main, main');
+    if (main) main.style.display = 'block';
     // Loading spinners / overlays
     document.querySelectorAll(
       '.loader, .loading, [class*="loader" i], [class*="loading" i], [id*="loader" i], [id*="loading" i]'
