@@ -1337,8 +1337,17 @@ function openModalFromHash() {
 }
 
 async function load() {
-  const res = await fetch('data/all-enriched.json');
-  DATA = await res.json();
+  try {
+    const res = await fetch('data/all-enriched.json?v=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    DATA = await res.json();
+    if (!Array.isArray(DATA) || DATA.length === 0) throw new Error('Empty data');
+  } catch (err) {
+    console.error('Failed to load data:', err);
+    const grid = document.getElementById('age-grid');
+    if (grid) grid.innerHTML = '<div style="grid-column:1/-1;padding:2rem;text-align:center;background:#FFF4E6;border:1px solid #F5CBA7;border-radius:16px;color:#8B4513"><strong>טעינת המאגר נכשלה.</strong><br>רעננו את הדף (Ctrl+Shift+R) או נסו שוב מאוחר יותר.<br><small style="opacity:0.7">' + err.message + '</small></div>';
+    return;
+  }
 
   // Read URL params
   const params = new URLSearchParams(window.location.search);
