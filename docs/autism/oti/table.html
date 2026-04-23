@@ -128,6 +128,16 @@
     direction: ltr; text-align: right;
   }
   .cell-web a:hover { text-decoration: underline; }
+  .url-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-inline-start: 6px;
+    vertical-align: middle;
+  }
+  .url-ok { background: #5b8452; }
+  .url-uncertain { background: #c99a2b; }
+  .url-broken { background: #b26650; }
   .cell-quote {
     max-width: 320px;
     font-size: 0.85rem;
@@ -236,6 +246,13 @@
     <select id="region-filter">
       <option value="">כל האזורים</option>
     </select>
+    <select id="url-filter">
+      <option value="">כל הקישורים</option>
+      <option value="ok">אתרים עובדים</option>
+      <option value="uncertain">חסומים לבוטים</option>
+      <option value="broken">שבורים</option>
+      <option value="none">בלי אתר</option>
+    </select>
     <span class="count-pill" id="count">214</span>
   </div>
 
@@ -336,7 +353,7 @@ function render() {
         <td class="cell-ages">${escapeHtml(r['גילאים'])}</td>
         <td class="cell-loc">${escapeHtml(r['אזור'])}</td>
         <td class="cell-phone">${renderPhones(r['טלפון'])}</td>
-        <td class="cell-web">${renderLinks(r['אתר'])}</td>
+        <td class="cell-web">${renderLinks(r['אתר'])}${r['url_status'] ? `<span class="url-dot url-${r['url_status']}" title="${r['url_status']==='ok'?'הקישור עובד':r['url_status']==='uncertain'?'חסום לבוטים (כנראה תקין)':'שבור/לא נגיש'}"></span>` : ''}</td>
         <td class="cell-quote ${quotesCollapsed ? '' : 'expanded'}" title="${escapeHtml(r['מקור'])}">${escapeHtml(r['הקשר/ציטוט'])}</td>
         <td class="cell-count">${escapeHtml(r['תדירות אזכור'])}</td>
       </tr>
@@ -350,11 +367,14 @@ function applyFilters() {
   const cat = document.getElementById('cat-filter').value;
   const age = document.getElementById('age-filter').value;
   const region = document.getElementById('region-filter').value;
+  const urlStatus = document.getElementById('url-filter').value;
 
   filtered = DATA.filter(r => {
     if (cat && r['קטגוריה'] !== cat) return false;
     if (age && !(r['גילאים'] || '').includes(age)) return false;
     if (region && !(r['אזור'] || '').includes(region)) return false;
+    if (urlStatus === 'none' && r['url_status']) return false;
+    if (urlStatus && urlStatus !== 'none' && r['url_status'] !== urlStatus) return false;
     if (q) {
       const blob = (r['שם'] + ' ' + r['אזור'] + ' ' + r['הקשר/ציטוט'] + ' ' + r['תת-קטגוריה'] + ' ' + (r['התמחות'] || '') + ' ' + (r['הערות'] || '')).toLowerCase();
       if (!blob.includes(q)) return false;
@@ -390,7 +410,7 @@ document.querySelectorAll('thead th[data-key]').forEach(th => {
   });
 });
 
-['search', 'cat-filter', 'age-filter', 'region-filter'].forEach(id => {
+['search', 'cat-filter', 'age-filter', 'region-filter', 'url-filter'].forEach(id => {
   document.getElementById(id).addEventListener('input', applyFilters);
 });
 
