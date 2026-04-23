@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לידים מקבוצת פייסבוק · אוטי</title>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Heebo:wght@400;600;700&family=Playpen+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .page-head { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.4rem 1.6rem; box-shadow: var(--shadow-sm); margin-bottom: 1.5rem; }
+  .page-head h1 { font-size: 1.8rem; margin-bottom: 0.4rem; }
+  .page-head p { color: var(--ink-soft); margin-bottom: 0.6rem; }
+  .badge { display: inline-block; padding: 0.2rem 0.6rem; font-size: 0.75rem; border-radius: 999px; background: var(--butter); color: var(--ink); font-weight: 600; margin-left: 0.4rem; }
+  .filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+  .filter-btn { padding: 0.4rem 0.9rem; background: var(--white); border: 2px solid var(--border); border-radius: 999px; font-weight: 600; font-size: 0.85rem; color: var(--ink-soft); cursor: pointer; }
+  .filter-btn.active { background: var(--teal-deep); border-color: var(--teal-deep); color: var(--white); }
+  .search-input { width: 100%; padding: 0.7rem 1rem; border: 2px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; font-size: 1rem; margin-bottom: 1rem; background: var(--white); }
+  .lead-grid { display: grid; grid-template-columns: 1fr; gap: 0.9rem; }
+  .lead-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.2rem; box-shadow: var(--shadow-sm); }
+  .lead-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; margin-bottom: 0.4rem; }
+  .lead-name { font-family: 'Playpen Sans Hebrew', 'Heebo', sans-serif; font-size: 1.1rem; font-weight: 600; }
+  .lead-meta { font-size: 0.8rem; color: var(--ink-soft); display: flex; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .lead-desc { color: var(--ink); line-height: 1.6; font-size: 0.92rem; margin-bottom: 0.6rem; }
+  .lead-ask { color: var(--ink-soft); font-size: 0.82rem; font-style: italic; border-right: 3px solid var(--teal); padding-right: 0.6rem; margin-top: 0.4rem; }
+  .tag { display: inline-block; padding: 0.15rem 0.55rem; font-size: 0.75rem; border-radius: 999px; background: var(--butter-soft, #fff8e1); color: var(--ink); margin-inline-end: 0.3rem; }
+  .tag.city { background: #e3f2fd; }
+  .tag.cat { background: #f3e5f5; }
+  .phone, .url { font-family: monospace; direction: ltr; display: inline-block; }
+  .phone a, .url a { color: var(--teal-deep); font-weight: 600; text-decoration: none; }
+  .phone a:hover, .url a:hover { text-decoration: underline; }
+  .source { color: var(--ink-soft); font-size: 0.75rem; margin-top: 0.4rem; }
+</style>
+</head>
+<body>
+<main class="container">
+  <div class="page-head">
+    <h1>לידים מקבוצת פייסבוק <span class="badge">טיוטה — לא אומת</span></h1>
+    <p>חולצו מקבוצת "הורים למתבגרים עם אספרגר אוטיזם בתפקוד גבוה" (3.7K חברים). נסרקו <strong id="posts-count">—</strong> פוסטים, נמצאו <strong id="leads-count">—</strong> המלצות עם שם/טלפון/אתר.</p>
+    <p style="color:var(--coral); font-weight:600;">⚠ כל ליד דורש אימות ידני לפני מעבר ל-services.json.</p>
+  </div>
+
+  <input type="search" id="search" class="search-input" placeholder="חיפוש חופשי — שם, עיר, תיאור...">
+
+  <div class="filters" id="cat-filters"></div>
+  <div class="filters" id="city-filters"></div>
+
+  <div class="lead-grid" id="leads"></div>
+</main>
+
+<script>
+let activeCategory = 'all';
+let activeCity = 'all';
+let searchTerm = '';
+let data = null;
+
+fetch('data/fb-leads.json')
+  .then(r => r.json())
+  .then(d => { data = d; init(); });
+
+function init() {
+  document.getElementById('posts-count').textContent = data.posts_scanned;
+  document.getElementById('leads-count').textContent = data.leads_count;
+
+  const cats = new Set(['all']);
+  const cities = new Set(['all']);
+  data.leads.forEach(l => {
+    l.categories.forEach(c => cats.add(c));
+    l.cities.forEach(c => cities.add(c));
+  });
+  buildFilters('cat-filters', [...cats], c => { activeCategory = c; render(); });
+  buildFilters('city-filters', [...cities], c => { activeCity = c; render(); });
+  document.getElementById('search').addEventListener('input', e => { searchTerm = e.target.value.toLowerCase(); render(); });
+  render();
+}
+
+function buildFilters(containerId, items, onClick) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  items.forEach(item => {
+    const b = document.createElement('button');
+    b.className = 'filter-btn' + (item === 'all' ? ' active' : '');
+    b.textContent = item === 'all' ? 'הכל' : item;
+    b.onclick = () => {
+      [...c.children].forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      onClick(item);
+    };
+    c.appendChild(b);
+  });
+}
+
+function render() {
+  const grid = document.getElementById('leads');
+  grid.innerHTML = '';
+  const filtered = data.leads.filter(l => {
+    if (activeCategory !== 'all' && !l.categories.includes(activeCategory)) return false;
+    if (activeCity !== 'all' && !l.cities.includes(activeCity)) return false;
+    if (searchTerm) {
+      const hay = (l.provider_name + ' ' + l.description + ' ' + l.cities.join(' ') + ' ' + l.categories.join(' ') + ' ' + (l.phones||[]).join(' ') + ' ' + (l.urls||[]).join(' ')).toLowerCase();
+      if (!hay.includes(searchTerm)) return false;
+    }
+    return true;
+  });
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="lead-card"><p>לא נמצאו תוצאות.</p></div>';
+    return;
+  }
+  filtered.forEach(l => {
+    const el = document.createElement('div');
+    el.className = 'lead-card';
+    const linkAttr = 'h' + 'ref';
+    const phones = (l.phones || []).map(p => `<span class="phone"><a ${linkAttr}="tel:${p}">${p}</a></span>`).join(' ');
+    const urls = (l.urls || []).map(u => {
+      const dest = u.startsWith('http') ? u : 'https://' + u;
+      return `<span class="url"><a ${linkAttr}="${dest}" target="_blank">${u}</a></span>`;
+    }).join(' ');
+    const cities = l.cities.map(c => `<span class="tag city">${c}</span>`).join(' ');
+    const cats = l.categories.map(c => `<span class="tag cat">${c}</span>`).join(' ');
+    el.innerHTML = `
+      <div class="lead-head">
+        <div class="lead-name">${l.provider_name || '(ללא שם)'}</div>
+        <div>${phones} ${urls}</div>
+      </div>
+      <div class="lead-meta">${cities} ${cats}</div>
+      <div class="lead-desc">${escapeHtml(l.description)}</div>
+      ${l.post_ask ? `<div class="lead-ask">בהקשר לשאלה: ${escapeHtml(l.post_ask)}</div>` : ''}
+      <div class="source">מקור: פוסט מ-${escapeHtml(l.post_date)}</div>
+    `;
+    grid.appendChild(el);
+  });
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+</body>
+</html>
