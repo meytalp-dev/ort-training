@@ -418,7 +418,37 @@
 <div class="topbar">
   <div class="topbar-title">דשבורד מורה · תרגול מבחני גמר</div>
   <div class="topbar-actions" id="topbar-actions">
+    <button onclick="openFeedback()" title="דיווח על בעיה או הערה">דווח/הערה</button>
     <a href="index.html">חזרה</a>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedback-modal" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <h2>דווח על בעיה / הערה</h2>
+      <button class="modal-close" onclick="closeFeedback()">×</button>
+    </div>
+    <div class="modal-body">
+      <label>נושא</label>
+      <select id="fb-subject">
+        <option>באג או תקלה</option>
+        <option>בעיה במחוון / תשובה שגויה</option>
+        <option>בקשה לפיצ'ר חדש</option>
+        <option>שאלה כללית</option>
+        <option>אחר</option>
+      </select>
+      <label>ההודעה</label>
+      <textarea id="fb-message" rows="5" placeholder="תאר/י את הבעיה או ההערה..."></textarea>
+      <label>מייל או טלפון לחזרה (אופציונלי)</label>
+      <input id="fb-contact" type="text" placeholder="כדי שנוכל לחזור אליך">
+      <div id="fb-error" style="color:var(--red);font-size:13px;margin-top:4px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-small btn-secondary" onclick="closeFeedback()">ביטול</button>
+      <button id="fb-submit" class="btn-small btn-save" onclick="sendFeedback()">שליחה</button>
+    </div>
   </div>
 </div>
 
@@ -686,6 +716,48 @@
   function logout() {
     localStorage.removeItem('pe_teacher');
     location.reload();
+  }
+
+  // ---------- Feedback ----------
+  function openFeedback() {
+    document.getElementById('feedback-modal').classList.remove('hidden');
+    document.getElementById('fb-error').textContent = '';
+  }
+  function closeFeedback() {
+    document.getElementById('feedback-modal').classList.add('hidden');
+  }
+  async function sendFeedback() {
+    const subject = document.getElementById('fb-subject').value;
+    const message = document.getElementById('fb-message').value.trim();
+    const contact = document.getElementById('fb-contact').value.trim();
+    const errEl = document.getElementById('fb-error');
+    errEl.textContent = '';
+    if (!message) { errEl.textContent = 'יש למלא את ההודעה'; return; }
+
+    const btn = document.getElementById('fb-submit');
+    btn.disabled = true; btn.textContent = 'שולח…';
+    try {
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'submit-feedback',
+          role: 'teacher',
+          name: (TEACHER && TEACHER.name) || '',
+          contact,
+          subject,
+          message,
+          url: location.href
+        })
+      });
+      alert('תודה! ההודעה נשלחה.');
+      document.getElementById('fb-message').value = '';
+      document.getElementById('fb-contact').value = '';
+      closeFeedback();
+    } catch (e) {
+      errEl.textContent = 'תקלה בשליחה. נסי שוב.';
+    } finally {
+      btn.disabled = false; btn.textContent = 'שליחה';
+    }
   }
 
   async function loadAll() {

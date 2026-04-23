@@ -19,10 +19,13 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
+const ADMIN_EMAIL = 'mlypeleg@gmail.com';
+
 const SHEET_SUBMISSIONS = 'submissions';
 const SHEET_ANSWER_KEYS = 'answer_keys';
 const SHEET_TEACHERS    = 'teachers';
 const SHEET_STUDENTS    = 'students';
+const SHEET_FEEDBACK    = 'feedback';
 const SHEET_LOG         = 'log';
 
 const SUBMISSION_HEADERS = [
@@ -38,6 +41,7 @@ const SUBMISSION_HEADERS = [
 const ANSWER_KEY_HEADERS = ['exam_id', 'question_id', 'correct_answer', 'updated_at'];
 const TEACHER_HEADERS    = ['teacher_code', 'name', 'email', 'pin', 'created_at', 'last_login'];
 const STUDENT_HEADERS    = ['student_key', 'name', 'class', 'pin', 'teacher_code', 'created_at', 'last_login'];
+const FEEDBACK_HEADERS   = ['timestamp', 'role', 'name', 'contact', 'subject', 'message', 'url'];
 const LOG_HEADERS        = ['timestamp', 'action', 'details'];
 
 // ============================================================
@@ -49,6 +53,7 @@ function setup() {
   ensureSheet_(ss, SHEET_ANSWER_KEYS, ANSWER_KEY_HEADERS);
   ensureSheet_(ss, SHEET_TEACHERS,    TEACHER_HEADERS);
   ensureSheet_(ss, SHEET_STUDENTS,    STUDENT_HEADERS);
+  ensureSheet_(ss, SHEET_FEEDBACK,    FEEDBACK_HEADERS);
   ensureSheet_(ss, SHEET_LOG,         LOG_HEADERS);
   log_('setup', 'Sheets initialized');
   try { SpreadsheetApp.getUi().alert('מוכן! 5 טאבים נוצרו. עכשיו Deploy → Manage deployments → New version'); } catch(e) {}
@@ -104,6 +109,11 @@ function doPost(e) {
     if (action === 'register-or-login-student') {
       const res = registerOrLoginStudent_(body.name, body.class, body.pin, body.teacherCode);
       log_('student-login', body.name + ' · ' + body.class + ' · ' + (res.ok ? res.mode : res.error));
+      return json_(res);
+    }
+    if (action === 'submit-feedback') {
+      const res = submitFeedback_(body);
+      log_('feedback', body.role + ' · ' + body.subject);
       return json_(res);
     }
 
@@ -350,6 +360,52 @@ function registerOrLoginStudent_(name, cls, pin, teacherCode) {
   // New student — register
   sh.appendRow([studentKey, name, cls, String(pin), teacherCode || '', new Date(), new Date()]);
   return { ok: true, mode: 'register', name, class: cls, teacherCode };
+}
+
+// ============================================================
+// feedback
+// ============================================================
+function submitFeedback_(body) {
+  const role = body.role || 'unknown';
+  const name = body.name || 'אנונימי';
+  const contact = body.contact || '';
+  const subject = body.subject || 'ללא נושא';
+  const message = body.message || '';
+  const url = body.url || '';
+
+  if (!message) return { ok: false, error: 'חובה להזין תוכן' };
+
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_FEEDBACK);
+  sh.appendRow([new Date(), role, name, contact, subject, message, url]);
+
+  try {
+    const roleHe = role === 'teacher' ? 'מורה' : (role === 'student' ? 'תלמיד/ה' : role);
+    const htmlBody =
+      '<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;">' +
+        '<h2 style="color:#ec4899;">דיווח חדש ממערכת תרגול מבחני גמר</h2>' +
+        '<table style="border-collapse:collapse;width:100%;">' +
+          '<tr><td style="padding:8px;background:#f8fafc;font-weight:bold;">תפקיד</td><td style="padding:8px;">' + roleHe + '</td></tr>' +
+          '<tr><td style="padding:8px;background:#f8fafc;font-weight:bold;">שם</td><td style="padding:8px;">' + name + '</td></tr>' +
+          (contact ? '<tr><td style="padding:8px;background:#f8fafc;font-weight:bold;">צור קשר</td><td style="padding:8px;">' + contact + '</td></tr>' : '') +
+          '<tr><td style="padding:8px;background:#f8fafc;font-weight:bold;">נושא</td><td style="padding:8px;">' + subject + '</td></tr>' +
+          '<tr><td style="padding:8px;background:#f8fafc;font-weight:bold;vertical-align:top;">הודעה</td><td style="padding:8px;white-space:pre-wrap;">' + message + '</td></tr>' +
+          (url ? '<tr><td style="padding:8px;background:#f8fafc;font-weight:bold;">דף</td><td style="padding:8px;"><a href="' + url + '">' + url + '</a></td></tr>' : '') +
+        '</table>' +
+        '<p style="color:#64748b;font-size:12px;margin-top:20px;">נשלח אוטומטית ממערכת תרגול מבחני גמר</p>' +
+      '</div>';
+
+    MailApp.sendEmail({
+      to: ADMIN_EMAIL,
+      replyTo: contact && contact.indexOf('@') > -1 ? contact : ADMIN_EMAIL,
+      subject: '[תרגול מבחנים] ' + subject + ' — ' + roleHe,
+      htmlBody: htmlBody
+    });
+  } catch (e) {
+    // Email fails silently — sheet row is saved
+    log_('email-error', String(e));
+  }
+
+  return { ok: true };
 }
 
 // ============================================================

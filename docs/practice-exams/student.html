@@ -454,10 +454,44 @@
 
 <div class="topbar">
   <div class="topbar-title">תרגול מבחני גמר</div>
-  <a href="index.html" class="topbar-back">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-    חזרה
-  </a>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button onclick="openFeedback()" style="background:none;border:1px solid var(--border);color:var(--muted);font-size:13px;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:inherit;">דווח/הערה</button>
+    <a href="index.html" class="topbar-back">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      חזרה
+    </a>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div id="feedback-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:50;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:18px;max-width:520px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="font-size:18px;font-weight:700;">דווח על בעיה / הערה</h2>
+      <button onclick="closeFeedback()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:4px 10px;">×</button>
+    </div>
+    <div style="padding:20px 22px;overflow-y:auto;flex:1;">
+      <label>נושא</label>
+      <select id="fb-subject">
+        <option>באג או תקלה</option>
+        <option>שאלה / תשובה שנראית שגויה</option>
+        <option>בעיית תצוגה</option>
+        <option>שאלה כללית</option>
+        <option>אחר</option>
+      </select>
+      <label>ההודעה</label>
+      <textarea id="fb-message" rows="5" placeholder="תאר/י את הבעיה או ההערה..."></textarea>
+      <label>שם (אופציונלי)</label>
+      <input id="fb-name" type="text" placeholder="שם מלא">
+      <label>מייל או טלפון (אופציונלי)</label>
+      <input id="fb-contact" type="text" placeholder="לחזרה במידת הצורך">
+      <div id="fb-error" style="color:var(--red);font-size:13px;margin-top:4px;"></div>
+    </div>
+    <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn-secondary" onclick="closeFeedback()" style="padding:8px 16px;font-size:14px;">ביטול</button>
+      <button id="fb-submit" onclick="sendFeedback()" style="background:var(--green);color:white;padding:8px 20px;font-size:14px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;">שליחה</button>
+    </div>
+  </div>
 </div>
 
 <div class="page">
@@ -947,6 +981,52 @@
       document.getElementById('result-subtitle').textContent = `צברת ${s.earnedPoints} מתוך ${s.totalExamPoints} נקודות`;
     }
     showScreen('result');
+  }
+
+  // ---------- Feedback ----------
+  function openFeedback() {
+    document.getElementById('feedback-modal').style.display = 'flex';
+    document.getElementById('fb-error').textContent = '';
+    if (USER && !document.getElementById('fb-name').value) {
+      document.getElementById('fb-name').value = USER.name || '';
+    }
+  }
+  function closeFeedback() {
+    document.getElementById('feedback-modal').style.display = 'none';
+  }
+  async function sendFeedback() {
+    const subject = document.getElementById('fb-subject').value;
+    const message = document.getElementById('fb-message').value.trim();
+    const name = document.getElementById('fb-name').value.trim();
+    const contact = document.getElementById('fb-contact').value.trim();
+    const errEl = document.getElementById('fb-error');
+    errEl.textContent = '';
+    if (!message) { errEl.textContent = 'יש למלא את ההודעה'; return; }
+
+    const btn = document.getElementById('fb-submit');
+    btn.disabled = true; btn.textContent = 'שולח…';
+    try {
+      await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'submit-feedback',
+          role: 'student',
+          name: name || (USER && USER.name) || 'אנונימי',
+          contact,
+          subject,
+          message,
+          url: location.href
+        })
+      });
+      alert('תודה! ההודעה נשלחה.');
+      document.getElementById('fb-message').value = '';
+      document.getElementById('fb-contact').value = '';
+      closeFeedback();
+    } catch (e) {
+      errEl.textContent = 'תקלה בשליחה. נסי שוב.';
+    } finally {
+      btn.disabled = false; btn.textContent = 'שליחה';
+    }
   }
 
   init();
