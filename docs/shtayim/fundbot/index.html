@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FundBot — הבוט של שתיים לגיוס משאבים</title>
+<meta name="description" content="בוט AI שעוזר לעמותות לכתוב הצעות שזוכות. בהובלת שתיים (liron & meytal). הידע של הופה, אחריות של מנהלות.">
+<meta property="og:title" content="FundBot — הבוט של שתיים לגיוס משאבים">
+<meta property="og:description" content="לא מחולל הגשות. יועץ אמיתי לקרנות, קולות קוראים וקריטריונים.">
+<meta property="og:type" content="website">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@100;300;400;500;600;700;900&family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --plum:#7B5EA7; --plum-dark:#5A3D8A; --plum-deep:#3E2668; --plum-light:#F3EEF9;
+  --coral:#E8836B; --coral-dark:#D06A52; --coral-light:#FDF0ED;
+  --sand:#FFFFFF; --cream:#FFFCF8; --charcoal:#2D2B3A; --gray:#6B6980;
+  --mint:#5BBF9E; --gold:#D4A843; --border:#E8E4F0;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Heebo',sans-serif;background:var(--cream);color:var(--charcoal);line-height:1.6;overflow-x:hidden;display:flex;flex-direction:column;min-height:100vh}
+
+/* NAV */
+nav{padding:14px 32px;display:flex;align-items:center;justify-content:space-between;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50}
+.nav-logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.nav-dots{display:flex;align-items:center;gap:4px}
+.nav-dot{width:10px;height:10px;border-radius:50%}
+.nav-dot.p{background:var(--plum);box-shadow:0 0 8px rgba(123,94,167,0.4)}
+.nav-dot.c{background:var(--coral);box-shadow:0 0 8px rgba(232,131,107,0.4)}
+.nav-bridge{width:12px;height:2px;background:linear-gradient(90deg,var(--plum),var(--coral));border-radius:1px}
+.nav-name{font-family:'Rubik',sans-serif;font-size:20px;font-weight:900;color:var(--charcoal)}
+.nav-name small{font-family:'Heebo',sans-serif;font-size:11px;font-weight:500;color:var(--gray);margin-right:8px;letter-spacing:1px;text-transform:uppercase}
+.nav-right{display:flex;align-items:center;gap:16px}
+.nav-right a{font-size:13px;color:var(--gray);text-decoration:none}
+.nav-right a:hover{color:var(--plum)}
+.settings-btn{background:none;border:1px solid var(--border);border-radius:10px;padding:6px 14px;font-family:inherit;font-size:13px;color:var(--gray);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.settings-btn:hover{border-color:var(--plum);color:var(--plum)}
+
+/* MAIN LAYOUT */
+.main{flex:1;display:flex;flex-direction:column;max-width:900px;margin:0 auto;width:100%;padding:24px 24px 0;min-height:0}
+
+/* INTRO (visible only on first load) */
+.intro{text-align:center;padding:40px 20px 24px;display:none}
+.intro.show{display:block}
+.intro-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--coral);margin-bottom:12px}
+.intro-title{font-family:'Rubik',sans-serif;font-size:clamp(32px,5vw,48px);font-weight:900;letter-spacing:-1px;line-height:1.1;margin-bottom:14px}
+.intro-title .glow{background:linear-gradient(135deg,var(--plum),var(--coral));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.intro-sub{font-size:17px;font-weight:300;color:var(--gray);max-width:580px;margin:0 auto 24px;line-height:1.7}
+.intro-sub strong{color:var(--charcoal);font-weight:600}
+.intro-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:680px;margin:0 auto}
+.chip{background:#fff;border:1px solid var(--border);border-radius:20px;padding:8px 16px;font-size:13px;color:var(--charcoal);cursor:pointer;transition:all .2s;font-family:inherit}
+.chip:hover{border-color:var(--plum);color:var(--plum);transform:translateY(-1px);box-shadow:0 4px 12px rgba(123,94,167,0.1)}
+
+/* CHAT */
+.chat-wrap{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0}
+.chat-scroll{flex:1;overflow-y:auto;padding:16px 0 8px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.chat-scroll::-webkit-scrollbar{width:6px}
+.chat-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+
+.msg{margin-bottom:20px;animation:fadeIn .3s ease-out}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg-row{display:flex;gap:12px;align-items:flex-start}
+.msg-row.user{flex-direction:row-reverse}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Rubik',sans-serif;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
+.avatar.bot{background:linear-gradient(135deg,var(--plum),var(--coral));box-shadow:0 4px 12px rgba(123,94,167,0.25)}
+.avatar.user{background:linear-gradient(135deg,#9AA5B1,#6B6980)}
+.bubble{max-width:78%;padding:14px 18px;border-radius:18px;font-size:15px;line-height:1.75;white-space:pre-wrap;word-wrap:break-word}
+.msg-row.user .bubble{background:var(--plum);color:#fff;border-bottom-right-radius:6px}
+.msg-row.bot .bubble{background:#fff;border:1px solid var(--border);color:var(--charcoal);border-bottom-left-radius:6px}
+.bubble strong{font-weight:700;color:var(--plum-dark)}
+.msg-row.user .bubble strong{color:#fff}
+.bubble code{background:rgba(123,94,167,0.08);padding:2px 6px;border-radius:6px;font-family:ui-monospace,monospace;font-size:13px;color:var(--plum-dark)}
+.bubble blockquote{border-right:3px solid var(--coral);margin:8px 0;padding:4px 14px;background:var(--coral-light);border-radius:8px;color:var(--charcoal)}
+.bubble h3,.bubble h4{font-family:'Rubik',sans-serif;font-weight:700;margin:10px 0 4px;color:var(--plum-dark)}
+.bubble ul,.bubble ol{margin:6px 20px 6px 0;padding:0}
+.bubble li{margin:4px 0}
+
+.typing{display:inline-flex;gap:4px;align-items:center}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--plum);opacity:.4;animation:typing 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes typing{0%,60%,100%{opacity:.4;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
+/* INPUT */
+.input-wrap{padding:12px 0 20px;position:sticky;bottom:0;background:linear-gradient(to bottom,transparent,var(--cream) 30%)}
+.input-inner{background:#fff;border:1px solid var(--border);border-radius:18px;padding:12px 16px;display:flex;gap:10px;align-items:flex-end;box-shadow:0 6px 24px rgba(0,0,0,0.05);transition:border-color .2s}
+.input-inner:focus-within{border-color:var(--plum);box-shadow:0 8px 28px rgba(123,94,167,0.12)}
+.input-inner textarea{flex:1;border:none;outline:none;resize:none;font-family:inherit;font-size:15px;color:var(--charcoal);line-height:1.5;max-height:180px;min-height:24px;background:transparent}
+.input-inner textarea::placeholder{color:#B0ADC0}
+.send-btn{background:linear-gradient(135deg,var(--plum),var(--coral));border:none;width:40px;height:40px;border-radius:50%;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.send-btn:hover:not(:disabled){transform:translateY(-2px) scale(1.05);box-shadow:0 8px 20px rgba(123,94,167,0.35)}
+.send-btn:disabled{opacity:.35;cursor:not-allowed}
+.send-btn svg{width:18px;height:18px}
+
+.input-hint{display:flex;justify-content:space-between;align-items:center;padding:8px 4px 0;font-size:11px;color:var(--gray)}
+.input-hint .brand{font-weight:600;color:var(--plum)}
+
+/* SETTINGS MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,21,48,0.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:20px;padding:28px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+.modal h2{font-family:'Rubik',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px;color:var(--charcoal)}
+.modal p.sub{font-size:14px;color:var(--gray);margin-bottom:20px;line-height:1.6}
+.modal label{display:block;font-size:13px;font-weight:600;color:var(--charcoal);margin-bottom:6px;margin-top:14px}
+.modal input, .modal select{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;color:var(--charcoal);background:#fff}
+.modal input:focus, .modal select:focus{outline:none;border-color:var(--plum)}
+.modal .help{font-size:12px;color:var(--gray);margin-top:4px;line-height:1.5}
+.modal .help a{color:var(--plum);text-decoration:none}
+.modal .help a:hover{text-decoration:underline}
+.modal-actions{display:flex;gap:10px;margin-top:24px;justify-content:flex-end}
+.btn{padding:10px 20px;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,var(--plum),var(--coral));color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(123,94,167,0.3)}
+.btn-ghost{background:transparent;color:var(--gray)}
+.btn-ghost:hover{color:var(--charcoal)}
+
+/* ERRORS */
+.error-banner{background:var(--coral-light);border:1px solid var(--coral);color:var(--coral-dark);padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;display:none}
+.error-banner.show{display:block}
+
+/* RESPONSIVE */
+@media (max-width:640px){
+  nav{padding:12px 16px}
+  .nav-name{font-size:16px}
+  .nav-name small{display:none}
+  .main{padding:12px 14px 0}
+  .intro{padding:24px 10px 16px}
+  .bubble{max-width:86%;font-size:14px}
+  .modal{padding:22px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="../site.html" class="nav-logo">
+    <span class="nav-dots">
+      <span class="nav-dot p"></span>
+      <span class="nav-bridge"></span>
+      <span class="nav-dot c"></span>
+    </span>
+    <span class="nav-name"><small>שתיים</small>FundBot</span>
+  </a>
+  <div class="nav-right">
+    <a href="../site.html">שתיים</a>
+    <button class="settings-btn" onclick="openSettings()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      הגדרות
+    </button>
+  </div>
+</nav>
+
+<div class="main">
+
+  <div class="intro show" id="intro">
+    <span class="intro-tag">שתיים · FundBot</span>
+    <h1 class="intro-title">לא <span class="glow">מחולל הגשות</span>.</h1>
+    <h1 class="intro-title">יועץ אמיתי.</h1>
+    <p class="intro-sub">
+      FundBot מבוסס על המתודולוגיה של <strong>לירון ומיטל</strong> —
+      ידע הופה (1,000 בוגרים, 80%→10%), 7 קרנות מתוחקרות, ומבנה הגשה שעובד.
+      <br>תגידי לי מה את עובדת עליו — אני אגיד לך איפה זה חלש.
+    </p>
+    <div class="intro-chips">
+      <button class="chip" onclick="quickStart('אני כותבת הצעה לברנקו-וייס. מאיפה להתחיל?')">ברנקו-וייס — מאיפה להתחיל?</button>
+      <button class="chip" onclick="quickStart('יש לי פתיחה להגשה, תגידי לי אם היא עובדת.')">ביקורת על פתיחה</button>
+      <button class="chip" onclick="quickStart('איזה קרנות פתוחות עכשיו לעמותה חינוכית?')">קרנות פתוחות עכשיו</button>
+      <button class="chip" onclick="quickStart('איך כותבים מדידה שקרן תקבל?')">מדידה שעובדת</button>
+      <button class="chip" onclick="quickStart('אנחנו עמותה חדשה בלי ותק. מה לעשות?')">עמותה חדשה, איך מתחילים?</button>
+    </div>
+  </div>
+
+  <div class="chat-wrap">
+    <div class="error-banner" id="errorBanner"></div>
+    <div class="chat-scroll" id="chatScroll"></div>
+    <div class="input-wrap">
+      <div class="input-inner">
+        <textarea id="userInput" rows="1" placeholder="כתבי לי: על איזו הגשה את עובדת? לאיזו קרן? באיזה שלב?" oninput="autosize(this)" onkeydown="handleKey(event)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="send()" aria-label="שליחה">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">
+        <span>Enter לשליחה · Shift+Enter לשורה חדשה</span>
+        <span><span class="brand">FundBot</span> של שתיים · המידע שלך נשאר אצלך</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <h2>הגדרות FundBot</h2>
+    <p class="sub">הבוט פועל מול Claude API (Anthropic). את/ה צריך/ה מפתח API אישי. המפתח נשמר רק אצלך בדפדפן, לא אצלנו.</p>
+
+    <label for="apiKey">Anthropic API Key</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
+    <p class="help">אין לך? <a href="https://console.anthropic.com/settings/keys" target="_blank">צרי מפתח ב-console.anthropic.com</a> — חינם לניסיון, תשלום לפי שימוש אחר כך.</p>
+
+    <label for="modelSelect">מודל</label>
+    <select id="modelSelect">
+      <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (מומלץ — איכות/מחיר)</option>
+      <option value="claude-opus-4-7">Claude Opus 4.7 (איכותי ביותר, יקר יותר)</option>
+      <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (מהיר וזול)</option>
+    </select>
+    <p class="help">Sonnet 4.6 = ברירת המחדל. Opus לבקשות מורכבות במיוחד.</p>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="clearChat()">נקה שיחה</button>
+      <button class="btn btn-ghost" onclick="closeSettings()">סגירה</button>
+      <button class="btn btn-primary" onclick="saveSettings()">שמירה</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================== STATE ==================
+const STORE_KEY='fundbot_v1';
+let state=loadState();
+let systemPrompt=null;
+let kbBundle=null;
+let isSending=false;
+
+function loadState(){
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    if(raw)return {messages:[],apiKey:'',model:'claude-sonnet-4-6',...JSON.parse(raw)};
+  }catch(e){}
+  return {messages:[],apiKey:'',model:'claude-sonnet-4-6'};
+}
+function saveState(){localStorage.setItem(STORE_KEY,JSON.stringify(state))}
+
+// ================== SETTINGS ==================
+function openSettings(){
+  document.getElementById('apiKey').value=state.apiKey||'';
+  document.getElementById('modelSelect').value=state.model||'claude-sonnet-4-6';
+  document.getElementById('settingsModal').classList.add('show');
+}
+function closeSettings(){document.getElementById('settingsModal').classList.remove('show')}
+function saveSettings(){
+  state.apiKey=document.getElementById('apiKey').value.trim();
+  state.model=document.getElementById('modelSelect').value;
+  saveState();
+  closeSettings();
+  showError('');
+}
+function clearChat(){
+  if(!confirm('למחוק את כל השיחה?'))return;
+  state.messages=[];
+  saveState();
+  renderChat();
+  document.getElementById('intro').classList.add('show');
+  closeSettings();
+}
+
+// ================== UI ==================
+function autosize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,180)+'px'}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}
+function quickStart(text){
+  document.getElementById('userInput').value=text;
+  send();
+}
+
+function renderChat(){
+  const scroll=document.getElementById('chatScroll');
+  scroll.innerHTML='';
+  for(const m of state.messages){
+    if(m.role==='system')continue;
+    appendMessage(m.role,m.content,false);
+  }
+  scroll.scrollTop=scroll.scrollHeight;
+}
+
+function md(text){
+  // minimal markdown: **bold**, *italic*, `code`, > quote, lists, headings
+  let t=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  t=t.replace(/`([^`]+)`/g,'<code>$1</code>');
+  t=t.replace(/^### (.+)$/gm,'<h4>$1</h4>');
+  t=t.replace(/^## (.+)$/gm,'<h3>$1</h3>');
+  t=t.replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>');
+  // ordered lists
+  t=t.replace(/(^|\n)(\d+\. .+(?:\n\d+\. .+)*)/g,(m,p,list)=>{
+    const items=list.split('\n').map(l=>'<li>'+l.replace(/^\d+\. /,'')+'</li>').join('');
+    return p+'<ol>'+items+'</ol>';
+  });
+  // unordered lists
+  t=t.replace(/(^|\n)([-*] .+(?:\n[-*] .+)*)/g,(m,p,list)=>{
+    const items=list.split('\n').map(l=>'<li>'+l.replace(/^[-*] /,'')+'</li>').join('');
+    return p+'<ul>'+items+'</ul>';
+  });
+  return t;
+}
+
+function appendMessage(role,content,animate=true){
+  const scroll=document.getElementById('chatScroll');
+  const row=document.createElement('div');
+  row.className='msg';
+  const avatar=role==='user'?'<div class="avatar user">את</div>':'<div class="avatar bot">FB</div>';
+  row.innerHTML=`<div class="msg-row ${role}">${avatar}<div class="bubble">${md(content)}</div></div>`;
+  scroll.appendChild(row);
+  if(animate)setTimeout(()=>{scroll.scrollTop=scroll.scrollHeight},20);
+  return row.querySelector('.bubble');
+}
+
+function appendTyping(){
+  const scroll=document.getElementById('chatScroll');
+  const row=document.createElement('div');
+  row.className='msg';
+  row.id='typingMsg';
+  row.innerHTML=`<div class="msg-row bot"><div class="avatar bot">FB</div><div class="bubble"><span class="typing"><span></span><span></span><span></span></span></div></div>`;
+  scroll.appendChild(row);
+  scroll.scrollTop=scroll.scrollHeight;
+}
+function removeTyping(){document.getElementById('typingMsg')?.remove()}
+
+function showError(msg){
+  const b=document.getElementById('errorBanner');
+  if(!msg){b.classList.remove('show');b.textContent='';return}
+  b.textContent=msg;
+  b.classList.add('show');
+}
+
+// ================== KB LOADING ==================
+const KB_FILES=[
+  'knowledge/voice/shtayim.md',
+  'knowledge/voice/liron.md',
+  'knowledge/voice/meytal.md',
+  'knowledge/case-studies/hofa.md',
+  'knowledge/funders/bituah-leumi.md',
+  'knowledge/funders/branco-weiss.md',
+  'knowledge/funders/jdc-ashalim.md',
+  'knowledge/funders/keren-yozmot.md',
+  'knowledge/funders/rashi.md',
+  'knowledge/funders/shefi.md',
+  'knowledge/funders/vaadat-izvonot.md',
+  'knowledge/templates/proposal-structure.md',
+  'knowledge/templates/glossary.md',
+];
+
+async function loadKB(){
+  if(kbBundle)return kbBundle;
+  const [promptRes,...fileResults]=await Promise.all([
+    fetch('system-prompt.md').then(r=>r.text()),
+    ...KB_FILES.map(f=>fetch(f).then(r=>r.text()).catch(()=>'')),
+  ]);
+  systemPrompt=promptRes;
+  const kbText=KB_FILES.map((f,i)=>`\n\n===== FILE: ${f} =====\n${fileResults[i]}`).join('');
+  kbBundle=`${systemPrompt}\n\n\n===== KNOWLEDGE BASE =====${kbText}`;
+  return kbBundle;
+}
+
+// ================== SEND ==================
+async function send(){
+  if(isSending)return;
+  const input=document.getElementById('userInput');
+  const text=input.value.trim();
+  if(!text)return;
+
+  if(!state.apiKey){
+    showError('חסר Anthropic API Key. לחצי על "הגדרות" למעלה ותוסיפי מפתח.');
+    openSettings();
+    return;
+  }
+
+  showError('');
+  document.getElementById('intro').classList.remove('show');
+  input.value='';autosize(input);
+
+  state.messages.push({role:'user',content:text});
+  saveState();
+  appendMessage('user',text);
+
+  isSending=true;
+  document.getElementById('sendBtn').disabled=true;
+  appendTyping();
+
+  try{
+    const sys=await loadKB();
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':state.apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
+      },
+      body:JSON.stringify({
+        model:state.model,
+        max_tokens:2000,
+        system:[{type:'text',text:sys,cache_control:{type:'ephemeral'}}],
+        messages:state.messages.filter(m=>m.role!=='system').map(m=>({role:m.role,content:m.content})),
+      }),
+    });
+
+    if(!res.ok){
+      const err=await res.text();
+      throw new Error('API '+res.status+': '+err.slice(0,300));
+    }
+
+    const data=await res.json();
+    const reply=data.content?.[0]?.text||'(לא התקבלה תשובה)';
+    removeTyping();
+    state.messages.push({role:'assistant',content:reply});
+    saveState();
+    appendMessage('assistant',reply);
+  }catch(e){
+    removeTyping();
+    showError('שגיאה: '+e.message);
+  }finally{
+    isSending=false;
+    document.getElementById('sendBtn').disabled=false;
+  }
+}
+
+// ================== INIT ==================
+(function init(){
+  if(state.messages.length>0){
+    document.getElementById('intro').classList.remove('show');
+    renderChat();
+  }
+  document.getElementById('userInput').focus();
+})();
+</script>
+
+</body>
+</html>
