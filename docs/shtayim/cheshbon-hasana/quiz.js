@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const API_URL = 'REPLACE_WITH_APPS_SCRIPT_URL';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbyvQhS_WifYFgneEUHgNcAblkM10dOsa9ca4uTu_wtKsjNBVVuXZeEYLJZgSavf3sqF/exec';
 
   const state = {
     sector: null,           // 'education' | 'social'
