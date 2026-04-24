@@ -25,9 +25,9 @@
 const SHEET_SUBMISSIONS = 'submissions';
 const SHEET_LOG = 'log';
 
-// Wide schema: up to 15 pain items per submission.
+// Wide schema: up to 32 pain items per submission (each sector has ~32 pains total).
 // Each item has 4 columns: id, freq, intensity, severity.
-const MAX_ITEMS = 15;
+const MAX_ITEMS = 32;
 
 function buildHeaders_() {
   const headers = [
