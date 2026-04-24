@@ -63,12 +63,6 @@ function initReceipt() {
   document.getElementById('btn-share-copy').addEventListener('click', copyLink);
   document.getElementById('btn-share-png').addEventListener('click', downloadReceiptPng);
   document.getElementById('btn-restart').addEventListener('click', () => window.location.reload());
-
-  const contactBtn = document.getElementById('btn-contact');
-  if (contactBtn) contactBtn.addEventListener('click', openWhatsAppContact);
-
-  const sendBtn = document.getElementById('btn-send-lead');
-  if (sendBtn) sendBtn.addEventListener('click', submitLead);
 }
 
 function openWhatsAppContact() {

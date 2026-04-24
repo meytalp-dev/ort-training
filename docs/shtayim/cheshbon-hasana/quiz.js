@@ -370,14 +370,6 @@
     renderReceipt(items);
     show('screen-receipt');
 
-    // Pre-fill the lead form on the receipt with what was already typed
-    const leadName = document.getElementById('lead-name');
-    const leadPhone = document.getElementById('lead-phone');
-    const leadEmail = document.getElementById('lead-email');
-    if (leadName && state.personal.name) leadName.value = state.personal.name;
-    if (leadPhone && state.personal.phone) leadPhone.value = state.personal.phone;
-    if (leadEmail && state.personal.email) leadEmail.value = state.personal.email;
-
     // fire-and-forget submit
     submitToSheet(items).catch(err => console.warn('submit failed', err));
   }
