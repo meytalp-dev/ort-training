@@ -23,6 +23,7 @@
  */
 
 const SHEET_SUBMISSIONS = 'submissions';
+const SHEET_LEADS = 'leads';
 const SHEET_LOG = 'log';
 
 // Wide schema: up to 32 pain items per submission (each sector has ~32 pains total).
@@ -44,6 +45,12 @@ function buildHeaders_() {
   return headers;
 }
 
+const LEAD_HEADERS = [
+  'timestamp', 'submission_id', 'sector',
+  'name', 'phone', 'email', 'role', 'org_type',
+  'top_pain_title', 'total_severity', 'note', 'user_agent'
+];
+
 const LOG_HEADERS = ['timestamp', 'action', 'details'];
 
 // ============================================================
@@ -52,10 +59,11 @@ const LOG_HEADERS = ['timestamp', 'action', 'details'];
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   ensureSheet_(ss, SHEET_SUBMISSIONS, buildHeaders_());
+  ensureSheet_(ss, SHEET_LEADS, LEAD_HEADERS);
   ensureSheet_(ss, SHEET_LOG, LOG_HEADERS);
   log_('setup', 'Sheets initialized');
   try {
-    SpreadsheetApp.getUi().alert('מוכן! טאב submissions נוצר. עכשיו Deploy → New deployment → Web app.');
+    SpreadsheetApp.getUi().alert('מוכן! 3 טאבים: submissions · leads · log.\nעכשיו Deploy → Manage deployments → עפרון → New version.');
   } catch (e) {}
 }
 
@@ -86,6 +94,12 @@ function doPost(e) {
       appendSubmission_(body.data);
       log_('submit', body.data.submissionId + ' · ' + body.data.sector);
       return json_({ ok: true, submissionId: body.data.submissionId });
+    }
+
+    if (action === 'saveLead') {
+      appendLead_(body.data);
+      log_('lead', (body.data.submissionId || '') + ' · ' + (body.data.name || '') + ' · ' + (body.data.phone || ''));
+      return json_({ ok: true });
     }
 
     return json_({ ok: false, error: 'unknown action: ' + action });
@@ -144,6 +158,25 @@ function appendSubmission_(data) {
   );
 
   sh.appendRow(row);
+}
+
+function appendLead_(data) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_LEADS);
+  if (!sh) return;
+  sh.appendRow([
+    new Date(),
+    data.submissionId || '',
+    data.sector || '',
+    data.name || '',
+    data.phone || '',
+    data.email || '',
+    data.role || '',
+    data.orgType || '',
+    data.topPainTitle || '',
+    data.totalSeverity || '',
+    data.note || '',
+    (data.userAgent || '').slice(0, 250)
+  ]);
 }
 
 function json_(obj) {

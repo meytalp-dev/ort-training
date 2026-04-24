@@ -7,6 +7,7 @@
   'use strict';
 
   const API_URL = 'https://script.google.com/macros/s/AKfycbyvQhS_WifYFgneEUHgNcAblkM10dOsa9ca4uTu_wtKsjNBVVuXZeEYLJZgSavf3sqF/exec';
+  window.__API_URL = API_URL;
 
   const state = {
     sector: null,           // 'education' | 'social'

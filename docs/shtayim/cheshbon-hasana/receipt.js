@@ -59,28 +59,80 @@ function makeBarcode(sector, id) {
 }
 
 function initReceipt() {
-  // שיתוף בוואטסאפ
   document.getElementById('btn-share-wa').addEventListener('click', shareOnWhatsApp);
-  // העתק קישור
   document.getElementById('btn-share-copy').addEventListener('click', copyLink);
-  // הורד כ-PNG
   document.getElementById('btn-share-png').addEventListener('click', downloadReceiptPng);
-  // התחל מחדש
-  document.getElementById('btn-restart').addEventListener('click', () => {
-    window.location.reload();
-  });
-  // צור קשר דרך וואטסאפ של שתיים
+  document.getElementById('btn-restart').addEventListener('click', () => window.location.reload());
+
   const contactBtn = document.getElementById('btn-contact');
-  if (contactBtn) {
-    contactBtn.addEventListener('click', () => {
-      const state = window.__receiptState;
-      const items = window.__receiptItems || [];
-      const top = items[0];
-      const sectorLabel = state.sector === 'education' ? 'בית ספר' : 'ארגון חברתי';
-      const msg = `שלום! השלמתי את "חשבון השנה" של שתיים.\n\nאני מנהל/ת ${sectorLabel}.\nהכאב הראשי שלי: ${top ? top.title : ''}\n\nאשמח לשיחה על זה.`;
-      const url = 'https://api.whatsapp.com/send?phone=972525421577&text=' + encodeURIComponent(msg);
-      window.open(url, '_blank');
+  if (contactBtn) contactBtn.addEventListener('click', openWhatsAppContact);
+
+  const sendBtn = document.getElementById('btn-send-lead');
+  if (sendBtn) sendBtn.addEventListener('click', submitLead);
+}
+
+function openWhatsAppContact() {
+  const state = window.__receiptState;
+  const items = window.__receiptItems || [];
+  const top = items[0];
+  const sectorLabel = state.sector === 'education' ? 'בית ספר' : 'ארגון חברתי';
+  const msg = `שלום! השלמתי את "חשבון השנה" של שתיים.\n\nאני מנהל/ת ${sectorLabel}.\nהכאב הראשי שלי: ${top ? top.title : ''}\n\nאשמח לשיחה על זה.`;
+  const url = 'https://api.whatsapp.com/send?phone=972525421577&text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+}
+
+async function submitLead() {
+  const state = window.__receiptState;
+  const items = window.__receiptItems || [];
+  const top = items[0];
+  const btn = document.getElementById('btn-send-lead');
+  const status = document.getElementById('lead-status');
+
+  const name = document.getElementById('lead-name').value.trim();
+  const phone = document.getElementById('lead-phone').value.trim();
+  const email = document.getElementById('lead-email').value.trim();
+  const note = document.getElementById('lead-note').value.trim();
+
+  if (!name || !phone) {
+    status.textContent = 'שם וטלפון חובה כדי שאוכל לחזור';
+    status.className = 'lead-status err';
+    return;
+  }
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span> שולח...';
+  status.textContent = '';
+  status.className = 'lead-status';
+
+  const payload = {
+    action: 'saveLead',
+    data: {
+      submissionId: state.submissionId || '',
+      sector: state.sector || '',
+      name, phone, email, note,
+      role: state.personal.role || '',
+      orgType: state.personal.orgType || '',
+      topPainTitle: top ? top.title : '',
+      totalSeverity: items.reduce((s, x) => s + x.severity, 0),
+      userAgent: navigator.userAgent
+    }
+  };
+
+  const API = window.__API_URL || (window.CHESHBON_API_URL);
+  try {
+    await fetch(API, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
     });
+    document.getElementById('cta-contact').classList.add('submitted');
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    status.textContent = 'שגיאה ברשת — נסי שוב או לחצי על וואטסאפ';
+    status.className = 'lead-status err';
   }
 }
 
