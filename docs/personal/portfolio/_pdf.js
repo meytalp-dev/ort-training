@@ -111,12 +111,41 @@ const PRINT_CSS = `
   .meta-pill { font-size: 9px !important; padding: 2px 7px !important; }
   .project-link { font-size: 10.5px !important; }
 
-  /* Training section */
-  .training { padding: 22px 22px !important; border-radius: 16px !important; }
+  /* Training section — must not split across pages */
+  #training {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .training {
+    padding: 22px 26px !important;
+    border-radius: 16px !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .training::before { display: none !important; }
   .training-inner { padding: 0 !important; }
-  .training-stats { gap: 12px !important; margin-top: 14px !important; }
-  .t-stat .num { font-size: 26px !important; }
-  .t-stat .lbl { font-size: 10.5px !important; }
+  .training .section-kicker { margin-bottom: 4px !important; }
+  .training .section-title { font-size: 20px !important; margin-bottom: 6px !important; }
+  .training .section-lede { font-size: 12px !important; margin-bottom: 12px !important; }
+  .training-stats {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 10px !important;
+    margin-top: 12px !important;
+  }
+  .t-stat {
+    padding: 12px 12px !important;
+    border-radius: 12px !important;
+    background: #2d4a6e !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    backdrop-filter: none !important;
+  }
+  .t-stat .num { font-size: 24px !important; color: #5abf92 !important; }
+  .t-stat .lbl { font-size: 10px !important; color: #e5edf5 !important; }
+  .training .btn { padding: 9px 18px !important; font-size: 12px !important; }
+  .training > div > div[style*="margin-top"] { margin-top: 14px !important; }
 
   /* Impact numbers — stay tight so keep on one page */
   .impact-row {
