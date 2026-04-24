@@ -325,9 +325,19 @@
       show('screen-ranking');
     });
     $('#btn-pers-next').addEventListener('click', async () => {
+      const emailEl = $('#pers-email');
+      const email = emailEl.value.trim();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!emailOk) {
+        emailEl.focus();
+        emailEl.setCustomValidity('נא להזין כתובת מייל תקינה');
+        emailEl.reportValidity();
+        setTimeout(() => emailEl.setCustomValidity(''), 100);
+        return;
+      }
       state.personal.name = $('#pers-name').value.trim();
       state.personal.phone = ($('#pers-phone') ? $('#pers-phone').value.trim() : '');
-      state.personal.email = $('#pers-email').value.trim();
+      state.personal.email = email;
       state.personal.role = $('#pers-role').value.trim();
       state.personal.orgType = $('#pers-orgtype').value.trim();
       await finishAndRender();
