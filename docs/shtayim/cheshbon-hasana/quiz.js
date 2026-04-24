@@ -14,7 +14,7 @@
     selected: new Map(),    // pain_id -> { freq, intensity }
     customPains: new Map(), // custom_id -> { title, categoryId }
     rankingIndex: 0,        // index of current pain in ranking screen
-    personal: { name: '', role: '', orgType: '', email: '' },
+    personal: { name: '', phone: '', email: '', role: '', orgType: '' },
     submissionId: null
   };
 
@@ -326,9 +326,10 @@
     });
     $('#btn-pers-next').addEventListener('click', async () => {
       state.personal.name = $('#pers-name').value.trim();
+      state.personal.phone = ($('#pers-phone') ? $('#pers-phone').value.trim() : '');
+      state.personal.email = $('#pers-email').value.trim();
       state.personal.role = $('#pers-role').value.trim();
       state.personal.orgType = $('#pers-orgtype').value.trim();
-      state.personal.email = $('#pers-email').value.trim();
       await finishAndRender();
     });
   }
@@ -358,6 +359,14 @@
 
     renderReceipt(items);
     show('screen-receipt');
+
+    // Pre-fill the lead form on the receipt with what was already typed
+    const leadName = document.getElementById('lead-name');
+    const leadPhone = document.getElementById('lead-phone');
+    const leadEmail = document.getElementById('lead-email');
+    if (leadName && state.personal.name) leadName.value = state.personal.name;
+    if (leadPhone && state.personal.phone) leadPhone.value = state.personal.phone;
+    if (leadEmail && state.personal.email) leadEmail.value = state.personal.email;
 
     // fire-and-forget submit
     submitToSheet(items).catch(err => console.warn('submit failed', err));

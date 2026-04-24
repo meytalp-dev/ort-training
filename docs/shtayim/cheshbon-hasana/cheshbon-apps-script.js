@@ -33,7 +33,7 @@ const MAX_ITEMS = 32;
 function buildHeaders_() {
   const headers = [
     'timestamp', 'submission_id', 'sector',
-    'name', 'role', 'org_type', 'email'
+    'name', 'phone', 'email', 'role', 'org_type'
   ];
   for (let i = 1; i <= MAX_ITEMS; i++) {
     headers.push(
@@ -73,12 +73,18 @@ function ensureSheet_(ss, name, headers) {
     sh = ss.insertSheet(name);
     sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
     sh.setFrozenRows(1);
-  } else {
-    // keep existing data but update header row if column count changed
-    const existing = sh.getRange(1, 1, 1, sh.getLastColumn() || 1).getValues()[0];
-    if (existing.length !== headers.length) {
-      sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
-    }
+    return;
+  }
+  // rewrite header row if length or ordering changed
+  const lastCol = Math.max(sh.getLastColumn(), headers.length);
+  const existing = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+  let needsRewrite = existing.length < headers.length;
+  for (let i = 0; i < headers.length && !needsRewrite; i++) {
+    if (String(existing[i] || '') !== headers[i]) needsRewrite = true;
+  }
+  if (needsRewrite) {
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+    sh.setFrozenRows(1);
   }
 }
 
@@ -130,9 +136,10 @@ function appendSubmission_(data) {
     data.submissionId || '',
     data.sector || '',
     p.name || '',
+    p.phone || '',
+    p.email || '',
     p.role || '',
-    p.orgType || '',
-    p.email || ''
+    p.orgType || ''
   ];
 
   let customCount = 0;
