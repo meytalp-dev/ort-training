@@ -282,7 +282,7 @@ function sendReceiptEmail_(data) {
         '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#E8836B;margin-inline-start:-3px;vertical-align:middle;"></span>' +
         '<span style="margin-inline-start:5px;font-size:11px;font-weight:600;color:#6B6980;vertical-align:middle;">שתיים</span>' +
       '</div>' +
-      '<div>רוצים לשמוע עוד פרטים?</div>' +
+      '<div>רוצים לשמוע פרטים על פתרונות לכאבים?</div>' +
       '<div style="margin-top:2px;">' +
         '<a href="https://api.whatsapp.com/send?phone=972536256653" style="color:#6B6980;text-decoration:none;">053-625-6653</a>' +
         '<span style="color:#D4D0C8;margin:0 6px;">·</span>' +
@@ -305,7 +305,7 @@ function sendReceiptEmail_(data) {
     'הכאב הראשי: ' + titleOf(top) + '\n' +
     'סה"כ השנה עלתה לך: ' + totalHours + ' שעות שחיקה\n\n' +
     'לקבלה האינטראקטיבית: https://meytalp-dev.github.io/ort-training/shtayim/cheshbon-hasana/\n\n' +
-    'רוצים לשמוע עוד פרטים?\nמיטל פלג · 053-625-6653 · mlypeleg@gmail.com';
+    'רוצים לשמוע פרטים על פתרונות לכאבים?\nמיטל פלג · 053-625-6653 · mlypeleg@gmail.com';
 
   MailApp.sendEmail({
     to: to,
