@@ -393,7 +393,8 @@
         sector: state.sector,
         personal: state.personal,
         items: items.map(x => ({
-          id: x.id, freq: x.freq, intensity: x.intensity, severity: x.severity,
+          id: x.id, title: x.title, hint: x.hint,
+          freq: x.freq, intensity: x.intensity, severity: x.severity,
           isCustom: !!x.isCustom,
           customTitle: x.isCustom ? x.title : '',
           customCategoryId: x.customCategoryId || ''
