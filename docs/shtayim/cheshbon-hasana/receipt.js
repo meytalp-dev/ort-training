@@ -77,7 +77,7 @@ function openWhatsAppContact() {
   const top = items[0];
   const sectorLabel = state.sector === 'education' ? 'בית ספר' : 'ארגון חברתי';
   const msg = `שלום! השלמתי את "חשבון השנה" של שתיים.\n\nאני מנהל/ת ${sectorLabel}.\nהכאב הראשי שלי: ${top ? top.title : ''}\n\nאשמח לשיחה על זה.`;
-  const url = 'https://api.whatsapp.com/send?phone=972525421577&text=' + encodeURIComponent(msg);
+  const url = 'https://api.whatsapp.com/send?phone=972536256653&text=' + encodeURIComponent(msg);
   window.open(url, '_blank');
 }
 
