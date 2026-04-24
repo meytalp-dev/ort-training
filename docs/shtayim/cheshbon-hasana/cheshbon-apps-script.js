@@ -35,9 +35,12 @@ function buildHeaders_() {
     'name', 'role', 'org_type', 'email'
   ];
   for (let i = 1; i <= MAX_ITEMS; i++) {
-    headers.push(`pain_${i}_id`, `pain_${i}_freq`, `pain_${i}_intensity`, `pain_${i}_severity`);
+    headers.push(
+      `pain_${i}_id`, `pain_${i}_freq`, `pain_${i}_intensity`, `pain_${i}_severity`,
+      `pain_${i}_custom_text`
+    );
   }
-  headers.push('top_pain_id', 'top_pain_title', 'top_severity', 'total_severity', 'items_count', 'user_agent');
+  headers.push('top_pain_id', 'top_pain_title', 'top_severity', 'total_severity', 'items_count', 'custom_count', 'user_agent');
   return headers;
 }
 
@@ -118,10 +121,16 @@ function appendSubmission_(data) {
     p.email || ''
   ];
 
+  let customCount = 0;
   for (let i = 0; i < MAX_ITEMS; i++) {
     const it = items[i];
-    if (it) row.push(it.id || '', it.freq || '', it.intensity || '', it.severity || '');
-    else    row.push('', '', '', '');
+    if (it) {
+      row.push(it.id || '', it.freq || '', it.intensity || '', it.severity || '',
+               it.isCustom ? (it.customTitle || '') : '');
+      if (it.isCustom) customCount++;
+    } else {
+      row.push('', '', '', '', '');
+    }
   }
 
   row.push(
@@ -130,6 +139,7 @@ function appendSubmission_(data) {
     top.severity || '',
     data.totalSeverity || 0,
     items.length,
+    customCount,
     (data.userAgent || '').slice(0, 250)
   );
 
