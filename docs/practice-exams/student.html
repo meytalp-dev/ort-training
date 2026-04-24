@@ -612,9 +612,11 @@
 
   // ---------- init ----------
   async function init() {
-    // Parse teacher code from URL
+    // Parse teacher code + optional exam id from URL
     const params = new URLSearchParams(location.search);
     const teacherCode = params.get('t');
+    const deepExamId = params.get('e');
+    window.__pendingExamId = deepExamId || null;
 
     if (teacherCode && APPS_SCRIPT_URL) {
       try {
@@ -641,7 +643,13 @@
       if (savedUser.teacherCode === teacherCode) {
         USER = savedUser;
         await loadCatalog();
-        showScreen('picker');
+        if (window.__pendingExamId) {
+          const examId = window.__pendingExamId;
+          window.__pendingExamId = null;
+          startExam(examId);
+        } else {
+          showScreen('picker');
+        }
       }
     }
   }
@@ -669,7 +677,7 @@
       USER = { name, class: cls, pin, teacherCode: TEACHER.teacherCode, teacherName: TEACHER.name, loginAt: new Date().toISOString() };
       localStorage.setItem('pe_user', JSON.stringify(USER));
       await loadCatalog();
-      showScreen('picker');
+      goToAfterLogin();
       return;
     }
 
@@ -684,9 +692,19 @@
       USER = { name, class: cls, pin, teacherCode: TEACHER.teacherCode, teacherName: TEACHER.name, mode: data.mode, loginAt: new Date().toISOString() };
       localStorage.setItem('pe_user', JSON.stringify(USER));
       await loadCatalog();
-      showScreen('picker');
+      goToAfterLogin();
     } catch (e) {
       errEl.textContent = 'תקלה ברשת. נסי שוב.';
+    }
+  }
+
+  function goToAfterLogin() {
+    if (window.__pendingExamId) {
+      const examId = window.__pendingExamId;
+      window.__pendingExamId = null;
+      startExam(examId);
+    } else {
+      showScreen('picker');
     }
   }
 
