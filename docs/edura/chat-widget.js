@@ -178,6 +178,8 @@
       text-decoration: none;
     }
     #ew-chat-root .ec-job-cta:hover { background: #c94a30; }
+    #ew-chat-root .ec-job-cta-tel { background: #1F6B5C; }
+    #ew-chat-root .ec-job-cta-tel:hover { background: #2D8B76; }
     #ew-chat-root .ec-job-save {
       padding: 9px 12px;
       border: 1.5px solid #E1DBD0;

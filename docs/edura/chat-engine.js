@@ -353,24 +353,28 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       const scope = j.scope ? '<span class="ec-tag">' + esc(j.scope) + '</span>' : '';
       const dateStr = j.date ? '<span class="ec-job-date">' + esc(j.date) + '</span>' : '';
 
-      // CTA חכם: עדיפות למייל (Gmail compose URL — עובד תמיד, גם בלי לקוח מייל),
-      // אז טלפון, אז קישור.
-      let cta = '';
+      // CTAs — מציג כל אמצעי קשר זמין ככפתור נפרד, עם הכתובת/מספר על הכפתור.
+      // ככה ברור למשתמשת מה כל כפתור עושה ואיזה פרטי קשר באמת קיימים במשרה.
+      const ctas = [];
       if (j.email) {
         const subj = encodeURIComponent('פנייה דרך אדורה — ' + (j.school || j.title || ''));
         const body = encodeURIComponent('שלום' + (j.contact_name ? ' ' + j.contact_name : '') + ',\n\nראיתי את המשרה שלכם באתר אדורה ואשמח להציג מועמדות.\n\n');
         const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(j.email) + '&su=' + subj + '&body=' + body;
-        cta = '<a class="ec-job-cta" href="' + gmailUrl + '" target="_blank" rel="noopener">שלחו מייל ←</a>';
-      } else if (j.phone) {
-        cta = '<a class="ec-job-cta" href="tel:' + esc(j.phone.replace(/\s+/g,'')) + '">חייגו ' + esc(j.phone) + '</a>';
-      } else if (j.url) {
-        cta = '<a class="ec-job-cta" href="' + esc(j.url) + '" target="_blank" rel="noopener">פתחו במקור ←</a>';
-      } else {
-        cta = '<span class="ec-job-cta" style="opacity:.5;cursor:default">פרטי קשר חסרים</span>';
+        ctas.push('<a class="ec-job-cta" href="' + gmailUrl + '" target="_blank" rel="noopener">שלחו מייל</a>');
+      }
+      if (j.phone) {
+        const cleanPhone = j.phone.replace(/\s+/g,'');
+        ctas.push('<a class="ec-job-cta ec-job-cta-tel" href="tel:' + esc(cleanPhone) + '">חייגו ' + esc(j.phone) + '</a>');
+      }
+      if (!j.email && !j.phone && j.url) {
+        ctas.push('<a class="ec-job-cta" href="' + esc(j.url) + '" target="_blank" rel="noopener">פתחו במקור ←</a>');
+      }
+      if (ctas.length === 0) {
+        ctas.push('<span class="ec-job-cta" style="opacity:.5;cursor:default">פרטי קשר חסרים</span>');
       }
 
       const contact = j.contact_name ? '<div class="ec-job-contact">איש קשר: ' + esc(j.contact_name) + '</div>' : '';
-      const phone = j.phone && j.email ? '<div class="ec-job-contact">טלפון: <a href="tel:' + esc(j.phone.replace(/\s+/g,'')) + '">' + esc(j.phone) + '</a></div>' : '';
+      const emailLine = j.email ? '<div class="ec-job-contact">מייל: <a href="mailto:' + esc(j.email) + '">' + esc(j.email) + '</a></div>' : '';
 
       card.innerHTML =
         '<div class="ec-job-card">' +
@@ -378,9 +382,9 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
           '<h4 class="ec-job-title">' + esc(j.school || j.title || '') + '</h4>' +
           '<div class="ec-job-tags">' + region + role + subj + lvl + scope + '</div>' +
           (j.snippet ? '<p class="ec-job-snippet">' + esc(String(j.snippet).slice(0, 220)) + '</p>' : '') +
-          contact + phone +
+          contact + emailLine +
           '<div class="ec-job-actions">' +
-            cta +
+            ctas.join('') +
             '<button class="ec-job-save" type="button">שמור</button>' +
           '</div>' +
         '</div>';
