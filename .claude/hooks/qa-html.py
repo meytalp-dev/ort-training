@@ -82,6 +82,9 @@ def check_broken_links(html, file_path):
         # דלג על URLs מוחלטים, data:, mailto:, tel:, anchors
         if re.match(r'^(https?:|data:|mailto:|tel:|//|#|javascript:)', link, re.IGNORECASE):
             continue
+        # דלג על placeholders בתוך JS templates ("${...}", "{{...}}")
+        if '${' in link or '{{' in link:
+            continue
         target = (base_dir / link).resolve()
         if not target.exists():
             issues.append(f"קישור שבור: {link}")
