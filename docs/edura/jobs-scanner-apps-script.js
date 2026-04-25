@@ -659,6 +659,65 @@ function json_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// ════════════════════════════════════════════════════════════════════
+// doPost — proxy ל-Gemini עבור הצ'אטבוט
+// פותח endpoint שמסתיר את המפתח, עוקף referrer restrictions ו-CORS.
+// קלט:  { action: 'parse', text: 'אני מורה למתמטיקה בירושלים' }
+// פלט:  { ok: true, filters: { region, role, subject, level, scope } }
+// ════════════════════════════════════════════════════════════════════
+const GEMINI_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
+
+function doPost(e) {
+  try {
+    const body = JSON.parse(e.postData.contents || '{}');
+    if (body.action === 'parse') {
+      return json_(parseUserText_(body.text || ''));
+    }
+    return json_({ ok: false, error: 'unknown action' });
+  } catch (err) {
+    return json_({ ok: false, error: String(err) });
+  }
+}
+
+function parseUserText_(text) {
+  const prompt = 'משתמש כתב בעברית: "' + text + '"\n\n' +
+    'חלץ פילטרים לחיפוש משרת הוראה ב-JSON בלבד (בלי הסבר, בלי markdown):\n' +
+    '{ "region": "ירושלים|מרכז|צפון|דרום|שפלה|", "role": "מורה|מחנך/ת|רכז/ת|יועץ/ת|מנהל/ת|", ' +
+    '"subject": "מתמטיקה|אנגלית|עברית|תנ\\"ך|היסטוריה|אזרחות|פיזיקה|כימיה|ביולוגיה|מחשבים|מדעים|ספורט|אומנות|מוזיקה|ערבית|", ' +
+    '"level": "יסודי|חט\\"ב|תיכון|", "scope": "מלאה|חלקית|" }\n' +
+    'אם שדה לא ברור — מחרוזת ריקה. החזר JSON אחד בלבד.';
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.1, maxOutputTokens: 200 }
+  };
+
+  const res = UrlFetchApp.fetch(GEMINI_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  if (res.getResponseCode() !== 200) {
+    return { ok: false, error: 'Gemini ' + res.getResponseCode() };
+  }
+
+  const data = JSON.parse(res.getContentText());
+  const raw = ((data.candidates || [{}])[0].content || {}).parts || [{}];
+  let txt = String(raw[0].text || '').trim();
+  // הסר עטיפת markdown אם יש
+  txt = txt.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '').trim();
+
+  try {
+    const filters = JSON.parse(txt);
+    return { ok: true, filters: filters };
+  } catch (e) {
+    return { ok: false, error: 'parse failed', raw: txt };
+  }
+}
+
 function log_(action, details) {
   try {
     const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_LOG);

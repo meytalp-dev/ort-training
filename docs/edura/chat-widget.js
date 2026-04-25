@@ -1,0 +1,291 @@
+/**
+ * Edura · Chat Widget
+ * ─────────────────────────────────────────────────────────────────
+ * כפתור צף + overlay שמטעין את chat-engine.js בעמוד.
+ * הוספה: <script src="chat-widget.js" defer></script>
+ */
+
+(function () {
+  'use strict';
+
+  const STYLES = `
+    .ew-fab {
+      position: fixed; bottom: 24px; left: 24px;
+      width: 56px; height: 56px;
+      background: #1F6B5C;
+      color: #fff;
+      border-radius: 50%;
+      box-shadow: 0 6px 20px rgba(31,107,92,.35);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+      z-index: 9998;
+      border: none;
+    }
+    .ew-fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(31,107,92,.45);
+    }
+    .ew-fab svg { width: 26px; height: 26px; }
+    .ew-fab-label {
+      position: absolute;
+      bottom: 70px;
+      background: #1A2B26; color: #fff;
+      padding: 8px 14px; border-radius: 8px;
+      font-size: 13px; font-weight: 600;
+      white-space: nowrap;
+      font-family: 'Heebo', sans-serif;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity .2s, transform .2s;
+    }
+    .ew-fab:hover .ew-fab-label { opacity: 1; transform: translateY(0); }
+
+    .ew-overlay {
+      position: fixed; inset: 0;
+      background: rgba(26,43,38,.45);
+      z-index: 9999;
+      display: flex; align-items: flex-end; justify-content: flex-start;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s ease;
+      padding: 0;
+    }
+    .ew-overlay.open { opacity: 1; pointer-events: auto; }
+
+    .ew-panel {
+      width: 400px; max-width: 100vw;
+      height: min(640px, calc(100vh - 24px));
+      background: #FAFAF7;
+      box-shadow: 0 -4px 32px rgba(0,0,0,.18);
+      display: flex; flex-direction: column;
+      transform: translateY(100%);
+      transition: transform .25s ease;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      margin: 0 12px 12px;
+      overflow: hidden;
+      font-family: 'Heebo', 'Assistant', sans-serif;
+      direction: rtl;
+    }
+    .ew-overlay.open .ew-panel { transform: translateY(0); }
+
+    .ew-panel-header {
+      background: #1F6B5C;
+      color: #fff;
+      padding: 14px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .ew-panel-title {
+      font-weight: 800; font-size: 16px;
+    }
+    .ew-panel-title-sub {
+      font-size: 12px; font-weight: 400; opacity: .85;
+      margin-top: 2px;
+    }
+    .ew-close {
+      background: rgba(255,255,255,.15);
+      border: none; color: #fff;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ew-close:hover { background: rgba(255,255,255,.25); }
+
+    #ew-chat-root {
+      flex: 1;
+      display: flex; flex-direction: column;
+      background: #FAFAF7;
+      overflow: hidden;
+    }
+
+    /* inherit chat-engine styles by reusing class names */
+    #ew-chat-root .ec-stream {
+      flex: 1; overflow-y: auto;
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    #ew-chat-root .ec-msg { display: flex; flex-direction: column; gap: 8px; max-width: 88%; }
+    #ew-chat-root .ec-msg-bot { align-self: flex-start; }
+    #ew-chat-root .ec-msg-user { align-self: flex-end; align-items: flex-end; }
+    #ew-chat-root .ec-bubble {
+      padding: 10px 14px; border-radius: 14px;
+      font-size: 14px; line-height: 1.5;
+      box-shadow: 0 1px 2px rgba(26,43,38,.06);
+    }
+    #ew-chat-root .ec-msg-bot .ec-bubble {
+      background: #E8F1ED; color: #1A2B26;
+      border-bottom-right-radius: 4px;
+    }
+    #ew-chat-root .ec-msg-user .ec-bubble {
+      background: #1F6B5C; color: #fff;
+      border-bottom-left-radius: 4px;
+    }
+    #ew-chat-root .ec-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    #ew-chat-root .ec-action {
+      padding: 7px 12px;
+      background: #fff; border: 1.5px solid #2D8B76;
+      color: #1F6B5C; border-radius: 999px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    #ew-chat-root .ec-action:hover:not(:disabled) {
+      background: #2D8B76; color: #fff;
+    }
+    #ew-chat-root .ec-action:disabled { opacity: .5; cursor: not-allowed; }
+
+    #ew-chat-root .ec-job-card {
+      background: #FBF7F0; border: 1px solid #F2EBDF;
+      border-radius: 12px; padding: 14px;
+    }
+    #ew-chat-root .ec-job-source {
+      font-size: 11px; font-weight: 600; color: #2D8B76;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+    }
+    #ew-chat-root .ec-job-title {
+      font-size: 15px; font-weight: 700; color: #1A2B26;
+      margin-bottom: 8px; line-height: 1.4;
+    }
+    #ew-chat-root .ec-job-tags {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+    }
+    #ew-chat-root .ec-tag {
+      font-size: 10px; font-weight: 600; padding: 3px 7px;
+      border-radius: 6px; background: #fff; color: #4A5A55;
+      border: 1px solid #E1DBD0;
+    }
+    #ew-chat-root .ec-job-snippet {
+      font-size: 12px; color: #4A5A55;
+      margin-bottom: 10px; line-height: 1.5;
+    }
+    #ew-chat-root .ec-job-actions { display: flex; gap: 6px; }
+    #ew-chat-root .ec-job-cta {
+      flex: 1; text-align: center;
+      padding: 9px 14px;
+      background: #E85D40; color: #fff;
+      border-radius: 8px;
+      font-size: 13px; font-weight: 700;
+      text-decoration: none;
+    }
+    #ew-chat-root .ec-job-cta:hover { background: #c94a30; }
+    #ew-chat-root .ec-job-save {
+      padding: 9px 12px;
+      border: 1.5px solid #E1DBD0;
+      background: #fff;
+      color: #4A5A55; border-radius: 8px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+
+    #ew-chat-root .ec-status {
+      padding: 8px 16px; color: #8A9994; font-size: 12px;
+      text-align: center; display: none;
+    }
+    #ew-chat-root .ec-input-row {
+      display: flex; gap: 6px;
+      padding: 10px 12px;
+      border-top: 1px solid #E1DBD0;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    #ew-chat-root .ec-input-row input {
+      flex: 1; padding: 9px 12px;
+      border: 1.5px solid #E1DBD0;
+      border-radius: 999px;
+      font-size: 14px; font-family: inherit;
+      outline: none;
+    }
+    #ew-chat-root .ec-input-row input:focus { border-color: #2D8B76; }
+    #ew-chat-root .ec-send-btn {
+      padding: 9px 16px;
+      background: #1F6B5C; color: #fff;
+      border-radius: 999px;
+      border: none; cursor: pointer;
+      font-weight: 700; font-size: 14px;
+    }
+
+    @media (max-width: 480px) {
+      .ew-panel {
+        width: 100%; height: 100vh;
+        margin: 0; border-radius: 0;
+      }
+      .ew-fab { bottom: 16px; left: 16px; }
+    }
+  `;
+
+  const FAB_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function injectStyles() {
+    if (document.getElementById('ew-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'ew-styles';
+    s.textContent = STYLES;
+    document.head.appendChild(s);
+  }
+
+  function ensureChatEngine(callback) {
+    if (window.EduraChat) { callback(); return; }
+    const existing = document.querySelector('script[data-ew-chat-engine]');
+    if (existing) { existing.addEventListener('load', callback); return; }
+    const s = document.createElement('script');
+    s.src = 'chat-engine.js';
+    s.dataset.ewChatEngine = '1';
+    s.onload = callback;
+    document.head.appendChild(s);
+  }
+
+  function buildWidget() {
+    injectStyles();
+
+    const fab = document.createElement('button');
+    fab.className = 'ew-fab';
+    fab.type = 'button';
+    fab.setAttribute('aria-label', 'פתח בוט חיפוש משרה');
+    fab.innerHTML = FAB_ICON + '<span class="ew-fab-label">מצא לי משרה</span>';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ew-overlay';
+    overlay.innerHTML =
+      '<div class="ew-panel" role="dialog" aria-label="בוט חיפוש משרה">' +
+        '<div class="ew-panel-header">' +
+          '<div>' +
+            '<div class="ew-panel-title">בוט חיפוש משרה</div>' +
+            '<div class="ew-panel-title-sub">שיחה קצרה. תוצאות מותאמות.</div>' +
+          '</div>' +
+          '<button class="ew-close" type="button" aria-label="סגור">×</button>' +
+        '</div>' +
+        '<div id="ew-chat-root"></div>' +
+      '</div>';
+
+    document.body.appendChild(fab);
+    document.body.appendChild(overlay);
+
+    const chatRoot = overlay.querySelector('#ew-chat-root');
+    const closeBtn = overlay.querySelector('.ew-close');
+    let chatStarted = false;
+
+    function open() {
+      overlay.classList.add('open');
+      if (!chatStarted) {
+        ensureChatEngine(() => {
+          const chat = new window.EduraChat(chatRoot);
+          chat.start();
+          chatStarted = true;
+        });
+      }
+    }
+    function close() { overlay.classList.remove('open'); }
+
+    fab.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', buildWidget);
+  } else {
+    buildWidget();
+  }
+})();
