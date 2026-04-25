@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Edura — אימות נתונים · 726 משרות</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Heebo', system-ui, sans-serif; margin: 0; background: #f9f7f3; color: #1a1a1a; }
+  header { padding: 24px 32px; background: #fff; border-bottom: 1px solid #e5e0d6; position: sticky; top: 0; z-index: 10; }
+  header h1 { margin: 0 0 8px; font-size: 20px; }
+  header .meta { font-size: 13px; color: #666; }
+  header .stats { margin-top: 12px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
+  header .stats span { background: #f1ede4; padding: 4px 10px; border-radius: 999px; }
+  .filters { padding: 16px 32px; background: #fff; border-bottom: 1px solid #e5e0d6; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .filters input, .filters select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; font-size: 13px; }
+  .filters input { flex: 1; min-width: 200px; }
+  .filters .count { margin-right: auto; font-weight: 700; color: #b8860b; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+  th { background: #f1ede4; padding: 12px 8px; text-align: right; font-weight: 700; border-bottom: 2px solid #d4cdb8; position: sticky; top: 130px; cursor: pointer; user-select: none; }
+  th:hover { background: #e8e2d2; }
+  th.sorted-asc::after { content: ' ↑'; }
+  th.sorted-desc::after { content: ' ↓'; }
+  td { padding: 10px 8px; border-bottom: 1px solid #ece9df; vertical-align: top; }
+  tr:hover { background: #fcfaf4; }
+  .src-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .src-igm { background: #e8f5e9; color: #1b5e20; }
+  .src-itu { background: #e3f2fd; color: #0d47a1; }
+  .src-shatil { background: #fff3e0; color: #e65100; }
+  .role-badge { background: #f3e8ff; color: #6b21a8; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+  .region-badge { background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+  td.snippet { max-width: 320px; color: #555; line-height: 1.4; }
+  td a { color: #0066cc; text-decoration: none; }
+  td a:hover { text-decoration: underline; }
+  .nowrap { white-space: nowrap; }
+  .empty { padding: 60px 32px; text-align: center; color: #999; }
+  .pager { padding: 16px 32px; text-align: center; }
+  .pager button { padding: 6px 14px; margin: 0 4px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer; font-family: inherit; }
+  .pager button:hover:not(:disabled) { background: #f1ede4; }
+  .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pager span { margin: 0 12px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Edura — אימות נתונים</h1>
+  <div class="meta">טבלת כל המשרות שנאספו, עם סינון ומיון. השוואה ישירה מול המקור.</div>
+  <div class="stats" id="stats">טוען…</div>
+</header>
+
+<div class="filters">
+  <input id="q" placeholder="חיפוש: בית ספר, מקצוע, עיר, איש קשר…" />
+  <select id="src">
+    <option value="">מקור: הכל</option>
+    <option value="igm">ארגון המורים</option>
+    <option value="itu">הסתדרות המורים</option>
+    <option value="shatil">שתיל</option>
+  </select>
+  <select id="region">
+    <option value="">אזור: הכל</option>
+  </select>
+  <select id="role">
+    <option value="">תפקיד: הכל</option>
+  </select>
+  <select id="has">
+    <option value="">פרטי קשר: הכל</option>
+    <option value="email">יש מייל</option>
+    <option value="phone">יש טלפון</option>
+    <option value="both">גם וגם</option>
+    <option value="none">אין כלום</option>
+  </select>
+  <span class="count" id="count">…</span>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th data-sort="source">מקור</th>
+      <th data-sort="date_iso">תאריך</th>
+      <th data-sort="region">אזור</th>
+      <th data-sort="city">עיר</th>
+      <th data-sort="school">בית ספר / כותרת</th>
+      <th data-sort="subject">מקצוע</th>
+      <th data-sort="role">תפקיד</th>
+      <th data-sort="scope">היקף</th>
+      <th>תיאור</th>
+      <th>איש קשר</th>
+      <th>מייל</th>
+      <th>טלפון</th>
+      <th>קישור</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<div class="pager" id="pager"></div>
+
+<script>
+let allJobs = [];
+let filtered = [];
+let sortBy = 'date_iso';
+let sortDir = 'desc';
+let page = 0;
+const PER_PAGE = 100;
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="13" class="empty">אין תוצאות לסינון הנוכחי</td></tr>';
+    document.getElementById('pager').innerHTML = '';
+    return;
+  }
+  const start = page * PER_PAGE;
+  const slice = filtered.slice(start, start + PER_PAGE);
+  tbody.innerHTML = slice.map(j => `
+    <tr>
+      <td class="nowrap"><span class="src-badge src-${j.source}">${escapeHtml(j.source_name || j.source)}</span></td>
+      <td class="nowrap">${escapeHtml(j.date || j.date_iso || '')}</td>
+      <td>${j.region ? `<span class="region-badge">${escapeHtml(j.region)}</span>` : '—'}</td>
+      <td>${escapeHtml(j.city || '—')}</td>
+      <td>${escapeHtml((j.school || j.title || '').slice(0, 60))}</td>
+      <td>${escapeHtml(j.subject || '—')}</td>
+      <td><span class="role-badge">${escapeHtml(j.role || '—')}</span></td>
+      <td>${escapeHtml(j.scope || '—')}</td>
+      <td class="snippet">${escapeHtml((j.snippet || j.description || '').slice(0, 200))}</td>
+      <td>${escapeHtml(j.contact_name || '—')}</td>
+      <td>${j.email ? `<a href="mailto:${escapeHtml(j.email)}">${escapeHtml(j.email)}</a>` : '—'}</td>
+      <td class="nowrap">${j.phone ? `<a href="tel:${escapeHtml(j.phone)}">${escapeHtml(j.phone)}</a>` : '—'}</td>
+      <td>${j.url ? `<a href="${escapeHtml(j.url)}" target="_blank" rel="noopener">↗</a>` : '—'}</td>
+    </tr>
+  `).join('');
+
+  // Pager
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  document.getElementById('pager').innerHTML = `
+    <button onclick="goPage(0)" ${page === 0 ? 'disabled' : ''}>«</button>
+    <button onclick="goPage(${page - 1})" ${page === 0 ? 'disabled' : ''}>‹</button>
+    <span>עמוד ${page + 1} מתוך ${totalPages} · ${filtered.length} תוצאות</span>
+    <button onclick="goPage(${page + 1})" ${page >= totalPages - 1 ? 'disabled' : ''}>›</button>
+    <button onclick="goPage(${totalPages - 1})" ${page >= totalPages - 1 ? 'disabled' : ''}>»</button>
+  `;
+}
+
+function goPage(p) { page = p; render(); window.scrollTo(0, 130); }
+window.goPage = goPage;
+
+function applyFilters() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const src = document.getElementById('src').value;
+  const region = document.getElementById('region').value;
+  const role = document.getElementById('role').value;
+  const has = document.getElementById('has').value;
+
+  filtered = allJobs.filter(j => {
+    if (src && j.source !== src) return false;
+    if (region && j.region !== region) return false;
+    if (role && j.role !== role) return false;
+    if (has === 'email' && !j.email) return false;
+    if (has === 'phone' && !j.phone) return false;
+    if (has === 'both' && (!j.email || !j.phone)) return false;
+    if (has === 'none' && (j.email || j.phone)) return false;
+    if (q) {
+      const hay = [j.school, j.title, j.subject, j.city, j.region, j.contact_name, j.email, j.role, j.snippet, j.description].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    const va = (a[sortBy] || '').toString();
+    const vb = (b[sortBy] || '').toString();
+    if (va < vb) return sortDir === 'asc' ? -1 : 1;
+    if (va > vb) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  page = 0;
+  document.getElementById('count').textContent = `${filtered.length} מ-${allJobs.length} משרות`;
+  render();
+}
+
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (sortBy === col) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortBy = col;
+      sortDir = 'asc';
+    }
+    document.querySelectorAll('th').forEach(t => t.classList.remove('sorted-asc', 'sorted-desc'));
+    th.classList.add('sorted-' + sortDir);
+    applyFilters();
+  });
+});
+
+['q', 'src', 'region', 'role', 'has'].forEach(id => {
+  document.getElementById(id).addEventListener('input', applyFilters);
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+
+async function init() {
+  const res = await fetch('jobs.json', { cache: 'no-store' });
+  const data = await res.json();
+  allJobs = data.jobs;
+  // Stats
+  const withEmail = allJobs.filter(j => j.email).length;
+  const withPhone = allJobs.filter(j => j.phone).length;
+  const withDesc = allJobs.filter(j => j.description && j.description.length > 30).length;
+  document.getElementById('stats').innerHTML = `
+    <span>סה"כ: <strong>${data.total}</strong></span>
+    <span>עם מייל: <strong>${withEmail}</strong> (${Math.round(withEmail/data.total*100)}%)</span>
+    <span>עם טלפון: <strong>${withPhone}</strong> (${Math.round(withPhone/data.total*100)}%)</span>
+    <span>עם תיאור: <strong>${withDesc}</strong> (${Math.round(withDesc/data.total*100)}%)</span>
+    <span>מקור: igm ${data.by_source.igm} · itu ${data.by_source.itu} · shatil ${data.by_source.shatil}</span>
+    <span>עודכן: ${data.updated_at}</span>
+  `;
+  // Populate region dropdown
+  const regions = [...new Set(allJobs.map(j => j.region).filter(Boolean))].sort();
+  document.getElementById('region').innerHTML = '<option value="">אזור: הכל</option>' +
+    regions.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+  // Populate role dropdown
+  const roles = [...new Set(allJobs.map(j => j.role).filter(Boolean))].sort();
+  document.getElementById('role').innerHTML = '<option value="">תפקיד: הכל</option>' +
+    roles.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+
+  document.querySelector('th[data-sort="date_iso"]').classList.add('sorted-desc');
+  applyFilters();
+}
+
+init().catch(err => {
+  document.getElementById('tbody').innerHTML = `<tr><td colspan="13" class="empty">שגיאה בטעינת jobs.json: ${err.message}</td></tr>`;
+});
+</script>
+
+</body>
+</html>
