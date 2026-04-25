@@ -193,6 +193,22 @@ def derive_level(text):
     return ''
 
 
+def derive_scope(text, existing=''):
+    """מחלץ היקף משרה ומנרמל ל-3 קטגוריות עיקריות: מלאה / חלקית / מלאה+חלקית."""
+    t = (existing or '') + ' ' + (text or '')
+    has_full = bool(re.search(r'משרה\s+מלאה|\bמלאה\b|\b100\s*%', t))
+    has_partial = bool(re.search(r'חלקית|חצי\s+משרה|חצי(?!\s+שנה)|שליש|שעות\s+בודדות|\b\d{1,2}\s*%|\b\d{1,3}\s*ש["״]ש|ש"ש', t))
+    if has_full and has_partial:
+        return 'מלאה/חלקית'
+    if has_full:
+        return 'מלאה'
+    if has_partial:
+        return 'חלקית'
+    if re.search(r'גמיש', t):
+        return 'גמישה'
+    return existing or ''
+
+
 def derive_sector(text):
     """מחזיר מגזר: ממלכתי / ממ"ד / חרדי / ערבי / '' (ברירת מחדל = ממלכתי)."""
     t = text or ''
@@ -321,7 +337,7 @@ def transform_igm(raw):
             'region': REGION_NORMALIZE.get(j.get('location_heb_title', ''), j.get('location_heb_title', '')),
             'sub_area': j.get('sub_area', ''),
             'city': j.get('city', ''),
-            'scope': scope,
+            'scope': derive_scope(info, scope),
             'contact_name': contact['contact_name'],
             'email': contact['email'] or j.get('template_link', ''),
             'phone': contact['phone'],
@@ -364,7 +380,7 @@ def transform_itu(raw):
             'region': REGION_NORMALIZE.get(j.get('region', ''), j.get('region', '')),
             'sub_area': '',
             'city': find_city(title + ' ' + description + ' ' + institute),
-            'scope': '',
+            'scope': derive_scope(title + ' ' + description),
             'contact_name': '',
             'email': j.get('email', ''),
             'phone': j.get('phone', ''),
@@ -406,7 +422,7 @@ def transform_shatil(raw):
             'region': norm_region(zones),
             'sub_area': zones,
             'city': find_city(title + ' ' + desc),
-            'scope': j.get('jobType', ''),
+            'scope': derive_scope(title + ' ' + desc, j.get('jobType', '')),
             'contact_name': j.get('contact', ''),
             'email': email,
             'phone': j.get('phone', ''),
@@ -443,6 +459,7 @@ def main():
     by_role = Counter(j['role'] for j in unique)
     by_level = Counter(j.get('level') or '(לא זוהה)' for j in unique)
     by_sector = Counter(j.get('sector') or '(לא זוהה)' for j in unique)
+    by_scope = Counter(j.get('scope') or '(לא זוהה)' for j in unique)
 
     out = {
         'updated_at': '2026-04-25',
@@ -452,6 +469,7 @@ def main():
         'by_role': dict(by_role),
         'by_level': dict(by_level),
         'by_sector': dict(by_sector),
+        'by_scope': dict(by_scope),
         'jobs': unique,
     }
     with open(OUT, 'w', encoding='utf-8') as f:
