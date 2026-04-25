@@ -340,6 +340,11 @@
       משרות חדשות · סקירת רשת
       <span class="badge" id="discoCount">—</span>
     </button>
+    <button class="tab-btn" data-tab="morning">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      הבוקר
+      <span class="badge" id="morningCount">—</span>
+    </button>
   </div>
 
   <!-- My Jobs Pane -->
@@ -372,6 +377,20 @@
 
     <div class="disco-group-title">דפי קריירה של ארגונים רלוונטיים</div>
     <div class="board-grid" id="orgs"></div>
+  </div>
+
+  <!-- Morning Pane -->
+  <div class="tab-pane" id="pane-morning">
+    <div class="disco-intro">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      <div>
+        <h3>סקירת בוקר אוטומטית · עדכון אחרון <span class="disco-date" id="morningUpdated">—</span></h3>
+        <p>סוכן יומי סורק 8 לוחות דרושים כל בוקר ב-06:30 ומסנן לפי המילים: חדשנות · טכנו-פדגוגיה · AI · בינה מלאכותית · ניהול חינוכי · רכז תוכניות. גם נשלח אלייך מייל למלפלג@gmail.com.</p>
+      </div>
+    </div>
+    <div class="jobs" id="morningJobs">
+      <div style="text-align:center;padding:40px;color:var(--ink-soft);">טוען…</div>
+    </div>
   </div>
 
 </div>
@@ -716,8 +735,89 @@
     });
   });
 
+  // Morning scan — load from Apps Script Web App
+  // After deploying jobs-scanner-apps-script.js, paste the Web App URL here:
+  const SCAN_API_URL = ''; // <-- TODO: paste deployed Web App URL
+
+  async function loadMorning() {
+    const container = document.getElementById('morningJobs');
+    const updatedEl = document.getElementById('morningUpdated');
+    const badgeEl = document.getElementById('morningCount');
+
+    if (!SCAN_API_URL) {
+      container.innerHTML =
+        '<div style="text-align:center;padding:40px;color:var(--ink-soft);background:#fff;border:1px dashed var(--line);border-radius:14px;">' +
+          '<div style="font-weight:700;color:var(--ink);margin-bottom:8px;">הסוכן עוד לא הותקן</div>' +
+          '<div style="font-size:13px;">פתחי את <code style="background:var(--sand);padding:2px 6px;border-radius:4px;">jobs-scanner-apps-script.js</code> ועקבי אחרי הוראות ההתקנה.</div>' +
+        '</div>';
+      badgeEl.textContent = '0';
+      return;
+    }
+
+    try {
+      const res = await fetch(SCAN_API_URL);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'unknown');
+
+      const jobs = data.jobs || [];
+      badgeEl.textContent = jobs.length;
+      if (data.updated) {
+        const d = new Date(data.updated);
+        updatedEl.textContent = d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      if (jobs.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ink-soft);">אין משרות חדשות עדיין. הסוכן ירוץ מחר בבוקר.</div>';
+        return;
+      }
+
+      container.innerHTML = jobs.map(j => {
+        const id = 'morning_' + (j.url || '').slice(0, 40);
+        const s = jobState(id);
+        const kws = (j.keywords || []).map(k => '<span class="tag primary">' + k + '</span>').join('');
+        const seen = j.firstSeen ? new Date(j.firstSeen).toLocaleDateString('he-IL') : '';
+        return (
+          '<article class="job ' + (s.done ? 'done' : '') + '" data-id="' + id + '">' +
+            '<div class="job-check ' + (s.done ? 'checked' : '') + '" data-action="toggle"></div>' +
+            '<div class="job-body">' +
+              '<div class="job-org">' + (j.sourceName || '') + ' · ' + seen + '</div>' +
+              '<div class="job-title">' + (j.title || '') + '</div>' +
+              '<div class="job-meta">' + kws + '</div>' +
+              '<textarea class="job-notes" placeholder="הערות…" data-action="notes">' + (s.notes || '') + '</textarea>' +
+            '</div>' +
+            '<div class="job-actions">' +
+              '<a class="job-btn primary" href="' + j.url + '" target="_blank" rel="noopener">פתח משרה' +
+                '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H8M17 7v9"/></svg>' +
+              '</a>' +
+              '<select class="status-select" data-action="status">' +
+                STATUS_OPTIONS.map(o => '<option value="' + o.v + '"' + (s.status === o.v ? ' selected' : '') + '>' + o.t + '</option>').join('') +
+              '</select>' +
+            '</div>' +
+          '</article>'
+        );
+      }).join('');
+
+      container.querySelectorAll('.job').forEach(card => {
+        const id = card.dataset.id;
+        card.querySelector('[data-action="toggle"]').addEventListener('click', () => {
+          const s = jobState(id); s.done = !s.done; state[id] = s; saveState(); loadMorning();
+        });
+        card.querySelector('[data-action="notes"]').addEventListener('input', (e) => {
+          const s = jobState(id); s.notes = e.target.value; state[id] = s; saveState();
+        });
+        card.querySelector('[data-action="status"]').addEventListener('change', (e) => {
+          const s = jobState(id); s.status = e.target.value; state[id] = s; saveState();
+        });
+      });
+    } catch (err) {
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:#c45530;">שגיאה בטעינת הסקירה: ' + err.message + '</div>';
+      badgeEl.textContent = '!';
+    }
+  }
+
   render();
   renderDiscovery();
+  loadMorning();
 </script>
 
 </body>
