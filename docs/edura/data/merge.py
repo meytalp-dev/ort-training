@@ -177,6 +177,20 @@ def parse_contact_block(s):
     return out
 
 
+def derive_level(text):
+    """מחזיר 'יסודי' / 'חטיבת ביניים' / 'תיכון' / 'גן' / '' לפי הטקסט."""
+    t = text or ''
+    if re.search(r'חט[״"\']ב|חטיבת\s+ביניים|חטה[״"\']ב|חטיבה\s+צעירה', t):
+        return 'חטיבת ביניים'
+    if re.search(r'יסודי|בית\s+ספר\s+יסודי|בי[ת"\']ס\s+יסודי', t):
+        return 'יסודי'
+    if re.search(r'תיכון|חטיבה\s+עליונה|חט[״"\']ע|מקיף|ישיבה\s+תיכונית|אולפנה|ישיבת\s+תיכונית|בגרות', t):
+        return 'תיכון'
+    if re.search(r'גן\s+ילדים|גנון|גני\s+ילדים|גן\s+חובה|גננת', t):
+        return 'גן'
+    return ''
+
+
 def derive_role(text, profession=''):
     t = (text or '') + ' ' + (profession or '')
     if re.search(r'מנהל[ת]?\s+(בית\s+ספר|תיכון|ביה"ס)', t): return 'מנהל/ת'
@@ -288,6 +302,7 @@ def transform_igm(raw):
             'title': full_title,
             'subject': subject,
             'role': derive_role(title + ' ' + info + ' ' + subject, subject),
+            'level': derive_level(title + ' ' + info + ' ' + scope),
             'region': REGION_NORMALIZE.get(j.get('location_heb_title', ''), j.get('location_heb_title', '')),
             'sub_area': j.get('sub_area', ''),
             'city': j.get('city', ''),
@@ -329,6 +344,7 @@ def transform_itu(raw):
             'title': title,
             'subject': profession,
             'role': derive_role(title + ' ' + description + ' ' + field, profession),
+            'level': derive_level(title + ' ' + description + ' ' + field + ' ' + institute),
             'region': REGION_NORMALIZE.get(j.get('region', ''), j.get('region', '')),
             'sub_area': '',
             'city': find_city(title + ' ' + description + ' ' + institute),
@@ -369,6 +385,7 @@ def transform_shatil(raw):
             'title': title,
             'subject': '',
             'role': derive_role(title + ' ' + desc),
+            'level': derive_level(title + ' ' + desc),
             'region': norm_region(zones),
             'sub_area': zones,
             'city': find_city(title + ' ' + desc),
@@ -407,6 +424,7 @@ def main():
     by_source = Counter(j['source'] for j in unique)
     by_region = Counter(j['region'] or '(לא זוהה)' for j in unique)
     by_role = Counter(j['role'] for j in unique)
+    by_level = Counter(j.get('level') or '(לא זוהה)' for j in unique)
 
     out = {
         'updated_at': '2026-04-25',
@@ -414,6 +432,7 @@ def main():
         'by_source': dict(by_source),
         'by_region': dict(by_region),
         'by_role': dict(by_role),
+        'by_level': dict(by_level),
         'jobs': unique,
     }
     with open(OUT, 'w', encoding='utf-8') as f:
