@@ -353,11 +353,14 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       const scope = j.scope ? '<span class="ec-tag">' + esc(j.scope) + '</span>' : '';
       const dateStr = j.date ? '<span class="ec-job-date">' + esc(j.date) + '</span>' : '';
 
-      // CTA חכם: עדיפות למייל, אז טלפון, אז קישור
+      // CTA חכם: עדיפות למייל (Gmail compose URL — עובד תמיד, גם בלי לקוח מייל),
+      // אז טלפון, אז קישור.
       let cta = '';
       if (j.email) {
-        const mailSubj = encodeURIComponent('פנייה דרך אדורה — ' + (j.school || j.title || ''));
-        cta = '<a class="ec-job-cta" href="mailto:' + esc(j.email) + '?subject=' + mailSubj + '">שלחו מייל ←</a>';
+        const subj = encodeURIComponent('פנייה דרך אדורה — ' + (j.school || j.title || ''));
+        const body = encodeURIComponent('שלום' + (j.contact_name ? ' ' + j.contact_name : '') + ',\n\nראיתי את המשרה שלכם באתר אדורה ואשמח להציג מועמדות.\n\n');
+        const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(j.email) + '&su=' + subj + '&body=' + body;
+        cta = '<a class="ec-job-cta" href="' + gmailUrl + '" target="_blank" rel="noopener">שלחו מייל ←</a>';
       } else if (j.phone) {
         cta = '<a class="ec-job-cta" href="tel:' + esc(j.phone.replace(/\s+/g,'')) + '">חייגו ' + esc(j.phone) + '</a>';
       } else if (j.url) {
