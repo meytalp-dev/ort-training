@@ -34,7 +34,14 @@ const FEEDBACK_PRINT_CSS = `
   .insight-item:nth-child(1),
   .insight-item:nth-child(3),
   .insight-item:nth-child(5) { display: none !important; }
-  .insight-grid { grid-template-columns: 1fr 1fr !important; }
+  /* Re-flow remaining 3 items in a single row so there's no empty gap */
+  .insight-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+  }
+  .insight-item { padding: 14px !important; }
+  .insight-text { font-size: 0.88rem !important; line-height: 1.55 !important; }
 
   /* Tighten layout */
   .header { padding: 24px 20px !important; margin-bottom: 18px !important; }
