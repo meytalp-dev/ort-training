@@ -180,6 +180,46 @@
     color: var(--ink-light);
   }
 
+  .cell-delete {
+    text-align: center;
+    min-width: 50px;
+  }
+  .btn-delete {
+    background: transparent;
+    border: 1.5px solid var(--coral-soft);
+    color: #b26650;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+    transition: all 0.15s;
+  }
+  .btn-delete:hover { background: #b26650; color: white; border-color: #b26650; }
+
+  tr.deleted { opacity: 0.4; text-decoration: line-through; }
+  tr.deleted .btn-delete {
+    border-color: var(--sage-soft);
+    color: #4f7047;
+  }
+  tr.deleted .btn-delete:hover { background: #4f7047; color: white; }
+
+  .delete-banner {
+    background: var(--butter-soft);
+    border: 1px solid var(--butter);
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    display: none;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+  }
+  .delete-banner.show { display: flex; }
+  .delete-banner strong { color: #8a6d1f; }
+
   .actions-bar {
     margin-top: 1rem;
     display: flex; gap: 0.5rem; flex-wrap: wrap;
@@ -243,7 +283,7 @@
 <main class="container">
 
   <div class="table-header">
-    <h1>טבלת מענים מלאה — <span id="total-count">559</span> רשומות</h1>
+    <h1>טבלת מענים מלאה — <span id="total-count">694</span> רשומות</h1>
     <p class="meta">חולץ באמצעות AI מ-42,880 הודעות בשני צ'אטי אמהות תקשורתיות (2020–2026). עמודת "המלצה" משקפת את הטון של ההורים בצ'אט. כל רשומה דורשת אימות לפני שימוש רשמי.</p>
   </div>
 
@@ -274,12 +314,20 @@
     <span class="count-pill" id="count">214</span>
   </div>
 
+  <div class="delete-banner" id="delete-banner">
+    <strong>מחקת <span id="deleted-count">0</span> מענים</strong>
+    <span style="color: var(--ink-soft);">— נשמר מקומית בדפדפן בלבד. לחצי "ייצוא רשימת מחיקה" כדי לשלוח לי לעדכון קבוע.</span>
+    <button class="btn-sm" id="export-deletions">📄 ייצוא רשימת מחיקה</button>
+    <button class="btn-sm" id="clear-deletions">↩ ביטול הכל</button>
+  </div>
+
   <div class="actions-bar">
     <button class="btn-sm" id="download-csv">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       הורדה כ-CSV
     </button>
     <button class="btn-sm" id="toggle-quotes">כיווץ ציטוטים ↕</button>
+    <button class="btn-sm" id="toggle-deleted">הצגה/הסתרת מחוקים 👁</button>
     <button class="btn-sm" id="reset">איפוס</button>
   </div>
 
@@ -298,6 +346,7 @@
           <th data-key="אתר">אתר</th>
           <th data-key="הקשר/ציטוט">ציטוט מהצ'אט</th>
           <th data-key="תדירות אזכור" class="sorted">אזכורים <span class="arrow">↓</span></th>
+          <th>מחיקה</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -312,6 +361,21 @@ let filtered = [];
 let sortKey = 'תדירות אזכור';
 let sortDir = -1;
 let quotesCollapsed = true;
+let deletedIds = new Set(JSON.parse(localStorage.getItem('oti-deleted') || '[]'));
+let showDeleted = false;
+
+function rowKey(r) { return (r['שם'] || '') + '||' + (r['קטגוריה'] || ''); }
+function saveDeletions() {
+  localStorage.setItem('oti-deleted', JSON.stringify([...deletedIds]));
+  updateDeleteBanner();
+}
+function updateDeleteBanner() {
+  const banner = document.getElementById('delete-banner');
+  const count = document.getElementById('deleted-count');
+  count.textContent = deletedIds.size;
+  if (deletedIds.size > 0) banner.classList.add('show');
+  else banner.classList.remove('show');
+}
 
 const CAT_CLASS = {
   'מסגרות חינוך': 'cat-edu',
@@ -362,10 +426,14 @@ function renderLinks(text) {
 function render() {
   const tbody = document.getElementById('tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">לא נמצאו תוצאות — נסי לשנות סינון</td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="12">לא נמצאו תוצאות — נסי לשנות סינון</td></tr>';
   } else {
-    tbody.innerHTML = filtered.map(r => `
-      <tr>
+    tbody.innerHTML = filtered.map(r => {
+      const key = rowKey(r);
+      const isDeleted = deletedIds.has(key);
+      const dataKey = encodeURIComponent(key);
+      return `
+      <tr class="${isDeleted ? 'deleted' : ''}" data-key="${dataKey}">
         <td class="cell-name">${escapeHtml(r['שם'])}</td>
         <td><span class="cell-cat ${CAT_CLASS[r['קטגוריה']] || ''}">${escapeHtml(r['קטגוריה'])}</span></td>
         <td>${renderSentiment(r['המלצה'])}</td>
@@ -374,11 +442,25 @@ function render() {
         <td class="cell-ages">${escapeHtml(r['גילאים'])}</td>
         <td class="cell-loc">${escapeHtml(r['אזור'])}</td>
         <td class="cell-phone">${renderPhones(r['טלפון'])}</td>
-        <td class="cell-web">${renderLinks(r['אתר'])}${r['url_status'] ? `<span class="url-dot url-${r['url_status']}" title="${r['url_status']==='ok'?'הקישור עובד':r['url_status']==='uncertain'?'חסום לבוטים (כנראה תקין)':'שבור/לא נגיש'}"></span>` : ''}</td>
+        <td class="cell-web">${renderLinks(r['אתר'])}${r['url_status'] && r['url_status']!=='no-url' ? `<span class="url-dot url-${r['url_status']}" title="${r['url_status']==='ok'?'הקישור עובד':r['url_status']==='uncertain'?'חסום לבוטים (כנראה תקין)':'שבור/לא נגיש'}"></span>` : ''}</td>
         <td class="cell-quote ${quotesCollapsed ? '' : 'expanded'}" title="${escapeHtml(r['מקור'])}">${escapeHtml(r['הקשר/ציטוט'])}</td>
         <td class="cell-count">${escapeHtml(r['תדירות אזכור'])}</td>
-      </tr>
-    `).join('');
+        <td class="cell-delete">
+          <button class="btn-delete" data-key="${dataKey}" title="${isDeleted ? 'שחזור' : 'מחיקה'}">${isDeleted ? '↩' : '✕'}</button>
+        </td>
+      </tr>`;
+    }).join('');
+    // Wire up delete buttons
+    tbody.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const key = decodeURIComponent(btn.dataset.key);
+        if (deletedIds.has(key)) deletedIds.delete(key);
+        else deletedIds.add(key);
+        saveDeletions();
+        render();
+      });
+    });
   }
   document.getElementById('count').textContent = filtered.length;
 }
@@ -391,10 +473,11 @@ function applyFilters() {
   const urlStatus = document.getElementById('url-filter').value;
 
   filtered = DATA.filter(r => {
+    if (!showDeleted && deletedIds.has(rowKey(r))) return false;
     if (cat && r['קטגוריה'] !== cat) return false;
     if (age && !(r['גילאים'] || '').includes(age)) return false;
     if (region && !(r['אזור'] || '').includes(region)) return false;
-    if (urlStatus === 'none' && r['url_status']) return false;
+    if (urlStatus === 'none' && r['url_status'] && r['url_status'] !== 'no-url') return false;
     if (urlStatus && urlStatus !== 'none' && r['url_status'] !== urlStatus) return false;
     if (q) {
       const blob = (r['שם'] + ' ' + r['אזור'] + ' ' + r['הקשר/ציטוט'] + ' ' + r['תת-קטגוריה'] + ' ' + (r['התמחות'] || '') + ' ' + (r['הערות'] || '')).toLowerCase();
@@ -448,6 +531,35 @@ document.getElementById('toggle-quotes').addEventListener('click', () => {
   render();
 });
 
+document.getElementById('toggle-deleted').addEventListener('click', () => {
+  showDeleted = !showDeleted;
+  applyFilters();
+});
+
+document.getElementById('export-deletions').addEventListener('click', () => {
+  if (deletedIds.size === 0) { alert('אין מענים מחוקים'); return; }
+  const list = [...deletedIds].map(k => {
+    const [name, cat] = k.split('||');
+    return { 'שם': name, 'קטגוריה': cat };
+  });
+  const headers = ['שם', 'קטגוריה'];
+  const esc = s => `"${(s || '').replace(/"/g, '""')}"`;
+  const csv = '\uFEFF' + headers.join(',') + '\n' +
+    list.map(r => headers.map(h => esc(r[h])).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'oti-deletions-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+});
+
+document.getElementById('clear-deletions').addEventListener('click', () => {
+  if (!confirm('לבטל את כל המחיקות?')) return;
+  deletedIds.clear();
+  saveDeletions();
+  applyFilters();
+});
+
 document.getElementById('download-csv').addEventListener('click', () => {
   const headers = ['שם', 'קטגוריה', 'המלצה', 'תת-קטגוריה', 'התמחות', 'גילאים', 'אזור', 'טלפון', 'אתר', 'הקשר/ציטוט', 'מקור', 'תדירות אזכור', 'הערות'];
   const esc = s => `"${(s || '').replace(/"/g, '""')}"`;
@@ -494,7 +606,8 @@ async function load() {
 
   filtered = [...DATA];
   sortFiltered();
-  render();
+  updateDeleteBanner();
+  applyFilters();
 }
 
 load();
