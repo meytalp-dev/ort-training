@@ -46,6 +46,11 @@
   .toolbar button { padding: 6px 12px; background: #fff; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; }
   .toolbar button:hover { background: #fff8e1; }
   .toolbar .count-deleted { font-weight: 700; color: #b8860b; }
+  td.editable { cursor: pointer; position: relative; }
+  td.editable:hover { background: #fef9e7; outline: 1px dashed #d4af37; }
+  td.editable.empty { color: #c00; font-style: italic; }
+  td.editable.edited { background: #e8f5e9; }
+  td.editable input { width: 100%; padding: 4px; border: 1px solid #4caf50; border-radius: 3px; font-family: inherit; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -60,9 +65,15 @@
   <strong>מחיקת לא-רלוונטיות:</strong>
   <span>לחיצה על × תסיר את השורה. הנמחקות נשמרות מקומית (localStorage).</span>
   <span class="count-deleted" id="count-deleted">0 נמחקו</span>
-  <button onclick="exportDeleted()">העתק רשימת נמחקות (לזיכרון של Claude)</button>
+  <button onclick="exportDeleted()">העתק רשימת נמחקות</button>
   <button onclick="undoLast()">↩ ביטול אחרון</button>
   <button onclick="resetDeleted()" style="color: #c00;">איפוס מחיקות</button>
+  <span style="border-right: 1px solid #ddd; margin: 0 4px; height: 20px;"></span>
+  <button onclick="exportCityEdits()">העתק עריכות עיר</button>
+  <button onclick="resetCityEdits()" style="color: #c00;">איפוס עריכות עיר</button>
+  <span style="border-right: 1px solid #ddd; margin: 0 4px; height: 20px;"></span>
+  <button onclick="exportSchoolEdits()">העתק עריכות בית ספר</button>
+  <button onclick="resetSchoolEdits()" style="color: #c00;">איפוס עריכות בית ספר</button>
 </div>
 
 <div class="filters">
@@ -121,8 +132,91 @@ let sortDir = 'desc';
 let page = 0;
 const PER_PAGE = 100;
 const DEL_KEY = 'edura-deleted-jobs';
+const CITY_KEY = 'edura-city-edits';
+const SCHOOL_KEY = 'edura-school-edits';
 let deleted = new Set(JSON.parse(localStorage.getItem(DEL_KEY) || '[]'));
+let cityEdits = JSON.parse(localStorage.getItem(CITY_KEY) || '{}');
+let schoolEdits = JSON.parse(localStorage.getItem(SCHOOL_KEY) || '{}');
 let deleteHistory = [];
+
+function persistCityEdits() {
+  localStorage.setItem(CITY_KEY, JSON.stringify(cityEdits));
+}
+function editCity(td, jobId) {
+  if (td.querySelector('input')) return;
+  const cur = cityEdits[jobId] !== undefined ? cityEdits[jobId] : (allJobs.find(x => x.id === jobId)?.city || '');
+  const inp = document.createElement('input');
+  inp.value = cur;
+  td.innerHTML = '';
+  td.appendChild(inp);
+  inp.focus();
+  inp.select();
+  function save() {
+    const v = inp.value.trim();
+    const orig = allJobs.find(x => x.id === jobId)?.city || '';
+    if (v === orig) delete cityEdits[jobId];
+    else cityEdits[jobId] = v;
+    persistCityEdits();
+    applyFilters();
+  }
+  inp.addEventListener('blur', save);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { e.preventDefault(); applyFilters(); }
+  });
+}
+function exportCityEdits() {
+  const items = Object.entries(cityEdits).map(([id, city]) => `${id}: ${city || '(נמחק)'}`);
+  const text = `Edura — עריכות עיר ידניות (${items.length}):\n\n${items.join('\n')}`;
+  navigator.clipboard.writeText(text).then(
+    () => alert(`✓ הועתק: ${items.length} עריכות.`),
+    () => prompt('העתיקי ידנית:', text)
+  );
+}
+function resetCityEdits() {
+  if (!confirm(`לאפס ${Object.keys(cityEdits).length} עריכות עיר?`)) return;
+  cityEdits = {};
+  persistCityEdits();
+  applyFilters();
+}
+window.editCity = editCity;
+window.exportCityEdits = exportCityEdits;
+window.resetCityEdits = resetCityEdits;
+
+function persistSchoolEdits() { localStorage.setItem(SCHOOL_KEY, JSON.stringify(schoolEdits)); }
+function editSchool(td, jobId) {
+  if (td.querySelector('input')) return;
+  const cur = schoolEdits[jobId] !== undefined ? schoolEdits[jobId] : (allJobs.find(x => x.id === jobId)?.school || '');
+  const inp = document.createElement('input');
+  inp.value = cur;
+  td.innerHTML = '';
+  td.appendChild(inp);
+  inp.focus(); inp.select();
+  function save() {
+    const v = inp.value.trim();
+    const orig = allJobs.find(x => x.id === jobId)?.school || '';
+    if (v === orig) delete schoolEdits[jobId]; else schoolEdits[jobId] = v;
+    persistSchoolEdits();
+    applyFilters();
+  }
+  inp.addEventListener('blur', save);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { e.preventDefault(); applyFilters(); }
+  });
+}
+function exportSchoolEdits() {
+  const items = Object.entries(schoolEdits).map(([id, s]) => `${id}: ${s}`);
+  const text = `Edura — עריכות בית ספר (${items.length}):\n\n${items.join('\n')}`;
+  navigator.clipboard.writeText(text).then(() => alert(`✓ הועתק: ${items.length} עריכות.`));
+}
+function resetSchoolEdits() {
+  if (!confirm(`לאפס ${Object.keys(schoolEdits).length} עריכות בית ספר?`)) return;
+  schoolEdits = {}; persistSchoolEdits(); applyFilters();
+}
+window.editSchool = editSchool;
+window.exportSchoolEdits = exportSchoolEdits;
+window.resetSchoolEdits = resetSchoolEdits;
 
 function persistDeleted() {
   localStorage.setItem(DEL_KEY, JSON.stringify([...deleted]));
@@ -173,8 +267,8 @@ function render() {
       <td class="nowrap"><span class="src-badge src-${j.source}">${escapeHtml(j.source_name || j.source)}</span></td>
       <td class="nowrap">${escapeHtml(j.date || j.date_iso || '')}</td>
       <td>${j.region ? `<span class="region-badge">${escapeHtml(j.region)}</span>` : '—'}</td>
-      <td>${escapeHtml(j.city || '—')}</td>
-      <td>${escapeHtml((j.school || j.title || '').slice(0, 60))}</td>
+      <td class="editable ${j._displayCity ? (cityEdits[j.id] !== undefined ? 'edited' : '') : 'empty'}" onclick="editCity(this, '${escapeHtml(j.id)}')" title="לחיצה לעריכה">${escapeHtml(j._displayCity || 'הוסיפי עיר')}</td>
+      <td class="editable ${schoolEdits[j.id] !== undefined ? 'edited' : ''}" onclick="editSchool(this, '${escapeHtml(j.id)}')" title="לחיצה לעריכה">${escapeHtml((j._displaySchool || '').slice(0, 60))}</td>
       <td>${escapeHtml(j.subject || '—')}</td>
       <td><span class="role-badge">${escapeHtml(j.role || '—')}</span></td>
       <td>${escapeHtml(j.scope || '—')}</td>
@@ -207,6 +301,12 @@ function applyFilters() {
   const region = document.getElementById('region').value;
   const role = document.getElementById('role').value;
   const has = document.getElementById('has').value;
+
+  // Apply manual overrides
+  allJobs.forEach(j => {
+    j._displayCity = cityEdits[j.id] !== undefined ? cityEdits[j.id] : j.city;
+    j._displaySchool = schoolEdits[j.id] !== undefined ? schoolEdits[j.id] : (j.school || j.title);
+  });
 
   filtered = allJobs.filter(j => {
     if (deleted.has(j.id)) return false;
