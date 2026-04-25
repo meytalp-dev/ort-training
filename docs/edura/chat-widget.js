@@ -158,7 +158,15 @@
     }
     #ew-chat-root .ec-job-snippet {
       font-size: 12px; color: #4A5A55;
-      margin-bottom: 10px; line-height: 1.5;
+      margin-bottom: 8px; line-height: 1.5;
+    }
+    #ew-chat-root .ec-job-contact {
+      font-size: 11px; color: #4A5A55; margin-bottom: 3px;
+    }
+    #ew-chat-root .ec-job-contact a { color: #1F6B5C; font-weight: 600; text-decoration: none; }
+    #ew-chat-root .ec-job-date {
+      font-size: 10px; color: #8A9994; font-weight: 400;
+      text-transform: none; letter-spacing: 0;
     }
     #ew-chat-root .ec-job-actions { display: flex; gap: 6px; }
     #ew-chat-root .ec-job-cta {

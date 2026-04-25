@@ -2,13 +2,14 @@
  * Edura · Chat Engine
  * ─────────────────────────────────────────────────────────────────
  * Wizard מבוסס כפתורים + טקסט חופשי (Gemini proxy).
- * משתמש ב-API_URL של Apps Script — אותו endpoint של האתר הראשי.
+ * משתמש ב-jobs.json — 440 משרות אמיתיות מ-shatil/itu/igm.
  *
  * שימוש:
  *   const chat = new EduraChat(rootElement);
  *   chat.start();
  */
 
+window.EDURA_JOBS_URL = 'data/jobs.json';
 window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9mJ6h55Kt9i6zKjcRZBscMYjrPkUV1BUuKhqT_n7ZLqC7cNZs7wR-Q/exec';
 
 (function () {
@@ -18,8 +19,22 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
   const ROLES = ['מורה', 'מחנך/ת', 'רכז/ת', 'יועץ/ת', 'מנהל/ת'];
   const SUBJECTS = ['מתמטיקה', 'אנגלית', 'עברית', 'תנ"ך', 'היסטוריה', 'אזרחות',
                     'פיזיקה', 'כימיה', 'ביולוגיה', 'מחשבים', 'מדעים', 'ספורט',
-                    'אומנות', 'מוזיקה', 'ערבית'];
-  const LEVELS = ['יסודי', 'חט"ב', 'תיכון'];
+                    'אומנות', 'מוזיקה', 'ערבית', 'לשון', 'ספרות', 'חינוך מיוחד'];
+  const LEVELS = ['יסודי', 'חטיבת ביניים', 'תיכון'];
+
+  // טיפול בשגיאות כתיב נפוצות בדאטה ("מתימטיקה" → "מתמטיקה")
+  const SUBJECT_ALIASES = {
+    'מתימטיקה': 'מתמטיקה',
+    'מתמט': 'מתמטיקה',
+    'מתמטיק': 'מתמטיקה',
+    'אנגל': 'אנגלית',
+    'תנך': 'תנ"ך',
+    'חט"ב': 'חטיבת ביניים'
+  };
+  function normalizeText(s) {
+    s = String(s || '').trim();
+    return SUBJECT_ALIASES[s] || s;
+  }
 
   const STORAGE_KEY = 'edura.chat.state.v1';
   const SAVED_KEY = 'edura.chat.saved.v1';
@@ -35,12 +50,16 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
 
     async start() {
       this.render();
-      this.botMsg('שלום! 👋 אני עוזר/ת למצוא משרת הוראה.');
+      this.botMsg('שלום! אני עוזר/ת למצוא משרת הוראה.');
       this.setStatus('טוען משרות...');
       try {
-        const res = await fetch(window.EDURA_API_URL);
+        const res = await fetch(window.EDURA_JOBS_URL);
         const data = await res.json();
-        this.allJobs = (data.jobs || []).filter(j => j.title && j.url);
+        this.allJobs = (data.jobs || []).map(j => ({
+          ...j,
+          subject: normalizeText(j.subject),
+          level: normalizeText(j.level)
+        }));
         this.setStatus('');
         this.botMsg('יש ' + this.allJobs.length + ' משרות פתוחות עכשיו. בואו נמצא לך את המתאימה.');
         this.askMode();
@@ -120,7 +139,9 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
 
     askLevel() {
       this.botMsg('איזה שכבה?', [
-        ...LEVELS.map(l => ({ label: l, onClick: () => this.setAndNext('level', l, 'showResults') })),
+        { label: 'יסודי', onClick: () => this.setAndNext('level', 'יסודי', 'showResults') },
+        { label: 'חט"ב', onClick: () => this.setAndNext('level', 'חטיבת ביניים', 'showResults') },
+        { label: 'תיכון', onClick: () => this.setAndNext('level', 'תיכון', 'showResults') },
         { label: 'גמיש', onClick: () => this.setAndNext('level', '', 'showResults') }
       ]);
     }
@@ -175,6 +196,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       const f = this.filters;
       // משקלים: התאמה מאומתת > דאטה חסרה > סתירה
       // קריטי שדאטה חסרה לא תקפוץ מעל התאמה אמיתית.
+      // הדאטה החדשה: subject/level הם strings (לא arrays), יש city/sub_area/contact
       const scored = this.allJobs.map(j => {
         let score = 0;
         let blocker = false;
@@ -182,34 +204,32 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
 
         if (f.region) {
           if (j.region === f.region) { score += 100; exactMatches++; }
-          else if (!j.region) score += 5;
-          // אזור אחר → לא תוסיף, אבל לא בלוקר (אולי קולקטיב מסונן רחב)
+          else if (!j.region || j.region === 'ארצי') score += 5;
         }
 
-        // מקצוע — אם יש מקצוע אחר זה blocker (חוץ מ-מורה כללי)
         if (f.subject) {
-          const subjects = j.subjects || [];
-          if (subjects.includes(f.subject)) { score += 80; exactMatches++; }
-          else if (subjects.length === 0) score += 5;
+          const sub = normalizeText(j.subject);
+          if (sub === f.subject) { score += 80; exactMatches++; }
+          else if (!sub || sub === 'מורה' || sub === 'אחר') score += 5;
           else blocker = true;
         }
 
         if (f.level) {
-          const levels = j.levels || [];
-          if (levels.includes(f.level)) { score += 40; exactMatches++; }
-          else if (levels.length === 0) score += 3;
+          const lvl = normalizeText(j.level);
+          if (lvl === f.level) { score += 40; exactMatches++; }
+          else if (!lvl || lvl === '(לא זוהה)') score += 3;
         }
 
         if (f.role) {
           const role = j.role || '';
           const roleBase = f.role.replace('/ת', '');
           if (role.includes(roleBase)) { score += 50; exactMatches++; }
-          else if (!role || role.indexOf('משוער') !== -1) score += 5;
+          else if (!role || role === 'אחר') score += 5;
         }
 
-        // טריות
-        if (j.firstSeen) {
-          const days = (Date.now() - new Date(j.firstSeen)) / 86400000;
+        // טריות לפי date_iso
+        if (j.date_iso) {
+          const days = (Date.now() - new Date(j.date_iso)) / 86400000;
           if (days < 7) score += 5;
           else if (days < 30) score += 2;
         }
@@ -252,8 +272,16 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     saveJob(job) {
       try {
         const saved = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]');
-        if (!saved.find(s => s.url === job.url)) {
-          saved.unshift({ url: job.url, title: job.title, sourceName: job.sourceName, savedAt: Date.now() });
+        const key = job.id || (job.school + job.email);
+        if (!saved.find(s => s.id === key)) {
+          saved.unshift({
+            id: key,
+            title: job.school || job.title || '',
+            email: job.email || '',
+            phone: job.phone || '',
+            sourceName: job.source_name || job.source || '',
+            savedAt: Date.now()
+          });
           localStorage.setItem(SAVED_KEY, JSON.stringify(saved.slice(0, 50)));
         }
       } catch (e) {}
@@ -316,19 +344,41 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     jobCard(j) {
       const card = document.createElement('div');
       card.className = 'ec-msg ec-msg-bot';
-      const region = j.region ? '<span class="ec-tag">' + esc(j.region) + '</span>' : '';
-      const role = j.role ? '<span class="ec-tag">' + esc(String(j.role).split(',')[0]) + '</span>' : '';
-      const lvl = (j.levels || [])[0] ? '<span class="ec-tag">' + esc(j.levels[0]) + '</span>' : '';
-      const subj = (j.subjects || [])[0] ? '<span class="ec-tag">' + esc(j.subjects[0]) + '</span>' : '';
+      const cityArea = [j.city, j.sub_area].filter(Boolean).join(' · ');
+      const region = j.region ? '<span class="ec-tag">' + esc(j.region) + (cityArea ? ' · ' + esc(cityArea) : '') + '</span>' :
+                                (cityArea ? '<span class="ec-tag">' + esc(cityArea) + '</span>' : '');
+      const role = j.role ? '<span class="ec-tag">' + esc(j.role) + '</span>' : '';
+      const lvl = j.level && j.level !== '(לא זוהה)' ? '<span class="ec-tag">' + esc(j.level) + '</span>' : '';
+      const subj = j.subject ? '<span class="ec-tag">' + esc(j.subject) + '</span>' : '';
+      const scope = j.scope ? '<span class="ec-tag">' + esc(j.scope) + '</span>' : '';
+      const dateStr = j.date ? '<span class="ec-job-date">' + esc(j.date) + '</span>' : '';
+
+      // CTA חכם: עדיפות למייל, אז טלפון, אז קישור
+      let cta = '';
+      if (j.email) {
+        const mailSubj = encodeURIComponent('פנייה דרך אדורה — ' + (j.school || j.title || ''));
+        cta = '<a class="ec-job-cta" href="mailto:' + esc(j.email) + '?subject=' + mailSubj + '">שלחו מייל ←</a>';
+      } else if (j.phone) {
+        cta = '<a class="ec-job-cta" href="tel:' + esc(j.phone.replace(/\s+/g,'')) + '">חייגו ' + esc(j.phone) + '</a>';
+      } else if (j.url) {
+        cta = '<a class="ec-job-cta" href="' + esc(j.url) + '" target="_blank" rel="noopener">פתחו במקור ←</a>';
+      } else {
+        cta = '<span class="ec-job-cta" style="opacity:.5;cursor:default">פרטי קשר חסרים</span>';
+      }
+
+      const contact = j.contact_name ? '<div class="ec-job-contact">איש קשר: ' + esc(j.contact_name) + '</div>' : '';
+      const phone = j.phone && j.email ? '<div class="ec-job-contact">טלפון: <a href="tel:' + esc(j.phone.replace(/\s+/g,'')) + '">' + esc(j.phone) + '</a></div>' : '';
+
       card.innerHTML =
         '<div class="ec-job-card">' +
-          '<div class="ec-job-source">' + esc(j.sourceName || '') + '</div>' +
-          '<h4 class="ec-job-title">' + esc(j.title) + '</h4>' +
-          '<div class="ec-job-tags">' + region + role + lvl + subj + '</div>' +
-          (j.snippet ? '<p class="ec-job-snippet">' + esc(String(j.snippet).slice(0, 180)) + '</p>' : '') +
+          '<div class="ec-job-source">' + esc(j.source_name || j.source || '') + (dateStr ? ' · ' + dateStr : '') + '</div>' +
+          '<h4 class="ec-job-title">' + esc(j.school || j.title || '') + '</h4>' +
+          '<div class="ec-job-tags">' + region + role + subj + lvl + scope + '</div>' +
+          (j.snippet ? '<p class="ec-job-snippet">' + esc(String(j.snippet).slice(0, 220)) + '</p>' : '') +
+          contact + phone +
           '<div class="ec-job-actions">' +
-            '<a class="ec-job-cta" href="' + esc(j.url) + '" target="_blank" rel="noopener">פנו עכשיו ←</a>' +
-            '<button class="ec-job-save" type="button" data-url="' + esc(j.url) + '">שמור</button>' +
+            cta +
+            '<button class="ec-job-save" type="button">שמור</button>' +
           '</div>' +
         '</div>';
       const saveBtn = card.querySelector('.ec-job-save');
