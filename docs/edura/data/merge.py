@@ -193,6 +193,18 @@ def derive_level(text):
     return ''
 
 
+def derive_sector(text):
+    """מחזיר מגזר: ממלכתי / ממ"ד / חרדי / ערבי / '' (ברירת מחדל = ממלכתי)."""
+    t = text or ''
+    if re.search(r'ערבי[ת]?(?!\s+שפה)|אורתודוקסי|כנסיה|טרה\s+סנטה|אלסהלה|דאר\s+אל|מלאם|דייר\s+חנא|סכנין|שפרעם|אעבלין|נצרת|דליי?ת|דרוזי|בית\s+ספר\s+ערבי', t):
+        return 'ערבי'
+    if re.search(r'\bחרדי[ת]?\b|בית\s+יעקב|חב[״"\']ד|תלמוד\s+תורה|ת[״"\']ת|חיידר|עזרא|בני\s+ברק', t):
+        return 'חרדי'
+    if re.search(r'ממ[״"\']ד|דתי\b|ישיבה|אולפנה|אולפנת|חמ[״"\']ד|תורני|אמ[״"\']ית|בני\s+עקיבא|מסורתי|דתית', t):
+        return 'ממ"ד'
+    return 'ממלכתי'
+
+
 def derive_role(text, profession=''):
     t = (text or '') + ' ' + (profession or '')
     if re.search(r'מנהל[ת]?\s+(בית\s+ספר|תיכון|ביה"ס)', t): return 'מנהל/ת'
@@ -305,6 +317,7 @@ def transform_igm(raw):
             'subject': subject,
             'role': derive_role(title + ' ' + info + ' ' + subject, subject),
             'level': derive_level(title + ' ' + info + ' ' + scope),
+            'sector': derive_sector(title + ' ' + info + ' ' + j.get('city', '')),
             'region': REGION_NORMALIZE.get(j.get('location_heb_title', ''), j.get('location_heb_title', '')),
             'sub_area': j.get('sub_area', ''),
             'city': j.get('city', ''),
@@ -347,6 +360,7 @@ def transform_itu(raw):
             'subject': profession,
             'role': derive_role(title + ' ' + description + ' ' + field, profession),
             'level': derive_level(title + ' ' + description + ' ' + field + ' ' + institute),
+            'sector': derive_sector(title + ' ' + description + ' ' + field + ' ' + institute),
             'region': REGION_NORMALIZE.get(j.get('region', ''), j.get('region', '')),
             'sub_area': '',
             'city': find_city(title + ' ' + description + ' ' + institute),
@@ -388,6 +402,7 @@ def transform_shatil(raw):
             'subject': '',
             'role': derive_role(title + ' ' + desc),
             'level': derive_level(title + ' ' + desc),
+            'sector': derive_sector(title + ' ' + desc),
             'region': norm_region(zones),
             'sub_area': zones,
             'city': find_city(title + ' ' + desc),
@@ -427,6 +442,7 @@ def main():
     by_region = Counter(j['region'] or '(לא זוהה)' for j in unique)
     by_role = Counter(j['role'] for j in unique)
     by_level = Counter(j.get('level') or '(לא זוהה)' for j in unique)
+    by_sector = Counter(j.get('sector') or '(לא זוהה)' for j in unique)
 
     out = {
         'updated_at': '2026-04-25',
@@ -435,6 +451,7 @@ def main():
         'by_region': dict(by_region),
         'by_role': dict(by_role),
         'by_level': dict(by_level),
+        'by_sector': dict(by_sector),
         'jobs': unique,
     }
     with open(OUT, 'w', encoding='utf-8') as f:
