@@ -140,14 +140,18 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       const matches = this.matchJobs();
       this.shownCount = 0;
       const summary = this.summarizeFilters();
-      this.botMsg('מצאתי ' + matches.length + ' משרות' + (summary ? ' עבור: ' + summary : '') + '.');
+      this.botMsg('מצאתי ' + matches.length + ' משרות רלוונטיות' + (summary ? ' עבור: ' + summary : '') + '.');
       if (matches.length === 0) {
-        this.botMsg('אין התאמה מדויקת. רוצה לרכך סינון?', [
+        this.botMsg('אין התאמה. הרבה משרות מגיעות עם פרטים חלקיים — בואו נרכך סינון:', [
           { label: 'בלי אזור', onClick: () => { this.filters.region = ''; this.showResults(); } },
           { label: 'בלי מקצוע', onClick: () => { this.filters.subject = ''; this.showResults(); } },
+          { label: 'בלי שכבה', onClick: () => { this.filters.level = ''; this.showResults(); } },
           { label: 'התחל מחדש', onClick: () => this.reset() }
         ]);
         return;
+      }
+      if (matches.length <= 3) {
+        this.botMsg('מציין שלחלק מהמשרות חסרים פרטים מלאים — אם משהו לא רלוונטי, פתחי וקראי במקור.');
       }
       this.showNextBatch(matches);
     }
@@ -165,14 +169,62 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     }
 
     matchJobs() {
+      // סינון רך עם ניקוד. במקום AND קשיח — כל משרה מקבלת score.
+      // מטה-דאטה דלילה (חסר אזור/שכבה) לא פוסל — נותן הזדמנות עם ניקוד נייטרלי.
+      // ההגיון: עדיף להראות התאמות חלקיות מאשר רשימה ריקה.
       const f = this.filters;
-      return this.allJobs.filter(j => {
-        if (f.region && j.region !== f.region) return false;
-        if (f.level && !(j.levels || []).includes(f.level)) return false;
-        if (f.subject && !(j.subjects || []).includes(f.subject)) return false;
-        if (f.role && !(j.role || '').includes(f.role.replace('/ת', ''))) return false;
-        return true;
-      }).sort((a, b) => new Date(b.firstSeen || 0) - new Date(a.firstSeen || 0));
+      // משקלים: התאמה מאומתת > דאטה חסרה > סתירה
+      // קריטי שדאטה חסרה לא תקפוץ מעל התאמה אמיתית.
+      const scored = this.allJobs.map(j => {
+        let score = 0;
+        let blocker = false;
+        let exactMatches = 0;
+
+        if (f.region) {
+          if (j.region === f.region) { score += 100; exactMatches++; }
+          else if (!j.region) score += 5;
+          // אזור אחר → לא תוסיף, אבל לא בלוקר (אולי קולקטיב מסונן רחב)
+        }
+
+        // מקצוע — אם יש מקצוע אחר זה blocker (חוץ מ-מורה כללי)
+        if (f.subject) {
+          const subjects = j.subjects || [];
+          if (subjects.includes(f.subject)) { score += 80; exactMatches++; }
+          else if (subjects.length === 0) score += 5;
+          else blocker = true;
+        }
+
+        if (f.level) {
+          const levels = j.levels || [];
+          if (levels.includes(f.level)) { score += 40; exactMatches++; }
+          else if (levels.length === 0) score += 3;
+        }
+
+        if (f.role) {
+          const role = j.role || '';
+          const roleBase = f.role.replace('/ת', '');
+          if (role.includes(roleBase)) { score += 50; exactMatches++; }
+          else if (!role || role.indexOf('משוער') !== -1) score += 5;
+        }
+
+        // טריות
+        if (j.firstSeen) {
+          const days = (Date.now() - new Date(j.firstSeen)) / 86400000;
+          if (days < 7) score += 5;
+          else if (days < 30) score += 2;
+        }
+
+        return { job: j, score: score, blocker: blocker, exactMatches: exactMatches };
+      });
+
+      const hasAnyFilter = !!(f.region || f.level || f.subject || f.role);
+      // דרישת מינימום: לפחות 1 התאמה מאומתת אמיתית (לא רק דאטה חסרה)
+      const filtered = scored
+        .filter(s => !s.blocker)
+        .filter(s => !hasAnyFilter || s.exactMatches >= 1)
+        .sort((a, b) => b.exactMatches - a.exactMatches || b.score - a.score);
+
+      return filtered.map(s => s.job);
     }
 
     summarizeFilters() {
