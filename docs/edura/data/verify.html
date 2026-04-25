@@ -40,6 +40,12 @@
   .pager button:hover:not(:disabled) { background: #f1ede4; }
   .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
   .pager span { margin: 0 12px; font-size: 13px; }
+  .btn-del { background: #fff; border: 1px solid #ddd; color: #c00; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; }
+  .btn-del:hover { background: #fde8e8; border-color: #c00; }
+  .toolbar { padding: 12px 32px; background: #fff8e1; border-bottom: 1px solid #f5d97a; display: flex; gap: 12px; align-items: center; font-size: 13px; }
+  .toolbar button { padding: 6px 12px; background: #fff; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; }
+  .toolbar button:hover { background: #fff8e1; }
+  .toolbar .count-deleted { font-weight: 700; color: #b8860b; }
 </style>
 </head>
 <body>
@@ -49,6 +55,15 @@
   <div class="meta">טבלת כל המשרות שנאספו, עם סינון ומיון. השוואה ישירה מול המקור.</div>
   <div class="stats" id="stats">טוען…</div>
 </header>
+
+<div class="toolbar">
+  <strong>מחיקת לא-רלוונטיות:</strong>
+  <span>לחיצה על × תסיר את השורה. הנמחקות נשמרות מקומית (localStorage).</span>
+  <span class="count-deleted" id="count-deleted">0 נמחקו</span>
+  <button onclick="exportDeleted()">העתק רשימת נמחקות (לזיכרון של Claude)</button>
+  <button onclick="undoLast()">↩ ביטול אחרון</button>
+  <button onclick="resetDeleted()" style="color: #c00;">איפוס מחיקות</button>
+</div>
 
 <div class="filters">
   <input id="q" placeholder="חיפוש: בית ספר, מקצוע, עיר, איש קשר…" />
@@ -90,6 +105,7 @@
       <th>מייל</th>
       <th>טלפון</th>
       <th>קישור</th>
+      <th>פעולה</th>
     </tr>
   </thead>
   <tbody id="tbody"></tbody>
@@ -104,6 +120,40 @@ let sortBy = 'date_iso';
 let sortDir = 'desc';
 let page = 0;
 const PER_PAGE = 100;
+const DEL_KEY = 'edura-deleted-jobs';
+let deleted = new Set(JSON.parse(localStorage.getItem(DEL_KEY) || '[]'));
+let deleteHistory = [];
+
+function persistDeleted() {
+  localStorage.setItem(DEL_KEY, JSON.stringify([...deleted]));
+  document.getElementById('count-deleted').textContent = `${deleted.size} נמחקו`;
+}
+function deleteJob(id) {
+  deleted.add(id);
+  deleteHistory.push(id);
+  persistDeleted();
+  applyFilters();
+}
+function undoLast() {
+  const last = deleteHistory.pop();
+  if (last) { deleted.delete(last); persistDeleted(); applyFilters(); }
+}
+function resetDeleted() {
+  if (!confirm(`למחוק את כל ${deleted.size} הסימונים?`)) return;
+  deleted.clear(); deleteHistory = []; persistDeleted(); applyFilters();
+}
+function exportDeleted() {
+  const ids = [...deleted].sort();
+  const text = `Edura — IDs שסומנו כלא-רלוונטיים (${ids.length}):\n\n${ids.join('\n')}`;
+  navigator.clipboard.writeText(text).then(
+    () => alert(`✓ הועתק ל-clipboard: ${ids.length} IDs.\n\nהדביקי לקלוד והוא ישמור בזיכרון.`),
+    () => prompt('העתיקי ידנית:', text)
+  );
+}
+window.deleteJob = deleteJob;
+window.undoLast = undoLast;
+window.resetDeleted = resetDeleted;
+window.exportDeleted = exportDeleted;
 
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -112,7 +162,7 @@ function escapeHtml(s) {
 function render() {
   const tbody = document.getElementById('tbody');
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="13" class="empty">אין תוצאות לסינון הנוכחי</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" class="empty">אין תוצאות לסינון הנוכחי</td></tr>';
     document.getElementById('pager').innerHTML = '';
     return;
   }
@@ -133,6 +183,7 @@ function render() {
       <td>${j.email ? `<a href="mailto:${escapeHtml(j.email)}">${escapeHtml(j.email)}</a>` : '—'}</td>
       <td class="nowrap">${j.phone ? `<a href="tel:${escapeHtml(j.phone)}">${escapeHtml(j.phone)}</a>` : '—'}</td>
       <td>${j.url ? `<a href="${escapeHtml(j.url)}" target="_blank" rel="noopener">↗</a>` : '—'}</td>
+      <td><button class="btn-del" onclick="deleteJob('${escapeHtml(j.id)}')" title="הסר — לא רלוונטי">×</button></td>
     </tr>
   `).join('');
 
@@ -158,6 +209,7 @@ function applyFilters() {
   const has = document.getElementById('has').value;
 
   filtered = allJobs.filter(j => {
+    if (deleted.has(j.id)) return false;
     if (src && j.source !== src) return false;
     if (region && j.region !== region) return false;
     if (role && j.role !== role) return false;
@@ -182,7 +234,7 @@ function applyFilters() {
   });
 
   page = 0;
-  document.getElementById('count').textContent = `${filtered.length} מ-${allJobs.length} משרות`;
+  document.getElementById('count').textContent = `${filtered.length} מ-${allJobs.length - deleted.size} משרות (${deleted.size} נמחקו)`;
   render();
 }
 
@@ -210,6 +262,7 @@ async function init() {
   const res = await fetch('jobs.json', { cache: 'no-store' });
   const data = await res.json();
   allJobs = data.jobs;
+  document.getElementById('count-deleted').textContent = `${deleted.size} נמחקו`;
   // Stats
   const withEmail = allJobs.filter(j => j.email).length;
   const withPhone = allJobs.filter(j => j.phone).length;
