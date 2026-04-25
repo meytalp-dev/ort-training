@@ -1,7 +1,5 @@
 """
-ממזג igm + itu + shatil ל-jobs.json אחיד.
-Schema: {id, source, source_name, school, title, subject, role, region, city, scope,
-         contact, email, phone, date, snippet, url, full_text}
+ממזג igm + itu + shatil ל-jobs.json אחיד — רק משרות הוראה (מורים בלבד).
 """
 import json, re, hashlib
 from pathlib import Path
@@ -42,7 +40,6 @@ REGION_NORMALIZE = {
 def norm_region(s):
     if not s:
         return ''
-    # split on commas — first match wins (simplest case)
     parts = [p.strip() for p in s.split(',')]
     for p in parts:
         if p in REGION_NORMALIZE:
@@ -59,7 +56,6 @@ def strip_html(s):
 
 
 def parse_contact_block(s):
-    """ארגון המורים מחזיר contact כ-'איש קשר: X<br/>דואל: Y<br/>טלפון: Z<br/>פקס: W'"""
     out = {'contact_name': '', 'email': '', 'phone': ''}
     if not s:
         return out
@@ -74,23 +70,92 @@ def parse_contact_block(s):
 
 
 def derive_role(text, profession=''):
-    """מסיק תפקיד מ-title/text/profession"""
     t = (text or '') + ' ' + (profession or '')
     if re.search(r'מנהל[ת]?\s+(בית\s+ספר|תיכון|ביה"ס)', t): return 'מנהל/ת'
     if re.search(r'\bסגן\s+מנהל|סגנית\s+מנהלת', t): return 'סגן/ית'
     if re.search(r'\bרכז[ת]?\b', t) and not re.search(r'מרכז', t): return 'רכז/ת'
     if re.search(r'\bמחנכ[ת]?\b', t): return 'מחנך/ת'
     if re.search(r'\bיועצ[תת]?\b|יועצ/ת', t): return 'יועץ/ת'
-    if re.search(r'\bמדריכ[הת]?\b', t): return 'מדריך/ה'
-    if re.search(r'\bסייע[ת]?\b', t): return 'סייע/ת'
     if re.search(r'\bמטפל[ת]?\b|תרפיסט', t): return 'מטפל/ת'
-    return 'מורה'
+    if re.search(r'\bסייע[ת]?\b|תומכ[ת]?\s+הוראה', t): return 'סייע/ת'
+    if re.search(r'\bמדריכ[הת]?\b', t): return 'מדריך/ה'
+    if re.search(r'\bמורה\b|\bמורות?\b|\bמורים\b', t): return 'מורה'
+    return 'אחר'
+
+
+# ─── פילטר מורים בלבד ──────────────────────────────────────────────
+# נשמרים: מורה, מחנך/ת, רכזת מקצוע, "דרוש/ה מורה ל..."
+# נפסלים: צהרון/מועדונית, מטפל/ת לבדו, מדריך לא-פדגוגי, ניהול/אדמין
+EXCLUDE_PATTERNS = [
+    r'\bצהרון',
+    r'מועדונית',
+    r'מועדוני\s+נוער',
+    r'\bפנימייה\b',
+    r'תרפיסט',
+    r'קלינאי\s+תקשורת',
+    r'פיזיותרפיסט',
+    r'מרפא[הת]?\s+בעיסוק',
+    r'ראש\s+צוות',
+    r'אוצר[ת]?\s+וגלריה|אוצר[ת]?\s+ומנהל',
+    r'מתאמ[ת]?\s+טיפול',
+    r'דיור\s+מוגן',
+    r'מרכז\s+חירום',
+    r'תכנית\s+\"עמיתים',
+    r'דרוש[/.ה]*\s*רכז[ת]?\.?ת?\s+עיר',
+    r'תנועת\s+נוער',
+    r'מועדון\s+ל',
+    r'אנשים\s+עם\s+מוגבלות',
+    r'אנשים\s+עם\s+צרכים\s+מיוחדים',
+    r'מנכ"ל',
+    r'מתאם[ת]?\s+',
+]
+
+INCLUDE_TEACHER_PATTERNS = [
+    r'\bמורה\s+ל',
+    r'\bמורים\b',
+    r'\bמורות\b',
+    r'דרוש[ה/]*\s+מור[הת]\b',
+    r'דרושים?\s+מורים',
+    r'\bמחנכ[ת]?\b',
+    r'\bמורה\b',
+    r'תעודת\s+הוראה',
+    r'מקצועי[ת/]?\s+ל(אנגלית|מתמטיקה|עברית|תנ"ך|היסטוריה|ספרות|פיזיקה|כימיה|ביולוגיה|מדעים|חינוך\s+גופני|אומנות|מוסיקה|ערבית)',
+    r'\bמדריך\s+פדגוגי',
+    r'\bמדריכה\s+פדגוגית',
+]
+
+
+def is_teacher_job(title, description, role_hint=''):
+    """מחזיר True רק אם זו משרת מורה אמיתית."""
+    text = (title or '') + ' ' + (description or '') + ' ' + (role_hint or '')
+
+    # החרגות חזקות
+    for pat in EXCLUDE_PATTERNS:
+        if re.search(pat, text):
+            # עדיין שמור אם בכותרת יש "מורה ל..."
+            if not re.search(r'\bמורה\s+ל', title or ''):
+                return False
+
+    # חייב להכיל סימן של הוראה
+    for pat in INCLUDE_TEACHER_PATTERNS:
+        if re.search(pat, text):
+            return True
+    return False
 
 
 def make_id(source, sid_or_url):
-    """ID יציב לפי source+raw id"""
     return f"{source}-{sid_or_url}" if isinstance(sid_or_url, (int, str)) else \
            f"{source}-{hashlib.sha1(str(sid_or_url).encode()).hexdigest()[:10]}"
+
+
+def iso_date_dmy(s):
+    m = re.match(r'(\d{2})/(\d{2})/(\d{4})', s or '')
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else ''
+
+
+def iso_date_dotted(s):
+    m = re.match(r'(\d{1,2})\.(\d{1,2})\.(\d{4})', s or '')
+    return f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}" if m else ''
 
 
 # ─── igm: ארגון המורים ─────────────────────────────────────────────
@@ -102,12 +167,17 @@ def transform_igm(raw):
         title = strip_html(j.get('title', '')) or 'משרת הוראה'
         subject = strip_html(j.get('subject', ''))
         scope = strip_html(j.get('job_length', ''))
+        full_title = f"{subject} · {title}" if subject and title else (subject or title)
+
+        if not is_teacher_job(full_title, info, subject):
+            continue
+
         out.append({
             'id': make_id('igm', j.get('id')),
             'source': 'igm',
             'source_name': 'ארגון המורים',
             'school': title,
-            'title': f"{subject} · {title}" if subject and title else (subject or title),
+            'title': full_title,
             'subject': subject,
             'role': derive_role(title + ' ' + info + ' ' + subject, subject),
             'region': REGION_NORMALIZE.get(j.get('location_heb_title', ''), j.get('location_heb_title', '')),
@@ -126,40 +196,22 @@ def transform_igm(raw):
     return out
 
 
-def iso_date_dmy(s):
-    """12/04/2026 → 2026-04-12"""
-    m = re.match(r'(\d{2})/(\d{2})/(\d{4})', s or '')
-    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else ''
-
-
-def iso_date_dotted(s):
-    """25.4.2026 → 2026-04-25"""
-    m = re.match(r'(\d{1,2})\.(\d{1,2})\.(\d{4})', s or '')
-    return f"{m.group(3)}-{int(m.group(2)):02d}-{int(m.group(1)):02d}" if m else ''
-
-
-# ─── itu: הסתדרות המורים ───────────────────────────────────────────
+# ─── itu: הסתדרות המורים (v2 with full modal data) ─────────────────
 def transform_itu(raw):
     out = []
     for j in raw['jobs']:
         title = j.get('title', '').strip()
         institute = j.get('institute', '').strip()
         profession = j.get('profession', '').strip()
+        field = j.get('field', '').strip()
         date = j.get('date', '').strip()
-        # Date format like "11:38 23/04/2026"
+        description = j.get('description', '').strip()
         m = re.search(r'(\d{2})/(\d{2})/(\d{4})', date)
         date_iso = f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else ''
-        # Excerpt — try to extract from raw text by stripping known parts
-        raw_text = j.get('raw', '')
-        # The card has structure: TITLE \n DATE \n PROFESSION \n FIELD \n INSTITUTE \n DESC
-        parts = [p.strip() for p in raw_text.split('\n') if p.strip()]
-        # find description after institute
-        desc = ''
-        if institute and institute in parts:
-            idx = parts.index(institute)
-            tail = parts[idx + 1:]
-            tail = [t for t in tail if t not in ('פרטים', 'סימון לשליחת קו"ח')]
-            desc = ' '.join(tail).strip()
+
+        if not is_teacher_job(title, description, field + ' ' + profession):
+            continue
+
         out.append({
             'id': make_id('itu', j.get('id')),
             'source': 'itu',
@@ -167,18 +219,18 @@ def transform_itu(raw):
             'school': institute or title,
             'title': title,
             'subject': profession,
-            'role': derive_role(title + ' ' + desc, j.get('field', '') or profession),
-            'region': '',  # not exposed at index level
+            'role': derive_role(title + ' ' + description + ' ' + field, profession),
+            'region': REGION_NORMALIZE.get(j.get('region', ''), j.get('region', '')),
             'sub_area': '',
             'city': '',
             'scope': '',
             'contact_name': '',
-            'email': '',
-            'phone': '',
+            'email': j.get('email', ''),
+            'phone': j.get('phone', ''),
             'date': date,
             'date_iso': date_iso,
-            'snippet': desc[:300],
-            'description': desc,
+            'snippet': description[:300],
+            'description': description,
             'url': raw['source_url'],
         })
     return out
@@ -190,9 +242,12 @@ def transform_shatil(raw):
     for j in raw['jobs']:
         title = j.get('title', '').strip()
         desc = j.get('description', '').strip()
-        # remove leading title+date from description
         if desc.startswith(title):
             desc = desc[len(title):].strip()
+
+        if not is_teacher_job(title, desc):
+            continue
+
         emails = j.get('emails') or []
         email = emails[0] if emails else ''
         zones = j.get('zones', '')
@@ -210,7 +265,7 @@ def transform_shatil(raw):
             'scope': j.get('jobType', ''),
             'contact_name': j.get('contact', ''),
             'email': email,
-            'phone': '',
+            'phone': j.get('phone', ''),
             'date': j.get('dateDisplay', ''),
             'date_iso': iso_date_dotted(j.get('dateDisplay', '')) or j.get('date', '')[:10],
             'snippet': desc[:300],
@@ -228,7 +283,6 @@ def main():
 
     all_jobs = transform_igm(igm) + transform_itu(itu) + transform_shatil(shatil)
 
-    # dedupe by id
     seen = set()
     unique = []
     for j in all_jobs:
@@ -237,10 +291,8 @@ def main():
         seen.add(j['id'])
         unique.append(j)
 
-    # sort by date_iso desc
     unique.sort(key=lambda j: j.get('date_iso', ''), reverse=True)
 
-    # stats
     from collections import Counter
     by_source = Counter(j['source'] for j in unique)
     by_region = Counter(j['region'] or '(לא זוהה)' for j in unique)
@@ -256,10 +308,15 @@ def main():
     }
     with open(OUT, 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
-    print(f'Wrote {OUT} with {len(unique)} jobs')
-    print(f'by_source: {dict(by_source)}')
-    print(f'by_region: {dict(by_region)}')
-    print(f'by_role: {dict(by_role)}')
+
+    # Also write a machine-readable summary (no Hebrew print issues)
+    summary_path = ROOT / 'merge-summary.txt'
+    with open(summary_path, 'w', encoding='utf-8') as f:
+        f.write(f'Total: {len(unique)}\n')
+        f.write(f'By source: {dict(by_source)}\n')
+        f.write(f'By region: {dict(by_region)}\n')
+        f.write(f'By role: {dict(by_role)}\n')
+    print(f'Wrote {OUT.name} with {len(unique)} jobs (see merge-summary.txt)')
 
 
 if __name__ == '__main__':
