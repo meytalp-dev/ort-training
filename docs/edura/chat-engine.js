@@ -345,13 +345,17 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       const card = document.createElement('div');
       card.className = 'ec-msg ec-msg-bot';
       const cityArea = [j.city, j.sub_area].filter(Boolean).join(' · ');
-      const region = j.region ? '<span class="ec-tag">' + esc(j.region) + (cityArea ? ' · ' + esc(cityArea) : '') + '</span>' :
-                                (cityArea ? '<span class="ec-tag">' + esc(cityArea) + '</span>' : '');
-      const role = j.role ? '<span class="ec-tag">' + esc(j.role) + '</span>' : '';
+      const region = j.region && j.region !== '(לא זוהה)'
+        ? '<span class="ec-tag">' + esc(j.region) + (cityArea ? ' · ' + esc(cityArea) : '') + '</span>'
+        : (cityArea ? '<span class="ec-tag">' + esc(cityArea) + '</span>' : '');
+      const role = j.role && j.role !== 'אחר' ? '<span class="ec-tag">' + esc(j.role) + '</span>' : '';
       const lvl = j.level && j.level !== '(לא זוהה)' ? '<span class="ec-tag">' + esc(j.level) + '</span>' : '';
       const subj = j.subject ? '<span class="ec-tag">' + esc(j.subject) + '</span>' : '';
+      const sector = j.sector ? '<span class="ec-tag">' + esc(j.sector) + '</span>' : '';
       const scope = j.scope ? '<span class="ec-tag">' + esc(j.scope) + '</span>' : '';
       const dateStr = j.date ? '<span class="ec-job-date">' + esc(j.date) + '</span>' : '';
+      // עדיפות ל-description (טקסט מלא), נופלים ל-snippet
+      const bodyText = j.description || j.snippet || '';
 
       // CTAs — מציג כל אמצעי קשר זמין ככפתור נפרד, עם הכתובת/מספר על הכפתור.
       // ככה ברור למשתמשת מה כל כפתור עושה ואיזה פרטי קשר באמת קיימים במשרה.
@@ -380,8 +384,8 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
         '<div class="ec-job-card">' +
           '<div class="ec-job-source">' + esc(j.source_name || j.source || '') + (dateStr ? ' · ' + dateStr : '') + '</div>' +
           '<h4 class="ec-job-title">' + esc(j.school || j.title || '') + '</h4>' +
-          '<div class="ec-job-tags">' + region + role + subj + lvl + scope + '</div>' +
-          (j.snippet ? '<p class="ec-job-snippet">' + esc(String(j.snippet).slice(0, 220)) + '</p>' : '') +
+          '<div class="ec-job-tags">' + region + role + subj + lvl + sector + scope + '</div>' +
+          (bodyText ? '<p class="ec-job-snippet">' + esc(String(bodyText).slice(0, 280)) + (bodyText.length > 280 ? '…' : '') + '</p>' : '') +
           contact + emailLine +
           '<div class="ec-job-actions">' +
             ctas.join('') +
