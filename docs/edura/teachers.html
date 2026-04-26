@@ -63,6 +63,69 @@
   .btn-text.active { background: var(--green-pale); color: var(--green-deep); font-weight: 700; }
   .btn-primary { background: var(--green-deep); color: var(--white); padding: 10px 20px; border-radius: 999px; font-weight: 600; font-size: 15px; transition: background .15s, transform .1s; }
   .btn-primary:hover { background: var(--green-soft); }
+  .btn-publish {
+    background: var(--pink); color: var(--pink-deep);
+    font-weight: 700; font-size: 14px; padding: 8px 14px;
+    border-radius: 8px; border: 1px solid #FBCFE8;
+    transition: background .15s, transform .1s;
+  }
+  .btn-publish:hover { background: #FBCFE8; transform: translateY(-1px); }
+
+  /* Publish modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(11,42,74,.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white); border-radius: var(--radius-lg);
+    max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;
+    padding: 32px; box-shadow: 0 20px 60px rgba(11,42,74,.3); position: relative;
+  }
+  .modal h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+  .modal-supra { font-size: 13px; color: var(--pink-deep); font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .modal-info {
+    background: var(--pink); border-right: 3px solid var(--pink-deep);
+    padding: 12px 16px; border-radius: 8px;
+    font-size: 13px; line-height: 1.5; color: var(--ink-soft);
+    margin: 16px 0 20px;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+  .modal label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; margin-top: 14px; }
+  .modal input, .modal textarea, .modal select {
+    width: 100%; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 14px; font-size: 14px; color: var(--ink);
+    font-family: inherit;
+  }
+  .modal input:focus, .modal textarea:focus, .modal select:focus { outline: none; border-color: var(--teal); background: var(--white); }
+  .modal textarea { min-height: 90px; resize: vertical; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+  .modal-actions button { flex: 1; padding: 12px; border-radius: 999px; font-weight: 600; font-size: 14px; transition: background .15s; cursor: pointer; }
+  .btn-submit { background: var(--green-deep); color: var(--white); border: none; }
+  .btn-submit:hover { background: var(--green-soft); }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-cancel { background: var(--cream-deep); color: var(--ink-soft); border: none; }
+  .btn-cancel:hover { background: var(--line); }
+  .modal-close {
+    position: absolute; top: 12px; left: 12px;
+    width: 32px; height: 32px; border-radius: 999px;
+    background: var(--cream); color: var(--ink-mute);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; transition: background .15s; cursor: pointer; border: none;
+  }
+  .modal-close:hover { background: var(--line); color: var(--ink); }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(120%);
+    background: var(--ink); color: var(--white);
+    padding: 14px 24px; border-radius: 999px;
+    font-size: 14px; font-weight: 500;
+    box-shadow: 0 10px 30px rgba(11,42,74,.3);
+    transition: transform .3s ease;
+    z-index: 200;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
 
   /* Hero */
   .hero {
@@ -304,6 +367,7 @@
       <a href="index.html" class="btn-text">משרות</a>
       <a href="teachers.html" class="btn-text active">מורים מחפשי עבודה</a>
       <a href="manager-tenders.html" class="btn-text">מכרזי ניהול</a>
+      <button class="btn-publish" onclick="openPublishModal()">+ פרסום עצמי</button>
       <a href="chat.html" class="btn-primary">בוט חיפוש 🔍</a>
     </nav>
   </div>
@@ -667,7 +731,177 @@ $('clear-filters').addEventListener('click', () => {
 });
 
 loadTeachers();
+
+// ─── Self-publish modal ───────────────────────────────────
+function openPublishModal() {
+  document.getElementById('publish-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closePublishModal() {
+  document.getElementById('publish-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+window.openPublishModal = openPublishModal;
+window.closePublishModal = closePublishModal;
+
+async function submitPublish() {
+  const name = document.getElementById('p-name').value.trim();
+  const subject = document.getElementById('p-subject').value.trim();
+  const region = document.getElementById('p-region').value;
+  const city = document.getElementById('p-city').value.trim();
+  const level = document.getElementById('p-level').value;
+  const scope = document.getElementById('p-scope').value;
+  const exp = document.getElementById('p-exp').value.trim();
+  const bio = document.getElementById('p-bio').value.trim();
+  const email = document.getElementById('p-email').value.trim();
+  const phone = document.getElementById('p-phone').value.trim();
+  const consent = document.getElementById('p-consent').checked;
+
+  if (!name || !subject || !email || !phone || !consent) {
+    showToast('שם, מקצוע, מייל, טלפון ואישור תצוגה — חובה.');
+    return;
+  }
+
+  const btn = document.getElementById('p-submit');
+  btn.disabled = true;
+  btn.textContent = 'שולח...';
+
+  // For now: open mailto: to Edura admin with all fields prefilled.
+  // Future: post to Apps Script that appends to a Google Sheet.
+  const subj = `[Edura] פרסום עצמי — ${name} (${subject})`;
+  const body = [
+    'מבקש/ת לפרסם פרופיל באתר אדורה — מורים מחפשי עבודה.',
+    '',
+    `שם: ${name}`,
+    `מקצוע: ${subject}`,
+    `אזור: ${region}`,
+    `עיר: ${city}`,
+    `שכבה: ${level}`,
+    `היקף: ${scope}`,
+    `ניסיון: ${exp}`,
+    `מייל: ${email}`,
+    `טלפון: ${phone}`,
+    '',
+    'תיאור קצר:',
+    bio,
+    '',
+    'אישור פרסום: ✓ אני מאשר/ת פרסום הפרטים האלה במאגר המורים של אדורה.'
+  ].join('\n');
+  const mailto = 'mailto:meytalp@gmail.com?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
+  showToast('✓ פרטיך הוכנו לשליחה. אנחנו נוסיף אותך למאגר ב-24 שעות.');
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = 'פרסם פרופיל ✓';
+    closePublishModal();
+  }, 2000);
+}
+window.submitPublish = submitPublish;
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePublishModal();
+});
 </script>
+
+<!-- Self-publish modal -->
+<div class="modal-overlay" id="publish-modal" onclick="if(event.target===this)closePublishModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closePublishModal()" aria-label="סגור">×</button>
+    <div class="modal-supra">פרסום עצמי במאגר אדורה</div>
+    <h2>אני מורה — מחפש/ת עבודה</h2>
+    <div class="modal-info">
+      <strong>פרטיך יוצגו במאגר המורים</strong> — מנהלי בתי ספר שמחפשים מורים יראו את התיאור ויפנו אלייך ישירות במייל או בטלפון. הפרסום חינם, ללא מתווכים. אפשר להסיר בכל רגע — שלחי לנו מייל.
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label for="p-name">שם מלא *</label>
+        <input type="text" id="p-name" placeholder="ישראלה ישראלי" required />
+      </div>
+      <div>
+        <label for="p-subject">מקצוע * </label>
+        <input type="text" id="p-subject" placeholder="אנגלית, מתמטיקה, חינוך מיוחד..." required />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label for="p-region">אזור</label>
+        <select id="p-region">
+          <option value="">בחרי</option>
+          <option value="ירושלים">ירושלים</option>
+          <option value="מרכז">מרכז</option>
+          <option value="צפון">צפון</option>
+          <option value="דרום">דרום</option>
+          <option value="שפלה">שפלה</option>
+        </select>
+      </div>
+      <div>
+        <label for="p-city">עיר</label>
+        <input type="text" id="p-city" placeholder="ירושלים" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label for="p-level">שכבה</label>
+        <select id="p-level">
+          <option value="">כל שכבה</option>
+          <option value="גן">גן</option>
+          <option value="יסודי">יסודי</option>
+          <option value="חטיבת ביניים">חטיבת ביניים</option>
+          <option value="תיכון">תיכון</option>
+          <option value="חינוך מיוחד">חינוך מיוחד</option>
+        </select>
+      </div>
+      <div>
+        <label for="p-scope">היקף משרה רצוי</label>
+        <select id="p-scope">
+          <option value="">גמיש</option>
+          <option value="מלאה">מלאה</option>
+          <option value="חלקית">חלקית</option>
+          <option value="מלאה/חלקית">מלאה/חלקית</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="p-exp">שנות ניסיון בהוראה</label>
+    <input type="text" id="p-exp" placeholder="לדוגמה: 5 שנים" />
+
+    <label for="p-bio">תיאור קצר עליי (יוצג למנהלים)</label>
+    <textarea id="p-bio" placeholder="לדוגמה: מורה לאנגלית עם 8 שנות ניסיון בחט&quot;ב. תעודת הוראה + תואר שני באמצעי תקשורת. מחפשת משרה חלקית באזור השרון."></textarea>
+
+    <div class="form-row">
+      <div>
+        <label for="p-email">מייל לפנייה *</label>
+        <input type="email" id="p-email" placeholder="example@gmail.com" required />
+      </div>
+      <div>
+        <label for="p-phone">טלפון *</label>
+        <input type="tel" id="p-phone" placeholder="050-1234567" required />
+      </div>
+    </div>
+
+    <label style="display: flex; gap: 8px; align-items: flex-start; margin-top: 18px; font-weight: 500; cursor: pointer;">
+      <input type="checkbox" id="p-consent" style="width: 18px; height: 18px; margin-top: 2px;" />
+      <span>אני מאשר/ת שפרטי האלה (שם, מקצוע, אזור, עיר, מייל, טלפון, תיאור) יוצגו לציבור באתר אדורה. אני יכול/ה לבקש להסיר את הפרופיל בכל רגע במייל לאדורה.</span>
+    </label>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePublishModal()">ביטול</button>
+      <button class="btn-submit" id="p-submit" onclick="submitPublish()">פרסם פרופיל ✓</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script src="chat-widget.js" defer></script>
 
