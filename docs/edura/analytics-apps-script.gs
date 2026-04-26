@@ -16,6 +16,9 @@
  * 8. Commit + push. Done.
  */
 
+// Spreadsheet ID — Edura sheet (גיליון אדורה הקיים)
+var SPREADSHEET_ID = '1-jQCpFVRfTtq2SigUt-ZCO-UQZOm6O5i2nme9jhzVJM';
+
 // Name of the tab inside the spreadsheet where events are appended.
 // Change if you want a different tab name.
 var SHEET_NAME = 'Analytics';
@@ -25,7 +28,7 @@ function doGet(e) {
   var callback = params.callback || 'cb';
 
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     var sheet = ss.getSheetByName(SHEET_NAME);
     if (!sheet) {
       sheet = ss.insertSheet(SHEET_NAME);
