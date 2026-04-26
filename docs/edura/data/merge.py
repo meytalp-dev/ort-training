@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent
 RAW = ROOT / 'raw'
 OUT = ROOT / 'jobs.json'
+MANUAL_EDITS = ROOT / 'manual-edits.json'
 
 
 def load(name):
@@ -470,6 +471,17 @@ def main():
         seen.add(j['id'])
         unique.append(j)
 
+    # Apply manual edits (verify.html → manual-edits.json)
+    manual_count = 0
+    if MANUAL_EDITS.exists():
+        with open(MANUAL_EDITS, 'r', encoding='utf-8') as f:
+            manual = json.load(f).get('edits', {})
+        for j in unique:
+            if j['id'] in manual:
+                for field, value in manual[j['id']].items():
+                    j[field] = value
+                manual_count += 1
+
     unique.sort(key=lambda j: j.get('date_iso', ''), reverse=True)
 
     from collections import Counter
@@ -498,10 +510,11 @@ def main():
     summary_path = ROOT / 'merge-summary.txt'
     with open(summary_path, 'w', encoding='utf-8') as f:
         f.write(f'Total: {len(unique)}\n')
+        f.write(f'Manual edits applied: {manual_count}\n')
         f.write(f'By source: {dict(by_source)}\n')
         f.write(f'By region: {dict(by_region)}\n')
         f.write(f'By role: {dict(by_role)}\n')
-    print(f'Wrote {OUT.name} with {len(unique)} jobs (see merge-summary.txt)')
+    print(f'Wrote {OUT.name} with {len(unique)} jobs ({manual_count} manual edits applied)')
 
 
 if __name__ == '__main__':
