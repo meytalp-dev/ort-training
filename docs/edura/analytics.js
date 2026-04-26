@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  const ANALYTICS_URL = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+  const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbyHpWdYzpi3FGJS9dUgYndDEYXNBorW5CrJEbkBvIqDda2fTjdl-8Jdmnr1E-yAprLI/exec';
 
   const _start = Date.now();
   const _device = /Mobi|Android/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
