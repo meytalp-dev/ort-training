@@ -43,7 +43,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     constructor(root) {
       this.root = root;
       this.allJobs = [];
-      this.filters = { region: '', role: '', subject: '', level: '', scope: '' };
+      this.filters = { region: '', city: '', role: '', subject: '', level: '', scope: '' };
       this.shownCount = 0;
       this.state = 'init';
     }
@@ -98,13 +98,15 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
           const summary = this.summarizeFilters();
           this.botMsg('הבנתי: ' + (summary || 'לא הצלחתי לזהות פרטים — בואו ננסה אחרת.'));
           if (!summary) { this.askRegion(); return; }
-          this.botMsg('רוצה לחדד עוד פרט או לראות את ההתאמות?', [
+          const refineOpts = [
             { label: 'הראה משרות', onClick: () => this.showResults() },
-            { label: 'אזור', onClick: () => this.askRegion() },
-            { label: 'תפקיד', onClick: () => this.askRole() },
-            { label: 'מקצוע', onClick: () => this.askSubject() },
-            { label: 'שכבה', onClick: () => this.askLevel() }
-          ]);
+            { label: 'אזור', onClick: () => this.askRegion() }
+          ];
+          if (this.filters.region) refineOpts.push({ label: 'עיר', onClick: () => this.askCity() });
+          refineOpts.push({ label: 'תפקיד', onClick: () => this.askRole() });
+          refineOpts.push({ label: 'מקצוע', onClick: () => this.askSubject() });
+          refineOpts.push({ label: 'שכבה', onClick: () => this.askLevel() });
+          this.botMsg('רוצה לחדד עוד פרט או לראות את ההתאמות?', refineOpts);
         } else {
           this.botMsg('לא הצלחתי לפענח. בואו נעבור על זה ביחד:');
           this.askRegion();
@@ -119,9 +121,36 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
 
     askRegion() {
       this.botMsg('באיזה אזור?', [
-        ...REGIONS.map(r => ({ label: r, onClick: () => this.setAndNext('region', r, 'askRole') })),
+        ...REGIONS.map(r => ({ label: r, onClick: () => this.setAndNext('region', r, 'askCity') })),
         { label: 'גמיש', onClick: () => this.setAndNext('region', '', 'askRole') }
       ]);
+    }
+
+    askCity() {
+      // מחשב את הערים שיש להן משרות באזור שנבחר, top 10 לפי כמות
+      const counts = {};
+      this.allJobs.forEach(j => {
+        if (j.region !== this.filters.region) return;
+        const c = (j.city || '').trim();
+        if (!c) return;
+        counts[c] = (counts[c] || 0) + 1;
+      });
+      const cities = Object.keys(counts)
+        .sort((a, b) => counts[b] - counts[a])
+        .slice(0, 10);
+
+      if (cities.length === 0) {
+        // אין ערים מסומנות באזור — דלג על שאלת העיר
+        this.askRole();
+        return;
+      }
+
+      const opts = cities.map(c => ({
+        label: c + ' (' + counts[c] + ')',
+        onClick: () => this.setAndNext('city', c, 'askRole')
+      }));
+      opts.push({ label: 'כל ' + this.filters.region, onClick: () => this.setAndNext('city', '', 'askRole') });
+      this.botMsg('איזו עיר ב' + this.filters.region + '?', opts);
     }
 
     askRole() {
@@ -163,12 +192,13 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       const summary = this.summarizeFilters();
       this.botMsg('מצאתי ' + matches.length + ' משרות רלוונטיות' + (summary ? ' עבור: ' + summary : '') + '.');
       if (matches.length === 0) {
-        this.botMsg('אין התאמה. הרבה משרות מגיעות עם פרטים חלקיים — בואו נרכך סינון:', [
-          { label: 'בלי אזור', onClick: () => { this.filters.region = ''; this.showResults(); } },
-          { label: 'בלי מקצוע', onClick: () => { this.filters.subject = ''; this.showResults(); } },
-          { label: 'בלי שכבה', onClick: () => { this.filters.level = ''; this.showResults(); } },
-          { label: 'התחל מחדש', onClick: () => this.reset() }
-        ]);
+        const opts = [];
+        if (this.filters.city) opts.push({ label: 'בלי עיר', onClick: () => { this.filters.city = ''; this.showResults(); } });
+        if (this.filters.region) opts.push({ label: 'בלי אזור', onClick: () => { this.filters.region = ''; this.filters.city = ''; this.showResults(); } });
+        if (this.filters.subject) opts.push({ label: 'בלי מקצוע', onClick: () => { this.filters.subject = ''; this.showResults(); } });
+        if (this.filters.level) opts.push({ label: 'בלי שכבה', onClick: () => { this.filters.level = ''; this.showResults(); } });
+        opts.push({ label: 'התחל מחדש', onClick: () => this.reset() });
+        this.botMsg('אין התאמה. בואו נרכך סינון:', opts);
         return;
       }
       if (matches.length <= 3) {
@@ -205,6 +235,14 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
         if (f.region) {
           if (j.region === f.region) { score += 100; exactMatches++; }
           else if (!j.region || j.region === 'ארצי') score += 5;
+        }
+
+        // עיר — בונוס משמעותי להתאמה (50). חוסם אם יש עיר אחרת באותו אזור.
+        if (f.city) {
+          const jCity = (j.city || '').trim();
+          if (jCity === f.city) { score += 50; exactMatches++; }
+          else if (!jCity) score += 3;
+          else if (j.region === f.region) blocker = true; // עיר אחרת באותו אזור → לא רלוונטי
         }
 
         if (f.subject) {
@@ -253,13 +291,14 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       if (f.role) parts.push(f.role);
       if (f.subject) parts.push(f.subject);
       if (f.level) parts.push(f.level);
-      if (f.region) parts.push('ב' + f.region);
+      if (f.city) parts.push('ב' + f.city);
+      else if (f.region) parts.push('ב' + f.region);
       if (f.scope) parts.push('משרה ' + f.scope);
       return parts.join(' · ');
     }
 
     reset() {
-      this.filters = { region: '', role: '', subject: '', level: '', scope: '' };
+      this.filters = { region: '', city: '', role: '', subject: '', level: '', scope: '' };
       this.shownCount = 0;
       this.persist();
       this.askMode();
