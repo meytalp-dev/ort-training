@@ -36,6 +36,24 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     return SUBJECT_ALIASES[s] || s;
   }
 
+  // משפטי טעינה — רוטציה אקראית במקום "טוען..."
+  const LOADING_LINES = [
+    'סורקים משרות מהר יותר ממורה תורנית במסדרון',
+    'מוצאים לכם משרה לפני שצלצל הצלצול',
+    'מחפשים בית ספר עם פסטרמה טרייה במקרר',
+    'בודקים מי מציע פרטניות בלי מילוי מקום מוסווה',
+    'מאתרים משרות עם תקשורת בוואטסאפ עד 21:00',
+    'מחפשים מנהל שעונה לטלפון לפני הצלצול',
+    'מאתרים משרות שבהן המיזוג באמת עובד'
+  ];
+  const PARSING_LINES = [
+    'קוראים את מה שכתבתם בעיון של בודק בגרויות',
+    'מנתחים את הבקשה בלי עט אדום',
+    'מחפשים את המילים החשובות, לא את הניסוח',
+    'מבינים את הצורך, לא רק את הכותרת'
+  ];
+  function pickLine(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
   const STORAGE_KEY = 'edura.chat.state.v1';
   const SAVED_KEY = 'edura.chat.saved.v1';
 
@@ -51,7 +69,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     async start() {
       this.render();
       this.botMsg('שלום! אני עוזר/ת למצוא משרת הוראה.');
-      this.setStatus('טוען משרות...');
+      this.setStatus(pickLine(LOADING_LINES));
       try {
         const res = await fetch(window.EDURA_JOBS_URL);
         const data = await res.json();
@@ -84,7 +102,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
 
     async handleFreeText(text) {
       this.userMsg(text);
-      this.setStatus('מנתח/ת...');
+      this.setStatus(pickLine(PARSING_LINES));
       try {
         const res = await fetch(window.EDURA_API_URL, {
           method: 'POST',

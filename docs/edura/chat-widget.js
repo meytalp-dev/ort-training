@@ -12,10 +12,10 @@
     .ew-fab {
       position: fixed; bottom: 24px; left: 24px;
       width: 56px; height: 56px;
-      background: #1F6B5C;
+      background: #0B2A4A;
       color: #fff;
       border-radius: 50%;
-      box-shadow: 0 6px 20px rgba(31,107,92,.35);
+      box-shadow: 0 6px 20px rgba(11,42,74,.35);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer;
       transition: transform .15s ease, box-shadow .15s ease;
@@ -24,7 +24,7 @@
     }
     .ew-fab:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(31,107,92,.45);
+      box-shadow: 0 8px 24px rgba(11,42,74,.45);
     }
     .ew-fab svg { width: 26px; height: 26px; }
     .ew-fab-label {
@@ -71,19 +71,39 @@
     .ew-overlay.open .ew-panel { transform: translateY(0); }
 
     .ew-panel-header {
-      background: #1F6B5C;
+      background: #0B2A4A;
       color: #fff;
-      padding: 14px 18px;
+      padding: 12px 16px;
       display: flex; align-items: center; justify-content: space-between;
       flex-shrink: 0;
     }
-    .ew-panel-title {
-      font-weight: 800; font-size: 16px;
+    .ew-panel-brand {
+      display: flex; flex-direction: column; gap: 2px;
     }
+    .ew-panel-logo { height: 32px; width: auto; display: block; }
     .ew-panel-title-sub {
-      font-size: 12px; font-weight: 400; opacity: .85;
-      margin-top: 2px;
+      font-size: 11px; font-weight: 500; opacity: .8;
+      letter-spacing: 0.5px;
     }
+    .ew-panel-footer {
+      padding: 8px 14px;
+      background: #fff;
+      border-top: 1px solid #E1DBD0;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: #8A9994;
+      flex-shrink: 0;
+    }
+    .ew-panel-footer strong { color: #4A5A55; font-weight: 700; }
+    .ew-panel-social { display: flex; gap: 6px; }
+    .ew-panel-social a {
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid #E1DBD0; border-radius: 50%;
+      color: #8A9994; font-size: 10px; font-weight: 700;
+      text-decoration: none;
+      transition: all .15s;
+    }
+    .ew-panel-social a:hover { color: #0B2A4A; border-color: #0B2A4A; }
     .ew-close {
       background: rgba(255,255,255,.15);
       border: none; color: #fff;
@@ -259,13 +279,25 @@
     overlay.innerHTML =
       '<div class="ew-panel" role="dialog" aria-label="בוט חיפוש משרה">' +
         '<div class="ew-panel-header">' +
-          '<div>' +
-            '<div class="ew-panel-title">בוט חיפוש משרה</div>' +
-            '<div class="ew-panel-title-sub">שיחה קצרה. תוצאות מותאמות.</div>' +
+          '<div class="ew-panel-brand">' +
+            '<svg class="ew-panel-logo" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+              '<text x="100" y="42" text-anchor="middle" direction="rtl" font-family="Heebo,sans-serif" font-weight="900" font-size="36" letter-spacing="-1.5" fill="#ffffff">אדור<tspan fill="#5EEAD4">ה</tspan></text>' +
+              '<circle cx="74" cy="50" r="2" fill="#5EEAD4"/>' +
+              '<circle cx="118" cy="50" r="2" fill="#5EEAD4"/>' +
+            '</svg>' +
+            '<div class="ew-panel-title-sub">בוט חיפוש משרה</div>' +
           '</div>' +
           '<button class="ew-close" type="button" aria-label="סגור">×</button>' +
         '</div>' +
         '<div id="ew-chat-root"></div>' +
+        '<div class="ew-panel-footer">' +
+          '<span>עוצב ע"י <strong>מיטל פלג</strong> · &copy; 2026</span>' +
+          '<span class="ew-panel-social">' +
+            '<a href="https://www.linkedin.com/in/meytal-peleg-839265378" target="_blank" rel="noopener" aria-label="LinkedIn">in</a>' +
+            '<a href="https://www.instagram.com/learni.ai/" target="_blank" rel="noopener" aria-label="Instagram">ig</a>' +
+            '<a href="https://www.facebook.com/profile.php?id=752991207892637" target="_blank" rel="noopener" aria-label="Facebook">fb</a>' +
+          '</span>' +
+        '</div>' +
       '</div>';
 
     document.body.appendChild(fab);
