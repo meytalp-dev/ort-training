@@ -465,6 +465,7 @@
   <p>© 2026 אדורה · edura.co.il</p>
 </footer>
 
+<script src="analytics.js"></script>
 <script src="matching.js"></script>
 <script>
 const TEACHERS_URL = 'data/teachers.json';
@@ -622,16 +623,17 @@ function render() {
     const meta = [t.city, t.sub_area].filter(Boolean).join(' · ');
 
     const contacts = [];
+    const tid = esc(t.name || t.id || '');
     if (isFb) {
       const fbUrl = t.fb_url || t.url || '';
       if (fbUrl) {
-        contacts.push('<a class="contact-btn primary" href="' + esc(fbUrl) + '" target="_blank" rel="noopener">📘 צפייה בפוסט בפייסבוק</a>');
+        contacts.push('<a class="contact-btn primary" href="' + esc(fbUrl) + '" target="_blank" rel="noopener" onclick="trk(\'contact_fb\', \'teacher=' + tid + '\')">📘 צפייה בפוסט בפייסבוק</a>');
       }
     } else {
       const wa = buildWaLink(t.phone, t.name);
-      if (t.email) contacts.push('<a class="contact-btn primary" href="mailto:' + esc(t.email) + '?subject=' + encodeURIComponent('הצעת עבודה דרך אדורה') + '">✉ שליחת הצעה במייל</a>');
-      if (t.phone) contacts.push('<a class="contact-btn secondary" href="tel:' + esc(t.phone) + '">☏ ' + esc(t.phone) + '</a>');
-      if (wa)      contacts.push('<a class="contact-btn secondary" href="' + esc(wa) + '" target="_blank" rel="noopener">🟢 WhatsApp</a>');
+      if (t.email) contacts.push('<a class="contact-btn primary" href="mailto:' + esc(t.email) + '?subject=' + encodeURIComponent('הצעת עבודה דרך אדורה') + '" onclick="trk(\'contact_email\', \'teacher=' + tid + '\')">✉ שליחת הצעה במייל</a>');
+      if (t.phone) contacts.push('<a class="contact-btn secondary" href="tel:' + esc(t.phone) + '" onclick="trk(\'contact_phone\', \'teacher=' + tid + '\')">☏ ' + esc(t.phone) + '</a>');
+      if (wa)      contacts.push('<a class="contact-btn secondary" href="' + esc(wa) + '" target="_blank" rel="noopener" onclick="trk(\'contact_wa\', \'teacher=' + tid + '\')">🟢 WhatsApp</a>');
     }
 
     const displayName = t.name || (isFb ? 'מורה מחפש/ת משרה' : 'מורה');
@@ -659,12 +661,18 @@ function render() {
   }).join('');
 }
 
+// ─── Helper: track shortcut ──────────────────────────────
+function trk(event, details) {
+  if (window.EduraAnalytics) window.EduraAnalytics.track(event, details);
+}
+
 // ─── Match modal ─────────────────────────────────────────
 function openMatchModal(teacherIndex) {
   const teacher = allT[teacherIndex];
   if (!teacher || !window.EduraMatch) return;
   const matches = window.EduraMatch.findJobsForTeacher(teacher, allJobs);
   const displayName = teacher.name || 'מורה זה/זו';
+  trk('match_badge_click', 'teacher=' + (teacher.name || teacher.id) + '|matches=' + matches.length);
 
   $('match-modal-title').textContent = '🎯 ' + matches.length + ' משרות מתאימות ל' + displayName;
   $('match-modal-sub').textContent = (teacher.subject || '') + (teacher.region ? ' · ' + teacher.region : '') + (teacher.city ? ' · ' + teacher.city : '');
@@ -691,7 +699,7 @@ function openMatchModal(teacherIndex) {
         (teacher.phone ? '• טלפון: ' + teacher.phone + '\n' : '') +
         '\nממליצים ליצור איתו/ה קשר ישיר.\n\n' +
         'בהצלחה,\nאדורה';
-      actions.push('<a class="match-action primary" href="mailto:' + esc(job.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) + '">✉ שלחו לבית הספר</a>');
+      actions.push('<a class="match-action primary" href="mailto:' + esc(job.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) + '" onclick="trk(\'match_send_email\', \'teacher=' + esc(teacher.name || teacher.id) + '|job=' + esc(job.id) + '\')">✉ שלחו לבית הספר</a>');
     }
     if (job.url) actions.push('<a class="match-action secondary" href="' + esc(job.url) + '" target="_blank" rel="noopener">המודעה המקורית ↗</a>');
 
@@ -721,9 +729,14 @@ window.openMatchModal = openMatchModal;
 window.closeMatchModal = closeMatchModal;
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMatchModal(); });
 
+const _trackFilter = debounce((id, val) => {
+  if (val) trk(id === 'search' ? 'search' : 'filter_' + id, val);
+}, 800);
 ['search','region','city','subject','scope'].forEach(id => {
   $(id).addEventListener('input', debounce(applyFilters, 100));
   $(id).addEventListener('change', applyFilters);
+  $(id).addEventListener('change', () => _trackFilter(id, $(id).value));
+  if (id === 'search') $(id).addEventListener('input', () => _trackFilter(id, $(id).value));
 });
 $('clear-filters').addEventListener('click', () => {
   ['search','region','city','subject','scope'].forEach(id => $(id).value = '');
@@ -736,6 +749,7 @@ loadTeachers();
 function openPublishModal() {
   document.getElementById('publish-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
+  trk('publish_modal_open', '');
 }
 function closePublishModal() {
   document.getElementById('publish-modal').classList.remove('open');
@@ -788,6 +802,7 @@ async function submitPublish() {
     'אישור פרסום: ✓ אני מאשר/ת פרסום הפרטים האלה במאגר המורים של אדורה.'
   ].join('\n');
   const mailto = 'mailto:mlypeleg@gmail.com?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+  trk('publish_submit', subject + '|' + region + '|' + city);
   window.location.href = mailto;
   showToast('✓ פרטיך הוכנו לשליחה. אנחנו נוסיף אותך למאגר ב-24 שעות.');
   setTimeout(() => {

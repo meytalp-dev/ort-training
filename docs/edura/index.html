@@ -97,6 +97,25 @@
     border: 1px solid #FBCFE8;
   }
   .btn-teachers:hover { background: #FBCFE8; transform: translateY(-1px); }
+  .btn-publish-job {
+    background: var(--orange-soft); color: var(--orange);
+    font-weight: 700; font-size: 14px; padding: 8px 14px;
+    border-radius: 8px; border: 1px solid #FDE68A;
+    transition: background .15s, transform .1s; cursor: pointer;
+  }
+  .btn-publish-job:hover { background: #FDE68A; transform: translateY(-1px); }
+  .modal-supra-publish { font-size: 13px; color: var(--orange); font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .modal-info-publish {
+    background: var(--orange-soft); border-right: 3px solid var(--orange);
+    padding: 12px 16px; border-radius: 8px;
+    font-size: 13px; line-height: 1.5; color: var(--ink-soft);
+    margin: 16px 0 20px;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .form-row-3 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 500px) { .form-row-3 { grid-template-columns: 1fr; } }
   .btn-primary {
     background: var(--green-deep); color: var(--white);
     padding: 10px 20px; border-radius: 999px;
@@ -449,7 +468,7 @@
     <nav class="header-cta">
       <a href="teachers.html" class="btn-teachers">👤 מורים מחפשי עבודה</a>
       <a href="manager-tenders.html" class="btn-tenders">מכרזי ניהול</a>
-      <a href="#cta" class="btn-text">פרסם משרה</a>
+      <button class="btn-publish-job" onclick="openPostJobModal()">+ פרסם משרה</button>
       <a href="chat.html" class="btn-primary">בוט חיפוש 🔍</a>
     </nav>
   </div>
@@ -586,6 +605,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="analytics.js"></script>
 <script src="matching.js"></script>
 <script>
 const JOBS_URL = 'data/jobs.json';
@@ -731,10 +751,11 @@ function render() {
     if (j.scope)   tags.push('<span class="tag tag-scope">' + esc(j.scope) + '</span>');
 
     const contacts = [];
-    if (j.email) contacts.push('<a class="contact-link" href="mailto:' + esc(j.email) + '">✉ מייל</a>');
-    if (j.phone) contacts.push('<a class="contact-link" href="tel:' + esc(j.phone) + '">☏ ' + esc(j.phone) + '</a>');
+    const jid = esc(j.id || '');
+    if (j.email) contacts.push('<a class="contact-link" href="mailto:' + esc(j.email) + '" onclick="trk(\'contact_email\', \'job=' + jid + '\')">✉ מייל</a>');
+    if (j.phone) contacts.push('<a class="contact-link" href="tel:' + esc(j.phone) + '" onclick="trk(\'contact_phone\', \'job=' + jid + '\')">☏ ' + esc(j.phone) + '</a>');
     const wa = buildWaLink(j.phone, j.school || j.title);
-    if (wa) contacts.push('<a class="contact-link" href="' + esc(wa) + '" target="_blank" rel="noopener">🟢 WhatsApp</a>');
+    if (wa) contacts.push('<a class="contact-link" href="' + esc(wa) + '" target="_blank" rel="noopener" onclick="trk(\'contact_wa\', \'job=' + jid + '\')">🟢 WhatsApp</a>');
 
     const cityLine = j.city ? esc(j.city) : '';
     const schoolLine = j.school && j.school !== j.title ? '<div class="job-school">' + esc(j.school) + (cityLine ? ' · ' + cityLine : '') + '</div>' : (cityLine ? '<div class="job-school">' + cityLine + '</div>' : '');
@@ -767,11 +788,18 @@ function render() {
   }).join('');
 }
 
+// ─── Helper: track shortcut ──────────────────────────────
+function trk(event, details) {
+  if (window.EduraAnalytics) window.EduraAnalytics.track(event, details);
+}
+window.trk = trk;
+
 // ─── Match modal (job → teachers) ─────────────────────────
 function openMatchModal(jobIdx) {
   const job = allJobs[jobIdx];
   if (!job || !window.EduraMatch) return;
   const matches = window.EduraMatch.findTeachersForJob(job, allTeachers);
+  trk('match_badge_click', 'job=' + (job.id || '') + '|matches=' + matches.length);
 
   $('match-modal-title').textContent = '🎯 ' + matches.length + ' מורים מתאימים למשרה';
   $('match-modal-sub').textContent = (job.title || '') + (job.school ? ' · ' + job.school : '') + (job.city ? ' · ' + job.city : '');
@@ -799,7 +827,7 @@ function openMatchModal(jobIdx) {
         (teacher.phone ? '• טלפון: ' + teacher.phone + '\n' : '') +
         '\nאתם יכולים ליצור קשר ישירות.\n\n' +
         'בהצלחה,\nאדורה';
-      actions.push('<a class="match-action primary" href="mailto:' + esc(job.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) + '">✉ שלחו לבית הספר</a>');
+      actions.push('<a class="match-action primary" href="mailto:' + esc(job.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) + '" onclick="trk(\'match_send_email\', \'job=' + esc(job.id) + '|teacher=' + esc(teacher.name || teacher.id) + '\')">✉ שלחו לבית הספר</a>');
     }
     if (teacher.email) actions.push('<a class="match-action secondary" href="mailto:' + esc(teacher.email) + '">✉ ' + esc(teacher.email) + '</a>');
     if (teacher.phone) actions.push('<a class="match-action secondary" href="tel:' + esc(teacher.phone) + '">☏ ' + esc(teacher.phone) + '</a>');
@@ -843,6 +871,7 @@ function openApplyModal(idx) {
   $('apply-school-name').textContent = currentApply.school || currentApply.title;
   $('apply-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
+  trk('apply_modal_open', 'job=' + (currentApply.id || ''));
 }
 function closeApplyModal() {
   $('apply-modal').classList.remove('open');
@@ -896,12 +925,15 @@ async function submitApplication() {
 
   if (currentApply.email) {
     const mailto = 'mailto:' + currentApply.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    trk('apply_submit', 'job=' + (currentApply.id || '') + '|via=mailto');
     window.location.href = mailto;
     showToast('פותח את הדואר שלך... זכרי לצרף ידנית את הקובץ ' + (file ? file.name : 'הקו"ח'));
   } else if (currentApply.url) {
+    trk('apply_submit', 'job=' + (currentApply.id || '') + '|via=source');
     showToast('המודעה לא חושפת מייל ישיר — נפתח את המקור');
     window.open(currentApply.url, '_blank');
   } else {
+    trk('apply_submit_fail', 'job=' + (currentApply.id || ''));
     showToast('לא ניתן לשלוח — אין פרטי קשר');
   }
 
@@ -919,9 +951,14 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
+const _trackFilter = debounce((id, val) => {
+  if (val) trk(id === 'search' ? 'search' : 'filter_' + id, val);
+}, 800);
 ['search','region','city','level','sector','subject','role','scope'].forEach(id => {
   $(id).addEventListener('input', debounce(applyFilters, 100));
   $(id).addEventListener('change', applyFilters);
+  $(id).addEventListener('change', () => _trackFilter(id, $(id).value));
+  if (id === 'search') $(id).addEventListener('input', () => _trackFilter(id, $(id).value));
 });
 $('clear-filters').addEventListener('click', () => {
   ['search','region','level','sector','subject','role','scope'].forEach(id => $(id).value = '');
@@ -934,7 +971,199 @@ document.addEventListener('keydown', (e) => {
 
 // Boot
 loadJobs().then(indexJobs);
+
+// ─── Post-job modal (for principals) ───────────────────────
+function openPostJobModal() {
+  document.getElementById('post-job-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closePostJobModal() {
+  document.getElementById('post-job-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+window.openPostJobModal = openPostJobModal;
+window.closePostJobModal = closePostJobModal;
+
+function submitPostJob() {
+  const school = document.getElementById('pj-school').value.trim();
+  const subject = document.getElementById('pj-subject').value.trim();
+  const role = document.getElementById('pj-role').value;
+  const region = document.getElementById('pj-region').value;
+  const city = document.getElementById('pj-city').value.trim();
+  const level = document.getElementById('pj-level').value;
+  const sector = document.getElementById('pj-sector').value;
+  const scope = document.getElementById('pj-scope').value;
+  const description = document.getElementById('pj-desc').value.trim();
+  const contactName = document.getElementById('pj-contact-name').value.trim();
+  const email = document.getElementById('pj-email').value.trim();
+  const phone = document.getElementById('pj-phone').value.trim();
+  const consent = document.getElementById('pj-consent').checked;
+
+  if (!school || !subject || !email || !phone || !contactName || !consent) {
+    showToast('שם בית ספר, מקצוע, איש קשר, מייל, טלפון ואישור — חובה.');
+    return;
+  }
+
+  const btn = document.getElementById('pj-submit');
+  btn.disabled = true;
+  btn.textContent = 'שולח...';
+
+  const subj = '[Edura] פרסום משרה — ' + school + ' (' + subject + ')';
+  const body = [
+    'בקשה לפרסום משרת הוראה באתר אדורה.',
+    '',
+    'בית ספר: ' + school,
+    'מקצוע: ' + subject,
+    'תפקיד: ' + role,
+    'אזור: ' + region,
+    'עיר: ' + city,
+    'שכבה: ' + level,
+    'מגזר: ' + sector,
+    'היקף: ' + scope,
+    '',
+    'תיאור המשרה:',
+    description,
+    '',
+    '— פרטי איש קשר —',
+    'איש קשר: ' + contactName,
+    'מייל: ' + email,
+    'טלפון: ' + phone,
+    '',
+    'אישור פרסום: ✓ אני מנהל/ת בית הספר ומאשר/ת פרסום המשרה באדורה.'
+  ].join('\n');
+  const mailto = 'mailto:mlypeleg@gmail.com?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
+  showToast('✓ פרטי המשרה הוכנו לשליחה. נוסיף ב-24 שעות.');
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = 'פרסם משרה ✓';
+    closePostJobModal();
+  }, 2000);
+}
+window.submitPostJob = submitPostJob;
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeApplyModal();
+    closePostJobModal();
+  }
+});
 </script>
+
+<!-- Post-job modal (for principals) -->
+<div class="modal-overlay" id="post-job-modal" onclick="if(event.target===this)closePostJobModal()">
+  <div class="modal" style="max-width: 640px;">
+    <button class="modal-close" onclick="closePostJobModal()" aria-label="סגור">×</button>
+    <div class="modal-supra-publish">פרסום משרה באדורה — חינם</div>
+    <h2>פרסום משרת הוראה</h2>
+    <div class="modal-info-publish">
+      <strong>בחינם, ללא הרשמה.</strong> המשרה תפורסם באדורה ותהיה גלויה למורות שמחפשות עבודה. תקבלו פניות ישירות למייל או לטלפון. אפשר להסיר בכל רגע — שלחו לנו מייל.
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label for="pj-school">שם בית הספר *</label>
+        <input type="text" id="pj-school" placeholder="לדוגמה: תיכון אורט אורנית" required />
+      </div>
+      <div>
+        <label for="pj-subject">מקצוע *</label>
+        <input type="text" id="pj-subject" placeholder="אנגלית, מתמטיקה, חינוך מיוחד..." required />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label for="pj-role">תפקיד</label>
+        <select id="pj-role">
+          <option value="מורה">מורה</option>
+          <option value="מחנך/ת">מחנך/ת</option>
+          <option value="רכז/ת">רכז/ת</option>
+          <option value="יועץ/ת">יועץ/ת</option>
+          <option value="מדריך/ה">מדריך/ה</option>
+          <option value="מטפל/ת">מטפל/ת</option>
+          <option value="סייע/ת">סייע/ת</option>
+          <option value="מנהל/ת">מנהל/ת</option>
+          <option value="סגן/ית">סגן/ית מנהל</option>
+        </select>
+      </div>
+      <div>
+        <label for="pj-scope">היקף משרה</label>
+        <select id="pj-scope">
+          <option value="">לא צוין</option>
+          <option value="מלאה">מלאה</option>
+          <option value="חלקית">חלקית</option>
+          <option value="מלאה/חלקית">מלאה/חלקית</option>
+          <option value="גמישה">גמישה</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row-3">
+      <div>
+        <label for="pj-region">אזור</label>
+        <select id="pj-region">
+          <option value="">בחרי</option>
+          <option value="ירושלים">ירושלים</option>
+          <option value="מרכז">מרכז</option>
+          <option value="צפון">צפון</option>
+          <option value="דרום">דרום</option>
+          <option value="שפלה">שפלה</option>
+        </select>
+      </div>
+      <div>
+        <label for="pj-city">עיר</label>
+        <input type="text" id="pj-city" placeholder="ראש העין" />
+      </div>
+      <div>
+        <label for="pj-level">שכבה</label>
+        <select id="pj-level">
+          <option value="">לא צוין</option>
+          <option value="גן">גן</option>
+          <option value="יסודי">יסודי</option>
+          <option value="חטיבת ביניים">חטיבת ביניים</option>
+          <option value="תיכון">תיכון</option>
+          <option value="חינוך מיוחד">חינוך מיוחד</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="pj-sector">מגזר</label>
+    <select id="pj-sector">
+      <option value="ממלכתי">ממלכתי</option>
+      <option value='ממ"ד'>ממ"ד</option>
+      <option value="חרדי">חרדי</option>
+      <option value="ערבי">ערבי</option>
+    </select>
+
+    <label for="pj-desc">תיאור המשרה</label>
+    <textarea id="pj-desc" placeholder="לדוגמה: לתיכון אורט אורנית בראש העין דרוש/ה מורה לאנגלית לשנת תשפ&quot;ז. מועמדים בעלי תעודת הוראה וניסיון בהגשה לבגרות. אפשרות למשרה מלאה או חלקית."></textarea>
+
+    <div class="form-row-3">
+      <div>
+        <label for="pj-contact-name">איש קשר *</label>
+        <input type="text" id="pj-contact-name" placeholder="שם המנהל/ת" required />
+      </div>
+      <div>
+        <label for="pj-email">מייל לפנייה *</label>
+        <input type="email" id="pj-email" placeholder="contact@school.org.il" required />
+      </div>
+      <div>
+        <label for="pj-phone">טלפון *</label>
+        <input type="tel" id="pj-phone" placeholder="03-1234567" required />
+      </div>
+    </div>
+
+    <label style="display: flex; gap: 8px; align-items: flex-start; margin-top: 18px; font-weight: 500; cursor: pointer;">
+      <input type="checkbox" id="pj-consent" style="width: 18px; height: 18px; margin-top: 2px;" />
+      <span>אני מנהל/ת בית הספר (או מאושר/ת מטעמו/ה) ומאשר/ת פרסום המשרה באדורה. אני אחראי/ת לתוכן הפרסום.</span>
+    </label>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePostJobModal()">ביטול</button>
+      <button class="btn-submit" id="pj-submit" onclick="submitPostJob()">פרסם משרה ✓</button>
+    </div>
+  </div>
+</div>
 
 <script src="chat-widget.js" defer></script>
 
