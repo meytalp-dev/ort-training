@@ -665,8 +665,13 @@ function json_(obj) {
 // קלט:  { action: 'parse', text: 'אני מורה למתמטיקה בירושלים' }
 // פלט:  { ok: true, filters: { region, role, subject, level, scope } }
 // ════════════════════════════════════════════════════════════════════
-const GEMINI_KEY = 'AIzaSyDKNEikoSozZIDOFN2lR6S6yc9MDPy74ok';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
+// 🔒 המפתח נשמר ב-Script Properties — אין מפתח בקוד הציבורי
+// הגדרה חד פעמית: Apps Script editor → Project Settings → Script Properties → Add: GEMINI_KEY = <המפתח>
+function getGeminiUrl_() {
+  const key = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  if (!key) throw new Error('GEMINI_KEY missing in Script Properties');
+  return 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key;
+}
 
 function doPost(e) {
   try {
@@ -695,11 +700,12 @@ function parseUserText_(text) {
     generationConfig: { temperature: 0.1, maxOutputTokens: 200 }
   };
 
-  const res = UrlFetchApp.fetch(GEMINI_URL, {
+  const res = UrlFetchApp.fetch(getGeminiUrl_(), {
     method: 'post',
     contentType: 'application/json',
     payload: JSON.stringify(payload),
-    muteHttpExceptions: true
+    muteHttpExceptions: true,
+    deadline: 8
   });
 
   if (res.getResponseCode() !== 200) {

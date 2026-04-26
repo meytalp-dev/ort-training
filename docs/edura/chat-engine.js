@@ -84,11 +84,13 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       this.root = root;
       this.allJobs = [];
       this.allTeachers = [];
-      this.flow = 'job'; // 'job' | 'teacher' | 'tender'
-      this.dataset = []; // הדאטה הפעיל (jobs מסונן או teachers)
+      this.flow = 'job';
+      this.dataset = [];
       this.filters = { region: '', city: '', role: '', subject: '', level: '', scope: '' };
       this.shownCount = 0;
       this.state = 'init';
+      // היסטוריית שלבים — מאפשרת "חזרה" לבחירה קודמת
+      this.history = [];
     }
 
     async start() {
@@ -204,10 +206,25 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     }
 
     askRegion() {
-      this.botMsg('באיזה אזור?', [
+      this.history.push('askRegion');
+      this.botMsg('באיזה אזור?', this.withBack([
         ...REGIONS.map(r => ({ label: r, onClick: () => this.setAndNext('region', r, 'askCity') })),
         { label: 'גמיש', onClick: () => this.setAndNext('region', '', 'askRole') }
-      ]);
+      ]));
+    }
+
+    // עוטף רשימת actions ומוסיף "← חזרה" אם יש היסטוריה
+    withBack(actions) {
+      if (this.history.length <= 1) return actions;
+      return actions.concat([{ label: '← חזרה', onClick: () => this.goBack() }]);
+    }
+
+    goBack() {
+      // הסר את השלב הנוכחי ואת הקודם, ואז קרא לקודם מחדש
+      this.history.pop(); // current
+      const prev = this.history.pop();
+      if (prev && typeof this[prev] === 'function') this[prev]();
+      else this.askFlow();
     }
 
     askCity() {
@@ -229,38 +246,40 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
         return;
       }
 
+      this.history.push('askCity');
       const opts = cities.map(c => ({
         label: c + ' (' + counts[c] + ')',
         onClick: () => this.setAndNext('city', c, 'askRole')
       }));
       opts.push({ label: 'כל ' + this.filters.region, onClick: () => this.setAndNext('city', '', 'askRole') });
-      this.botMsg('איזו עיר ב' + this.filters.region + '?', opts);
+      this.botMsg('איזו עיר ב' + this.filters.region + '?', this.withBack(opts));
     }
 
     askRole() {
-      // במכרזי ניהול — הסינון על מנהל/ת כבר קבוע, דלג ל-subject (לא רלוונטי) או level
       if (this.flow === 'tender') { this.askLevel(); return; }
-      // במורים מחפשי משרה — אין שדה role בדאטה, דלג ל-subject
       if (this.flow === 'teacher') { this.askSubject(); return; }
-      this.botMsg('איזה תפקיד?', [
+      this.history.push('askRole');
+      this.botMsg('איזה תפקיד?', this.withBack([
         ...ROLES.map(r => ({ label: r, onClick: () => this.setAndNext('role', r, this.needsSubject_(r) ? 'askSubject' : 'askLevel') })),
         { label: 'גמיש', onClick: () => this.setAndNext('role', '', 'askLevel') }
-      ]);
+      ]));
     }
 
     askSubject() {
+      this.history.push('askSubject');
       const opts = SUBJECTS.map(s => ({ label: s, onClick: () => this.setAndNext('subject', s, 'askLevel') }));
       opts.push({ label: 'אחר / גמיש', onClick: () => this.setAndNext('subject', '', 'askLevel') });
-      this.botMsg('איזה מקצוע?', opts);
+      this.botMsg('איזה מקצוע?', this.withBack(opts));
     }
 
     askLevel() {
-      this.botMsg('איזה שכבה?', [
+      this.history.push('askLevel');
+      this.botMsg('איזו שכבה?', this.withBack([
         { label: 'יסודי', onClick: () => this.setAndNext('level', 'יסודי', 'showResults') },
         { label: 'חט"ב', onClick: () => this.setAndNext('level', 'חטיבת ביניים', 'showResults') },
         { label: 'תיכון', onClick: () => this.setAndNext('level', 'תיכון', 'showResults') },
         { label: 'גמיש', onClick: () => this.setAndNext('level', '', 'showResults') }
-      ]);
+      ]));
     }
 
     needsSubject_(role) {
@@ -271,6 +290,8 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       this.filters[key] = value;
       this.userMsg(value || 'גמיש');
       this.persist();
+      // איפוס shownCount כשמתחילים סינון מחדש (תיקון באג מימוש)
+      this.shownCount = 0;
       if (typeof this[nextFn] === 'function') this[nextFn]();
     }
 
@@ -278,7 +299,8 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       const matches = this.matchJobs();
       this.shownCount = 0;
       const summary = this.summarizeFilters();
-      this.botMsg('מצאתי ' + matches.length + ' משרות רלוונטיות' + (summary ? ' עבור: ' + summary : '') + '.');
+      const noun = this.flow === 'teacher' ? 'מורים מתאימים' : (this.flow === 'tender' ? 'מכרזים' : 'משרות רלוונטיות');
+      this.botMsg('מצאתי ' + matches.length + ' ' + noun + (summary ? ' עבור: ' + summary : '') + '.');
       if (matches.length === 0) {
         const opts = [];
         if (this.filters.city) opts.push({ label: 'בלי עיר', onClick: () => { this.filters.city = ''; this.showResults(); } });
@@ -389,6 +411,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       this.filters = { region: '', city: '', role: '', subject: '', level: '', scope: '' };
       this.shownCount = 0;
       this.dataset = [];
+      this.history = [];
       this.persist();
       this.askFlow();
     }
@@ -418,10 +441,10 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     // ─── UI helpers ───────────────────────────────────────────
     render() {
       this.root.innerHTML = '' +
-        '<div class="ec-stream" id="ec-stream"></div>' +
-        '<div class="ec-status" id="ec-status"></div>' +
+        '<div class="ec-stream" id="ec-stream" role="log" aria-live="polite" aria-atomic="false" aria-label="שיחה עם בוט אדורה"></div>' +
+        '<div class="ec-status" id="ec-status" role="status" aria-live="polite"></div>' +
         '<div class="ec-input-row" id="ec-input-row" hidden>' +
-          '<input type="text" id="ec-input" placeholder="כתוב/י כאן..." autocomplete="off" />' +
+          '<input type="text" id="ec-input" aria-label="הקלידו את החיפוש שלכם" placeholder="כתבו כאן..." autocomplete="off" inputmode="search" enterkeyhint="send" />' +
           '<button id="ec-send" class="ec-send-btn" type="button">שלח</button>' +
         '</div>';
       this.stream = this.root.querySelector('#ec-stream');
@@ -510,8 +533,9 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
         const cleanPhone = j.phone.replace(/\s+/g,'');
         ctas.push('<a class="ec-job-cta ec-job-cta-tel" href="tel:' + esc(cleanPhone) + '">חייגו ' + esc(j.phone) + '</a>');
       }
-      if (!j.email && !j.phone && j.url) {
-        ctas.push('<a class="ec-job-cta" href="' + esc(j.url) + '" target="_blank" rel="noopener">פתחו במקור ←</a>');
+      // קישור למקור — מוצג תמיד כשיש URL (גם אם יש מייל/טלפון). חשוב למשתמש שרוצה לראות מודעה מלאה.
+      if (j.url) {
+        ctas.push('<a class="ec-job-cta ec-job-cta-link" href="' + esc(j.url) + '" target="_blank" rel="noopener">פרטים נוספים ←</a>');
       }
       if (ctas.length === 0) {
         ctas.push('<span class="ec-job-cta" style="opacity:.5;cursor:default">פרטי קשר חסרים</span>');

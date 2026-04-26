@@ -9,6 +9,14 @@
   'use strict';
 
   const STYLES = `
+    /* a11y — focus + reduced motion */
+    .ew-overlay a:focus-visible, .ew-overlay button:focus-visible, .ew-overlay input:focus-visible,
+    .ew-fab:focus-visible {
+      outline: 2px solid #14B8A6; outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ew-fab, .ew-overlay, .ew-panel { transition: none !important; }
+    }
     .ew-fab {
       position: fixed; bottom: 24px; left: 24px;
       width: 56px; height: 56px;
@@ -107,10 +115,10 @@
     .ew-close {
       background: rgba(255,255,255,.15);
       border: none; color: #fff;
-      width: 32px; height: 32px;
+      width: 44px; height: 44px;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 20px;
       display: flex; align-items: center; justify-content: center;
     }
     .ew-close:hover { background: rgba(255,255,255,.25); }
@@ -146,7 +154,8 @@
     }
     #ew-chat-root .ec-actions { display: flex; flex-wrap: wrap; gap: 6px; }
     #ew-chat-root .ec-action {
-      padding: 7px 12px;
+      min-height: 40px;
+      padding: 9px 14px;
       background: #fff; border: 1.5px solid #14B8A6;
       color: #0B2A4A; border-radius: 999px;
       font-size: 13px; font-weight: 600; cursor: pointer;
@@ -197,9 +206,14 @@
       font-size: 13px; font-weight: 700;
       text-decoration: none;
     }
-    #ew-chat-root .ec-job-cta:hover { background: #c94a30; }
+    #ew-chat-root .ec-job-cta:hover { background: #B45309; }
     #ew-chat-root .ec-job-cta-tel { background: #0B2A4A; }
-    #ew-chat-root .ec-job-cta-tel:hover { background: #14B8A6; }
+    #ew-chat-root .ec-job-cta-tel:hover { background: #1E3A5F; }
+    #ew-chat-root .ec-job-cta-link {
+      background: #fff; color: #0B2A4A;
+      border: 1.5px solid #E2E8F0;
+    }
+    #ew-chat-root .ec-job-cta-link:hover { background: #F8FAFC; border-color: #0B2A4A; }
     #ew-chat-root .ec-job-save {
       padding: 9px 12px;
       border: 1.5px solid #E2E8F0;
@@ -277,7 +291,8 @@
     const overlay = document.createElement('div');
     overlay.className = 'ew-overlay';
     overlay.innerHTML =
-      '<div class="ew-panel" role="dialog" aria-label="בוט חיפוש משרה">' +
+      '<div class="ew-panel" role="dialog" aria-modal="true" aria-labelledby="ew-dialog-title">' +
+        '<h2 id="ew-dialog-title" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">בוט חיפוש משרה אדורה</h2>' +
         '<div class="ew-panel-header">' +
           '<div class="ew-panel-brand">' +
             '<svg class="ew-panel-logo" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
@@ -307,17 +322,25 @@
     const closeBtn = overlay.querySelector('.ew-close');
     let chatStarted = false;
 
+    let lastFocused = null;
     function open() {
+      lastFocused = document.activeElement;
       overlay.classList.add('open');
       if (!chatStarted) {
         ensureChatEngine(() => {
           const chat = new window.EduraChat(chatRoot);
           chat.start();
           chatStarted = true;
+          setTimeout(() => closeBtn.focus(), 200);
         });
+      } else {
+        setTimeout(() => closeBtn.focus(), 200);
       }
     }
-    function close() { overlay.classList.remove('open'); }
+    function close() {
+      overlay.classList.remove('open');
+      if (lastFocused && lastFocused.focus) lastFocused.focus();
+    }
 
     fab.addEventListener('click', open);
     closeBtn.addEventListener('click', close);
