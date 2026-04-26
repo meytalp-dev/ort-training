@@ -16,12 +16,21 @@
  * 8. Commit + push. Done.
  */
 
+// Name of the tab inside the spreadsheet where events are appended.
+// Change if you want a different tab name.
+var SHEET_NAME = 'Analytics';
+
 function doGet(e) {
   var params = (e && e.parameter) || {};
   var callback = params.callback || 'cb';
 
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_NAME);
+      sheet.appendRow(['תאריך','אירוע','פרטים','עמוד','מכשיר','session','זמן_שניות','מקור']);
+    }
     sheet.appendRow([
       new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }),
       params.event || '',
