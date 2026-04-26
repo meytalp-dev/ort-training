@@ -6,7 +6,7 @@
 <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="pragma" content="no-cache" />
 <meta http-equiv="expires" content="0" />
-<title>Edura — אימות נתונים · 440 משרות (v8)</title>
+<title>Edura — אימות נתונים · 440 משרות (v9)</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
@@ -448,7 +448,15 @@ function applyFilters() {
     return 0;
   });
 
-  page = 0;
+  // Don't auto-reset page when called after an inline edit. Only when triggered
+  // by a filter/search input change (handled by event listeners that set _resetPage=true).
+  if (window._resetPage) {
+    page = 0;
+    window._resetPage = false;
+  }
+  // Clamp page to valid range (in case filter shrunk the list)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  if (page >= totalPages) page = totalPages - 1;
   document.getElementById('count').textContent = `${filtered.length} מ-${allJobs.length - deleted.size} משרות (${deleted.size} נמחקו)`;
   render();
 }
@@ -468,9 +476,10 @@ document.querySelectorAll('th[data-sort]').forEach(th => {
   });
 });
 
+function applyFiltersResetPage() { window._resetPage = true; applyFilters(); }
 ['q', 'src', 'region', 'level', 'sector', 'scope', 'role', 'has'].forEach(id => {
-  document.getElementById(id).addEventListener('input', applyFilters);
-  document.getElementById(id).addEventListener('change', applyFilters);
+  document.getElementById(id).addEventListener('input', applyFiltersResetPage);
+  document.getElementById(id).addEventListener('change', applyFiltersResetPage);
 });
 
 async function init() {
