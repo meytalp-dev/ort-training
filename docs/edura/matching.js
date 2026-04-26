@@ -56,13 +56,27 @@
     return GENERIC_SUBJECTS.has(normalizeText(subject));
   }
 
+  function asRegionArr(x) {
+    if (Array.isArray(x)) {
+      return x.map(v => String(v || '').trim()).filter(Boolean);
+    }
+    const s = String(x || '').trim();
+    return s ? [s] : [];
+  }
+
   function regionScore(rA, rB) {
-    const a = normalizeText(rA);
-    const b = normalizeText(rB);
-    if (!a || !b) return 0;
-    if (a === b) return 30;
-    const neighbors = REGION_NEIGHBORS[rA] || [];
-    if (neighbors.includes(rB)) return 15;
+    const arrA = asRegionArr(rA);
+    const arrB = asRegionArr(rB);
+    if (!arrA.length || !arrB.length) return 0;
+    for (const a of arrA) {
+      if (arrB.indexOf(a) !== -1) return 30;
+    }
+    for (const a of arrA) {
+      const neighbors = REGION_NEIGHBORS[a] || [];
+      for (const n of neighbors) {
+        if (arrB.indexOf(n) !== -1) return 15;
+      }
+    }
     return 0;
   }
 
@@ -72,7 +86,6 @@
     const cB = canonicalSubject(sB);
     if (!cA || !cB) return 0;
     if (cA === cB) return 60;
-    // Substring fallback for partial matches like "מורה לתנ"ך" vs "תנ"ך"
     if (cA.includes(cB) || cB.includes(cA)) return 40;
     return 0;
   }
@@ -87,7 +100,9 @@
   function scoreMatch(teacher, job) {
     const subj = subjectScore(teacher.subject, job.subject);
     if (subj === 0) return 0;
+    // אזור הוא חובה: בלי חפיפה אזורית/שכנה — אין התאמה, גם אם המקצוע זהה
     const reg = regionScore(teacher.region, job.region);
+    if (reg === 0) return 0;
     const city = cityBonus(teacher.city, job.city);
     return subj + reg + city;
   }

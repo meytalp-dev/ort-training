@@ -498,14 +498,21 @@ function buildWaLink(phone, name) {
   return 'https://api.whatsapp.com/send?phone=' + p + '&text=' + encodeURIComponent('שלום' + (name ? ' ' + name : '') + ', ראיתי את הפרסום שלך באדורה ויש לי הצעת עבודה');
 }
 
-// ממפה אזור חופשי מ-FB לאזור הסטנדרטי של אדורה
+// ממפה אזור חופשי מ-FB לאזור/ים סטנדרטיים של אדורה (תומך בריבוי אזורים מופרדים ב-/)
+function regionOfPart(p) {
+  if (/ירושלים|בית\s*שמש|מבשרת/.test(p)) return 'ירושלים';
+  if (/באר\s*שבע|אשדוד|אשקלון|נגב|דרום|דימונה|ערד|קריית\s*גת|קרית\s*גת|אילת/.test(p)) return 'דרום';
+  if (/חיפה|נשר|טבעון|קריות|כרמיאל|צפת|עכו|נצרת|עפולה|חריש|חדרה|פרדס\s*חנה|ואדי\s*ערה|צפון|טבריה|גליל|כרמל/.test(p)) return 'צפון';
+  return 'מרכז';
+}
 function deriveRegionFromArea(area) {
   if (!area) return '';
-  const a = String(area);
-  if (/ירושלים/.test(a)) return 'ירושלים';
-  if (/באר\s*שבע|אשדוד|אשקלון|נגב|דרום/.test(a)) return 'דרום';
-  if (/חיפה|נשר|טבעון|קריות|כרמיאל|צפת|עכו|נצרת|עפולה|חריש|חדרה|פרדס\s*חנה|ואדי\s*ערה|צפון/.test(a)) return 'צפון';
-  return 'מרכז';
+  const parts = String(area).split(/\s*[\/,]\s*/).filter(Boolean);
+  if (!parts.length) return '';
+  const set = new Set();
+  parts.forEach(p => set.add(regionOfPart(p)));
+  const arr = [...set];
+  return arr.length === 1 ? arr[0] : arr;
 }
 
 function normalizeFbTeachers(data) {
@@ -557,10 +564,14 @@ async function loadTeachers() {
   }
 }
 
+function regionsOf(t) {
+  if (Array.isArray(t.region)) return t.region.filter(Boolean);
+  return t.region ? [t.region] : [];
+}
 function populateFilters() {
   const regions = new Set(), cities = new Set(), subjects = new Set(), scopes = new Set();
   allT.forEach(t => {
-    if (t.region) regions.add(t.region);
+    regionsOf(t).forEach(r => regions.add(r));
     if (t.city) cities.add(t.city);
     if (t.subject) subjects.add(t.subject);
     if (t.scope) scopes.add(t.scope);
@@ -589,12 +600,12 @@ function applyFilters() {
   const scope = $('scope').value;
 
   filtered = allT.filter(t => {
-    if (region && t.region !== region) return false;
+    if (region && regionsOf(t).indexOf(region) === -1) return false;
     if (city && t.city !== city) return false;
     if (subject && t.subject !== subject) return false;
     if (scope && !((t.scope || '').includes(scope))) return false;
     if (q) {
-      const text = ((t.name || '') + ' ' + (t.subject || '') + ' ' + (t.city || '') + ' ' + (t.region || '') + ' ' + (t.scope || '') + ' ' + (t.email || '')).toLowerCase();
+      const text = ((t.name || '') + ' ' + (t.subject || '') + ' ' + (t.city || '') + ' ' + regionsOf(t).join(' ') + ' ' + (t.scope || '') + ' ' + (t.email || '')).toLowerCase();
       if (!text.includes(q)) return false;
     }
     return true;
@@ -621,7 +632,7 @@ function render() {
   grid.innerHTML = filtered.map(t => {
     const isFb = t.source === 'facebook';
     const tags = [];
-    if (t.region)  tags.push('<span class="tag tag-region">' + esc(t.region) + '</span>');
+    regionsOf(t).forEach(r => tags.push('<span class="tag tag-region">' + esc(r) + '</span>'));
     if (t.subject) tags.push('<span class="tag tag-subject">' + esc(t.subject) + '</span>');
     if (t.level)   tags.push('<span class="tag tag-level">' + esc(t.level) + '</span>');
     if (t.scope)   tags.push('<span class="tag tag-scope">' + esc(t.scope) + '</span>');
@@ -681,7 +692,8 @@ function openMatchModal(teacherIndex) {
   trk('match_badge_click', 'teacher=' + (teacher.name || teacher.id) + '|matches=' + matches.length);
 
   $('match-modal-title').textContent = '🎯 ' + matches.length + ' משרות מתאימות ל' + displayName;
-  $('match-modal-sub').textContent = (teacher.subject || '') + (teacher.region ? ' · ' + teacher.region : '') + (teacher.city ? ' · ' + teacher.city : '');
+  const regLabel = regionsOf(teacher).join(' / ');
+  $('match-modal-sub').textContent = (teacher.subject || '') + (regLabel ? ' · ' + regLabel : '') + (teacher.city ? ' · ' + teacher.city : '');
 
   $('match-modal-body').innerHTML = matches.map(({ job, score }) => {
     const tags = [];
@@ -699,7 +711,7 @@ function openMatchModal(teacherIndex) {
         'יש לי מועמד/ת שמתאים/ה בדיוק:\n' +
         '• שם: ' + (teacher.name || '(לא צוין)') + '\n' +
         '• מקצוע: ' + (teacher.subject || '') + '\n' +
-        '• אזור: ' + (teacher.region || '') + (teacher.city ? ' (' + teacher.city + ')' : '') + '\n' +
+        '• אזור: ' + regLabel + (teacher.city ? ' (' + teacher.city + ')' : '') + '\n' +
         (teacher.scope ? '• היקף: ' + teacher.scope + '\n' : '') +
         (teacher.email ? '• מייל: ' + teacher.email + '\n' : '') +
         (teacher.phone ? '• טלפון: ' + teacher.phone + '\n' : '') +
@@ -925,6 +937,7 @@ document.addEventListener('keydown', (e) => {
 <div class="toast" id="toast"></div>
 
 <script src="chat-widget.js" defer></script>
+<script src="feedback-widget.js" defer></script>
 
 </body>
 </html>
