@@ -165,6 +165,15 @@
     background: linear-gradient(180deg, var(--pink-deep) 0%, var(--teal-deep) 100%);
     border-radius: var(--radius) 0 0 var(--radius);
   }
+  .teacher-card-fb::before {
+    background: linear-gradient(180deg, #1877F2 0%, var(--teal-deep) 100%);
+  }
+  .teacher-card-fb .teacher-source { color: #1877F2; }
+  .teacher-notes {
+    font-size: 13px; color: var(--ink-soft); background: var(--cream);
+    padding: 8px 12px; border-radius: 8px; line-height: 1.5;
+    border-inline-start: 3px solid var(--teal);
+  }
   .teacher-source {
     font-size: 11px; font-weight: 700; color: var(--teal-deep);
     letter-spacing: 0.5px; text-transform: uppercase;
@@ -238,7 +247,7 @@
 <section class="hero">
   <div class="hero-badge">חדש · ערך מוסף למנהלים · עדכון יומי</div>
   <h1>מורים <span class="accent">מחפשים אותך</span></h1>
-  <p class="hero-sub">35 מורות ומורים מחפשי עבודה לתשפ"ז — שם, מקצוע, אזור, מייל וטלפון. פנייה ישירה, בלי מתווכים.</p>
+  <p class="hero-sub">מורות ומורים מחפשים עבודה לתשפ"ז — מארגון המורים ומקבוצות פייסבוק. סינון לפי מקצוע, אזור והיקף משרה.</p>
   <div class="hero-stats">
     <div class="stat"><span class="stat-num" id="stat-total">—</span><span class="stat-label">מורים זמינים</span></div>
     <div class="stat"><span class="stat-num" id="stat-subjects">—</span><span class="stat-label">מקצועות</span></div>
@@ -316,6 +325,7 @@
 
 <script>
 const TEACHERS_URL = 'data/teachers.json';
+const FB_TEACHERS_URL = 'data/fb-teachers.json';
 let allT = [];
 let filtered = [];
 
@@ -336,11 +346,50 @@ function buildWaLink(phone, name) {
   return 'https://api.whatsapp.com/send?phone=' + p + '&text=' + encodeURIComponent('שלום' + (name ? ' ' + name : '') + ', ראיתי את הפרסום שלך באדורה ויש לי הצעת עבודה');
 }
 
+// ממפה אזור חופשי מ-FB לאזור הסטנדרטי של אדורה
+function deriveRegionFromArea(area) {
+  if (!area) return '';
+  const a = String(area);
+  if (/ירושלים/.test(a)) return 'ירושלים';
+  if (/באר\s*שבע|אשדוד|אשקלון|נגב|דרום/.test(a)) return 'דרום';
+  if (/חיפה|נשר|טבעון|קריות|כרמיאל|צפת|עכו|נצרת|עפולה|חריש|חדרה|פרדס\s*חנה|ואדי\s*ערה|צפון/.test(a)) return 'צפון';
+  return 'מרכז';
+}
+
+function normalizeFbTeachers(data) {
+  const teachers = (data && data.teachers) || [];
+  const sourceName = (data && data.source) || 'קבוצת פייסבוק';
+  return teachers.map((t, i) => ({
+    id: 'fb-' + i,
+    source: 'facebook',
+    source_name: sourceName,
+    name: '',
+    subject: t.subject || '',
+    level: t.level || '',
+    region: deriveRegionFromArea(t.area),
+    sub_area: t.area || '',
+    city: '',
+    scope: t.scope || '',
+    notes: t.notes || '',
+    email: '',
+    phone: '',
+    date: '',
+    date_iso: '',
+    url: t.fb_url || '',
+    fb_url: t.fb_url || ''
+  }));
+}
+
 async function loadTeachers() {
   try {
-    const res = await fetch(TEACHERS_URL, { cache: 'no-store' });
-    const data = await res.json();
-    allT = data.teachers || [];
+    const [resA, resB] = await Promise.all([
+      fetch(TEACHERS_URL, { cache: 'no-store' }),
+      fetch(FB_TEACHERS_URL, { cache: 'no-store' }).catch(() => null)
+    ]);
+    const dataA = await resA.json();
+    const fbData = resB && resB.ok ? await resB.json() : null;
+    const fbTeachers = fbData ? normalizeFbTeachers(fbData) : [];
+    allT = [...(dataA.teachers || []), ...fbTeachers];
     populateFilters();
     applyFilters();
     $('stat-total').textContent = allT.length;
@@ -414,6 +463,7 @@ function render() {
   }
 
   grid.innerHTML = filtered.map(t => {
+    const isFb = t.source === 'facebook';
     const tags = [];
     if (t.region)  tags.push('<span class="tag tag-region">' + esc(t.region) + '</span>');
     if (t.subject) tags.push('<span class="tag tag-subject">' + esc(t.subject) + '</span>');
@@ -422,18 +472,29 @@ function render() {
 
     const meta = [t.city, t.sub_area].filter(Boolean).join(' · ');
 
-    const wa = buildWaLink(t.phone, t.name);
     const contacts = [];
-    if (t.email) contacts.push('<a class="contact-btn primary" href="mailto:' + esc(t.email) + '?subject=' + encodeURIComponent('הצעת עבודה דרך אדורה') + '">✉ שליחת הצעה במייל</a>');
-    if (t.phone) contacts.push('<a class="contact-btn secondary" href="tel:' + esc(t.phone) + '">☏ ' + esc(t.phone) + '</a>');
-    if (wa)      contacts.push('<a class="contact-btn secondary" href="' + esc(wa) + '" target="_blank" rel="noopener">🟢 WhatsApp</a>');
+    if (isFb) {
+      const fbUrl = t.fb_url || t.url || '';
+      if (fbUrl) {
+        contacts.push('<a class="contact-btn primary" href="' + esc(fbUrl) + '" target="_blank" rel="noopener">📘 צפייה בפוסט בפייסבוק</a>');
+      }
+    } else {
+      const wa = buildWaLink(t.phone, t.name);
+      if (t.email) contacts.push('<a class="contact-btn primary" href="mailto:' + esc(t.email) + '?subject=' + encodeURIComponent('הצעת עבודה דרך אדורה') + '">✉ שליחת הצעה במייל</a>');
+      if (t.phone) contacts.push('<a class="contact-btn secondary" href="tel:' + esc(t.phone) + '">☏ ' + esc(t.phone) + '</a>');
+      if (wa)      contacts.push('<a class="contact-btn secondary" href="' + esc(wa) + '" target="_blank" rel="noopener">🟢 WhatsApp</a>');
+    }
+
+    const displayName = t.name || (isFb ? 'מורה מחפש/ת משרה' : 'מורה');
+    const sourceLabel = esc(t.source_name || 'אדורה') + (t.date ? ' · ' + esc(t.date) : '');
 
     return (
-      '<article class="teacher-card">' +
-        '<div class="teacher-source">' + esc(t.source_name || 'אדורה') + ' · ' + esc(t.date || '') + '</div>' +
-        '<h3 class="teacher-name">' + esc(t.name || 'מורה') + '</h3>' +
+      '<article class="teacher-card' + (isFb ? ' teacher-card-fb' : '') + '">' +
+        '<div class="teacher-source">' + sourceLabel + '</div>' +
+        '<h3 class="teacher-name">' + esc(displayName) + '</h3>' +
         (meta ? '<div class="teacher-meta">' + esc(meta) + '</div>' : '') +
         '<div class="teacher-tags">' + tags.join('') + '</div>' +
+        (isFb && t.notes ? '<div class="teacher-notes">' + esc(t.notes) + '</div>' : '') +
         (contacts.length ? '<div class="teacher-contact">' + contacts.join('') + '</div>' : '') +
       '</article>'
     );
