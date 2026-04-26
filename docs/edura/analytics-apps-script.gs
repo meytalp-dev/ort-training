@@ -23,6 +23,13 @@ var SPREADSHEET_ID = '1-jQCpFVRfTtq2SigUt-ZCO-UQZOm6O5i2nme9jhzVJM';
 // Change if you want a different tab name.
 var SHEET_NAME = 'Analytics';
 
+// CSV/Formula injection guard — prepend ' so Sheets treats value as text
+function safe_(v) {
+  var s = String(v == null ? '' : v);
+  if (s.length > 500) s = s.slice(0, 500);
+  return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+}
+
 function doGet(e) {
   var params = (e && e.parameter) || {};
   var callback = params.callback || 'cb';
@@ -36,13 +43,13 @@ function doGet(e) {
     }
     sheet.appendRow([
       new Date().toLocaleString('he-IL', { timeZone: 'Asia/Jerusalem' }),
-      params.event || '',
-      params.details || '',
-      params.page || '',
-      params.device || '',
-      params.session || '',
-      params.duration || '',
-      params.referrer || ''
+      safe_(params.event),
+      safe_(params.details),
+      safe_(params.page),
+      safe_(params.device),
+      safe_(params.session),
+      safe_(params.duration),
+      safe_(params.referrer)
     ]);
 
     return ContentService

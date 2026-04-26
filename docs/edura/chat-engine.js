@@ -586,7 +586,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
         ctas.push('<a class="ec-job-cta" href="' + gmailUrl + '" target="_blank" rel="noopener">' + ctaLabel + '</a>');
       }
       if (j.phone) {
-        const cleanPhone = j.phone.replace(/\s+/g,'');
+        const cleanPhone = String(j.phone).replace(/\D/g,'');
         ctas.push('<a class="ec-job-cta ec-job-cta-tel" href="tel:' + esc(cleanPhone) + '">חייגו ' + esc(j.phone) + '</a>');
       }
       // קישור למקור — מוצג תמיד כשיש URL (גם אם יש מייל/טלפון). חשוב למשתמש שרוצה לראות מודעה מלאה.
