@@ -76,6 +76,16 @@
     padding: 8px 12px; border-radius: 8px; transition: background .15s;
   }
   .btn-text:hover { background: var(--cream); }
+  .btn-tenders {
+    background: var(--green-pale);
+    color: var(--green-deep);
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: background .15s, transform .1s;
+  }
+  .btn-tenders:hover { background: #99F6E4; transform: translateY(-1px); }
   .btn-primary {
     background: var(--green-deep); color: var(--white);
     padding: 10px 20px; border-radius: 999px;
@@ -381,7 +391,7 @@
       </svg>
     </a>
     <nav class="header-cta">
-      <a href="manager-tenders.html" class="btn-text">מכרזי ניהול</a>
+      <a href="manager-tenders.html" class="btn-tenders">מכרזי ניהול</a>
       <a href="#cta" class="btn-text">פרסם משרה</a>
       <a href="chat.html" class="btn-primary">בוט חיפוש 🔍</a>
     </nav>
@@ -400,22 +410,6 @@
   </div>
 </section>
 
-<div class="tenders-banner">
-  <a href="manager-tenders.html" style="display:block;">
-    <div class="tenders-banner-card">
-      <div class="tenders-banner-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-      </div>
-      <div class="tenders-banner-text">
-        <div class="tenders-banner-eyebrow">חדש · משרד החינוך</div>
-        <div class="tenders-banner-title">264 מכרזי ניהול בתי ספר לתשפ"ז</div>
-        <div class="tenders-banner-sub">סינון לפי מחוז · מגזר · שכבת גיל + הסבר מלא על תהליך ההגשה.</div>
-      </div>
-      <span class="tenders-banner-btn">צפו במכרזים ←</span>
-    </div>
-  </a>
-</div>
-
 <div class="filters-wrap">
   <div class="filters">
     <div class="filter-group" style="grid-column: 1 / -1;">
@@ -428,6 +422,10 @@
     <div class="filter-group">
       <label class="filter-label" for="region">אזור</label>
       <select id="region" class="filter-select"><option value="">הכל</option></select>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="city">עיר</label>
+      <select id="city" class="filter-select"><option value="">הכל</option></select>
     </div>
     <div class="filter-group">
       <label class="filter-label" for="level">שכבה</label>
@@ -569,9 +567,10 @@ async function loadJobs() {
 }
 
 function populateFilters() {
-  const regions = new Set(), levels = new Set(), sectors = new Set(), subjects = new Set(), roles = new Set(), scopes = new Set();
+  const regions = new Set(), cities = new Set(), levels = new Set(), sectors = new Set(), subjects = new Set(), roles = new Set(), scopes = new Set();
   allJobs.forEach(j => {
     if (j.region) regions.add(j.region);
+    if (j.city) cities.add(j.city);
     if (j.level) levels.add(j.level);
     if (j.sector) sectors.add(j.sector);
     if (j.subject) subjects.add(j.subject);
@@ -579,6 +578,7 @@ function populateFilters() {
     if (j.scope) scopes.add(j.scope);
   });
   fillSelect('region', [...regions].sort());
+  fillSelect('city', [...cities].sort((a, b) => a.localeCompare(b, 'he')));
   fillSelect('level', ['יסודי', 'חטיבת ביניים', 'תיכון', 'חינוך מיוחד', 'גן'].filter(l => levels.has(l)));
   fillSelect('sector', ['ממלכתי', 'ממ"ד', 'חרדי', 'ערבי'].filter(s => sectors.has(s)));
   fillSelect('subject', [...subjects].sort());
@@ -599,6 +599,7 @@ function fillSelect(id, options) {
 function applyFilters() {
   const q = $('search').value.toLowerCase().trim();
   const region = $('region').value;
+  const city = $('city').value;
   const level = $('level').value;
   const sector = $('sector').value;
   const subject = $('subject').value;
@@ -607,6 +608,7 @@ function applyFilters() {
 
   filtered = allJobs.filter(j => {
     if (region && j.region !== region) return false;
+    if (city && j.city !== city) return false;
     if (level && j.level !== level) return false;
     if (sector && j.sector !== sector) return false;
     if (subject && !((j.subject || '').includes(subject))) return false;
@@ -633,7 +635,7 @@ function render() {
 
   count.innerHTML = '<strong>' + filtered.length + '</strong> מתוך ' + allJobs.length + ' משרות';
 
-  const hasFilter = $('search').value || $('region').value || $('level').value || $('sector').value || $('subject').value || $('role').value || $('scope').value;
+  const hasFilter = $('search').value || $('region').value || $('city').value || $('level').value || $('sector').value || $('subject').value || $('role').value || $('scope').value;
   clearBtn.hidden = !hasFilter;
 
   if (filtered.length === 0) {
@@ -766,7 +768,7 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
-['search','region','level','sector','subject','role','scope'].forEach(id => {
+['search','region','city','level','sector','subject','role','scope'].forEach(id => {
   $(id).addEventListener('input', debounce(applyFilters, 100));
   $(id).addEventListener('change', applyFilters);
 });
