@@ -30,7 +30,7 @@
     .ew-fab-label {
       position: absolute;
       bottom: 70px;
-      background: #1A2B26; color: #fff;
+      background: #0B2A4A; color: #fff;
       padding: 8px 14px; border-radius: 8px;
       font-size: 13px; font-weight: 600;
       white-space: nowrap;
@@ -56,7 +56,7 @@
     .ew-panel {
       width: 400px; max-width: 100vw;
       height: min(640px, calc(100vh - 24px));
-      background: #FAFAF7;
+      background: #F8FAFC;
       box-shadow: 0 -4px 32px rgba(0,0,0,.18);
       display: flex; flex-direction: column;
       transform: translateY(100%);
@@ -88,18 +88,18 @@
     .ew-panel-footer {
       padding: 8px 14px;
       background: #fff;
-      border-top: 1px solid #E1DBD0;
+      border-top: 1px solid #E2E8F0;
       display: flex; justify-content: space-between; align-items: center;
-      font-size: 11px; color: #8A9994;
+      font-size: 11px; color: #64748B;
       flex-shrink: 0;
     }
-    .ew-panel-footer strong { color: #4A5A55; font-weight: 700; }
+    .ew-panel-footer strong { color: #1E3A5F; font-weight: 700; }
     .ew-panel-social { display: flex; gap: 6px; }
     .ew-panel-social a {
       width: 22px; height: 22px;
       display: flex; align-items: center; justify-content: center;
-      border: 1px solid #E1DBD0; border-radius: 50%;
-      color: #8A9994; font-size: 10px; font-weight: 700;
+      border: 1px solid #E2E8F0; border-radius: 50%;
+      color: #64748B; font-size: 10px; font-weight: 700;
       text-decoration: none;
       transition: all .15s;
     }
@@ -118,7 +118,7 @@
     #ew-chat-root {
       flex: 1;
       display: flex; flex-direction: column;
-      background: #FAFAF7;
+      background: #F8FAFC;
       overflow: hidden;
     }
 
@@ -137,35 +137,35 @@
       box-shadow: 0 1px 2px rgba(26,43,38,.06);
     }
     #ew-chat-root .ec-msg-bot .ec-bubble {
-      background: #E8F1ED; color: #1A2B26;
+      background: #CCFBF1; color: #0B2A4A;
       border-bottom-right-radius: 4px;
     }
     #ew-chat-root .ec-msg-user .ec-bubble {
-      background: #1F6B5C; color: #fff;
+      background: #0B2A4A; color: #fff;
       border-bottom-left-radius: 4px;
     }
     #ew-chat-root .ec-actions { display: flex; flex-wrap: wrap; gap: 6px; }
     #ew-chat-root .ec-action {
       padding: 7px 12px;
-      background: #fff; border: 1.5px solid #2D8B76;
-      color: #1F6B5C; border-radius: 999px;
+      background: #fff; border: 1.5px solid #14B8A6;
+      color: #0B2A4A; border-radius: 999px;
       font-size: 13px; font-weight: 600; cursor: pointer;
     }
     #ew-chat-root .ec-action:hover:not(:disabled) {
-      background: #2D8B76; color: #fff;
+      background: #14B8A6; color: #fff;
     }
     #ew-chat-root .ec-action:disabled { opacity: .5; cursor: not-allowed; }
 
     #ew-chat-root .ec-job-card {
-      background: #FBF7F0; border: 1px solid #F2EBDF;
+      background: #F8FAFC; border: 1px solid #EEF2F6;
       border-radius: 12px; padding: 14px;
     }
     #ew-chat-root .ec-job-source {
-      font-size: 11px; font-weight: 600; color: #2D8B76;
+      font-size: 11px; font-weight: 600; color: #14B8A6;
       text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
     }
     #ew-chat-root .ec-job-title {
-      font-size: 15px; font-weight: 700; color: #1A2B26;
+      font-size: 15px; font-weight: 700; color: #0B2A4A;
       margin-bottom: 8px; line-height: 1.4;
     }
     #ew-chat-root .ec-job-tags {
@@ -173,63 +173,63 @@
     }
     #ew-chat-root .ec-tag {
       font-size: 10px; font-weight: 600; padding: 3px 7px;
-      border-radius: 6px; background: #fff; color: #4A5A55;
-      border: 1px solid #E1DBD0;
+      border-radius: 6px; background: #fff; color: #1E3A5F;
+      border: 1px solid #E2E8F0;
     }
     #ew-chat-root .ec-job-snippet {
-      font-size: 12px; color: #4A5A55;
+      font-size: 12px; color: #1E3A5F;
       margin-bottom: 8px; line-height: 1.5;
     }
     #ew-chat-root .ec-job-contact {
-      font-size: 11px; color: #4A5A55; margin-bottom: 3px;
+      font-size: 11px; color: #1E3A5F; margin-bottom: 3px;
     }
-    #ew-chat-root .ec-job-contact a { color: #1F6B5C; font-weight: 600; text-decoration: none; }
+    #ew-chat-root .ec-job-contact a { color: #0B2A4A; font-weight: 600; text-decoration: none; }
     #ew-chat-root .ec-job-date {
-      font-size: 10px; color: #8A9994; font-weight: 400;
+      font-size: 10px; color: #64748B; font-weight: 400;
       text-transform: none; letter-spacing: 0;
     }
     #ew-chat-root .ec-job-actions { display: flex; gap: 6px; }
     #ew-chat-root .ec-job-cta {
       flex: 1; text-align: center;
       padding: 9px 14px;
-      background: #E85D40; color: #fff;
+      background: #D97706; color: #fff;
       border-radius: 8px;
       font-size: 13px; font-weight: 700;
       text-decoration: none;
     }
     #ew-chat-root .ec-job-cta:hover { background: #c94a30; }
-    #ew-chat-root .ec-job-cta-tel { background: #1F6B5C; }
-    #ew-chat-root .ec-job-cta-tel:hover { background: #2D8B76; }
+    #ew-chat-root .ec-job-cta-tel { background: #0B2A4A; }
+    #ew-chat-root .ec-job-cta-tel:hover { background: #14B8A6; }
     #ew-chat-root .ec-job-save {
       padding: 9px 12px;
-      border: 1.5px solid #E1DBD0;
+      border: 1.5px solid #E2E8F0;
       background: #fff;
-      color: #4A5A55; border-radius: 8px;
+      color: #1E3A5F; border-radius: 8px;
       font-size: 13px; font-weight: 600; cursor: pointer;
     }
 
     #ew-chat-root .ec-status {
-      padding: 8px 16px; color: #8A9994; font-size: 12px;
+      padding: 8px 16px; color: #64748B; font-size: 12px;
       text-align: center; display: none;
     }
     #ew-chat-root .ec-input-row {
       display: flex; gap: 6px;
       padding: 10px 12px;
-      border-top: 1px solid #E1DBD0;
+      border-top: 1px solid #E2E8F0;
       background: #fff;
       flex-shrink: 0;
     }
     #ew-chat-root .ec-input-row input {
       flex: 1; padding: 9px 12px;
-      border: 1.5px solid #E1DBD0;
+      border: 1.5px solid #E2E8F0;
       border-radius: 999px;
       font-size: 14px; font-family: inherit;
       outline: none;
     }
-    #ew-chat-root .ec-input-row input:focus { border-color: #2D8B76; }
+    #ew-chat-root .ec-input-row input:focus { border-color: #14B8A6; }
     #ew-chat-root .ec-send-btn {
       padding: 9px 16px;
-      background: #1F6B5C; color: #fff;
+      background: #0B2A4A; color: #fff;
       border-radius: 999px;
       border: none; cursor: pointer;
       font-weight: 700; font-size: 14px;

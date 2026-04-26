@@ -10,6 +10,7 @@
  */
 
 window.EDURA_JOBS_URL = 'data/jobs.json';
+window.EDURA_TEACHERS_URL = 'data/teachers.json';
 window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9mJ6h55Kt9i6zKjcRZBscMYjrPkUV1BUuKhqT_n7ZLqC7cNZs7wR-Q/exec';
 
 (function () {
@@ -46,6 +47,17 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     'מחפשים מנהל שעונה לטלפון לפני הצלצול',
     'מאתרים משרות שבהן המיזוג באמת עובד'
   ];
+  const TEACHER_LOADING_LINES = [
+    'מאתרים מורים שכבר עברו את שלב המחברות הראשון',
+    'בוחרים מורים שלא יברחו אחרי חודש',
+    'סורקים פרופילים בלי שאלות מיותרות',
+    'מאתרים מורים שמכירים את ה"מיצב" וצוחקים על זה'
+  ];
+  const TENDER_LOADING_LINES = [
+    'מאתרים מכרזי ניהול בלי 80 עמודי טופס',
+    'בודקים אילו בתי ספר באמת מחפשים מנהל/ת',
+    'סורקים מכרזים פתוחים — בלי תוכניות חמש שנתיות'
+  ];
   const PARSING_LINES = [
     'קוראים את מה שכתבתם בעיון של בודק בגרויות',
     'מנתחים את הבקשה בלי עט אדום',
@@ -61,6 +73,9 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     constructor(root) {
       this.root = root;
       this.allJobs = [];
+      this.allTeachers = [];
+      this.flow = 'job'; // 'job' | 'teacher' | 'tender'
+      this.dataset = []; // הדאטה הפעיל (jobs מסונן או teachers)
       this.filters = { region: '', city: '', role: '', subject: '', level: '', scope: '' };
       this.shownCount = 0;
       this.state = 'init';
@@ -68,18 +83,59 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
 
     async start() {
       this.render();
-      this.botMsg('שלום! אני עוזר/ת למצוא משרת הוראה.');
-      this.setStatus(pickLine(LOADING_LINES));
+      this.botMsg('שלום! בואו נחסוך את שלוש שעות הסקרולינג בלוחות.');
+      this.askFlow();
+    }
+
+    askFlow() {
+      this.botMsg('מה מביא אותך הנה?', [
+        { label: 'מחפש/ת משרה', onClick: () => this.startFlow('job') },
+        { label: 'מחפש/ת מורה', onClick: () => this.startFlow('teacher') },
+        { label: 'מחפש/ת מכרז ניהול', onClick: () => this.startFlow('tender') }
+      ]);
+    }
+
+    async startFlow(flow) {
+      this.flow = flow;
+      this.userMsg(flow === 'job' ? 'מחפש/ת משרה' :
+                   flow === 'teacher' ? 'מחפש/ת מורה' :
+                   'מחפש/ת מכרז ניהול');
+
+      const loadingArr = flow === 'job' ? LOADING_LINES :
+                         flow === 'teacher' ? TEACHER_LOADING_LINES :
+                         TENDER_LOADING_LINES;
+      this.setStatus(pickLine(loadingArr));
+
       try {
-        const res = await fetch(window.EDURA_JOBS_URL);
-        const data = await res.json();
-        this.allJobs = (data.jobs || []).map(j => ({
-          ...j,
-          subject: normalizeText(j.subject),
-          level: normalizeText(j.level)
-        }));
-        this.setStatus('');
-        this.botMsg('יש ' + this.allJobs.length + ' משרות פתוחות עכשיו. בואו נמצא לך את המתאימה.');
+        if (flow === 'teacher') {
+          if (!this.allTeachers.length) {
+            const res = await fetch(window.EDURA_TEACHERS_URL);
+            const data = await res.json();
+            this.allTeachers = data.teachers || [];
+          }
+          this.dataset = this.allTeachers;
+          this.setStatus('');
+          this.botMsg('יש ' + this.dataset.length + ' מורים שמחפשים בית. בואו נצמצם.');
+        } else {
+          if (!this.allJobs.length) {
+            const res = await fetch(window.EDURA_JOBS_URL);
+            const data = await res.json();
+            this.allJobs = (data.jobs || []).map(j => ({
+              ...j,
+              subject: normalizeText(j.subject),
+              level: normalizeText(j.level)
+            }));
+          }
+          if (flow === 'tender') {
+            this.dataset = this.allJobs.filter(j => (j.role || '').includes('מנהל'));
+            this.setStatus('');
+            this.botMsg('יש ' + this.dataset.length + ' מכרזי ניהול פתוחים. בואו נחדד.');
+          } else {
+            this.dataset = this.allJobs;
+            this.setStatus('');
+            this.botMsg('יש ' + this.dataset.length + ' משרות פתוחות עכשיו. בואו נמצא לך את המתאימה.');
+          }
+        }
         this.askMode();
       } catch (err) {
         this.setStatus('');
@@ -145,9 +201,9 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     }
 
     askCity() {
-      // מחשב את הערים שיש להן משרות באזור שנבחר, top 10 לפי כמות
+      // מחשב את הערים שיש להן פריטים באזור שנבחר, top 10 לפי כמות
       const counts = {};
-      this.allJobs.forEach(j => {
+      this.dataset.forEach(j => {
         if (j.region !== this.filters.region) return;
         const c = (j.city || '').trim();
         if (!c) return;
@@ -172,6 +228,10 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     }
 
     askRole() {
+      // במכרזי ניהול — הסינון על מנהל/ת כבר קבוע, דלג ל-subject (לא רלוונטי) או level
+      if (this.flow === 'tender') { this.askLevel(); return; }
+      // במורים מחפשי משרה — אין שדה role בדאטה, דלג ל-subject
+      if (this.flow === 'teacher') { this.askSubject(); return; }
       this.botMsg('איזה תפקיד?', [
         ...ROLES.map(r => ({ label: r, onClick: () => this.setAndNext('role', r, this.needsSubject_(r) ? 'askSubject' : 'askLevel') })),
         { label: 'גמיש', onClick: () => this.setAndNext('role', '', 'askLevel') }
@@ -245,7 +305,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       // משקלים: התאמה מאומתת > דאטה חסרה > סתירה
       // קריטי שדאטה חסרה לא תקפוץ מעל התאמה אמיתית.
       // הדאטה החדשה: subject/level הם strings (לא arrays), יש city/sub_area/contact
-      const scored = this.allJobs.map(j => {
+      const scored = this.dataset.map(j => {
         let score = 0;
         let blocker = false;
         let exactMatches = 0;
@@ -318,8 +378,9 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     reset() {
       this.filters = { region: '', city: '', role: '', subject: '', level: '', scope: '' };
       this.shownCount = 0;
+      this.dataset = [];
       this.persist();
-      this.askMode();
+      this.askFlow();
     }
 
     persist() {
@@ -401,11 +462,12 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
     jobCard(j) {
       const card = document.createElement('div');
       card.className = 'ec-msg ec-msg-bot';
+      const isTeacher = this.flow === 'teacher';
       const cityArea = [j.city, j.sub_area].filter(Boolean).join(' · ');
       const region = j.region && j.region !== '(לא זוהה)'
         ? '<span class="ec-tag">' + esc(j.region) + (cityArea ? ' · ' + esc(cityArea) : '') + '</span>'
         : (cityArea ? '<span class="ec-tag">' + esc(cityArea) + '</span>' : '');
-      const role = j.role && j.role !== 'אחר' ? '<span class="ec-tag">' + esc(j.role) + '</span>' : '';
+      const role = !isTeacher && j.role && j.role !== 'אחר' ? '<span class="ec-tag">' + esc(j.role) + '</span>' : '';
       const lvl = j.level && j.level !== '(לא זוהה)' ? '<span class="ec-tag">' + esc(j.level) + '</span>' : '';
       const subj = j.subject ? '<span class="ec-tag">' + esc(j.subject) + '</span>' : '';
       const sector = j.sector ? '<span class="ec-tag">' + esc(j.sector) + '</span>' : '';
@@ -413,15 +475,26 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       const dateStr = j.date ? '<span class="ec-job-date">' + esc(j.date) + '</span>' : '';
       // עדיפות ל-description (טקסט מלא), נופלים ל-snippet
       const bodyText = j.description || j.snippet || '';
+      // כותרת: למורה — שם המורה. למשרה — בית הספר.
+      const cardTitle = isTeacher ? (j.name || 'מורה אנונימי/ת') : (j.school || j.title || '');
+      const subjLabel = isTeacher && j.subject ? 'מורה ל' + j.subject : '';
 
       // CTAs — מציג כל אמצעי קשר זמין ככפתור נפרד, עם הכתובת/מספר על הכפתור.
       // ככה ברור למשתמשת מה כל כפתור עושה ואיזה פרטי קשר באמת קיימים במשרה.
       const ctas = [];
       if (j.email) {
-        const subj = encodeURIComponent('פנייה דרך אדורה — ' + (j.school || j.title || ''));
-        const body = encodeURIComponent('שלום' + (j.contact_name ? ' ' + j.contact_name : '') + ',\n\nראיתי את המשרה שלכם באתר אדורה ואשמח להציג מועמדות.\n\n');
-        const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(j.email) + '&su=' + subj + '&body=' + body;
-        ctas.push('<a class="ec-job-cta" href="' + gmailUrl + '" target="_blank" rel="noopener">שלחו מייל</a>');
+        const isT = this.flow === 'teacher';
+        const subjText = isT
+          ? 'פנייה דרך אדורה לגבי משרת הוראה'
+          : 'פנייה דרך אדורה — ' + (j.school || j.title || '');
+        const bodyText2 = isT
+          ? 'שלום' + (j.name ? ' ' + j.name.split(' ')[0] : '') + ',\n\nראיתי את הפרופיל שלך באדורה ואשמח לדבר איתך על משרה אצלנו.\n\n'
+          : 'שלום' + (j.contact_name ? ' ' + j.contact_name : '') + ',\n\nראיתי את המשרה שלכם באתר אדורה ואשמח להציג מועמדות.\n\n';
+        const gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(j.email) +
+                         '&su=' + encodeURIComponent(subjText) +
+                         '&body=' + encodeURIComponent(bodyText2);
+        const ctaLabel = isT ? 'פנו אליו/ה' : 'שלחו מייל';
+        ctas.push('<a class="ec-job-cta" href="' + gmailUrl + '" target="_blank" rel="noopener">' + ctaLabel + '</a>');
       }
       if (j.phone) {
         const cleanPhone = j.phone.replace(/\s+/g,'');
@@ -434,13 +507,15 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
         ctas.push('<span class="ec-job-cta" style="opacity:.5;cursor:default">פרטי קשר חסרים</span>');
       }
 
-      const contact = j.contact_name ? '<div class="ec-job-contact">איש קשר: ' + esc(j.contact_name) + '</div>' : '';
+      const contact = !isTeacher && j.contact_name ? '<div class="ec-job-contact">איש קשר: ' + esc(j.contact_name) + '</div>' : '';
       const emailLine = j.email ? '<div class="ec-job-contact">מייל: <a href="mailto:' + esc(j.email) + '">' + esc(j.email) + '</a></div>' : '';
+      const teacherSubtitle = isTeacher && subjLabel ? '<div class="ec-job-source">' + esc(subjLabel) + '</div>' : '';
 
       card.innerHTML =
         '<div class="ec-job-card">' +
           '<div class="ec-job-source">' + esc(j.source_name || j.source || '') + (dateStr ? ' · ' + dateStr : '') + '</div>' +
-          '<h4 class="ec-job-title">' + esc(j.school || j.title || '') + '</h4>' +
+          '<h4 class="ec-job-title">' + esc(cardTitle) + '</h4>' +
+          teacherSubtitle +
           '<div class="ec-job-tags">' + region + role + subj + lvl + sector + scope + '</div>' +
           (bodyText ? '<p class="ec-job-snippet">' + esc(String(bodyText).slice(0, 280)) + (bodyText.length > 280 ? '…' : '') + '</p>' : '') +
           contact + emailLine +
