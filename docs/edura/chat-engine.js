@@ -11,6 +11,7 @@
 
 window.EDURA_JOBS_URL = 'data/jobs.json';
 window.EDURA_TEACHERS_URL = 'data/teachers.json';
+window.EDURA_FB_TEACHERS_URL = 'data/fb-teachers.json';
 window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9mJ6h55Kt9i6zKjcRZBscMYjrPkUV1BUuKhqT_n7ZLqC7cNZs7wR-Q/exec';
 
 (function () {
@@ -76,6 +77,55 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
   ];
   function pickLine(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+  // region יכול להיות string או array (מורי FB עם כמה אזורים)
+  function regionsOf(j) {
+    if (Array.isArray(j.region)) return j.region.filter(Boolean);
+    return j.region ? [j.region] : [];
+  }
+  function regionMatches(j, target) {
+    return regionsOf(j).indexOf(target) !== -1;
+  }
+
+  // ממפה אזור חופשי מ-FB לאזור/ים סטנדרטיים (זהה ל-teachers.html)
+  function regionOfPart(p) {
+    if (/ירושלים|בית\s*שמש|מבשרת/.test(p)) return 'ירושלים';
+    if (/באר\s*שבע|אשדוד|אשקלון|נגב|דרום|דימונה|ערד|קריית\s*גת|קרית\s*גת|אילת/.test(p)) return 'דרום';
+    if (/חיפה|נשר|טבעון|קריות|כרמיאל|צפת|עכו|נצרת|עפולה|חריש|חדרה|פרדס\s*חנה|ואדי\s*ערה|צפון|טבריה|גליל|כרמל/.test(p)) return 'צפון';
+    return 'מרכז';
+  }
+  function deriveRegionFromArea(area) {
+    if (!area) return '';
+    const parts = String(area).split(/\s*[\/,]\s*/).filter(Boolean);
+    if (!parts.length) return '';
+    const set = new Set();
+    parts.forEach(p => set.add(regionOfPart(p)));
+    const arr = [...set];
+    return arr.length === 1 ? arr[0] : arr;
+  }
+  function normalizeFbTeachers(data) {
+    const teachers = (data && data.teachers) || [];
+    const sourceName = (data && data.source) || 'קבוצת פייסבוק';
+    return teachers.map((t, i) => ({
+      id: 'fb-' + i,
+      source: 'facebook',
+      source_name: sourceName,
+      name: '',
+      subject: t.subject || '',
+      level: t.level || '',
+      region: deriveRegionFromArea(t.area),
+      sub_area: t.area || '',
+      city: '',
+      scope: t.scope || '',
+      notes: t.notes || '',
+      email: '',
+      phone: '',
+      date: '',
+      date_iso: '',
+      url: t.fb_url || '',
+      fb_url: t.fb_url || ''
+    }));
+  }
+
   const STORAGE_KEY = 'edura.chat.state.v1';
   const SAVED_KEY = 'edura.chat.saved.v1';
 
@@ -121,9 +171,14 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       try {
         if (flow === 'teacher') {
           if (!this.allTeachers.length) {
-            const res = await fetch(window.EDURA_TEACHERS_URL);
-            const data = await res.json();
-            this.allTeachers = data.teachers || [];
+            const [resA, resB] = await Promise.all([
+              fetch(window.EDURA_TEACHERS_URL),
+              fetch(window.EDURA_FB_TEACHERS_URL).catch(() => null)
+            ]);
+            const dataA = await resA.json();
+            const fbData = resB && resB.ok ? await resB.json() : null;
+            const fbTeachers = fbData ? normalizeFbTeachers(fbData) : [];
+            this.allTeachers = [...(dataA.teachers || []), ...fbTeachers];
           }
           this.dataset = this.allTeachers;
           this.setStatus('');
@@ -231,7 +286,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       // מחשב את הערים שיש להן פריטים באזור שנבחר, top 10 לפי כמות
       const counts = {};
       this.dataset.forEach(j => {
-        if (j.region !== this.filters.region) return;
+        if (!regionMatches(j, this.filters.region)) return;
         const c = (j.city || '').trim();
         if (!c) return;
         counts[c] = (counts[c] || 0) + 1;
@@ -343,8 +398,8 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
         let exactMatches = 0;
 
         if (f.region) {
-          if (j.region === f.region) { score += 100; exactMatches++; }
-          else if (!j.region || j.region === 'ארצי') score += 5;
+          if (regionMatches(j, f.region)) { score += 100; exactMatches++; }
+          else if (!regionsOf(j).length || j.region === 'ארצי') score += 5;
         }
 
         // עיר — בונוס משמעותי להתאמה (50). חוסם אם יש עיר אחרת באותו אזור.
@@ -352,7 +407,7 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
           const jCity = (j.city || '').trim();
           if (jCity === f.city) { score += 50; exactMatches++; }
           else if (!jCity) score += 3;
-          else if (j.region === f.region) blocker = true; // עיר אחרת באותו אזור → לא רלוונטי
+          else if (regionMatches(j, f.region)) blocker = true; // עיר אחרת באותו אזור → לא רלוונטי
         }
 
         if (f.subject) {
@@ -497,8 +552,9 @@ window.EDURA_API_URL = 'https://script.google.com/macros/s/AKfycbxFqT828xAhAAhe9
       card.className = 'ec-msg ec-msg-bot';
       const isTeacher = this.flow === 'teacher';
       const cityArea = [j.city, j.sub_area].filter(Boolean).join(' · ');
-      const region = j.region && j.region !== '(לא זוהה)'
-        ? '<span class="ec-tag">' + esc(j.region) + (cityArea ? ' · ' + esc(cityArea) : '') + '</span>'
+      const regionStr = regionsOf(j).filter(r => r !== '(לא זוהה)').join(' / ');
+      const region = regionStr
+        ? '<span class="ec-tag">' + esc(regionStr) + (cityArea ? ' · ' + esc(cityArea) : '') + '</span>'
         : (cityArea ? '<span class="ec-tag">' + esc(cityArea) + '</span>' : '');
       const role = !isTeacher && j.role && j.role !== 'אחר' ? '<span class="ec-tag">' + esc(j.role) + '</span>' : '';
       const lvl = j.level && j.level !== '(לא זוהה)' ? '<span class="ec-tag">' + esc(j.level) + '</span>' : '';
