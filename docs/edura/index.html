@@ -327,6 +327,51 @@
   .footer-logo-word { font-family: 'Heebo', sans-serif; font-weight: 900; font-size: 80px; letter-spacing: -2px; fill: var(--white); }
   .footer-logo-h { fill: var(--teal); }
 
+  /* ─── Match badge ─── */
+  .match-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    color: #92400E; font-size: 12px; font-weight: 700;
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid #FCD34D; transition: transform .1s, box-shadow .15s;
+    align-self: flex-start; margin-top: 4px;
+  }
+  .match-badge:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(245,158,11,.25); }
+  .match-badge .pulse { width: 8px; height: 8px; border-radius: 50%; background: #D97706; box-shadow: 0 0 0 0 rgba(217,119,6,.6); animation: matchPulse 2s infinite; }
+  @keyframes matchPulse { 0% { box-shadow: 0 0 0 0 rgba(217,119,6,.5); } 70% { box-shadow: 0 0 0 8px rgba(217,119,6,0); } 100% { box-shadow: 0 0 0 0 rgba(217,119,6,0); } }
+
+  /* ─── Match modal items ─── */
+  .match-modal-header {
+    background: linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%);
+    margin: -32px -32px 16px; padding: 24px 32px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .match-modal-header h2 { font-size: 18px; font-weight: 800; line-height: 1.3; }
+  .match-modal-header .modal-sub { font-size: 13px; color: var(--ink-mute); margin-top: 4px; }
+  .match-item {
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 10px;
+    transition: border-color .15s, background .15s;
+  }
+  .match-item:hover { border-color: var(--teal); background: var(--cream); }
+  .match-item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+  .match-item-title { font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.3; flex: 1; }
+  .match-item-score { font-size: 11px; font-weight: 700; color: #92400E; background: #FEF3C7; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+  .match-item-meta { font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+  .match-item-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .match-item-tags .tag { font-size: 10px; padding: 2px 8px; }
+  .match-item-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .match-action {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 7px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+    text-decoration: none;
+  }
+  .match-action.primary { background: var(--green-deep); color: var(--white); }
+  .match-action.primary:hover { background: var(--green-soft); }
+  .match-action.secondary { background: var(--cream); color: var(--ink-soft); border: 1px solid var(--line); }
+  .match-action.secondary:hover { background: var(--cream-deep); }
+
   /* ─── Apply modal ─── */
   .modal-overlay {
     position: fixed; inset: 0; background: rgba(11,42,74,.6);
@@ -528,11 +573,25 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="match-modal" onclick="if(event.target===this)closeMatchModal()">
+  <div class="modal" style="position: relative;">
+    <button class="modal-close" onclick="closeMatchModal()" aria-label="סגור">×</button>
+    <div class="match-modal-header">
+      <h2 id="match-modal-title">מורים מתאימים</h2>
+      <div class="modal-sub" id="match-modal-sub"></div>
+    </div>
+    <div id="match-modal-body"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<script src="matching.js"></script>
 <script>
 const JOBS_URL = 'data/jobs.json';
+const TEACHERS_URL = 'data/teachers.json';
 let allJobs = [];
+let allTeachers = [];
 let filtered = [];
 let currentApply = null;
 
@@ -565,9 +624,14 @@ function daysAgo(iso) {
 
 async function loadJobs() {
   try {
-    const res = await fetch(JOBS_URL, { cache: 'no-store' });
-    const data = await res.json();
+    const [resJ, resT] = await Promise.all([
+      fetch(JOBS_URL, { cache: 'no-store' }),
+      fetch(TEACHERS_URL, { cache: 'no-store' }).catch(() => null)
+    ]);
+    const data = await resJ.json();
     allJobs = data.jobs || [];
+    const teachersData = resT && resT.ok ? await resT.json() : null;
+    allTeachers = (teachersData && teachersData.teachers) || [];
     populateFilters();
     applyFilters();
     $('stat-total').textContent = allJobs.length;
@@ -675,6 +739,14 @@ function render() {
     const schoolLine = j.school && j.school !== j.title ? '<div class="job-school">' + esc(j.school) + (cityLine ? ' · ' + cityLine : '') + '</div>' : (cityLine ? '<div class="job-school">' + cityLine + '</div>' : '');
     const days = daysAgo(j.firstSeen || j.date_iso);
 
+    let matchBadge = '';
+    if (window.EduraMatch && allTeachers.length) {
+      const matches = window.EduraMatch.findTeachersForJob(j, allTeachers);
+      if (matches.length > 0) {
+        matchBadge = '<button class="match-badge" onclick="openMatchModal(' + j.jobsIndex + ')" aria-label="הצג ' + matches.length + ' מורים מתאימים"><span class="pulse"></span>🎯 ' + matches.length + ' ' + (matches.length === 1 ? 'מורה מתאים/ה' : 'מורים מתאימים') + '</button>';
+      }
+    }
+
     return (
       '<article class="job-card">' +
         '<div class="job-source">' + esc(j.source_name || j.source) + '</div>' +
@@ -682,6 +754,7 @@ function render() {
         schoolLine +
         '<div class="job-tags">' + tags.join('') + '</div>' +
         (j.snippet ? '<p class="job-snippet">' + esc(j.snippet) + '</p>' : '') +
+        matchBadge +
         (contacts.length ? '<div class="job-contact-row">' + contacts.join('') + '</div>' : '') +
         '<div class="job-actions">' +
           '<button class="btn-apply" onclick=\'openApplyModal(' + j.jobsIndex + ')\'>שלח/י קו"ח ←</button>' +
@@ -692,6 +765,70 @@ function render() {
     );
   }).join('');
 }
+
+// ─── Match modal (job → teachers) ─────────────────────────
+function openMatchModal(jobIdx) {
+  const job = allJobs[jobIdx];
+  if (!job || !window.EduraMatch) return;
+  const matches = window.EduraMatch.findTeachersForJob(job, allTeachers);
+
+  $('match-modal-title').textContent = '🎯 ' + matches.length + ' מורים מתאימים למשרה';
+  $('match-modal-sub').textContent = (job.title || '') + (job.school ? ' · ' + job.school : '') + (job.city ? ' · ' + job.city : '');
+
+  $('match-modal-body').innerHTML = matches.map(({ teacher, score }) => {
+    const tags = [];
+    if (teacher.region) tags.push('<span class="tag tag-region">' + esc(teacher.region) + '</span>');
+    if (teacher.subject) tags.push('<span class="tag tag-subject">' + esc(teacher.subject) + '</span>');
+    if (teacher.scope) tags.push('<span class="tag tag-scope">' + esc(teacher.scope) + '</span>');
+
+    const meta = [teacher.city, teacher.sub_area].filter(Boolean).join(' · ');
+    const actions = [];
+
+    if (teacher.email && job.email) {
+      const subject = 'מועמד/ת מתאים/ה דרך אדורה: ' + (teacher.name || 'מורה') + ' — ' + (teacher.subject || '');
+      const body =
+        'שלום,\n\n' +
+        'ראיתי את המודעה שלכם דרך אדורה (edura.co.il) למשרת ' + (job.title || job.subject || 'הוראה') + '.\n\n' +
+        'מצאנו מועמד/ת שמתאים/ה בדיוק:\n' +
+        '• שם: ' + (teacher.name || '(לא צוין)') + '\n' +
+        '• מקצוע: ' + (teacher.subject || '') + '\n' +
+        '• אזור: ' + (teacher.region || '') + (teacher.city ? ' (' + teacher.city + ')' : '') + '\n' +
+        (teacher.scope ? '• היקף: ' + teacher.scope + '\n' : '') +
+        '• מייל: ' + teacher.email + '\n' +
+        (teacher.phone ? '• טלפון: ' + teacher.phone + '\n' : '') +
+        '\nאתם יכולים ליצור קשר ישירות.\n\n' +
+        'בהצלחה,\nאדורה';
+      actions.push('<a class="match-action primary" href="mailto:' + esc(job.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) + '">✉ שלחו לבית הספר</a>');
+    }
+    if (teacher.email) actions.push('<a class="match-action secondary" href="mailto:' + esc(teacher.email) + '">✉ ' + esc(teacher.email) + '</a>');
+    if (teacher.phone) actions.push('<a class="match-action secondary" href="tel:' + esc(teacher.phone) + '">☏ ' + esc(teacher.phone) + '</a>');
+
+    const displayName = teacher.name || 'מורה מחפש/ת משרה';
+
+    return (
+      '<div class="match-item">' +
+        '<div class="match-item-header">' +
+          '<div class="match-item-title">' + esc(displayName) + '</div>' +
+          '<div class="match-item-score">' + score + '%</div>' +
+        '</div>' +
+        (meta ? '<div class="match-item-meta">' + esc(meta) + '</div>' : '') +
+        (tags.length ? '<div class="match-item-tags">' + tags.join('') + '</div>' : '') +
+        (actions.length ? '<div class="match-item-actions">' + actions.join('') + '</div>' : '') +
+      '</div>'
+    );
+  }).join('');
+
+  $('match-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMatchModal() {
+  $('match-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+window.openMatchModal = openMatchModal;
+window.closeMatchModal = closeMatchModal;
 
 // Pre-index for openApplyModal
 function indexJobs() {
@@ -791,7 +928,7 @@ $('clear-filters').addEventListener('click', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeApplyModal();
+  if (e.key === 'Escape') { closeApplyModal(); closeMatchModal(); }
 });
 
 // Boot
