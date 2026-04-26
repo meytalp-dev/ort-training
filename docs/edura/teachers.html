@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate" />
 <title>אדורה · מורים מחפשי עבודה</title>
-<meta name="description" content="35 מורים מחפשי עבודה — שם, מקצוע, אזור, מייל וטלפון. למנהלים שמחפשים מורים." />
+<meta name="description" content="מאגר מורים מחפשי עבודה — מקצוע, אזור והיקף משרה. פנייה דרך אדורה, באישור המורה." />
 <meta property="og:title" content="אדורה · מורים מחפשי עבודה" />
-<meta property="og:description" content="מאגר מורים פתוחים להצעות. למנהלים בלבד." />
+<meta property="og:description" content="מאגר מורים פתוחים להצעות. פרטי המורים נחשפים רק באישורם." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Assistant:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -26,7 +26,7 @@
     --pink-deep: #BE185D;
     --ink: #0B2A4A;
     --ink-soft: #1E3A5F;
-    --ink-mute: #64748B;
+    --ink-mute: #475569;
     --line: #E2E8F0;
     --bg: #F8FAFC;
     --white: #FFFFFF;
@@ -37,6 +37,16 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
+  /* Accessibility — focus ring גלוי לכל נווט מקלדת */
+  :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 3px solid var(--teal-deep);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* iOS Safari — מונע auto-zoom בלחיצה על שדה במובייל */
+  @media (max-width: 768px) {
+    .filter-input, .filter-select, .modal input, .modal textarea, .modal select { font-size: 16px; }
+  }
   body {
     font-family: 'Heebo', 'Assistant', sans-serif;
     background: var(--bg);
@@ -374,7 +384,7 @@
       <a href="index.html" class="btn-text">משרות</a>
       <a href="teachers.html" class="btn-text active">מורים מחפשי עבודה</a>
       <a href="manager-tenders.html" class="btn-text">מכרזי ניהול</a>
-      <a href="chat.html" class="btn-primary">בוט חיפוש 🔍</a>
+      <a href="chat.html" class="btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-left:6px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>בוט חיפוש</a>
     </nav>
   </div>
 </header>
@@ -387,7 +397,7 @@
     <div class="stat"><span class="stat-num" id="stat-total">—</span><span class="stat-label">מורים זמינים</span></div>
     <div class="stat"><span class="stat-num" id="stat-subjects">—</span><span class="stat-label">מקצועות</span></div>
     <div class="stat"><span class="stat-num">5</span><span class="stat-label">אזורי הארץ</span></div>
-    <div class="stat"><span class="stat-num">100%</span><span class="stat-label">עם פרטי קשר</span></div>
+    <div class="stat"><span class="stat-num">100%</span><span class="stat-label">פנייה באישור המורה</span></div>
   </div>
 </section>
 
@@ -404,7 +414,7 @@
     <div class="audience-text">
       <div class="audience-eyebrow">למנהלי בתי ספר</div>
       <div class="audience-title">חוסכים שעות חיפוש — המורים כבר כאן</div>
-      <div class="audience-sub">סיננו לפי מקצוע, שכבה ואזור. פנו ישירות במייל או בטלפון. בלי מתווכים, בלי דמי תיווך.</div>
+      <div class="audience-sub">סיננו לפי מקצוע, שכבה ואזור. פנייה דרך אדורה — אנחנו מעבירים למורה את הבקשה ורק אם המורה מאשר/ת, נעביר לכם את הפרטים. שומרים על הפרטיות.</div>
     </div>
   </div>
 </div>
@@ -476,6 +486,7 @@
 <script>
 const TEACHERS_URL = 'data/teachers.json';
 const FB_TEACHERS_URL = 'data/fb-teachers.json';
+const FB_TEACHERS_2_URL = 'data/fb-teachers-2.json';
 const JOBS_URL = 'data/jobs.json';
 let allT = [];
 let allJobs = [];
@@ -515,11 +526,12 @@ function deriveRegionFromArea(area) {
   return arr.length === 1 ? arr[0] : arr;
 }
 
-function normalizeFbTeachers(data) {
+function normalizeFbTeachers(data, idPrefix) {
   const teachers = (data && data.teachers) || [];
   const sourceName = (data && data.source) || 'קבוצת פייסבוק';
+  const prefix = idPrefix || 'fb';
   return teachers.map((t, i) => ({
-    id: 'fb-' + i,
+    id: prefix + '-' + i,
     source: 'facebook',
     source_name: sourceName,
     name: '',
@@ -541,16 +553,19 @@ function normalizeFbTeachers(data) {
 
 async function loadTeachers() {
   try {
-    const [resA, resB, resJ] = await Promise.all([
+    const [resA, resB, resB2, resJ] = await Promise.all([
       fetch(TEACHERS_URL, { cache: 'no-store' }),
       fetch(FB_TEACHERS_URL, { cache: 'no-store' }).catch(() => null),
+      fetch(FB_TEACHERS_2_URL, { cache: 'no-store' }).catch(() => null),
       fetch(JOBS_URL, { cache: 'no-store' }).catch(() => null)
     ]);
     const dataA = await resA.json();
     const fbData = resB && resB.ok ? await resB.json() : null;
+    const fbData2 = resB2 && resB2.ok ? await resB2.json() : null;
     const jobsData = resJ && resJ.ok ? await resJ.json() : null;
-    const fbTeachers = fbData ? normalizeFbTeachers(fbData) : [];
-    allT = [...(dataA.teachers || []), ...fbTeachers];
+    const fbTeachers = fbData ? normalizeFbTeachers(fbData, 'fb') : [];
+    const fbTeachers2 = fbData2 ? normalizeFbTeachers(fbData2, 'fb2') : [];
+    allT = [...(dataA.teachers || []), ...fbTeachers, ...fbTeachers2];
     allT.forEach((t, i) => { t.tIndex = i; });
     allJobs = (jobsData && jobsData.jobs) || [];
     populateFilters();
@@ -640,27 +655,39 @@ function render() {
     const meta = [t.city, t.sub_area].filter(Boolean).join(' · ');
 
     const contacts = [];
-    const tid = esc(t.name || t.id || '');
+    const tid = esc(t.id || '');
     if (isFb) {
       const fbUrl = t.fb_url || t.url || '';
       if (fbUrl) {
-        contacts.push('<a class="contact-btn primary" href="' + esc(fbUrl) + '" target="_blank" rel="noopener" onclick="trk(\'contact_fb\', \'teacher=' + tid + '\')">📘 צפייה בפוסט בפייסבוק</a>');
+        contacts.push('<a class="contact-btn primary" href="' + esc(fbUrl) + '" target="_blank" rel="noopener" onclick="trk(\'contact_fb\', \'teacher=' + tid + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.84c0-2.52 1.5-3.91 3.78-3.91 1.1 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.57v1.89h2.78l-.44 2.91h-2.34V22c4.78-.76 8.43-4.92 8.43-9.94z"/></svg> צפייה בפוסט בפייסבוק</a>');
       }
     } else {
-      const wa = buildWaLink(t.phone, t.name);
-      if (t.email) contacts.push('<a class="contact-btn primary" href="mailto:' + esc(t.email) + '?subject=' + encodeURIComponent('הצעת עבודה דרך אדורה') + '" onclick="trk(\'contact_email\', \'teacher=' + tid + '\')">✉ שליחת הצעה במייל</a>');
-      if (t.phone) contacts.push('<a class="contact-btn secondary" href="tel:' + esc(t.phone) + '" onclick="trk(\'contact_phone\', \'teacher=' + tid + '\')">☏ ' + esc(t.phone) + '</a>');
-      if (wa)      contacts.push('<a class="contact-btn secondary" href="' + esc(wa) + '" target="_blank" rel="noopener" onclick="trk(\'contact_wa\', \'teacher=' + tid + '\')">🟢 WhatsApp</a>');
+      // המורה אנונימי — פנייה דרך הפלטפורמה בלבד, באישור המורה
+      const subjectLine = encodeURIComponent('בקשת קשר דרך אדורה · ' + (t.subject || 'מורה') + ' · ' + (t.city || ''));
+      const bodyLine = encodeURIComponent(
+        'שלום,\n\n' +
+        'אני מנהל/ת בית ספר ומעוניין/ת ליצור קשר עם המורה ' + (t.id || '') + ' שראיתי באדורה.\n\n' +
+        'פרטי הצוות שיועברו למורה לאישור:\n' +
+        '• שם בית הספר:\n' +
+        '• אזור / יישוב:\n' +
+        '• תפקיד מבוקש:\n' +
+        '• טלפון ליצירת קשר:\n' +
+        '• מייל:\n\n' +
+        'תודה,\nאדורה'
+      );
+      contacts.push('<a class="contact-btn primary" href="mailto:mlypeleg@gmail.com?subject=' + subjectLine + '&body=' + bodyLine + '" onclick="trk(\'contact_request\', \'teacher=' + tid + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> פנייה דרך אדורה</a>');
     }
 
-    const displayName = t.name || (isFb ? 'מורה מחפש/ת משרה' : 'מורה');
+    const displayName = isFb
+      ? 'מורה מחפש/ת משרה'
+      : 'מורה' + (t.subject ? ' ל' + t.subject : '');
     const sourceLabel = esc(t.source_name || 'אדורה') + (t.date ? ' · ' + esc(t.date) : '');
 
     let matchBadge = '';
     if (window.EduraMatch && allJobs.length) {
       const matches = window.EduraMatch.findJobsForTeacher(t, allJobs);
       if (matches.length > 0) {
-        matchBadge = '<button class="match-badge" onclick="openMatchModal(' + t.tIndex + ')" aria-label="הצג ' + matches.length + ' משרות מתאימות"><span class="pulse"></span>🎯 ' + matches.length + ' ' + (matches.length === 1 ? 'משרה מתאימה' : 'משרות מתאימות') + '</button>';
+        matchBadge = '<button class="match-badge" onclick="openMatchModal(' + t.tIndex + ')" aria-label="הצג ' + matches.length + ' משרות מתאימות"><span class="pulse"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-left:4px"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>' + matches.length + ' ' + (matches.length === 1 ? 'משרה מתאימה' : 'משרות מתאימות') + '</button>';
       }
     }
 
@@ -688,10 +715,10 @@ function openMatchModal(teacherIndex) {
   const teacher = allT[teacherIndex];
   if (!teacher || !window.EduraMatch) return;
   const matches = window.EduraMatch.findJobsForTeacher(teacher, allJobs);
-  const displayName = teacher.name || 'מורה זה/זו';
-  trk('match_badge_click', 'teacher=' + (teacher.name || teacher.id) + '|matches=' + matches.length);
+  const displayName = 'מורה' + (teacher.subject ? ' ל' + teacher.subject : '');
+  trk('match_badge_click', 'teacher=' + (teacher.id || '') + '|matches=' + matches.length);
 
-  $('match-modal-title').textContent = '🎯 ' + matches.length + ' משרות מתאימות ל' + displayName;
+  $('match-modal-title').textContent = matches.length + ' משרות מתאימות ל' + displayName;
   const regLabel = regionsOf(teacher).join(' / ');
   $('match-modal-sub').textContent = (teacher.subject || '') + (regLabel ? ' · ' + regLabel : '') + (teacher.city ? ' · ' + teacher.city : '');
 
@@ -703,23 +730,7 @@ function openMatchModal(teacherIndex) {
 
     const meta = [job.school, job.city].filter(Boolean).join(' · ');
     const actions = [];
-    if (job.email) {
-      const subject = 'מועמד/ת מתאים/ה דרך אדורה: ' + (teacher.name || 'מורה') + ' — ' + (teacher.subject || '');
-      const body =
-        'שלום,\n\n' +
-        'ראיתי את המודעה שלכם דרך אדורה (edura.co.il) למשרת ' + (job.title || job.subject || 'הוראה') + '.\n\n' +
-        'יש לי מועמד/ת שמתאים/ה בדיוק:\n' +
-        '• שם: ' + (teacher.name || '(לא צוין)') + '\n' +
-        '• מקצוע: ' + (teacher.subject || '') + '\n' +
-        '• אזור: ' + regLabel + (teacher.city ? ' (' + teacher.city + ')' : '') + '\n' +
-        (teacher.scope ? '• היקף: ' + teacher.scope + '\n' : '') +
-        (teacher.email ? '• מייל: ' + teacher.email + '\n' : '') +
-        (teacher.phone ? '• טלפון: ' + teacher.phone + '\n' : '') +
-        '\nממליצים ליצור איתו/ה קשר ישיר.\n\n' +
-        'בהצלחה,\nאדורה';
-      actions.push('<a class="match-action primary" href="mailto:' + esc(job.email) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body) + '" onclick="trk(\'match_send_email\', \'teacher=' + esc(teacher.name || teacher.id) + '|job=' + esc(job.id) + '\')">✉ שלחו לבית הספר</a>');
-    }
-    if (job.url) actions.push('<a class="match-action secondary" href="' + esc(job.url) + '" target="_blank" rel="noopener">המודעה המקורית ↗</a>');
+    if (job.url) actions.push('<a class="match-action primary" href="' + esc(job.url) + '" target="_blank" rel="noopener" onclick="trk(\'match_view_job\', \'teacher=' + esc(teacher.id) + '|job=' + esc(job.id) + '\')">המודעה המקורית ↗</a>');
 
     return (
       '<div class="match-item">' +
