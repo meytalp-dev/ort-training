@@ -28,17 +28,55 @@ const SHEET_LOG = 'log';
 const RECIPIENT = 'mlypeleg@gmail.com';
 const PAGE_URL = 'https://meytalp-dev.github.io/ort-training/personal/jobs/';
 
-// Keywords (any match → relevant). Word boundary not strict — Hebrew has no spaces in compound words.
-const KEYWORDS = [
-  'חדשנות', 'טכנו-פדגוג', 'טכנו פדגוג', 'AI', 'בינה מלאכותית',
-  'חינוך דיגיטלי', 'ניהול חינוכי', 'מנכ"ל', 'מנכל',
-  'רכז תוכניות', 'רכזת תוכניות', 'רכז/ת תוכניות',
-  'טכנולוגיה חינוכית', 'מנהל פרויקט', 'מנהלת פרויקט',
-  'מנהל מרכז', 'מנהלת מרכז', 'תקשוב'
+// ============================================================
+// Filters — 3 cumulative gates: job-listing? · role-match? · location?
+// All matched against LINK TEXT only (not surrounding context)
+// ============================================================
+
+// Gate 1 — markers that confirm a link is a job listing.
+// Either a Hebrew job-listing word, a role-title pattern, or a job URL pattern.
+const JOB_LISTING_WORDS = [
+  'דרוש', 'דרושה', 'דרושים', 'דרושות', 'משרה', 'משרת', 'משרות',
+  'תפקיד', 'מועמדות', 'הגשת מועמדות'
+];
+const JOB_TITLE_PATTERNS = [
+  'מנהל/ת', 'מנהל ', 'מנהלת', 'רכז/ת', 'רכז ', 'רכזת',
+  'סגן/ית', 'סגן ', 'סגנית', 'ראש תחום', 'ראש צוות',
+  'מנכ"ל', 'מנכ״ל', 'מנכל', 'מנכלית', 'מוביל/ה', 'מוביל ', 'מובילה',
+  'רפרנט/ית', 'רפרנט ', 'רפרנטית', 'מפקח/ת', 'מפקחת'
+];
+const JOB_URL_PATTERNS = ['/job', '/drush', '/career', '/position', '/wanted', '/employment', '/vacanc', '/jobs/'];
+
+// Gate 2 — role focus. Must contain a FULL phrase (not "AI" alone — too noisy).
+const RELEVANT_PHRASES = [
+  'חדשנות חינוכית', 'חדשנות וטכנולוגיה', 'מרכז חדשנות', 'יחידת חדשנות', 'יחידה לחדשנות',
+  'טכנו-פדגוג', 'טכנו פדגוג', 'פדגוגיה דיגיטלית', 'פדגוגית דיגיטלית',
+  'בינה מלאכותית', 'כשירות AI', 'AI בחינוך',
+  'ניהול חינוכי', 'מינהל חינוכי', 'מנהל/ת מרכז', 'מנהלת מרכז', 'מנהל מרכז',
+  'רכז/ת תוכניות', 'רכזת תוכניות', 'רכז תוכניות',
+  'מנהל/ת פרויקט', 'מנהלת פרויקט', 'מנהל פרויקט',
+  'ראש תחום חינוך', 'ראש תחום דיגיטל', 'ראש תחום טכנולוגיה',
+  'טכנולוגיה חינוכית', 'תקשוב'
 ];
 
-// Negative filters — skip these even if keyword matches
-const NEGATIVE = ['בוגר תואר ראשון בלבד', 'משרה זמנית לחודש'];
+// Gate 3 — location. If link mentions a non-allowed city, reject. Empty location = allowed (national/unknown).
+const ALLOWED_LOCATIONS = ['ירושלים', 'אזור ירושלים', 'ארצי', 'היברידי', 'מרכז', 'גוש דן'];
+const REJECTED_LOCATIONS = ['תל אביב', 'תל-אביב', 'חיפה', 'באר שבע', 'באר-שבע', 'השרון', 'צפון', 'דרום', 'אילת', 'הגליל', 'הנגב'];
+
+// Negative filters — skip even if all gates pass
+const NEGATIVE = [
+  'בוגר תואר ראשון בלבד', 'משרה זמנית לחודש',
+  'מורה ל', 'סייע/ת', 'סייעת', 'מתנדב/ת', 'מתנדבת', 'סטודנט/ית', 'סטודנטית',
+  'משרת אם', 'שכר מינימום'
+];
+
+// Navigation/footer link text patterns to strip out before any gate
+const NAV_NOISE = [
+  'דף הבית', 'עמוד הבית', 'אודות', 'צור קשר', 'יצירת קשר', 'קטגוריות', 'תפריט',
+  'כל הזכויות', 'הרשמה', 'התחבר', 'התחברות', 'הרשם', 'תקנון', 'מדיניות',
+  'הצהרת נגישות', 'נגישות', 'מפת אתר', 'הקודם', 'הבא', 'עוד', 'קרא עוד',
+  'לפרטים', 'לחצו כאן', 'הצטרפו אלינו', 'הירשמו'
+];
 
 // Sources to scan. type=html for plain page parsing.
 const SOURCES = [
@@ -210,17 +248,28 @@ function scanSource_(src) {
   const matches = [];
 
   candidates.forEach(c => {
-    const text = (c.text || '') + ' ' + (c.context || '');
-    if (matchesNegative_(text)) return;
-    const matched = matchKeywords_(text);
+    const linkText = (c.text || '').trim();
+
+    // Filter on link text only — context is too noisy
+    if (matchesNegative_(linkText)) return;
+    if (isNavNoise_(linkText)) return;
+
+    // Gate 1 — must look like a job listing (text or URL)
+    if (!isJobListing_(linkText, c.url)) return;
+
+    // Gate 2 — must match a relevant role phrase
+    const matched = matchKeywords_(linkText);
     if (matched.length === 0) return;
+
+    // Gate 3 — location must not be explicitly outside Jerusalem area
+    if (isRejectedLocation_(linkText) && !isAllowedLocation_(linkText)) return;
 
     matches.push({
       sourceId: src.id,
       sourceName: src.name,
-      title: c.text.trim().slice(0, 200),
+      title: linkText.slice(0, 200),
       url: c.url,
-      snippet: c.context.trim().slice(0, 300),
+      snippet: (c.context || '').trim().slice(0, 300),
       keywords: matched
     });
   });
@@ -244,7 +293,8 @@ function extractLinks_(html, baseUrl) {
   while ((m = linkRegex.exec(html)) !== null) {
     const href = m[2];
     const inner = (m[4] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    if (inner.length < 5 || inner.length > 250) continue;
+    // Tightened length: short = nav, very long = paragraph
+    if (inner.length < 15 || inner.length > 150) continue;
 
     // Resolve relative URLs
     let absUrl = href;
@@ -269,8 +319,8 @@ function extractLinks_(html, baseUrl) {
 function matchKeywords_(text) {
   const lower = text.toLowerCase();
   const matches = [];
-  for (const kw of KEYWORDS) {
-    if (lower.indexOf(kw.toLowerCase()) !== -1) matches.push(kw);
+  for (const phrase of RELEVANT_PHRASES) {
+    if (lower.indexOf(phrase.toLowerCase()) !== -1) matches.push(phrase);
   }
   return matches;
 }
@@ -279,6 +329,45 @@ function matchesNegative_(text) {
   const lower = text.toLowerCase();
   for (const n of NEGATIVE) {
     if (lower.indexOf(n.toLowerCase()) !== -1) return true;
+  }
+  return false;
+}
+
+function isNavNoise_(text) {
+  const trimmed = text.trim();
+  for (const n of NAV_NOISE) {
+    if (trimmed === n) return true;
+  }
+  return false;
+}
+
+// Gate 1 — must contain job-listing word, role-title pattern, or job URL pattern
+function isJobListing_(text, url) {
+  const lowerText = text.toLowerCase();
+  const lowerUrl = (url || '').toLowerCase();
+
+  for (const w of JOB_LISTING_WORDS) {
+    if (lowerText.indexOf(w) !== -1) return true;
+  }
+  for (const p of JOB_TITLE_PATTERNS) {
+    if (lowerText.indexOf(p.toLowerCase()) !== -1) return true;
+  }
+  for (const u of JOB_URL_PATTERNS) {
+    if (lowerUrl.indexOf(u) !== -1) return true;
+  }
+  return false;
+}
+
+function isRejectedLocation_(text) {
+  for (const loc of REJECTED_LOCATIONS) {
+    if (text.indexOf(loc) !== -1) return true;
+  }
+  return false;
+}
+
+function isAllowedLocation_(text) {
+  for (const loc of ALLOWED_LOCATIONS) {
+    if (text.indexOf(loc) !== -1) return true;
   }
   return false;
 }
