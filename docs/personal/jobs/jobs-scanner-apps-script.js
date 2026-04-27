@@ -249,27 +249,28 @@ function scanSource_(src) {
 
   candidates.forEach(c => {
     const linkText = (c.text || '').trim();
+    const nearby = (c.context || '').trim();
 
-    // Filter on link text only — context is too noisy
-    if (matchesNegative_(linkText)) return;
+    if (matchesNegative_(linkText) || matchesNegative_(nearby)) return;
     if (isNavNoise_(linkText)) return;
 
-    // Gate 1 — must look like a job listing (text or URL)
+    // Gate 1 — strict on link text + URL (no context here, to avoid noise)
     if (!isJobListing_(linkText, c.url)) return;
 
-    // Gate 2 — must match a relevant role phrase
-    const matched = matchKeywords_(linkText);
+    // Gate 2 — relevant phrase in link text OR close context
+    let matched = matchKeywords_(linkText);
+    if (matched.length === 0) matched = matchKeywords_(nearby);
     if (matched.length === 0) return;
 
-    // Gate 3 — location must not be explicitly outside Jerusalem area
-    if (isRejectedLocation_(linkText) && !isAllowedLocation_(linkText)) return;
+    // Gate 3 — location: rejected wins over allowed (don't accept Tel Aviv even if "ירושלים" mentioned elsewhere)
+    if (isRejectedLocation_(linkText + ' ' + nearby) && !isAllowedLocation_(linkText)) return;
 
     matches.push({
       sourceId: src.id,
       sourceName: src.name,
       title: linkText.slice(0, 200),
       url: c.url,
-      snippet: (c.context || '').trim().slice(0, 300),
+      snippet: nearby.slice(0, 300),
       keywords: matched
     });
   });
@@ -293,8 +294,8 @@ function extractLinks_(html, baseUrl) {
   while ((m = linkRegex.exec(html)) !== null) {
     const href = m[2];
     const inner = (m[4] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    // Tightened length: short = nav, very long = paragraph
-    if (inner.length < 15 || inner.length > 150) continue;
+    // Length: filter out very short nav and very long paragraph links
+    if (inner.length < 8 || inner.length > 150) continue;
 
     // Resolve relative URLs
     let absUrl = href;
@@ -305,10 +306,10 @@ function extractLinks_(html, baseUrl) {
       continue;
     }
 
-    // Get context — text within ±300 chars
+    // Get tight context — only ±120 chars around the link
     const idx = m.index;
-    const ctxStart = Math.max(0, idx - 200);
-    const ctxEnd = Math.min(html.length, idx + m[0].length + 200);
+    const ctxStart = Math.max(0, idx - 120);
+    const ctxEnd = Math.min(html.length, idx + m[0].length + 120);
     const context = html.slice(ctxStart, ctxEnd).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 
     out.push({ url: absUrl, text: inner, context: context });
@@ -459,7 +460,7 @@ function sendDigestEmail_(jobs) {
       '<a href="' + PAGE_URL + '" style="display:inline-block;padding:12px 24px;background:linear-gradient(135deg,#1e3a5f,#2d7a6e);color:#fff;text-decoration:none;border-radius:999px;font-size:13px;font-weight:600;">לוח המשרות המלא ←</a>' +
     '</div>' +
     '<div style="text-align:center;margin-top:32px;padding-top:16px;border-top:1px solid #e4ddd0;font-size:11px;color:#9b99ac;">' +
-      'סקירה אוטומטית · ' + SOURCES.length + ' מקורות · מילות מפתח: ' + KEYWORDS.slice(0, 5).join(', ') + '…' +
+      'סקירה אוטומטית · ' + SOURCES.length + ' מקורות · ' + RELEVANT_PHRASES.length + ' ביטויי תפקיד · ירושלים/ארצי' +
     '</div>' +
   '</div>' +
 '</body></html>';
