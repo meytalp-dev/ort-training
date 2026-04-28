@@ -161,7 +161,18 @@ function setupSheets() {
   // Sheet 4: staff_quotas — מעקב מכסה יומית
   ensureSheet_(ss, 'staff_quotas', ['issuer', 'date', 'count']);
 
-  SpreadsheetApp.getUi().alert('מוכן! 4 טאבים נוצרו בהצלחה. אפשר להמשיך ל-Deploy.');
+  // Sheet 5: error_log — לוג שגיאות לאבחון
+  ensureSheet_(ss, 'error_log', ['timestamp', 'action', 'issuer', 'student_id', 'error', 'raw_params']);
+
+  SpreadsheetApp.getUi().alert('מוכן! 5 טאבים נוצרו בהצלחה. אפשר להמשיך ל-Deploy.');
+}
+
+function logError_(ss, action, issuer, studentId, error, params) {
+  try {
+    var sh = ss.getSheetByName('error_log');
+    if (!sh) sh = ensureSheet_(ss, 'error_log', ['timestamp', 'action', 'issuer', 'student_id', 'error', 'raw_params']);
+    sh.appendRow([new Date().toISOString(), action || '', issuer || '', studentId || '', String(error).substring(0, 300), JSON.stringify(params || {}).substring(0, 500)]);
+  } catch (e) { /* swallow — לוג לא צריך להפיל את הזרימה */ }
 }
 
 function ensureSheet_(ss, name, headers) {
@@ -179,16 +190,28 @@ function ensureSheet_(ss, name, headers) {
 // ============================================
 
 function issueInvestment_(data) {
+  var ss;
+  try { ss = SpreadsheetApp.openById(SHEET_ID); } catch (e) {
+    return { result: 'error', message: 'שגיאת חיבור ל-Sheet: ' + e.toString().substring(0, 150) };
+  }
+
   // ולידציות
-  if (!data.student_id) return { result: 'error', message: 'חסר תלמיד' };
-  if (!data.category)   return { result: 'error', message: 'חסרה קטגוריה' };
+  if (!data.student_id) { logError_(ss, 'issue', data.issuer_name, data.student_id, 'חסר תלמיד', data); return { result: 'error', message: 'חסר תלמיד' }; }
+  if (!data.category)   { logError_(ss, 'issue', data.issuer_name, data.student_id, 'חסרה קטגוריה', data); return { result: 'error', message: 'חסרה קטגוריה' }; }
   if (!data.personal_note || data.personal_note.length < 15) {
+    logError_(ss, 'issue', data.issuer_name, data.student_id, 'הערה קצרה מדי', data);
     return { result: 'error', message: 'הערה אישית חייבת להיות לפחות 15 תווים' };
   }
-  if (!data.issuer_name || !data.issuer_role) return { result: 'error', message: 'חסר פרטי מנפיק' };
+  if (!data.issuer_name || !data.issuer_role) {
+    logError_(ss, 'issue', data.issuer_name, data.student_id, 'חסר פרטי מנפיק', data);
+    return { result: 'error', message: 'חסר פרטי מנפיק' };
+  }
 
   var cat = CATEGORIES[data.category];
-  if (!cat) return { result: 'error', message: 'קטגוריה לא מוכרת' };
+  if (!cat) {
+    logError_(ss, 'issue', data.issuer_name, data.student_id, 'קטגוריה לא מוכרת: ' + data.category, data);
+    return { result: 'error', message: 'קטגוריה לא מוכרת' };
+  }
 
   // LockService — מונע race condition בין מנפיקים במקביל
   var lock = LockService.getScriptLock();
@@ -199,13 +222,28 @@ function issueInvestment_(data) {
   }
 
   try {
+    // Idempotency — אם הפתק עם אותו id כבר קיים, להחזיר success בלי לכתוב שוב
+    if (data.id) {
+      var existingRow = findInvestmentById_(ss, data.id);
+      if (existingRow) {
+        return {
+          result: 'success',
+          id: data.id,
+          points: cat.points,
+          dimension: cat.dim,
+          duplicate: true,
+          message: 'הפתק כבר נשמר קודם'
+        };
+      }
+    }
+
     // בדיקת מכסה יומית
-    var ss = SpreadsheetApp.openById(SHEET_ID);
     var quota = DAILY_QUOTA[data.issuer_role] || 5;
     var today = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'yyyy-MM-dd');
     var currentCount = getQuotaCount_(ss, data.issuer_name, today);
 
     if (currentCount >= quota) {
+      logError_(ss, 'issue', data.issuer_name, data.student_id, 'מכסה יומית', data);
       return { result: 'error', message: 'הגעת למכסה היומית שלך (' + quota + '). ננסה שוב מחר.' };
     }
 
@@ -228,9 +266,22 @@ function issueInvestment_(data) {
       quota_used: currentCount + 1,
       quota_max: quota
     };
+  } catch (e) {
+    logError_(ss, 'issue', data.issuer_name, data.student_id, e.toString(), data);
+    return { result: 'error', message: 'שגיאה: ' + e.toString().substring(0, 200) };
   } finally {
     lock.releaseLock();
   }
+}
+
+function findInvestmentById_(ss, id) {
+  var sh = ss.getSheetByName('investments');
+  if (!sh) return null;
+  var data = sh.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) return i + 1;
+  }
+  return null;
 }
 
 // ============================================

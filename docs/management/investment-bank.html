@@ -148,6 +148,10 @@ body::before{content:'';position:fixed;inset:0;background:
   </div>
   <div class="header-right">
     <span id="currentUser" style="font-size:.8rem;color:var(--text-light);font-weight:600"></span>
+    <button id="syncBtn" class="header-btn hidden" onclick="manualResync()" style="background:#FFF3CD;border-color:#FFE69C;color:#856404">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      <span id="syncBtnText">סנכרן (<span id="pendingCount">0</span>)</span>
+    </button>
     <a href="investment-bank-admin.html" class="header-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
       דשבורד
@@ -249,6 +253,7 @@ var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8Ks7t8V3JZoK2mZ
 var STORAGE_KEY_USER = 'investment_bank_user';
 var STORAGE_KEY_LOCAL = 'investment_bank_local_log';
 var STORAGE_KEY_QUOTA = 'investment_bank_quota';
+var STORAGE_KEY_STUDENT_PHONES = 'investment_bank_student_phones'; // מאגר ידני שמורות ממלאות
 
 // קטגוריות — חייבות להיות זהות ל-Apps Script. 8 קטגוריות מכסות את 5 הממדים.
 // כלל: כל פתק = נקודה אחת. השקעה = השקעה.
@@ -446,16 +451,24 @@ function submitInvestment(){
     isSubmitting = false;
 
     if (result.result === 'error'){
-      // שרת דחה — מכסה, ולידציה או שגיאה אחרת
+      // שרת דחה אקטיבית — מכסה, ולידציה. לא לשמור, להציג שגיאה.
       btn.disabled = false;
       btn.textContent = prevText;
       showMessage(result.message || 'שליחה נכשלה, נסו שוב', 'error');
       return;
     }
 
-    // הצלחה (אונליין) או offline — שומרים מקומית
+    // success או network_error — שומרים מקומית. ב-network_error נסמן synced=false ונסנכרן אחר כך.
     var log = JSON.parse(localStorage.getItem(STORAGE_KEY_LOCAL) || '[]');
-    if (result.result === 'success' && result.id) { ticket.server_id = result.id; ticket.synced = true; }
+    if (result.result === 'success' && result.id) {
+      ticket.server_id = result.id;
+      ticket.synced = true;
+    } else {
+      // network_error — שמירה מקומית עם דגל לסנכרון מאוחר יותר
+      ticket.synced = false;
+      ticket.last_sync_attempt = new Date().toISOString();
+      ticket.last_sync_error = result.message || 'תקשורת';
+    }
     log.push(ticket);
     localStorage.setItem(STORAGE_KEY_LOCAL, JSON.stringify(log));
     incrementLocalQuota();
@@ -470,12 +483,12 @@ function submitInvestment(){
     // הצגת הודעת הצלחה עם כפתור הדפסה ווואטסאפ — ללא setTimeout, נשארת עד שמורה בוחרת פעולה
     var waHtml = renderWhatsAppButtons(ticket, student);
     var msg = document.getElementById('message');
-    var offlineNote = (result.result === 'offline')
-      ? '<div class="wa-hint" style="color:var(--create-dark);margin-top:6px">לב: נשמר במכשיר זה בלבד — לא מחובר לשרת</div>'
+    var pendingNote = (result.result !== 'success')
+      ? '<div class="wa-hint" style="color:var(--create-dark);margin-top:6px;background:#FFF3CD;padding:8px;border-radius:8px">⏳ הפתק נשמר במכשיר. ייסונכרן לשרת ברקע — אין צורך לעשות כלום.</div>'
       : '';
     msg.innerHTML = '<div class="message success">' +
       '<strong>הפתק נוצר ל' + escapeHtml(ticket.student_name) + '.</strong>' +
-      offlineNote +
+      pendingNote +
       '<div class="wa-actions" style="margin-top:10px">' +
         '<button class="wa-btn" style="background:var(--primary)" onclick="printTicket(\'' + ticket.id + '\')">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>' +
@@ -487,6 +500,11 @@ function submitInvestment(){
 
     refreshQuota();
     renderRecent();
+    updatePendingBadge();
+    // אם נשמר offline — מנסה לסנכרן ברקע מיד (שולח את כל ההמתנות)
+    if (result.result !== 'success') {
+      setTimeout(function(){ resyncPending(false); }, 2000);
+    }
   });
 }
 
@@ -513,21 +531,24 @@ function isMobileDevice(){
 function syncToServer(ticket, onResult){
   if (!APPS_SCRIPT_URL){
     console.log('APPS_SCRIPT_URL לא הוגדר — הפתק נשמר מקומית בלבד');
-    if (onResult) onResult({ result: 'offline' });
+    if (onResult) onResult({ result: 'network_error', message: 'אין הגדרת שרת' });
     return;
   }
   // JSONP GET — הדרך האמינה היחידה לקרוא תשובה מ-Apps Script (POST נופל ב-302 redirect)
   var cb = 'issueCb_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  var script;
   var timeoutId = setTimeout(function(){
     if (window[cb]) {
       delete window[cb];
-      if (onResult) onResult({ result: 'error', message: 'השרת לא ענה בזמן — ננסה שוב' });
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+      if (onResult) onResult({ result: 'network_error', message: 'השרת לא ענה בזמן' });
     }
   }, 15000);
 
   window[cb] = function(data){
     clearTimeout(timeoutId);
     delete window[cb];
+    if (script && script.parentNode) script.parentNode.removeChild(script);
     if (data && data.result === 'success' && onResult) onResult(data);
     else if (onResult) onResult(data || { result: 'error', message: 'תגובה לא תקינה מהשרת' });
   };
@@ -539,12 +560,13 @@ function syncToServer(ticket, onResult){
       params.push(encodeURIComponent(k) + '=' + encodeURIComponent(ticket[k]));
     }
   }
-  var script = document.createElement('script');
+  script = document.createElement('script');
   script.src = APPS_SCRIPT_URL + '?' + params.join('&');
   script.onerror = function(){
     clearTimeout(timeoutId);
     delete window[cb];
-    if (onResult) onResult({ result: 'error', message: 'שגיאת רשת — בדקי חיבור' });
+    if (script && script.parentNode) script.parentNode.removeChild(script);
+    if (onResult) onResult({ result: 'network_error', message: 'שגיאת רשת' });
   };
   document.head.appendChild(script);
 }
@@ -616,35 +638,191 @@ function buildWaLink(phone, message){
   return 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
 }
 
+function getStoredStudentPhone(studentId){
+  try {
+    var map = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENT_PHONES) || '{}');
+    return map[studentId] || '';
+  } catch (e) { return ''; }
+}
+function setStoredStudentPhone(studentId, phone){
+  try {
+    var map = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENT_PHONES) || '{}');
+    map[studentId] = phone;
+    localStorage.setItem(STORAGE_KEY_STUDENT_PHONES, JSON.stringify(map));
+  } catch (e) {}
+}
+
+// קצת שונה — הודעה מותאמת לתלמיד (גוף שני) במקום הורים
+function buildStudentTicketMessage(ticket){
+  var lines = [
+    'היי ' + ticket.student_name.split(' ')[0] + ',',
+    '',
+    'קיבלת היום פתק "השקעה בעצמך" בבית הספר 💛',
+    '',
+    'קטגוריה: ' + ticket.category,
+    '',
+    'מה ראינו:',
+    '"' + ticket.personal_note + '"',
+    '',
+    ticket.issuer_name + ' · ' + ticket.issuer_role,
+    'אורט בית הערבה',
+    '',
+    '— כל פתק = נקודה בבנק שלך. אפשר לצבור ולממש בתגמולים.'
+  ];
+  return lines.join('\n');
+}
+
+function waSvgIcon(){
+  return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';
+}
+
+function sendStudentWa(ticketId, studentId){
+  var log = JSON.parse(localStorage.getItem(STORAGE_KEY_LOCAL) || '[]');
+  var ticket = log.find(function(x){ return x.id === ticketId; });
+  if (!ticket) return;
+  var input = document.getElementById('studentPhoneInput_' + ticketId);
+  var raw = (input && input.value || '').trim();
+  if (!raw) { alert('הזיני מספר טלפון של התלמיד'); return; }
+  var phone = normalizePhone(raw);
+  if (!phone) { alert('מספר לא תקין. דוגמה: 0501234567'); return; }
+  setStoredStudentPhone(studentId, raw);
+  var link = buildWaLink(phone, buildStudentTicketMessage(ticket));
+  window.open(link, '_blank', 'noopener');
+}
+
 function renderWhatsAppButtons(ticket, student){
   var msg = buildTicketMessage(ticket);
   var p1 = normalizePhone(student.p1);
   var p2 = normalizePhone(student.p2);
+  var savedStudentPhone = getStoredStudentPhone(student.id);
 
+  var html = '';
+
+  // קודם — שליחה לתלמיד עצמו (הזנה ידנית, נשמר במכשיר)
+  html += '<div style="margin-top:10px;padding:12px;background:#F0FAF8;border:1px solid #B8E4DE;border-radius:10px">' +
+    '<div style="font-weight:700;font-size:.85rem;margin-bottom:8px;color:var(--lead-dark)">שליחה לתלמיד עצמו</div>' +
+    '<div style="display:flex;gap:6px;align-items:stretch;flex-wrap:wrap">' +
+      '<input type="tel" id="studentPhoneInput_' + escapeHtml(ticket.id) + '" ' +
+        'placeholder="050-1234567" value="' + escapeHtml(savedStudentPhone) + '" ' +
+        'style="flex:1;min-width:140px;border:2px solid #B8E4DE;border-radius:10px;padding:10px 12px;font-size:16px;font-family:var(--font-body)">' +
+      '<button class="wa-btn" onclick="sendStudentWa(\'' + escapeHtml(ticket.id) + '\',' + Number(student.id) + ')">' +
+        waSvgIcon() + 'שלח לתלמיד' +
+      '</button>' +
+    '</div>' +
+    '<div style="font-size:.72rem;color:var(--text-lighter);margin-top:6px">המספר נשמר במכשיר זה לשליחה הבאה — לא נשלח לשרת</div>' +
+  '</div>';
+
+  // אחר כך — שליחה להורים (אם יש מספרים)
   if (!p1 && !p2) {
-    return '<div class="wa-hint">אין מספר טלפון להורים ברישום התלמיד — לא ניתן לשלוח וואטסאפ</div>';
+    html += '<div class="wa-hint" style="margin-top:8px">אין מספר טלפון להורים ברישום התלמיד</div>';
+    return html;
   }
-  var html = '<div class="wa-actions">';
+  html += '<div style="margin-top:10px;padding:12px;background:#FAF8FE;border:1px solid #D4CEF0;border-radius:10px">' +
+    '<div style="font-weight:700;font-size:.85rem;margin-bottom:8px;color:var(--primary-dark)">שליחה להורים</div>' +
+    '<div class="wa-actions" style="margin-top:0">';
   if (p1) {
-    var label1 = 'הורה 1';
-    html += '<a class="wa-btn" href="' + buildWaLink(p1, msg) + '" target="_blank" rel="noopener">' +
-      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>' +
-      'שלח ל' + escapeHtml(label1) + '</a>';
+    html += '<a class="wa-btn" href="' + buildWaLink(p1, msg) + '" target="_blank" rel="noopener">' + waSvgIcon() + 'הורה 1</a>';
   }
   if (p2) {
-    var label2 = 'הורה 2';
-    html += '<a class="wa-btn" href="' + buildWaLink(p2, msg) + '" target="_blank" rel="noopener">' +
-      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>' +
-      'שלח ל' + escapeHtml(label2) + '</a>';
+    html += '<a class="wa-btn" href="' + buildWaLink(p2, msg) + '" target="_blank" rel="noopener">' + waSvgIcon() + 'הורה 2</a>';
   }
-  html += '</div><div class="wa-hint">ההודעה תיפתח בוואטסאפ מוכנה — פשוט ללחוץ שלח</div>';
+  html += '</div></div>';
   return html;
 }
 
 // ════════════════════════════════════════════════════════════
+// RE-SYNC — pending tickets that failed to reach server
+// ════════════════════════════════════════════════════════════
+var isResyncing = false;
+
+function getPendingTickets(){
+  var log = JSON.parse(localStorage.getItem(STORAGE_KEY_LOCAL) || '[]');
+  return log.filter(function(t){ return t.synced !== true; });
+}
+
+function updatePendingBadge(){
+  var pending = getPendingTickets();
+  var btn = document.getElementById('syncBtn');
+  var count = document.getElementById('pendingCount');
+  if (!btn || !count) return;
+  count.textContent = pending.length;
+  if (pending.length > 0) btn.classList.remove('hidden');
+  else btn.classList.add('hidden');
+}
+
+function resyncPending(showFeedback){
+  if (isResyncing) return;
+  var pending = getPendingTickets();
+  if (!pending.length) {
+    if (showFeedback) showMessage('אין פתקים ממתינים לסנכרון', 'success');
+    return;
+  }
+  if (!APPS_SCRIPT_URL) {
+    if (showFeedback) showMessage('אין הגדרת שרת — לא ניתן לסנכרן', 'error');
+    return;
+  }
+
+  isResyncing = true;
+  var btn = document.getElementById('syncBtn');
+  var btnText = document.getElementById('syncBtnText');
+  if (btnText) btnText.textContent = 'מסנכרן...';
+
+  var success = 0, failed = 0, total = pending.length;
+  var idx = 0;
+
+  function next(){
+    if (idx >= pending.length){
+      isResyncing = false;
+      updatePendingBadge();
+      if (btnText) btnText.innerHTML = 'סנכרן (<span id="pendingCount">' + (total - success) + '</span>)';
+      if (showFeedback){
+        if (success === total) showMessage('סונכרנו ' + success + ' פתקים בהצלחה ✓', 'success');
+        else if (success > 0)  showMessage('סונכרנו ' + success + ' מתוך ' + total + '. ' + failed + ' עדיין ממתינים — נסו שוב מאוחר יותר.', 'error');
+        else                   showMessage('הסנכרון נכשל — בדקי חיבור אינטרנט ונסי שוב', 'error');
+      }
+      return;
+    }
+    var ticket = pending[idx++];
+    syncToServer(ticket, function(result){
+      var log = JSON.parse(localStorage.getItem(STORAGE_KEY_LOCAL) || '[]');
+      var i = log.findIndex(function(t){ return t.id === ticket.id; });
+      if (i >= 0){
+        if (result.result === 'success'){
+          log[i].synced = true;
+          if (result.id) log[i].server_id = result.id;
+          delete log[i].last_sync_error;
+          success++;
+        } else if (result.result === 'error' && result.message && /כפול|duplicate|exists/i.test(result.message)){
+          // השרת אמר שכבר קיים — נסמן כסונכרן (idempotent)
+          log[i].synced = true;
+          success++;
+        } else {
+          log[i].last_sync_attempt = new Date().toISOString();
+          log[i].last_sync_error = result.message || 'unknown';
+          failed++;
+        }
+        localStorage.setItem(STORAGE_KEY_LOCAL, JSON.stringify(log));
+      }
+      // בין ניסיונות 800ms כדי לא להציף את השרת
+      setTimeout(next, 800);
+    });
+  }
+  next();
+}
+
+function manualResync(){ resyncPending(true); }
+
+// ════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════
-if (restoreLogin()) showIssueView();
+if (restoreLogin()) {
+  showIssueView();
+  updatePendingBadge();
+  // ניסיון סנכרון אוטומטי בטעינה אם יש פתקים ממתינים
+  if (getPendingTickets().length > 0){
+    setTimeout(function(){ resyncPending(false); }, 1500);
+  }
+}
 </script>
 </body>
 </html>
