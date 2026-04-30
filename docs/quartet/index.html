@@ -138,6 +138,14 @@ body::before{content:'';position:fixed;inset:0;
 .tag.ext{background:rgba(232,144,156,.08);color:var(--spark-dark);border-color:rgba(232,144,156,.2)}
 .card-arrow{flex-shrink:0;width:28px;height:28px;border-radius:8px;background:var(--bg-alt);display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .2s}
 .card:hover .card-arrow{background:var(--dream);color:#fff;transform:translateX(-3px)}
+.card-actions{display:flex;gap:6px;margin-top:8px;padding-top:10px;border-top:1px dashed var(--border-soft)}
+.card-action-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 10px;border-radius:9px;font-family:Heebo;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s;text-decoration:none;border:1.5px solid var(--border)}
+.card-action-btn.open{background:var(--lead-dark);color:#fff;border-color:var(--lead-dark)}
+.card-action-btn.open:hover{background:var(--lead);transform:translateY(-1px);box-shadow:0 3px 10px rgba(58,172,160,.3)}
+.card-action-btn.details{background:#fff;color:var(--text);border-color:var(--border)}
+.card-action-btn.details:hover{background:var(--dream-light);border-color:var(--dream);color:var(--dream-dark)}
+.card-action-btn svg{flex-shrink:0;opacity:.9}
+.card-action-btn.disabled{background:var(--bg-alt);color:var(--text-lighter);border-color:var(--border-soft);cursor:not-allowed;pointer-events:none}
 
 /* ===== Modal ===== */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(44,38,34,.55);backdrop-filter:blur(4px);z-index:200;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease}
@@ -680,6 +688,12 @@ function renderCard(s, i){
         <span class="editor-name">${escapeHtml(editor)}</span>
         <span class="editor-time">· ${formatRelTime(ts)}</span>
       </div>` : '';
+  const openBtn = s.url
+    ? `<a class="card-action-btn open" href="${escapeHtml(s.url)}" target="_blank" rel="noopener" data-action="open">
+         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+         פתח מערכת
+       </a>`
+    : `<span class="card-action-btn disabled">אין קישור</span>`;
   return `
     <div class="${cardClass}" data-idx="${i}" data-status="${m.status||'unset'}">
       ${statusBadge}
@@ -690,6 +704,13 @@ function renderCard(s, i){
       <div class="desc">${escapeHtml(m.desc)}</div>
       <div class="card-tags">${tagsHtml}</div>
       ${editorHtml}
+      <div class="card-actions">
+        ${openBtn}
+        <button class="card-action-btn details" data-action="details">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          פרטים ועריכה
+        </button>
+      </div>
     </div>`;
 }
 
@@ -867,6 +888,8 @@ modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
 
 document.addEventListener('click', e => {
+  // אם נלחץ "פתח מערכת" — נתנו ל-<a> לעבוד, לא לפתוח מודאל
+  if(e.target.closest('[data-action="open"]')) return;
   const card = e.target.closest('.card[data-idx]');
   if(card) openModal(parseInt(card.dataset.idx));
 });
