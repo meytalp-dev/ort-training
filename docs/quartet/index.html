@@ -163,6 +163,14 @@ body::before{content:'';position:fixed;inset:0;
 .modal-block.link .label-dot{background:var(--create)}
 .modal-block .content{font-size:.9rem;color:var(--text);line-height:1.7;background:var(--bg-alt);border:1px solid var(--border-soft);border-radius:12px;padding:12px 16px}
 .modal-block.tech .content{font-family:'SF Mono','Consolas',monospace;font-size:.8rem;direction:ltr;text-align:left;background:#FBF8F3}
+.modal-block.code .label-dot{background:#475569}
+.code-list{display:flex;flex-wrap:wrap;gap:6px}
+.code-link{display:inline-flex;align-items:center;gap:6px;background:#1E293B;color:#E2E8F0;padding:6px 12px;border-radius:8px;text-decoration:none;font-family:'SF Mono','Consolas',monospace;font-size:.75rem;direction:ltr;transition:all .15s;border:1px solid #334155}
+.code-link:hover{background:#0F172A;color:#fff;transform:translateY(-1px);box-shadow:0 4px 10px rgba(15,23,42,.25)}
+.code-link.primary{background:#3AACA0;border-color:#1B7A6E;color:#fff}
+.code-link.primary:hover{background:#1B7A6E}
+.code-link svg{flex-shrink:0;opacity:.8}
+.code-empty{font-size:.82rem;color:var(--muted);font-style:italic}
 .modal-link{display:inline-flex;align-items:center;gap:6px;background:var(--lead-dark);color:#fff;padding:10px 18px;border-radius:11px;text-decoration:none;font-weight:700;font-size:.88rem;font-family:Heebo;transition:all .2s}
 .modal-link:hover{background:var(--lead);transform:translateY(-1px);box-shadow:0 4px 12px rgba(58,172,160,.3)}
 .modal-link.disabled{background:var(--text-lighter);cursor:not-allowed;pointer-events:none}
@@ -296,8 +304,12 @@ body::before{content:'';position:fixed;inset:0;
         <div class="content" id="modalFlow"></div>
       </div>
       <div class="modal-block tech">
-        <div class="label"><span class="label-dot"></span>הקוד / הטכנולוגיה</div>
+        <div class="label"><span class="label-dot"></span>הטכנולוגיה</div>
         <div class="content" id="modalTech"></div>
+      </div>
+      <div class="modal-block code">
+        <div class="label"><span class="label-dot"></span>📁 קוד מקור (GitHub)</div>
+        <div class="code-list" id="modalCode"></div>
       </div>
       <div class="modal-block link">
         <div class="label"><span class="label-dot"></span>פתיחה</div>
@@ -483,7 +495,48 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 // Modal
-const modal = document.getElementById('modalOverlay');
+const GH_BASE = 'https://github.com/meytalp-dev/ort-training/blob/main/docs/';
+const GH_TREE = 'https://github.com/meytalp-dev/ort-training/tree/main/docs/';
+const ICON_GH = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
+
+function buildCodeLinks(s){
+  if(!s.url || s.url === '../training/' || !s.url.includes('/')) {
+    // No specific runtime file — return empty or special handling
+  }
+  const folder = s.url ? s.url.replace(/^\.\.\//, '').replace(/[^/]+$/, '') : '';
+  const runtimeFile = s.url ? s.url.replace(/^\.\.\//, '').split('/').pop() : '';
+  // Extract code filenames mentioned in tech (.html / .js / .json / .css)
+  const matches = s.tech.match(/[\w-]+\.(?:html|js|json|css)/g) || [];
+  const seen = new Set();
+  const links = [];
+  // Always include the runtime file first as primary
+  if(runtimeFile && runtimeFile.includes('.')){
+    seen.add(runtimeFile);
+    links.push({ label: runtimeFile, url: GH_BASE + folder + runtimeFile, primary: true });
+  }
+  matches.forEach(f => {
+    if(seen.has(f)) return;
+    seen.add(f);
+    links.push({ label: f, url: GH_BASE + folder + f, primary: false });
+  });
+  // Special: if url ends with '/' → folder link
+  if(s.url && s.url.endsWith('/')){
+    const treeFolder = s.url.replace(/^\.\.\//, '');
+    links.unshift({ label: treeFolder, url: GH_TREE + treeFolder, primary: true, isFolder: true });
+  }
+  return links;
+}
+
+function renderCodeLinks(s){
+  const links = buildCodeLinks(s);
+  if(links.length === 0){
+    return '<span class="code-empty">אין קוד מקושר</span>';
+  }
+  return links.map(l =>
+    `<a class="code-link${l.primary ? ' primary' : ''}" href="${l.url}" target="_blank" rel="noopener">${ICON_GH}<span>${l.label}</span></a>`
+  ).join('');
+}
+
 function openModal(idx){
   const s = SYSTEMS[idx];
   document.getElementById('modalCat').className = 'modal-cat ' + s.cat;
@@ -493,6 +546,7 @@ function openModal(idx){
   document.getElementById('modalPain').textContent = s.pain;
   document.getElementById('modalFlow').textContent = s.flow;
   document.getElementById('modalTech').textContent = s.tech;
+  document.getElementById('modalCode').innerHTML = renderCodeLinks(s);
   const link = document.getElementById('modalLink');
   if(s.url){
     link.href = s.url;
