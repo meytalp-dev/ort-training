@@ -23,7 +23,7 @@
  * ════════════════════════════════════════════════════════════
  */
 
-var SHEET_ID = 'PASTE_YOUR_SHEET_ID_HERE';
+var SHEET_ID = '1J8ipt8IG4JbsFEcXH4NwrcaylKoF5IfkXE06UeCRsb4';
 
 var FIELDS = ['name', 'desc', 'pain', 'flow', 'tech'];
 var STATUSES = ['relevant', 'maybe', 'not'];
