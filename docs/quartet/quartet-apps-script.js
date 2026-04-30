@@ -38,9 +38,10 @@ function doGet(e) {
   try {
     var result;
     switch (action) {
-      case 'getAll': result = getAll_(); break;
-      case 'save':   result = saveOne_(e.parameter); break;
-      default:       result = { result: 'ok', message: 'quartet API v1' };
+      case 'getAll':     result = getAll_(); break;
+      case 'getHistory': result = getHistory_(e.parameter.id); break;
+      case 'save':       result = saveOne_(e.parameter); break;
+      default:           result = { result: 'ok', message: 'quartet API v2' };
     }
     return ContentService
       .createTextOutput(callback + '(' + JSON.stringify(result) + ')')
@@ -102,19 +103,59 @@ function setupSheet() {
 function getAll_() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var sh = ss.getSheetByName('edits');
-  if (!sh || sh.getLastRow() < 2) return { result: 'success', edits: {} };
-  var data = sh.getDataRange().getValues();
-  var headers = data[0];
   var edits = {};
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    var obj = {};
-    for (var j = 0; j < headers.length; j++) {
-      if (row[j] !== '' && row[j] !== null) obj[headers[j]] = row[j];
+  if (sh && sh.getLastRow() >= 2) {
+    var data = sh.getDataRange().getValues();
+    var headers = data[0];
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      var obj = {};
+      for (var j = 0; j < headers.length; j++) {
+        if (row[j] !== '' && row[j] !== null) obj[headers[j]] = row[j];
+      }
+      if (obj.id) edits[obj.id] = obj;
     }
-    if (obj.id) edits[obj.id] = obj;
   }
-  return { result: 'success', edits: edits };
+  // attach history map: id → [{editor, ts, fields, status}, ...]
+  var history = {};
+  var log = ss.getSheetByName('log');
+  if (log && log.getLastRow() >= 2) {
+    var ldata = log.getDataRange().getValues();
+    for (var i = 1; i < ldata.length; i++) {
+      var ts = ldata[i][0], id = ldata[i][1], action = ldata[i][2], editor = ldata[i][3], payloadStr = ldata[i][4];
+      if (!id) continue;
+      if (!history[id]) history[id] = [];
+      var fields = [];
+      var status = '';
+      try {
+        var p = JSON.parse(payloadStr || '{}');
+        if (p.status !== undefined) status = p.status;
+        ['name','desc','pain','flow','tech'].forEach(function (k) { if (p[k] !== undefined) fields.push(k); });
+      } catch (e) {}
+      history[id].push({ editor: editor || 'אנונימי', ts: ts, fields: fields, status: status });
+    }
+  }
+  return { result: 'success', edits: edits, history: history };
+}
+
+function getHistory_(id) {
+  if (!id) return { result: 'error', message: 'חסר id' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var log = ss.getSheetByName('log');
+  if (!log || log.getLastRow() < 2) return { result: 'success', history: [] };
+  var data = log.getDataRange().getValues();
+  var rows = [];
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][1]) !== String(id)) continue;
+    var fields = [], status = '';
+    try {
+      var p = JSON.parse(data[i][4] || '{}');
+      if (p.status !== undefined) status = p.status;
+      ['name','desc','pain','flow','tech'].forEach(function (k) { if (p[k] !== undefined) fields.push(k); });
+    } catch (e) {}
+    rows.push({ ts: data[i][0], editor: data[i][3] || 'אנונימי', fields: fields, status: status });
+  }
+  return { result: 'success', history: rows };
 }
 
 // ============================================
