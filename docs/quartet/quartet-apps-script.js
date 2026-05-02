@@ -38,10 +38,13 @@ function doGet(e) {
   try {
     var result;
     switch (action) {
-      case 'getAll':     result = getAll_(); break;
-      case 'getHistory': result = getHistory_(e.parameter.id); break;
-      case 'save':       result = saveOne_(e.parameter); break;
-      default:           result = { result: 'ok', message: 'quartet API v2' };
+      case 'getAll':           result = getAll_(); break;
+      case 'getHistory':       result = getHistory_(e.parameter.id); break;
+      case 'save':             result = saveOne_(e.parameter); break;
+      case 'addNote':          result = addNote_(e.parameter); break;
+      case 'addRequest':       result = addRequest_(e.parameter); break;
+      case 'markRequestDone':  result = markRequestDone_(e.parameter); break;
+      default:                 result = { result: 'ok', message: 'quartet API v3' };
     }
     return ContentService
       .createTextOutput(callback + '(' + JSON.stringify(result) + ')')
@@ -58,8 +61,11 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var result;
     switch (data.action || 'save') {
-      case 'save': result = saveOne_(data); break;
-      default:     result = { result: 'error', message: 'unknown action: ' + data.action };
+      case 'save':             result = saveOne_(data); break;
+      case 'addNote':          result = addNote_(data); break;
+      case 'addRequest':       result = addRequest_(data); break;
+      case 'markRequestDone':  result = markRequestDone_(data); break;
+      default:                 result = { result: 'error', message: 'unknown action: ' + data.action };
     }
     return ContentService
       .createTextOutput(JSON.stringify(result))
@@ -93,7 +99,32 @@ function setupSheet() {
     log.getRange(1, 1, 1, 5).setValues([['timestamp', 'id', 'action', 'editor', 'payload']]).setFontWeight('bold');
     log.setFrozenRows(1);
   }
-  SpreadsheetApp.getUi().alert('מוכן! הטאב "edits" נוצר. אפשר להמשיך ל-Deploy.');
+  // notes sheet
+  var notesSheet = ss.getSheetByName('notes');
+  if (!notesSheet) {
+    notesSheet = ss.insertSheet('notes');
+    notesSheet.getRange(1, 1, 1, 4).setValues([['id', 'editor', 'ts', 'text']]).setFontWeight('bold').setBackground('#D4F0EA');
+    notesSheet.setFrozenRows(1);
+    notesSheet.setColumnWidth(1, 250);
+    notesSheet.setColumnWidth(2, 120);
+    notesSheet.setColumnWidth(3, 130);
+    notesSheet.setColumnWidth(4, 500);
+  }
+  // requests sheet (chat bot change requests)
+  var reqSheet = ss.getSheetByName('requests');
+  if (!reqSheet) {
+    reqSheet = ss.insertSheet('requests');
+    reqSheet.getRange(1, 1, 1, 7).setValues([['req_id', 'ts', 'editor', 'system_id', 'system_name', 'text', 'status']]).setFontWeight('bold').setBackground('#FCE4EC');
+    reqSheet.setFrozenRows(1);
+    reqSheet.setColumnWidth(1, 200);
+    reqSheet.setColumnWidth(2, 130);
+    reqSheet.setColumnWidth(3, 120);
+    reqSheet.setColumnWidth(4, 220);
+    reqSheet.setColumnWidth(5, 200);
+    reqSheet.setColumnWidth(6, 500);
+    reqSheet.setColumnWidth(7, 100);
+  }
+  SpreadsheetApp.getUi().alert('מוכן! הטאבים edits / log / notes / requests מוכנים. אפשר להמשיך ל-Deploy.');
 }
 
 // ============================================
@@ -135,7 +166,41 @@ function getAll_() {
       history[id].push({ editor: editor || 'אנונימי', ts: ts, fields: fields, status: status });
     }
   }
-  return { result: 'success', edits: edits, history: history };
+  // notes map: id → [{editor, ts, text}, ...]
+  var notes = {};
+  var notesSheet = ss.getSheetByName('notes');
+  if (notesSheet && notesSheet.getLastRow() >= 2) {
+    var ndata = notesSheet.getDataRange().getValues();
+    for (var i = 1; i < ndata.length; i++) {
+      var nid = ndata[i][0];
+      if (!nid) continue;
+      if (!notes[nid]) notes[nid] = [];
+      notes[nid].push({
+        editor: ndata[i][1] || 'אנונימי',
+        ts: ndata[i][2],
+        text: ndata[i][3] || ''
+      });
+    }
+  }
+  // requests array: [{id, ts, editor, system_id, system_name, text, status}, ...]
+  var requests = [];
+  var reqSheet = ss.getSheetByName('requests');
+  if (reqSheet && reqSheet.getLastRow() >= 2) {
+    var rdata = reqSheet.getDataRange().getValues();
+    for (var i = 1; i < rdata.length; i++) {
+      if (!rdata[i][0]) continue;
+      requests.push({
+        id: rdata[i][0],
+        ts: rdata[i][1],
+        editor: rdata[i][2] || 'אנונימי',
+        system_id: rdata[i][3] || '',
+        system_name: rdata[i][4] || '',
+        text: rdata[i][5] || '',
+        status: rdata[i][6] || 'pending'
+      });
+    }
+  }
+  return { result: 'success', edits: edits, history: history, notes: notes, requests: requests };
 }
 
 function getHistory_(id) {
@@ -224,6 +289,115 @@ function saveOne_(data) {
     if (log) log.appendRow([ts, data.id, 'save', editor, JSON.stringify(data).substring(0, 500)]);
 
     return { result: 'success', id: data.id, updated_at: ts };
+  } catch (e) {
+    return { result: 'error', message: e.toString().substring(0, 200) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================
+// NOTES — append-only thread per system
+// ============================================
+
+function addNote_(data) {
+  if (!data.id) return { result: 'error', message: 'חסר id' };
+  if (!data.text || !String(data.text).trim()) return { result: 'error', message: 'חסר טקסט' };
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(8000); } catch (e) {
+    return { result: 'error', message: 'המערכת עמוסה, נסי שוב' };
+  }
+
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sh = ss.getSheetByName('notes');
+    if (!sh) {
+      sh = ss.insertSheet('notes');
+      sh.getRange(1, 1, 1, 4).setValues([['id', 'editor', 'ts', 'text']]).setFontWeight('bold').setBackground('#D4F0EA');
+      sh.setFrozenRows(1);
+    }
+
+    var ts = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'yyyy-MM-dd HH:mm');
+    var editor = (data.editor || 'אנונימי').toString().substring(0, 80);
+    var text = String(data.text).substring(0, 2000);
+
+    sh.appendRow([data.id, editor, ts, text]);
+
+    var log = ss.getSheetByName('log');
+    if (log) log.appendRow([ts, data.id, 'note', editor, text.substring(0, 300)]);
+
+    return { result: 'success', id: data.id, ts: ts, editor: editor, text: text };
+  } catch (e) {
+    return { result: 'error', message: e.toString().substring(0, 200) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================
+// REQUESTS — chat bot change requests queue
+// ============================================
+
+function addRequest_(data) {
+  if (!data.system_id) return { result: 'error', message: 'חסר system_id' };
+  if (!data.text || !String(data.text).trim()) return { result: 'error', message: 'חסר תיאור שינוי' };
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(8000); } catch (e) {
+    return { result: 'error', message: 'המערכת עמוסה, נסי שוב' };
+  }
+
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sh = ss.getSheetByName('requests');
+    if (!sh) {
+      sh = ss.insertSheet('requests');
+      sh.getRange(1, 1, 1, 7).setValues([['req_id', 'ts', 'editor', 'system_id', 'system_name', 'text', 'status']]).setFontWeight('bold').setBackground('#FCE4EC');
+      sh.setFrozenRows(1);
+    }
+
+    var ts = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'yyyy-MM-dd HH:mm');
+    var editor = (data.editor || 'אנונימי').toString().substring(0, 80);
+    var reqId = data.id || ('req_' + new Date().getTime() + '_' + Math.floor(Math.random() * 100000));
+    var text = String(data.text).substring(0, 3000);
+    var systemName = String(data.system_name || '').substring(0, 200);
+    var systemIdStr = String(data.system_id).substring(0, 200);
+
+    sh.appendRow([reqId, ts, editor, systemIdStr, systemName, text, 'pending']);
+
+    var log = ss.getSheetByName('log');
+    if (log) log.appendRow([ts, systemIdStr, 'request', editor, text.substring(0, 300)]);
+
+    return { result: 'success', id: reqId, ts: ts };
+  } catch (e) {
+    return { result: 'error', message: e.toString().substring(0, 200) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function markRequestDone_(data) {
+  if (!data.id) return { result: 'error', message: 'חסר id' };
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(8000); } catch (e) {
+    return { result: 'error', message: 'המערכת עמוסה, נסי שוב' };
+  }
+
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sh = ss.getSheetByName('requests');
+    if (!sh || sh.getLastRow() < 2) return { result: 'error', message: 'אין בקשות' };
+
+    var data_rows = sh.getRange(2, 1, sh.getLastRow() - 1, 7).getValues();
+    for (var i = 0; i < data_rows.length; i++) {
+      if (String(data_rows[i][0]) === String(data.id)) {
+        sh.getRange(i + 2, 7).setValue('done');
+        return { result: 'success', id: data.id };
+      }
+    }
+    return { result: 'error', message: 'בקשה לא נמצאה' };
   } catch (e) {
     return { result: 'error', message: e.toString().substring(0, 200) };
   } finally {
