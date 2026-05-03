@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>תרגול חי · לשון 70% · Impact SO</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/practice.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html" class="topnav-brand">
+    <div class="topnav-brand-mark">ל</div>
+    <div>
+      <div class="topnav-brand-text">לשון 70%</div>
+      <div class="topnav-brand-sub">Impact SO · תרגול חי</div>
+    </div>
+  </a>
+  <div class="topnav-links">
+    <a href="annual-plan.html" class="topnav-link">חזרה לתוכנית</a>
+  </div>
+</nav>
+
+<div class="practice-shell">
+
+  <div class="practice-header" id="practice-header">
+    <div class="practice-meta-left">
+      <div class="practice-meta-title" id="topic-title">טוען...</div>
+      <div class="practice-meta-sub" id="topic-sub"></div>
+    </div>
+    <div class="practice-stats">
+      <div class="stat-pill stat-pill-track stat-pill-track-blue" id="track-pill">רמה: רגיל</div>
+      <div class="stat-pill stat-pill-streak" id="streak-pill">רצף: 0</div>
+      <div class="stat-pill stat-pill-score" id="score-pill">ציון: 0</div>
+    </div>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-text" id="progress-text">שאלה 0 מתוך 0</div>
+  </div>
+
+  <div id="question-area">
+    <!-- Dynamic content -->
+  </div>
+
+  <div id="grade-area" style="display:none;">
+    <!-- Final grade screen -->
+  </div>
+</div>
+
+<!-- Coach modal -->
+<div class="coach-overlay" id="coach-overlay">
+  <div class="coach-card">
+    <div class="coach-icon">🎓</div>
+    <div class="coach-title" id="coach-title"></div>
+    <div class="coach-body" id="coach-body"></div>
+    <button class="btn btn-primary" id="coach-continue">ממשיך</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="ai/practice-engine.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const topicId = params.get('topic') || 'thesis-location';
+
+  let session = null;
+  let currentQuestion = null;
+  let userSelection = null;
+  let hintsUsed = 0;
+  let hintHistory = [];
+
+  function escapeHtml(text) {
+    if (typeof text !== 'string') return '';
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function showToast(msg, isError = false) {
+    const toast = $('toast');
+    toast.textContent = msg;
+    toast.classList.toggle('toast-error', isError);
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  async function loadBank() {
+    try {
+      const response = await fetch(`curriculum/practice-bank/${topicId}.json`);
+      if (!response.ok) throw new Error('בנק שאלות לא נמצא');
+      return await response.json();
+    } catch (e) {
+      $('question-area').innerHTML = `
+        <div class="card text-center">
+          <h3>בנק התרגול בבנייה</h3>
+          <p class="text-soft mt-1">לנושא הזה עדיין לא הוכן בנק שאלות. בדמו זמין רק <strong>איתור תזה</strong>.</p>
+          <a href="annual-plan.html" class="btn btn-primary mt-2">חזרה לתוכנית</a>
+        </div>
+      `;
+      throw e;
+    }
+  }
+
+  function renderHeader(bank) {
+    $('topic-title').textContent = bank.topic_label || 'תרגול';
+    $('topic-sub').textContent = bank.instruction_recap ? bank.instruction_recap.replace(/<[^>]*>/g, '').slice(0, 90) + '...' : '';
+  }
+
+  function renderQuestion(question) {
+    const total = session.state.flatQuestions.length;
+    const num = session.state.history.length + 1;
+
+    $('progress-fill').style.width = `${(session.state.history.length / total) * 100}%`;
+    $('progress-text').textContent = `שאלה ${num} מתוך ${total}`;
+
+    const trackLabels = { green: 'תמיכה', blue: 'רגיל', purple: 'אתגר' };
+    const trackPill = $('track-pill');
+    trackPill.className = `stat-pill stat-pill-track stat-pill-track-${session.state.currentTrack}`;
+    trackPill.textContent = `רמה: ${trackLabels[session.state.currentTrack]}`;
+
+    let inputHtml = '';
+    if (question.type === 'multiple_choice') {
+      const letters = ['א', 'ב', 'ג', 'ד', 'ה'];
+      inputHtml = `
+        <div class="choices-list" id="choices">
+          ${question.options.map((opt, i) => `
+            <div class="choice-option" data-idx="${i}">
+              <div class="choice-letter">${letters[i]}</div>
+              <div>${escapeHtml(opt)}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } else if (question.type === 'open_text') {
+      inputHtml = `
+        <textarea class="answer-textarea" id="answer-input" placeholder="כתוב את התשובה שלך כאן..."></textarea>
+      `;
+    } else if (question.type === 'true_false') {
+      inputHtml = `
+        <div class="tf-container">
+          <button class="tf-button tf-button-true" data-val="true">נכון ✓</button>
+          <button class="tf-button tf-button-false" data-val="false">לא נכון ✗</button>
+        </div>
+      `;
+    }
+
+    const html = `
+      <div class="question-card" data-track="${session.state.currentTrack}">
+        <div class="question-header">
+          <div class="question-num">שאלה ${num}</div>
+          <span class="pill pill-${session.state.currentTrack === 'green' ? 'mint' : session.state.currentTrack === 'blue' ? 'blue' : 'lavender'}">
+            ${trackLabels[session.state.currentTrack]}
+          </span>
+        </div>
+
+        ${question.context ? `<div class="question-context">${question.context}</div>` : ''}
+        <div class="question-prompt">${escapeHtml(question.question)}</div>
+        ${inputHtml}
+
+        <div class="practice-actions">
+          <button class="btn-submit" id="submit-btn">בדוק תשובה</button>
+          <button class="btn-hint" id="hint-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 7 7c0 3-2 5-3 6H8c-1-1-3-3-3-6a7 7 0 0 1 7-7z"/></svg>
+            רמז
+          </button>
+        </div>
+
+        <div id="hint-history-area"></div>
+      </div>
+    `;
+
+    $('question-area').innerHTML = html;
+    attachQuestionHandlers(question);
+  }
+
+  function attachQuestionHandlers(question) {
+    if (question.type === 'multiple_choice') {
+      document.querySelectorAll('.choice-option').forEach(el => {
+        el.addEventListener('click', () => {
+          document.querySelectorAll('.choice-option').forEach(c => c.classList.remove('selected'));
+          el.classList.add('selected');
+          userSelection = parseInt(el.dataset.idx);
+        });
+      });
+    } else if (question.type === 'true_false') {
+      document.querySelectorAll('.tf-button').forEach(el => {
+        el.addEventListener('click', () => {
+          document.querySelectorAll('.tf-button').forEach(c => c.classList.remove('selected'));
+          el.classList.add('selected');
+          userSelection = el.dataset.val === 'true';
+        });
+      });
+    }
+
+    $('submit-btn').addEventListener('click', () => handleSubmit(question));
+    $('hint-btn').addEventListener('click', () => handleHint(question));
+  }
+
+  async function handleHint(question) {
+    const hint = window.PracticeEngine.localSocraticHint(question, hintsUsed, question.hint_levels);
+    hintHistory.push(hint);
+    hintsUsed++;
+    $('hint-history-area').innerHTML = `
+      <div class="hint-history">
+        ${hintHistory.map((h, i) => `
+          <div class="hint-item">
+            <div class="hint-item-num">רמז ${i + 1}</div>
+            <div>${escapeHtml(h)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function handleSubmit(question) {
+    let validation;
+    let userAnswer;
+
+    if (question.type === 'multiple_choice') {
+      if (userSelection === null) { showToast('בחר תשובה', true); return; }
+      validation = window.PracticeEngine.validateMultipleChoice(userSelection, question.correct);
+      userAnswer = userSelection;
+    } else if (question.type === 'open_text') {
+      const text = $('answer-input').value.trim();
+      if (!text) { showToast('כתוב תשובה', true); return; }
+      validation = window.PracticeEngine.validateOpenText(text, question.expected_answer, question.expected_keywords);
+      userAnswer = text;
+    } else if (question.type === 'true_false') {
+      if (userSelection === null) { showToast('בחר נכון או לא נכון', true); return; }
+      validation = window.PracticeEngine.validateTrueFalse(userSelection, question.correct);
+      userAnswer = userSelection;
+    }
+
+    session.recordAnswer(question, validation, hintsUsed);
+    showFeedback(question, validation, userAnswer);
+
+    // Update stats
+    const trackLabels = { green: 'תמיכה', blue: 'רגיל', purple: 'אתגר' };
+    const trackPill = $('track-pill');
+    trackPill.className = `stat-pill stat-pill-track stat-pill-track-${session.state.currentTrack}`;
+    trackPill.textContent = `רמה: ${trackLabels[session.state.currentTrack]}`;
+
+    $('streak-pill').textContent = `רצף: ${session.state.streak.correct}`;
+    const score = session.getCurrentScore();
+    $('score-pill').textContent = `ציון: ${score}`;
+    $('score-pill').classList.add('score-up');
+    setTimeout(() => $('score-pill').classList.remove('score-up'), 600);
+  }
+
+  function showFeedback(question, validation, userAnswer) {
+    const isCorrect = validation.correct === true;
+    const isPartial = validation.correct === 'partial';
+
+    // Mark choices visually
+    if (question.type === 'multiple_choice') {
+      document.querySelectorAll('.choice-option').forEach(el => {
+        const idx = parseInt(el.dataset.idx);
+        if (idx === question.correct) el.classList.add('correct');
+        else if (idx === userAnswer && !isCorrect) el.classList.add('incorrect');
+      });
+    }
+
+    const card = document.querySelector('.question-card');
+    if (isCorrect) {
+      card.classList.add('success-pulse');
+      window.PracticeEngine.fireConfetti(session.state.streak.correct >= 3 ? 'big' : 'normal');
+
+      // Pick encouragement
+      let category = 'generic';
+      if (session.state.streak.correct >= 8) category = 'streak_8';
+      else if (session.state.streak.correct >= 5) category = 'streak_5';
+      else if (session.state.streak.correct >= 3) category = 'streak_3';
+      else if (session.state.history.length === 1) category = 'first';
+      else if (session.state.history.length >= 2 && session.state.history[session.state.history.length - 2].correct === false) category = 'after_struggle';
+      else if (question.track === 'purple') category = 'hard_question';
+
+      const msg = window.PracticeEngine.pickEncouragement('correct', category);
+      showToast(msg);
+    } else if (isPartial) {
+      card.classList.add('error-pulse');
+    } else {
+      card.classList.add('shake', 'error-pulse');
+      setTimeout(() => card.classList.remove('shake'), 500);
+
+      let category = 'generic';
+      if (session.state.streak.incorrect >= 3) category = 'streak_3';
+      else if (session.state.streak.incorrect >= 2) category = 'streak_2';
+      else if (session.state.history.length === 1) category = 'first';
+      else if (session.state.history.length >= 2 && session.state.history[session.state.history.length - 2].correct === true) category = 'after_correct';
+
+      const msg = window.PracticeEngine.pickEncouragement('incorrect', category);
+      showToast(msg, true);
+    }
+
+    const panelClass = isCorrect ? 'correct' : isPartial ? 'partial' : 'incorrect';
+    const icon = isCorrect ? '✓' : isPartial ? '◐' : '✗';
+    const title = isCorrect ? 'תשובה נכונה!' : isPartial ? 'כמעט שם' : 'לא הפעם';
+
+    const feedbackHtml = `
+      <div class="feedback-panel feedback-panel-${panelClass}">
+        <div class="feedback-icon">${icon}</div>
+        <div class="feedback-message">${title}</div>
+        <div class="feedback-explain">${escapeHtml(validation.feedback || '')}</div>
+        ${question.explain ? `<div class="feedback-explain mt-2"><strong>הסבר:</strong> ${escapeHtml(question.explain)}</div>` : ''}
+
+        <div class="feedback-actions">
+          <button class="btn-next" id="next-btn">${session.state.history.length >= session.state.flatQuestions.length ? 'סיום ותעודה' : 'שאלה הבאה ←'}</button>
+          ${!isCorrect && question.type !== 'multiple_choice' ? `<button class="btn-retry" id="retry-btn">נסה שוב</button>` : ''}
+        </div>
+      </div>
+    `;
+
+    $('question-area').insertAdjacentHTML('beforeend', feedbackHtml);
+    $('next-btn').addEventListener('click', () => {
+      // Check coach trigger
+      if (session.shouldShowCoach()) {
+        showCoach();
+      } else {
+        nextQuestion();
+      }
+    });
+    if ($('retry-btn')) {
+      $('retry-btn').addEventListener('click', () => {
+        document.querySelector('.feedback-panel').remove();
+        card.classList.remove('success-pulse', 'error-pulse');
+      });
+    }
+
+    // Disable submit button to prevent double submit
+    $('submit-btn').disabled = true;
+    $('hint-btn').disabled = true;
+  }
+
+  function showCoach() {
+    const feedback = window.PracticeEngine.generateCoachFeedback(session.state.history);
+    $('coach-title').textContent = feedback.title;
+    $('coach-body').textContent = feedback.body;
+    $('coach-overlay').classList.add('active');
+    session.markCoachShown();
+
+    $('coach-continue').onclick = () => {
+      $('coach-overlay').classList.remove('active');
+      nextQuestion();
+    };
+  }
+
+  function nextQuestion() {
+    hintsUsed = 0;
+    hintHistory = [];
+    userSelection = null;
+
+    if (session.state.history.length >= session.state.flatQuestions.length) {
+      showFinalGrade();
+      return;
+    }
+
+    const next = session.pickNextQuestion();
+    if (!next) {
+      showFinalGrade();
+      return;
+    }
+    currentQuestion = next;
+    renderQuestion(next);
+  }
+
+  function showFinalGrade() {
+    const grade = window.PracticeEngine.generateFinalGrade(session.state.history);
+    window.PracticeEngine.fireConfetti('big');
+
+    // Mega confetti for high scores
+    if (grade.score >= 80) {
+      setTimeout(() => window.PracticeEngine.fireConfetti('big'), 500);
+      setTimeout(() => window.PracticeEngine.fireConfetti('normal'), 1000);
+    }
+
+    const html = `
+      <div class="grade-screen">
+        <div class="grade-circle">
+          <div class="grade-circle-content">
+            <div class="grade-score">${grade.score}</div>
+            <div class="grade-level">${grade.level}</div>
+          </div>
+        </div>
+        <h2 class="grade-message">${escapeHtml(grade.message)}</h2>
+        <p class="text-soft">סיימת את התרגול. הנה הפירוט שלך:</p>
+
+        <div class="grade-stats-row">
+          <div class="grade-stat">
+            <div class="grade-stat-num" style="color: var(--mint);">${grade.stats.correct}</div>
+            <div class="grade-stat-label">נכונות</div>
+          </div>
+          <div class="grade-stat">
+            <div class="grade-stat-num" style="color: var(--amber);">${grade.stats.partial}</div>
+            <div class="grade-stat-label">חלקיות</div>
+          </div>
+          <div class="grade-stat">
+            <div class="grade-stat-num" style="color: var(--rose);">${grade.stats.wrong}</div>
+            <div class="grade-stat-label">שגויות</div>
+          </div>
+          <div class="grade-stat">
+            <div class="grade-stat-num" style="color: var(--lavender);">${grade.stats.accuracy}%</div>
+            <div class="grade-stat-label">דיוק</div>
+          </div>
+        </div>
+
+        <div class="recommendations-card">
+          <h4>המלצות AI לתרגול הבא</h4>
+          <ul class="recommendations-list">
+            ${grade.recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
+            ${grade.weakAreas.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="flex gap-2 justify-center mt-3">
+          <a href="annual-plan.html" class="btn btn-primary">חזרה לתוכנית</a>
+          <a href="practice.html?topic=${topicId}" class="btn btn-secondary">תרגול נוסף</a>
+        </div>
+      </div>
+    `;
+
+    $('question-area').style.display = 'none';
+    $('grade-area').innerHTML = html;
+    $('grade-area').style.display = 'block';
+
+    // Save to localStorage
+    const savedScores = JSON.parse(localStorage.getItem('impact-so-practice-scores') || '{}');
+    savedScores[topicId] = {
+      score: grade.score,
+      level: grade.level,
+      date: new Date().toISOString(),
+      stats: grade.stats
+    };
+    localStorage.setItem('impact-so-practice-scores', JSON.stringify(savedScores));
+  }
+
+  // ─── INIT ───
+  (async () => {
+    try {
+      const bank = await loadBank();
+      session = window.PracticeEngine.createSession({
+        topicId,
+        questionBank: bank
+      });
+      renderHeader(bank);
+      const first = session.pickNextQuestion();
+      currentQuestion = first;
+      renderQuestion(first);
+    } catch (e) {
+      console.error(e);
+    }
+  })();
+</script>
+
+</body>
+</html>
