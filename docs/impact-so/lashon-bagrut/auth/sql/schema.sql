@@ -241,8 +241,17 @@ CREATE POLICY "Assistant own" ON assistant_conversations FOR ALL USING (teacher_
 -- AUTOMATIC TEACHER PROFILE ON SIGNUP
 -- =====================================================
 
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+-- Grant Supabase auth admin permission to write to our tables
+GRANT INSERT, SELECT ON public.teachers TO supabase_auth_admin;
+GRANT INSERT, SELECT ON public.schools TO supabase_auth_admin;
+GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   default_school_id UUID;
   user_school_name TEXT;
@@ -250,14 +259,15 @@ BEGIN
   user_school_name := COALESCE(NEW.raw_user_meta_data->>'school_name', 'אורט בית הערבה');
 
   -- Find or create the school
-  SELECT id INTO default_school_id FROM schools WHERE name = user_school_name LIMIT 1;
+  SELECT id INTO default_school_id FROM public.schools WHERE name = user_school_name LIMIT 1;
   IF default_school_id IS NULL THEN
-    INSERT INTO schools (name, city) VALUES (user_school_name, COALESCE(NEW.raw_user_meta_data->>'school_city', 'ירושלים'))
+    INSERT INTO public.schools (name, city)
+    VALUES (user_school_name, COALESCE(NEW.raw_user_meta_data->>'school_city', 'ירושלים'))
     RETURNING id INTO default_school_id;
   END IF;
 
   -- Create teacher profile
-  INSERT INTO teachers (user_id, school_id, full_name, email)
+  INSERT INTO public.teachers (user_id, school_id, full_name, email)
   VALUES (
     NEW.id,
     default_school_id,
@@ -266,13 +276,17 @@ BEGIN
   );
 
   RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Log error but don't fail the auth signup
+  RAISE LOG 'Error in handle_new_user: %', SQLERRM;
+  RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- =====================================================
 -- DEMO DATA — schools (run after first teacher signs up if you want demo content)
