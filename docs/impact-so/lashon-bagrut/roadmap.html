@@ -356,7 +356,7 @@
         <div class="stat-cell-num num-pending" id="count-pending">25</div>
         <div class="stat-cell-label">לא נבחר</div>
       </div>
-      <button class="ready-button" id="ready-top" disabled>סיימתי לסמן ←</button>
+      <button class="ready-button" id="ready-top">ראי סיכום ←</button>
     </div>
   </div>
 
@@ -365,7 +365,7 @@
   <div class="bottom-action">
     <h2>סיימת לסמן?</h2>
     <p>אעבוד לפי הסדר: ⭐ <strong>חובה</strong> ראשון, אחר כך ✓ <strong>כן</strong>. את 🤔 <strong>אולי</strong> נשאיר לסיבוב הבא, ✗ <strong>לא</strong> פשוט מסומן כלא רלוונטי.</p>
-    <button class="big-cta" id="ready-bottom" disabled>עברתי על הכל — קדימה לבנייה</button>
+    <button class="big-cta" id="ready-bottom">ראי סיכום בחירות</button>
     <p class="text-muted mt-2" style="font-size: 0.8rem;">הסימונים נשמרים אוטומטית בלוקל. תוכלי לחזור ולשנות מתי שתרצי.</p>
   </div>
 
@@ -754,14 +754,12 @@
     $('count-pending').textContent = pending;
 
     const ready = pending === 0;
-    $('ready-top').disabled = !ready;
-    $('ready-bottom').disabled = !ready;
     if (ready) {
-      $('ready-top').textContent = 'סיימת! ←';
+      $('ready-top').textContent = 'סיימת! ראי סיכום ←';
       $('ready-bottom').textContent = 'עברתי על הכל — קדימה לבנייה ←';
     } else {
-      $('ready-top').textContent = `נותרו ${pending} ←`;
-      $('ready-bottom').textContent = `סמני עוד ${pending} פיצ'רים`;
+      $('ready-top').textContent = `ראי סיכום (${totalVoted}/${IDEAS.length}) ←`;
+      $('ready-bottom').textContent = `ראי סיכום בחירות שעשית עד כה (${totalVoted})`;
     }
   }
 
@@ -783,27 +781,90 @@
     IDEAS.forEach(idea => {
       const status = votes[idea.id]?.status;
       if (status) sorted[status].push(idea);
+      else sorted.no.push(idea); // treat unvoted as "no" if user clicked button
     });
 
-    const summary = `
-🎯 חובה (${sorted.must.length}):
-${sorted.must.map(i => '  • ' + i.title).join('\n') || '  (אין)'}
+    const summary = `סיכום בחירות — Impact SO לשון
+=================================
+
+⭐ חובה (${sorted.must.length}):
+${sorted.must.map(i => '  • ' + i.title + ' [' + i.id + ']').join('\n') || '  (אין)'}
 
 ✓ כן (${sorted.yes.length}):
-${sorted.yes.map(i => '  • ' + i.title).join('\n') || '  (אין)'}
+${sorted.yes.map(i => '  • ' + i.title + ' [' + i.id + ']').join('\n') || '  (אין)'}
 
 🤔 אולי (${sorted.maybe.length}):
-${sorted.maybe.map(i => '  • ' + i.title).join('\n') || '  (אין)'}
+${sorted.maybe.map(i => '  • ' + i.title + ' [' + i.id + ']').join('\n') || '  (אין)'}
 
-✗ לא (${sorted.no.length}):
-${sorted.no.map(i => '  • ' + i.title).join('\n') || '  (אין)'}
+✗ לא רלוונטי (${sorted.no.length}):
+${sorted.no.map(i => '  • ' + i.title + ' [' + i.id + ']').join('\n') || '  (אין)'}
     `.trim();
 
-    alert('סיכום הבחירות שלך:\n\n' + summary + '\n\nהמסמך נשמר. עכשיו אפשר לחזור לקלוד ולהגיד "סיימתי לבחור".');
+    showSummaryModal(summary);
   }
 
+  function showSummaryModal(summary) {
+    let modal = document.getElementById('summary-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'summary-modal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(20,20,60,0.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:300;padding:1.5rem;';
+      modal.innerHTML = `
+        <div style="background:white;border-radius:20px;padding:2rem;max-width:640px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(20,20,60,0.2);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h2 style="font-family:'Playpen Sans Hebrew',sans-serif;font-weight:800;font-size:1.4rem;margin:0;">סיכום הבחירות שלך</h2>
+            <button id="summary-close" style="width:36px;height:36px;border-radius:10px;background:#f7f7fb;border:none;cursor:pointer;font-size:1.2rem;">✗</button>
+          </div>
+          <p style="font-size:0.9rem;color:#4a4a6a;margin-bottom:1rem;">בחרי את כל הטקסט (Ctrl+A), העתיקי (Ctrl+C), ושלחי לקלוד.</p>
+          <textarea id="summary-textarea" readonly style="width:100%;min-height:340px;padding:1rem;border:1px solid #e8e8f0;border-radius:12px;font-family:monospace;font-size:0.85rem;line-height:1.6;direction:rtl;background:#fafaff;resize:vertical;" onclick="this.select()"></textarea>
+          <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap;">
+            <button id="summary-copy" style="flex:1;min-width:160px;padding:0.85rem;background:linear-gradient(135deg,#a78bfa,#c4b5fd);color:white;border:none;border-radius:12px;font-family:'Playpen Sans Hebrew',sans-serif;font-weight:700;cursor:pointer;font-size:0.95rem;">📋 העתיקי ללוח</button>
+            <button id="summary-download" style="padding:0.85rem 1.25rem;background:#f7f7fb;color:#1a1a2e;border:1px solid #e8e8f0;border-radius:12px;font-family:'Heebo',sans-serif;font-weight:600;cursor:pointer;">⬇ הורידי כקובץ</button>
+          </div>
+          <div id="summary-feedback" style="margin-top:0.75rem;text-align:center;color:#059669;font-weight:600;display:none;">✓ הועתק! עכשיו תוכלי להדביק בצ'אט עם קלוד</div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    const ta = document.getElementById('summary-textarea');
+    ta.value = summary;
+    modal.style.display = 'flex';
+
+    document.getElementById('summary-close').onclick = () => modal.style.display = 'none';
+    modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+    document.getElementById('summary-copy').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(summary);
+      } catch (e) {
+        // Fallback
+        ta.select();
+        document.execCommand('copy');
+      }
+      const feedback = document.getElementById('summary-feedback');
+      feedback.style.display = 'block';
+      setTimeout(() => feedback.style.display = 'none', 3000);
+    };
+
+    document.getElementById('summary-download').onclick = () => {
+      const blob = new Blob([summary], {type: 'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'lashon-roadmap-bechirot.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    setTimeout(() => ta.select(), 100);
+  }
+
+  // Allow showing summary even before all 25 are voted
   $('ready-top').addEventListener('click', showSummary);
   $('ready-bottom').addEventListener('click', showSummary);
+  $('ready-top').disabled = false;
+  $('ready-bottom').disabled = false;
 
   renderGroups();
 </script>
