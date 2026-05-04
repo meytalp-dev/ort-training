@@ -201,6 +201,7 @@ body.editing .name-cell input, body.editing .notes-cell input { display: block; 
 @media (max-width: 800px) { .teacher-row { grid-template-columns: 1fr; } }
 .teacher-row.has-data { border-right: 4px solid #26A69A; }
 .teacher-row .t-student-name { font-weight: 700; font-size: 15px; color: #263238; }
+.teacher-row .t-student-topic { font-size: 12px; color: #6A1B9A; font-weight: 500; margin-top: 2px; background: #F3E5F5; padding: 2px 8px; border-radius: 10px; display: inline-block; }
 .teacher-row .t-items { display: flex; flex-wrap: wrap; gap: 6px 12px; }
 .teacher-row .t-checkbox { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: #455A64; cursor: pointer; user-select: none; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; }
 .teacher-row .t-checkbox:hover { background: #F5FAFA; }
@@ -394,9 +395,53 @@ const TEACHERS = [
     { name:'שובל',   role:'מעשי',         items:['טופס אבחון','טיפול בלקוחה','תרגילי יסוד','פן','צבע תספורת'] },
     { name:'אושר',   role:'5 איפורים',     items:['איפור 1','איפור 2','איפור 3','איפור 4','איפור 5'] },
     { name:'ויקי',    role:'כתיבת פרויקט בגרות', items:['כתיבת פרויקט בגרות'] },
-    { name:'אופירה', role:'פרויקט גמר',   items:['פרויקט גמר'] },
-    { name:'שירלי',   role:'פרויקט גמר',   items:['פרויקט גמר'] }
+    { name:'אופירה ושירלי', role:'פרויקט גמר',  items:[
+        'תמונות נושא + חומר עיוני',
+        'תמונות נלוות (פסים/צבע/החלקה/תספורות)',
+        'אינפוגרפיקה',
+        'תסרוק AI',
+        'תסרוקת + נייר עמדה',
+        'תמונת תלמיד לשער',
+        'סרטון',
+        'ביבליוגרפיה'
+    ]}
 ];
+
+const STUDENT_GEMER_TOPICS = {
+    'נתנאל אבוצדקה':    'תספורות גברים',
+    'אור דוד':           'תספורות גברים',
+    'דוד דיאר':          'חפיפה',
+    'נועם יטיב':         'צבע',
+    'אליאב כהן':         'תספורות גברים',
+    'דוד מאור כהן':      'תספורות גברים',
+    'נויה פאריאס':       'מחליק',
+    'זוהר סופיה קופלה':  'פן',
+    'ינאי שני':          'צבע שורש',
+    'הודיה בן ארבון':    'צבע',
+    'שילת אברהם':        'צבע שורש',
+    'שחרי בן יוסף':      'צמות',
+    'ניר ברוך':          'תספורות גברים',
+    'דניאל דרעי':        'צבע שורש',
+    'יוסף נח':           'פן'
+};
+
+const PROJECT_GEMER_SEED = {
+    'נתנאל אבוצדקה':    { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':true,  'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר החלקה.' },
+    'שילת אברהם':        { items:{ 'תמונות נושא + חומר עיוני':false, 'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':false, 'תמונת תלמיד לשער':true,  'סרטון':false, 'ביבליוגרפיה':true }, note:'תמונות נושא — יש סיכום, חסר תמונות. תמונות נלוות — אין כלום. חסר נייר עמדה. חסר סרטון.' },
+    'הודיה בן ארבון':    { items:{ 'תמונות נושא + חומר עיוני':false, 'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':false, 'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'תמונות נושא — יש סיכום, חסר תמונות. תמונות נלוות — אין כלום. חסר נייר עמדה.' },
+    'שחרי בן יוסף':      { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':false, 'תמונת תלמיד לשער':true,  'סרטון':false, 'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר החלקה ותספורות. חסר נייר עמדה. חסר סרטון.' },
+    'ניר ברוך':          { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':true,  'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר החלקה.' },
+    'אור דוד':           { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':true,  'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':true,  'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'הכל מוכן.' },
+    'דוד דיאר':          { items:{ 'תמונות נושא + חומר עיוני':false, 'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':false, 'תמונת תלמיד לשער':true,  'סרטון':false, 'ביבליוגרפיה':true }, note:'תמונות נושא — יש סיכום, חסר תמונות. תמונות נלוות — אין כלום. חסר נייר עמדה. חסר סרטון.' },
+    'דניאל דרעי':        { items:{ 'תמונות נושא + חומר עיוני':false, 'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':true,  'תמונת תלמיד לשער':true,  'סרטון':false, 'ביבליוגרפיה':true }, note:'תמונות נושא — יש סיכום, חסר תמונות. תמונות נלוות — אין כלום. חסר סרטון.' },
+    'נועם יטיב':         { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':true,  'תמונת תלמיד לשער':true,  'סרטון':false, 'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר החלקה. חסר סרטון.' },
+    'אליאב כהן':         { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':true,  'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר צבע.' },
+    'דוד מאור כהן':      { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':true,  'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':false, 'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'חסר נייר עמדה.' },
+    'יוסף נח':           { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':false, 'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר החלקה. חסר נייר עמדה.' },
+    'נויה פאריאס':       { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':false, 'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר גוונים והחלקה. חסר נייר עמדה.' },
+    'זוהר סופיה קופלה':  { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':false, 'תמונת תלמיד לשער':true,  'סרטון':true,  'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר החלקה, תספורת וצבע. חסר נייר עמדה.' },
+    'ינאי שני':          { items:{ 'תמונות נושא + חומר עיוני':true,  'תמונות נלוות (פסים/צבע/החלקה/תספורות)':false, 'אינפוגרפיקה':true, 'תסרוק AI':true, 'תסרוקת + נייר עמדה':true,  'תמונת תלמיד לשער':false, 'סרטון':true,  'ביבליוגרפיה':true }, note:'תמונות נלוות — חסר גוונים והחלקה. חסר תמונת תלמיד לשער.' }
+};
 
 let currentTeacher = TEACHERS[0].name;
 
@@ -520,6 +565,40 @@ async function loadData() {
     }
     if (!loaded) loaded = defaultData();
     if (!loaded.teacherEntries) loaded.teacherEntries = [];
+
+    loaded.teacherEntries = loaded.teacherEntries.map(e =>
+        (e.teacher === 'אופירה' || e.teacher === 'שירלי')
+            ? { ...e, teacher: 'אופירה ושירלי' }
+            : e
+    );
+
+    loaded.students.forEach(s => {
+        if (!s.gemerTopic && STUDENT_GEMER_TOPICS[s.name]) {
+            s.gemerTopic = STUDENT_GEMER_TOPICS[s.name];
+        }
+    });
+
+    if (!loaded._seeds) loaded._seeds = {};
+    if (!loaded._seeds.gemer_v1) {
+        const seedDate = '2026-05-04';
+        const hasGemerEntries = loaded.teacherEntries.some(e => e.teacher === 'אופירה ושירלי');
+        if (!hasGemerEntries) {
+            Object.entries(PROJECT_GEMER_SEED).forEach(([studentName, seed]) => {
+                const student = loaded.students.find(s => s.name === studentName);
+                if (!student) return;
+                loaded.teacherEntries.push({
+                    id: 'te_seed_gemer_' + student.id,
+                    teacher: 'אופירה ושירלי',
+                    studentId: student.id,
+                    date: seedDate,
+                    items: { ...seed.items },
+                    note: seed.note
+                });
+            });
+        }
+        loaded._seeds.gemer_v1 = true;
+    }
+
     return loaded;
 }
 
@@ -1028,14 +1107,17 @@ function renderTeachersTab() {
     document.getElementById('teacher-role-label').textContent = teacher.role;
 
     const grid = document.getElementById('teacher-grid');
+    const showGemerTopic = teacher.name === 'אופירה ושירלי';
     grid.innerHTML = data.students.map(s => {
         const entry = getTeacherEntry(teacher.name, s.id, date);
         const items = entry?.items || {};
         const note = entry?.note || '';
         const hasData = Object.values(items).some(v => v) || (note && note.trim());
+        const topicLine = (showGemerTopic && s.gemerTopic)
+            ? `<div class="t-student-topic">נושא: ${escapeHtml(s.gemerTopic)}</div>` : '';
 
         return `<div class="teacher-row ${hasData ? 'has-data' : ''}">
-            <div class="t-student-name">${escapeHtml(s.name)}</div>
+            <div class="t-student-name">${escapeHtml(s.name)}${topicLine}</div>
             <div class="t-items">
                 ${teacher.items.map(item => `
                     <label class="t-checkbox">
