@@ -296,6 +296,21 @@ body::before{content:'';position:fixed;inset:0;
 .upcoming-events-banner li .ue-pending{font-size:.68rem;background:var(--warn-bg);color:var(--warn);padding:2px 7px;border-radius:5px;font-weight:600}
 .upcoming-events-banner .banner-close{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:4px;flex-shrink:0}
 
+/* All-events list view */
+.cal-all-list{display:flex;flex-direction:column;gap:0}
+.cal-all-month{margin-bottom:18px}
+.cal-all-month-header{font-size:.95rem;font-weight:700;color:var(--primary-dark);padding:8px 4px;border-bottom:2px solid var(--primary-light);margin-bottom:10px;font-family:Heebo}
+.cal-all-empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.cal-all-empty svg{width:48px;height:48px;margin-bottom:10px;opacity:.5}
+.cal-all-day-row{display:grid;grid-template-columns:90px 1fr;gap:14px;align-items:flex-start;margin-bottom:10px}
+.cal-all-date-block{background:linear-gradient(135deg,rgba(58,172,160,.1),rgba(232,176,96,.06));border:1px solid var(--primary-light);border-radius:12px;padding:10px;text-align:center;position:sticky;top:80px}
+.cal-all-date-block .cad-day{font-size:1.6rem;font-weight:800;color:var(--primary-dark);line-height:1;font-family:Heebo}
+.cal-all-date-block .cad-month{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.cal-all-date-block .cad-weekday{font-size:.72rem;color:var(--text-light);margin-top:4px;font-weight:600}
+.cal-all-date-block.is-today{background:linear-gradient(135deg,rgba(232,144,156,.18),rgba(232,176,96,.1));border-color:var(--spark)}
+.cal-all-date-block.is-today .cad-day{color:var(--spark-dark)}
+.cal-all-date-block.is-past{opacity:.5}
+
 /* Event form — extended */
 .event-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .event-form-grid input,.event-form-grid select,.event-form-grid textarea{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:Heebo;font-size:.85rem;background:var(--card);color:var(--text);width:100%}
@@ -662,6 +677,31 @@ body::before{content:'';position:fixed;inset:0;
   </div>
   <div id="keyGateCalendar"></div>
   <div id="calendarContent" style="display:none">
+    <!-- Top tabs: All events list / Month view -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary btn-sm" id="calViewAllBtn" onclick="setCalView('all')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> כל האירועים</button>
+      <button class="btn btn-ghost btn-sm" id="calViewMonthBtn" onclick="setCalView('month')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> תצוגת חודש</button>
+      <div style="margin-right:auto;display:flex;gap:6px">
+        <select id="calFilterGrade" onchange="renderCalAllList()" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-family:Heebo;font-size:.82rem;background:var(--card);color:var(--text)">
+          <option value="">כל השכבות</option>
+          <option value="ט">ט'</option><option value="י">י'</option><option value="יא">יא'</option><option value="יב">יב'</option><option value="כולם">כולם</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="quickAddFromList()">+ אירוע חדש</button>
+      </div>
+    </div>
+
+    <!-- VIEW: All events list -->
+    <div id="calView-all">
+      <div class="card">
+        <div class="card-body">
+          <div id="quickEventForm" style="display:none"></div>
+          <div id="calAllList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: Month grid -->
+    <div id="calView-month" style="display:none">
     <div class="split">
       <div>
         <div class="card">
@@ -703,6 +743,7 @@ body::before{content:'';position:fixed;inset:0;
         </div>
       </div>
     </div>
+    </div><!-- /calView-month -->
   </div>
 </div>
 
@@ -1385,11 +1426,11 @@ const EVT_TYPES=['אירוע','מבחן','חופשה','ישיבה','טקס','י�
 const GRADES=['כולם','ט','י','יא','יב'];
 const evtCls={אירוע:'evt-event',מבחן:'evt-exam',חופשה:'evt-holiday',ישיבה:'evt-meeting',טקס:'evt-ceremony','יום שיא':'evt-peak',אחר:'evt-other'};
 
+let calView='all';
 function initCalendar(){
   // Calendar is always usable — Gemini key only gates the AI chat
   document.getElementById('keyGateCalendar').innerHTML='';
   document.getElementById('calendarContent').style.display='';
-  // Default to today if nothing selected
   if(!selectedDate){
     const t=new Date();
     calYear=t.getFullYear();calMonth=t.getMonth();
@@ -1398,7 +1439,87 @@ function initCalendar(){
   if(typeof calYear==='undefined'||calYear===null){
     const t=new Date();calYear=t.getFullYear();calMonth=t.getMonth();
   }
-  renderCalendar();
+  setCalView(calView||'all');
+}
+function setCalView(view){
+  calView=view;
+  const all=document.getElementById('calView-all');
+  const month=document.getElementById('calView-month');
+  const allBtn=document.getElementById('calViewAllBtn');
+  const monthBtn=document.getElementById('calViewMonthBtn');
+  if(!all||!month)return;
+  if(view==='all'){
+    all.style.display='';month.style.display='none';
+    if(allBtn){allBtn.classList.remove('btn-ghost');allBtn.classList.add('btn-primary')}
+    if(monthBtn){monthBtn.classList.remove('btn-primary');monthBtn.classList.add('btn-ghost')}
+    renderCalAllList();
+  }else{
+    all.style.display='none';month.style.display='';
+    if(monthBtn){monthBtn.classList.remove('btn-ghost');monthBtn.classList.add('btn-primary')}
+    if(allBtn){allBtn.classList.remove('btn-primary');allBtn.classList.add('btn-ghost')}
+    renderCalendar();
+  }
+}
+function renderCalAllList(){
+  const host=document.getElementById('calAllList');
+  if(!host)return;
+  const gradeFilter=(document.getElementById('calFilterGrade')||{}).value||'';
+  const today=new Date();today.setHours(0,0,0,0);
+  let evts=calEvents.slice();
+  if(gradeFilter)evts=evts.filter(e=>e.grade===gradeFilter);
+  evts.sort((a,b)=>a.date.localeCompare(b.date));
+  if(!evts.length){
+    host.innerHTML=`<div class="cal-all-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div style="font-size:1rem;font-weight:600;margin-bottom:4px">אין אירועים עדיין</div>
+      <div style="font-size:.85rem">לחצי "+ אירוע חדש" כדי להוסיף</div>
+    </div>`;
+    return;
+  }
+  // Group by month
+  const groups={};
+  evts.forEach(e=>{
+    const k=e.date.slice(0,7);
+    (groups[k]=groups[k]||[]).push(e);
+  });
+  const monthNames=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  let html='<div class="cal-all-list">';
+  Object.keys(groups).sort().forEach(k=>{
+    const [y,m]=k.split('-');
+    html+=`<div class="cal-all-month">
+      <div class="cal-all-month-header">${monthNames[parseInt(m,10)-1]} ${y}</div>`;
+    groups[k].forEach(e=>{
+      const dt=new Date(e.date+'T00:00');
+      const isToday=dt.getTime()===today.getTime();
+      const isPast=dt<today&&!isToday;
+      const cls=isToday?'is-today':(isPast?'is-past':'');
+      const wd=dt.toLocaleDateString('he-IL',{weekday:'short'});
+      const mn=monthNames[dt.getMonth()].slice(0,3);
+      html+=`<div class="cal-all-day-row">
+        <div class="cal-all-date-block ${cls}">
+          <div class="cad-day">${dt.getDate()}</div>
+          <div class="cad-month">${mn}</div>
+          <div class="cad-weekday">${wd}</div>
+        </div>
+        <div>${renderEventItem(e)}</div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  host.innerHTML=html;
+}
+function quickAddFromList(){
+  const t=new Date();
+  selectedDate=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  startAddEvent();
+  // Add date field at top of grid for picking a different date
+  const formGrid=document.querySelector('#eventForm .event-form-grid');
+  if(formGrid&&!document.getElementById('ef_date')){
+    const dateField=document.createElement('div');
+    dateField.innerHTML=`<label>תאריך</label><input id="ef_date" type="date" value="${editingEvt.date}">`;
+    formGrid.insertBefore(dateField,formGrid.firstChild);
+  }
 }
 function calPrev(){if(calMonth===0){calMonth=11;calYear--}else calMonth--;renderCalendar()}
 function calNext(){if(calMonth===11){calMonth=0;calYear++}else calMonth++;renderCalendar()}
@@ -1481,20 +1602,44 @@ function toggleEventTask(eventId,taskIdx){
   if(!e||!Array.isArray(e.tasks)||!e.tasks[taskIdx])return;
   e.tasks[taskIdx].done=!e.tasks[taskIdx].done;
   e.updatedAt=new Date().toLocaleDateString('he-IL');
-  localStorage.setItem('mgmt-events',JSON.stringify(calEvents));
-  renderCalendar();renderDayPanel();
+  try{localStorage.setItem('mgmt-events',JSON.stringify(calEvents))}catch(err){}
+  if(calView==='all')renderCalAllList();else{renderCalendar();renderDayPanel()}
+  try{renderUpcomingEventsBanner()}catch(err){}
   remoteSave('saveCalendarEvent',e);
 }
 
+function ensureFormHost(){
+  // When in all-list view, route form to quickEventForm above the list
+  if(calView==='all'){
+    const quick=document.getElementById('quickEventForm');
+    if(!quick)return;
+    quick.style.display='';
+    quick.innerHTML='';
+    const placeholder=document.createElement('div');placeholder.id='eventForm';
+    quick.appendChild(placeholder);
+    quick.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
 function startAddEvent(){
-  editingEvt={id:'evt_'+Date.now(),date:selectedDate,endDate:'',type:'אירוע',title:'',description:'',grade:'כולם',time:'',owner:'',tasks:[],createdBy:'',updatedAt:''};
+  const t=new Date();
+  const today=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  editingEvt={id:'evt_'+Date.now(),date:selectedDate||today,endDate:'',type:'אירוע',title:'',description:'',grade:'כולם',time:'',owner:'',tasks:[],createdBy:'',updatedAt:''};
+  ensureFormHost();
   renderEventForm();
 }
 function startEditEvent(id){
   const e=calEvents.find(x=>x.id===id);
   if(!e)return;
   editingEvt={...e,tasks:Array.isArray(e.tasks)?JSON.parse(JSON.stringify(e.tasks)):[]};
+  ensureFormHost();
   renderEventForm();
+  // Add a date field for editing
+  const formGrid=document.querySelector('#eventForm .event-form-grid');
+  if(formGrid&&!document.getElementById('ef_date')){
+    const dateField=document.createElement('div');
+    dateField.innerHTML=`<label>תאריך</label><input id="ef_date" type="date" value="${editingEvt.date}">`;
+    formGrid.insertBefore(dateField,formGrid.firstChild);
+  }
 }
 function renderEventForm(){
   const e=editingEvt;
@@ -1544,7 +1689,6 @@ function removeEvtTask(idx){
   editingEvt.tasks.splice(idx,1);
   renderEventForm();
 }
-function cancelEvtForm(){editingEvt=null;document.getElementById('eventForm').style.display='none';document.getElementById('eventForm').innerHTML=''}
 function saveEvent(){
   editingEvt.title=document.getElementById('ef_title').value;
   editingEvt.type=document.getElementById('ef_type').value;
@@ -1552,19 +1696,37 @@ function saveEvent(){
   editingEvt.time=document.getElementById('ef_time').value.trim();
   editingEvt.owner=document.getElementById('ef_owner').value.trim();
   editingEvt.description=document.getElementById('ef_desc').value;
+  const dateInput=document.getElementById('ef_date');
+  if(dateInput&&dateInput.value)editingEvt.date=dateInput.value;
   editingEvt.tasks=collectFormTasks();
   editingEvt.updatedAt=new Date().toLocaleDateString('he-IL');
   if(!editingEvt.title.trim())return;
   const idx=calEvents.findIndex(x=>x.id===editingEvt.id);
   if(idx>=0)calEvents[idx]=editingEvt;else calEvents.push(editingEvt);
   const saved=editingEvt;
-  cancelEvtForm();renderCalendar();renderDayPanel();
+  // Close quick form if open
+  const quick=document.getElementById('quickEventForm');
+  if(quick){quick.style.display='none';quick.innerHTML=''}
+  cancelEvtForm();
+  if(calView==='all')renderCalAllList();else{renderCalendar();renderDayPanel()}
+  try{renderUpcomingEventsBanner()}catch(e){}
   remoteSave('saveCalendarEvent',saved);
+}
+function cancelEvtForm(){
+  editingEvt=null;
+  const ef=document.getElementById('eventForm');
+  if(ef){ef.style.display='none';ef.innerHTML=''}
+  const quick=document.getElementById('quickEventForm');
+  if(quick){quick.style.display='none';quick.innerHTML=''}
 }
 function delEvent(id){
   if(!confirm('למחוק את האירוע?'))return;
-  calEvents=calEvents.filter(e=>e.id!==id);renderCalendar();renderDayPanel();remoteSave('deleteCalendarEvent',{id});
+  calEvents=calEvents.filter(e=>e.id!==id);
+  if(calView==='all')renderCalAllList();else{renderCalendar();renderDayPanel()}
+  try{renderUpcomingEventsBanner()}catch(e){}
+  remoteSave('deleteCalendarEvent',{id});
 }
+function startEditEventFromList(id){startEditEvent(id)}
 
 // ===== Seed school events for May–June 2026 (one-time, idempotent by ID) =====
 const SEED_EVENTS_MAY_JUN_2026=[
@@ -1676,7 +1838,9 @@ function seedSchoolEventsIfNeeded(){
   if(added){
     try{localStorage.setItem('mgmt-events',JSON.stringify(calEvents))}catch(e){}
     const calPage=document.getElementById('page-calendar');
-    if(calPage&&calPage.style.display!=='none')renderCalendar();
+    if(calPage&&calPage.style.display!=='none'){
+      if(calView==='all')renderCalAllList();else renderCalendar();
+    }
     try{renderUpcomingEventsBanner()}catch(e){}
   }
 }
@@ -3038,7 +3202,7 @@ function loadRemoteData(){
   loadBucketSafely({
     bucket:'events',action:'getCalendarEvents',storageKey:'mgmt-events',
     extractor:(d)=>d.events,
-    applyFn:(data)=>{calEvents=data;window._eventsCloudSyncDone=true;if(document.getElementById('page-calendar').style.display!=='none')renderCalendar();try{renderUpcomingEventsBanner()}catch(e){}try{seedSchoolEventsIfNeeded()}catch(e){}}
+    applyFn:(data)=>{calEvents=data;window._eventsCloudSyncDone=true;if(document.getElementById('page-calendar').style.display!=='none'){if(calView==='all')renderCalAllList();else renderCalendar();}try{renderUpcomingEventsBanner()}catch(e){}try{seedSchoolEventsIfNeeded()}catch(e){}}
   });
   loadBucketSafely({
     bucket:'classSchedule',action:'getClassSchedule',storageKey:'mgmt-class-schedule',
