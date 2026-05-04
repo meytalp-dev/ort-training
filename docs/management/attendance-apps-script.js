@@ -98,8 +98,8 @@ const DEFAULT_CONFIG = [
   ['class_יב1_phone','0507111410','טלפון בת השירות של יב1'],
   ['class_יב2','','שם בת השירות של יב2 — חסרה!'],
   ['class_יב2_phone','','טלפון בת השירות של יב2'],
-  ['class_יב3','אלומה קשת','שם בת השירות של יב3'],
-  ['class_יב3_phone','0585557890','טלפון בת השירות של יב3'],
+  ['class_יב3','','שם בת השירות של יב3 — אין'],
+  ['class_יב3_phone','','טלפון בת השירות של יב3'],
   ['','',''],
   ['bnot_reminder_enabled','yes','yes/no — האם לשלוח תזכורת ב-10:30 לבנות השירות'],
   ['','',''],
@@ -783,8 +783,8 @@ function fillPhoneNumbers() {
     {key: 'class_יא3_phone', value: '0505222688', desc: 'טלפון בת השירות של יא3'},
     {key: 'class_יב1', value: 'שני אלבז', desc: 'שם בת השירות של יב1'},
     {key: 'class_יב1_phone', value: '0507111410', desc: 'טלפון בת השירות של יב1'},
-    {key: 'class_יב3', value: 'אלומה קשת', desc: 'שם בת השירות של יב3'},
-    {key: 'class_יב3_phone', value: '0585557890', desc: 'טלפון בת השירות של יב3'}
+    {key: 'class_יב3', value: '', desc: 'שם בת השירות של יב3 — אין'},
+    {key: 'class_יב3_phone', value: '', desc: 'טלפון בת השירות של יב3'}
   ];
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_CONFIG);
   const data = sheet.getDataRange().getValues();
