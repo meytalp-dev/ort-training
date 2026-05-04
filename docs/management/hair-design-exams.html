@@ -137,8 +137,17 @@ body.editing .name-cell input, body.editing .notes-cell input { display: block; 
 .day-section.domain-bagrut_makeup  .ds-title { color: #E65100; }
 .day-section.domain-bagrut_writing .ds-title { color: #1565C0; }
 .day-section .ds-count { font-size: 12px; color: #78909C; font-weight: 500; }
-.day-section .ds-teachers { font-size: 13px; color: #546E7A; margin-bottom: 8px; }
+.day-section .ds-teachers { font-size: 13px; color: #546E7A; margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .day-section .ds-teachers strong { color: #263238; }
+.teacher-link { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; background: white; color: #00838F; border: 1px solid #B2EBF2; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s; }
+.teacher-link:hover { background: #00838F; color: white; border-color: #00838F; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,131,143,0.3); }
+.teacher-link .tl-icon { font-size: 11px; opacity: 0.7; }
+.day-section.domain-gemer          .teacher-link { color: #6A1B9A; border-color: #E1BEE7; }
+.day-section.domain-gemer          .teacher-link:hover { background: #6A1B9A; border-color: #6A1B9A; color: white; }
+.day-section.domain-bagrut_makeup  .teacher-link { color: #E65100; border-color: #FFCC80; }
+.day-section.domain-bagrut_makeup  .teacher-link:hover { background: #E65100; border-color: #E65100; color: white; }
+.day-section.domain-bagrut_writing .teacher-link { color: #1565C0; border-color: #90CAF9; }
+.day-section.domain-bagrut_writing .teacher-link:hover { background: #1565C0; border-color: #1565C0; color: white; }
 .day-section .ds-students { display: flex; flex-wrap: wrap; gap: 5px; }
 .day-section .ds-chip { padding: 4px 10px; background: white; border-radius: 12px; font-size: 13px; font-weight: 500; border: 1px solid #E0E0E0; display: inline-flex; align-items: center; gap: 5px; }
 .day-section .ds-chip .ds-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -286,7 +295,7 @@ body.editing .name-cell input, body.editing .notes-cell input { display: block; 
     <button class="tab active" data-tab="students">תלמידים</button>
     <button class="tab" data-tab="schedule">שיבוץ מערכת</button>
     <button class="tab" data-tab="tracking">מעקב פעולות</button>
-    <button class="tab" data-tab="teachers">מורים</button>
+    <button class="tab" data-tab="teachers">תיעוד מורים</button>
     <button class="tab" data-tab="stats">סיכום</button>
 </div>
 
@@ -962,9 +971,16 @@ function renderSchedule() {
                 ? '<span class="ds-empty">אין תלמידים בקבוצה זו</span>'
                 : students.map(s => `<span class="ds-chip"><span class="ds-dot" style="background:${STATUS_INFO[statusForDomain(s, domain)].color};"></span>${escapeHtml(s.name)}</span>`).join('');
 
+            const teacherLinks = teachers.map(t => {
+                const safeT = String(t).replace(/'/g, "\\'");
+                return `<button type="button" class="teacher-link" onclick="goToTeacherDocs('${safeT}', '${day.date}')" title="פתח תיעוד של ${escapeHtml(t)} ל-${escapeHtml(formatScheduleDate(day.date))}">
+                    ${escapeHtml(t)}<span class="tl-icon">📋</span>
+                </button>`;
+            }).join('');
+
             return `<div class="day-section domain-${domain}">
                 <div class="ds-title">${escapeHtml(DOMAIN_TITLES[domain])} <span class="ds-count">· ${students.length} תלמידים</span></div>
-                <div class="ds-teachers"><strong>מורים:</strong> ${teachers.map(t => escapeHtml(t)).join(' · ')}</div>
+                <div class="ds-teachers"><strong>מורים:</strong> ${teacherLinks}</div>
                 <div class="ds-students">${studentsHtml}</div>
             </div>`;
         }).join('');
@@ -1188,6 +1204,31 @@ function updateTeacherNote(studentId, value, inputEl) {
 function selectTeacher(name) {
     currentTeacher = name;
     renderTeachersTab();
+}
+
+function goToTeacherDocs(teacherName, date) {
+    let mapped = teacherName;
+    if (teacherName === 'שירלי' || teacherName === 'אופירה') {
+        mapped = 'אופירה ושירלי';
+    }
+    if (!TEACHERS.find(t => t.name === mapped)) {
+        alert('המורה ' + teacherName + ' לא נמצאה ברשימת המורים לתיעוד');
+        return;
+    }
+    currentTeacher = mapped;
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    const tabBtn = document.querySelector('.tab[data-tab="teachers"]');
+    const tabContent = document.getElementById('tab-teachers');
+    if (tabBtn) tabBtn.classList.add('active');
+    if (tabContent) tabContent.classList.add('active');
+
+    const dateInput = document.getElementById('teacher-date');
+    if (dateInput && date) dateInput.value = date;
+
+    renderTeachersTab();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderTeachersTab() {
