@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Today · לוח הבוקר · Impact SO</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    body {
+      padding-bottom: 100px; /* space for assistant bar */
+    }
+    .today-shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    /* ─── Greeting hero ─── */
+    .greeting {
+      padding: 2rem 0 1.5rem;
+    }
+    .greeting h1 {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      margin-bottom: 0.4rem;
+    }
+    .greeting-sub {
+      color: var(--ink-soft);
+      font-size: 1rem;
+    }
+
+    /* ─── Quick stats row ─── */
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 700px) { .quick-stats { grid-template-columns: repeat(2, 1fr); } }
+    .qstat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .qstat-icon {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      display: grid; place-items: center;
+      flex: 0 0 40px;
+    }
+    .qstat-icon.cyan { background: var(--cyan-soft); color: #0891b2; }
+    .qstat-icon.lavender { background: var(--lavender-soft); color: #7c3aed; }
+    .qstat-icon.mint { background: var(--mint-soft); color: #059669; }
+    .qstat-icon.amber { background: var(--amber-soft); color: #d97706; }
+    .qstat-num {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .qstat-label {
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+      margin-top: 0.15rem;
+    }
+
+    /* ─── Main grid ─── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* ─── Section card ─── */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      gap: 0.75rem;
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .section-link {
+      font-size: 0.85rem;
+      color: var(--lavender);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* ─── Lesson schedule ─── */
+    .lesson-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 0.6rem;
+      transition: all 0.15s;
+      cursor: pointer;
+      background: var(--surface);
+      text-decoration: none;
+      color: var(--ink);
+    }
+    .lesson-item:hover { border-color: var(--lavender); transform: translateX(-2px); box-shadow: var(--shadow-sm); }
+    .lesson-item.now { background: linear-gradient(135deg, var(--mint-soft), white); border-color: var(--mint); }
+    .lesson-time {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.1rem;
+      flex: 0 0 70px;
+      text-align: center;
+    }
+    .lesson-info { flex: 1; min-width: 0; }
+    .lesson-class {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    .lesson-topic {
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+      margin-top: 0.1rem;
+    }
+    .lesson-status {
+      flex: 0 0 auto;
+      padding: 0.3rem 0.75rem;
+      background: var(--surface-2);
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--ink-soft);
+    }
+    .lesson-status.now {
+      background: var(--mint);
+      color: white;
+    }
+    .lesson-status.upcoming { background: var(--cyan-soft); color: #0891b2; }
+    .lesson-status.done { background: var(--surface-2); color: var(--ink-muted); }
+
+    /* ─── Alert items ─── */
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.85rem;
+      background: var(--surface-2);
+      border-right: 4px solid var(--lavender);
+      border-radius: var(--radius);
+      margin-bottom: 0.6rem;
+    }
+    .alert-item.urgent { border-color: var(--rose); background: var(--rose-soft); }
+    .alert-item.success { border-color: var(--mint); background: var(--mint-soft); }
+    .alert-item.warning { border-color: var(--amber); background: var(--amber-soft); }
+    .alert-icon { flex: 0 0 24px; margin-top: 2px; }
+    .alert-body { flex: 1; }
+    .alert-title { font-weight: 700; font-size: 0.92rem; }
+    .alert-desc { font-size: 0.85rem; color: var(--ink-soft); margin-top: 0.15rem; line-height: 1.5; }
+    .alert-actions {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .alert-btn {
+      padding: 0.3rem 0.75rem;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      color: var(--ink-soft);
+    }
+    .alert-btn.primary { background: var(--lavender); color: white; border-color: var(--lavender); }
+
+    /* ─── Quick actions ─── */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .quick-action {
+      padding: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      text-align: right;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .quick-action:hover { border-color: var(--lavender); background: var(--lavender-soft); }
+    .quick-action-icon {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      background: var(--lavender-soft);
+      color: var(--lavender);
+      display: grid; place-items: center;
+      flex: 0 0 32px;
+    }
+    .quick-action-label {
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    /* ─── AI Assistant Bar (sticky bottom) ─── */
+    .ai-assistant-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 20px rgba(20, 20, 60, 0.05);
+      padding: 0.85rem 1.25rem;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.97);
+    }
+    .ai-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .ai-bar-avatar {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--lavender), var(--cyan));
+      color: white;
+      display: grid; place-items: center;
+      flex: 0 0 40px;
+      font-weight: 700;
+    }
+    .ai-bar-input-wrap {
+      flex: 1;
+      position: relative;
+    }
+    .ai-bar-input {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      direction: rtl;
+    }
+    .ai-bar-input:focus { outline: none; border-color: var(--lavender); box-shadow: var(--shadow-glow); }
+    .ai-bar-send {
+      padding: 0.7rem 1.25rem;
+      background: linear-gradient(135deg, var(--lavender), #c4b5fd);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 700;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+    .ai-bar-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* AI Chat overlay (when expanded) */
+    .ai-chat-overlay {
+      position: fixed;
+      bottom: 80px;
+      left: 1rem;
+      right: 1rem;
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      max-height: 70vh;
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+      z-index: 99;
+    }
+    .ai-chat-overlay.open { display: flex; }
+    .ai-chat-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .ai-chat-title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+    .ai-chat-close {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--surface-2);
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .ai-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .chat-bubble {
+      padding: 0.85rem 1rem;
+      border-radius: var(--radius);
+      max-width: 85%;
+      line-height: 1.5;
+      font-size: 0.92rem;
+    }
+    .chat-bubble.user {
+      background: var(--lavender);
+      color: white;
+      margin-left: auto;
+    }
+    .chat-bubble.ai {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .chat-bubble.ai-thinking {
+      background: var(--lavender-soft);
+      color: var(--lavender);
+      font-style: italic;
+    }
+    .chat-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      padding: 0.75rem 1.25rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .chat-suggestion {
+      padding: 0.4rem 0.75rem;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chat-suggestion:hover {
+      border-color: var(--lavender);
+      background: var(--lavender-soft);
+      color: var(--lavender);
+    }
+
+    /* Loading state */
+    .loading-skeleton {
+      background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface) 50%, var(--surface-2) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius);
+      height: 60px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--ink-muted);
+    }
+    .empty-state-icon {
+      font-size: 2rem;
+      opacity: 0.5;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="today.html" class="topnav-brand">
+    <div class="topnav-brand-mark">ל</div>
+    <div>
+      <div class="topnav-brand-text">לשון 70%</div>
+      <div class="topnav-brand-sub">Impact SO · Today</div>
+    </div>
+  </a>
+  <div class="topnav-links">
+    <a href="today.html" class="topnav-link active">Today</a>
+    <a href="../annual-plan.html" class="topnav-link">תוכנית שנתית</a>
+    <a href="../roadmap.html" class="topnav-link">Roadmap</a>
+    <button id="logout-btn" class="btn btn-ghost btn-sm">יציאה</button>
+  </div>
+</nav>
+
+<div class="today-shell">
+
+  <section class="greeting">
+    <h1 id="greeting-title">בוקר טוב</h1>
+    <div class="greeting-sub" id="greeting-sub">טוען...</div>
+  </section>
+
+  <div class="quick-stats">
+    <div class="qstat">
+      <div class="qstat-icon cyan">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div>
+        <div class="qstat-num" id="stat-lessons">0</div>
+        <div class="qstat-label">שיעורים היום</div>
+      </div>
+    </div>
+    <div class="qstat">
+      <div class="qstat-icon lavender">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      </div>
+      <div>
+        <div class="qstat-num" id="stat-pending">0</div>
+        <div class="qstat-label">עבודות לבדיקה</div>
+      </div>
+    </div>
+    <div class="qstat">
+      <div class="qstat-icon amber">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+      </div>
+      <div>
+        <div class="qstat-num" id="stat-alerts">0</div>
+        <div class="qstat-label">התראות חכמות</div>
+      </div>
+    </div>
+    <div class="qstat">
+      <div class="qstat-icon mint">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+      </div>
+      <div>
+        <div class="qstat-num" id="stat-students">0</div>
+        <div class="qstat-label">תלמידים פעילים</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Right column: schedule + alerts -->
+    <div>
+      <div class="section-card">
+        <div class="section-head">
+          <div class="section-title">⏰ מערכת היום</div>
+          <a href="../annual-plan.html" class="section-link">תוכנית שנתית מלאה ←</a>
+        </div>
+        <div id="schedule-list">
+          <div class="loading-skeleton"></div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head">
+          <div class="section-title">🎯 התראות חכמות מ-AI</div>
+          <span class="text-muted" style="font-size: 0.82rem;">עודכן עכשיו</span>
+        </div>
+        <div id="alerts-list"></div>
+      </div>
+    </div>
+
+    <!-- Left column: quick actions + tasks -->
+    <div>
+      <div class="section-card">
+        <div class="section-head">
+          <div class="section-title">⚡ פעולות מהירות</div>
+        </div>
+        <div class="quick-actions">
+          <a href="../annual-plan.html" class="quick-action">
+            <div class="quick-action-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+            </div>
+            <div class="quick-action-label">תוכנית שנתית</div>
+          </a>
+          <a href="../practice.html?topic=thesis-location" class="quick-action">
+            <div class="quick-action-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>
+            </div>
+            <div class="quick-action-label">תרגול חי</div>
+          </a>
+          <a href="../index.html" class="quick-action">
+            <div class="quick-action-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <div class="quick-action-label">בנה מערך</div>
+          </a>
+          <a href="../roadmap.html" class="quick-action">
+            <div class="quick-action-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="quick-action-label">Roadmap</div>
+          </a>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head">
+          <div class="section-title">📋 משימות פתוחות</div>
+        </div>
+        <div id="tasks-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">✓</div>
+            <div>אין משימות פתוחות כרגע</div>
+            <div style="font-size: 0.82rem; margin-top: 0.5rem;">המערכת תוסיף כאן משימות חכמות לאורך היום</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- AI Chat overlay -->
+<div class="ai-chat-overlay" id="ai-chat-overlay">
+  <div class="ai-chat-header">
+    <div class="ai-chat-title">✨ AI Assistant — מורה לשון</div>
+    <button class="ai-chat-close" id="ai-chat-close">✗</button>
+  </div>
+  <div class="ai-chat-messages" id="chat-messages"></div>
+  <div class="chat-suggestions" id="chat-suggestions"></div>
+</div>
+
+<!-- AI Assistant bar (sticky) -->
+<div class="ai-assistant-bar">
+  <div class="ai-bar-inner">
+    <div class="ai-bar-avatar">✨</div>
+    <div class="ai-bar-input-wrap">
+      <input type="text" class="ai-bar-input" id="ai-input" placeholder="שאלי משהו... 'תכתבי לי בוחן על תקינות הפועל לכיתה יא1'">
+    </div>
+    <button class="ai-bar-send" id="ai-send">שלחי</button>
+  </div>
+</div>
+
+<script src="../auth/supabase-config.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  let teacher = null;
+
+  // ── Init ──────────────────────────────────
+  (async () => {
+    const user = await window.ImpactAuth.requireAuth('auth/login.html');
+    if (!user) return;
+
+    teacher = await window.ImpactAuth.getCurrentTeacher();
+    if (!teacher) {
+      // Trigger may not have completed yet; create manually
+      await createTeacherFallback(user);
+      teacher = await window.ImpactAuth.getCurrentTeacher();
+    }
+
+    renderGreeting();
+    await loadDashboard();
+    setupAIAssistant();
+  })();
+
+  async function createTeacherFallback(user) {
+    const supabase = await window.ImpactAuth.getSupabase();
+    const meta = user.user_metadata || {};
+    let schoolId = null;
+
+    if (meta.school_name) {
+      // Find or create school
+      const { data: schools } = await supabase.from('schools').select('id').eq('name', meta.school_name).limit(1);
+      if (schools?.length) {
+        schoolId = schools[0].id;
+      } else {
+        const { data: newSchool } = await supabase.from('schools').insert({
+          name: meta.school_name,
+          city: meta.school_city || null
+        }).select().single();
+        schoolId = newSchool?.id;
+      }
+    }
+
+    await supabase.from('teachers').insert({
+      user_id: user.id,
+      school_id: schoolId,
+      full_name: meta.full_name || user.email,
+      email: user.email
+    });
+  }
+
+  function renderGreeting() {
+    const hour = new Date().getHours();
+    let greeting;
+    if (hour < 6) greeting = 'לילה טוב';
+    else if (hour < 12) greeting = 'בוקר טוב';
+    else if (hour < 17) greeting = 'צהריים טובים';
+    else if (hour < 21) greeting = 'ערב טוב';
+    else greeting = 'לילה טוב';
+
+    const firstName = teacher?.full_name?.split(' ')[0] || '';
+    $('greeting-title').textContent = `${greeting} ${firstName}`;
+
+    const today = new Date().toLocaleDateString('he-IL', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const schoolName = teacher?.schools?.name || teacher?.school_name || '';
+    $('greeting-sub').textContent = `${today}${schoolName ? ' · ' + schoolName : ''}`;
+  }
+
+  async function loadDashboard() {
+    const supabase = await window.ImpactAuth.getSupabase();
+
+    // Load classes
+    const { data: classes } = await supabase
+      .from('classes')
+      .select('*, students(count)')
+      .eq('teacher_id', teacher.id);
+
+    const studentsCount = classes?.reduce((sum, c) => sum + (c.students?.[0]?.count || 0), 0) || 0;
+
+    $('stat-students').textContent = studentsCount;
+    $('stat-lessons').textContent = '0'; // No lessons in DB yet
+    $('stat-pending').textContent = '0';
+
+    renderEmptyOrSchedule(classes || []);
+    renderSmartAlerts(classes || []);
+  }
+
+  function renderEmptyOrSchedule(classes) {
+    const list = $('schedule-list');
+
+    if (!classes.length) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">📚</div>
+          <div style="font-weight: 600; color: var(--ink); margin-bottom: 0.5rem;">עוד לא הגדרת כיתות</div>
+          <div style="font-size: 0.88rem; line-height: 1.6;">
+            כדי לראות את לוח השיעורים שלך,<br>
+            תצטרכי קודם להוסיף כיתה לפחות.
+          </div>
+          <button class="btn btn-primary mt-2" id="add-class-btn">+ הוסיפי כיתה</button>
+        </div>
+      `;
+
+      $('add-class-btn')?.addEventListener('click', () => {
+        // Open AI chat with prefilled prompt
+        openAIChat('תוסיפי לי כיתה חדשה');
+      });
+      return;
+    }
+
+    // TODO: Render real schedule from lessons_progress
+    list.innerHTML = classes.map(c => `
+      <a class="lesson-item" href="../annual-plan.html">
+        <div class="lesson-time">י"א</div>
+        <div class="lesson-info">
+          <div class="lesson-class">${c.name}</div>
+          <div class="lesson-topic">${c.exam_module === 'lashon_70' ? 'לשון 70%' : c.exam_module} · ${c.students?.[0]?.count || 0} תלמידים</div>
+        </div>
+        <div class="lesson-status upcoming">פתחי תוכנית</div>
+      </a>
+    `).join('');
+  }
+
+  function renderSmartAlerts(classes) {
+    const list = $('alerts-list');
+    const alerts = [];
+
+    if (!classes.length) {
+      alerts.push({
+        type: 'lavender',
+        icon: '✨',
+        title: 'ברוכה הבאה ל-Impact SO!',
+        desc: 'התחילי בלהוסיף כיתה ראשונה. דברי איתי בפס התחתון: "תוסיפי לי כיתה יא1 עם 24 תלמידים".',
+        actions: [{ label: 'התחילי', action: () => openAIChat('תוסיפי לי כיתה יא1 עם 24 תלמידים') }]
+      });
+    } else {
+      alerts.push({
+        type: 'success',
+        icon: '🎯',
+        title: `יש לך ${classes.length} ${classes.length === 1 ? 'כיתה פעילה' : 'כיתות פעילות'}`,
+        desc: 'המערכת תתחיל לבנות עבורך תובנות חכמות ככל שתלמידים יתחילו לתרגל.',
+        actions: []
+      });
+    }
+
+    alerts.push({
+      type: 'cyan',
+      icon: '📅',
+      title: 'הבגרות בעוד 378 ימים',
+      desc: 'יום ב\' 17.5.2027. תוכלי לראות את כל התוכנית השנתית שתכננו אחורה מהתאריך הזה.',
+      actions: [{ label: 'תוכנית שנתית', href: '../annual-plan.html', primary: true }]
+    });
+
+    alerts.push({
+      type: 'warning',
+      icon: '💡',
+      title: 'טיפ למורה',
+      desc: 'המערכת היא בפיילוט פעיל — כל פיצ\'ר שתסמני ⭐ ב-Roadmap, נבנה ראשון.',
+      actions: [{ label: 'Roadmap', href: '../roadmap.html' }]
+    });
+
+    $('stat-alerts').textContent = alerts.length;
+
+    list.innerHTML = alerts.map((a, i) => `
+      <div class="alert-item ${a.type === 'success' ? 'success' : a.type === 'warning' ? 'warning' : ''}">
+        <div class="alert-icon">${a.icon}</div>
+        <div class="alert-body">
+          <div class="alert-title">${a.title}</div>
+          <div class="alert-desc">${a.desc}</div>
+          ${a.actions.length ? `
+            <div class="alert-actions">
+              ${a.actions.map(act => act.href
+                ? `<a class="alert-btn ${act.primary ? 'primary' : ''}" href="${act.href}">${act.label}</a>`
+                : `<button class="alert-btn ${act.primary ? 'primary' : ''}" data-alert-action="${i}">${act.label}</button>`
+              ).join('')}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    // Wire button actions
+    document.querySelectorAll('[data-alert-action]').forEach((btn, i) => {
+      const alertIdx = parseInt(btn.dataset.alertAction);
+      const action = alerts[alertIdx]?.actions?.find(a => !a.href);
+      if (action?.action) {
+        btn.addEventListener('click', action.action);
+      }
+    });
+  }
+
+  // ── AI Assistant ──────────────────────────────────
+  const SUGGESTIONS = [
+    'תוסיפי לי כיתה חדשה',
+    'הראי לי את הכיתות שלי',
+    'מה היום בלוח השיעורים?',
+    'תכתבי לי בוחן על הפועל',
+    'תני לי דוח על הביצועים השבוע',
+    'תזכירי לתלמידים על מבחן ביום ה\''
+  ];
+
+  let chatHistory = [];
+
+  function setupAIAssistant() {
+    $('ai-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    $('ai-send').addEventListener('click', sendMessage);
+    $('ai-chat-close').addEventListener('click', () => $('ai-chat-overlay').classList.remove('open'));
+
+    renderSuggestions();
+  }
+
+  function renderSuggestions() {
+    $('chat-suggestions').innerHTML = SUGGESTIONS.map(s =>
+      `<div class="chat-suggestion" data-text="${s}">${s}</div>`
+    ).join('');
+    document.querySelectorAll('.chat-suggestion').forEach(el => {
+      el.addEventListener('click', () => {
+        $('ai-input').value = el.dataset.text;
+        sendMessage();
+      });
+    });
+  }
+
+  function openAIChat(prefill) {
+    $('ai-chat-overlay').classList.add('open');
+    if (prefill) {
+      $('ai-input').value = prefill;
+      $('ai-input').focus();
+    }
+  }
+
+  async function sendMessage() {
+    const text = $('ai-input').value.trim();
+    if (!text) return;
+
+    $('ai-chat-overlay').classList.add('open');
+    addMessage('user', text);
+    $('ai-input').value = '';
+    addMessage('ai-thinking', 'חושבת...');
+
+    // Stub AI response — to be replaced with real Claude API call
+    setTimeout(() => {
+      removeThinking();
+      const response = generateStubResponse(text);
+      addMessage('ai', response);
+    }, 800 + Math.random() * 600);
+  }
+
+  function generateStubResponse(userText) {
+    const lower = userText.toLowerCase();
+
+    if (lower.includes('כיתה') && (lower.includes('תוסיפי') || lower.includes('הוסיפ') || lower.includes('צור'))) {
+      return 'בקרוב — בעוד שלב אחד אעזור לך להוסיף כיתות עם תלמידים בקלות. כרגע ה-AI Assistant בשלב הקמה ראשונית. בינתיים אפשר להגדיר כיתה ידנית דרך תפריט ההגדרות (יבוא בעוד יומיים).';
+    }
+    if (lower.includes('בוחן') || lower.includes('מבחן')) {
+      return 'מצוין! מחולל בחנים חכם הוא אחד הפיצ\'רים שסימנת כ⭐ חובה. הוא בתור הבא לבנייה. בינתיים, את יכולה ליצור בוחן ידני דרך מסך תוכנית שנתית → לחיצה על שיעור → "בנה מערך".';
+    }
+    if (lower.includes('תוכנית') || lower.includes('שיעור')) {
+      return 'התוכנית השנתית שלך ב-annual-plan.html מציגה את כל 93 השיעורים מ-1.9.2026 עד 17.5.2027 — אפשר לראות את החלוקה לפי נושא, להוסיף לוח שעות אישי, ולבנות מערכי שיעור.';
+    }
+    if (lower.includes('דוח') || lower.includes('ביצוע')) {
+      return 'דוחות חכמים בתור — צריך נתונים מצטברים מתרגולים אמיתיים של תלמידים. בעוד כמה שבועות נוכל להציג כאן ניתוח DNA כיתתי.';
+    }
+    if (lower.includes('שלום') || lower.includes('היי') || lower.includes('הי')) {
+      return `שלום ${teacher?.full_name?.split(' ')[0] || ''}! איך אני יכולה לעזור לך היום? אפשר לשאול אותי על תוכנית השיעורים, על תלמידים, או לבקש ממני לבנות בחנים, מערכי שיעור, ועוד.`;
+    }
+
+    return 'קיבלתי. ה-AI Assistant שלי בשלב חיבור — בעוד יום-יומיים אהיה מחוברת ל-Claude API ואוכל לבצע פעולות אמיתיות (בנייה, ניתוח, יצירת תוכן). בינתיים תוכלי להשתמש בכלים הקיימים: תוכנית שנתית, תרגול חי, בנה מערך.';
+  }
+
+  function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = `chat-bubble ${role}`;
+    div.textContent = text;
+    if (role === 'ai-thinking') div.id = 'ai-thinking';
+    $('chat-messages').appendChild(div);
+    $('chat-messages').scrollTop = $('chat-messages').scrollHeight;
+  }
+
+  function removeThinking() {
+    const t = $('ai-thinking');
+    if (t) t.remove();
+  }
+
+  // Logout
+  $('logout-btn').addEventListener('click', async () => {
+    await window.ImpactAuth.logout();
+  });
+</script>
+
+</body>
+</html>
