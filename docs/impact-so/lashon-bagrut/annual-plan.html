@@ -441,6 +441,22 @@
   const HEBREW_DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
   const PRACTICE_BANKS_READY = new Set(['reading-purpose', 'text-structure', 'thesis-definition', 'thesis-location']);
 
+  // Map lesson subtopic keywords → full lesson plan ID
+  const FULL_LESSONS_MAP = [
+    {match: /חסרי פ.ן/, id: 'hapoel-chasrei-pn'},
+    {match: /מאמר טיעון.*מבנה|מאמר טיעון.*פתיחה/, id: 'maamar-tiyun-mivneh'},
+    {match: /משקל/, id: 'tatzura-mishkalim'},
+    {match: /סקירה ממזגת.*הכרות|סקירה ממזגת.*תזה|סקירה.*איתור/, id: 'skira-memazeget-teza'}
+  ];
+
+  function findFullLessonId(subtopic) {
+    if (!subtopic) return null;
+    for (const m of FULL_LESSONS_MAP) {
+      if (m.match.test(subtopic)) return m.id;
+    }
+    return null;
+  }
+
   let plan = null;
   let allDays = [];
   let activeFilter = 'all';
@@ -673,10 +689,18 @@
     // Actions: lesson + practice + evaluation
     let actions = '';
     if (day.lesson && day.lesson.hours > 0) {
-      actions += `<button class="action-btn primary" data-action="generate" data-date="${day.lesson.date}" title="בנה מערך שיעור">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
-        מערך
-      </button>`;
+      const fullLessonId = findFullLessonId(day.lesson.subtopic);
+      if (fullLessonId) {
+        actions += `<a class="action-btn primary" href="teacher/lesson-view.html?id=${fullLessonId}" title="פתחי מערך שיעור מלא — מוכן עם פיצ'רי AI">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          מערך מלא ✦
+        </a>`;
+      } else {
+        actions += `<button class="action-btn primary" data-action="generate" data-date="${day.lesson.date}" title="בנה מערך שיעור">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+          מערך
+        </button>`;
+      }
 
       if (day.lesson.ai_topic) {
         const ready = PRACTICE_BANKS_READY.has(day.lesson.ai_topic);
