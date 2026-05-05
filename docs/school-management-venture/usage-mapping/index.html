@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>היום שלך במערכת — מיפוי שימוש דקה</title>
+<meta name="description" content="דקה למפות איך אתה משתמש במערכת הפדגוגית — בסוף מקבלים דיוקן אישי והשוואה לקולגות.">
+<meta property="og:title" content="היום שלך במערכת">
+<meta property="og:description" content="דקה למפות איך אתה משתמש במערכת הפדגוגית. בסוף — דיוקן אישי.">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&family=Playpen+Sans+Hebrew:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #FDFCFA;
+    --surface: #FFFFFF;
+    --ink: #1B2A3A;
+    --ink-soft: #5C6B7A;
+    --ink-mute: #9AA5B0;
+    --line: #ECE6DC;
+    --dream: #C9B8E8;
+    --dream-soft: #EDE5FA;
+    --create: #FFB89B;
+    --create-soft: #FFE8DC;
+    --lead: #8FD4C4;
+    --lead-soft: #DEF3EE;
+    --accent: #6B5BD8;
+    --shadow: 0 8px 30px rgba(27, 42, 58, 0.08);
+    --shadow-lg: 0 20px 60px rgba(27, 42, 58, 0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Assistant', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse 800px 600px at 10% -10%, var(--dream-soft) 0%, transparent 50%),
+      radial-gradient(ellipse 700px 500px at 110% 100%, var(--lead-soft) 0%, transparent 50%),
+      radial-gradient(ellipse 500px 400px at 90% 20%, var(--create-soft) 0%, transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+
+  .shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 20px 80px;
+  }
+
+  .progress-wrap {
+    width: 100%;
+    max-width: 560px;
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--ink-mute);
+    font-weight: 500;
+  }
+
+  .progress-bar {
+    height: 6px;
+    background: var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--dream), var(--accent));
+    border-radius: 999px;
+    width: 0%;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-stack {
+    width: 100%;
+    max-width: 560px;
+    position: relative;
+  }
+
+  .card {
+    background: var(--surface);
+    border-radius: 28px;
+    padding: 36px 28px 28px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+    display: none;
+    flex-direction: column;
+    gap: 24px;
+    animation: cardIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .card.active { display: flex; }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .card-tag {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--dream-soft);
+    padding: 6px 14px;
+    border-radius: 999px;
+    align-self: flex-start;
+  }
+
+  .card-title {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+
+  .card-sub {
+    font-size: 16px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin-top: -12px;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .options.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .opt {
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    padding: 16px 18px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: right;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .opt:hover {
+    border-color: var(--accent);
+    background: var(--dream-soft);
+    transform: translateY(-1px);
+  }
+
+  .opt.selected {
+    border-color: var(--accent);
+    background: var(--dream-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .opt .check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .opt.selected .check {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  .opt.selected .check::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+  }
+
+  .freq-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .freq-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .freq-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .freq-btn {
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .freq-btn:hover {
+    border-color: var(--dream);
+    color: var(--ink);
+  }
+
+  .freq-btn.selected {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: white;
+  }
+
+  .module-card {
+    background: var(--bg);
+    border-radius: 18px;
+    padding: 18px;
+    border: 1px solid var(--line);
+  }
+
+  .module-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .module-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--dream-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+  }
+
+  .multi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .multi-opt {
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: right;
+    font-family: inherit;
+    transition: all 0.2s ease;
+  }
+
+  .multi-opt:hover { border-color: var(--accent); }
+  .multi-opt.selected {
+    border-color: var(--lead);
+    background: var(--lead-soft);
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .slider-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 12px 0;
+  }
+
+  .slider-value {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--accent);
+    text-align: center;
+  }
+
+  .slider-value small {
+    font-size: 18px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-right: 6px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    background: var(--line);
+    border-radius: 999px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(107, 91, 216, 0.4);
+    border: 3px solid white;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(107, 91, 216, 0.4);
+    border: 3px solid white;
+  }
+
+  .input-field {
+    width: 100%;
+    background: var(--surface);
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--ink);
+    transition: border-color 0.2s ease;
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 14px;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: white;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(107, 91, 216, 0.3);
+  }
+
+  .btn-primary:disabled {
+    background: var(--line);
+    color: var(--ink-mute);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 14px 18px;
+  }
+
+  .btn-ghost:hover {
+    color: var(--accent);
+  }
+
+  /* Intro card */
+  .intro-card {
+    text-align: center;
+    align-items: center;
+    padding: 48px 28px 36px;
+  }
+
+  .intro-emoji {
+    width: 96px;
+    height: 96px;
+    border-radius: 28px;
+    background: linear-gradient(135deg, var(--dream-soft), var(--lead-soft));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+  }
+
+  .intro-card .card-title {
+    font-size: 32px;
+    text-align: center;
+  }
+
+  .intro-card .card-sub {
+    text-align: center;
+    font-size: 17px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+
+  .intro-meta {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 8px 0 0;
+    flex-wrap: wrap;
+  }
+
+  .intro-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  /* Result card */
+  .result-card {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .result-hero {
+    background: linear-gradient(135deg, var(--dream-soft) 0%, var(--lead-soft) 100%);
+    padding: 40px 28px 32px;
+    text-align: center;
+    position: relative;
+  }
+
+  .result-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255, 184, 155, 0.3) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(143, 212, 196, 0.3) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  .result-tag {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .result-name {
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.2;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .result-tagline {
+    font-size: 17px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    max-width: 380px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .result-body {
+    padding: 32px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .insights {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .insight {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .insight-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--dream-soft);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-family: 'Playpen Sans Hebrew', sans-serif;
+  }
+
+  .insight-text {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink);
+    padding-top: 4px;
+  }
+
+  .benchmark {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 20px;
+  }
+
+  .benchmark-title {
+    font-size: 14px;
+    color: var(--ink-mute);
+    font-weight: 600;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .bench-row {
+    margin-bottom: 14px;
+  }
+
+  .bench-row:last-child { margin-bottom: 0; }
+
+  .bench-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+
+  .bench-bar {
+    height: 8px;
+    background: var(--line);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bench-bar-you {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--dream));
+    border-radius: 999px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bench-marker {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 14px;
+    background: var(--ink-soft);
+    transition: right 1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bench-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    flex-wrap: wrap;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  .share-row {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+  }
+
+  .share-btn {
+    background: var(--surface);
+    border: 2px solid var(--line);
+    color: var(--ink);
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .share-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--dream-soft);
+  }
+
+  /* Contact card */
+  .contact-perks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-top: -8px;
+  }
+
+  .perk {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.45;
+  }
+
+  .perk-dot {
+    color: var(--lead);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .skip-note {
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-mute);
+    margin-top: 4px;
+  }
+
+  /* Shtayim footer */
+  .shtayim-footer {
+    margin-top: 32px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-mute);
+    opacity: 0.7;
+  }
+
+  .shtayim-footer a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--ink-mute);
+  }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .shell { padding: 16px 14px 60px; }
+    .card { padding: 28px 20px 22px; border-radius: 24px; }
+    .card-title { font-size: 22px; }
+    .intro-card .card-title { font-size: 26px; }
+    .result-name { font-size: 30px; }
+    .options.grid-2 { grid-template-columns: 1fr; }
+    .multi-grid { grid-template-columns: 1fr; }
+    .freq-grid { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .freq-btn { font-size: 11px; padding: 8px 2px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="progress-wrap" id="progressWrap" style="display:none;">
+    <div class="progress-meta">
+      <span id="progressLabel">שלב 1 מתוך 14</span>
+      <span id="progressPct">7%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+
+  <div class="card-stack" id="stack"></div>
+
+  <div class="shtayim-footer">
+    כלי של <a href="https://meytalp-dev.github.io/ort-presentation-builder/shtayim/site.html" target="_blank">שתיים</a> · מיפוי שימוש במערכות פדגוגיות
+  </div>
+
+</div>
+
+<script>
+// ===== Configuration =====
+const APPS_SCRIPT_URL = ''; // ← להחליף ב-URL של ה-Web App אחרי deploy
+
+// ===== State =====
+const state = {
+  step: 0,
+  answers: {
+    role: null,
+    stage: null,
+    schoolSize: null,
+    modules: {}, // { attendance: 'daily', grades: 'weekly', ... }
+    outsideSystem: [],
+    minutesPerDay: 30,
+    name: '',
+    email: ''
+  }
+};
+
+// ===== Modules to ask about =====
+const MODULES = [
+  { id: 'attendance', name: 'רישום נוכחות', icon: '✓' },
+  { id: 'grades', name: 'ציונים והערכות', icon: '%' },
+  { id: 'parents', name: 'תקשורת עם הורים', icon: '✉' },
+  { id: 'timetable', name: 'מערכת שעות / מילוי מקום', icon: '⊞' },
+  { id: 'reports', name: 'דוחות פדגוגיים', icon: '◉' },
+  { id: 'planning', name: 'תוכניות עבודה / מעקב יעדים', icon: '↗' },
+  { id: 'discipline', name: 'אישורי היעדרות / משמעת', icon: '!' }
+];
+
+const FREQ_OPTIONS = [
+  { id: 'daily', label: 'כל יום' },
+  { id: 'often', label: 'כמה פעמים בשבוע' },
+  { id: 'weekly', label: 'פעם בשבוע' },
+  { id: 'rare', label: 'פחות' },
+  { id: 'never', label: 'לא משתמש' }
+];
+
+const OUTSIDE_OPTIONS = [
+  'תקשורת בוואטסאפ עם הורים',
+  'אקסל למעקב ציונים',
+  'אקסל למעקב נוכחות',
+  'מחברת/דף לרישום אישי',
+  'גוגל שיטס משותף עם הצוות',
+  'ניהול מערכת שעות/שיבוצים',
+  'מעקב משמעת / היעדרויות',
+  'תכנון פדגוגי / יעדים',
+  'דוחות הורים / ועדות',
+  'אחר'
+];
+
+// ===== 9 Personas =====
+const PERSONAS = {
+  contact: {
+    name: 'איש הקשר',
+    tag: 'מתחבר',
+    tagline: 'הלב של בית הספר עובר דרכך — אתה זה שמדבר עם ההורים, מעדכן ומחבר.'
+  },
+  documenter: {
+    name: 'המתעד',
+    tag: 'מדייק',
+    tagline: 'נוכחות, ציונים, פרטים קטנים — אתה דואג שהכול יהיה במקום ובזמן.'
+  },
+  strategist: {
+    name: 'האסטרטג',
+    tag: 'רואה רחוק',
+    tagline: 'דוחות, יעדים ותכנון — אתה עובד על התמונה הגדולה, לא על הניהול היומי.'
+  },
+  pragmatist: {
+    name: 'הפרגמטי',
+    tag: 'עוקף את הבירוקרטיה',
+    tagline: 'אקסל, וואטסאפ, גוגל שיטס — אתה משתמש במה שעובד, גם אם זה מחוץ למערכת.'
+  },
+  adaptive: {
+    name: 'המסתגל',
+    tag: 'מאזן בין השניים',
+    tagline: 'גם בתוך המערכת וגם בלעדיה. בוחר לכל משימה את הכלי הנכון.'
+  },
+  swift: {
+    name: 'הזריז',
+    tag: 'יעיל ולעניין',
+    tagline: 'נכנס, עושה את שלך, יוצא. מעט מודולים — אבל בדיוק מה שצריך.'
+  },
+  mentor: {
+    name: 'המנטור',
+    tag: 'אישי וחם',
+    tagline: 'הערות איכותיות, משוב, מעקב אחר תלמידים — אתה משקיע באנשים, לא רק בנתונים.'
+  },
+  starter: {
+    name: 'המתחיל',
+    tag: 'בתחילת הדרך',
+    tagline: 'עוד גילית רק חלק מהמערכת. יש לך הרבה מקום לגדול — וגם פוטנציאל לחסוך זמן.'
+  },
+  routine: {
+    name: 'השגרתי',
+    tag: 'יציב ועקבי',
+    tagline: 'אותה שגרה, יום אחר יום, בכל המודולים. אתה הבסיס שכולם נשענים עליו.'
+  }
+};
+
+// ===== Initial benchmark (estimated, will update from Sheet over time) =====
+const BENCHMARK = {
+  attendance: { daily: 78, often: 12, weekly: 5, rare: 3, never: 2 },
+  grades: { daily: 22, often: 38, weekly: 28, rare: 8, never: 4 },
+  parents: { daily: 35, often: 32, weekly: 22, rare: 8, never: 3 },
+  timetable: { daily: 45, often: 25, weekly: 15, rare: 10, never: 5 },
+  reports: { daily: 8, often: 18, weekly: 32, rare: 30, never: 12 },
+  planning: { daily: 6, often: 14, weekly: 28, rare: 36, never: 16 },
+  discipline: { daily: 18, often: 28, weekly: 32, rare: 16, never: 6 }
+};
+
+// ===== Build cards =====
+function buildCards() {
+  const stack = document.getElementById('stack');
+  const cards = [];
+
+  // 0 — Intro
+  cards.push(`
+    <div class="card intro-card active" data-step="0">
+      <div class="intro-emoji">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent);">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <div>
+        <div class="card-tag">מיפוי דקה</div>
+      </div>
+      <h1 class="card-title">היום שלך במערכת</h1>
+      <p class="card-sub">איך נראה השימוש שלך במערכת הפדגוגית של בית הספר? דקה למפות — ובסוף תקבל דיוקן אישי והשוואה לקולגות.</p>
+      <div class="intro-meta">
+        <div class="intro-meta-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          כדקה
+        </div>
+        <div class="intro-meta-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+          ללא הרשמה
+        </div>
+        <div class="intro-meta-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M9 9h6v6H9z"/></svg>
+          דיוקן אישי
+        </div>
+      </div>
+      <div class="nav">
+        <button class="btn btn-primary" onclick="next()">בואו נתחיל
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </div>
+    </div>
+  `);
+
+  // 1 — Role
+  cards.push(`
+    <div class="card" data-step="1">
+      <div class="card-tag">זיהוי 1/3</div>
+      <h2 class="card-title">איזה תפקיד אתה ממלא?</h2>
+      <div class="options grid-2" id="roleOpts">
+        ${[['principal','מנהל / מנהלת'],['vice','סגן / סגנית'],['coord','רכז / רכזת'],['teacher','מורה']].map(([v,l]) =>
+          `<button class="opt" data-value="${v}" onclick="selectSingle(this, 'role')"><span>${l}</span><span class="check"></span></button>`
+        ).join('')}
+      </div>
+      ${navHTML()}
+    </div>
+  `);
+
+  // 2 — Stage
+  cards.push(`
+    <div class="card" data-step="2">
+      <div class="card-tag">זיהוי 2/3</div>
+      <h2 class="card-title">איזה שלב חינוך?</h2>
+      <div class="options grid-2" id="stageOpts">
+        ${[['elementary','יסודי'],['middle','חט"ב'],['high','תיכון'],['mixed','משולב']].map(([v,l]) =>
+          `<button class="opt" data-value="${v}" onclick="selectSingle(this, 'stage')"><span>${l}</span><span class="check"></span></button>`
+        ).join('')}
+      </div>
+      ${navHTML()}
+    </div>
+  `);
+
+  // 3 — School size
+  cards.push(`
+    <div class="card" data-step="3">
+      <div class="card-tag">זיהוי 3/3</div>
+      <h2 class="card-title">מה גודל בית הספר?</h2>
+      <p class="card-sub">לפי מספר התלמידים</p>
+      <div class="options" id="sizeOpts">
+        ${[['xs','עד 300 תלמידים'],['s','300-600 תלמידים'],['m','600-900 תלמידים'],['l','מעל 900 תלמידים']].map(([v,l]) =>
+          `<button class="opt" data-value="${v}" onclick="selectSingle(this, 'schoolSize')"><span>${l}</span><span class="check"></span></button>`
+        ).join('')}
+      </div>
+      ${navHTML()}
+    </div>
+  `);
+
+  // 4-10 — Modules (one per card)
+  MODULES.forEach((m, idx) => {
+    cards.push(`
+      <div class="card" data-step="${4 + idx}">
+        <div class="card-tag">שימוש יומיומי ${idx + 1}/${MODULES.length}</div>
+        <h2 class="card-title">${m.name}</h2>
+        <p class="card-sub">כמה פעמים אתה נכנס לזה?</p>
+        <div class="freq-grid" id="mod_${m.id}">
+          ${FREQ_OPTIONS.map(f =>
+            `<button class="freq-btn" data-value="${f.id}" onclick="selectModule(this, '${m.id}')">${f.label}</button>`
+          ).join('')}
+        </div>
+        ${navHTML()}
+      </div>
+    `);
+  });
+
+  // 11 — Outside system
+  cards.push(`
+    <div class="card" data-step="${4 + MODULES.length}">
+      <div class="card-tag">מחוץ למערכת</div>
+      <h2 class="card-title">מה אתה עושה מחוץ למערכת?</h2>
+      <p class="card-sub">סמן הכל מה שמתאים — דברים שאתה עושה באקסל, וואטסאפ, נייר וכו'</p>
+      <div class="multi-grid" id="outsideOpts">
+        ${OUTSIDE_OPTIONS.map(o =>
+          `<button class="multi-opt" data-value="${o}" onclick="toggleMulti(this)">${o}</button>`
+        ).join('')}
+      </div>
+      ${navHTML(true)}
+    </div>
+  `);
+
+  // 12 — Time per day
+  cards.push(`
+    <div class="card" data-step="${5 + MODULES.length}">
+      <div class="card-tag">זמן</div>
+      <h2 class="card-title">כמה זמן ביום אתה במערכת?</h2>
+      <p class="card-sub">בערך, בממוצע</p>
+      <div class="slider-wrap">
+        <div class="slider-value">
+          <span id="sliderVal">30</span><small>דקות ביום</small>
+        </div>
+        <input type="range" id="timeSlider" min="0" max="180" step="5" value="30"
+          oninput="document.getElementById('sliderVal').textContent = this.value; state.answers.minutesPerDay = parseInt(this.value);">
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--ink-mute);">
+          <span>0</span><span>90</span><span>180+</span>
+        </div>
+      </div>
+      ${navHTML(true)}
+    </div>
+  `);
+
+  // 13 — Contact (optional)
+  cards.push(`
+    <div class="card" data-step="${6 + MODULES.length}">
+      <div class="card-tag">כמעט סיימנו</div>
+      <h2 class="card-title">רוצה לקבל את הדיוקן במייל?</h2>
+      <p class="card-sub">אופציונלי לגמרי — אפשר לדלג ולראות את הדיוקן עכשיו</p>
+      <div class="contact-perks">
+        <div class="perk">
+          <svg class="perk-dot" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          הדיוקן המלא שלך + השוואה לקבוצת ההתייחסות
+        </div>
+        <div class="perk">
+          <svg class="perk-dot" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          עדכונים על שאלוני בנצ'מרק נוספים בעתיד
+        </div>
+        <div class="perk">
+          <svg class="perk-dot" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          ללא ספאם, אפשר להסיר בכל רגע
+        </div>
+      </div>
+      <input type="text" class="input-field" placeholder="שם פרטי" id="nameInput" oninput="state.answers.name = this.value;">
+      <input type="email" class="input-field" placeholder="מייל" id="emailInput" oninput="state.answers.email = this.value;">
+      <button class="btn btn-primary" onclick="submit()">צור לי את הדיוקן
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="skip-note"><a href="#" onclick="event.preventDefault(); submit();" style="color:var(--ink-soft);">דלג ותראה את הדיוקן</a></div>
+    </div>
+  `);
+
+  // 14 — Result (filled dynamically)
+  cards.push(`
+    <div class="card result-card" data-step="${7 + MODULES.length}" id="resultCard"></div>
+  `);
+
+  stack.innerHTML = cards.join('');
+}
+
+function navHTML(allowSkip = false) {
+  return `
+    <div class="nav">
+      <button class="btn btn-ghost" onclick="prev()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        חזרה
+      </button>
+      <button class="btn btn-primary" onclick="next()" id="nextBtn" ${allowSkip ? '' : 'disabled'}>הבא
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+  `;
+}
+
+// ===== Selection handlers =====
+function selectSingle(btn, field) {
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.answers[field] = btn.dataset.value;
+  enableNext();
+}
+
+function selectModule(btn, moduleId) {
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.freq-btn').forEach(o => o.classList.remove('selected'));
+  btn.classList.add('selected');
+  state.answers.modules[moduleId] = btn.dataset.value;
+  enableNext();
+}
+
+function toggleMulti(btn) {
+  btn.classList.toggle('selected');
+  const value = btn.dataset.value;
+  const arr = state.answers.outsideSystem;
+  if (btn.classList.contains('selected')) {
+    if (!arr.includes(value)) arr.push(value);
+  } else {
+    state.answers.outsideSystem = arr.filter(v => v !== value);
+  }
+}
+
+function enableNext() {
+  const card = document.querySelector('.card.active');
+  const nextBtn = card.querySelector('#nextBtn');
+  if (nextBtn) nextBtn.disabled = false;
+}
+
+// ===== Navigation =====
+function next() {
+  const cards = document.querySelectorAll('.card');
+  if (state.step < cards.length - 1) {
+    cards[state.step].classList.remove('active');
+    state.step++;
+    cards[state.step].classList.add('active');
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function prev() {
+  const cards = document.querySelectorAll('.card');
+  if (state.step > 0) {
+    cards[state.step].classList.remove('active');
+    state.step--;
+    cards[state.step].classList.add('active');
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function updateProgress() {
+  const total = document.querySelectorAll('.card').length - 1; // exclude result
+  const wrap = document.getElementById('progressWrap');
+  if (state.step === 0 || state.step >= total) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'flex';
+  const pct = Math.round((state.step / total) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `שלב ${state.step} מתוך ${total}`;
+  document.getElementById('progressPct').textContent = pct + '%';
+}
+
+// ===== Persona logic =====
+function calculatePersona() {
+  const m = state.answers.modules;
+  const outside = state.answers.outsideSystem.length;
+  const minutes = state.answers.minutesPerDay;
+
+  // Count "active" modules (daily/often)
+  const activeCount = Object.values(m).filter(v => v === 'daily' || v === 'often').length;
+  const totalAnswered = Object.keys(m).length;
+
+  // Score per category
+  const score = {
+    parents: freqScore(m.parents),
+    documentation: freqScore(m.attendance) + freqScore(m.grades),
+    strategy: freqScore(m.reports) + freqScore(m.planning),
+    discipline: freqScore(m.discipline)
+  };
+
+  // Decision tree
+  if (activeCount <= 2) return 'starter';
+  if (outside >= 5) return 'pragmatist';
+  if (score.parents >= 3 && score.documentation < 5) return 'contact';
+  if (score.documentation >= 6) return 'documenter';
+  if (score.strategy >= 4 && score.documentation < 4) return 'strategist';
+  if (score.parents >= 2 && score.documentation >= 3 && state.answers.role === 'teacher') return 'mentor';
+  if (activeCount >= 5 && minutes >= 45) return 'routine';
+  if (activeCount <= 4 && minutes <= 30) return 'swift';
+  return 'adaptive';
+}
+
+function freqScore(freq) {
+  return { daily: 4, often: 3, weekly: 2, rare: 1, never: 0 }[freq] || 0;
+}
+
+// ===== Insights generation =====
+function generateInsights(personaId) {
+  const m = state.answers.modules;
+  const insights = [];
+
+  // Insight 1: top module
+  const topMod = Object.entries(m).sort((a, b) => freqScore(b[1]) - freqScore(a[1]))[0];
+  if (topMod && freqScore(topMod[1]) >= 3) {
+    const modName = MODULES.find(x => x.id === topMod[0])?.name;
+    insights.push(`המודול שלך הוא <strong>${modName}</strong> — שם אתה מבלה את רוב הזמן.`);
+  }
+
+  // Insight 2: outside system
+  const outside = state.answers.outsideSystem.length;
+  if (outside >= 4) {
+    insights.push(`אתה עושה <strong>${outside} פעולות מחוץ למערכת</strong> — סימן שהיא לא נותנת לך מענה מלא.`);
+  } else if (outside === 0) {
+    insights.push(`אתה <strong>נאמן למערכת</strong> — כמעט הכל קורה בתוכה.`);
+  } else {
+    insights.push(`אתה משלב את המערכת עם כלים נוספים — <strong>גישה היברידית</strong>.`);
+  }
+
+  // Insight 3: time
+  const min = state.answers.minutesPerDay;
+  if (min >= 60) {
+    insights.push(`<strong>${min} דקות ביום</strong> במערכת — זה נתח משמעותי מהיום.`);
+  } else if (min <= 15) {
+    insights.push(`<strong>${min} דקות ביום</strong> בלבד — שימוש קליל ויעיל.`);
+  } else {
+    insights.push(`<strong>${min} דקות ביום</strong> במערכת — שימוש מתון.`);
+  }
+
+  return insights;
+}
+
+// ===== Render result =====
+function renderResult() {
+  const personaId = calculatePersona();
+  const persona = PERSONAS[personaId];
+  const insights = generateInsights(personaId);
+  const m = state.answers.modules;
+
+  const benchmarkRows = MODULES.map(mod => {
+    const userFreq = m[mod.id];
+    const userScore = freqScore(userFreq);
+    const userPct = (userScore / 4) * 100;
+    const benchAvg = calcBenchmarkAvg(mod.id);
+    return `
+      <div class="bench-row">
+        <div class="bench-label">
+          <span>${mod.name}</span>
+          <span style="color:var(--ink-mute); font-size:12px;">${freqLabel(userFreq)}</span>
+        </div>
+        <div class="bench-bar">
+          <div class="bench-bar-you" style="width:${userPct}%"></div>
+          <div class="bench-marker" style="right:${benchAvg}%" title="ממוצע"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const card = document.getElementById('resultCard');
+  card.innerHTML = `
+    <div class="result-hero">
+      <div class="result-tag">${persona.tag}</div>
+      <h1 class="result-name">${persona.name}</h1>
+      <p class="result-tagline">${persona.tagline}</p>
+    </div>
+    <div class="result-body">
+      <div class="insights">
+        ${insights.map((t, i) => `
+          <div class="insight">
+            <div class="insight-num">${i + 1}</div>
+            <div class="insight-text">${t}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="benchmark">
+        <div class="benchmark-title">השוואה לקולגות במערכת</div>
+        ${benchmarkRows}
+        <div class="bench-legend">
+          <div class="legend-item"><div class="legend-dot" style="background: linear-gradient(90deg, var(--accent), var(--dream));"></div>אתה</div>
+          <div class="legend-item"><div class="legend-dot" style="background: var(--ink-soft); width:2px; height:14px; border-radius:1px;"></div>ממוצע משתמשים</div>
+        </div>
+      </div>
+
+      <div class="share-row">
+        <button class="share-btn" onclick="shareWhatsApp()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          שלח לקולגה בוואטסאפ
+        </button>
+        <button class="share-btn" onclick="copyLink()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          העתק קישור לשיתוף
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function calcBenchmarkAvg(modId) {
+  const dist = BENCHMARK[modId];
+  // Weighted average position (0-100)
+  const total = dist.daily + dist.often + dist.weekly + dist.rare + dist.never;
+  const weighted = (dist.daily * 100 + dist.often * 75 + dist.weekly * 50 + dist.rare * 25 + dist.never * 0) / total;
+  return Math.round(weighted);
+}
+
+function freqLabel(freq) {
+  return FREQ_OPTIONS.find(f => f.id === freq)?.label || '—';
+}
+
+// ===== Share =====
+function shareWhatsApp() {
+  const url = window.location.href;
+  const text = encodeURIComponent(`היום שלך במערכת — מיפוי דקה שמראה איך אתה משתמש במערכת הפדגוגית. בסוף יוצא דיוקן אישי. ${url}`);
+  window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    alert('הקישור הועתק!');
+  });
+}
+
+// ===== Submit =====
+function submit() {
+  const payload = {
+    timestamp: new Date().toISOString(),
+    role: state.answers.role,
+    stage: state.answers.stage,
+    schoolSize: state.answers.schoolSize,
+    modules: state.answers.modules,
+    outsideSystem: state.answers.outsideSystem,
+    minutesPerDay: state.answers.minutesPerDay,
+    name: state.answers.name || '(אנונימי)',
+    email: state.answers.email || '',
+    persona: calculatePersona(),
+    userAgent: navigator.userAgent,
+    referrer: document.referrer || 'direct'
+  };
+
+  // Send to Apps Script (fire and forget)
+  if (APPS_SCRIPT_URL) {
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).catch(e => console.warn('Save failed', e));
+  } else {
+    console.log('Submission (no Apps Script URL configured):', payload);
+  }
+
+  // Show result
+  renderResult();
+  next();
+}
+
+// ===== Init =====
+buildCards();
+updateProgress();
+</script>
+</body>
+</html>
