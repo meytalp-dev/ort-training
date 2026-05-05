@@ -1,23 +1,25 @@
 /**
- * Apps Script v2 — מיפוי שימוש במערכות פדגוגיות
- * תומך בשני קהלים: מורות + מנהלות
- * שמירה ל-Sheet (גיליון נפרד לכל קהל) + מייל אישי + נוטיפיקציה למיטל
+ * Apps Script v3 — מיפוי שימוש במערכות פדגוגיות
+ * שאלות ארכיטיפ (לא תלונות): תפקיד, מערכת, תדירות, מתי, מטרה, מחוץ למערכת
+ * 2 גיליונות נפרדים: מורות + מנהלות
  */
 
 const SHEET_ID = '1Nrn4rLyLkq2pSRAUuwHOZTcKao2_gCG9ttagWRsHR5E';
 const NOTIFY_EMAIL = 'mlypeleg@gmail.com';
 
 const HEADERS_TEACHER = [
-  'תאריך','תפקיד','שלב','גודל','מערכת',
+  'תאריך','תפקיד','שלב','שלב-אחר','גודל','מערכת','מערכת-אחר',
   'נוכחות','ציונים','התנהגות','הודעות הורים','תיעוד שיעורים','מעקב אישי','הערכות',
-  'נקודות כאב','מחוץ למערכת','דקות בשבוע','שינוי מבוקש',
+  'מתי','מתי-אחר','מטרה עיקרית','מטרה-אחר',
+  'מחוץ למערכת','מחוץ-אחר','דקות בשבוע',
   'ארכיטיפ','שם','מייל','מקור'
 ];
 
 const HEADERS_PRINCIPAL = [
-  'תאריך','תפקיד','שלב','גודל','מערכת',
+  'תאריך','תפקיד','שלב','שלב-אחר','גודל','מערכת','מערכת-אחר',
   'דוחות','ניהול צוות','תקשורת הורים','ועדות','תקציב','תכנון','רגולציה',
-  'נקודות כאב','מחוץ למערכת','דקות ביום','שינוי מבוקש',
+  'מתי','מתי-אחר','מטרה עיקרית','מטרה-אחר',
+  'מחוץ למערכת','מחוץ-אחר','דקות ביום',
   'ארכיטיפ','שם','מייל','מקור'
 ];
 
@@ -33,8 +35,10 @@ function doPost(e) {
         new Date(),
         roleLabel(data.role, true),
         stageLabel(data.stage),
+        data.stageOther || '',
         sizeLabel(data.schoolSize),
         systemLabel(data.system),
+        data.systemOther || '',
         freqLabel(data.modules.attendance),
         freqLabel(data.modules.grades),
         freqLabel(data.modules.behavior),
@@ -42,10 +46,13 @@ function doPost(e) {
         freqLabel(data.modules.lesson_plan),
         freqLabel(data.modules.individual),
         freqLabel(data.modules.assessments),
-        (data.pains || []).join(' | '),
+        whenLabel(data.whenUse),
+        data.whenOther || '',
+        purposeLabel(data.purpose, true),
+        data.purposeOther || '',
         (data.outsideSystem || []).join(' | '),
+        data.outsideOther || '',
         data.minutesPerDay,
-        data.wishOpenText || '',
         data.personaName || data.persona,
         data.name || '(אנונימי)',
         data.email || '',
@@ -56,8 +63,10 @@ function doPost(e) {
         new Date(),
         roleLabel(data.role, false),
         stageLabel(data.stage),
+        data.stageOther || '',
         sizeLabel(data.schoolSize),
         systemLabel(data.system),
+        data.systemOther || '',
         freqLabel(data.modules.reports_data),
         freqLabel(data.modules.staff_mgmt),
         freqLabel(data.modules.parents_comm),
@@ -65,10 +74,13 @@ function doPost(e) {
         freqLabel(data.modules.budget_admin),
         freqLabel(data.modules.planning),
         freqLabel(data.modules.regulation),
-        (data.pains || []).join(' | '),
+        whenLabel(data.whenUse),
+        data.whenOther || '',
+        purposeLabel(data.purpose, false),
+        data.purposeOther || '',
         (data.outsideSystem || []).join(' | '),
+        data.outsideOther || '',
         data.minutesPerDay,
-        data.wishOpenText || '',
         data.personaName || data.persona,
         data.name || '(אנונימי)',
         data.email || '',
@@ -78,12 +90,9 @@ function doPost(e) {
 
     sheet.appendRow(row);
 
-    // Send personalized email to respondent
     if (data.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       try { sendUserEmail(data); } catch(err) { console.error('user email failed', err); }
     }
-
-    // Notify Meytal
     try { notifyMeytal(data); } catch(err) { console.error('notify failed', err); }
 
     return ContentService.createTextOutput(JSON.stringify({success:true})).setMimeType(ContentService.MimeType.JSON);
@@ -118,6 +127,7 @@ function sendUserEmail(data) {
   const persona = data.personaName || data.persona;
   const activeCount = Object.values(data.modules).filter(v => v === 'daily' || v === 'often').length;
   const audienceLabel = data.audience === 'teacher' ? 'מורות' : 'מנהלות';
+  const purposeText = purposeLabel(data.purpose, data.audience === 'teacher') + (data.purposeOther ? ` (${data.purposeOther})` : '');
 
   const html = `
     <div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1B2A3A;background:#FDFCFA">
@@ -130,7 +140,7 @@ function sendUserEmail(data) {
         <h2 style="font-size:18px;margin:0 0 14px 0">היי ${name},</h2>
         <p style="font-size:15px;line-height:1.6;color:#5C6B7A;margin:0 0 16px 0">
           תודה שהשתתפת במחקר על שימוש במערכות פדגוגיות.<br>
-          ענית על השאלון, וזה עוזר לי להבין מה באמת קורה בשטח.
+          המטרה העיקרית שלך במערכת: <strong>${purposeText}</strong>.
         </p>
         <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0;border-top:1px solid #ECE6DC;border-bottom:1px solid #ECE6DC">
           <tr>
@@ -143,13 +153,13 @@ function sendUserEmail(data) {
               <div style="font-size:11px;color:#9AA5B0;margin-top:4px">מחוץ למערכת</div>
             </td>
             <td align="center" style="padding:16px;width:33%">
-              <div style="font-size:24px;font-weight:800;color:#6B5BD8">${(data.pains||[]).length}</div>
-              <div style="font-size:11px;color:#9AA5B0;margin-top:4px">נקודות כאב</div>
+              <div style="font-size:24px;font-weight:800;color:#6B5BD8">${data.minutesPerDay}</div>
+              <div style="font-size:11px;color:#9AA5B0;margin-top:4px">דקות</div>
             </td>
           </tr>
         </table>
         <p style="font-size:14px;line-height:1.6;color:#5C6B7A;margin:0 0 16px 0">
-          כשנגיע ל-50 משיבים אשלח לך את הסיכום המצרפי — איפה הקהל שלך נמצא יחסית לאחרים, ומה התובנות העיקריות.
+          כשנגיע ל-50 משיבים אשלח לך את הסיכום המצרפי — איפה הקהל שלך נמצא יחסית לאחרים, ומה הארכיטיפים השכיחים.
         </p>
         <div style="margin-top:20px;text-align:center">
           <a href="https://meytalp-dev.github.io/ort-training/school-management-venture/usage-mapping/" style="display:inline-block;background:#6B5BD8;color:#fff;padding:12px 28px;border-radius:50px;text-decoration:none;font-weight:700;font-size:14px">שלחי לקולגה</a>
@@ -161,7 +171,7 @@ function sendUserEmail(data) {
       </div>
     </div>`;
 
-  const plainBody = `היי ${name},\n\nהארכיטיפ שלך הוא: ${persona}\nתודה שהשתתפת במחקר על מערכות פדגוגיות.\n\nכשנגיע ל-50 משיבים אשלח את הסיכום המצרפי.\n\nמיטל פלג · שתיים`;
+  const plainBody = `היי ${name},\n\nהארכיטיפ שלך: ${persona}\nמטרה עיקרית: ${purposeText}\n\nתודה שהשתתפת במחקר.\n\nמיטל פלג · שתיים`;
 
   MailApp.sendEmail({
     to: data.email,
@@ -186,13 +196,13 @@ function notifyMeytal(data) {
         <li><b>שם:</b> ${data.name || '(אנונימי)'}</li>
         <li><b>מייל:</b> ${data.email || '—'}</li>
         <li><b>תפקיד:</b> ${roleLabel(data.role, data.audience === 'teacher')}</li>
-        <li><b>שלב:</b> ${stageLabel(data.stage)}</li>
+        <li><b>שלב:</b> ${stageLabel(data.stage)}${data.stageOther ? ` — "${data.stageOther}"` : ''}</li>
         <li><b>גודל:</b> ${sizeLabel(data.schoolSize)}</li>
-        <li><b>מערכת:</b> ${systemLabel(data.system)}</li>
+        <li><b>מערכת:</b> ${systemLabel(data.system)}${data.systemOther ? ` — "${data.systemOther}"` : ''}</li>
+        <li><b>מתי במערכת:</b> ${whenLabel(data.whenUse)}${data.whenOther ? ` — "${data.whenOther}"` : ''}</li>
+        <li><b>מטרה עיקרית:</b> ${purposeLabel(data.purpose, data.audience === 'teacher')}${data.purposeOther ? ` — "${data.purposeOther}"` : ''}</li>
         <li><b>זמן:</b> ${data.minutesPerDay} דקות</li>
-        <li><b>כאבים:</b> ${(data.pains||[]).join(', ') || '—'}</li>
-        <li><b>מחוץ למערכת:</b> ${(data.outsideSystem||[]).length} פריטים</li>
-        ${data.wishOpenText ? `<li><b>שינוי מבוקש:</b> "${data.wishOpenText}"</li>` : ''}
+        <li><b>מחוץ למערכת:</b> ${(data.outsideSystem||[]).length} פריטים${data.outsideOther ? ` — "${data.outsideOther}"` : ''}</li>
       </ul>
     </div>`
   });
@@ -228,6 +238,25 @@ function systemLabel(v) {
     manbas:'מנב"סנט', mashov:'משוב', smart:'סמארט סקול', tiktak:'תיק תק',
     pilon:'פילון', iscool:'Iscool', multi:'משלב כמה', other:'אחר'
   }[v] || v;
+}
+
+function whenLabel(v) {
+  return {
+    morning:'תחילת יום', breaks:'בהפסקות', end_school:'בסוף יום בבי"ס',
+    evening:'בערב/בבית', allday:'לאורך היום', weekend:'בעיקר בסופ"ש', other:'אחר'
+  }[v] || v || '';
+}
+
+function purposeLabel(v, isTeacher) {
+  const teacherMap = {
+    documenting:'תיעוד', communication:'תקשורת', individual:'מעקב אישי',
+    mandates:'חובות מערכתיות', teaching:'הוראה ולמידה', feedback:'משוב והערכה', other:'אחר'
+  };
+  const principalMap = {
+    analysis:'ניתוח נתונים', communication:'תקשורת', operations:'תפעול שוטף',
+    planning:'תכנון ויעדים', mandates:'חובות רגולציה', committees:'ועדות', other:'אחר'
+  };
+  return (isTeacher ? teacherMap : principalMap)[v] || v || '';
 }
 
 function freqLabel(v) {

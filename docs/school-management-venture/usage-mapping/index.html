@@ -412,19 +412,36 @@ const MODULES_TEACHER = [
   { id:'assessments',   q:'מחוונים והערכות איכותיות',     sub:'תעודות, פירוט הישגים, הערכה מילולית' }
 ];
 
-const PAINS_TEACHER = [
-  'הזנת ציונים אורכת נצח',
-  'מסך לא נטען / קורס',
-  'קשה למצוא תלמיד / כיתה',
-  'נכנס שוב ושוב לאותה פעולה',
-  'אין app מובייל טוב',
-  'לא רואה היסטוריה של תלמיד',
-  'תקשורת עם הורים מסורבלת',
-  'הערכות איכותיות = העתקה ידנית',
-  'מסכים לא מותאמים לסלולר',
-  'הרשאות נופלות באמצע',
-  'אי אפשר לערוך אחרי שמירה',
-  'אחר'
+// When in system — same for both audiences
+const WHEN_OPTIONS = [
+  ['morning','תחילת יום (לפני שיעורים)'],
+  ['breaks','בהפסקות / בין שיעורים'],
+  ['end_school','בסוף יום בבית הספר'],
+  ['evening','בערב / בבית'],
+  ['allday','לאורך כל היום'],
+  ['weekend','בעיקר בסופ"ש'],
+  ['other','אחר']
+];
+
+// Purpose — different per audience
+const PURPOSE_TEACHER = [
+  ['documenting','תיעוד נתונים (נוכחות, ציונים)'],
+  ['communication','תקשורת (הורים, תלמידים)'],
+  ['individual','מעקב אישי אחרי תלמידים'],
+  ['mandates','חובות מערכתיות (דוחות, טפסים)'],
+  ['teaching','הוראה ולמידה (מערכי שיעור)'],
+  ['feedback','משוב והערכה איכותית'],
+  ['other','אחר']
+];
+
+const PURPOSE_PRINCIPAL = [
+  ['analysis','ניתוח נתונים וקבלת החלטות'],
+  ['communication','תקשורת (צוות, הורים, רשות)'],
+  ['operations','ניהול תפעולי שוטף'],
+  ['planning','תכנון ומעקב יעדים'],
+  ['mandates','חובות רגולציה (פיקוח, משה"ח)'],
+  ['committees','ועדות והחלטות פדגוגיות'],
+  ['other','אחר']
 ];
 
 const OUTSIDE_TEACHER = [
@@ -473,20 +490,6 @@ const MODULES_PRINCIPAL = [
   { id:'regulation',     q:'דיווח לפיקוח / משרד החינוך',  sub:'נספחים, טפסים, דוחות רגולציה' }
 ];
 
-const PAINS_PRINCIPAL = [
-  'דוחות ייצור — איטי וידני',
-  'אין תמונת מצב מהירה של הביה"ס',
-  'נתונים מפוזרים בכמה מערכות',
-  'קושי לעקוב אחרי החלטות ועדות',
-  'תקשורת עם הורים לא ממוקדת',
-  'אין כלי לתכנון אסטרטגי',
-  'דיווחים לפיקוח אורכים שעות',
-  'קושי להפיק תובנות מהנתונים',
-  'הרשאות סבוכות לצוות',
-  'ממשק לא מותאם למנהלים',
-  'אין מובייל אמיתי לתפעול',
-  'אחר'
-];
 
 const OUTSIDE_PRINCIPAL = [
   'אקסל לדוחות / ניתוחים',
@@ -526,17 +529,25 @@ const PRINCIPAL_PERSONAS = {
 let state = loadState() || {
   audience: null,
   system: null,
+  systemOther: '',
   role: null,
   stage: null,
+  stageOther: '',
   schoolSize: null,
   modules: {},
-  pains: [],
+  whenUse: null,
+  whenOther: '',
+  purpose: null,
+  purposeOther: '',
   outsideSystem: [],
+  outsideOther: '',
   minutesPerDay: 30,
-  wishOpenText: '',
   name: '',
   email: ''
 };
+// Migration: clear old fields
+if (state.pains) delete state.pains;
+if (state.wishOpenText !== undefined) delete state.wishOpenText;
 let cur = 0, total = 0;
 let SCREENS = {};
 
@@ -559,7 +570,7 @@ function clearState() {
 function init() {
   const isTeacher = state.audience === 'teacher';
   const MODULES = isTeacher ? MODULES_TEACHER : (state.audience === 'principal' ? MODULES_PRINCIPAL : []);
-  const PAINS = isTeacher ? PAINS_TEACHER : PAINS_PRINCIPAL;
+  const PURPOSE = isTeacher ? PURPOSE_TEACHER : PURPOSE_PRINCIPAL;
   const OUTSIDE = isTeacher ? OUTSIDE_TEACHER : OUTSIDE_PRINCIPAL;
   const ROLES = isTeacher ? ROLES_TEACHER : ROLES_PRINCIPAL;
 
@@ -580,10 +591,10 @@ function init() {
     for (let i = 0; i < MODULES.length; i++) {
       SCREENS.modules.push(idx++);
     }
-    SCREENS.pains = idx++;
+    SCREENS.whenUse = idx++;
+    SCREENS.purpose = idx++;
     SCREENS.outside = idx++;
     SCREENS.time = idx++;
-    SCREENS.wish = idx++;
     SCREENS.contact = idx++;
     SCREENS.done = idx++;
   }
@@ -668,9 +679,11 @@ function init() {
         ['mixed','משולב / שש שנתי'],
         ['other','אחר']
       ].map(([v,l]) =>
-        `<button class="id-btn" onclick="pickId('stage','${v}',this)">${l}</button>`
+        `<button class="id-btn" onclick="pickIdWithOther('stage','${v}',this,${SCREENS.size})">${l}</button>`
       ).join('')}
     </div>
+    <input type="text" class="open-input other-input" id="stageOtherInput" placeholder="כתבו את השלב..." style="display:none;margin-top:12px;min-height:auto;padding:12px 14px" oninput="state.stageOther=this.value;saveState()" value="${state.stageOther || ''}">
+    <button class="done-pill" id="stageContinue" style="display:none;margin-top:12px" onclick="go(${SCREENS.size})">המשך</button>
   </div>`;
 
   // SIZE
@@ -699,9 +712,11 @@ function init() {
     <p class="sub" style="font-size:.78rem;margin-bottom:18px">המערכת הפדגוגית הראשית</p>
     <div class="id-grid">
       ${SYSTEMS.map(s =>
-        `<button class="id-btn" onclick="pickId('system','${s.id}',this)">${s.label}</button>`
+        `<button class="id-btn" onclick="pickIdWithOther('system','${s.id}',this,${SCREENS.modules[0]})">${s.label}</button>`
       ).join('')}
     </div>
+    <input type="text" class="open-input other-input" id="systemOtherInput" placeholder="כתבו את שם המערכת..." style="display:none;margin-top:12px;min-height:auto;padding:12px 14px" oninput="state.systemOther=this.value;saveState()" value="${state.systemOther || ''}">
+    <button class="done-pill" id="systemContinue" style="display:none;margin-top:12px" onclick="go(${SCREENS.modules[0]})">המשך</button>
   </div>`;
 
   // MODULES (signal bars)
@@ -727,19 +742,30 @@ function init() {
     </div>`;
   });
 
-  // PAINS — multi-select up to 3
-  h += `<div class="scr" data-i="${SCREENS.pains}">
-    <div class="multi-q">איפה הכי נתקעים?</div>
-    <div class="multi-sub">בחרו עד 3 דברים שהכי מתסכלים</div>
-    <div class="pain-grid" id="painsGrid">
-      ${PAINS.map(p => `
-        <button class="pain-btn" onclick="togglePain(this,'${p.replace(/'/g,"\\'")}')">
-          <span>${p}</span>
-          <span class="ring"></span>
-        </button>
-      `).join('')}
+  // WHEN — single choice
+  h += `<div class="scr" data-i="${SCREENS.whenUse}">
+    <div class="multi-q">מתי אתם הכי במערכת?</div>
+    <div class="multi-sub">בחרו אפשרות אחת — מתי השימוש העיקרי שלכם</div>
+    <div class="id-grid" style="max-width:340px">
+      ${WHEN_OPTIONS.map(([v,l]) =>
+        `<button class="id-btn" onclick="pickSingle('whenUse','${v}',this,${SCREENS.purpose})">${l}</button>`
+      ).join('')}
     </div>
-    <button class="done-pill" onclick="go(${SCREENS.outside})">המשך</button>
+    <input type="text" class="open-input other-input" id="whenOtherInput" placeholder="כתבו מתי..." style="display:none;margin-top:12px;min-height:auto;padding:12px 14px" oninput="state.whenOther=this.value;saveState()" value="${state.whenOther || ''}">
+    <button class="done-pill" id="whenContinue" style="display:none;margin-top:12px" onclick="go(${SCREENS.purpose})">המשך</button>
+  </div>`;
+
+  // PURPOSE — single choice
+  h += `<div class="scr" data-i="${SCREENS.purpose}">
+    <div class="multi-q">מה המטרה העיקרית שלך במערכת?</div>
+    <div class="multi-sub">בחרו את הדבר ש<strong>הכי</strong> מאפיין אתכם</div>
+    <div class="id-grid" style="max-width:340px">
+      ${PURPOSE.map(([v,l]) =>
+        `<button class="id-btn" onclick="pickSingle('purpose','${v}',this,${SCREENS.outside})">${l}</button>`
+      ).join('')}
+    </div>
+    <input type="text" class="open-input other-input" id="purposeOtherInput" placeholder="כתבו את המטרה..." style="display:none;margin-top:12px;min-height:auto;padding:12px 14px" oninput="state.purposeOther=this.value;saveState()" value="${state.purposeOther || ''}">
+    <button class="done-pill" id="purposeContinue" style="display:none;margin-top:12px" onclick="go(${SCREENS.outside})">המשך</button>
   </div>`;
 
   // OUTSIDE
@@ -751,6 +777,7 @@ function init() {
         `<button class="multi-btn" onclick="toggleOutside(this,'${o.replace(/'/g,"\\'")}')">${o}</button>`
       ).join('')}
     </div>
+    <input type="text" class="open-input other-input" id="outsideOtherInput" placeholder="כתבו מה אחר..." style="display:none;margin-top:10px;min-height:auto;padding:11px 14px;max-width:340px" oninput="state.outsideOther=this.value;saveState()" value="${state.outsideOther || ''}">
     <button class="done-pill" onclick="go(${SCREENS.time})">המשך</button>
   </div>`;
 
@@ -771,15 +798,6 @@ function init() {
       <div class="slider-labels"><span>0</span><span>${isTeacher ? '300' : '120'}</span><span>${isTeacher ? '600+' : '240+'}</span></div>
     </div>
     <button class="done-pill" style="margin-top:22px" onclick="go(${SCREENS.wish})">המשך</button>
-  </div>`;
-
-  // WISH (open text)
-  h += `<div class="scr" data-i="${SCREENS.wish}">
-    <div class="multi-q">דבר אחד שהיית משנה במערכת?</div>
-    <div class="multi-sub">אופציונלי — תשובה אחת קצרה (לא חובה)</div>
-    <textarea class="open-input" id="wishInput" placeholder="${isTeacher ? 'למשל: שיהיה אפליקציה אמיתית במובייל...' : 'למשל: דשבורד אמיתי עם תובנות בזמן אמת...'}" oninput="state.wishOpenText=this.value;saveState()" maxlength="280">${state.wishOpenText || ''}</textarea>
-    <button class="done-pill" style="margin-top:14px" onclick="go(${SCREENS.contact})">המשך</button>
-    <div class="skip-link" onclick="go(${SCREENS.contact})">דלג</div>
   </div>`;
 
   // CONTACT
@@ -807,8 +825,9 @@ function init() {
     <div class="persona-stats">
       <div class="persona-stat"><div class="v" id="pActive">—</div><div class="l">מודולים פעילים</div></div>
       <div class="persona-stat"><div class="v" id="pOutside">—</div><div class="l">מחוץ למערכת</div></div>
-      <div class="persona-stat"><div class="v" id="pPains">—</div><div class="l">נקודות כאב</div></div>
+      <div class="persona-stat"><div class="v" id="pTime">—</div><div class="l">דקות</div></div>
     </div>
+    <div id="pPurposeLine" style="font-size:.78rem;opacity:.7;margin-top:-2px;margin-bottom:14px;max-width:300px;line-height:1.4"></div>
     <button class="share-pill" onclick="shareWA()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
       שלחו לקולגה
@@ -846,26 +865,32 @@ function restoreSelections() {
       }
     });
   }
-  // Restore pains
-  if (state.pains.length) {
-    document.querySelectorAll('.pain-btn').forEach(btn => {
-      const text = btn.querySelector('span').textContent;
-      if (state.pains.includes(text)) btn.classList.add('sel');
-    });
-  }
   // Restore outside
   if (state.outsideSystem.length) {
     document.querySelectorAll('.multi-btn').forEach(btn => {
       if (state.outsideSystem.includes(btn.textContent.trim())) btn.classList.add('sel');
     });
+    if (state.outsideSystem.includes('אחר') && state.outsideOther) {
+      const inp = document.getElementById('outsideOtherInput');
+      if (inp) { inp.style.display = ''; inp.value = state.outsideOther; }
+    }
   }
-  // Restore role/stage/size/system selections
-  ['role','stage','schoolSize','system'].forEach(field => {
+  // Restore role/stage/size/system/whenUse/purpose selections
+  ['role','stage','schoolSize','system','whenUse','purpose'].forEach(field => {
     if (state[field]) {
       document.querySelectorAll('.id-btn').forEach(btn => {
         const onclick = btn.getAttribute('onclick') || '';
         if (onclick.includes(`'${field}','${state[field]}'`)) btn.classList.add('sel');
       });
+      // Show "other" input if applicable
+      if (state[field] === 'other' && state[field + 'Other']) {
+        const inputMap = { stage:'stageOtherInput', system:'systemOtherInput', whenUse:'whenOtherInput', purpose:'purposeOtherInput' };
+        const inp = document.getElementById(inputMap[field]);
+        if (inp) { inp.style.display = ''; inp.value = state[field + 'Other']; }
+        const screen = inp ? inp.closest('.scr') : null;
+        const btn = screen ? screen.querySelector('.done-pill') : null;
+        if (btn) btn.style.display = '';
+      }
     }
   });
 }
@@ -893,7 +918,6 @@ function rebuild() {
 }
 
 function resumeFlow() {
-  // Find first incomplete screen
   let target = SCREENS.role || 1;
   if (state.role && SCREENS.stage) target = SCREENS.stage;
   if (state.stage && SCREENS.size) target = SCREENS.size;
@@ -902,10 +926,11 @@ function resumeFlow() {
   const MODULES = state.audience === 'teacher' ? MODULES_TEACHER : MODULES_PRINCIPAL;
   for (let i = 0; i < MODULES.length; i++) {
     if (state.modules[MODULES[i].id]) {
-      target = (i < MODULES.length - 1) ? SCREENS.modules[i + 1] : SCREENS.pains;
+      target = (i < MODULES.length - 1) ? SCREENS.modules[i + 1] : SCREENS.whenUse;
     }
   }
-  if (state.pains.length) target = SCREENS.outside;
+  if (state.whenUse) target = SCREENS.purpose;
+  if (state.purpose) target = SCREENS.outside;
   if (state.outsideSystem.length) target = SCREENS.time;
   go(target);
 }
@@ -949,24 +974,33 @@ function pickSignal(si, modId, idx, btn) {
   // Auto-advance after a moment
   const MODULES = state.audience === 'teacher' ? MODULES_TEACHER : MODULES_PRINCIPAL;
   const moduleIdx = SCREENS.modules.indexOf(si);
-  const nextScreen = (moduleIdx === MODULES.length - 1) ? SCREENS.pains : SCREENS.modules[moduleIdx + 1];
+  const nextScreen = (moduleIdx === MODULES.length - 1) ? SCREENS.whenUse : SCREENS.modules[moduleIdx + 1];
   setTimeout(() => go(nextScreen), 700);
 }
 
-function togglePain(btn, painText) {
-  if (btn.classList.contains('sel')) {
-    btn.classList.remove('sel');
-    state.pains = state.pains.filter(p => p !== painText);
-  } else {
-    if (state.pains.length >= 3) {
-      btn.style.animation = 'shake .4s ease';
-      setTimeout(() => btn.style.animation = '', 400);
-      return;
-    }
-    btn.classList.add('sel');
-    state.pains.push(painText);
-  }
+// Single choice with "other" support — auto-advances unless "other" picked
+function pickSingle(field, value, btn, nextScreen) {
+  state[field] = value;
+  btn.parentElement.querySelectorAll('.id-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
   saveState();
+  // Show/hide "other" input
+  const screen = btn.closest('.scr');
+  const otherInput = screen.querySelector('.other-input');
+  const continueBtn = screen.querySelector('.done-pill');
+  if (value === 'other') {
+    if (otherInput) { otherInput.style.display = ''; otherInput.focus(); }
+    if (continueBtn) continueBtn.style.display = '';
+  } else {
+    if (otherInput) otherInput.style.display = 'none';
+    if (continueBtn) continueBtn.style.display = 'none';
+    setTimeout(() => go(nextScreen), 280);
+  }
+}
+
+// Same as pickSingle but for the existing pickId fields (id-grid screens)
+function pickIdWithOther(field, value, btn, nextScreen) {
+  pickSingle(field, value, btn, nextScreen);
 }
 
 function toggleOutside(btn, value) {
@@ -975,6 +1009,15 @@ function toggleOutside(btn, value) {
     if (!state.outsideSystem.includes(value)) state.outsideSystem.push(value);
   } else {
     state.outsideSystem = state.outsideSystem.filter(v => v !== value);
+    if (value === 'אחר') state.outsideOther = '';
+  }
+  // Show/hide "other" input
+  if (value === 'אחר') {
+    const otherInput = document.getElementById('outsideOtherInput');
+    if (otherInput) {
+      otherInput.style.display = btn.classList.contains('sel') ? '' : 'none';
+      if (btn.classList.contains('sel')) otherInput.focus();
+    }
   }
   saveState();
 }
@@ -1040,28 +1083,37 @@ function calculatePersona() {
   const isTeacher = state.audience === 'teacher';
   const activeCount = Object.values(m).filter(v => v === 'daily' || v === 'often').length;
   const totalScore = Object.values(m).reduce((s, v) => s + freqScore(v), 0);
+  const purpose = state.purpose;
 
   if (isTeacher) {
-    // Teacher personas
+    // Teacher: purpose drives archetype, modules confirm
     const docScore = freqScore(m.attendance) + freqScore(m.grades);
-    const eduScore = freqScore(m.individual) + freqScore(m.assessments) + freqScore(m.parents_msg);
+    const eduScore = freqScore(m.individual) + freqScore(m.assessments) + freqScore(m.parents_msg) + freqScore(m.behavior);
 
     if (activeCount <= 1 && totalScore <= 5) return 'starter';
     if (outside >= 5) return 'pragmatist';
-    if (eduScore >= 7) return 'educator';
+    // Purpose-led routing
+    if (purpose === 'individual' || purpose === 'feedback' || purpose === 'communication') return 'educator';
+    if (purpose === 'documenting' || purpose === 'mandates') return 'documenter';
+    // Module-led fallback
+    if (eduScore >= 8) return 'educator';
     if (docScore >= 6) return 'documenter';
     if (activeCount <= 3 && outside <= 2) return 'efficient';
     return 'hybrid';
   } else {
-    // Principal personas
+    // Principal: purpose drives archetype
     const dataScore = freqScore(m.reports_data) + freqScore(m.regulation);
     const opScore = freqScore(m.staff_mgmt) + freqScore(m.committees) + freqScore(m.parents_comm);
-    const stratScore = freqScore(m.planning);
 
     if (activeCount <= 1 && totalScore <= 5) return 'builder';
     if (outside >= 5) return 'pragmatist';
+    // Purpose-led routing
+    if (purpose === 'analysis' || purpose === 'mandates') return 'analyst';
+    if (purpose === 'planning') return 'strategist';
+    if (purpose === 'operations' || purpose === 'committees' || purpose === 'communication') return 'operator';
+    // Module-led fallback
     if (dataScore >= 6) return 'analyst';
-    if (stratScore >= 3 && (freqScore(m.planning) === 4 || freqScore(m.planning) === 3)) return 'strategist';
+    if (freqScore(m.planning) >= 3) return 'strategist';
     if (opScore >= 7) return 'operator';
     return 'hybrid';
   }
@@ -1076,12 +1128,35 @@ function finish() {
   const p = PERSONAS[personaId];
   const activeCount = Object.values(state.modules).filter(v => v === 'daily' || v === 'often').length;
 
+  // Map purpose+when to display labels
+  const purposeMap = {
+    documenting:'תיעוד', communication:'תקשורת', individual:'מעקב אישי',
+    mandates:'חובות מערכתיות', teaching:'הוראה ולמידה', feedback:'משוב והערכה',
+    analysis:'ניתוח נתונים', operations:'תפעול שוטף', planning:'תכנון ויעדים',
+    committees:'ועדות', other: state.purposeOther || 'אחר'
+  };
+  const whenMap = {
+    morning:'תחילת יום', breaks:'בהפסקות', end_school:'בסוף יום בבי"ס',
+    evening:'בערב/בבית', allday:'לאורך היום', weekend:'בסופ"ש',
+    other: state.whenOther || 'אחר'
+  };
+
   document.getElementById('pTag').textContent = p.tag;
   document.getElementById('pName').textContent = p.name;
   document.getElementById('pTagline').textContent = p.tagline;
   document.getElementById('pActive').textContent = activeCount;
   document.getElementById('pOutside').textContent = state.outsideSystem.length;
-  document.getElementById('pPains').textContent = state.pains.length;
+  document.getElementById('pTime').textContent = state.minutesPerDay;
+
+  // Purpose + When line
+  const purposeLabel = purposeMap[state.purpose] || '';
+  const whenLabel = whenMap[state.whenUse] || '';
+  if (purposeLabel || whenLabel) {
+    document.getElementById('pPurposeLine').innerHTML =
+      (purposeLabel ? `<strong>מטרה:</strong> ${purposeLabel}` : '') +
+      (purposeLabel && whenLabel ? ' · ' : '') +
+      (whenLabel ? `<strong>מתי:</strong> ${whenLabel}` : '');
+  }
 
   go(SCREENS.done);
   confetti();
@@ -1094,13 +1169,18 @@ function save(personaId, personaName) {
     audience: state.audience,
     role: state.role,
     stage: state.stage,
+    stageOther: state.stageOther || '',
     schoolSize: state.schoolSize,
     system: state.system,
+    systemOther: state.systemOther || '',
     modules: state.modules,
-    pains: state.pains,
+    whenUse: state.whenUse,
+    whenOther: state.whenOther || '',
+    purpose: state.purpose,
+    purposeOther: state.purposeOther || '',
     outsideSystem: state.outsideSystem,
+    outsideOther: state.outsideOther || '',
     minutesPerDay: state.minutesPerDay,
-    wishOpenText: state.wishOpenText || '',
     name: state.name || '(אנונימי)',
     email: state.email || '',
     persona: personaId,
