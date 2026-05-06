@@ -3049,24 +3049,59 @@ function renderClassSummaryView(){
   const counselor = getCounselorForClass(cls);
   const hr = getHomeroomReport(cls, month);
   const visits = getHomeVisits(cls, month);
+  const hrTracking = hr?.studentTracking || {};
 
-  // Attendance + status stats from student records
+  // Compute risk level per student from ALL signals (counselor + teacher tracking + lifeSkills + attendance)
+  function computeStudentRisk(s){
+    const t = hrTracking[s.id] || {};
+    const reasons = [];
+    let level = 'green';
+    function bump(to){ if(to==='red') level='red'; else if(to==='yellow' && level!=='red') level='yellow'; }
+
+    if(s.overallStatus==='red'){ bump('red'); reasons.push('סטטוס יועצת: התערבות'); }
+    else if(s.overallStatus==='yellow'){ bump('yellow'); reasons.push('סטטוס יועצת: מעקב'); }
+
+    // Teacher tracking: 1-4 scale (1=lowest); 0=not filled
+    const lowFields = [];
+    [['attendanceLevel','נוכחות'],['performanceLevel','תפקוד'],['academicLevel','רצינות'],['skillLevel','מיומנות'],['dimLevel','ממד']].forEach(([k,lbl])=>{
+      if(t[k]>=1 && t[k]<=2) lowFields.push(lbl+(t[k]===1?' (1)':' (2)'));
+    });
+    if(lowFields.length>=2){ bump('red'); reasons.push('ציוני מחנך נמוכים: '+lowFields.join(', ')); }
+    else if(lowFields.length===1){ bump('yellow'); reasons.push('ציון מחנך נמוך: '+lowFields[0]); }
+
+    // Life skills
+    const lsRed = Object.entries(s.lifeSkills||{}).filter(([_,v])=>v.status==='red').map(([k])=>k);
+    const lsYellow = Object.entries(s.lifeSkills||{}).filter(([_,v])=>v.status==='yellow').map(([k])=>k);
+    if(lsRed.length){ bump('red'); reasons.push('כישורי חיים בהתערבות: '+lsRed.join(', ')); }
+    else if(lsYellow.length){ bump('yellow'); reasons.push('כישורי חיים במעקב: '+lsYellow.join(', ')); }
+
+    // Counselor attendance field
+    if(s.attendance==='בעייתית'){ bump('red'); reasons.push('נוכחות יועצת: בעייתית'); }
+    else if(s.attendance==='חלקית'){ bump('yellow'); reasons.push('נוכחות יועצת: חלקית'); }
+
+    return { level, reasons };
+  }
+
+  // Attendance + status stats — using computed risk
   const total = students.length;
   let red=0, yellow=0, green=0;
   let attRegular=0, attPartial=0, attProblem=0;
+  const studentRisk = {};
   students.forEach(s => {
-    if(s.overallStatus==='red') red++;
-    else if(s.overallStatus==='yellow') yellow++;
+    const r = computeStudentRisk(s);
+    studentRisk[s.id] = r;
+    if(r.level==='red') red++;
+    else if(r.level==='yellow') yellow++;
     else green++;
     if(s.attendance==='בעייתית') attProblem++;
     else if(s.attendance==='חלקית') attPartial++;
     else attRegular++;
   });
 
-  // At-risk + watch list students (sorted)
+  // At-risk + watch list — sorted red first
   const atRisk = students
-    .filter(s => s.overallStatus==='red' || s.overallStatus==='yellow')
-    .sort((a,b) => (a.overallStatus==='red'?0:1) - (b.overallStatus==='red'?0:1));
+    .filter(s => studentRisk[s.id].level !== 'green')
+    .sort((a,b) => (studentRisk[a.id].level==='red'?0:1) - (studentRisk[b.id].level==='red'?0:1));
 
   // Trend across months — submitted/missing count + attendance flag count
   const trendRows = MONTH_KEYS.map(mk => {
@@ -3186,36 +3221,38 @@ function renderClassSummaryView(){
     </div>
   ` : '';
 
-  // ==== AT-RISK STUDENTS (FROM COUNSELOR DATA) ====
+  // ==== AT-RISK STUDENTS (combined: counselor status + teacher tracking + lifeSkills) ====
   const atRiskHTML = `
     <div class="card" style="margin-bottom:20px">
       <div class="card-header">
         <h3>תלמידים בסיכון ובמעקב</h3>
-        <span style="font-size:.78rem;color:var(--muted)">${atRisk.length} מתוך ${total}</span>
+        <span style="font-size:.78rem;color:var(--muted)">${atRisk.length} מתוך ${total} (${red} בסיכון · ${yellow} מעקב)</span>
       </div>
       <div class="card-body">
         ${atRisk.length ? `
           <div class="table-scroll">
             <table class="data-table">
-              <thead><tr><th style="width:34px"></th><th>שם</th><th>נוכחות</th><th>אבחון / טיפול</th><th>הערות אחרונות (${monthLabel})</th><th>פעולה</th></tr></thead>
+              <thead><tr><th style="width:34px"></th><th>שם</th><th>סיבות לדגל</th><th>הערות יועצת (${monthLabel})</th><th>אבחון/טיפול</th><th></th></tr></thead>
               <tbody>
                 ${atRisk.map(s => {
+                  const r = studentRisk[s.id];
                   const md = (s.monthlyData?.[month]) || {};
                   const therapyTxt = [s.diagnoses, s.therapist, s.emotionalTherapy?'טיפול רגשי':''].filter(Boolean).join(' · ') || '—';
-                  const noteTxt = [md.done, md.notes].filter(Boolean).join(' · ') || '—';
+                  const noteTxt = [md.done, md.notes, md.goals].filter(Boolean).join(' · ') || '—';
+                  const reasonsTxt = r.reasons.length ? r.reasons.join(' · ') : '—';
                   return `<tr onclick="openStudentCounselorReport('${s.className}','${s.id}')" style="cursor:pointer">
-                    <td><span class="status-dot ${s.overallStatus}"></span></td>
+                    <td><span class="status-dot ${r.level}"></span></td>
                     <td style="font-weight:600">${escapeHtml(s.name)}</td>
-                    <td>${escapeHtml(s.attendance||'—')}</td>
-                    <td style="font-size:.82rem">${escapeHtml(therapyTxt)}</td>
+                    <td style="font-size:.78rem;color:var(--text-light)">${escapeHtml(reasonsTxt)}</td>
                     <td style="font-size:.82rem">${escapeHtml(noteTxt)}</td>
-                    <td style="font-size:.78rem;color:var(--primary-dark)">פתח כרטיס</td>
+                    <td style="font-size:.82rem">${escapeHtml(therapyTxt)}</td>
+                    <td style="font-size:.78rem;color:var(--primary-dark);white-space:nowrap">פתח כרטיס</td>
                   </tr>`;
                 }).join('')}
               </tbody>
             </table>
           </div>
-        ` : `<p style="color:var(--muted);text-align:center;padding:18px">אין תלמידים בסיכון או במעקב כרגע.</p>`}
+        ` : `<p style="color:var(--muted);text-align:center;padding:18px">אין תלמידים בסיכון או במעקב כרגע — לא לפי היועצת, לא לפי ציוני המחנכ/ת, ולא לפי כישורי החיים.</p>`}
       </div>
     </div>
   `;
@@ -3296,36 +3333,67 @@ function renderClassSummaryView(){
   if(typeof injectAIButton === 'function'){
     injectAIButton('aiSummaryHost', 'management', () => buildClassSummaryAIPayload(cls, month), {
       buttonText: `סיכום AI לכיתה ${cls}`,
-      customPrompt: `להלן payload JSON עם נתוני כיתה ${cls} לחודש ${monthLabel}.
+      customPrompt: `להלן payload JSON מלא עם נתוני כיתה ${cls} לחודש ${monthLabel}.
 
-⚠️ חוקי ברזל — קריטי:
-1. **אסור להמציא נתונים שלא קיימים ב-payload.** אם שדה ריק/חסר — כתבי במפורש "לא דווח" או "אין נתון". אסור לחלוטין להמציא שמות תלמידים, מספרים, היעדרויות, או אירועים.
-2. **אסור להמציא שמות תלמידים** — השתמשי רק בשמות שמופיעים ב-atRiskStudents או ב-teacherReport.attendanceStudents.
-3. **אסור להמציא מספרים** — השתמשי רק בערכים מ-stats ו-teacherReport.attendanceAbsences.
-4. אם teacherReport.classOverall ריק — כתבי "המחנך/ת לא הגיש/ה דוח לחודש ${monthLabel}, לא ניתן לסכם את מצב הכיתה."
-5. אם atRiskStudents ריק — כתבי "אין תלמידים שסומנו בסיכון/מעקב ע"י היועצת לכיתה זו".
+מבנה ה-payload:
+- stats: סטטיסטיקות מצרפיות
+- teacherReport: דוח המחנך/ת ברמת הכיתה (מצב כללי, ממד, שיעורי חינוך, הצלחות)
+- students: מערך **של כל התלמידים בכיתה** עם שני שדות:
+  • counselor — נתוני היועצת (סטטוס, נוכחות, אבחונים, טיפול, הערות חודשיות, lifeSkillsAlerts, פגישה אחרונה)
+  • teacherTracking — ציוני המחנך/ת ל-5 סקאלות (ממד, מיומנות, רצינות, נוכחות, תפקוד) בסולם 1-4. 0=לא מולא.
+- homeVisits: ביקורי בית בחודש
+- trendAcrossMonths: מבט-על לחודשים קודמים
 
-מבנה הסיכום (השתמשי בכותרות ### ובלעדי הנתונים שיש):
+⚠️ חוקי ברזל:
+1. **אסור להמציא** — שמות, מספרים, אירועים. רק מה שמופיע ב-payload.
+2. כל שם תלמיד שאת מציינת — חייב להופיע ב-students[].name.
+3. כל מספר/ציון — חייב להגיע מהנתונים.
+4. שדה ריק = "לא דווח".
+
+איך לזהות תלמיד בסיכון (השתמשי **בכל המקורות יחד**):
+- counselor.overallStatus = "red" או "yellow"
+- teacherTracking — שני ציונים או יותר ב-1-2 = סיכון; ציון אחד = מעקב
+- counselor.attendance = "בעייתית" / "חלקית"
+- counselor.lifeSkillsAlerts מכיל פריטים עם status "red" או "yellow"
+- counselor.currentMonthNotes מכיל תוכן שמעיד על קושי
+
+מבנה הסיכום (כותרות ###):
 
 ### 1. מצב הכיתה
-ציטוט/פרפראזה של teacherReport.classOverall. אם ריק — לציין שלא הוגש דוח.
+פרפראזה של teacherReport.classOverall. אם ריק — לציין במפורש "לא הוגש דוח כללי".
 
 ### 2. נוכחות
-לפי stats: כמה תקינים, חלקיים, בעייתיים. אם teacherReport.attendanceStudents מציין שמות — לפרט.
+- סיכום מספרי לפי stats (סדירה / חלקית / בעייתית)
+- שמות התלמידים עם נוכחות חלקית או בעייתית (מ-students[].counselor.attendance)
+- שמות נוספים מ-teacherTracking.attendanceLevel ≤ 2 (המחנך/ת סימנ/ה ציון נוכחות נמוך)
 
-### 3. תהליכים בכיתה
-לפי teacherReport: educationLessonsCount, educationLessonsDesc, currentDimension, currentSkill, successes. אם ריק — "לא דווח".
+### 3. תהליכים והתפתחות בכיתה
+- מה נעשה: educationLessonsCount + educationLessonsDesc
+- ממד מוביל: currentDimension; מיומנות: currentSkill
+- ממוצעי הכיתה (לחשב מ-teacherTracking של כל התלמידים): ממד, מיומנות, רצינות, נוכחות, תפקוד
+- הצלחות: teacherReport.successes
+- מי קיבל "מילה טובה" / שיחה אישית (teacherTracking.gotPositiveWord/hadConversation)
 
-### 4. תלמידים בסיכון
-טבלה של atRiskStudents. לכל אחד: שם, מצב, אבחון/טיפול שדווח, מה חסר. אסור להוסיף שמות שלא ברשימה.
+### 4. תלמידים בסיכון ובמעקב
+**רשימה מפורטת** של כל מי שעונה על אחד הקריטריונים למעלה. לכל אחד:
+- שם
+- סיבה לדגל (איזה מקור — יועצת/מחנכת/lifeSkill/נוכחות)
+- מה הטיפול הקיים (counselor.therapist + counselor.diagnoses + counselor.lastMeeting)
+- מה הערכת היועצת לחודש זה (counselor.currentMonthNotes/done/goals)
+- מה חסר/דחוף
 
-### 5. דגלים דחופים
-לפי teacherReport.flagsForManagement + tracking ב-trendAcrossMonths.
+אם הרשימה ריקה — לציין במפורש שלפי כל הנתונים אין תלמידים שסומנו בסיכון/מעקב.
 
-### 6. המלצות לפעולה
-2-3 המלצות קונקרטיות **רק אם יש מספיק נתונים**. אחרת: "ראשית יש להשלים דוח מחנך/ת לחודש זה כדי לאפשר המלצות מבוססות".
+### 5. דגלים דחופים להנהלה
+- teacherReport.flagsForManagement
+- trackDifficultyStudents/Desc
+- employmentIssues (אם רלוונטי)
+- ביקורי בית עם needsFollowup=true
 
-כתבי בעברית פשוטה, משפטים קצרים. אם הנתונים דלים — תגידי את זה במפורש.`
+### 6. המלצות לפעולה למנהלת
+2-3 המלצות קונקרטיות לחודש הבא, מבוססות על הנתונים. אם נתונים דלים — להגיד מה חסר.
+
+כתבי בעברית פשוטה, משפטים קצרים. הצמדי לנתונים.`
     });
   } else {
     document.getElementById('aiSummaryHost').innerHTML = '<p style="color:var(--muted)">שירות ה-AI לא זמין.</p>';
@@ -3349,38 +3417,87 @@ function resetGeminiKey(){
   renderClassSummaryView();
 }
 
-// Build a compact JSON payload for the AI — only the relevant fields
+// Build a compact JSON payload for the AI — full per-student data from BOTH teacher tracking and counselor
 function buildClassSummaryAIPayload(cls, month){
   const teacher = getTeacherForClass(cls);
   const counselor = getCounselorForClass(cls);
   const hr = getHomeroomReport(cls, month) || {};
+  const hrTracking = hr.studentTracking || {};
   const visits = getHomeVisits(cls, month) || [];
   const students = (DATA.students[cls] || []);
 
-  const stats = { total: students.length, red:0, yellow:0, green:0, attRegular:0, attPartial:0, attProblem:0 };
-  students.forEach(s => {
-    if(s.overallStatus==='red') stats.red++;
-    else if(s.overallStatus==='yellow') stats.yellow++;
+  const SCALE_LABELS = ['לא מולא','1 — נמוך','2','3','4 — גבוה'];
+
+  // Build a per-student record combining EVERYTHING the principal can see
+  function buildStudentRecord(s){
+    const t = hrTracking[s.id] || {};
+    const md = s.monthlyData?.[month] || {};
+    const lifeSkillsArr = Object.entries(s.lifeSkills||{}).map(([sk,v]) => ({
+      skill: sk,
+      status: v.status,
+      notes: v.notes || ''
+    })).filter(ls => ls.status !== 'green' || ls.notes);
+    const lastMeeting = (s.meetings||[]).slice(-1)[0] || null;
+    return {
+      name: s.name,
+      track: s.track || '',
+      // Counselor data
+      counselor: {
+        overallStatus: s.overallStatus,
+        attendance: s.attendance || 'לא דווח',
+        parentContact: s.parentContact || '',
+        diagnoses: s.diagnoses || '',
+        therapist: s.therapist || '',
+        emotionalTherapy: !!s.emotionalTherapy,
+        openCases: s.openCases || '',
+        strengths: s.strengths || '',
+        familyStatus: s.familyStatus || '',
+        economicStatus: s.economicStatus || '',
+        currentMonthDone: md.done || '',
+        currentMonthGoals: md.goals || '',
+        currentMonthNotes: md.notes || '',
+        lifeSkillsAlerts: lifeSkillsArr,
+        lastMeeting: lastMeeting ? {date:lastMeeting.date, summary:lastMeeting.summary, nextSteps:lastMeeting.nextSteps} : null
+      },
+      // Teacher tracking (the 5 scales the homeroom teacher filled this month)
+      teacherTracking: Object.keys(t).length ? {
+        dimLevel: t.dimLevel || 0,
+        dimLevelLabel: SCALE_LABELS[t.dimLevel||0],
+        skillLevel: t.skillLevel || 0,
+        skillLevelLabel: SCALE_LABELS[t.skillLevel||0],
+        academicLevel: t.academicLevel || 0,
+        academicLevelLabel: SCALE_LABELS[t.academicLevel||0],
+        attendanceLevel: t.attendanceLevel || 0,
+        attendanceLevelLabel: SCALE_LABELS[t.attendanceLevel||0],
+        performanceLevel: t.performanceLevel || 0,
+        performanceLevelLabel: SCALE_LABELS[t.performanceLevel||0],
+        hadConversation: !!t.conversation,
+        gotPositiveWord: !!t.positiveWord,
+        goals: t.goals || '',
+        achieved: t.achieved || ''
+      } : null
+    };
+  }
+
+  // Compute stats using same logic as UI
+  const stats = { total: students.length, red:0, yellow:0, green:0, attRegular:0, attPartial:0, attProblem:0, teacherFilledTracking:0 };
+  const allStudents = students.map(buildStudentRecord);
+  allStudents.forEach((rec, i) => {
+    const s = students[i];
+    if(rec.teacherTracking) stats.teacherFilledTracking++;
+    // simple risk recompute
+    const t = rec.teacherTracking || {};
+    const lowSignals = ['attendanceLevel','performanceLevel','academicLevel','skillLevel','dimLevel'].filter(k => t[k]>=1 && t[k]<=2).length;
+    const lsRed = (rec.counselor.lifeSkillsAlerts||[]).filter(ls=>ls.status==='red').length;
+    const lsYellow = (rec.counselor.lifeSkillsAlerts||[]).filter(ls=>ls.status==='yellow').length;
+    const isRed = s.overallStatus==='red' || lowSignals>=2 || lsRed>0 || s.attendance==='בעייתית';
+    const isYellow = !isRed && (s.overallStatus==='yellow' || lowSignals===1 || lsYellow>0 || s.attendance==='חלקית');
+    if(isRed) stats.red++;
+    else if(isYellow) stats.yellow++;
     else stats.green++;
     if(s.attendance==='בעייתית') stats.attProblem++;
     else if(s.attendance==='חלקית') stats.attPartial++;
     else stats.attRegular++;
-  });
-
-  const atRisk = students.filter(s => s.overallStatus!=='green').map(s => {
-    const md = s.monthlyData?.[month] || {};
-    return {
-      name: s.name,
-      status: s.overallStatus,
-      attendance: s.attendance,
-      diagnoses: s.diagnoses || '',
-      therapist: s.therapist || '',
-      emotionalTherapy: !!s.emotionalTherapy,
-      openCases: s.openCases || '',
-      monthlyDone: md.done || '',
-      monthlyGoals: md.goals || '',
-      monthlyNotes: md.notes || ''
-    };
   });
 
   const trend = MONTH_KEYS.map(mk => {
@@ -3417,7 +3534,7 @@ function buildClassSummaryAIPayload(cls, month){
       successes: hr.successes || '',
       goalNextMonth: hr.goalNextMonth || ''
     },
-    atRiskStudents: atRisk,
+    students: allStudents,
     homeVisits: visits.map(v => ({
       studentName: v.studentName,
       date: v.date,
