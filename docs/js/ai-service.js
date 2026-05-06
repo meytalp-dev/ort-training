@@ -4,8 +4,14 @@
  */
 
 const AIService = (() => {
-  // ── API Configuration (single place for updates) ──
-  const API_KEY = 'AIzaSyAZNwwPvxKjtkr43TIA1c2zLLAnvua7L3Y';
+  // ── API Configuration ──
+  // ⚠️ Repo ציבורי — מפתחות שמופיעים בקוד נחסמים אוטומטית ע"י Google תוך דקות.
+  // המפתח חייב להיות מוגבל ל-HTTP referrer `meytalp-dev.github.io/*` ב-Google Cloud Console
+  // לפני שמטמיעים אותו פה. עד אז — נשמר ב-localStorage בלבד.
+  const DEFAULT_GEMINI_KEY = '';
+  function getApiKey() {
+    return (localStorage.getItem('mgmt-gemini-key') || DEFAULT_GEMINI_KEY).trim();
+  }
   const MODEL = 'gemini-2.5-flash';
   const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
@@ -78,6 +84,18 @@ const AIService = (() => {
    * @param {string} [customPrompt] - Optional override for the user prompt
    * @returns {Promise<string>} - The AI response text
    */
+  async function callGemini(apiKey, systemPrompt, userPrompt) {
+    return fetch(`${API_URL}?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+      })
+    });
+  }
+
   async function getInsights(context, data, customPrompt) {
     const systemPrompt = SYSTEM_PROMPTS[context];
     if (!systemPrompt) {
@@ -86,18 +104,20 @@ const AIService = (() => {
 
     const userPrompt = customPrompt || `נתח את הנתונים הבאים ותן תובנות:\n${JSON.stringify(data, null, 2)}`;
 
-    const response = await fetch(`${API_URL}?key=${API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024
-        }
-      })
-    });
+    let apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error('חסר מפתח Gemini API. צרי מפתח ב-https://aistudio.google.com/apikey, הגבילי אותו ב-Google Cloud Console ל-HTTP referrer של meytalp-dev.github.io/*, ואז הזיני אותו דרך כפתור "החלפת מפתח Gemini".');
+    }
+    let response = await callGemini(apiKey, systemPrompt, userPrompt);
+
+    // Auto-recover when a stale localStorage key fails (expired, leaked, restricted, invalid)
+    // → fall back to embedded default and retry once (אם יש כזה)
+    if (!response.ok && DEFAULT_GEMINI_KEY && apiKey !== DEFAULT_GEMINI_KEY && (response.status === 400 || response.status === 403)) {
+      console.warn('[AIService] localStorage key failed ('+response.status+') — falling back to default key');
+      localStorage.removeItem('mgmt-gemini-key');
+      apiKey = DEFAULT_GEMINI_KEY;
+      response = await callGemini(apiKey, systemPrompt, userPrompt);
+    }
 
     if (!response.ok) {
       const err = await response.text();
