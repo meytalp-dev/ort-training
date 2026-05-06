@@ -3033,6 +3033,93 @@ function renderPrincipalStudentView(classId, studentId){
 
 // ==================== CLASS SUMMARY VIEW (Principal/Deputy) ====================
 let _summaryClass = null;
+let _attendanceCache = null; // populated on first call
+
+function loadAttendanceData(){
+  // Already loaded? return cached
+  if(_attendanceCache) return Promise.resolve(_attendanceCache);
+  // Try cloudStorage first (authoritative), fall back to localStorage
+  return cloudStorage.get('ort-attendance', {fallback: null}).then(function(data){
+    if(!data){
+      try { data = JSON.parse(localStorage.getItem('ort-attendance') || '{}'); }
+      catch(e){ data = {}; }
+    }
+    _attendanceCache = data || {};
+    return _attendanceCache;
+  }).catch(function(){
+    try { _attendanceCache = JSON.parse(localStorage.getItem('ort-attendance') || '{}'); }
+    catch(e){ _attendanceCache = {}; }
+    return _attendanceCache;
+  });
+}
+
+// Compute per-student attendance stats for a given Hebrew-month-key (e.g. '2026-04')
+function computeAttendanceForMonth(students, monthKey){
+  const att = _attendanceCache || {};
+  // Build the date range = all days in that calendar month
+  const [yr, mo] = monthKey.split('-').map(Number);
+  const out = {
+    perStudent: {},
+    classStats: { totalSlots:0, present:0, absent:0, late:0, sick:0, early:0 },
+    excellent: [],   // 100% presence
+    atRisk: [],      // <80% presence
+    schoolDaysCount: 0
+  };
+
+  // Find which dates actually had data recorded for this class & month (treat them as school days)
+  const classIds = new Set(students.map(s => extractRawStudentId(s.id)));
+  const schoolDays = new Set();
+  Object.keys(att).forEach(function(sid){
+    if(!classIds.has(String(sid))) return;
+    Object.keys(att[sid] || {}).forEach(function(dateKey){
+      if(dateKey.startsWith(yr+'-'+String(mo).padStart(2,'0')+'-')) schoolDays.add(dateKey);
+    });
+  });
+  out.schoolDaysCount = schoolDays.size;
+
+  students.forEach(function(s){
+    const rawId = extractRawStudentId(s.id);
+    const records = att[rawId] || {};
+    const stat = { name:s.name, present:0, absent:0, late:0, sick:0, early:0, total:0, pct:0, reasons:[] };
+    schoolDays.forEach(function(dateKey){
+      const r = records[dateKey];
+      if(!r) return;
+      stat.total++;
+      if(r.status==='present') stat.present++;
+      else if(r.status==='absent'){ stat.absent++; if(r.reason) stat.reasons.push(r.reason); }
+      else if(r.status==='late') stat.late++;
+      else if(r.status==='sick') stat.sick++;
+      else if(r.status==='early') stat.early++;
+    });
+    // pct = (present+late+early) / total — present-counting includes late & early as "showed up"
+    const showedUp = stat.present + stat.late + stat.early;
+    stat.pct = stat.total ? Math.round((showedUp / stat.total) * 100) : null;
+    out.perStudent[s.id] = stat;
+    out.classStats.totalSlots += stat.total;
+    out.classStats.present += stat.present;
+    out.classStats.absent += stat.absent;
+    out.classStats.late += stat.late;
+    out.classStats.sick += stat.sick;
+    out.classStats.early += stat.early;
+
+    if(stat.total >= Math.max(3, schoolDays.size * 0.5)){
+      // Only classify if student has enough recorded days
+      if(stat.pct === 100 && stat.absent === 0 && stat.sick === 0) out.excellent.push(stat);
+      else if(stat.pct !== null && stat.pct < 80) out.atRisk.push(stat);
+    }
+  });
+
+  out.excellent.sort((a,b) => b.total - a.total);
+  out.atRisk.sort((a,b) => a.pct - b.pct);
+  return out;
+}
+
+// Student IDs in monthly-reports look like 'ט1_123' but ATTENDANCE keys come from STUDENTS.id (raw)
+function extractRawStudentId(id){
+  // Format from buildRealStudents: className + '_' + s.id
+  const idx = String(id).indexOf('_');
+  return idx >= 0 ? String(id).slice(idx + 1) : String(id);
+}
 
 function renderClassSummaryView(){
   const container = document.getElementById('viewClassSummary');
@@ -3044,22 +3131,37 @@ function renderClassSummaryView(){
   const cls = container.dataset.selectedClass || _summaryClass;
   _summaryClass = cls;
 
+  // Lazy-load attendance data the first time the principal opens this view
+  if(!_attendanceCache){
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">טוען נתוני נוכחות…</div>';
+    loadAttendanceData().then(() => renderClassSummaryView());
+    return;
+  }
+
   const students = (DATA.students[cls] || []).slice();
   const teacher = getTeacherForClass(cls);
   const counselor = getCounselorForClass(cls);
   const hr = getHomeroomReport(cls, month);
   const visits = getHomeVisits(cls, month);
   const hrTracking = hr?.studentTracking || {};
+  const attData = computeAttendanceForMonth(students, month);
 
-  // Compute risk level per student from ALL signals (counselor + teacher tracking + lifeSkills + attendance)
+  // Compute risk level per student from ALL signals (counselor + teacher tracking + lifeSkills + attendance + real attendance)
   function computeStudentRisk(s){
     const t = hrTracking[s.id] || {};
+    const att = attData.perStudent[s.id] || {};
     const reasons = [];
     let level = 'green';
     function bump(to){ if(to==='red') level='red'; else if(to==='yellow' && level!=='red') level='yellow'; }
 
     if(s.overallStatus==='red'){ bump('red'); reasons.push('סטטוס יועצת: התערבות'); }
     else if(s.overallStatus==='yellow'){ bump('yellow'); reasons.push('סטטוס יועצת: מעקב'); }
+
+    // Real attendance (only when we have enough data)
+    if(att.total >= 3){
+      if(att.pct < 70){ bump('red'); reasons.push('נוכחות בפועל: '+att.pct+'% ('+att.absent+' חיסורים)'); }
+      else if(att.pct < 85){ bump('yellow'); reasons.push('נוכחות בפועל: '+att.pct+'%'); }
+    }
 
     // Teacher tracking: 1-4 scale (1=lowest); 0=not filled
     const lowFields = [];
@@ -3198,6 +3300,72 @@ function renderClassSummaryView(){
     </div>
   `;
 
+  // ==== ATTENDANCE DATA (from attendance.html localStorage) ====
+  const cs = attData.classStats;
+  const overallPct = cs.totalSlots ? Math.round(((cs.present + cs.late + cs.early) / cs.totalSlots) * 100) : null;
+  const attendanceHTML = attData.schoolDaysCount ? `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <h3>נתוני נוכחות בפועל — ${monthLabel}</h3>
+        <span style="font-size:.78rem;color:var(--muted)">${attData.schoolDaysCount} ימי לימוד · ממוצע כיתתי ${overallPct!==null?overallPct+'%':'—'}</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:18px">
+          <div style="padding:12px;border-radius:12px;background:var(--success-bg);text-align:center">
+            <div style="font-size:1.4rem;font-weight:800;color:var(--success);font-family:Heebo">${cs.present}</div>
+            <div style="font-size:.74rem;color:var(--muted)">נוכחויות</div>
+          </div>
+          <div style="padding:12px;border-radius:12px;background:var(--danger-bg);text-align:center">
+            <div style="font-size:1.4rem;font-weight:800;color:var(--danger);font-family:Heebo">${cs.absent}</div>
+            <div style="font-size:.74rem;color:var(--muted)">חיסורים</div>
+          </div>
+          <div style="padding:12px;border-radius:12px;background:rgba(91,155,213,.1);text-align:center">
+            <div style="font-size:1.4rem;font-weight:800;color:#5B9BD5;font-family:Heebo">${cs.late}</div>
+            <div style="font-size:.74rem;color:var(--muted)">איחורים</div>
+          </div>
+          <div style="padding:12px;border-radius:12px;background:rgba(232,176,96,.12);text-align:center">
+            <div style="font-size:1.4rem;font-weight:800;color:var(--accent-dark);font-family:Heebo">${cs.sick}</div>
+            <div style="font-size:.74rem;color:var(--muted)">חולים</div>
+          </div>
+          <div style="padding:12px;border-radius:12px;background:rgba(142,126,212,.1);text-align:center">
+            <div style="font-size:1.4rem;font-weight:800;color:var(--dream-dark);font-family:Heebo">${cs.early}</div>
+            <div style="font-size:.74rem;color:var(--muted)">שחרור מוקדם</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+          <div style="padding:14px 16px;border-radius:14px;background:var(--success-bg);border-right:4px solid var(--success)">
+            <div style="font-size:.84rem;font-weight:700;color:var(--success);margin-bottom:8px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-left:4px"><polyline points="20 6 9 17 4 12"/></svg>
+              הצטיינות בנוכחות (${attData.excellent.length})
+            </div>
+            ${attData.excellent.length
+              ? `<div style="font-size:.85rem;line-height:1.7">${attData.excellent.map(e => `<strong>${escapeHtml(e.name)}</strong> — ${e.total}/${e.total} ימים`).join('<br>')}</div>`
+              : '<div style="font-size:.82rem;color:var(--muted)">אין תלמידים עם 100% נוכחות החודש.</div>'
+            }
+          </div>
+          <div style="padding:14px 16px;border-radius:14px;background:var(--danger-bg);border-right:4px solid var(--danger)">
+            <div style="font-size:.84rem;font-weight:700;color:var(--danger);margin-bottom:8px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-2px;margin-left:4px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              סיכון נוכחות — מתחת ל-80% (${attData.atRisk.length})
+            </div>
+            ${attData.atRisk.length
+              ? `<div style="font-size:.85rem;line-height:1.7">${attData.atRisk.map(e => `<strong>${escapeHtml(e.name)}</strong> — ${e.pct}% (${e.absent} חיסורים${e.late?`, ${e.late} איחורים`:''})`).join('<br>')}</div>`
+              : '<div style="font-size:.82rem;color:var(--muted)">אין תלמידים בסיכון נוכחות החודש.</div>'
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  ` : `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><h3>נתוני נוכחות בפועל — ${monthLabel}</h3></div>
+      <div class="card-body">
+        <p style="color:var(--muted);text-align:center;padding:18px">לא נמצאו נתוני נוכחות לחודש זה. ייתכן שהמערכת לא עודכנה — <a href="attendance.html" style="color:var(--primary-dark)">פתחי את מערכת הנוכחות</a>.</p>
+      </div>
+    </div>
+  `;
+
   // ==== FLAGS + ISSUES FROM TEACHER ====
   const flagsBlocks = [];
   if(hr?.flagsForManagement) flagsBlocks.push({title:'דגלים להנהלה', text:hr.flagsForManagement, color:'var(--danger)', bg:'var(--danger-bg)'});
@@ -3327,7 +3495,7 @@ function renderClassSummaryView(){
     </div>
   `;
 
-  container.innerHTML = selectorHTML + overviewHTML + teacherCardHTML + flagsHTML + atRiskHTML + visitsHTML + trendHTML + aiHTML;
+  container.innerHTML = selectorHTML + overviewHTML + attendanceHTML + teacherCardHTML + flagsHTML + atRiskHTML + visitsHTML + trendHTML + aiHTML;
 
   // Inject AI button (uses management context)
   if(typeof injectAIButton === 'function'){
@@ -3338,9 +3506,11 @@ function renderClassSummaryView(){
 מבנה ה-payload:
 - stats: סטטיסטיקות מצרפיות
 - teacherReport: דוח המחנך/ת ברמת הכיתה (מצב כללי, ממד, שיעורי חינוך, הצלחות)
-- students: מערך **של כל התלמידים בכיתה** עם שני שדות:
+- students: מערך **של כל התלמידים בכיתה** עם שלושה שדות:
   • counselor — נתוני היועצת (סטטוס, נוכחות, אבחונים, טיפול, הערות חודשיות, lifeSkillsAlerts, פגישה אחרונה)
+  • realAttendance — נתוני נוכחות בפועל מהמערכת לחודש זה (ימים, % נוכחות, חיסורים, איחורים, סיבות)
   • teacherTracking — ציוני המחנך/ת ל-5 סקאלות (ממד, מיומנות, רצינות, נוכחות, תפקוד) בסולם 1-4. 0=לא מולא.
+- realAttendanceSummary: סיכום נוכחות כיתתי + רשימות מצטיינים (100%) ובסיכון (<80%)
 - homeVisits: ביקורי בית בחודש
 - trendAcrossMonths: מבט-על לחודשים קודמים
 
@@ -3363,9 +3533,11 @@ function renderClassSummaryView(){
 פרפראזה של teacherReport.classOverall. אם ריק — לציין במפורש "לא הוגש דוח כללי".
 
 ### 2. נוכחות
-- סיכום מספרי לפי stats (סדירה / חלקית / בעייתית)
-- שמות התלמידים עם נוכחות חלקית או בעייתית (מ-students[].counselor.attendance)
-- שמות נוספים מ-teacherTracking.attendanceLevel ≤ 2 (המחנך/ת סימנ/ה ציון נוכחות נמוך)
+**הסתמכי בעיקר על realAttendanceSummary** — זה הנתון האמיתי מהמערכת.
+- סיכום כיתתי: % נוכחות כללי, מספר חיסורים, איחורים (realAttendanceSummary.classStats)
+- **הצטיינות** — שמות מ-realAttendanceSummary.excellentInAttendance (תלמידים עם 100% נוכחות)
+- **סיכון בנוכחות** — שמות מ-realAttendanceSummary.atRiskInAttendance, עם % הנוכחות שלהם וסיבות אם דווחו
+- שמות נוספים מ-teacherTracking.attendanceLevel ≤ 2 (אם יש פער מהנתונים בפועל — לציין)
 
 ### 3. תהליכים והתפתחות בכיתה
 - מה נעשה: educationLessonsCount + educationLessonsDesc
@@ -3425,6 +3597,7 @@ function buildClassSummaryAIPayload(cls, month){
   const hrTracking = hr.studentTracking || {};
   const visits = getHomeVisits(cls, month) || [];
   const students = (DATA.students[cls] || []);
+  const attData = computeAttendanceForMonth(students, month);
 
   const SCALE_LABELS = ['לא מולא','1 — נמוך','2','3','4 — גבוה'];
 
@@ -3432,6 +3605,7 @@ function buildClassSummaryAIPayload(cls, month){
   function buildStudentRecord(s){
     const t = hrTracking[s.id] || {};
     const md = s.monthlyData?.[month] || {};
+    const att = attData.perStudent[s.id] || {};
     const lifeSkillsArr = Object.entries(s.lifeSkills||{}).map(([sk,v]) => ({
       skill: sk,
       status: v.status,
@@ -3459,6 +3633,17 @@ function buildClassSummaryAIPayload(cls, month){
         lifeSkillsAlerts: lifeSkillsArr,
         lastMeeting: lastMeeting ? {date:lastMeeting.date, summary:lastMeeting.summary, nextSteps:lastMeeting.nextSteps} : null
       },
+      // Real attendance from attendance.html for this month
+      realAttendance: att.total ? {
+        daysRecorded: att.total,
+        present: att.present,
+        absent: att.absent,
+        late: att.late,
+        sick: att.sick,
+        early: att.early,
+        attendancePct: att.pct,
+        absenceReasons: (att.reasons || []).filter(Boolean).slice(0,5)
+      } : null,
       // Teacher tracking (the 5 scales the homeroom teacher filled this month)
       teacherTracking: Object.keys(t).length ? {
         dimLevel: t.dimLevel || 0,
@@ -3535,6 +3720,12 @@ function buildClassSummaryAIPayload(cls, month){
       goalNextMonth: hr.goalNextMonth || ''
     },
     students: allStudents,
+    realAttendanceSummary: {
+      schoolDaysCount: attData.schoolDaysCount,
+      classStats: attData.classStats,
+      excellentInAttendance: attData.excellent.map(e => ({name:e.name, daysPresent:e.total, pct:e.pct})),
+      atRiskInAttendance: attData.atRisk.map(e => ({name:e.name, pct:e.pct, absent:e.absent, late:e.late, reasons:(e.reasons||[]).slice(0,3)}))
+    },
     homeVisits: visits.map(v => ({
       studentName: v.studentName,
       date: v.date,
