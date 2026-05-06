@@ -3609,7 +3609,7 @@ function renderClassSummaryView(){
   const aiHTML = `
     <div class="card" style="margin-bottom:20px">
       <div class="card-header">
-        <h3>סיכום אינטגרטיבי — תובנות AI</h3>
+        <h3>תובנות AI — מבוסס על הנתונים למעלה</h3>
         <div style="display:flex;gap:8px">
           <button class="btn btn-sm btn-outline" onclick="showAIPayload()" title="הצג בדיוק איזה נתונים נשלחים ל-AI">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="6"/><path d="M7 4v3M7 10h0"/></svg>
@@ -3622,10 +3622,32 @@ function renderClassSummaryView(){
         </div>
       </div>
       <div class="card-body">
-        <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">
-          הפעלי את כפתור התובנות לקבלת סיכום מובנה. אם נראה שה-AI ממציא — לחצי "מה נשלח ל-AI" כדי לראות את הנתונים האמיתיים שמועברים.
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:18px">
+          ה-AI לא ממציא נתונים — הוא רואה בדיוק את המידע שכבר עובד למעלה. תפקידו רק להציע פעולות והדגשות.
         </p>
-        <div id="aiSummaryHost"></div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px">
+
+          <div style="padding:16px;border:1.5px solid var(--danger);border-radius:14px;background:rgba(212,92,110,.04)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <h4 style="font-size:1rem;font-weight:700;color:var(--danger);margin:0">3 צעדי פעולה דחופים השבוע</h4>
+            </div>
+            <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">מה הכי דחוף שאת צריכה לטפל בו ב-7 הימים הקרובים</p>
+            <div id="aiHostActions"></div>
+          </div>
+
+          <div style="padding:16px;border:1.5px solid var(--primary);border-radius:14px;background:rgba(58,172,160,.04)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary-dark)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>
+              <h4 style="font-size:1rem;font-weight:700;color:var(--primary-dark);margin:0">3 דברים לישיבת הצוות השבועית</h4>
+            </div>
+            <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">נושאים שדורשים דיון משותף (מחנכ/ת + יועצת + הנהלה)</p>
+            <div id="aiHostMeeting"></div>
+          </div>
+
+        </div>
+
         <div id="aiPayloadDebug" style="display:none;margin-top:14px"></div>
       </div>
     </div>
@@ -3633,82 +3655,55 @@ function renderClassSummaryView(){
 
   container.innerHTML = selectorHTML + overviewHTML + attendanceHTML + teacherCardHTML + flagsHTML + studentsHTML + atRiskHTML + visitsHTML + trendHTML + aiHTML;
 
-  // Inject AI button (uses management context)
+  // ==== TWO FOCUSED AI BUTTONS (action items + meeting agenda) ====
   if(typeof injectAIButton === 'function'){
-    injectAIButton('aiSummaryHost', 'management', () => buildClassSummaryAIPayload(cls, month), {
-      buttonText: `סיכום AI לכיתה ${cls}`,
-      customPrompt: `כתבי דוח עבור מנהלת ביה"ס על כיתה ${cls} בחודש ${monthLabel}, **בהסתמך אך ורק על ה-payload שלהלן**.
 
-—————————————————————————————
-חוקי כתיבה — מחייבים:
+    // Button 1 — Urgent action items for the principal this week
+    injectAIButton('aiHostActions', 'management', () => buildClassSummaryAIPayload(cls, month), {
+      buttonText: 'בנה רשימת פעולות',
+      customPrompt: `בהינתן ה-payload עם כל נתוני כיתה ${cls} לחודש ${monthLabel}, ציינו **שלוש פעולות הכי דחופות** שמייטל (מנהלת ביה"ס) צריכה לבצע ב-7 הימים הקרובים.
 
-1. **כל שם תלמיד שאת כותבת חייב להופיע במפורש ב-payload.** לפני שאת כותבת שם — חפשי אותו בשדה students[].name. אם אין — אל תכתבי אותו.
-2. **כל מספר חייב לבוא מ-payload** — מ-stats, realAttendanceSummary.classStats, או realAttendance של תלמיד ספציפי.
-3. אם שדה ריק/null — כתבי במפורש "לא דווח" או "אין נתון". לעולם לא להמציא.
-4. אם אין נתון בכלל לתת קטגוריה — כתבי "אין מידע מספק לחלק זה" ועברי הלאה.
-—————————————————————————————
+חוקים:
+- כל פעולה חייבת להיות מבוססת על נתון ספציפי ב-payload (תלמיד מסוים, מצב מסוים, מספר מסוים)
+- אל תמציאי שמות. השתמשי רק בשמות מ-students[].name
+- אל תמציאי מספרים. השתמשי רק במה שב-stats / realAttendanceSummary / realAttendance
+- מיון לפי דחיפות (1 הכי דחוף)
 
-מבנה ה-payload (קראי בקפידה):
+לכל פעולה — פורמט קבוע:
+**1. [כותרת בת 5-10 מילים]**
+- למה דחוף: [נתון ספציפי שגרם לדגל — למשל "X% נוכחות", "ציון 1 ב-Y", "lifeSkillsAlerts ב-Z"]
+- מה לעשות: [פעולה קונקרטית — לא "לדבר עם" אלא "לזמן ל-15 דקות שיחה ב..."]
+- מי מעורבים: [שמות מהצוות / משפחה / תלמידים]
 
-• **stats** — סיכום מספרי של הכיתה
-• **teacherReport** — דוח המחנכ/ת ברמת הכיתה
-• **students[]** — רשומה לכל תלמיד עם 3 תת-שדות:
-   - **counselor**: סטטוס, נוכחות לפי יועצת, אבחונים, מטפל, הערות חודשיות (currentMonthDone/Goals/Notes), lifeSkillsAlerts (כישורים בצהוב/אדום), פגישה אחרונה
-   - **realAttendance**: ימים מתועדים, נוכחויות, חיסורים, איחורים, אחוז נוכחות בפועל, סיבות חיסור
-   - **teacherTracking**: 5 ציונים מהמחנכ/ת בסולם 1-4 (1=נמוך, 4=גבוה). 0 = לא מולא. כולל hadConversation, gotPositiveWord, goals, achieved
-• **realAttendanceSummary**: סיכום נוכחות כיתתי + רשימות מצטיינים (100%) ובסיכון (<80%)
-• **homeVisits[]**, **trendAcrossMonths[]**
+אם אין נתונים שמצדיקים פעולה דחופה — כתבי "אין דגלים דחופים השבוע, הנתונים תקינים".
 
-—————————————————————————————
-
-מבנה הדוח שתכתבי (כותרות ### בלבד):
-
-### 1. מצב הכיתה
-- אם teacherReport.classOverall קיים → ציטוט/פרפראזה
-- אחרת → "המחנכ/ת לא דיווח/ה על מצב כללי בחודש זה"
-
-### 2. נוכחות
-- ממוצע כיתתי: realAttendanceSummary.classStats — חשבי % מתוך totalSlots
-- מספר חיסורים, איחורים, חולים, שחרור מוקדם
-- **רשימת מצטיינים** — שמות מ-realAttendanceSummary.excellentInAttendance (כל אחד עם המספר)
-- **רשימת בסיכון נוכחות** — שמות מ-realAttendanceSummary.atRiskInAttendance (% + מס' חיסורים + סיבות)
-
-### 3. התפתחות בממדים — מה המחנכ/ת רואה
-- מנייה כמה תלמידים יש להם ציונים גבוהים (3-4) ונמוכים (1-2) בכל אחד מ-5 הסקאלות
-- שמות תלמידים בולטים לטובה (3+ סקאלות בציון 4)
-- שמות תלמידים שמתקשים (2+ סקאלות בציון 1-2)
-- מי קיבל שיחה אישית (hadConversation=true) ומי קיבל מילה טובה (gotPositiveWord=true) החודש
-
-### 4. הערכת היועצת — תלמיד אחר תלמיד
-**עברי על כל student ב-students[] שיש לו currentMonthDone או currentMonthNotes או currentMonthGoals — לא ריק** וכתבי שורה: "**[שם]**: [תוכן הערות היועצת]". אם אין הערות חודשיות בכלל — "אין הערות חודשיות מהיועצת לאף תלמיד".
-
-### 5. תלמידים בסיכון ובמעקב
-תלמיד נחשב "בסיכון" אם **לפחות אחד** מהבאים מתקיים ב-payload שלו:
-- counselor.overallStatus = "red"
-- realAttendance.attendancePct < 70
-- teacherTracking — 2+ ציונים בין 1-2
-- counselor.lifeSkillsAlerts כולל פריט עם status="red"
-
-תלמיד "במעקב" אם:
-- counselor.overallStatus = "yellow"
-- realAttendance.attendancePct בין 70-84
-- teacherTracking — ציון אחד 1-2
-- lifeSkillsAlerts יש status="yellow"
-
-לכל תלמיד שמתאים — שורה עם: שם · הסיבות (כל מה שמתאים מהרשימה למעלה) · מה הטיפול הקיים (counselor.therapist + counselor.diagnoses + counselor.lastMeeting אם יש)
-
-אם אין אף תלמיד שמתאים → "לפי הנתונים אין תלמידים בסיכון/מעקב החודש".
-
-### 6. דגלים להנהלה
-מ-teacherReport: flagsForManagement, trackDifficultyStudents+Desc, employmentIssues. מ-homeVisits: ביקורים עם needsFollowup=true.
-
-### 7. המלצות לפעולה (3 צעדים מקסימום)
-**רק אם יש מספיק נתונים**. כל המלצה צריכה להפנות לתלמיד/קבוצה ספציפית מ-payload.
-
-כתבי בעברית פשוטה, משפטים קצרים, ללא הזיות.`
+עברית פשוטה, משפטים קצרים.`
     });
+
+    // Button 2 — Topics for the weekly staff meeting
+    injectAIButton('aiHostMeeting', 'management', () => buildClassSummaryAIPayload(cls, month), {
+      buttonText: 'בנה סדר יום לישיבה',
+      customPrompt: `בהינתן ה-payload עם נתוני כיתה ${cls} לחודש ${monthLabel}, הציעי **שלושה נושאים** הכי חשובים לישיבת הצוות השבועית הקרובה (מחנכ/ת + יועצת + הנהלה).
+
+חוקים:
+- בחרי נושאים שדורשים **שיחה משותפת** ואי-אפשר לפתור לבד (לא משימות אדמיניסטרטיביות)
+- כל נושא מבוסס על נתון ב-payload — תלמיד, דפוס, פער בין מקורות
+- אל תמציאי שמות או מספרים — רק מה שמופיע ב-payload
+- חפשי במיוחד **פערים בין מקורות**: למשל המחנכ/ת נתן/ה ציון נוכחות גבוה אבל הנוכחות בפועל נמוכה, או היועצת לא מציינת קושי שנראה בציוני המחנכ/ת
+
+פורמט:
+**1. [שם הנושא — 5-8 מילים]**
+- מה הנתון: [על מה זה מבוסס — תלמיד/ים ספציפי/ים, דפוס]
+- למה דרוש דיון: [מה לא ניתן להחליט לבד]
+- מה ההחלטה שצריך לקבל: [שאלה קונקרטית לדיון]
+
+אם אין נתונים שמצדיקים דיון משותף — כתבי "השבוע אין נושאים שדורשים דיון משותף, רק מעקב אישי".
+
+עברית פשוטה, משפטים קצרים.`
+    });
+
   } else {
-    document.getElementById('aiSummaryHost').innerHTML = '<p style="color:var(--muted)">שירות ה-AI לא זמין.</p>';
+    document.getElementById('aiHostActions').innerHTML = '<p style="color:var(--muted);font-size:.85rem">שירות ה-AI לא זמין.</p>';
   }
 }
 
