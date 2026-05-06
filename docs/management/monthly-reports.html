@@ -3655,56 +3655,117 @@ function renderClassSummaryView(){
 
   container.innerHTML = selectorHTML + overviewHTML + attendanceHTML + teacherCardHTML + flagsHTML + studentsHTML + atRiskHTML + visitsHTML + trendHTML + aiHTML;
 
+  // ==== DATA SUFFICIENCY CHECK before exposing AI buttons ====
+  const dataCheck = checkDataSufficiency(cls, month);
+  if(!dataCheck.sufficient){
+    const empty = `<div style="padding:14px 16px;background:var(--warn-bg);border-right:3px solid var(--warn);border-radius:10px;font-size:.85rem;line-height:1.6">
+      <strong>אין מספיק נתונים להפעלת ה-AI לחודש זה.</strong><br>
+      ${escapeHtml(dataCheck.message)}<br>
+      <span style="color:var(--muted);font-size:.78rem">ה-AI לא יופעל כשהמידע דליל מדי כדי למנוע המצאות.</span>
+    </div>`;
+    document.getElementById('aiHostActions').innerHTML = empty;
+    document.getElementById('aiHostMeeting').innerHTML = empty;
+    return;
+  }
+
   // ==== TWO FOCUSED AI BUTTONS (action items + meeting agenda) ====
+  const STRICT_ANTI_HALLUCINATION = `
+חוקי ברזל קריטיים — לפני כל מילה:
+1. **קראי את ה-payload כולו לפני שאת כותבת.** ספרי כמה תלמידים יש ב-students[]. ספרי כמה יש להם teacherTracking לא-ריק. ספרי כמה יש להם counselor.currentMonthDone/Notes/Goals לא-ריק.
+2. **אסור** לכתוב את המילה "דוגמה" או "לדוגמה" או "כמו ש..." או "אילו היו לי נתונים אמיתיים..."
+3. **אסור** להניח שה-payload דמה. הוא אמיתי — אלה הנתונים שהמורה והיועצת מילאו.
+4. **אסור** להציג שם תלמיד שלא מופיע ב-students[].name (חפשי בעצמך)
+5. **אסור** להציג מספר/אחוז/ציון שלא מופיע ישירות ב-payload
+6. אם הנתון ריק/null/undefined → לדלג עליו. אל תכתבי "לא צוין" שורה אחר שורה — פשוט לדלג.
+7. אם אין מספיק מידע ל-3 פריטים — לכתוב פחות. עדיף 1 פריט נכון מ-3 פריטים בהזיה.
+`;
+
   if(typeof injectAIButton === 'function'){
 
     // Button 1 — Urgent action items for the principal this week
     injectAIButton('aiHostActions', 'management', () => buildClassSummaryAIPayload(cls, month), {
       buttonText: 'בנה רשימת פעולות',
-      customPrompt: `בהינתן ה-payload עם כל נתוני כיתה ${cls} לחודש ${monthLabel}, ציינו **שלוש פעולות הכי דחופות** שמייטל (מנהלת ביה"ס) צריכה לבצע ב-7 הימים הקרובים.
+      customPrompt: `מטרה: רשימת פעולות דחופות למייטל (מנהלת ביה"ס) ל-7 הימים הקרובים, מבוסס על payload של כיתה ${cls} בחודש ${monthLabel}.
 
-חוקים:
-- כל פעולה חייבת להיות מבוססת על נתון ספציפי ב-payload (תלמיד מסוים, מצב מסוים, מספר מסוים)
-- אל תמציאי שמות. השתמשי רק בשמות מ-students[].name
-- אל תמציאי מספרים. השתמשי רק במה שב-stats / realAttendanceSummary / realAttendance
-- מיון לפי דחיפות (1 הכי דחוף)
+${STRICT_ANTI_HALLUCINATION}
 
-לכל פעולה — פורמט קבוע:
-**1. [כותרת בת 5-10 מילים]**
-- למה דחוף: [נתון ספציפי שגרם לדגל — למשל "X% נוכחות", "ציון 1 ב-Y", "lifeSkillsAlerts ב-Z"]
-- מה לעשות: [פעולה קונקרטית — לא "לדבר עם" אלא "לזמן ל-15 דקות שיחה ב..."]
-- מי מעורבים: [שמות מהצוות / משפחה / תלמידים]
+מבנה לכל פעולה:
+**N. [כותרת קצרה]**
+- שם תלמיד/ה ספציפי/ת (חובה — מ-students[].name)
+- הנתון שהפעיל את הדגל: ציטוט מהשדה הספציפי ב-payload (למשל: realAttendance.attendancePct=68%, או teacherTracking.attendanceLevel=1)
+- פעולה קונקרטית: "לזמן/לתאם/להתקשר ל..." בזמן ספציפי
 
-אם אין נתונים שמצדיקים פעולה דחופה — כתבי "אין דגלים דחופים השבוע, הנתונים תקינים".
+עד 3 פעולות. מיון לפי דחיפות.
+אם יש 0-1 דגלים אמיתיים → כתבי רק כמה שיש. אל תמלאי מקומות.
+אם אין שום דגל → "השבוע אין דגלים דחופים. הנתונים יציבים."
 
-עברית פשוטה, משפטים קצרים.`
+ללא הקדמות, ללא הסברים על המתודולוגיה. ישר לרשימה.`
     });
 
     // Button 2 — Topics for the weekly staff meeting
     injectAIButton('aiHostMeeting', 'management', () => buildClassSummaryAIPayload(cls, month), {
       buttonText: 'בנה סדר יום לישיבה',
-      customPrompt: `בהינתן ה-payload עם נתוני כיתה ${cls} לחודש ${monthLabel}, הציעי **שלושה נושאים** הכי חשובים לישיבת הצוות השבועית הקרובה (מחנכ/ת + יועצת + הנהלה).
+      customPrompt: `מטרה: 3 נושאים לישיבת צוות שבועית (מחנכ/ת + יועצת + הנהלה) מבוסס על payload של כיתה ${cls} בחודש ${monthLabel}.
 
-חוקים:
-- בחרי נושאים שדורשים **שיחה משותפת** ואי-אפשר לפתור לבד (לא משימות אדמיניסטרטיביות)
-- כל נושא מבוסס על נתון ב-payload — תלמיד, דפוס, פער בין מקורות
-- אל תמציאי שמות או מספרים — רק מה שמופיע ב-payload
-- חפשי במיוחד **פערים בין מקורות**: למשל המחנכ/ת נתן/ה ציון נוכחות גבוה אבל הנוכחות בפועל נמוכה, או היועצת לא מציינת קושי שנראה בציוני המחנכ/ת
+${STRICT_ANTI_HALLUCINATION}
 
-פורמט:
-**1. [שם הנושא — 5-8 מילים]**
-- מה הנתון: [על מה זה מבוסס — תלמיד/ים ספציפי/ים, דפוס]
-- למה דרוש דיון: [מה לא ניתן להחליט לבד]
-- מה ההחלטה שצריך לקבל: [שאלה קונקרטית לדיון]
+חפשי במיוחד **פערים בין מקורות**:
+- המחנכ/ת נותן/ת ציון אחד אבל הנוכחות בפועל אומרת אחרת
+- היועצת מסמנת lifeSkillsAlerts אבל אין על זה דיון בהערה החודשית
+- תלמיד/ה ירד/ה בציונים מהחודש הקודם (השוואה ל-trendAcrossMonths)
 
-אם אין נתונים שמצדיקים דיון משותף — כתבי "השבוע אין נושאים שדורשים דיון משותף, רק מעקב אישי".
+מבנה לכל נושא:
+**N. [כותרת קצרה]**
+- על מי/מה מדובר: שם תלמיד או דפוס + הנתון הספציפי
+- למה לא יחיד יכול לפתור: מה דורש שיחה משותפת (הצלבת מבטים)
+- שאלה לדיון: שאלה אחת קונקרטית
 
-עברית פשוטה, משפטים קצרים.`
+עד 3 נושאים. אם יש פחות פערים אמיתיים → פחות פריטים. אסור למלא מקומות.
+אם אין שום פער → "אין נושאים שדורשים דיון משותף השבוע, רק מעקב פרטני."
+
+ישר לרשימה. בלי הקדמות.`
     });
 
   } else {
     document.getElementById('aiHostActions').innerHTML = '<p style="color:var(--muted);font-size:.85rem">שירות ה-AI לא זמין.</p>';
   }
+}
+
+// Check whether we have enough real data to justify an AI call
+function checkDataSufficiency(cls, month){
+  const hr = getHomeroomReport(cls, month);
+  const students = (DATA.students[cls] || []);
+  const hrTracking = hr?.studentTracking || {};
+  const studentsWithTracking = students.filter(s => {
+    const t = hrTracking[s.id]; if(!t) return false;
+    return ['dimLevel','skillLevel','academicLevel','attendanceLevel','performanceLevel'].some(k => t[k] > 0);
+  }).length;
+  const studentsWithCounselorNotes = students.filter(s => {
+    const md = s.monthlyData?.[month];
+    return md && (md.done || md.goals || md.notes);
+  }).length;
+  const att = (typeof _attendanceCache !== 'undefined' && _attendanceCache) ? _attendanceCache : {};
+  const hasAttendance = students.some(s => {
+    const rawId = extractRawStudentId(s.id);
+    const records = att[rawId] || {};
+    const [yr, mo] = month.split('-');
+    return Object.keys(records).some(k => k.startsWith(yr+'-'+mo+'-'));
+  });
+  const teacherClassReport = !!(hr && hr.classOverall);
+
+  const sources = [];
+  if(teacherClassReport) sources.push('דוח מחנכ/ת ברמת כיתה');
+  if(studentsWithTracking >= 3) sources.push(`ציוני מעקב ל-${studentsWithTracking} תלמידים`);
+  if(studentsWithCounselorNotes >= 3) sources.push(`הערות יועצת ל-${studentsWithCounselorNotes} תלמידים`);
+  if(hasAttendance) sources.push('נתוני נוכחות בפועל');
+
+  if(sources.length >= 2){
+    return { sufficient: true };
+  }
+  let msg = 'נמצאו רק: ';
+  if(sources.length === 0) msg = 'לא נמצאו נתונים מהמחנכ/ת, מהיועצת, או מהנוכחות לחודש זה.';
+  else if(sources.length === 1) msg = 'נמצאו רק ' + sources[0] + '. נדרשים לפחות 2 מקורות נתונים.';
+  return { sufficient: false, message: msg };
 }
 
 function onSummaryClassChange(){
