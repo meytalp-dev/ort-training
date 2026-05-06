@@ -12,8 +12,8 @@ const AIService = (() => {
   function getApiKey() {
     return (localStorage.getItem('mgmt-gemini-key') || DEFAULT_GEMINI_KEY).trim();
   }
-  const MODEL = 'gemini-2.5-flash';
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest'];
+  function urlFor(model){ return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`; }
 
   // ── System Prompts by Context ──
   const SYSTEM_PROMPTS = {
@@ -84,16 +84,31 @@ const AIService = (() => {
    * @param {string} [customPrompt] - Optional override for the user prompt
    * @returns {Promise<string>} - The AI response text
    */
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
   async function callGemini(apiKey, systemPrompt, userPrompt) {
-    return fetch(`${API_URL}?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
-      })
+    // Retry with exponential backoff + model fallback when Gemini is overloaded (503)
+    const body = JSON.stringify({
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
     });
+    const headers = { 'Content-Type': 'application/json' };
+    const delays = [0, 1500, 4000]; // ms before each attempt
+    let lastResponse = null;
+    for (const model of MODELS) {
+      for (let i = 0; i < delays.length; i++) {
+        if (delays[i]) await sleep(delays[i]);
+        const resp = await fetch(`${urlFor(model)}?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers, body });
+        if (resp.ok) return resp;
+        lastResponse = resp;
+        // Only retry on 503 (overloaded). Other errors → break to next model or surface immediately
+        if (resp.status !== 503) break;
+      }
+      // If non-503 (e.g. 403 leaked) — don't waste time on other models
+      if (lastResponse && lastResponse.status !== 503) return lastResponse;
+    }
+    return lastResponse;
   }
 
   async function getInsights(context, data, customPrompt) {
@@ -112,9 +127,14 @@ const AIService = (() => {
 
     if (!response.ok) {
       const errText = await response.text();
-      // Friendly message for the most common case — leaked/expired key
       if (/leaked|API_KEY_INVALID|API key expired|API key not valid|PERMISSION_DENIED/i.test(errText)) {
         throw new Error('המפתח Gemini שלך נחסם או פג תוקף. צרי מפתח חדש ב-https://aistudio.google.com/apikey ולחצי על "מפתח Gemini" כדי להחליף.');
+      }
+      if (response.status === 503) {
+        throw new Error('Gemini עמוס כרגע (זה זמני, לא בעיה אצלך). ניסיתי 3 מודלים בלי הצלחה — חכי 2-3 דקות ונסי שוב.');
+      }
+      if (response.status === 429) {
+        throw new Error('הגעת למכסת השימוש החינמית של Gemini להיום (50 בקשות לדקה / 1500 ליום). נסי שוב בעוד דקה.');
       }
       throw new Error(`Gemini API error (${response.status}): ${errText}`);
     }
