@@ -5,10 +5,10 @@
 
 const AIService = (() => {
   // ── API Configuration ──
-  // המפתח מוגבל ב-Google Cloud Console ל-HTTP referrer `meytalp-dev.github.io/*` בלבד —
-  // לכן בטוח להשאיר אותו פה (גנב לא יוכל להשתמש בו מדומיין אחר).
-  // אם מחליפים — חובה להגביל גם את המפתח החדש לפני הטמעה!
-  const DEFAULT_GEMINI_KEY = 'AIzaSyAzvJn0wr1h344E-Sd57Z7pRX13UUp9S-s';
+  // ⚠️ חשוב: Google סורק GitHub אוטומטית וחוסם כל מפתח Gemini שמופיע ב-public repo
+  // כ-"leaked" — גם אם הוא מוגבל לדומיין. לכן המפתח לא יושב בקוד.
+  // המפתח נשמר ב-localStorage של מיטל בלבד (כפתור "מפתח Gemini" בסיכום כיתה).
+  const DEFAULT_GEMINI_KEY = '';
   function getApiKey() {
     return (localStorage.getItem('mgmt-gemini-key') || DEFAULT_GEMINI_KEY).trim();
   }
@@ -106,22 +106,17 @@ const AIService = (() => {
 
     let apiKey = getApiKey();
     if (!apiKey) {
-      throw new Error('חסר מפתח Gemini API. צרי מפתח ב-https://aistudio.google.com/apikey, הגבילי אותו ב-Google Cloud Console ל-HTTP referrer של meytalp-dev.github.io/*, ואז הזיני אותו דרך כפתור "החלפת מפתח Gemini".');
+      throw new Error('חסר מפתח Gemini. לחצי על כפתור "מפתח Gemini" בכרטיס סיכום AI והדביקי מפתח חדש מ-https://aistudio.google.com/apikey');
     }
-    let response = await callGemini(apiKey, systemPrompt, userPrompt);
-
-    // Auto-recover when a stale localStorage key fails (expired, leaked, restricted, invalid)
-    // → fall back to embedded default and retry once (אם יש כזה)
-    if (!response.ok && DEFAULT_GEMINI_KEY && apiKey !== DEFAULT_GEMINI_KEY && (response.status === 400 || response.status === 403)) {
-      console.warn('[AIService] localStorage key failed ('+response.status+') — falling back to default key');
-      localStorage.removeItem('mgmt-gemini-key');
-      apiKey = DEFAULT_GEMINI_KEY;
-      response = await callGemini(apiKey, systemPrompt, userPrompt);
-    }
+    const response = await callGemini(apiKey, systemPrompt, userPrompt);
 
     if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Gemini API error (${response.status}): ${err}`);
+      const errText = await response.text();
+      // Friendly message for the most common case — leaked/expired key
+      if (/leaked|API_KEY_INVALID|API key expired|API key not valid|PERMISSION_DENIED/i.test(errText)) {
+        throw new Error('המפתח Gemini שלך נחסם או פג תוקף. צרי מפתח חדש ב-https://aistudio.google.com/apikey ולחצי על "מפתח Gemini" כדי להחליף.');
+      }
+      throw new Error(`Gemini API error (${response.status}): ${errText}`);
     }
 
     const result = await response.json();
