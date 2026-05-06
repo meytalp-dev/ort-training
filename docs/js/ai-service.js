@@ -91,7 +91,7 @@ const AIService = (() => {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
       })
     });
   }
@@ -125,7 +125,12 @@ const AIService = (() => {
     }
 
     const result = await response.json();
-    return result.candidates?.[0]?.content?.parts?.[0]?.text || 'לא התקבלה תשובה מה-AI';
+    const candidate = result.candidates?.[0];
+    let text = candidate?.content?.parts?.[0]?.text || 'לא התקבלה תשובה מה-AI';
+    if (candidate?.finishReason === 'MAX_TOKENS') {
+      text += '\n\n_(התשובה נחתכה כי הגיעה למגבלת אורך — נסי שוב או צמצמי את הנתונים)_';
+    }
+    return text;
   }
 
   return { getInsights, SYSTEM_PROMPTS };
