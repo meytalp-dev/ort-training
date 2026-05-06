@@ -3481,16 +3481,23 @@ function renderClassSummaryView(){
     <div class="card" style="margin-bottom:20px">
       <div class="card-header">
         <h3>סיכום אינטגרטיבי — תובנות AI</h3>
-        <button class="btn btn-sm btn-outline" onclick="resetGeminiKey()" title="הזנה / החלפה של מפתח Gemini (נשמר במכשיר שלך בלבד)">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M13 10V4H7"/><path d="M11.5 7.5A6 6 0 002.5 4M2.5 6.5A6 6 0 0011.5 10"/></svg>
-          מפתח Gemini
-        </button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-outline" onclick="showAIPayload()" title="הצג בדיוק איזה נתונים נשלחים ל-AI">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="6"/><path d="M7 4v3M7 10h0"/></svg>
+            מה נשלח ל-AI
+          </button>
+          <button class="btn btn-sm btn-outline" onclick="resetGeminiKey()" title="הזנה / החלפה של מפתח Gemini (נשמר במכשיר שלך בלבד)">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M13 10V4H7"/><path d="M11.5 7.5A6 6 0 002.5 4M2.5 6.5A6 6 0 0011.5 10"/></svg>
+            מפתח Gemini
+          </button>
+        </div>
       </div>
       <div class="card-body">
         <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">
-          הפעלי את כפתור התובנות לקבלת סיכום מובנה — מצב הכיתה, תלמידים שדורשים תשומת לב, נקודות לחיזוק והמלצות לפעולה.
+          הפעלי את כפתור התובנות לקבלת סיכום מובנה. אם נראה שה-AI ממציא — לחצי "מה נשלח ל-AI" כדי לראות את הנתונים האמיתיים שמועברים.
         </p>
         <div id="aiSummaryHost"></div>
+        <div id="aiPayloadDebug" style="display:none;margin-top:14px"></div>
       </div>
     </div>
   `;
@@ -3501,71 +3508,75 @@ function renderClassSummaryView(){
   if(typeof injectAIButton === 'function'){
     injectAIButton('aiSummaryHost', 'management', () => buildClassSummaryAIPayload(cls, month), {
       buttonText: `סיכום AI לכיתה ${cls}`,
-      customPrompt: `להלן payload JSON מלא עם נתוני כיתה ${cls} לחודש ${monthLabel}.
+      customPrompt: `כתבי דוח עבור מנהלת ביה"ס על כיתה ${cls} בחודש ${monthLabel}, **בהסתמך אך ורק על ה-payload שלהלן**.
 
-מבנה ה-payload:
-- stats: סטטיסטיקות מצרפיות
-- teacherReport: דוח המחנך/ת ברמת הכיתה (מצב כללי, ממד, שיעורי חינוך, הצלחות)
-- students: מערך **של כל התלמידים בכיתה** עם שלושה שדות:
-  • counselor — נתוני היועצת (סטטוס, נוכחות, אבחונים, טיפול, הערות חודשיות, lifeSkillsAlerts, פגישה אחרונה)
-  • realAttendance — נתוני נוכחות בפועל מהמערכת לחודש זה (ימים, % נוכחות, חיסורים, איחורים, סיבות)
-  • teacherTracking — ציוני המחנך/ת ל-5 סקאלות (ממד, מיומנות, רצינות, נוכחות, תפקוד) בסולם 1-4. 0=לא מולא.
-- realAttendanceSummary: סיכום נוכחות כיתתי + רשימות מצטיינים (100%) ובסיכון (<80%)
-- homeVisits: ביקורי בית בחודש
-- trendAcrossMonths: מבט-על לחודשים קודמים
+—————————————————————————————
+חוקי כתיבה — מחייבים:
 
-⚠️ חוקי ברזל:
-1. **אסור להמציא** — שמות, מספרים, אירועים. רק מה שמופיע ב-payload.
-2. כל שם תלמיד שאת מציינת — חייב להופיע ב-students[].name.
-3. כל מספר/ציון — חייב להגיע מהנתונים.
-4. שדה ריק = "לא דווח".
+1. **כל שם תלמיד שאת כותבת חייב להופיע במפורש ב-payload.** לפני שאת כותבת שם — חפשי אותו בשדה students[].name. אם אין — אל תכתבי אותו.
+2. **כל מספר חייב לבוא מ-payload** — מ-stats, realAttendanceSummary.classStats, או realAttendance של תלמיד ספציפי.
+3. אם שדה ריק/null — כתבי במפורש "לא דווח" או "אין נתון". לעולם לא להמציא.
+4. אם אין נתון בכלל לתת קטגוריה — כתבי "אין מידע מספק לחלק זה" ועברי הלאה.
+—————————————————————————————
 
-איך לזהות תלמיד בסיכון (השתמשי **בכל המקורות יחד**):
-- counselor.overallStatus = "red" או "yellow"
-- teacherTracking — שני ציונים או יותר ב-1-2 = סיכון; ציון אחד = מעקב
-- counselor.attendance = "בעייתית" / "חלקית"
-- counselor.lifeSkillsAlerts מכיל פריטים עם status "red" או "yellow"
-- counselor.currentMonthNotes מכיל תוכן שמעיד על קושי
+מבנה ה-payload (קראי בקפידה):
 
-מבנה הסיכום (כותרות ###):
+• **stats** — סיכום מספרי של הכיתה
+• **teacherReport** — דוח המחנכ/ת ברמת הכיתה
+• **students[]** — רשומה לכל תלמיד עם 3 תת-שדות:
+   - **counselor**: סטטוס, נוכחות לפי יועצת, אבחונים, מטפל, הערות חודשיות (currentMonthDone/Goals/Notes), lifeSkillsAlerts (כישורים בצהוב/אדום), פגישה אחרונה
+   - **realAttendance**: ימים מתועדים, נוכחויות, חיסורים, איחורים, אחוז נוכחות בפועל, סיבות חיסור
+   - **teacherTracking**: 5 ציונים מהמחנכ/ת בסולם 1-4 (1=נמוך, 4=גבוה). 0 = לא מולא. כולל hadConversation, gotPositiveWord, goals, achieved
+• **realAttendanceSummary**: סיכום נוכחות כיתתי + רשימות מצטיינים (100%) ובסיכון (<80%)
+• **homeVisits[]**, **trendAcrossMonths[]**
+
+—————————————————————————————
+
+מבנה הדוח שתכתבי (כותרות ### בלבד):
 
 ### 1. מצב הכיתה
-פרפראזה של teacherReport.classOverall. אם ריק — לציין במפורש "לא הוגש דוח כללי".
+- אם teacherReport.classOverall קיים → ציטוט/פרפראזה
+- אחרת → "המחנכ/ת לא דיווח/ה על מצב כללי בחודש זה"
 
 ### 2. נוכחות
-**הסתמכי בעיקר על realAttendanceSummary** — זה הנתון האמיתי מהמערכת.
-- סיכום כיתתי: % נוכחות כללי, מספר חיסורים, איחורים (realAttendanceSummary.classStats)
-- **הצטיינות** — שמות מ-realAttendanceSummary.excellentInAttendance (תלמידים עם 100% נוכחות)
-- **סיכון בנוכחות** — שמות מ-realAttendanceSummary.atRiskInAttendance, עם % הנוכחות שלהם וסיבות אם דווחו
-- שמות נוספים מ-teacherTracking.attendanceLevel ≤ 2 (אם יש פער מהנתונים בפועל — לציין)
+- ממוצע כיתתי: realAttendanceSummary.classStats — חשבי % מתוך totalSlots
+- מספר חיסורים, איחורים, חולים, שחרור מוקדם
+- **רשימת מצטיינים** — שמות מ-realAttendanceSummary.excellentInAttendance (כל אחד עם המספר)
+- **רשימת בסיכון נוכחות** — שמות מ-realAttendanceSummary.atRiskInAttendance (% + מס' חיסורים + סיבות)
 
-### 3. תהליכים והתפתחות בכיתה
-- מה נעשה: educationLessonsCount + educationLessonsDesc
-- ממד מוביל: currentDimension; מיומנות: currentSkill
-- ממוצעי הכיתה (לחשב מ-teacherTracking של כל התלמידים): ממד, מיומנות, רצינות, נוכחות, תפקוד
-- הצלחות: teacherReport.successes
-- מי קיבל "מילה טובה" / שיחה אישית (teacherTracking.gotPositiveWord/hadConversation)
+### 3. התפתחות בממדים — מה המחנכ/ת רואה
+- מנייה כמה תלמידים יש להם ציונים גבוהים (3-4) ונמוכים (1-2) בכל אחד מ-5 הסקאלות
+- שמות תלמידים בולטים לטובה (3+ סקאלות בציון 4)
+- שמות תלמידים שמתקשים (2+ סקאלות בציון 1-2)
+- מי קיבל שיחה אישית (hadConversation=true) ומי קיבל מילה טובה (gotPositiveWord=true) החודש
 
-### 4. תלמידים בסיכון ובמעקב
-**רשימה מפורטת** של כל מי שעונה על אחד הקריטריונים למעלה. לכל אחד:
-- שם
-- סיבה לדגל (איזה מקור — יועצת/מחנכת/lifeSkill/נוכחות)
-- מה הטיפול הקיים (counselor.therapist + counselor.diagnoses + counselor.lastMeeting)
-- מה הערכת היועצת לחודש זה (counselor.currentMonthNotes/done/goals)
-- מה חסר/דחוף
+### 4. הערכת היועצת — תלמיד אחר תלמיד
+**עברי על כל student ב-students[] שיש לו currentMonthDone או currentMonthNotes או currentMonthGoals — לא ריק** וכתבי שורה: "**[שם]**: [תוכן הערות היועצת]". אם אין הערות חודשיות בכלל — "אין הערות חודשיות מהיועצת לאף תלמיד".
 
-אם הרשימה ריקה — לציין במפורש שלפי כל הנתונים אין תלמידים שסומנו בסיכון/מעקב.
+### 5. תלמידים בסיכון ובמעקב
+תלמיד נחשב "בסיכון" אם **לפחות אחד** מהבאים מתקיים ב-payload שלו:
+- counselor.overallStatus = "red"
+- realAttendance.attendancePct < 70
+- teacherTracking — 2+ ציונים בין 1-2
+- counselor.lifeSkillsAlerts כולל פריט עם status="red"
 
-### 5. דגלים דחופים להנהלה
-- teacherReport.flagsForManagement
-- trackDifficultyStudents/Desc
-- employmentIssues (אם רלוונטי)
-- ביקורי בית עם needsFollowup=true
+תלמיד "במעקב" אם:
+- counselor.overallStatus = "yellow"
+- realAttendance.attendancePct בין 70-84
+- teacherTracking — ציון אחד 1-2
+- lifeSkillsAlerts יש status="yellow"
 
-### 6. המלצות לפעולה למנהלת
-2-3 המלצות קונקרטיות לחודש הבא, מבוססות על הנתונים. אם נתונים דלים — להגיד מה חסר.
+לכל תלמיד שמתאים — שורה עם: שם · הסיבות (כל מה שמתאים מהרשימה למעלה) · מה הטיפול הקיים (counselor.therapist + counselor.diagnoses + counselor.lastMeeting אם יש)
 
-כתבי בעברית פשוטה, משפטים קצרים. הצמדי לנתונים.`
+אם אין אף תלמיד שמתאים → "לפי הנתונים אין תלמידים בסיכון/מעקב החודש".
+
+### 6. דגלים להנהלה
+מ-teacherReport: flagsForManagement, trackDifficultyStudents+Desc, employmentIssues. מ-homeVisits: ביקורים עם needsFollowup=true.
+
+### 7. המלצות לפעולה (3 צעדים מקסימום)
+**רק אם יש מספיק נתונים**. כל המלצה צריכה להפנות לתלמיד/קבוצה ספציפית מ-payload.
+
+כתבי בעברית פשוטה, משפטים קצרים, ללא הזיות.`
     });
   } else {
     document.getElementById('aiSummaryHost').innerHTML = '<p style="color:var(--muted)">שירות ה-AI לא זמין.</p>';
@@ -3576,6 +3587,35 @@ function onSummaryClassChange(){
   const container = document.getElementById('viewClassSummary');
   container.dataset.selectedClass = document.getElementById('summaryClassSelect').value;
   renderClassSummaryView();
+}
+
+function showAIPayload(){
+  const cls = _summaryClass;
+  const month = document.getElementById('monthSelect').value;
+  const payload = buildClassSummaryAIPayload(cls, month);
+  const host = document.getElementById('aiPayloadDebug');
+  // Quick stats summary at top
+  const studentsWithTracking = (payload.students||[]).filter(s => s.teacherTracking).length;
+  const studentsWithCounselorNotes = (payload.students||[]).filter(s => s.counselor.currentMonthDone || s.counselor.currentMonthNotes || s.counselor.currentMonthGoals).length;
+  const studentsWithAttendance = (payload.students||[]).filter(s => s.realAttendance).length;
+  host.innerHTML = `
+    <div style="padding:14px 16px;background:var(--bg-alt);border-radius:14px;font-size:.85rem;line-height:1.7">
+      <div style="font-weight:700;margin-bottom:10px">הנתונים שנשלחים ל-AI עבור ${cls} — ${MONTHS_HE[month]}</div>
+      <div>• <strong>${payload.students.length}</strong> תלמידים בכיתה</div>
+      <div>• <strong>${studentsWithTracking}</strong> תלמידים עם ציוני מעקב מהמחנכ/ת (5 סקאלות)</div>
+      <div>• <strong>${studentsWithCounselorNotes}</strong> תלמידים עם הערות חודשיות מהיועצת</div>
+      <div>• <strong>${studentsWithAttendance}</strong> תלמידים עם נתוני נוכחות בפועל מהמערכת</div>
+      <div>• דוח מחנכ/ת ברמת הכיתה: <strong>${payload.teacherReport.classOverall ? 'מולא' : 'ריק'}</strong></div>
+      <div>• ביקורי בית בחודש: <strong>${payload.homeVisits.length}</strong></div>
+      <div>• ימי לימוד בנתוני הנוכחות: <strong>${payload.realAttendanceSummary.schoolDaysCount}</strong></div>
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer;font-weight:600;color:var(--primary-dark)">הצג JSON מלא (לבדיקה)</summary>
+        <pre style="margin-top:8px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:8px;font-size:.74rem;line-height:1.4;direction:ltr;text-align:left;max-height:400px;overflow:auto">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
+      </details>
+      <button class="btn btn-sm btn-outline" style="margin-top:10px" onclick="document.getElementById('aiPayloadDebug').style.display='none'">סגירה</button>
+    </div>
+  `;
+  host.style.display = 'block';
 }
 
 function resetGeminiKey(){
