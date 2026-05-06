@@ -5,10 +5,10 @@
 
 const AIService = (() => {
   // ── API Configuration ──
-  // ⚠️ Repo ציבורי — מפתחות שמופיעים בקוד נחסמים אוטומטית ע"י Google תוך דקות.
-  // המפתח חייב להיות מוגבל ל-HTTP referrer `meytalp-dev.github.io/*` ב-Google Cloud Console
-  // לפני שמטמיעים אותו פה. עד אז — נשמר ב-localStorage בלבד.
-  const DEFAULT_GEMINI_KEY = '';
+  // המפתח מוגבל ב-Google Cloud Console ל-HTTP referrer `meytalp-dev.github.io/*` בלבד —
+  // לכן בטוח להשאיר אותו פה (גנב לא יוכל להשתמש בו מדומיין אחר).
+  // אם מחליפים — חובה להגביל גם את המפתח החדש לפני הטמעה!
+  const DEFAULT_GEMINI_KEY = 'AIzaSyAzvJn0wr1h344E-Sd57Z7pRX13UUp9S-s';
   function getApiKey() {
     return (localStorage.getItem('mgmt-gemini-key') || DEFAULT_GEMINI_KEY).trim();
   }
