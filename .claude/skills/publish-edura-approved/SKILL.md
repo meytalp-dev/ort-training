@@ -1,11 +1,15 @@
 ---
 name: publish-edura-approved
-description: "פרסום משרות מאושרות ל-Edura לאחר אישור ידני בעמוד staging. מעביר משרות מ-jobs-pending.json ל-jobs.json, מסיר דחויות, מעדכן ספירות, commit+push. הפעל עם /publish-edura-approved approved=id1,id2,... rejected=id3,id4,..."
+description: "פרסום משרות מאושרות ל-Edura אחרי אישור ב-staging (jobs-pending → jobs.json), או דחייה של הגשות ישירות ב-Apps Script. הפעל עם /publish-edura-approved approved=id1,id2 rejected=id3 — או /publish-edura-approved submission-reject=JOB-...,TCH-..."
 ---
 
-# פרסום משרות מאושרות ל-Edura
+# ניהול משרות ב-Edura — פרסום ודחייה
 
-מקבל החלטות אישור/דחייה ממיטל (אחרי שעברה על staging.html), מעביר את המאושרים מהקובץ pending אל הקובץ החי, ומסיר את הדחויים.
+הסקיל מטפל בשני זרמים נפרדים:
+
+**זרם A — סורק יומי:** משרות שנאספו מ-igm/itu/shatil ל-`jobs-pending.json`, ומיטל מאשרת ב-staging.html. הסקיל מעביר ל-`jobs.json` ודוחף.
+
+**זרם B — הגשות ישירות:** משרות/מורות שמנהלים+מורים שלחו דרך publish-job.html, נשמרות ב-Google Sheet של Apps Script, ומיטל מאשרת/דוחה דרך לינק במייל. אם הגיע אישור בטעות (בדיקה, ספאם וכו׳) — הסקיל יודע **לדחות** את ההגשה דרך Apps Script (מסמן את הרשומה כ-rejected, היא נעלמת מ-`?action=approved` והאתר מפסיק להציג).
 
 **הריפו:** `c:/Users/meyta/Downloads/edura/`
 
@@ -13,15 +17,21 @@ description: "פרסום משרות מאושרות ל-Edura לאחר אישור 
 
 ## ארגומנטים
 
-הסקיל מוזמן בפורמט:
 ```
 /publish-edura-approved approved=<id1,id2,...> rejected=<id3,id4,...>
+/publish-edura-approved submission-reject=<JOB-...,TCH-...>
 ```
 
-- `approved=` — רשימת IDs מופרדת בפסיקים שיועברו ל-jobs.json
-- `rejected=` — רשימת IDs שיוסרו מ-pending (אופציונלי, יכול להיות ריק)
+**זרם A:**
+- `approved=` — IDs מ-jobs-pending.json שיועברו ל-jobs.json
+- `rejected=` — IDs מ-jobs-pending.json שיוסרו (אופציונלי)
 
-אם `approved=` ריק/חסר — אל תעשה כלום, הצג שגיאה ידידותית.
+**זרם B:**
+- `submission-reject=` — refs של הגשות ישירות שכבר אושרו ויש לסמן כ-rejected. ה-refs מתחילים ב-`JOB-` או `TCH-`. הסקיל גוזר את הסוג מהקידומת.
+
+אם הוזמן בלי שום ארגומנט שיש לו ערך — הצג עזרה.
+
+**אם יש `submission-reject=` — דלג על שלב 1-7 (זרם A) ועבור ישר ל-"זרם B" בסוף.**
 
 ---
 
@@ -130,3 +140,99 @@ git push
 - אסור לעבוד על שום קובץ אחר בריפו edura.
 - אם המשתמשת מזמינה את הסקיל בלי ארגומנטים — הצג עזרה: "השתמש ב-staging.html, לחצי 'פרסם מאושרים', העתיקי את הפקודה והדביקי כאן."
 - הסקיל לא סורק שום מקור — זה תפקיד הסקירה היומית.
+
+---
+
+## זרם B — דחיית הגשות ישירות (Apps Script)
+
+**מתי משתמשים:** מיטל אישרה הגשה דרך לינק במייל ועכשיו רוצה לבטל (בדיקה, ספאם, טעות).
+
+**איך זה עובד:** ה-Apps Script שומר את ההגשות בגיליון Google Sheet ועובד עם טוקן SHA-256 חתום. הסקיל מחשב את הטוקן באופן מקומי ושולח GET request עם `decision=reject`. ה-Sheet מתעדכן ל-`status=rejected`, הרשומה נעלמת מהפיד `?action=approved`, ותוך 1-2 דקות (אחרי טעינה מחודשת של האתר) — נעלמת גם משם. **לא נדרש commit/push** כי זה לא נוגע לריפו.
+
+### קבועים
+
+```
+APPS_SCRIPT_URL = https://script.google.com/macros/s/AKfycbwleldcwH8c5k9OZ8EMDIKZ8veRbrtO1M7XwYFWg7HHbEV-SrZkLTElbFRiq4cHPlyarw/exec
+APPROVE_SECRET  = edura-approve-2026-meytal
+```
+
+### גזירת הסוג מה-ref
+
+- `JOB-...` → `type=job`
+- `TCH-...` → `type=teacher`
+- כל שאר התחיליות → דווח שגיאה לאותו ref ודלג, אל תעצור על השאר.
+
+### חישוב הטוקן
+
+```python
+import hashlib
+raw = (type + '|' + ref + '|' + APPROVE_SECRET).encode('utf-8')
+token = hashlib.sha256(raw).hexdigest()[:24]   # 24 תווים הקסדצימליים ראשונים
+```
+
+(זה בדיוק הפורמט של `signToken_` ב-`submissions-apps-script.gs` בריפו edura.)
+
+### שליחת הבקשה
+
+```
+GET {APPS_SCRIPT_URL}?action=approve&decision=reject&type={type}&ref={ref}&token={token}
+```
+
+קוד תגובה תקין: HTTP 200. גוף התגובה הוא דף HTML — שגרת ההצלחה היא שמופיע אחד מהביטויים: `נדחתה`, `כבר נדחתה`, או `rejected`. אם רואים `שגיאת אימות` — הטוקן לא תואם (בדוק שאין רווחים מסביב ל-ref).
+
+### סקריפט מומלץ
+
+```python
+import hashlib, urllib.request, urllib.parse
+
+URL = 'https://script.google.com/macros/s/AKfycbwleldcwH8c5k9OZ8EMDIKZ8veRbrtO1M7XwYFWg7HHbEV-SrZkLTElbFRiq4cHPlyarw/exec'
+SECRET = 'edura-approve-2026-meytal'
+
+def reject(ref):
+    if ref.startswith('JOB-'):    typ = 'job'
+    elif ref.startswith('TCH-'):  typ = 'teacher'
+    else:                          return ('skip', ref, 'unknown prefix')
+    raw = (typ + '|' + ref + '|' + SECRET).encode('utf-8')
+    token = hashlib.sha256(raw).hexdigest()[:24]
+    qs = urllib.parse.urlencode({'action':'approve','decision':'reject','type':typ,'ref':ref,'token':token})
+    with urllib.request.urlopen(URL + '?' + qs, timeout=30) as r:
+        body = r.read().decode('utf-8', errors='replace')
+        ok = ('נדחתה' in body) or ('rejected' in body.lower())
+        return ('ok' if ok else 'fail', ref, body[:200])
+
+for ref in REFS_FROM_ARG:
+    print(reject(ref.strip()))
+```
+
+### וידוא
+
+אחרי שכל הדחיות הסתיימו — קרא את הפיד שוב ואשר שהן באמת ירדו:
+
+```
+GET {APPS_SCRIPT_URL}?action=approved
+```
+
+בדוק שאף אחד מה-refs שדחית לא מופיע יותר ב-`jobs[]` או ב-`teachers[]`.
+
+### דוח סיכום (זרם B)
+
+```
+✓ דחייה הסתיימה
+─────────────────
+נדחו: N הגשות (jobs:X · teachers:Y)
+דווחו שגיאות: M
+─────────────────
+האתר יעדכן את עצמו תוך 1-2 דקות (כשתישלח טעינה הבאה).
+```
+
+### טיפול בשגיאות (זרם B)
+
+- **Apps Script לא מגיב / timeout:** דווח על ה-ref הספציפי, המשך עם השאר.
+- **`שגיאת אימות` בתגובה:** סימן שה-`APPROVE_SECRET` השתנה. עצור והודע למיטל.
+- **ref לא מתחיל ב-JOB-/TCH-:** דלג עם הודעה.
+- **ref לא נמצא במערכת:** ה-Apps Script מחזיר "לא נמצא" — דווח ולא נחשב כהצלחה.
+
+### חשוב
+
+- לא נדרש `git pull`, `git commit`, או `git push` בזרם B. הוא נוגע **רק** ב-Apps Script.
+- אסור להפעיל את `decision=reject` על ref שלא הוסכם עם מיטל. זו פעולה בלתי הפיכה דרך ה-skill הזה (אין undo — צריך להריץ עם `decision=approve` כדי להחזיר, וזה לא חלק מהסקיל הנוכחי).
