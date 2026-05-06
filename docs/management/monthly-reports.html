@@ -633,6 +633,9 @@ h1,h2,h3,h4{font-family:'Playpen Sans Hebrew','Heebo',sans-serif}
 <!-- View: Counselor Reports (principal) -->
 <div class="section" id="viewCounselorReports"></div>
 
+<!-- View: Class Summary (principal/deputy) -->
+<div class="section" id="viewClassSummary"></div>
+
 </div><!-- /container -->
 </div><!-- /appMain -->
 
@@ -1225,6 +1228,7 @@ function buildNavigation(){
     tabs.push({view:'class', label:'תצוגת כיתה', icon:iconClass});
   } else {
     tabs.push({view:'dashboard', label:'דשבורד', icon:iconDash});
+    tabs.push({view:'classSummary', label:'סיכום כיתה', icon:iconClass});
     tabs.push({view:'class', label:'תצוגת כיתה', icon:iconClass});
     tabs.push({view:'homeroomReports', label:'דוחות מחנכים', icon:iconClip});
     tabs.push({view:'counselorReports', label:'דוחות יועצות', icon:iconHeart});
@@ -1256,7 +1260,8 @@ function switchView(view){
     'class':'viewClass',
     'dashboard':'viewDashboard',
     'homeroomReports':'viewHomeroomReports',
-    'counselorReports':'viewCounselorReports'
+    'counselorReports':'viewCounselorReports',
+    'classSummary':'viewClassSummary'
   };
 
   const el = document.getElementById(viewMap[view]);
@@ -1271,6 +1276,7 @@ function switchView(view){
   if(view==='dashboard') renderDashboard();
   if(view==='homeroomReports') renderHomeroomReportsView();
   if(view==='counselorReports') renderCounselorReportsView();
+  if(view==='classSummary') renderClassSummaryView();
 }
 
 // ==================== TOAST ====================
@@ -3029,6 +3035,380 @@ function renderPrincipalStudentView(classId, studentId){
   `;
 }
 
+// ==================== CLASS SUMMARY VIEW (Principal/Deputy) ====================
+let _summaryClass = null;
+
+function renderClassSummaryView(){
+  const container = document.getElementById('viewClassSummary');
+  const month = document.getElementById('monthSelect').value;
+  const monthLabel = MONTHS_HE[month] || month;
+
+  // Default to first class with data, or first in list
+  if(!_summaryClass || !DATA.students[_summaryClass]) _summaryClass = CLASSES[0];
+  const cls = container.dataset.selectedClass || _summaryClass;
+  _summaryClass = cls;
+
+  const students = (DATA.students[cls] || []).slice();
+  const teacher = getTeacherForClass(cls);
+  const counselor = getCounselorForClass(cls);
+  const hr = getHomeroomReport(cls, month);
+  const visits = getHomeVisits(cls, month);
+
+  // Attendance + status stats from student records
+  const total = students.length;
+  let red=0, yellow=0, green=0;
+  let attRegular=0, attPartial=0, attProblem=0;
+  students.forEach(s => {
+    if(s.overallStatus==='red') red++;
+    else if(s.overallStatus==='yellow') yellow++;
+    else green++;
+    if(s.attendance==='בעייתית') attProblem++;
+    else if(s.attendance==='חלקית') attPartial++;
+    else attRegular++;
+  });
+
+  // At-risk + watch list students (sorted)
+  const atRisk = students
+    .filter(s => s.overallStatus==='red' || s.overallStatus==='yellow')
+    .sort((a,b) => (a.overallStatus==='red'?0:1) - (b.overallStatus==='red'?0:1));
+
+  // Trend across months — submitted/missing count + attendance flag count
+  const trendRows = MONTH_KEYS.map(mk => {
+    const r = getHomeroomReport(cls, mk);
+    return {
+      key: mk,
+      label: MONTHS_HE[mk],
+      submitted: !!(r && r.submitted),
+      flag: !!(r && r.flagsForManagement),
+      attIssue: !!(r && r.hasAttendanceIssues),
+      absences: r?.attendanceAbsences || 0,
+      visits: (DATA.homeVisits?.[cls]?.[mk] || []).length
+    };
+  });
+
+  // ==== HEADER + CLASS SELECTOR ====
+  const selectorHTML = `
+    <div class="selector-bar">
+      <label>כיתה:</label>
+      <select id="summaryClassSelect" onchange="onSummaryClassChange()">
+        ${CLASSES.map(c => `<option value="${c}" ${c===cls?'selected':''}>${c} — ${getTeacherForClass(c)?.name||''}</option>`).join('')}
+      </select>
+      <span style="font-size:.85rem;color:var(--muted)">
+        מחנך/ת: <strong>${teacher?.name||'—'}</strong>
+        ${counselor?` · יועצת: <strong>${counselor.name}</strong>`:''}
+      </span>
+    </div>
+  `;
+
+  // ==== OVERVIEW STATS ====
+  const overviewHTML = `
+    <div class="summary-bar">
+      <div class="summary-stat">
+        <div class="stat-icon blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary-dark)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div><div class="stat-num">${total}</div><div class="stat-label">תלמידים בכיתה</div></div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-icon green">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M4 9l4 4 8-8"/></svg>
+        </div>
+        <div><div class="stat-num">${green}</div><div class="stat-label">תקין</div></div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-icon yellow">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div><div class="stat-num">${yellow}</div><div class="stat-label">דרוש מעקב</div></div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-icon red">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><path d="M12 2L2 22h20z"/><line x1="12" y1="9" x2="12" y2="14"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div><div class="stat-num">${red}</div><div class="stat-label">בסיכון / התערבות</div></div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-icon yellow">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div><div class="stat-num">${attProblem+attPartial}</div><div class="stat-label">נוכחות לא סדירה (${attProblem} בעייתי / ${attPartial} חלקי)</div></div>
+      </div>
+    </div>
+  `;
+
+  // ==== TEACHER REPORT — CLASS STATE ====
+  const teacherCardHTML = hr && hr.submitted ? `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <h3>דוח המחנך/ת — ${monthLabel}</h3>
+        <span class="badge badge-submitted">הוגש ${hr.submittedDate||''}</span>
+      </div>
+      <div class="card-body">
+        ${hr.classOverall ? `<div class="hr-summary-card">
+          <h4>מצב כללי בכיתה</h4>
+          <div style="font-size:.92rem;line-height:1.7">${escapeHtml(hr.classOverall)}</div>
+        </div>` : ''}
+        <div class="hr-summary-grid">
+          ${hr.currentDimension ? `<div class="hr-summary-item"><strong>ממד מרכזי</strong>${escapeHtml(hr.currentDimension)}</div>` : ''}
+          ${hr.currentSkill ? `<div class="hr-summary-item"><strong>מיומנות</strong>${escapeHtml(hr.currentSkill)}</div>` : ''}
+          ${hr.educationLessonsCount ? `<div class="hr-summary-item"><strong>שיעורי חינוך</strong>${hr.educationLessonsCount} שיעורים</div>` : ''}
+        </div>
+        ${hr.educationLessonsDesc ? `<div style="margin-top:12px;padding:12px 16px;background:var(--bg-alt);border-radius:12px;font-size:.88rem"><strong>מה נעשה: </strong>${escapeHtml(hr.educationLessonsDesc)}</div>` : ''}
+        ${hr.successes ? `<div style="margin-top:12px;padding:12px 16px;background:var(--success-bg);border-radius:12px;font-size:.88rem"><strong>הצלחות: </strong>${escapeHtml(hr.successes)}</div>` : ''}
+        ${hr.goalNextMonth ? `<div style="margin-top:12px;padding:12px 16px;background:rgba(58,172,160,.08);border-radius:12px;font-size:.88rem"><strong>יעדים לחודש הבא: </strong>${escapeHtml(hr.goalNextMonth)}</div>` : ''}
+      </div>
+    </div>
+  ` : `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><h3>דוח המחנך/ת — ${monthLabel}</h3><span class="badge badge-missing">לא הוגש</span></div>
+      <div class="card-body">
+        <p style="color:var(--muted);text-align:center;padding:18px">לא הוגש דוח מחנך לחודש זה.</p>
+      </div>
+    </div>
+  `;
+
+  // ==== FLAGS + ISSUES FROM TEACHER ====
+  const flagsBlocks = [];
+  if(hr?.flagsForManagement) flagsBlocks.push({title:'דגלים להנהלה', text:hr.flagsForManagement, color:'var(--danger)', bg:'var(--danger-bg)'});
+  if(hr?.hasAttendanceIssues) flagsBlocks.push({title:'אתגרי נוכחות', text:`${hr.attendanceStudents||'תלמידים בלתי מוגדרים'}${hr.attendanceAbsences?` · ${hr.attendanceAbsences} היעדרויות`:''}`, color:'var(--warn)', bg:'var(--warn-bg)'});
+  if(hr?.trackDifficultyStudents || hr?.trackDifficultyDesc) flagsBlocks.push({title:'קשיים במגמה', text:[hr.trackDifficultyStudents, hr.trackDifficultyDesc].filter(Boolean).join(' — '), color:'var(--accent-dark)', bg:'rgba(232,176,96,.12)'});
+  if(hr?.employmentIssues) flagsBlocks.push({title:'תעסוקה', text:hr.employmentIssues, color:'var(--dream-dark)', bg:'rgba(142,126,212,.12)'});
+
+  const flagsHTML = flagsBlocks.length ? `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><h3>דגלים ונושאים לטיפול</h3></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+          ${flagsBlocks.map(b => `
+            <div style="padding:14px 16px;border-radius:14px;background:${b.bg};border-right:4px solid ${b.color}">
+              <div style="font-size:.78rem;font-weight:700;color:${b.color};margin-bottom:6px">${b.title}</div>
+              <div style="font-size:.88rem;line-height:1.5">${escapeHtml(b.text)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  ` : '';
+
+  // ==== AT-RISK STUDENTS (FROM COUNSELOR DATA) ====
+  const atRiskHTML = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <h3>תלמידים בסיכון ובמעקב</h3>
+        <span style="font-size:.78rem;color:var(--muted)">${atRisk.length} מתוך ${total}</span>
+      </div>
+      <div class="card-body">
+        ${atRisk.length ? `
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr><th style="width:34px"></th><th>שם</th><th>נוכחות</th><th>אבחון / טיפול</th><th>הערות אחרונות (${monthLabel})</th><th>פעולה</th></tr></thead>
+              <tbody>
+                ${atRisk.map(s => {
+                  const md = (s.monthlyData?.[month]) || {};
+                  const therapyTxt = [s.diagnoses, s.therapist, s.emotionalTherapy?'טיפול רגשי':''].filter(Boolean).join(' · ') || '—';
+                  const noteTxt = [md.done, md.notes].filter(Boolean).join(' · ') || '—';
+                  return `<tr onclick="openStudentCounselorReport('${s.className}','${s.id}')" style="cursor:pointer">
+                    <td><span class="status-dot ${s.overallStatus}"></span></td>
+                    <td style="font-weight:600">${escapeHtml(s.name)}</td>
+                    <td>${escapeHtml(s.attendance||'—')}</td>
+                    <td style="font-size:.82rem">${escapeHtml(therapyTxt)}</td>
+                    <td style="font-size:.82rem">${escapeHtml(noteTxt)}</td>
+                    <td style="font-size:.78rem;color:var(--primary-dark)">פתח כרטיס</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : `<p style="color:var(--muted);text-align:center;padding:18px">אין תלמידים בסיכון או במעקב כרגע.</p>`}
+      </div>
+    </div>
+  `;
+
+  // ==== HOME VISITS THIS MONTH ====
+  const visitsHTML = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <h3>ביקורי בית — ${monthLabel}</h3>
+        <span style="font-size:.78rem;color:var(--muted)">${visits.length} ביקורים</span>
+      </div>
+      <div class="card-body">
+        ${visits.length ? visits.map(v => `
+          <div class="hv-summary-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+              <div>
+                <span class="hv-s-name">${escapeHtml(v.studentName||'')}</span>
+                <span class="hv-s-date">${escapeHtml(v.date||'')}</span>
+              </div>
+              ${v.needsFollowup ? `<span class="badge badge-intervention">דורש המשך</span>` : ''}
+            </div>
+            ${v.insights ? `<div class="hv-s-insight">${escapeHtml(v.insights)}</div>` : ''}
+            ${v.followupDetails ? `<div style="font-size:.78rem;margin-top:6px;color:var(--danger)"><strong>המשך טיפול: </strong>${escapeHtml(v.followupDetails)}</div>` : ''}
+          </div>
+        `).join('') : `<p style="color:var(--muted);text-align:center;padding:18px">אין ביקורי בית בחודש זה.</p>`}
+      </div>
+    </div>
+  `;
+
+  // ==== TREND ACROSS MONTHS ====
+  const trendHTML = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><h3>תהליכים — מבט לאורך השנה</h3></div>
+      <div class="card-body">
+        <div class="table-scroll">
+          <table class="data-table" style="font-size:.85rem">
+            <thead><tr><th>חודש</th><th>דוח מחנך</th><th>היעדרויות</th><th>אתגרי נוכחות</th><th>דגלים</th><th>ביקורי בית</th></tr></thead>
+            <tbody>
+              ${trendRows.map(r => `
+                <tr ${r.key===month?'style="background:rgba(58,172,160,.06);font-weight:600"':''}>
+                  <td>${r.label}</td>
+                  <td>${r.submitted?'<span class="badge badge-submitted">הוגש</span>':'<span class="badge badge-missing">חסר</span>'}</td>
+                  <td>${r.absences||'—'}</td>
+                  <td>${r.attIssue?'<span style="color:var(--warn)">●</span>':'—'}</td>
+                  <td>${r.flag?'<span style="color:var(--danger)">●</span>':'—'}</td>
+                  <td>${r.visits||'—'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // ==== AI INSIGHTS PLACEHOLDER ====
+  const aiHTML = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header">
+        <h3>סיכום אינטגרטיבי — תובנות AI</h3>
+      </div>
+      <div class="card-body">
+        <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">
+          הפעלי את כפתור התובנות לקבלת סיכום מובנה — מצב הכיתה, תלמידים שדורשים תשומת לב, נקודות לחיזוק והמלצות לפעולה.
+        </p>
+        <div id="aiSummaryHost"></div>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = selectorHTML + overviewHTML + teacherCardHTML + flagsHTML + atRiskHTML + visitsHTML + trendHTML + aiHTML;
+
+  // Inject AI button (uses management context)
+  if(typeof injectAIButton === 'function'){
+    injectAIButton('aiSummaryHost', 'management', () => buildClassSummaryAIPayload(cls, month), {
+      buttonText: `סיכום AI לכיתה ${cls}`,
+      customPrompt: `להלן נתונים מלאים על כיתה ${cls} בחודש ${monthLabel}: דוח מחנך, רשימת תלמידים בסיכון מהיועצת, ביקורי בית ונתוני נוכחות.
+
+בנה סיכום מובנה למנהלת הכוללת:
+
+1. **מצב הכיתה במשפט** — אווירה, תפקוד, מגמה כללית
+2. **נוכחות** — מי במצב טוב, מי דורש מעקב, מי בעייתי
+3. **תהליכים בכיתה** — מה נעשה החודש (שיעורי חינוך, פעילויות, ממד/מיומנות), הצלחות
+4. **תלמידים בסיכון** — שמות, מצב, מה הטיפול הקיים, מה חסר
+5. **דגלים אדומים** — מה דחוף שמייטל צריכה לטפל בו השבוע
+6. **המלצות לפעולה** — 3 צעדים קונקרטיים למנהלת לחודש הבא
+
+כתבי בעברית, פשוט וברור, עם משפטים קצרים. השתמשי בכותרות משנה (### ) וברשימות.`
+    });
+  } else {
+    document.getElementById('aiSummaryHost').innerHTML = '<p style="color:var(--muted)">שירות ה-AI לא זמין.</p>';
+  }
+}
+
+function onSummaryClassChange(){
+  const container = document.getElementById('viewClassSummary');
+  container.dataset.selectedClass = document.getElementById('summaryClassSelect').value;
+  renderClassSummaryView();
+}
+
+// Build a compact JSON payload for the AI — only the relevant fields
+function buildClassSummaryAIPayload(cls, month){
+  const teacher = getTeacherForClass(cls);
+  const counselor = getCounselorForClass(cls);
+  const hr = getHomeroomReport(cls, month) || {};
+  const visits = getHomeVisits(cls, month) || [];
+  const students = (DATA.students[cls] || []);
+
+  const stats = { total: students.length, red:0, yellow:0, green:0, attRegular:0, attPartial:0, attProblem:0 };
+  students.forEach(s => {
+    if(s.overallStatus==='red') stats.red++;
+    else if(s.overallStatus==='yellow') stats.yellow++;
+    else stats.green++;
+    if(s.attendance==='בעייתית') stats.attProblem++;
+    else if(s.attendance==='חלקית') stats.attPartial++;
+    else stats.attRegular++;
+  });
+
+  const atRisk = students.filter(s => s.overallStatus!=='green').map(s => {
+    const md = s.monthlyData?.[month] || {};
+    return {
+      name: s.name,
+      status: s.overallStatus,
+      attendance: s.attendance,
+      diagnoses: s.diagnoses || '',
+      therapist: s.therapist || '',
+      emotionalTherapy: !!s.emotionalTherapy,
+      openCases: s.openCases || '',
+      monthlyDone: md.done || '',
+      monthlyGoals: md.goals || '',
+      monthlyNotes: md.notes || ''
+    };
+  });
+
+  const trend = MONTH_KEYS.map(mk => {
+    const r = getHomeroomReport(cls, mk);
+    return {
+      month: MONTHS_HE[mk],
+      submitted: !!(r && r.submitted),
+      classOverall: r?.classOverall || '',
+      flags: r?.flagsForManagement || '',
+      attendanceIssues: !!r?.hasAttendanceIssues,
+      absences: r?.attendanceAbsences || 0
+    };
+  });
+
+  return {
+    class: cls,
+    month: MONTHS_HE[month],
+    teacher: teacher?.name || '',
+    counselor: counselor?.name || '',
+    stats,
+    teacherReport: {
+      classOverall: hr.classOverall || '',
+      currentDimension: hr.currentDimension || '',
+      currentSkill: hr.currentSkill || '',
+      educationLessonsCount: hr.educationLessonsCount || 0,
+      educationLessonsDesc: hr.educationLessonsDesc || '',
+      hasAttendanceIssues: !!hr.hasAttendanceIssues,
+      attendanceStudents: hr.attendanceStudents || '',
+      attendanceAbsences: hr.attendanceAbsences || 0,
+      trackDifficultyStudents: hr.trackDifficultyStudents || '',
+      trackDifficultyDesc: hr.trackDifficultyDesc || '',
+      employmentIssues: hr.employmentIssues || '',
+      flagsForManagement: hr.flagsForManagement || '',
+      successes: hr.successes || '',
+      goalNextMonth: hr.goalNextMonth || ''
+    },
+    atRiskStudents: atRisk,
+    homeVisits: visits.map(v => ({
+      studentName: v.studentName,
+      date: v.date,
+      conditions: v.conditions || '',
+      insights: v.insights || '',
+      needsFollowup: !!v.needsFollowup,
+      followupDetails: v.followupDetails || ''
+    })),
+    trendAcrossMonths: trend
+  };
+}
+
+// Small HTML escape helper for safe rendering of user text
+function escapeHtml(s){
+  if(s == null) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 // ==================== MONTH CHANGE ====================
 function onMonthChange(){
   // Re-render current view
@@ -3039,6 +3419,7 @@ function onMonthChange(){
   if(currentView==='dashboard') renderDashboard();
   if(currentView==='homeroomReports') renderHomeroomReportsView();
   if(currentView==='counselorReports') renderCounselorReportsView();
+  if(currentView==='classSummary') renderClassSummaryView();
 }
 
 // ==================== INIT ====================
@@ -3200,10 +3581,23 @@ window.addEventListener('beforeunload', function(){
   else { saveData(); }
 });
 
+function checkDirectTeacherLink(){
+  const params = new URLSearchParams(window.location.search);
+  const teacherName = params.get('teacher');
+  if(!teacherName) return false;
+  const t = STAFF.teachers.find(x => x.name === decodeURIComponent(teacherName));
+  if(!t) return false;
+  currentUser = {role:'teacher', name:t.name, class:t.class};
+  sessionStorage.setItem(LS_SESSION, JSON.stringify(currentUser));
+  enterApp();
+  return true;
+}
+
 function init(){
   cloudStorage.mountStatusBadge();
   loadData().then(function(){
     if(checkDirectReportLink()) return;
+    if(checkDirectTeacherLink()) return;
     if(!tryRestoreSession()){
       document.getElementById('loginScreen').style.display = 'flex';
       document.getElementById('appMain').style.display = 'none';
