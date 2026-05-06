@@ -3389,41 +3389,170 @@ function renderClassSummaryView(){
     </div>
   ` : '';
 
-  // ==== AT-RISK STUDENTS (combined: counselor status + teacher tracking + lifeSkills) ====
-  const atRiskHTML = `
+  // ==== PER-STUDENT COMPREHENSIVE CARDS (deterministic, no AI hallucinations) ====
+  const SCALE_LABELS = ['ממד','מיומנות','רצינות','נוכחות','תפקוד'];
+  const SCALE_KEYS = ['dimLevel','skillLevel','academicLevel','attendanceLevel','performanceLevel'];
+  const SCALE_COLORS = [['#E8985A','#D4B76A','#2A9D8F','#D4A853'],['#C4A8E0','#A87FCC','#8B5FB5','#7040A0'],['#8CBEE0','#5FA3D4','#3888C4','#1A6FB0'],['#8EC78E','#60B060','#3D993D','#2A802A'],['#E0A8A8','#D08080','#BC5E5E','#A84040']];
+
+  function renderScaleBar(key, value, idx){
+    const filled = value || 0;
+    const colors = SCALE_COLORS[idx];
+    const label = SCALE_LABELS[idx];
+    const segs = [1,2,3,4].map(n => {
+      const isOn = n <= filled;
+      const color = isOn ? colors[n-1] : '#E5E1D8';
+      return `<div style="flex:1;height:6px;background:${color};border-radius:2px"></div>`;
+    }).join('');
+    return `
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:.7rem;margin-bottom:3px">
+          <span style="color:var(--muted)">${label}</span>
+          <span style="font-weight:700;color:${filled?colors[Math.min(filled-1,3)]:'#aaa'}">${filled||'—'}</span>
+        </div>
+        <div style="display:flex;gap:2px">${segs}</div>
+      </div>
+    `;
+  }
+
+  function renderStudentCard(s){
+    const r = studentRisk[s.id];
+    const t = hrTracking[s.id] || {};
+    const md = s.monthlyData?.[month] || {};
+    const att = attData.perStudent[s.id] || {};
+    const lifeSkillsAlerts = Object.entries(s.lifeSkills||{}).filter(([_,v])=>v.status==='red'||v.status==='yellow');
+    const counselorNotes = [
+      md.done && {label:'מה נעשה', text:md.done},
+      md.goals && {label:'יעדים', text:md.goals},
+      md.notes && {label:'הערות', text:md.notes}
+    ].filter(Boolean);
+    const therapyParts = [s.diagnoses, s.therapist, s.emotionalTherapy?'טיפול רגשי':'', s.openCases].filter(Boolean);
+    const hasTracking = Object.values(t).some(v => v && (typeof v === 'number' ? v>0 : true));
+    const hasAttendance = att.total > 0;
+    const lastMeeting = (s.meetings||[]).slice(-1)[0];
+
+    const borderColor = r.level==='red' ? 'var(--danger)' : r.level==='yellow' ? 'var(--warn)' : 'var(--border)';
+    const bgTint = r.level==='red' ? 'rgba(212,92,110,.04)' : r.level==='yellow' ? 'rgba(232,176,96,.04)' : '#fff';
+    const attBadge = hasAttendance
+      ? `<span style="padding:3px 10px;border-radius:10px;font-size:.78rem;font-weight:700;background:${att.pct>=90?'var(--success-bg)':att.pct>=80?'var(--warn-bg)':'var(--danger-bg)'};color:${att.pct>=90?'var(--success)':att.pct>=80?'var(--warn)':'var(--danger)'}">${att.pct}% נוכחות</span>`
+      : `<span style="padding:3px 10px;border-radius:10px;font-size:.78rem;color:var(--muted);background:#f4f1ec">אין נתוני נוכחות</span>`;
+
+    return `
+      <div class="student-card-v2" style="background:${bgTint};border:1.5px solid ${borderColor};border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+        <!-- Header row: status + name + track + attendance badge -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <span class="status-dot ${r.level}" style="width:12px;height:12px;flex-shrink:0"></span>
+            <div style="min-width:0">
+              <div style="font-weight:700;font-size:.98rem">${escapeHtml(s.name)}</div>
+              <div style="font-size:.74rem;color:var(--muted)">${escapeHtml(s.track||'—')}${s.attendance?` · נוכחות יועצת: ${escapeHtml(s.attendance)}`:''}</div>
+            </div>
+          </div>
+          ${attBadge}
+        </div>
+
+        <!-- Attendance details row -->
+        ${hasAttendance ? `
+          <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:.76rem">
+            <span style="color:var(--success)">נוכח/ת: <strong>${att.present}</strong></span>
+            ${att.absent?`<span style="color:var(--danger)">חיסור: <strong>${att.absent}</strong></span>`:''}
+            ${att.late?`<span style="color:#5B9BD5">איחור: <strong>${att.late}</strong></span>`:''}
+            ${att.sick?`<span style="color:var(--accent-dark)">חולה: <strong>${att.sick}</strong></span>`:''}
+            ${att.early?`<span style="color:var(--dream-dark)">שחרור מוקדם: <strong>${att.early}</strong></span>`:''}
+            ${att.reasons.length?`<span style="color:var(--muted)">סיבות שדווחו: ${escapeHtml(att.reasons.slice(0,3).join(', '))}</span>`:''}
+          </div>
+        ` : ''}
+
+        <!-- Teacher tracking: 5 scales -->
+        ${hasTracking ? `
+          <div>
+            <div style="font-size:.74rem;color:var(--muted);margin-bottom:6px">ציוני המחנכ/ת — ${monthLabel}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              ${SCALE_KEYS.map((k,i) => renderScaleBar(k, t[k], i)).join('')}
+            </div>
+            ${(t.hadConversation || t.gotPositiveWord || t.goals || t.achieved) ? `
+              <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:.76rem">
+                ${t.hadConversation?'<span style="color:var(--success)">✓ שיחה אישית</span>':''}
+                ${t.gotPositiveWord?'<span style="color:var(--accent-dark)">✓ מילה טובה</span>':''}
+                ${t.goals?`<span style="color:var(--text-light)"><strong>מטרה:</strong> ${escapeHtml(t.goals)}${t.achieved?` (${t.achieved==='yes'?'הושג':t.achieved==='partial'?'חלקי':'לא הושג'})`:''}</span>`:''}
+              </div>
+            ` : ''}
+          </div>
+        ` : `<div style="font-size:.76rem;color:var(--muted);font-style:italic">המחנכ/ת לא מילא/ה ציוני מעקב לחודש זה</div>`}
+
+        <!-- Counselor notes -->
+        ${counselorNotes.length ? `
+          <div style="background:rgba(232,144,156,.06);border-right:3px solid var(--spark);padding:10px 12px;border-radius:8px">
+            <div style="font-size:.72rem;font-weight:700;color:var(--spark-dark);margin-bottom:4px">הערות יועצת</div>
+            ${counselorNotes.map(n => `<div style="font-size:.82rem;line-height:1.5"><strong>${n.label}:</strong> ${escapeHtml(n.text)}</div>`).join('')}
+          </div>
+        ` : `<div style="font-size:.76rem;color:var(--muted);font-style:italic">אין הערות יועצת לחודש זה</div>`}
+
+        <!-- Therapy/diagnoses + life skills alerts -->
+        ${(therapyParts.length || lifeSkillsAlerts.length) ? `
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:.78rem">
+            ${therapyParts.length ? `<div><span style="color:var(--muted)">אבחון/טיפול:</span> ${escapeHtml(therapyParts.join(' · '))}</div>` : ''}
+            ${lifeSkillsAlerts.length ? `<div><span style="color:var(--muted)">כישורי חיים בסימון:</span> ${lifeSkillsAlerts.map(([sk,v])=>`<span style="color:${v.status==='red'?'var(--danger)':'var(--warn)'};font-weight:600">${escapeHtml(sk)}</span>`).join(', ')}</div>` : ''}
+            ${lastMeeting ? `<div><span style="color:var(--muted)">פגישה אחרונה (${escapeHtml(lastMeeting.date||'—')}):</span> ${escapeHtml(lastMeeting.summary||'—')}${lastMeeting.nextSteps?` · <strong>צעדים הבאים:</strong> ${escapeHtml(lastMeeting.nextSteps)}`:''}</div>` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Risk reasons (only if not green) -->
+        ${r.level !== 'green' && r.reasons.length ? `
+          <div style="background:${r.level==='red'?'var(--danger-bg)':'var(--warn-bg)'};padding:8px 12px;border-radius:8px;font-size:.76rem">
+            <strong style="color:${r.level==='red'?'var(--danger)':'var(--warn)'}">סיבות לדגל:</strong> ${escapeHtml(r.reasons.join(' · '))}
+          </div>
+        ` : ''}
+
+        <!-- Footer: open full record link -->
+        <div style="text-align:left;margin-top:-4px">
+          <a href="javascript:void(0)" onclick="openStudentCounselorReport('${s.className}','${s.id}')" style="font-size:.75rem;color:var(--primary-dark);text-decoration:none;font-weight:600">פתח כרטיס מלא ›</a>
+        </div>
+      </div>
+    `;
+  }
+
+  // Sort: red → yellow → green; within each tier alphabetical by name
+  const sortedStudents = [...students].sort((a,b) => {
+    const ra = studentRisk[a.id].level, rb = studentRisk[b.id].level;
+    const order = {red:0, yellow:1, green:2};
+    if(order[ra] !== order[rb]) return order[ra] - order[rb];
+    return a.name.localeCompare(b.name, 'he');
+  });
+
+  const studentsHTML = `
     <div class="card" style="margin-bottom:20px">
       <div class="card-header">
-        <h3>תלמידים בסיכון ובמעקב</h3>
-        <span style="font-size:.78rem;color:var(--muted)">${atRisk.length} מתוך ${total} (${red} בסיכון · ${yellow} מעקב)</span>
+        <h3>כל התלמידים — מבט מקיף</h3>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:.78rem;color:var(--muted)">${total} תלמידים · ${red} בסיכון · ${yellow} מעקב · ${green} תקין</span>
+          <select id="studentsFilter" onchange="filterStudentCards(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-family:Heebo;font-size:.8rem">
+            <option value="all">כל התלמידים</option>
+            <option value="risk">בסיכון בלבד</option>
+            <option value="watch">בסיכון + מעקב</option>
+            <option value="excellent">מצטיינים בנוכחות</option>
+            <option value="missing">חסר דיווח (מחנכ/ת או יועצת)</option>
+          </select>
+        </div>
       </div>
       <div class="card-body">
-        ${atRisk.length ? `
-          <div class="table-scroll">
-            <table class="data-table">
-              <thead><tr><th style="width:34px"></th><th>שם</th><th>סיבות לדגל</th><th>הערות יועצת (${monthLabel})</th><th>אבחון/טיפול</th><th></th></tr></thead>
-              <tbody>
-                ${atRisk.map(s => {
-                  const r = studentRisk[s.id];
-                  const md = (s.monthlyData?.[month]) || {};
-                  const therapyTxt = [s.diagnoses, s.therapist, s.emotionalTherapy?'טיפול רגשי':''].filter(Boolean).join(' · ') || '—';
-                  const noteTxt = [md.done, md.notes, md.goals].filter(Boolean).join(' · ') || '—';
-                  const reasonsTxt = r.reasons.length ? r.reasons.join(' · ') : '—';
-                  return `<tr onclick="openStudentCounselorReport('${s.className}','${s.id}')" style="cursor:pointer">
-                    <td><span class="status-dot ${r.level}"></span></td>
-                    <td style="font-weight:600">${escapeHtml(s.name)}</td>
-                    <td style="font-size:.78rem;color:var(--text-light)">${escapeHtml(reasonsTxt)}</td>
-                    <td style="font-size:.82rem">${escapeHtml(noteTxt)}</td>
-                    <td style="font-size:.82rem">${escapeHtml(therapyTxt)}</td>
-                    <td style="font-size:.78rem;color:var(--primary-dark);white-space:nowrap">פתח כרטיס</td>
-                  </tr>`;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : `<p style="color:var(--muted);text-align:center;padding:18px">אין תלמידים בסיכון או במעקב כרגע — לא לפי היועצת, לא לפי ציוני המחנכ/ת, ולא לפי כישורי החיים.</p>`}
+        <div id="studentCardsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:14px">
+          ${sortedStudents.map(s => {
+            const t = hrTracking[s.id] || {};
+            const md = s.monthlyData?.[month] || {};
+            const att = attData.perStudent[s.id] || {};
+            const r = studentRisk[s.id].level;
+            const hasTracking = Object.values(t).some(v => v && (typeof v === 'number' ? v>0 : true));
+            const hasCounselor = md.done || md.goals || md.notes;
+            const isExcellent = att.total >= 3 && att.pct === 100;
+            const dataAttrs = `data-risk="${r}" data-excellent="${isExcellent}" data-missing="${(!hasTracking || !hasCounselor)}"`;
+            return `<div ${dataAttrs}>${renderStudentCard(s)}</div>`;
+          }).join('')}
+        </div>
       </div>
     </div>
   `;
+  // Keep an empty placeholder so existing layout assembly still works
+  const atRiskHTML = '';
 
   // ==== HOME VISITS THIS MONTH ====
   const visitsHTML = `
@@ -3502,7 +3631,7 @@ function renderClassSummaryView(){
     </div>
   `;
 
-  container.innerHTML = selectorHTML + overviewHTML + attendanceHTML + teacherCardHTML + flagsHTML + atRiskHTML + visitsHTML + trendHTML + aiHTML;
+  container.innerHTML = selectorHTML + overviewHTML + attendanceHTML + teacherCardHTML + flagsHTML + studentsHTML + atRiskHTML + visitsHTML + trendHTML + aiHTML;
 
   // Inject AI button (uses management context)
   if(typeof injectAIButton === 'function'){
@@ -3587,6 +3716,22 @@ function onSummaryClassChange(){
   const container = document.getElementById('viewClassSummary');
   container.dataset.selectedClass = document.getElementById('summaryClassSelect').value;
   renderClassSummaryView();
+}
+
+function filterStudentCards(filter){
+  const grid = document.getElementById('studentCardsGrid');
+  if(!grid) return;
+  Array.from(grid.children).forEach(card => {
+    const risk = card.dataset.risk;
+    const excellent = card.dataset.excellent === 'true';
+    const missing = card.dataset.missing === 'true';
+    let show = true;
+    if(filter === 'risk') show = risk === 'red';
+    else if(filter === 'watch') show = risk === 'red' || risk === 'yellow';
+    else if(filter === 'excellent') show = excellent;
+    else if(filter === 'missing') show = missing;
+    card.style.display = show ? '' : 'none';
+  });
 }
 
 function showAIPayload(){
