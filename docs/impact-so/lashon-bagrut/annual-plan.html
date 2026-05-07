@@ -341,9 +341,79 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* Track selector */
+    .track-selector {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .track-selector-head h3 {
+      font-size: 1.05rem;
+      margin: 0 0 0.75rem;
+    }
+    .track-helper {
+      font-weight: 400;
+      color: var(--ink-muted);
+      font-size: 0.85rem;
+    }
+    .track-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+    @media (max-width: 700px) { .track-options { grid-template-columns: 1fr; } }
+    .track-option {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      font-family: var(--font-body);
+    }
+    .track-option:hover { border-color: var(--lavender); }
+    .track-option.active {
+      border-color: var(--lavender);
+      background: linear-gradient(135deg, #faf5ff, white);
+      box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.12);
+    }
+    .track-icon {
+      width: 36px; height: 36px;
+      border-radius: 12px;
+      margin: 0 auto 0.4rem;
+      display: grid; place-items: center;
+      font-size: 1rem;
+    }
+    .track-label {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+    .track-meta {
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+      margin-top: 0.15rem;
+    }
+
+    /* Track badge in row */
+    .track-badge-cell {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-right: 0.3rem;
+    }
+    .track-badge-tzurot { background: #ede7f6; color: #7c3aed; }
+    .track-badge-tahbir { background: #dbeafe; color: #2563eb; }
+    .track-badge-shared { background: #fef3c7; color: #d97706; }
+
     /* Print friendly */
     @media print {
-      .topnav, .filters, .bagrut-banner, .topic-distribution, .stats-grid { display: none; }
+      .topnav, .filters, .bagrut-banner, .topic-distribution, .stats-grid, .track-selector { display: none; }
       .calendar-table { font-size: 0.75rem; }
       .action-row { display: none; }
     }
@@ -378,12 +448,35 @@
       <div class="bagrut-icon">!</div>
       <div>
         <div class="bagrut-info-title">בגרות לשון 70% · יום ב' 17.5.2027</div>
-        <div class="bagrut-info-sub">שאלון 011117 · נקודת היעד של כל התוכנית · המערכת תכננה אחורה מהתאריך הזה</div>
+        <div class="bagrut-info-sub" id="bagrut-info-sub">שאלון 011281 · 50 נק' משותף + 40 נק' מסלול בחירה (צורות / תחביר) + 10 נק' תקינות · מבוסס תוכנית הלימודים תשס"ג + 7 בגרויות אחרונות</div>
       </div>
     </div>
     <div class="bagrut-countdown-wrap">
       <div class="bagrut-countdown-num" id="countdown-num">—</div>
       <div class="bagrut-countdown-label" id="countdown-label">ימים לבגרות</div>
+    </div>
+  </div>
+
+  <div class="track-selector" id="track-selector">
+    <div class="track-selector-head">
+      <h3>בחרי מסלול לימוד <span class="track-helper">(ההכרעה של ביה"ס בין 2 פרקי הבחירה בבגרות)</span></h3>
+    </div>
+    <div class="track-options">
+      <button class="track-option" data-track="tzurot">
+        <div class="track-icon" style="background: #ede7f6; color: #7c3aed;">🟣</div>
+        <div class="track-label">מערכת הצורות</div>
+        <div class="track-meta">הפועל · תצורת השם · 40 נק'</div>
+      </button>
+      <button class="track-option" data-track="tahbir">
+        <div class="track-icon" style="background: #dbeafe; color: #2563eb;">🔵</div>
+        <div class="track-label">תחביר</div>
+        <div class="track-meta">משפטים · פסוקיות · 40 נק'</div>
+      </button>
+      <button class="track-option active" data-track="both">
+        <div class="track-icon" style="background: linear-gradient(135deg, #ede7f6, #dbeafe); color: var(--ink);">⚪</div>
+        <div class="track-label">שני המסלולים</div>
+        <div class="track-meta">השוואה · החלטה</div>
+      </button>
     </div>
   </div>
 
@@ -470,7 +563,14 @@
   let plan = null;
   let allDays = [];
   let activeFilter = 'all';
+  let activeTrack = 'both'; // 'tzurot' | 'tahbir' | 'both'
   let trackingState = {};
+
+  const TRACK_LABELS = {
+    tzurot: 'מערכת הצורות',
+    tahbir: 'תחביר',
+    shared: 'משותף'
+  };
 
   function escapeHtml(text) {
     if (typeof text !== 'string') return '';
@@ -505,22 +605,21 @@
   function buildAllDays() {
     const start = new Date(plan.meta.year_start);
     const end = new Date(plan.meta.year_end);
+    // Group lessons by date — multiple lessons can occur on same day (one per track)
     const lessonsByDate = {};
-    plan.lessons.forEach(l => { lessonsByDate[l.date] = l; });
+    plan.lessons.forEach(l => {
+      if (!lessonsByDate[l.date]) lessonsByDate[l.date] = [];
+      lessonsByDate[l.date].push(l);
+    });
 
     allDays = [];
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().slice(0, 10);
-      const dow = d.getDay(); // 0=Sun, 6=Sat
+      const dow = d.getDay();
       const dayLetter = HEBREW_DAYS[dow];
-
-      // Check holidays
       const holiday = plan.holidays.find(h => isInRange(d, h.start, h.end));
-      // Check external exams
       const exam = plan.external_exams.find(e => e.date === dateStr);
-      // Check lessons
-      const lesson = lessonsByDate[dateStr];
-
+      const lessons = lessonsByDate[dateStr] || [];
       const isWeekend = dow === 5 || dow === 6;
 
       allDays.push({
@@ -531,9 +630,17 @@
         isWeekend,
         holiday,
         exam,
-        lesson
+        lessons // array — one per track
       });
     }
+  }
+
+  // Filter lessons by active track
+  function visibleLessons(lessons) {
+    if (!lessons || !lessons.length) return [];
+    if (activeTrack === 'both') return lessons;
+    // Show: shared (always) + the selected track
+    return lessons.filter(l => l.track === 'shared' || l.track === activeTrack);
   }
 
   function renderCountdown() {
@@ -553,22 +660,41 @@
   }
 
   function renderStats() {
-    const lessons = plan.lessons.filter(l => l.hours > 0);
-    const totalHours = lessons.reduce((sum, l) => sum + l.hours, 0);
-    const evaluations = plan.lessons.filter(l => l.evaluation);
-    const exams = evaluations.filter(l => l.evaluation === 'exam').length;
-    const bochanim = evaluations.filter(l => l.evaluation === 'bochan').length;
-    const assignments = evaluations.filter(l => l.evaluation === 'assignment').length;
-    const aiTopics = lessons.filter(l => l.ai_topic && PRACTICE_BANKS_READY.has(l.ai_topic)).length;
+    // Filter by active track
+    const filteredLessons = plan.lessons.filter(l => {
+      if (l.hours === 0 || !l.topic) return false;
+      if (activeTrack === 'both') return true;
+      return l.track === 'shared' || l.track === activeTrack;
+    });
+    const totalHours = filteredLessons.reduce((sum, l) => sum + l.hours, 0);
+
+    // Count evaluations (avoid duplicates by date+type when both tracks have same eval)
+    const evalSet = new Set();
+    filteredLessons.forEach(l => {
+      if (l.evaluation) evalSet.add(`${l.date}|${l.evaluation}|${l.track}`);
+    });
+    const evals = [...evalSet].map(k => k.split('|')[1]);
+    const exams = evals.filter(e => e === 'exam').length;
+    const bochanim = evals.filter(e => e === 'bochan').length;
+    const assignments = evals.filter(e => e === 'assignment').length;
+
+    // Count topics in selected track(s)
+    const topicSet = new Set(filteredLessons.map(l => l.topic).filter(Boolean));
+
+    // Practice banks
+    const aiTopics = new Set();
+    filteredLessons.forEach(l => {
+      if (l.ai_topic && PRACTICE_BANKS_READY.has(l.ai_topic)) aiTopics.add(l.ai_topic);
+    });
 
     $('stats-grid').innerHTML = `
       <div class="stat-tile">
-        <div class="stat-tile-num" style="color: var(--lavender);">${plan.summary_stats.topics}</div>
-        <div class="stat-tile-label">נושאים מרכזיים</div>
+        <div class="stat-tile-num" style="color: var(--lavender);">${topicSet.size}</div>
+        <div class="stat-tile-label">נושאים</div>
       </div>
       <div class="stat-tile">
-        <div class="stat-tile-num" style="color: var(--cyan);">${lessons.length}</div>
-        <div class="stat-tile-label">שיעורים בשנה</div>
+        <div class="stat-tile-num" style="color: var(--cyan);">${filteredLessons.length}</div>
+        <div class="stat-tile-label">שיעורים</div>
       </div>
       <div class="stat-tile">
         <div class="stat-tile-num" style="color: var(--mint);">${totalHours}</div>
@@ -583,8 +709,8 @@
         <div class="stat-tile-label">מבחנים פנימיים</div>
       </div>
       <div class="stat-tile">
-        <div class="stat-tile-num" style="color: var(--pink);">${aiTopics}</div>
-        <div class="stat-tile-label">נושאי תרגול AI</div>
+        <div class="stat-tile-num" style="color: var(--pink);">${aiTopics.size}</div>
+        <div class="stat-tile-label">תרגול AI מוכן</div>
       </div>
     `;
   }
@@ -592,9 +718,10 @@
   function renderTopicBars() {
     const topicHours = {};
     plan.lessons.forEach(l => {
-      if (l.topic && l.hours > 0) {
-        topicHours[l.topic] = (topicHours[l.topic] || 0) + l.hours;
-      }
+      if (!l.topic || !l.hours) return;
+      // Filter by active track
+      if (activeTrack !== 'both' && l.track !== 'shared' && l.track !== activeTrack) return;
+      topicHours[l.topic] = (topicHours[l.topic] || 0) + l.hours;
     });
     const totalHours = Object.values(topicHours).reduce((a, b) => a + b, 0);
     $('total-hours').textContent = totalHours;
@@ -603,14 +730,26 @@
       key,
       ...plan.topics_index[key],
       actual_hours: topicHours[key] || 0
-    })).sort((a, b) => b.actual_hours - a.actual_hours);
+    }))
+      .filter(t => {
+        if (activeTrack === 'both') return t.actual_hours > 0;
+        return t.track === 'shared' || t.track === activeTrack;
+      })
+      .sort((a, b) => b.actual_hours - a.actual_hours);
 
     $('topic-bars').innerHTML = topics.map(t => {
       const pct = totalHours ? Math.round((t.actual_hours / totalHours) * 100) : 0;
+      const trackBadge = t.track === 'shared'
+        ? '<span class="track-badge-cell track-badge-shared" style="margin-right:0.4rem;">משותף</span>'
+        : t.track === 'tzurot'
+          ? '<span class="track-badge-cell track-badge-tzurot" style="margin-right:0.4rem;">צורות</span>'
+          : t.track === 'tahbir'
+            ? '<span class="track-badge-cell track-badge-tahbir" style="margin-right:0.4rem;">תחביר</span>'
+            : '';
       return `
         <div class="topic-bar-row">
           <div class="topic-bar-name">
-            <span class="topic-chip" style="background: ${t.color};">${escapeHtml(t.name)}</span>
+            ${trackBadge}<span class="topic-chip" style="background: ${t.color};">${escapeHtml(t.name)}</span>
           </div>
           <div class="topic-bar-track">
             <div class="topic-bar-fill" style="width: ${pct}%; background: ${t.color};"></div>
@@ -628,8 +767,9 @@
     today.setHours(0, 0, 0, 0);
 
     for (const day of allDays) {
-      // Filter
-      if (!matchFilter(day, today)) continue;
+      const visible = visibleLessons(day.lessons);
+      // Filter days by user filter
+      if (!matchFilter(day, visible, today)) continue;
 
       // Month divider
       const monthYear = `${HEBREW_MONTHS[day.dateObj.getMonth()]} ${day.dateObj.getFullYear()}`;
@@ -638,27 +778,35 @@
         lastMonthYear = monthYear;
       }
 
-      rows.push(renderRow(day));
+      // For days with no lessons (holiday/exam/empty) → render single row
+      if (!visible.length) {
+        rows.push(renderRow(day, null, true));
+      } else {
+        // One row per visible lesson
+        visible.forEach((lesson, idx) => {
+          rows.push(renderRow(day, lesson, idx === 0));
+        });
+      }
     }
     $('calendar-body').innerHTML = rows.join('');
 
-    // Attach handlers
     document.querySelectorAll('[data-action="generate"]').forEach(btn => {
-      btn.addEventListener('click', () => generateLesson(btn.dataset.date));
+      btn.addEventListener('click', () => generateLesson(btn.dataset.date, btn.dataset.track));
     });
     document.querySelectorAll('.tracking-checkbox').forEach(cb => {
       cb.addEventListener('change', () => {
-        trackingState[cb.dataset.date] = cb.checked;
+        const key = `${cb.dataset.date}|${cb.dataset.track || 'shared'}`;
+        trackingState[key] = cb.checked;
         localStorage.setItem('impact-so-tracking', JSON.stringify(trackingState));
       });
     });
   }
 
-  function matchFilter(day, today) {
+  function matchFilter(day, visibleLessons, today) {
     if (activeFilter === 'all') return true;
-    if (activeFilter === 'lessons') return !!day.lesson && day.lesson.hours > 0;
-    if (activeFilter === 'evaluations') return !!(day.lesson?.evaluation) || !!day.exam;
-    if (activeFilter === 'practice-ready') return !!(day.lesson?.ai_topic && PRACTICE_BANKS_READY.has(day.lesson.ai_topic));
+    if (activeFilter === 'lessons') return visibleLessons.some(l => l.hours > 0);
+    if (activeFilter === 'evaluations') return visibleLessons.some(l => l.evaluation) || !!day.exam;
+    if (activeFilter === 'practice-ready') return visibleLessons.some(l => hasKit(l.subtopic));
     if (activeFilter === 'upcoming') {
       const monthAhead = new Date(today);
       monthAhead.setMonth(monthAhead.getMonth() + 1);
@@ -667,46 +815,59 @@
     return true;
   }
 
-  function renderRow(day) {
+  function renderRow(day, lesson, isFirst) {
     const cls = [];
     if (day.isWeekend) cls.push('weekend');
     if (day.holiday) cls.push('holiday');
     if (day.exam?.type === 'bagrut') cls.push('bagrut-day');
-    if (day.lesson && day.lesson.hours > 0) cls.push('lesson-day');
+    if (lesson && lesson.hours > 0) cls.push('lesson-day');
+    if (!isFirst) cls.push('lesson-day-extra');
 
-    const dateFormatted = formatDateHebrew(day.dateObj);
+    const dateFormatted = isFirst ? formatDateHebrew(day.dateObj) : '';
+    const dayLetter = isFirst ? day.day : '';
 
     // Activity column
     let activity = '';
-    if (day.exam?.type === 'bagrut') activity = `<span class="bagrut-chip">🎯 ${escapeHtml(day.exam.label)}</span>`;
-    else if (day.exam) activity = `<span class="bagrut-chip" style="background: var(--amber); color: white;">${escapeHtml(day.exam.label)}</span>`;
-    else if (day.holiday) activity = `<span class="holiday-chip">${escapeHtml(day.holiday.name)}</span>`;
+    if (isFirst) {
+      if (day.exam?.type === 'bagrut') activity = `<span class="bagrut-chip">🎯 ${escapeHtml(day.exam.label)}</span>`;
+      else if (day.exam) activity = `<span class="bagrut-chip" style="background: var(--amber); color: white;">${escapeHtml(day.exam.label)}</span>`;
+      else if (day.holiday) activity = `<span class="holiday-chip">${escapeHtml(day.holiday.name)}</span>`;
+    }
+
+    // Track badge
+    let trackBadge = '';
+    if (lesson?.track) {
+      const cls2 = lesson.track === 'tzurot' ? 'track-badge-tzurot'
+        : lesson.track === 'tahbir' ? 'track-badge-tahbir' : 'track-badge-shared';
+      trackBadge = `<span class="track-badge-cell ${cls2}">${TRACK_LABELS[lesson.track] || lesson.track}</span>`;
+    }
 
     // Topic + subtopic
     let topicCell = '';
     let subtopicCell = '';
-    if (day.lesson && day.lesson.topic) {
-      const t = plan.topics_index[day.lesson.topic];
-      topicCell = `<span class="topic-chip" style="background: ${t.color};">${escapeHtml(t.name)}</span>`;
-      const kitBadge = hasKit(day.lesson.subtopic)
+    if (lesson && lesson.topic) {
+      const t = plan.topics_index[lesson.topic];
+      if (t) {
+        topicCell = `${trackBadge}<span class="topic-chip" style="background: ${t.color};">${escapeHtml(t.name)}</span>`;
+      }
+      const kitBadge = hasKit(lesson.subtopic)
         ? ' <span style="display:inline-block;background:linear-gradient(135deg,var(--lavender),var(--cyan));color:white;padding:0.1rem 0.5rem;border-radius:999px;font-size:0.68rem;font-weight:700;margin-right:0.3rem;">🎁 חבילה</span>'
         : '';
-      subtopicCell = escapeHtml(day.lesson.subtopic || '') + kitBadge;
-    } else if (day.lesson?.skipped_reason) {
-      subtopicCell = `<span class="text-muted">— ${escapeHtml(day.lesson.skipped_reason)} —</span>`;
+      subtopicCell = escapeHtml(lesson.subtopic || '') + kitBadge;
+    } else if (lesson?.skipped_reason) {
+      subtopicCell = `<span class="text-muted">— ${escapeHtml(lesson.skipped_reason)} —</span>`;
     }
 
     // Hours
-    const hoursCell = day.lesson && day.lesson.hours > 0 ? day.lesson.hours : (day.holiday || day.exam ? '—' : '');
+    const hoursCell = lesson && lesson.hours > 0 ? lesson.hours : (isFirst && (day.holiday || day.exam) ? '—' : '');
 
     // Actions: lesson + practice + evaluation
     let actions = '';
-    if (day.lesson && day.lesson.hours > 0) {
-      const fullLessonId = findFullLessonId(day.lesson.subtopic);
+    if (lesson && lesson.hours > 0) {
+      const fullLessonId = findFullLessonId(lesson.subtopic);
       const lessonHasKit = fullLessonId && KITS_AVAILABLE.has(fullLessonId);
 
       if (lessonHasKit) {
-        // Has full digital kit — open kit dashboard (which links to pedagogical view too)
         actions += `<a class="action-btn primary" href="lesson-kits/${fullLessonId}/index.html" title="פתחי חבילה דיגיטלית מלאה — 5 רכיבים אינטראקטיביים" style="background: linear-gradient(135deg, var(--lavender), var(--cyan)); border-color: var(--lavender);">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg>
           חבילה
@@ -715,44 +876,38 @@
           📋
         </a>`;
       } else if (fullLessonId) {
-        // Has pedagogical view only (no kit yet)
         actions += `<a class="action-btn primary" href="teacher/lesson-view.html?id=${fullLessonId}" title="פתחי מערך שיעור פדגוגי">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           מערך
         </a>`;
       } else {
-        // No content yet — generator
-        actions += `<button class="action-btn primary" data-action="generate" data-date="${day.lesson.date}" title="בנה מערך שיעור">
+        actions += `<button class="action-btn primary" data-action="generate" data-date="${lesson.date}" data-track="${lesson.track || ''}" title="בנה מערך שיעור">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
           מערך
         </button>`;
       }
 
-      if (day.lesson.ai_topic) {
-        const ready = PRACTICE_BANKS_READY.has(day.lesson.ai_topic);
+      if (lesson.ai_topic) {
+        const ready = PRACTICE_BANKS_READY.has(lesson.ai_topic);
         if (ready) {
-          actions += `<a class="action-btn success" href="practice.html?topic=${day.lesson.ai_topic}" title="תרגול חי משולב AI">
+          actions += `<a class="action-btn success" href="practice.html?topic=${lesson.ai_topic}" title="תרגול חי משולב AI">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>
             תרגול ✦
           </a>`;
-        } else {
-          actions += `<button class="action-btn" disabled title="בנק שאלות בבנייה">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            תרגול
-          </button>`;
         }
       }
 
-      if (day.lesson.evaluation) {
+      if (lesson.evaluation) {
         const evalLabels = { bochan: 'בוחן', exam: 'מבחן', assignment: 'הגשה' };
-        actions += `<span class="eval-chip eval-${day.lesson.evaluation}">${evalLabels[day.lesson.evaluation]}</span>`;
+        actions += `<span class="eval-chip eval-${lesson.evaluation}">${evalLabels[lesson.evaluation]}</span>`;
       }
     }
 
     // Tracking
-    const trackingCell = day.lesson && day.lesson.hours > 0 ? `
+    const trackingKey = lesson ? `${lesson.date}|${lesson.track || 'shared'}` : null;
+    const trackingCell = lesson && lesson.hours > 0 ? `
       <div class="tracking-cell">
-        <input type="checkbox" class="checkbox-input tracking-checkbox" data-date="${day.lesson.date}" ${trackingState[day.lesson.date] ? 'checked' : ''}>
+        <input type="checkbox" class="checkbox-input tracking-checkbox" data-date="${lesson.date}" data-track="${lesson.track || ''}" ${trackingState[trackingKey] ? 'checked' : ''}>
         <span>בוצע</span>
       </div>
     ` : '';
@@ -760,7 +915,7 @@
     return `
       <tr class="${cls.join(' ')}">
         <td class="col-date">${dateFormatted}</td>
-        <td class="col-day">${day.day}</td>
+        <td class="col-day">${dayLetter}</td>
         <td class="col-activity">${activity}</td>
         <td class="col-hours">${hoursCell}</td>
         <td class="col-topic">${topicCell}</td>
@@ -780,13 +935,30 @@
         renderTable();
       });
     });
+
+    // Track selector
+    document.querySelectorAll('.track-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.track-option').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeTrack = btn.dataset.track;
+        renderStats();
+        renderTopicBars();
+        renderTable();
+      });
+    });
   }
 
   // Generate lesson modal
-  async function generateLesson(date) {
-    const lesson = plan.lessons.find(l => l.date === date);
+  async function generateLesson(date, track) {
+    // Find the right lesson — match both date AND track if multiple lessons on same date
+    const candidates = plan.lessons.filter(l => l.date === date);
+    const lesson = track
+      ? candidates.find(l => l.track === track) || candidates[0]
+      : candidates[0];
     if (!lesson) return;
     const topic = plan.topics_index[lesson.topic];
+    if (!topic) return;
 
     $('gen-title').textContent = 'בונה מערך שיעור...';
     $('gen-sub').textContent = `${topic.name} — ${lesson.subtopic}`;
