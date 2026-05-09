@@ -5,8 +5,8 @@
  */
 
 const CONFIG = {
-  // Apps Script Web App URL — להחליף אחרי Deploy
-  API_URL: 'https://script.google.com/macros/s/REPLACE_AFTER_DEPLOY/exec',
+  // Apps Script Web App URL
+  API_URL: 'https://script.google.com/macros/s/AKfycbxHNG9YXEDmj_Xm8xNiCGlQAL6M3opvB8TdrPePBbBaKvWp5SLqYM7Fw1qy-m_Z-X37yQ/exec',
 
   // Brand
   APP_NAME: 'ImpactOS אוריינות מידע',
