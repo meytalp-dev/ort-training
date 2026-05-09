@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>דשבורד מורה · ImpactOS אוריינות מידע</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { 'heebo': ['Heebo', 'sans-serif'], 'inter': ['Inter', 'sans-serif'] },
+          colors: {
+            'truth': { 50: '#ecfdf5', 100: '#d1fae5', 200: '#a7f3d0', 300: '#6ee7b7', 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857', 800: '#065f46', 900: '#064e3b' },
+            'think': { 50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95' },
+            'voice': { 50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d', 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706', 700: '#b45309', 800: '#92400e', 900: '#78350f' },
+          },
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="font-heebo bg-gray-50 text-gray-900 antialiased min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-100 sticky top-0 z-40">
+    <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-gradient-to-br from-truth-500 via-think-500 to-voice-500 rounded-lg flex items-center justify-center text-white font-bold">I</div>
+          <div class="hidden sm:block">
+            <div class="font-bold text-sm leading-tight">ImpactOS</div>
+            <div class="text-xs text-gray-500 leading-tight">דשבורד מורה</div>
+          </div>
+        </a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="text-sm text-gray-700 hidden sm:block">
+          שלום, <span id="user-name" class="font-semibold">...</span>
+        </div>
+        <button onclick="logout()" class="text-gray-500 hover:text-red-600 transition" title="התנתקות">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto px-4 py-6 max-w-6xl">
+
+    <!-- Page header -->
+    <div class="mb-8">
+      <h1 class="text-3xl md:text-4xl font-bold mb-2">הכיתה שלי</h1>
+      <p class="text-gray-600">מבט-על על 13 הרכיבים, התקדמות פר-תלמיד, והמלצות הוראה.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6 overflow-x-auto pb-1">
+      <button onclick="showTab('roster')" id="tab-roster" class="whitespace-nowrap px-4 py-2 rounded-xl bg-truth-600 text-white font-semibold text-sm transition">תלמידים</button>
+      <button onclick="showTab('heatmap')" id="tab-heatmap" class="whitespace-nowrap px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm transition">חום-מפה</button>
+      <button onclick="showTab('matrix')" id="tab-matrix" class="whitespace-nowrap px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm transition">מטריצה חוצה-מקצועות</button>
+      <button onclick="showTab('recommend')" id="tab-recommend" class="whitespace-nowrap px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm transition">המלצה השבוע</button>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="text-center py-12">
+      <div class="spinner mx-auto mb-4"></div>
+      <p class="text-gray-500 text-sm">טוען...</p>
+    </div>
+
+    <!-- Roster -->
+    <div id="section-roster" class="hidden">
+      <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div id="roster-empty" class="hidden p-8 text-center">
+          <p class="text-gray-500 mb-2">עדיין אין תלמידים בכיתה.</p>
+          <p class="text-sm text-gray-400">תלמידים שיירשמו עם ה-classId שלך יופיעו כאן.</p>
+        </div>
+        <table id="roster-table" class="hidden w-full text-sm">
+          <thead class="bg-gray-50 text-right text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+              <th class="p-3">שם</th>
+              <th class="p-3">רמה כללית</th>
+              <th class="p-3">שלב נוכחי</th>
+              <th class="p-3">אבחון</th>
+              <th class="p-3">חוזקה</th>
+              <th class="p-3">חולשה</th>
+            </tr>
+          </thead>
+          <tbody id="roster-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Heatmap -->
+    <div id="section-heatmap" class="hidden">
+      <div class="bg-white rounded-2xl border border-gray-100 p-6">
+        <h2 class="font-bold text-lg mb-4">רמה ממוצעת לרכיב</h2>
+        <p class="text-sm text-gray-600 mb-6">צבע כהה = רמה גבוהה. צבע בהיר = הכיתה זקוקה לחיזוק.</p>
+
+        <div id="heatmap-grid" class="space-y-6"></div>
+      </div>
+    </div>
+
+    <!-- Cross-curricular matrix -->
+    <div id="section-matrix" class="hidden">
+      <div class="bg-white rounded-2xl border border-gray-100 p-6">
+        <h2 class="font-bold text-lg mb-2">מטריצת מקצועות</h2>
+        <p class="text-sm text-gray-600 mb-6">איזה מקצוע מוביל איזה ממד. כל מקצוע מקבל מטלה אחת לפחות בסמסטר.</p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="p-3 text-right text-xs uppercase">ממד / מקצוע</th>
+                <th class="p-3 text-right text-xs uppercase">עברית</th>
+                <th class="p-3 text-right text-xs uppercase">אזרחות</th>
+                <th class="p-3 text-right text-xs uppercase">היסטוריה</th>
+                <th class="p-3 text-right text-xs uppercase">מדעים</th>
+                <th class="p-3 text-right text-xs uppercase">מתמטיקה</th>
+                <th class="p-3 text-right text-xs uppercase">חינוך</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-t border-gray-100">
+                <td class="p-3 font-bold text-truth-700">איתור / הערכה</td>
+                <td class="p-3 bg-truth-50">1.1, 1.5</td>
+                <td class="p-3 bg-truth-50">1.2, 1.5</td>
+                <td class="p-3 bg-truth-50">1.3</td>
+                <td class="p-3 bg-truth-50">1.4</td>
+                <td class="p-3 text-gray-400">תומך</td>
+                <td class="p-3 bg-truth-50">מודול פתיחה</td>
+              </tr>
+              <tr class="border-t border-gray-100">
+                <td class="p-3 font-bold text-think-700">ארגון / עיבוד</td>
+                <td class="p-3 bg-think-50">2.3</td>
+                <td class="p-3 bg-think-50">2.5</td>
+                <td class="p-3 bg-think-50">2.2</td>
+                <td class="p-3 bg-think-50">2.1</td>
+                <td class="p-3 bg-think-50">2.1, 2.2</td>
+                <td class="p-3 text-gray-400">תומך</td>
+              </tr>
+              <tr class="border-t border-gray-100">
+                <td class="p-3 font-bold text-voice-700">הצגה</td>
+                <td class="p-3 bg-voice-50">3.1, 3.2</td>
+                <td class="p-3 bg-voice-50">3.3</td>
+                <td class="p-3 text-gray-400">תומך</td>
+                <td class="p-3 text-gray-400">תומך</td>
+                <td class="p-3 text-gray-400">תומך</td>
+                <td class="p-3 text-gray-400">תומך</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-6 bg-think-50 border border-think-200 rounded-xl p-4">
+          <div class="font-bold text-think-800 mb-2">הצעות מטלות חוצות-מקצוע:</div>
+          <ul class="space-y-2 text-sm text-gray-700">
+            <li><strong>היסטוריה:</strong> "בחרו אירוע שנוי במחלוקת. אספו מקורות מ-2 צדדים. כיצד מייצגים אותו?"</li>
+            <li><strong>אזרחות:</strong> "בחרו זכות אדם. מצאו 3 מקורות שונים על המצב שלה. מהם ההבדלים?"</li>
+            <li><strong>עברית:</strong> "כתבו ביקורת על מאמר עיתונאי. האם הכותב משוחד?"</li>
+            <li><strong>מדעים:</strong> "בדקו טענה מדעית פופולרית. האם היא מבוססת? מה אומר המאמר המקורי?"</li>
+            <li><strong>מתמטיקה:</strong> "מצאו גרף סטטיסטי בעיתון. האם הוא מטעה? איך תיצגו אחרת?"</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weekly recommendation -->
+    <div id="section-recommend" class="hidden">
+      <div class="bg-gradient-to-br from-truth-600 via-think-600 to-voice-600 rounded-2xl p-8 text-white mb-6">
+        <div class="text-sm font-bold opacity-90 mb-2">השבוע מומלץ ללמד:</div>
+        <h2 class="text-2xl md:text-3xl font-bold mb-4" id="rec-component-name">טוען...</h2>
+        <p class="opacity-90 mb-6" id="rec-reason"></p>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-gray-100 p-6">
+        <h3 class="font-bold text-lg mb-4">למה הרכיב הזה?</h3>
+        <p class="text-sm text-gray-700 mb-4" id="rec-explanation">המערכת בחרה את הרכיב שבו הכיתה הכי חלשה ביחס ל-2.0 ביולוגיה.</p>
+
+        <h3 class="font-bold text-lg mb-2 mt-6">הצעת שיעור (90 דקות):</h3>
+        <div class="bg-gray-50 rounded-xl p-4 text-sm space-y-2" id="rec-lesson-plan">
+          <p>טוען הצעה...</p>
+        </div>
+
+        <a href="unit-ai-missed.html" class="inline-block mt-6 bg-truth-600 hover:bg-truth-700 text-white px-6 py-3 rounded-lg font-semibold transition">צפה ביחידה לדוגמה</a>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script>
+    let currentUser = null;
+    let roster = [];
+    let heatmap = {};
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      currentUser = requireAuth(['teacher']);
+      if (!currentUser) return;
+      document.getElementById('user-name').textContent = currentUser.name.split(' ')[0];
+      await loadAll();
+      showTab('roster');
+    });
+
+    async function loadAll() {
+      try {
+        if (isDemoMode()) {
+          // Demo data
+          roster = [
+            { userId: 'demo1', name: 'נועה כהן', overallLevel: 2, currentStage: 'core', diagnosticCompletedAt: '2026-09-12', componentLevels: { '1.1': 2, '1.2': 3, '1.3': 2, '1.4': 1, '1.5': 2, '2.1': 2, '2.2': 1, '2.3': 1, '2.4': 1, '2.5': 1, '3.1': 3, '3.2': 3, '3.3': 2 } },
+            { userId: 'demo2', name: 'דניאל לוי', overallLevel: 3, currentStage: 'core', diagnosticCompletedAt: '2026-09-10', componentLevels: { '1.1': 3, '1.2': 3, '1.3': 3, '1.4': 2, '1.5': 3, '2.1': 3, '2.2': 3, '2.3': 2, '2.4': 2, '2.5': 2, '3.1': 3, '3.2': 4, '3.3': 3 } },
+            { userId: 'demo3', name: 'תאיר פרץ', overallLevel: 1, currentStage: 'open', diagnosticCompletedAt: '2026-09-15', componentLevels: { '1.1': 1, '1.2': 1, '1.3': 1, '1.4': 1, '1.5': 1, '2.1': 1, '2.2': 1, '2.3': 1, '2.4': 1, '2.5': 1, '3.1': 2, '3.2': 2, '3.3': 1 } },
+            { userId: 'demo4', name: 'יואב רוזן', overallLevel: 2, currentStage: 'core', diagnosticCompletedAt: '2026-09-13', componentLevels: { '1.1': 2, '1.2': 2, '1.3': 2, '1.4': 2, '1.5': 2, '2.1': 2, '2.2': 2, '2.3': 2, '2.4': 1, '2.5': 1, '3.1': 2, '3.2': 2, '3.3': 2 } },
+          ];
+          heatmap = computeHeatmapFromRoster(roster);
+        } else {
+          roster = await API.getClassRoster();
+          const result = await API.call('getClassHeatmap');
+          heatmap = result.heatmap || {};
+        }
+      } catch (err) {
+        console.error('Load error:', err);
+        roster = [];
+        heatmap = {};
+      }
+      document.getElementById('loading').classList.add('hidden');
+    }
+
+    function computeHeatmapFromRoster(students) {
+      const components = Object.keys(CONFIG.COMPONENTS);
+      const map = {};
+      components.forEach(c => {
+        const levels = students.map(s => s.componentLevels[c] || 0).filter(x => x > 0);
+        map[c] = {
+          mean: levels.length ? (levels.reduce((a,b) => a+b, 0) / levels.length).toFixed(2) : 0,
+          count: levels.length,
+          total: students.length,
+        };
+      });
+      return map;
+    }
+
+    function showTab(tab) {
+      ['roster', 'heatmap', 'matrix', 'recommend'].forEach(t => {
+        const tabBtn = document.getElementById(`tab-${t}`);
+        const sec = document.getElementById(`section-${t}`);
+        if (t === tab) {
+          tabBtn.className = 'whitespace-nowrap px-4 py-2 rounded-xl bg-truth-600 text-white font-semibold text-sm transition';
+          sec.classList.remove('hidden');
+        } else {
+          tabBtn.className = 'whitespace-nowrap px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm transition';
+          sec.classList.add('hidden');
+        }
+      });
+
+      if (tab === 'roster') renderRoster();
+      if (tab === 'heatmap') renderHeatmap();
+      if (tab === 'recommend') renderRecommendation();
+    }
+
+    function renderRoster() {
+      if (roster.length === 0) {
+        document.getElementById('roster-empty').classList.remove('hidden');
+        document.getElementById('roster-table').classList.add('hidden');
+        return;
+      }
+      document.getElementById('roster-empty').classList.add('hidden');
+      document.getElementById('roster-table').classList.remove('hidden');
+
+      const stageNames = {};
+      CONFIG.STAGES.forEach(s => stageNames[s.id] = s.short);
+
+      document.getElementById('roster-tbody').innerHTML = roster.map(s => {
+        // Find strongest and weakest component
+        const entries = Object.entries(s.componentLevels);
+        const sorted = entries.sort((a,b) => b[1] - a[1]);
+        const strong = sorted[0];
+        const weak = sorted[sorted.length - 1];
+        const diagDate = s.diagnosticCompletedAt
+          ? new Date(s.diagnosticCompletedAt).toLocaleDateString('he-IL')
+          : '<span class="text-amber-600">לא הושלם</span>';
+
+        return `
+          <tr class="border-t border-gray-100 hover:bg-gray-50">
+            <td class="p-3 font-semibold">${escapeHtml(s.name)}</td>
+            <td class="p-3"><span class="level-pill level-${s.overallLevel}">רמה ${s.overallLevel}</span></td>
+            <td class="p-3 text-gray-600">${stageNames[s.currentStage] || '-'}</td>
+            <td class="p-3 text-xs text-gray-500">${diagDate}</td>
+            <td class="p-3"><span class="text-truth-700 font-semibold">${strong[0]}</span> <span class="text-xs text-gray-500">(${strong[1]})</span></td>
+            <td class="p-3"><span class="text-amber-700 font-semibold">${weak[0]}</span> <span class="text-xs text-gray-500">(${weak[1]})</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderHeatmap() {
+      const grid = document.getElementById('heatmap-grid');
+      const dimColors = { 1: 'truth', 2: 'think', 3: 'voice' };
+      const dimNames = { 1: 'ממד 1 · איתור והערכה', 2: 'ממד 2 · ארגון ועיבוד', 3: 'ממד 3 · הצגה' };
+
+      grid.innerHTML = [1, 2, 3].map(dim => {
+        const color = dimColors[dim];
+        const components = Object.entries(CONFIG.COMPONENTS).filter(([,c]) => c.dim === dim);
+
+        const cells = components.map(([id, c]) => {
+          const data = heatmap[id] || { mean: 0, count: 0, total: 0 };
+          const mean = Number(data.mean);
+          const intensity = Math.max(0, Math.min(4, Math.round(mean)));
+          const bgs = ['bg-gray-100', 'bg-' + color + '-100', 'bg-' + color + '-200', 'bg-' + color + '-400', 'bg-' + color + '-600'];
+          const textCls = intensity >= 3 ? 'text-white' : 'text-gray-900';
+
+          return `
+            <div class="${bgs[intensity]} ${textCls} rounded-lg p-3 text-center">
+              <div class="text-xs font-bold opacity-80">${id}</div>
+              <div class="text-sm font-semibold mt-1 truncate" title="${c.name}">${c.short}</div>
+              <div class="text-2xl font-bold mt-2">${mean.toFixed(1)}</div>
+              <div class="text-xs opacity-75 mt-1">${data.count}/${data.total}</div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div>
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-3 h-3 bg-${color}-500 rounded-full"></div>
+              <h3 class="font-bold text-${color}-700">${dimNames[dim]}</h3>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">${cells}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRecommendation() {
+      // Find weakest component
+      const entries = Object.entries(heatmap)
+        .filter(([,d]) => d.count > 0)
+        .map(([id, d]) => [id, Number(d.mean)])
+        .sort((a, b) => a[1] - b[1]);
+
+      if (entries.length === 0) {
+        document.getElementById('rec-component-name').textContent = 'אין עדיין נתונים';
+        document.getElementById('rec-reason').textContent = 'אחרי שתלמידים ישלימו אבחון, נבחר רכיב חלש להמליץ עליו.';
+        return;
+      }
+
+      const [weakId, weakMean] = entries[0];
+      const comp = CONFIG.COMPONENTS[weakId];
+      const dim = CONFIG.DIMENSIONS[comp.dim];
+
+      document.getElementById('rec-component-name').textContent = `${weakId} · ${comp.name}`;
+      document.getElementById('rec-reason').textContent = `הכיתה הכי חלשה ברכיב הזה (ממוצע ${weakMean.toFixed(2)} מתוך 4).`;
+      document.getElementById('rec-explanation').textContent = `הרכיב הזה שייך ל${dim.name}. זה רכיב עם משקל ${dim.weight}% בתוכנית, ובאבחון התלמידים הציגו רמה נמוכה בו ביחס לרכיבים האחרים.`;
+
+      const lessonsByComponent = {
+        '1.1': '15 דק׳ סדנת ניסוח שאלה: התלמידים מקבלים 5 נושאים → מנסחים שאלת חיפוש איכותית לכל אחד → השוואה בקבוצות.',
+        '1.2': 'סדנת CRAAP על מקור אמיתי שבחרת. תלמידים בזוגות. דיון בכיתה.',
+        '1.3': 'אותה שאלה, 2 ערוצים: AI + מקור אנושי (ויקיפדיה). השוואה. מסקנות.',
+        '1.4': 'יחידת "מה ה-AI החמיץ?" המוכנה במערכת. 90 דק׳.',
+        '1.5': 'ניתוח 2 כותרות עיתון על אותו אירוע. איתור הטיות. כתיבה מנקודת מבט שלישית.',
+        '2.1': 'מפת חשיבה ממקור מורכב. חלוקה לקטגוריות לוגיות.',
+        '2.2': 'PBL זוטא: שאלת חקר → 3 מקורות → מסקנות מנומקות.',
+        '2.3': 'דיבייט מובנה על נושא שנוי במחלוקת. הערכת איכות הראיות.',
+        '2.4': 'פרויקט חוצה-מקצועות עם מורה אחר.',
+        '2.5': 'חקר היסטורי: עובדה אחת, שני פירושים. מיזוג לתובנה מקורית.',
+        '3.1': 'סימולציה: אותו תוכן ל-3 קהלים שונים. השוואה.',
+        '3.2': 'PBL מלא: התלמידים בוחרים פורמט (סרטון/אינפוגרפיקה/פוסט).',
+        '3.3': 'פרסום אמיתי באתר ביה"ס או רשת חברתית של הכיתה.',
+      };
+
+      document.getElementById('rec-lesson-plan').innerHTML = `<p>${lessonsByComponent[weakId] || 'מומלץ להתאים שיעור לפי השיטה המומלצת ברכיב.'}</p>`;
+    }
+
+    function logout() {
+      if (confirm('להתנתק?')) Auth.logout();
+    }
+
+    function escapeHtml(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>
