@@ -30,6 +30,17 @@
 - בעורך Apps Script: בחרי את הפונקציה `installReminderTrigger` והריצי אותה פעם אחת.
 - מעכשיו תרוץ פעם בשעה ותשלח תזכורות אוטומטית יום לפני האסיפה.
 
+### 7. (אופציונלי) הקלטה קולית להורים
+מאפשר להורה לדבר אל הטלפון במקום למלא טופס. דורש מפתח Gemini.
+
+1. השיגי מפתח: https://aistudio.google.com/apikey
+2. בעורך Apps Script: `Project Settings (גלגל שיניים) → Script Properties → Add property`
+3. Property: `GEMINI_API_KEY` · Value: המפתח שלך
+4. שמרי.
+5. עשי **Deploy → Manage deployments → Edit → New version → Deploy** כדי שהתוספת תעלה לאוויר.
+
+הצד הקולי משתמש ב-`gemini-2.5-flash`, עלות שולית (~אגורה לשניית אודיו), 90 שניות מקסימום להקלטה.
+
 ---
 
 ## בדיקת תקינות

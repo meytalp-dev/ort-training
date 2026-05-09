@@ -53,6 +53,7 @@ function handle(e){
       case 'createEvent':   result = createEvent(payload); break;
       case 'getEvent':      result = getEvent(payload); break;
       case 'bookSlot':      result = bookSlot(payload); break;
+      case 'voiceBook':     result = voiceBook(payload); break;
       case 'getBookings':   result = getBookingsForTeacher(payload); break;
       case 'cancelBooking': result = cancelBooking(payload); break;
       default: throw new Error('Unknown action: ' + action);
@@ -412,4 +413,145 @@ function sendDueReminders(){
 function setupSheets(){
   Object.keys(SHEETS).forEach(k => getSheet(SHEETS[k]));
   Logger.log('Sheets ready: ' + Object.values(SHEETS).join(', '));
+}
+
+// === Voice booking (Gemini) ===
+/**
+ * מקבל הקלטה קולית מההורה, מחלץ פרטים דרך Gemini ומחזיר טופס מוכן לאישור.
+ * payload: { eventId, audioBase64, mimeType }
+ *
+ * דרישה: הוסיפי GEMINI_API_KEY ב-Project Settings → Script Properties.
+ */
+function voiceBook(p){
+  if (!p.eventId || !p.audioBase64) throw new Error('חסרים פרטי הקלטה');
+
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) throw new Error('Gemini API key לא מוגדר. הוסיפי GEMINI_API_KEY ב-Script Properties.');
+
+  const e = findEvent(p.eventId);
+  const students = readAll('Students').filter(s => s.eventId === p.eventId);
+  const bookings = readAll('Bookings').filter(b => b.eventId === p.eventId);
+
+  const startTime = formatTime(e.startTime);
+  const endTime = formatTime(e.endTime);
+  const slotMinutes = Number(e.slotMinutes);
+  const allSlots = buildSlotsServer(startTime, endTime, slotMinutes);
+  const taken = new Set(bookings.map(b => b.slot));
+  const availableSlots = allSlots.filter(s => !taken.has(s));
+  const studentsAvailable = students
+    .map(s => s.studentName)
+    .filter(name => !bookings.some(b => b.studentName === name));
+
+  if (studentsAvailable.length === 0) throw new Error('אין תלמידים פנויים לרישום');
+  if (availableSlots.length === 0) throw new Error('אין שעות פנויות');
+
+  const systemPrompt =
+    'את עוזרת רישום לאסיפת הורים. ההורה שלח/ה הודעה קולית בעברית. חלצי ממנה את הפרטים הבאים והחזירי JSON תקין בלבד.\n\n' +
+    'רשימת תלמידים פנויים לרישום (חייב להתאים אחד מהם בדיוק):\n' +
+    studentsAvailable.map((n,i) => (i+1) + '. ' + n).join('\n') + '\n\n' +
+    'האסיפה מתקיימת בין ' + startTime + ' ל-' + endTime + ', סלוטים של ' + slotMinutes + ' דקות.\n' +
+    'שעות פנויות: ' + availableSlots.join(', ') + '\n\n' +
+    'החזירי JSON עם המפתחות הבאים:\n' +
+    '{\n' +
+    '  "studentName": "שם מדויק מהרשימה למעלה, או null אם לא ברור",\n' +
+    '  "preferredSlot": "שעה משוערת בפורמט HH:MM (קרבי לרבע השעה הקרוב מתוך השעות הפנויות), או null",\n' +
+    '  "parentName": "שם ההורה כפי שאמר/ה, או null",\n' +
+    '  "parentPhone": "מספר טלפון של 10 ספרות (אם נאמר), או null",\n' +
+    '  "parentEmail": "כתובת מייל אם הוזכרה, או null",\n' +
+    '  "notes": "הערות חשובות נוספות שההורה אמר/ה (לא חובה)"\n' +
+    '}\n\n' +
+    'חשוב: אם ההורה אמר/ה רק חלק מהפרטים — מלאי את מה שיש והשאירי השאר null. אל תמציאי.';
+
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+  const requestBody = {
+    contents: [{
+      parts: [
+        { text: systemPrompt },
+        { inline_data: { mime_type: p.mimeType || 'audio/webm', data: p.audioBase64 } },
+      ],
+    }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: 0.1,
+    },
+  };
+
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(requestBody),
+    muteHttpExceptions: true,
+  });
+
+  const code = response.getResponseCode();
+  if (code !== 200) {
+    throw new Error('Gemini error ' + code + ': ' + response.getContentText().slice(0, 300));
+  }
+
+  const data = JSON.parse(response.getContentText());
+  const textOut = data.candidates && data.candidates[0] && data.candidates[0].content
+    && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+    && data.candidates[0].content.parts[0].text;
+
+  if (!textOut) throw new Error('לא הצלחתי לחלץ פרטים מההקלטה');
+
+  let parsed;
+  try { parsed = JSON.parse(textOut); }
+  catch(_){ throw new Error('תשובה לא תקינה מהמודל'); }
+
+  let matchedStudent = null;
+  if (parsed.studentName) {
+    const exact = studentsAvailable.find(n => n === parsed.studentName);
+    matchedStudent = exact
+      || studentsAvailable.find(n => n.indexOf(parsed.studentName) >= 0)
+      || studentsAvailable.find(n => parsed.studentName.indexOf(n) >= 0);
+  }
+
+  let suggestedSlot = null;
+  if (parsed.preferredSlot && availableSlots.indexOf(parsed.preferredSlot) >= 0) {
+    suggestedSlot = parsed.preferredSlot;
+  } else if (parsed.preferredSlot) {
+    suggestedSlot = nearestSlotServer(parsed.preferredSlot, availableSlots);
+  }
+
+  return {
+    matchedStudent: matchedStudent || null,
+    suggestedSlot: suggestedSlot || null,
+    availableSlots,
+    studentsAvailable,
+    parentName: parsed.parentName || '',
+    parentPhone: cleanPhoneServer(parsed.parentPhone) || '',
+    parentEmail: parsed.parentEmail || '',
+    notes: parsed.notes || '',
+  };
+}
+
+function buildSlotsServer(startTime, endTime, slotMinutes){
+  const t = function(s){ const a = s.split(':').map(Number); return a[0]*60 + a[1]; };
+  const tt = function(m){
+    return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+  };
+  const s = t(startTime), e = t(endTime), step = Number(slotMinutes) || 10;
+  const out = [];
+  for (let i = s; i + step <= e; i += step) out.push(tt(i));
+  return out;
+}
+
+function nearestSlotServer(target, slots){
+  if (!slots.length) return null;
+  const t = function(s){ const a = String(s).split(':').map(Number); return a[0]*60 + a[1]; };
+  const targetMin = t(target);
+  let best = slots[0], bestDiff = Math.abs(t(slots[0]) - targetMin);
+  for (let i = 1; i < slots.length; i++) {
+    const diff = Math.abs(t(slots[i]) - targetMin);
+    if (diff < bestDiff) { best = slots[i]; bestDiff = diff; }
+  }
+  return best;
+}
+
+function cleanPhoneServer(s){
+  if (!s) return '';
+  const digits = String(s).replace(/[^\d]/g, '');
+  if (digits.length === 9 && digits.charAt(0) !== '0') return '0' + digits;
+  return digits;
 }

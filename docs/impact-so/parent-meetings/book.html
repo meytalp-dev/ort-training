@@ -38,6 +38,24 @@
         </div>
       </div>
 
+      <!-- Voice option -->
+      <div class="card voice-cta" id="voice-cta">
+        <div class="voice-cta-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="2" width="6" height="12" rx="3"/>
+            <path d="M5 10v2a7 7 0 0 0 14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+          </svg>
+        </div>
+        <div class="voice-cta-text">
+          <div class="voice-cta-title">להזמנה בהקלטה קולית</div>
+          <div class="voice-cta-sub">דברו אל הטלפון, אנחנו נמלא את הפרטים</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-open-voice">הקלטה</button>
+      </div>
+
+      <div class="voice-or">— או —</div>
+
       <div class="card sec">
         <div class="sec-label">שלב 1 · בחירת שם התלמיד/ה</div>
         <div class="field">
@@ -48,6 +66,80 @@
           <div class="help">אם השם של ילדכם לא מופיע, פנו למורה.</div>
         </div>
         <button class="btn btn-primary" id="btn-to-slots">המשך לבחירת שעה ←</button>
+      </div>
+    </div>
+
+    <!-- Step Voice Review: shown after voice processing -->
+    <div id="step-voice-review" class="hidden">
+      <div class="hero">
+        <div>
+          <div class="sec-label">שלב סקירה · אישור פרטים</div>
+          <h1 class="hero-title">הבנו <span class="accent">את ההקלטה</span></h1>
+          <div class="hero-sub">בדקו שהכל נכון לפני אישור הפגישה. אפשר לערוך כל שדה.</div>
+        </div>
+        <button class="btn btn-sm btn-ghost" id="btn-voice-back">→ חזרה</button>
+      </div>
+
+      <div id="voice-notes-box" class="voice-review-card hidden"></div>
+
+      <form class="card" id="form-voice-review">
+        <div class="field">
+          <label>שם התלמיד/ה</label>
+          <select class="select" id="vr-student" required>
+            <option value="">— בחרו —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>שעת הפגישה</label>
+          <select class="select" id="vr-slot" required>
+            <option value="">— בחרו —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>שם ההורה</label>
+          <input class="input" id="vr-parent-name" required>
+        </div>
+        <div class="field">
+          <label>טלפון</label>
+          <input class="input" type="tel" id="vr-parent-phone" placeholder="050-1234567" required>
+        </div>
+        <div class="field">
+          <label>מייל (לקבלת אישור ותזכורת)</label>
+          <input class="input" type="email" id="vr-parent-email" required>
+          <div class="help">אם לא הזכרתם מייל בהקלטה — מלאו אותו כאן.</div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="btn-voice-confirm">אישור הזמנה ✓</button>
+      </form>
+    </div>
+
+    <!-- Voice modal -->
+    <div id="voice-modal" class="voice-modal hidden" role="dialog" aria-modal="true">
+      <div class="voice-modal-inner">
+        <div id="voice-state-idle">
+          <h2>הקלטה קולית</h2>
+          <div class="voice-tip">
+            דברו: שם התלמיד/ה, שעה מועדפת, שם ההורה, טלפון ומייל.<br>
+            למשל: "אני אמא של דנה כהן, רוצה אחרי שש, הטלפון 0501234567".
+          </div>
+          <button class="voice-record-btn" id="btn-record" aria-label="התחל הקלטה">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="2" width="6" height="12" rx="3"/>
+              <path d="M5 10v2a7 7 0 0 0 14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+          </button>
+          <div class="voice-timer en" id="voice-timer">00:00</div>
+          <div class="voice-actions">
+            <button class="btn btn-ghost btn-sm" id="btn-voice-cancel">ביטול</button>
+            <button class="btn btn-primary btn-sm hidden" id="btn-voice-send">שליחת הקלטה</button>
+          </div>
+          <div class="voice-error hidden" id="voice-error"></div>
+        </div>
+        <div id="voice-state-processing" class="hidden">
+          <span class="spinner dark lg"></span>
+          <div style="margin-top:14px;font-size:13px;font-weight:600">מבינים מה אמרתם...</div>
+          <div class="voice-tip" style="margin-top:6px">לוקח כ-5 שניות</div>
+        </div>
       </div>
     </div>
 
@@ -162,7 +254,7 @@ function showError(msg){
 }
 
 function showStep(name){
-  ['student','slot','details','done'].forEach(n =>
+  ['student','slot','details','done','voice-review'].forEach(n =>
     document.getElementById('step-'+n).classList.toggle('hidden', n !== name)
   );
   window.scrollTo({top:0, behavior:'smooth'});
@@ -248,6 +340,226 @@ $('#form-book').addEventListener('submit', async (e) => {
     chosen.slot = '';
     renderSlots();
     showStep('slot');
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'אישור הזמנה ✓';
+  }
+});
+
+// ========== Voice booking ==========
+let mediaRecorder = null;
+let audioChunks = [];
+let recordStartMs = 0;
+let recordTimerId = null;
+let lastBlob = null;
+let lastMime = '';
+
+const voiceModal = $('#voice-modal');
+const btnRecord = $('#btn-record');
+const btnVoiceSend = $('#btn-voice-send');
+const btnVoiceCancel = $('#btn-voice-cancel');
+const voiceTimer = $('#voice-timer');
+const voiceError = $('#voice-error');
+const voiceIdle = $('#voice-state-idle');
+const voiceProcessing = $('#voice-state-processing');
+
+$('#btn-open-voice').addEventListener('click', openVoice);
+btnVoiceCancel.addEventListener('click', closeVoice);
+btnRecord.addEventListener('click', toggleRecord);
+btnVoiceSend.addEventListener('click', sendVoice);
+$('#btn-voice-back').addEventListener('click', () => showStep('student'));
+
+function openVoice(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('הדפדפן לא תומך בהקלטה. השתמשו במילוי הרגיל.');
+    return;
+  }
+  resetVoiceState();
+  voiceModal.classList.remove('hidden');
+}
+
+function closeVoice(){
+  stopRecord(true);
+  voiceModal.classList.add('hidden');
+}
+
+function resetVoiceState(){
+  audioChunks = [];
+  lastBlob = null;
+  lastMime = '';
+  voiceTimer.textContent = '00:00';
+  btnRecord.classList.remove('recording');
+  btnRecord.setAttribute('aria-label','התחל הקלטה');
+  btnVoiceSend.classList.add('hidden');
+  voiceError.classList.add('hidden');
+  voiceError.textContent = '';
+  voiceIdle.classList.remove('hidden');
+  voiceProcessing.classList.add('hidden');
+  if (recordTimerId) { clearInterval(recordTimerId); recordTimerId = null; }
+}
+
+async function toggleRecord(){
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopRecord(false);
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimeCandidates = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+    let mime = '';
+    for (const m of mimeCandidates) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) { mime = m; break; }
+    }
+    mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.addEventListener('dataavailable', (ev) => { if (ev.data && ev.data.size) audioChunks.push(ev.data); });
+    mediaRecorder.addEventListener('stop', () => {
+      stream.getTracks().forEach(t => t.stop());
+      const recordedMime = (mediaRecorder.mimeType || mime || 'audio/webm').split(';')[0];
+      lastBlob = new Blob(audioChunks, { type: recordedMime });
+      lastMime = recordedMime;
+      if (lastBlob.size > 200) {
+        btnVoiceSend.classList.remove('hidden');
+      }
+    });
+    mediaRecorder.start();
+    recordStartMs = Date.now();
+    btnRecord.classList.add('recording');
+    btnRecord.setAttribute('aria-label','עצור הקלטה');
+    btnVoiceSend.classList.add('hidden');
+    voiceError.classList.add('hidden');
+    recordTimerId = setInterval(updateTimer, 200);
+  } catch (err) {
+    showVoiceError('לא קיבלנו גישה למיקרופון. בדקו את ההרשאות בדפדפן ונסו שוב.');
+  }
+}
+
+function stopRecord(silent){
+  if (recordTimerId) { clearInterval(recordTimerId); recordTimerId = null; }
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    try { mediaRecorder.stop(); } catch(_){}
+  }
+  btnRecord.classList.remove('recording');
+  btnRecord.setAttribute('aria-label','התחל הקלטה');
+  if (silent) {
+    audioChunks = [];
+    lastBlob = null;
+  }
+}
+
+function updateTimer(){
+  const ms = Date.now() - recordStartMs;
+  const s = Math.floor(ms/1000);
+  const mm = String(Math.floor(s/60)).padStart(2,'0');
+  const ss = String(s%60).padStart(2,'0');
+  voiceTimer.textContent = mm + ':' + ss;
+  if (s >= 90) stopRecord(false);
+}
+
+function showVoiceError(msg){
+  voiceError.textContent = msg;
+  voiceError.classList.remove('hidden');
+}
+
+async function sendVoice(){
+  if (!lastBlob) { showVoiceError('אין הקלטה לשלוח'); return; }
+  if (!ParentMeetings.isLive()) {
+    showVoiceError('הקלטה קולית פעילה רק על המערכת המלאה (Apps Script). השתמשו במילוי הרגיל.');
+    return;
+  }
+  voiceIdle.classList.add('hidden');
+  voiceProcessing.classList.remove('hidden');
+
+  try {
+    const base64 = await blobToBase64(lastBlob);
+    const result = await ParentMeetings.voiceBook({ eventId, audioBase64: base64, mimeType: lastMime });
+    voiceModal.classList.add('hidden');
+    populateVoiceReview(result);
+    showStep('voice-review');
+  } catch (err) {
+    voiceProcessing.classList.add('hidden');
+    voiceIdle.classList.remove('hidden');
+    showVoiceError('שגיאה בעיבוד: ' + (err.message || 'לא ידוע'));
+  }
+}
+
+function blobToBase64(blob){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result || '';
+      const i = String(result).indexOf(',');
+      resolve(i >= 0 ? String(result).slice(i+1) : String(result));
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function populateVoiceReview(r){
+  const studentSel = $('#vr-student');
+  studentSel.innerHTML = '<option value="">— בחרו —</option>';
+  (r.studentsAvailable || []).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name; opt.textContent = name;
+    if (name === r.matchedStudent) opt.selected = true;
+    studentSel.appendChild(opt);
+  });
+
+  const slotSel = $('#vr-slot');
+  slotSel.innerHTML = '<option value="">— בחרו —</option>';
+  (r.availableSlots || []).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    if (s === r.suggestedSlot) opt.selected = true;
+    slotSel.appendChild(opt);
+  });
+
+  $('#vr-parent-name').value = r.parentName || '';
+  $('#vr-parent-phone').value = r.parentPhone || '';
+  $('#vr-parent-email').value = r.parentEmail || '';
+
+  const notesBox = $('#voice-notes-box');
+  if (r.notes && String(r.notes).trim()) {
+    notesBox.innerHTML = '<strong>הערה שזיהינו:</strong> ' + escapeHtmlSimple(r.notes);
+    notesBox.classList.remove('hidden');
+  } else {
+    notesBox.classList.add('hidden');
+  }
+}
+
+function escapeHtmlSimple(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+$('#form-voice-review').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('#btn-voice-confirm');
+  const studentName = $('#vr-student').value;
+  const slot = $('#vr-slot').value;
+  const parentName = $('#vr-parent-name').value.trim();
+  const parentPhone = $('#vr-parent-phone').value.trim();
+  const parentEmail = $('#vr-parent-email').value.trim();
+
+  if (!studentName || !slot) { alert('נא לבחור תלמיד/ה ושעה'); return; }
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> מאשר...';
+  try {
+    await ParentMeetings.bookSlot({
+      eventId,
+      studentName,
+      slot,
+      parentName,
+      parentPhone,
+      parentEmail,
+    });
+    chosen.studentName = studentName;
+    chosen.slot = slot;
+    showDone();
+  } catch (err) {
+    alert('שגיאה: ' + err.message + '\n\nייתכן שמישהו תפס את השעה במקביל. נטען מחדש.');
+    eventData = await ParentMeetings.getEvent(eventId);
+    renderStudent();
+    showStep('student');
   } finally {
     btn.disabled = false; btn.innerHTML = 'אישור הזמנה ✓';
   }
