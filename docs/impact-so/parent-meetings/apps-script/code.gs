@@ -514,14 +514,28 @@ function voiceBook(p){
     suggestedSlot = nearestSlotServer(parsed.preferredSlot, availableSlots);
   }
 
+  // אם זוהה תלמיד ויש לו פרטי הורה ברשומות — נשתמש בהם במקום מה ש-Gemini חילץ
+  let storedEmail = '';
+  let storedPhone = '';
+  let contactsFromRecord = false;
+  if (matchedStudent) {
+    const rec = students.find(s => s.studentName === matchedStudent);
+    if (rec) {
+      storedEmail = String(rec.parentEmail || '').trim();
+      storedPhone = cleanPhoneServer(rec.parentPhone) || '';
+      if (storedEmail || storedPhone) contactsFromRecord = true;
+    }
+  }
+
   return {
     matchedStudent: matchedStudent || null,
     suggestedSlot: suggestedSlot || null,
     availableSlots,
     studentsAvailable,
     parentName: parsed.parentName || '',
-    parentPhone: cleanPhoneServer(parsed.parentPhone) || '',
-    parentEmail: parsed.parentEmail || '',
+    parentPhone: storedPhone || cleanPhoneServer(parsed.parentPhone) || '',
+    parentEmail: storedEmail || parsed.parentEmail || '',
+    contactsFromRecord,
     notes: parsed.notes || '',
   };
 }
