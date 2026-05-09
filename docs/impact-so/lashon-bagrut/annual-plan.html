@@ -1252,10 +1252,30 @@
     return date >= new Date(start) && date <= new Date(end);
   }
 
+  // Load plan — works on both http(s) and file:// (script-tag fallback)
+  function loadPlan() {
+    return new Promise((resolve, reject) => {
+      fetch('curriculum/annual-plan-full-year.json', { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+        .then(resolve)
+        .catch(() => {
+          // file:// fallback — load via <script>
+          window.__ANNUAL_PLAN = null;
+          const s = document.createElement('script');
+          s.src = 'curriculum/annual-plan-full-year.js?_=' + Date.now();
+          s.onload = () => {
+            if (window.__ANNUAL_PLAN) { const p = window.__ANNUAL_PLAN; window.__ANNUAL_PLAN = null; resolve(p); }
+            else reject(new Error('אין נתונים בקובץ'));
+          };
+          s.onerror = () => reject(new Error('הקובץ לא נמצא: curriculum/annual-plan-full-year.js'));
+          document.head.appendChild(s);
+        });
+    });
+  }
+
   async function init() {
     try {
-      const response = await fetch('curriculum/annual-plan-full-year.json');
-      plan = await response.json();
+      plan = await loadPlan();
       trackingState = JSON.parse(localStorage.getItem('impact-so-tracking') || '{}');
       buildAllDays();
       renderCountdown();
