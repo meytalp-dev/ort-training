@@ -28,6 +28,43 @@
       <div><strong>שגיאה.</strong> <span id="error-msg"></span></div>
     </div>
 
+    <!-- Step Edit: shown when ?edit=TOKEN -->
+    <div id="step-edit" class="hidden">
+      <div class="hero">
+        <div>
+          <div class="sec-label">הפגישה שלך</div>
+          <h1 class="hero-title">שלום, <span class="accent" id="ed-parent">—</span></h1>
+          <div class="hero-sub" id="ed-meta">—</div>
+        </div>
+      </div>
+
+      <div class="card sec">
+        <div class="sec-label">פרטי הפגישה הנוכחית</div>
+        <div style="font-size:14px;line-height:2">
+          <div><strong>תלמיד/ה:</strong> <span id="ed-student">—</span></div>
+          <div><strong>תאריך:</strong> <span id="ed-date">—</span></div>
+          <div><strong>שעה:</strong> <span class="accent en" style="font-weight:700;font-size:18px" id="ed-slot">—</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" id="btn-keep">השעה מתאימה לי ✓</button>
+        <button class="btn btn-ghost" id="btn-change-time">לשינוי שעה</button>
+      </div>
+
+      <div class="footer-mini">לביטול הפגישה — לחצו "לשינוי שעה" ואז סגרו את הדף בלי לבחור שעה אחרת.</div>
+    </div>
+
+    <!-- Step Kept: parent confirmed they're keeping the time -->
+    <div id="step-kept" class="hidden">
+      <div class="notice green">
+        <div>
+          <strong>סופר!</strong>
+          הפגישה נשארה כפי שנקבעה. תקבלו תזכורת אוטומטית במייל יום לפני האסיפה.
+        </div>
+      </div>
+    </div>
+
     <!-- Step 1: choose student -->
     <div id="step-student" class="hidden">
       <div class="hero">
@@ -228,12 +265,16 @@
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
 const eventId = params.get('event');
+const editToken = params.get('edit') || '';
 
 let eventData = null;
 let chosen = { studentName: '', slot: '' };
+let prefillContacts = { parentName: '', parentEmail: '', parentPhone: '' };
 
 if (!eventId) {
   showError('הקישור לא תקין — חסר מזהה אירוע.');
+} else if (editToken) {
+  loadEditFlow();
 } else {
   loadEvent();
 }
@@ -249,6 +290,62 @@ async function loadEvent(){
   }
 }
 
+async function loadEditFlow(){
+  try {
+    const data = await ParentMeetings.getMyBooking({ eventId, editToken });
+    $('#loading').classList.add('hidden');
+    renderEditScreen(data);
+  } catch(err) {
+    showError(err.message);
+  }
+}
+
+function renderEditScreen(data){
+  const e = data.event;
+  const b = data.booking;
+  $('#ed-parent').textContent = b.parentName || 'הורה יקר/ה';
+  $('#ed-meta').textContent = e.title + (e.teacherName ? ' · ' + e.teacherName : '');
+  $('#ed-student').textContent = b.studentName;
+  $('#ed-date').textContent = window.PMHelpers.formatDateHe(e.date);
+  $('#ed-slot').textContent = b.slot;
+
+  // Cache for re-booking flow
+  prefillContacts = {
+    parentName: b.parentName || '',
+    parentEmail: b.parentEmail || '',
+    parentPhone: b.parentPhone || '',
+  };
+  chosen.studentName = b.studentName;
+
+  showStep('edit');
+}
+
+document.addEventListener('click', (ev) => {
+  if (ev.target.id === 'btn-keep') {
+    showStep('kept');
+  } else if (ev.target.id === 'btn-change-time') {
+    handleChangeTime();
+  }
+});
+
+async function handleChangeTime(){
+  const btn = $('#btn-change-time');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner dark"></span> מבטל...';
+  try {
+    await ParentMeetings.cancelMyBooking({ eventId, editToken });
+    // Now reload event data and go to slot picker with student preset
+    eventData = await ParentMeetings.getEvent(eventId);
+    renderSlots();
+    showStep('slot');
+    $('#chose-name').textContent = chosen.studentName;
+    $('#bk-meta-2').textContent =
+      window.PMHelpers.formatDateHe(eventData.date) + ' · ' + eventData.slotMinutes + ` דק' לפגישה`;
+  } catch(err) {
+    alert('שגיאה: ' + err.message);
+    btn.disabled = false; btn.innerHTML = 'לשינוי שעה';
+  }
+}
+
 function showError(msg){
   $('#loading').classList.add('hidden');
   $('#error-msg').textContent = msg;
@@ -256,7 +353,7 @@ function showError(msg){
 }
 
 function showStep(name){
-  ['student','slot','details','done','voice-review'].forEach(n =>
+  ['student','slot','details','done','voice-review','edit','kept'].forEach(n =>
     document.getElementById('step-'+n).classList.toggle('hidden', n !== name)
   );
   window.scrollTo({top:0, behavior:'smooth'});
@@ -314,6 +411,11 @@ $('#btn-to-details').addEventListener('click', () => {
   if (!chosen.slot) return;
   $('#d-student').textContent = chosen.studentName;
   $('#d-slot').textContent = chosen.slot;
+  // Pre-fill from edit flow or from records (if available)
+  const form = $('#form-book');
+  if (prefillContacts.parentName)  form.elements['parentName'].value  = prefillContacts.parentName;
+  if (prefillContacts.parentEmail) form.elements['parentEmail'].value = prefillContacts.parentEmail;
+  if (prefillContacts.parentPhone) form.elements['parentPhone'].value = prefillContacts.parentPhone;
   showStep('details');
 });
 

@@ -50,12 +50,14 @@ function handle(e){
 
     let result;
     switch(action){
-      case 'createEvent':   result = createEvent(payload); break;
-      case 'getEvent':      result = getEvent(payload); break;
-      case 'bookSlot':      result = bookSlot(payload); break;
-      case 'voiceBook':     result = voiceBook(payload); break;
-      case 'getBookings':   result = getBookingsForTeacher(payload); break;
-      case 'cancelBooking': result = cancelBooking(payload); break;
+      case 'createEvent':     result = createEvent(payload); break;
+      case 'getEvent':        result = getEvent(payload); break;
+      case 'bookSlot':        result = bookSlot(payload); break;
+      case 'voiceBook':       result = voiceBook(payload); break;
+      case 'getBookings':     result = getBookingsForTeacher(payload); break;
+      case 'cancelBooking':   result = cancelBooking(payload); break;
+      case 'getMyBooking':    result = getMyBooking(payload); break;
+      case 'cancelMyBooking': result = cancelMyBooking(payload); break;
       default: throw new Error('Unknown action: ' + action);
     }
     return json({ ok:true, result });
@@ -196,6 +198,7 @@ function bookSlot(p){
   if (!p.eventId || !p.studentName || !p.slot) throw new Error('פרטי הזמנה חסרים');
   const e = findEvent(p.eventId);
 
+  let bookedAt;
   // Lock to prevent double-booking under concurrency
   const lock = LockService.getDocumentLock();
   lock.waitLock(8000);
@@ -206,6 +209,7 @@ function bookSlot(p){
     if (bookings.some(b => b.studentName === p.studentName))
       throw new Error('כבר נרשמה פגישה לתלמיד הזה');
 
+    bookedAt = new Date().toISOString();
     appendRow('Bookings', {
       eventId: p.eventId,
       studentName: p.studentName,
@@ -213,23 +217,25 @@ function bookSlot(p){
       parentName: p.parentName || '',
       parentEmail: p.parentEmail || '',
       parentPhone: p.parentPhone || '',
-      bookedAt: new Date().toISOString(),
+      bookedAt: bookedAt,
       reminderSent: 'false',
     });
   } finally {
     lock.releaseLock();
   }
 
+  const editToken = computeEditToken(p.eventId, p.studentName, p.slot, bookedAt);
+
   // Send confirmation email
   if (p.parentEmail) {
     try {
-      sendConfirmationEmail(e, p);
+      sendConfirmationEmail(e, p, editToken);
     } catch(err) {
       Logger.log('Mail error: ' + err);
     }
   }
 
-  return { ok: true };
+  return { ok: true, editToken };
 }
 
 function getBookingsForTeacher(p){
@@ -249,6 +255,7 @@ function getBookingsForTeacher(p){
       studentName: b.studentName, slot: formatTime(b.slot),
       parentName: b.parentName, parentEmail: b.parentEmail, parentPhone: b.parentPhone,
       bookedAt: b.bookedAt,
+      editToken: computeEditToken(b.eventId, b.studentName, formatTime(b.slot), b.bookedAt),
     })),
   };
 }
@@ -275,10 +282,14 @@ function formatTime(v){
 }
 
 // === Emails ===
-function sendConfirmationEmail(event, booking){
+function sendConfirmationEmail(event, booking, editToken){
   const subject = `אישור פגישה — ${event.title}`;
   const date = formatDate(event.date);
   const teacher = event.teacherName || '';
+  const editLink = buildEditLink(event.eventId, editToken);
+  const editBlock = editLink
+    ? `<p style="margin:0 0 14px"><a href="${editLink}" style="display:inline-block;background:#EC4899;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">לשינוי או ביטול הפגישה</a></p>`
+    : '';
   const html = `
     <div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;background:#F9FAFB;padding:30px;color:#111827">
       <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #E5E7EB;border-radius:14px;overflow:hidden">
@@ -296,9 +307,9 @@ function sendConfirmationEmail(event, booking){
               <strong>שעה:</strong> <span style="color:#EC4899;font-weight:700">${escapeXml(booking.slot)}</span>
             </div>
           </div>
+          ${editBlock}
           <p style="font-size:13px;color:#6B7280;line-height:1.7">
             תקבלו תזכורת אוטומטית במייל יום לפני האסיפה.
-            במקרה של שינוי או ביטול אנא צרו קשר עם המורה.
           </p>
           <p style="font-size:11px;color:#9CA3AF;margin-top:24px">ImpactOS · אסיפות הורים · learni.ai</p>
         </div>
@@ -312,9 +323,15 @@ function sendConfirmationEmail(event, booking){
 }
 
 function sendReminderEmail(event, booking){
-  const subject = `תזכורת — מחר פגישת הורים, ${booking.slot}`;
+  const subject = `תזכורת — מחר פגישת הורים, ${formatTime(booking.slot)}`;
   const date = formatDate(event.date);
+  const slot = formatTime(booking.slot);
   const teacher = event.teacherName || '';
+  const editToken = computeEditToken(event.eventId, booking.studentName, slot, booking.bookedAt);
+  const editLink = buildEditLink(event.eventId, editToken);
+  const editBlock = editLink
+    ? `<p style="margin:0 0 14px"><a href="${editLink}" style="display:inline-block;background:#EC4899;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">לשינוי או ביטול הפגישה</a></p>`
+    : '';
   const html = `
     <div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;background:#F9FAFB;padding:30px;color:#111827">
       <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #E5E7EB;border-radius:14px;overflow:hidden">
@@ -329,13 +346,12 @@ function sendReminderEmail(event, booking){
             <div style="font-size:13px;line-height:1.9">
               <strong>תלמיד/ה:</strong> ${escapeXml(booking.studentName)}<br>
               <strong>תאריך:</strong> ${date}<br>
-              <strong>שעה:</strong> <span style="color:#EC4899;font-weight:700;font-size:18px">${escapeXml(booking.slot)}</span><br>
+              <strong>שעה:</strong> <span style="color:#EC4899;font-weight:700;font-size:18px">${escapeXml(slot)}</span><br>
               <strong>אירוע:</strong> ${escapeXml(event.title)}
             </div>
           </div>
-          <p style="font-size:13px;color:#6B7280;line-height:1.7">
-            נתראה מחר! אם אתם צריכים לשנות או לבטל, פנו ישירות למורה.
-          </p>
+          ${editBlock}
+          <p style="font-size:13px;color:#6B7280;line-height:1.7">נתראה מחר!</p>
           <p style="font-size:11px;color:#9CA3AF;margin-top:24px">ImpactOS · אסיפות הורים · learni.ai</p>
         </div>
       </div>
@@ -413,6 +429,86 @@ function sendDueReminders(){
 function setupSheets(){
   Object.keys(SHEETS).forEach(k => getSheet(SHEETS[k]));
   Logger.log('Sheets ready: ' + Object.values(SHEETS).join(', '));
+}
+
+// === Self-service edit (parent cancels/changes their own booking) ===
+function bookedAtKey(v){
+  if (v instanceof Date) return Math.floor(v.getTime() / 1000) + '';
+  const s = String(v || '');
+  if (!s) return '';
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return Math.floor(d.getTime() / 1000) + '';
+}
+
+function computeEditToken(eventId, studentName, slot, bookedAt){
+  const raw = String(eventId) + '|' + String(studentName) + '|' + String(slot) + '|' + bookedAtKey(bookedAt);
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) {
+    let b = bytes[i]; if (b < 0) b += 256;
+    const h = b.toString(16);
+    hex += h.length === 1 ? '0' + h : h;
+  }
+  return hex.slice(0, 16);
+}
+
+function findBookingByEditToken(eventId, editToken){
+  const bookings = readAll('Bookings').filter(b => b.eventId === eventId);
+  for (let i = 0; i < bookings.length; i++) {
+    const b = bookings[i];
+    const slot = formatTime(b.slot);
+    const tok = computeEditToken(b.eventId, b.studentName, slot, b.bookedAt);
+    if (tok === editToken) {
+      return { booking: b, slot };
+    }
+  }
+  return null;
+}
+
+function getMyBooking(p){
+  if (!p.eventId || !p.editToken) throw new Error('חסרים פרטים לזיהוי הפגישה');
+  const e = findEvent(p.eventId);
+  const found = findBookingByEditToken(p.eventId, p.editToken);
+  if (!found) throw new Error('הפגישה לא נמצאה (ייתכן שכבר בוטלה)');
+  const b = found.booking;
+  return {
+    event: {
+      eventId: e.eventId, title: e.title, teacherName: e.teacherName,
+      date: formatDate(e.date), startTime: formatTime(e.startTime),
+      endTime: formatTime(e.endTime), slotMinutes: Number(e.slotMinutes),
+    },
+    booking: {
+      studentName: b.studentName,
+      slot: found.slot,
+      parentName: String(b.parentName || ''),
+      parentEmail: String(b.parentEmail || ''),
+      parentPhone: String(b.parentPhone || ''),
+    },
+  };
+}
+
+function cancelMyBooking(p){
+  if (!p.eventId || !p.editToken) throw new Error('חסרים פרטים לזיהוי הפגישה');
+  findEvent(p.eventId); // validate event exists
+  const found = findBookingByEditToken(p.eventId, p.editToken);
+  if (!found) throw new Error('הפגישה לא נמצאה (ייתכן שכבר בוטלה)');
+  const b = found.booking;
+  const slot = found.slot;
+  const ok = deleteRow('Bookings', x =>
+    x.eventId === p.eventId && x.studentName === b.studentName && formatTime(x.slot) === slot
+  );
+  return { ok };
+}
+
+function getBaseUrl(){
+  const prop = PropertiesService.getScriptProperties().getProperty('PARENT_MEETINGS_BASE_URL');
+  return prop || 'https://meytalp-dev.github.io/ort-training/impact-so/parent-meetings/';
+}
+
+function buildEditLink(eventId, editToken){
+  if (!eventId || !editToken) return '';
+  return getBaseUrl() + 'book.html?event=' + encodeURIComponent(eventId) + '&edit=' + encodeURIComponent(editToken);
 }
 
 // === Voice booking (Gemini) ===

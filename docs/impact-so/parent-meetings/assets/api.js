@@ -102,6 +102,12 @@ const ApiDemo = {
   voiceBook(){
     throw new Error('הקלטה קולית לא זמינה במצב דמו. צריך להפעיל את ה-Apps Script.');
   },
+  getMyBooking(){
+    throw new Error('עריכת הזמנה לא זמינה במצב דמו.');
+  },
+  cancelMyBooking(){
+    throw new Error('עריכת הזמנה לא זמינה במצב דמו.');
+  },
 };
 
 async function api(action, payload){
@@ -110,12 +116,14 @@ async function api(action, payload){
 }
 
 const ParentMeetings = {
-  createEvent:   (data) => api('createEvent', data),
-  getEvent:      (eventId) => api('getEvent', { eventId }),
-  bookSlot:      (booking) => api('bookSlot', booking),
-  voiceBook:     (data) => api('voiceBook', data),
-  getBookings:   (eventId, token) => api('getBookings', { eventId, token }),
-  cancelBooking: (data) => api('cancelBooking', data),
+  createEvent:     (data) => api('createEvent', data),
+  getEvent:        (eventId) => api('getEvent', { eventId }),
+  bookSlot:        (booking) => api('bookSlot', booking),
+  voiceBook:       (data) => api('voiceBook', data),
+  getBookings:     (eventId, token) => api('getBookings', { eventId, token }),
+  cancelBooking:   (data) => api('cancelBooking', data),
+  getMyBooking:    (data) => api('getMyBooking', data),
+  cancelMyBooking: (data) => api('cancelMyBooking', data),
   isLive,
 };
 window.ParentMeetings = ParentMeetings;
