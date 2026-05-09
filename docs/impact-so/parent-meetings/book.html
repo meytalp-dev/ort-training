@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>קביעת פגישה — אסיפת הורים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css">
+</head>
+<body>
+
+<div class="brand-bar">
+  <div>
+    <div class="brand-bar-title">Impact<span>OS</span></div>
+    <div class="brand-bar-sub">קביעת פגישה לאסיפת הורים</div>
+  </div>
+</div>
+
+<div class="main">
+  <section class="page">
+
+    <!-- Loading -->
+    <div id="loading" class="empty">טוען את האירוע...</div>
+
+    <!-- Error -->
+    <div id="error" class="notice orange hidden">
+      <div><strong>שגיאה.</strong> <span id="error-msg"></span></div>
+    </div>
+
+    <!-- Step 1: choose student -->
+    <div id="step-student" class="hidden">
+      <div class="hero">
+        <div>
+          <div class="sec-label" id="bk-teacher">—</div>
+          <h1 class="hero-title" id="bk-title">—</h1>
+          <div class="hero-sub" id="bk-meta">—</div>
+        </div>
+      </div>
+
+      <div class="card sec">
+        <div class="sec-label">שלב 1 · בחירת שם התלמיד/ה</div>
+        <div class="field">
+          <label>שם התלמיד/ה שלי</label>
+          <select class="select" id="select-student">
+            <option value="">— בחרו שם —</option>
+          </select>
+          <div class="help">אם השם של ילדכם לא מופיע, פנו למורה.</div>
+        </div>
+        <button class="btn btn-primary" id="btn-to-slots">המשך לבחירת שעה ←</button>
+      </div>
+    </div>
+
+    <!-- Step 2: choose slot -->
+    <div id="step-slot" class="hidden">
+      <div class="hero">
+        <div>
+          <div class="sec-label">שלב 2 · בחירת שעה</div>
+          <h1 class="hero-title">שעות פנויות עבור <span class="accent" id="chose-name">—</span></h1>
+          <div class="hero-sub" id="bk-meta-2">—</div>
+        </div>
+        <button class="btn btn-sm btn-ghost" onclick="backToStudent()">→ חזרה</button>
+      </div>
+
+      <div class="card sec">
+        <div id="slots" class="slots-grid"></div>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="btn-to-details" disabled>המשך לפרטי הורה ←</button>
+    </div>
+
+    <!-- Step 3: parent details -->
+    <div id="step-details" class="hidden">
+      <div class="hero">
+        <div>
+          <div class="sec-label">שלב 3 · פרטי קשר</div>
+          <h1 class="hero-title">כמעט סיימנו</h1>
+          <div class="hero-sub">פגישה ל-<strong id="d-student">—</strong> בשעה <strong class="accent en" id="d-slot">—</strong></div>
+        </div>
+        <button class="btn btn-sm btn-ghost" onclick="backToSlot()">→ חזרה</button>
+      </div>
+
+      <form class="card" id="form-book">
+        <div class="field">
+          <label>שם ההורה</label>
+          <input class="input" name="parentName" required>
+        </div>
+        <div class="field">
+          <label>טלפון</label>
+          <input class="input" type="tel" name="parentPhone" placeholder="050-1234567" required>
+        </div>
+        <div class="field">
+          <label>מייל (לקבלת אישור ותזכורת)</label>
+          <input class="input" type="email" name="parentEmail" required>
+          <div class="help">תישלח תזכורת אוטומטית במייל יום לפני האסיפה.</div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="btn-confirm">אישור הזמנה ✓</button>
+      </form>
+    </div>
+
+    <!-- Step 4: confirmed -->
+    <div id="step-done" class="hidden">
+      <div class="notice green">
+        <div>
+          <strong>הפגישה נקבעה!</strong>
+          תקבלו אישור במייל ותזכורת יום לפני האסיפה.
+        </div>
+      </div>
+
+      <div class="card sec">
+        <div class="sec-label">סיכום הפגישה</div>
+        <div style="font-size:14px;line-height:1.8">
+          <div><strong>תלמיד/ה:</strong> <span id="ok-student">—</span></div>
+          <div><strong>אסיפה:</strong> <span id="ok-event">—</span></div>
+          <div><strong>תאריך:</strong> <span id="ok-date">—</span></div>
+          <div><strong>שעה:</strong> <span class="en accent" style="font-weight:700;font-size:18px" id="ok-slot">—</span></div>
+          <div><strong>מורה:</strong> <span id="ok-teacher">—</span></div>
+        </div>
+      </div>
+
+      <a id="ok-cal" class="btn btn-dark">+ הוספה ליומן</a>
+    </div>
+
+    <div class="footer-mini">
+      ImpactOS · בנייה: <a href="https://learni.ai" target="_blank">Learni</a>
+    </div>
+
+  </section>
+</div>
+
+<script src="assets/config.js"></script>
+<script src="assets/api.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const eventId = params.get('event');
+
+let eventData = null;
+let chosen = { studentName: '', slot: '' };
+
+if (!eventId) {
+  showError('הקישור לא תקין — חסר מזהה אירוע.');
+} else {
+  loadEvent();
+}
+
+async function loadEvent(){
+  try {
+    eventData = await ParentMeetings.getEvent(eventId);
+    $('#loading').classList.add('hidden');
+    showStep('student');
+    renderStudent();
+  } catch(err) {
+    showError(err.message);
+  }
+}
+
+function showError(msg){
+  $('#loading').classList.add('hidden');
+  $('#error-msg').textContent = msg;
+  $('#error').classList.remove('hidden');
+}
+
+function showStep(name){
+  ['student','slot','details','done'].forEach(n =>
+    document.getElementById('step-'+n).classList.toggle('hidden', n !== name)
+  );
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function renderStudent(){
+  $('#bk-teacher').textContent = eventData.teacherName || 'המורה';
+  $('#bk-title').textContent = eventData.title;
+  $('#bk-meta').textContent = `${window.PMHelpers.formatDateHe(eventData.date)} · ${eventData.startTime}–${eventData.endTime}`;
+  $('#bk-meta-2').textContent = `${window.PMHelpers.formatDateHe(eventData.date)} · ${eventData.slotMinutes} דק' לפגישה`;
+
+  const takenStudents = new Set(eventData.taken.map(t => t.studentName));
+  const sel = $('#select-student');
+  sel.innerHTML = '<option value="">— בחרו שם —</option>';
+  eventData.students.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.name;
+    opt.textContent = s.name + (takenStudents.has(s.name) ? ' (כבר נקבעה פגישה)' : '');
+    if (takenStudents.has(s.name)) opt.disabled = true;
+    sel.appendChild(opt);
+  });
+}
+
+$('#btn-to-slots').addEventListener('click', () => {
+  const name = $('#select-student').value;
+  if (!name) return alert('יש לבחור שם תלמיד/ה');
+  chosen.studentName = name;
+  $('#chose-name').textContent = name;
+  renderSlots();
+  showStep('slot');
+});
+
+function renderSlots(){
+  const slots = window.PMHelpers.buildSlots(eventData.startTime, eventData.endTime, eventData.slotMinutes);
+  const taken = new Set(eventData.taken.map(t => t.slot));
+  const html = slots.map(slot => {
+    const isTaken = taken.has(slot);
+    return `<div class="slot ${isTaken?'taken':''}" data-slot="${slot}">
+      <div class="slot-time en">${slot}</div>
+      <div class="slot-status">${isTaken?'תפוס':'פנוי'}</div>
+    </div>`;
+  }).join('');
+  $('#slots').innerHTML = html;
+  document.querySelectorAll('.slot:not(.taken)').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+      chosen.slot = el.dataset.slot;
+      $('#btn-to-details').disabled = false;
+    });
+  });
+}
+
+$('#btn-to-details').addEventListener('click', () => {
+  if (!chosen.slot) return;
+  $('#d-student').textContent = chosen.studentName;
+  $('#d-slot').textContent = chosen.slot;
+  showStep('details');
+});
+
+function backToStudent(){ showStep('student'); }
+function backToSlot(){ showStep('slot'); }
+
+$('#form-book').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('#btn-confirm');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> מאשר...';
+  try {
+    const fd = new FormData(e.target);
+    await ParentMeetings.bookSlot({
+      eventId,
+      studentName: chosen.studentName,
+      slot: chosen.slot,
+      parentName: fd.get('parentName'),
+      parentPhone: fd.get('parentPhone'),
+      parentEmail: fd.get('parentEmail'),
+    });
+    showDone();
+  } catch(err) {
+    alert('שגיאה: ' + err.message + '\n\nייתכן שמישהו תפס את השעה במקביל. נחזור לבחירת שעה.');
+    // Re-fetch and go back
+    eventData = await ParentMeetings.getEvent(eventId);
+    chosen.slot = '';
+    renderSlots();
+    showStep('slot');
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'אישור הזמנה ✓';
+  }
+});
+
+function showDone(){
+  $('#ok-student').textContent = chosen.studentName;
+  $('#ok-event').textContent = eventData.title;
+  $('#ok-date').textContent = window.PMHelpers.formatDateHe(eventData.date);
+  $('#ok-slot').textContent = chosen.slot;
+  $('#ok-teacher').textContent = eventData.teacherName || '—';
+
+  // Build Google Calendar link
+  const [hh, mm] = chosen.slot.split(':').map(Number);
+  const date = new Date(eventData.date + 'T00:00:00');
+  date.setHours(hh, mm, 0, 0);
+  const endD = new Date(date.getTime() + (eventData.slotMinutes * 60000));
+  const fmt = (d) => d.toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  const gcal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('פגישת הורים — '+eventData.title)}&dates=${fmt(date)}/${fmt(endD)}&details=${encodeURIComponent('עם '+(eventData.teacherName||''))}`;
+  $('#ok-cal').href = gcal;
+  $('#ok-cal').target = '_blank';
+
+  showStep('done');
+}
+</script>
+</body>
+</html>
