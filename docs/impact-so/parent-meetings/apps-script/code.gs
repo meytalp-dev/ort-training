@@ -188,7 +188,7 @@ function getEvent(p){
     date: formatDate(e.date), startTime: formatTime(e.startTime),
     endTime: formatTime(e.endTime), slotMinutes: Number(e.slotMinutes),
     students: students.map(s => ({ name: s.studentName })),
-    taken: bookings.map(b => ({ slot: b.slot, studentName: b.studentName })),
+    taken: bookings.map(b => ({ slot: formatTime(b.slot), studentName: b.studentName })),
   };
 }
 
@@ -201,7 +201,7 @@ function bookSlot(p){
   lock.waitLock(8000);
   try {
     const bookings = readAll('Bookings').filter(b => b.eventId === p.eventId);
-    if (bookings.some(b => b.slot === p.slot))
+    if (bookings.some(b => formatTime(b.slot) === p.slot))
       throw new Error('השעה הזו כבר תפוסה');
     if (bookings.some(b => b.studentName === p.studentName))
       throw new Error('כבר נרשמה פגישה לתלמיד הזה');
@@ -246,7 +246,7 @@ function getBookingsForTeacher(p){
       name: s.studentName, parentEmail: s.parentEmail, parentPhone: s.parentPhone,
     })),
     bookings: bookings.map(b => ({
-      studentName: b.studentName, slot: b.slot,
+      studentName: b.studentName, slot: formatTime(b.slot),
       parentName: b.parentName, parentEmail: b.parentEmail, parentPhone: b.parentPhone,
       bookedAt: b.bookedAt,
     })),
@@ -256,7 +256,7 @@ function getBookingsForTeacher(p){
 function cancelBooking(p){
   const e = findEvent(p.eventId);
   if (e.token !== p.token) throw new Error('אין הרשאה');
-  const ok = deleteRow('Bookings', b => b.eventId === p.eventId && b.slot === p.slot);
+  const ok = deleteRow('Bookings', b => b.eventId === p.eventId && formatTime(b.slot) === p.slot);
   return { ok };
 }
 
@@ -436,7 +436,7 @@ function voiceBook(p){
   const endTime = formatTime(e.endTime);
   const slotMinutes = Number(e.slotMinutes);
   const allSlots = buildSlotsServer(startTime, endTime, slotMinutes);
-  const taken = new Set(bookings.map(b => b.slot));
+  const taken = new Set(bookings.map(b => formatTime(b.slot)));
   const availableSlots = allSlots.filter(s => !taken.has(s));
   const studentsAvailable = students
     .map(s => s.studentName)
