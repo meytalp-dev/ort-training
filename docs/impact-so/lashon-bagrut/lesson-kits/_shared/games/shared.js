@@ -63,16 +63,35 @@
     return p.get(name) || fallback || '';
   }
 
-  // ─── Load JSON content (with file:// fallback) ───
-  async function loadContent(path) {
-    if (!path) throw new Error('content path missing');
-    try {
-      const res = await fetch(path, { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return await res.json();
-    } catch (e) {
-      throw new Error('שגיאה בטעינת תוכן: ' + e.message);
-    }
+  // ─── Load content — works on both file:// and http(s) ───
+  // Tries fetch first; on failure, falls back to <script> tag (path swapped to .js)
+  // .js files must set window.__GAME_CONTENT = {...}
+  function loadContent(path) {
+    if (!path) return Promise.reject(new Error('content path missing'));
+    return new Promise((resolve, reject) => {
+      // Method 1: fetch (works on http(s))
+      fetch(path, { cache: 'no-store' })
+        .then(res => res.ok ? res.json() : Promise.reject(new Error('HTTP ' + res.status)))
+        .then(resolve)
+        .catch(() => {
+          // Method 2: <script> tag fallback (works on file://)
+          const jsPath = path.replace(/\.json$/i, '.js');
+          window.__GAME_CONTENT = null;
+          const s = document.createElement('script');
+          s.src = jsPath + '?_=' + Date.now();
+          s.onload = () => {
+            if (window.__GAME_CONTENT) {
+              const c = window.__GAME_CONTENT;
+              window.__GAME_CONTENT = null;
+              resolve(c);
+            } else {
+              reject(new Error('שגיאה בטעינת תוכן (אין נתונים)'));
+            }
+          };
+          s.onerror = () => reject(new Error('שגיאה בטעינת תוכן (קובץ לא נמצא: ' + jsPath + ')'));
+          document.head.appendChild(s);
+        });
+    });
   }
 
   // ─── Send results to Google Sheets (JSONP via script tag) ───
