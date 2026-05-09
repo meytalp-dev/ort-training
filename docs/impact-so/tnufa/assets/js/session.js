@@ -20,6 +20,11 @@
 (function () {
   'use strict';
 
+  // Resume state — persists in localStorage so the student can leave mid-session
+  // and pick up where they stopped (within 12 hours, same unit).
+  const STATE_KEY = 'tnufa_active_session_v1';
+  const STATE_TTL_MS = 12 * 3600 * 1000;
+
   let currentUser = null;
   let unit = null;
   let sessionId = null;
@@ -46,6 +51,17 @@
 
     document.getElementById('step-total').textContent = unit.sessionSequence.length;
 
+    const saved = loadState();
+    if (saved && saved.stepIndex < unit.sessionSequence.length) {
+      showResumePrompt(saved);
+      return;
+    }
+
+    await startNewSession();
+  }
+
+  async function startNewSession() {
+    clearState();
     try {
       sessionId = await API.startSession();
     } catch (error) {
@@ -53,10 +69,102 @@
       showFatal('שגיאה בפתיחת הסשן. נסה.י לרענן.');
       return;
     }
-
     sessionStart = Date.now();
+    totalCorrect = 0;
+    activitiesCompleted = 0;
+    learnedItems = [];
     startTimer();
     runStep(0);
+  }
+
+  function resumeSession(saved) {
+    sessionId = saved.sessionId;
+    totalCorrect = saved.totalCorrect || 0;
+    activitiesCompleted = saved.activitiesCompleted || 0;
+    learnedItems = saved.learnedItems || [];
+    sessionStart = Date.now() - (saved.elapsed || 0);
+    startTimer();
+    runStep(saved.stepIndex || 0);
+  }
+
+  function showResumePrompt(saved) {
+    const loading = document.getElementById('loading');
+    const total = unit.sessionSequence.length;
+    const remaining = total - saved.stepIndex;
+    const nextStep = unit.sessionSequence[saved.stepIndex];
+    const stepLabels = {
+      vocabulary: 'אוצר מילים',
+      reading: 'הבנת הנקרא',
+      listening: 'האזנה',
+      grammar: 'דקדוק',
+      writing: 'כתיבה',
+    };
+    const nextLabel = (nextStep && stepLabels[nextStep.type]) || '';
+
+    loading.innerHTML =
+      '<div class="bg-white rounded-2xl border border-gray-100 p-6 max-w-md mx-auto text-center">' +
+        '<svg class="w-14 h-14 mx-auto mb-3 text-lead-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+        '<h2 class="text-lg font-bold mb-2">להמשיך מאיפה שעצרת?</h2>' +
+        '<p class="text-sm text-gray-600 mb-1">השלמת ' + saved.stepIndex + ' מתוך ' + total + ' פעילויות.</p>' +
+        '<p class="text-sm text-gray-600 mb-5">הפעילות הבאה: <span class="font-semibold text-lead-700">' + nextLabel + '</span> · נשארו ' + remaining + '</p>' +
+        '<button id="resume-btn" class="w-full bg-gradient-to-r from-lead-600 to-dream-600 hover:from-lead-700 hover:to-dream-700 text-white py-3 rounded-xl font-semibold transition mb-2">המשך מהמקום שלי</button>' +
+        '<button id="new-btn" class="w-full text-gray-500 hover:text-gray-900 py-2 rounded-xl text-sm transition">להתחיל סשן מחדש</button>' +
+      '</div>';
+
+    document.getElementById('resume-btn').onclick = () => resumeSession(saved);
+    document.getElementById('new-btn').onclick = async () => {
+      // Close the abandoned session in the backend, then start fresh.
+      try {
+        await API.endSession(saved.sessionId, {
+          activitiesCompleted: saved.activitiesCompleted || 0,
+          timeOnTaskSeconds: Math.round((saved.elapsed || 0) / 1000),
+        });
+      } catch (e) { /* ignore */ }
+      document.getElementById('loading').innerHTML = '<div class="spinner mx-auto mb-4"></div><p class="text-gray-500 text-sm">פותח סשן חדש...</p>';
+      await startNewSession();
+    };
+  }
+
+  // ===== State persistence =====
+
+  function saveState(nextStepIndex) {
+    if (!sessionId || !unit) return;
+    try {
+      localStorage.setItem(STATE_KEY, JSON.stringify({
+        sessionId,
+        stepIndex: nextStepIndex !== undefined ? nextStepIndex : stepIndex,
+        totalCorrect,
+        activitiesCompleted,
+        learnedItems,
+        elapsed: Date.now() - sessionStart,
+        unitId: unit.id,
+        savedAt: Date.now(),
+      }));
+    } catch (e) { /* ignore quota */ }
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STATE_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || !s.sessionId) return null;
+      if ((Date.now() - s.savedAt) > STATE_TTL_MS) {
+        localStorage.removeItem(STATE_KEY);
+        return null;
+      }
+      if (s.unitId !== window.UNIT_1.id) {
+        localStorage.removeItem(STATE_KEY);
+        return null;
+      }
+      return s;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearState() {
+    try { localStorage.removeItem(STATE_KEY); } catch (e) { /* ignore */ }
   }
 
   function runStep(index) {
@@ -127,7 +235,9 @@
       console.warn('logActivity failed (continuing):', error.message);
     }
 
-    runStep(stepIndex + 1);
+    const nextIndex = stepIndex + 1;
+    saveState(nextIndex);
+    runStep(nextIndex);
   }
 
   async function showSummary() {
@@ -144,6 +254,7 @@
     } catch (error) {
       console.warn('endSession failed:', error.message);
     }
+    clearState();
 
     document.getElementById('activity-slot').classList.add('hidden');
     document.getElementById('summary').classList.remove('hidden');
@@ -228,16 +339,11 @@
     document.getElementById('exit-modal').classList.add('hidden');
   };
 
-  window.exitSession = async function () {
+  window.exitSession = function () {
+    // Save state so the student can resume; do NOT close the session in backend.
     stopActiveActivity();
     stopTimer();
-    const totalSeconds = Math.round((Date.now() - sessionStart) / 1000);
-    try {
-      await API.endSession(sessionId, {
-        activitiesCompleted,
-        timeOnTaskSeconds: totalSeconds,
-      });
-    } catch (e) { /* ignore */ }
+    saveState();
     window.location.href = 'student.html';
   };
 
