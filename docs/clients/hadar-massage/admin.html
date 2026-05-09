@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הדר בק | ניהול הזמנות</title>
+<meta name="robots" content="noindex,nofollow">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@100;300;400;500;600;700&family=Frank+Ruhl+Libre:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#FDFBF7; --bg-cream:#F5F2EC; --bg-beige:#E8E4DC;
+  --accent:#A0B9C4; --accent-soft:rgba(160,185,196,.12); --accent-deep:#7E9AA8;
+  --text:#3D3D3D; --text-mid:#5D5D5D; --text-light:#8B8B8B;
+  --white:#fff; --footer:#3D3D3D;
+  --whatsapp:#25D366; --error:#C97B5F;
+  --status-new:#E8B86E; --status-ok:#7FAF8C; --status-no:#C97B5F; --status-done:#9098A8;
+  --shadow:0 4px 20px rgba(60,60,60,.08); --shadow-lg:0 10px 40px rgba(60,60,60,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:'Heebo',ui-sans-serif,system-ui,sans-serif;font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* Header */
+.topbar{background:var(--white);border-bottom:1px solid var(--bg-beige);padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;font-size:.9rem}
+.topbar .brand{font-family:'Frank Ruhl Libre',serif;font-weight:400;font-size:1.2rem;letter-spacing:.04em}
+.topbar .brand small{color:var(--text-light);font-size:.8rem;margin-right:.5rem}
+.topbar .logout{background:none;border:1px solid var(--bg-beige);color:var(--text-light);padding:.4rem 1rem;border-radius:9999px;cursor:pointer;font-family:inherit;font-size:.82rem;transition:all .2s}
+.topbar .logout:hover{border-color:var(--accent);color:var(--accent-deep)}
+
+/* PIN gate */
+.gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--bg-cream)}
+.gate .card{background:var(--white);border-radius:20px;padding:3rem 2.5rem;max-width:380px;width:100%;text-align:center;box-shadow:var(--shadow-lg)}
+.gate h1{font-family:'Frank Ruhl Libre',serif;font-weight:300;font-size:2rem;margin-bottom:.5rem;color:var(--text)}
+.gate p{color:var(--text-light);margin-bottom:2rem;font-size:.95rem}
+.gate input{width:100%;padding:1rem;border:1px solid var(--bg-beige);border-radius:12px;font-family:inherit;font-size:1.4rem;text-align:center;letter-spacing:.4rem;color:var(--text);background:var(--bg);transition:all .2s}
+.gate input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--white)}
+.gate .err{color:var(--error);font-size:.85rem;margin-top:.5rem;min-height:1.2em}
+.gate button{width:100%;background:var(--accent);color:var(--white);border:none;padding:1rem;border-radius:9999px;font-family:inherit;font-size:1rem;cursor:pointer;margin-top:1.5rem;font-weight:400;letter-spacing:.02em;transition:all .25s}
+.gate button:hover{background:var(--accent-deep);transform:translateY(-1px)}
+.gate button:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* App layout */
+.app{display:none;min-height:100vh;flex-direction:column}
+.app.active{display:flex}
+
+/* Tabs */
+.tabs{background:var(--white);border-bottom:1px solid var(--bg-beige);padding:0 2rem;display:flex;gap:.5rem}
+.tab{background:none;border:none;padding:1.2rem 1.4rem;cursor:pointer;font-family:inherit;font-size:.95rem;color:var(--text-light);font-weight:400;border-bottom:2px solid transparent;transition:all .2s;display:flex;align-items:center;gap:.5rem}
+.tab .badge{background:var(--accent-soft);color:var(--accent-deep);font-size:.72rem;padding:.1rem .5rem;border-radius:9999px;font-weight:500}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);border-bottom-color:var(--accent)}
+
+main{flex:1;padding:2rem;max-width:1280px;margin:0 auto;width:100%}
+.panel{display:none}
+.panel.active{display:block}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem}
+.stat{background:var(--white);border:1px solid var(--bg-beige);border-radius:14px;padding:1.2rem 1.4rem}
+.stat .num{font-family:'Frank Ruhl Libre',serif;font-size:2rem;font-weight:400;color:var(--text)}
+.stat .lbl{color:var(--text-light);font-size:.85rem;margin-top:.2rem}
+
+/* Filters */
+.filters{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.filter{background:var(--white);border:1px solid var(--bg-beige);border-radius:9999px;padding:.45rem 1rem;cursor:pointer;font-family:inherit;font-size:.85rem;color:var(--text-mid);transition:all .2s}
+.filter:hover{border-color:var(--accent)}
+.filter.active{background:var(--accent);color:var(--white);border-color:var(--accent)}
+.search{margin-right:auto;background:var(--white);border:1px solid var(--bg-beige);border-radius:9999px;padding:.45rem 1rem;font-family:inherit;font-size:.85rem;width:240px;color:var(--text)}
+.search:focus{outline:none;border-color:var(--accent)}
+
+/* Bookings table */
+.table-wrap{background:var(--white);border:1px solid var(--bg-beige);border-radius:16px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+thead th{background:var(--bg-cream);text-align:right;padding:1rem;font-weight:500;color:var(--text-mid);font-size:.82rem;letter-spacing:.03em}
+tbody td{padding:1rem;border-top:1px solid var(--bg-beige);color:var(--text);vertical-align:middle}
+tbody tr:hover{background:var(--bg-cream)}
+.status{display:inline-block;padding:.25rem .8rem;border-radius:9999px;font-size:.78rem;font-weight:500;color:#fff}
+.status[data-s="חדש"]{background:var(--status-new)}
+.status[data-s="אושר"]{background:var(--status-ok)}
+.status[data-s="נדחה"]{background:var(--status-no)}
+.status[data-s="בוצע"]{background:var(--status-done)}
+.row-actions{display:flex;gap:.4rem;flex-wrap:wrap}
+.act{background:none;border:1px solid var(--bg-beige);padding:.35rem .8rem;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.78rem;color:var(--text-mid);transition:all .15s}
+.act:hover{background:var(--bg-cream);color:var(--text)}
+.act.ok{border-color:var(--status-ok);color:var(--status-ok)}
+.act.ok:hover{background:var(--status-ok);color:#fff}
+.act.no{border-color:var(--status-no);color:var(--status-no)}
+.act.no:hover{background:var(--status-no);color:#fff}
+.act.done{border-color:var(--status-done);color:var(--status-done)}
+.act.done:hover{background:var(--status-done);color:#fff}
+.act.wa{border-color:var(--whatsapp);color:var(--whatsapp);text-decoration:none;display:inline-flex;align-items:center;gap:.3rem}
+.act.wa:hover{background:var(--whatsapp);color:#fff}
+.notes-cell{max-width:200px;font-size:.82rem;color:var(--text-light)}
+.empty{text-align:center;padding:3rem;color:var(--text-light)}
+.loading{text-align:center;padding:3rem;color:var(--text-light)}
+.loading::before{content:"";display:inline-block;width:20px;height:20px;border:2px solid var(--bg-beige);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-left:.5rem;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Days off panel */
+.daysoff-form{background:var(--white);border:1px solid var(--bg-beige);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem;display:flex;gap:.8rem;align-items:flex-end;flex-wrap:wrap}
+.daysoff-form label{display:block;font-size:.82rem;color:var(--text-light);margin-bottom:.3rem}
+.daysoff-form input{padding:.7rem 1rem;border:1px solid var(--bg-beige);border-radius:10px;font-family:inherit;font-size:.95rem;color:var(--text);background:var(--bg)}
+.daysoff-form input:focus{outline:none;border-color:var(--accent)}
+.daysoff-form button{background:var(--accent);color:#fff;border:none;padding:.75rem 1.5rem;border-radius:9999px;cursor:pointer;font-family:inherit;font-weight:400}
+.daysoff-form button:hover{background:var(--accent-deep)}
+.daysoff-list{display:grid;gap:.6rem}
+.day-row{background:var(--white);border:1px solid var(--bg-beige);border-radius:12px;padding:.8rem 1.2rem;display:flex;justify-content:space-between;align-items:center}
+.day-row .info strong{color:var(--text);font-weight:500}
+.day-row .info small{color:var(--text-light);margin-right:.6rem}
+.day-row button{background:none;border:1px solid var(--bg-beige);color:var(--text-light);padding:.3rem .8rem;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.8rem}
+.day-row button:hover{border-color:var(--status-no);color:var(--status-no)}
+
+/* Toast */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--footer);color:#fff;padding:.85rem 1.5rem;border-radius:12px;font-size:.9rem;z-index:9999;transition:transform .3s ease;box-shadow:var(--shadow-lg)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{background:var(--error)}
+.toast.success{background:var(--status-ok)}
+
+@media (max-width:760px){
+  .topbar{padding:.8rem 1rem}
+  .tabs{padding:0 .5rem;overflow-x:auto}
+  .tab{padding:1rem .8rem;font-size:.85rem;white-space:nowrap}
+  main{padding:1rem}
+  .filters{flex-direction:column;align-items:stretch}
+  .search{margin-right:0;width:100%}
+  table{font-size:.85rem}
+  thead{display:none}
+  tbody tr{display:block;padding:1rem;border-top:1px solid var(--bg-beige)}
+  tbody td{display:flex;justify-content:space-between;padding:.4rem 0;border:none}
+  tbody td::before{content:attr(data-lbl);color:var(--text-light);font-size:.78rem;font-weight:500}
+  tbody td.row-actions-cell{flex-direction:column;align-items:stretch;margin-top:.6rem}
+  tbody td.row-actions-cell::before{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Login Gate -->
+<div class="gate" id="gate">
+  <div class="card">
+    <h1>ניהול הזמנות</h1>
+    <p>הדר בק · הכנסי קוד גישה</p>
+    <input type="password" id="pin-input" maxlength="8" inputmode="numeric" placeholder="••••" autocomplete="off">
+    <div class="err" id="pin-err"></div>
+    <button id="pin-go">כניסה</button>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand">הדר בק <small>· מערכת ניהול</small></div>
+    <button class="logout" id="logout">יציאה</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-panel="bookings">
+      הזמנות
+      <span class="badge" id="badge-new">0</span>
+    </button>
+    <button class="tab" data-panel="daysoff">ימי חופש</button>
+  </div>
+
+  <main>
+
+    <!-- Bookings panel -->
+    <div class="panel active" id="panel-bookings">
+      <div class="stats" id="stats"></div>
+
+      <div class="filters">
+        <button class="filter active" data-filter="all">הכל</button>
+        <button class="filter" data-filter="חדש">חדשות</button>
+        <button class="filter" data-filter="אושר">אושרו</button>
+        <button class="filter" data-filter="בוצע">בוצעו</button>
+        <button class="filter" data-filter="נדחה">נדחו</button>
+        <input type="text" class="search" id="search" placeholder="חיפוש לפי שם או טלפון...">
+      </div>
+
+      <div class="table-wrap">
+        <div class="loading" id="loading">טוען הזמנות</div>
+        <table id="tbl" style="display:none">
+          <thead>
+            <tr>
+              <th>תאריך</th>
+              <th>שעה</th>
+              <th>שם</th>
+              <th>טלפון</th>
+              <th>טיפול</th>
+              <th>הערות</th>
+              <th>סטטוס</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="empty" id="empty" style="display:none">אין הזמנות עדיין</div>
+      </div>
+    </div>
+
+    <!-- Days off panel -->
+    <div class="panel" id="panel-daysoff">
+      <div class="daysoff-form">
+        <div>
+          <label>תאריך</label>
+          <input type="date" id="off-date">
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label>סיבה (אופציונלי)</label>
+          <input type="text" id="off-reason" placeholder="חופש, מחלה, אירוע...">
+        </div>
+        <button id="off-add">+ הוסף יום חופש</button>
+      </div>
+      <div class="daysoff-list" id="daysoff-list">
+        <div class="loading">טוען</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ⚠️ עדכן ל-URL של ה-Apps Script אחרי הפריסה
+const SHEETS_URL = '';
+
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const HE_DOW = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+const HE_MONTHS_SHORT = ['ינו׳','פבר׳','מרץ','אפר׳','מאי','יוני','יולי','אוג׳','ספט׳','אוק׳','נוב׳','דצמ׳'];
+
+let PIN = sessionStorage.getItem('hadarPin') || '';
+let allBookings = [];
+let currentFilter = 'all';
+let searchTerm = '';
+
+function showToast(msg, kind){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (kind ? ' ' + kind : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ---- JSONP ----
+function api(params, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    if (!SHEETS_URL) { reject(new Error('no SHEETS_URL configured')); return; }
+    const cbName = 'admCb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, timeoutMs || 10000);
+    const script = document.createElement('script');
+    function cleanup() {
+      clearTimeout(timer);
+      try { delete window[cbName]; } catch(e) { window[cbName] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(resp) { cleanup(); resolve(resp); };
+    const usp = new URLSearchParams(params);
+    usp.append('callback', cbName);
+    script.src = SHEETS_URL + '?' + usp.toString();
+    script.onerror = () => { cleanup(); reject(new Error('network')); };
+    document.body.appendChild(script);
+  });
+}
+
+// ---- PIN gate ----
+async function tryLogin(pin) {
+  $('#pin-go').disabled = true;
+  $('#pin-err').textContent = '';
+  try {
+    const resp = await api({ action: 'list', pin: pin });
+    if (resp && resp.result === 'success') {
+      PIN = pin;
+      sessionStorage.setItem('hadarPin', pin);
+      $('#gate').style.display = 'none';
+      $('#app').classList.add('active');
+      allBookings = resp.bookings || [];
+      renderAll();
+    } else {
+      $('#pin-err').textContent = 'קוד שגוי';
+    }
+  } catch (e) {
+    $('#pin-err').textContent = 'שגיאת תקשורת — נסי שנית';
+  } finally {
+    $('#pin-go').disabled = false;
+  }
+}
+
+$('#pin-go').addEventListener('click', () => {
+  const pin = $('#pin-input').value.trim();
+  if (!pin) return;
+  tryLogin(pin);
+});
+$('#pin-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('#pin-go').click();
+});
+
+$('#logout').addEventListener('click', () => {
+  sessionStorage.removeItem('hadarPin');
+  PIN = '';
+  $('#app').classList.remove('active');
+  $('#gate').style.display = 'flex';
+  $('#pin-input').value = '';
+});
+
+// auto-login if PIN cached
+if (PIN) {
+  $('#gate').style.display = 'none';
+  tryLogin(PIN);
+}
+
+// ---- Tabs ----
+$$('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.panel;
+    $$('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    $$('.panel').forEach(p => p.classList.remove('active'));
+    $('#panel-' + target).classList.add('active');
+    if (target === 'daysoff') loadDaysOff();
+  });
+});
+
+// ---- Filters ----
+$$('.filter').forEach(b => {
+  b.addEventListener('click', () => {
+    $$('.filter').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentFilter = b.dataset.filter;
+    renderTable();
+  });
+});
+$('#search').addEventListener('input', e => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  renderTable();
+});
+
+// ---- Render ----
+function fmtDateLabel(iso) {
+  if (!iso) return '';
+  const parts = iso.split('-');
+  if (parts.length !== 3) return iso;
+  const d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+  return HE_DOW[d.getDay()] + ' · ' + d.getDate() + ' ' + HE_MONTHS_SHORT[d.getMonth()];
+}
+
+function renderAll() {
+  // Stats
+  const stats = { total: allBookings.length, חדש:0, אושר:0, בוצע:0, נדחה:0 };
+  allBookings.forEach(b => {
+    if (stats[b.status] !== undefined) stats[b.status]++;
+  });
+  $('#stats').innerHTML = `
+    <div class="stat"><div class="num">${stats.חדש}</div><div class="lbl">חדשות לאישור</div></div>
+    <div class="stat"><div class="num">${stats.אושר}</div><div class="lbl">מאושרות</div></div>
+    <div class="stat"><div class="num">${stats.בוצע}</div><div class="lbl">בוצעו</div></div>
+    <div class="stat"><div class="num">${stats.total}</div><div class="lbl">סה"כ</div></div>
+  `;
+  $('#badge-new').textContent = stats.חדש;
+  renderTable();
+}
+
+function renderTable() {
+  $('#loading').style.display = 'none';
+  const tbody = $('#tbody');
+  let rows = allBookings;
+  if (currentFilter !== 'all') rows = rows.filter(b => b.status === currentFilter);
+  if (searchTerm) rows = rows.filter(b =>
+    String(b.name||'').toLowerCase().includes(searchTerm) ||
+    String(b.phone||'').includes(searchTerm)
+  );
+
+  if (rows.length === 0) {
+    $('#tbl').style.display = 'none';
+    $('#empty').style.display = 'block';
+    return;
+  }
+  $('#empty').style.display = 'none';
+  $('#tbl').style.display = '';
+
+  tbody.innerHTML = rows.map(b => {
+    const phoneClean = String(b.phone||'').replace(/\D/g,'');
+    const waPhone = phoneClean.startsWith('0') ? '972' + phoneClean.substring(1) : phoneClean;
+    const waMsg = encodeURIComponent(`שלום ${b.name}, קיבלתי את בקשתך לתור ${b.service} ב-${fmtDateLabel(b.date)} בשעה ${b.time}.`);
+    return `
+      <tr data-id="${b.id}">
+        <td data-lbl="תאריך">${fmtDateLabel(b.date)}</td>
+        <td data-lbl="שעה">${b.time||''}</td>
+        <td data-lbl="שם"><strong>${b.name||''}</strong></td>
+        <td data-lbl="טלפון">${b.phone||''}</td>
+        <td data-lbl="טיפול">${b.service||''} <small style="color:#8B8B8B">${b.duration?b.duration+' דק׳':''}</small></td>
+        <td data-lbl="הערות" class="notes-cell">${b.notes||'—'}</td>
+        <td data-lbl="סטטוס"><span class="status" data-s="${b.status||'חדש'}">${b.status||'חדש'}</span></td>
+        <td class="row-actions-cell">
+          <div class="row-actions">
+            ${b.status !== 'אושר' ? `<button class="act ok" data-act="אושר">אישור</button>` : ''}
+            ${b.status !== 'נדחה' ? `<button class="act no" data-act="נדחה">דחיה</button>` : ''}
+            ${b.status !== 'בוצע' ? `<button class="act done" data-act="בוצע">בוצע</button>` : ''}
+            <a class="act wa" href="https://api.whatsapp.com/send?phone=${waPhone}&text=${waMsg}" target="_blank" rel="noopener">WA</a>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // wire action buttons
+  tbody.querySelectorAll('.act[data-act]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id;
+      const status = btn.dataset.act;
+      btn.disabled = true;
+      btn.style.opacity = .5;
+      try {
+        const resp = await api({ action: 'update_status', pin: PIN, id: id, status: status });
+        if (resp && resp.result === 'success') {
+          const row = allBookings.find(b => b.id === id);
+          if (row) row.status = status;
+          showToast('עודכן ל-' + status, 'success');
+          renderAll();
+        } else {
+          showToast(resp && resp.message || 'שגיאה', 'error');
+          btn.disabled = false;
+          btn.style.opacity = 1;
+        }
+      } catch (e) {
+        showToast('שגיאת תקשורת', 'error');
+        btn.disabled = false;
+        btn.style.opacity = 1;
+      }
+    });
+  });
+}
+
+// ---- Days off ----
+async function loadDaysOff() {
+  const wrap = $('#daysoff-list');
+  wrap.innerHTML = '<div class="loading">טוען</div>';
+  try {
+    const resp = await api({ action: 'days_off' });
+    const dates = (resp && resp.dates) || [];
+    if (dates.length === 0) {
+      wrap.innerHTML = '<div class="empty">אין ימי חופש מוגדרים</div>';
+      return;
+    }
+    wrap.innerHTML = dates.sort().map(d => `
+      <div class="day-row" data-date="${d}">
+        <div class="info"><strong>${fmtDateLabel(d)}</strong><small>${d}</small></div>
+        <button data-del>הסר</button>
+      </div>
+    `).join('');
+    wrap.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const d = btn.closest('.day-row').dataset.date;
+        if (!confirm('להסיר את ' + fmtDateLabel(d) + '?')) return;
+        try {
+          const r = await api({ action: 'set_day_off', pin: PIN, date: d, op: 'remove' });
+          if (r && r.result === 'success') { showToast('הוסר', 'success'); loadDaysOff(); }
+          else showToast('שגיאה', 'error');
+        } catch (e) { showToast('שגיאת תקשורת', 'error'); }
+      });
+    });
+  } catch (e) {
+    wrap.innerHTML = '<div class="empty">שגיאת תקשורת</div>';
+  }
+}
+
+$('#off-add').addEventListener('click', async () => {
+  const date = $('#off-date').value;
+  const reason = $('#off-reason').value.trim();
+  if (!date) { showToast('בחרי תאריך', 'error'); return; }
+  try {
+    const r = await api({ action: 'set_day_off', pin: PIN, date: date, reason: reason, op: 'add' });
+    if (r && r.result === 'success') {
+      showToast('נוסף יום חופש', 'success');
+      $('#off-date').value = '';
+      $('#off-reason').value = '';
+      loadDaysOff();
+    } else {
+      showToast(r && r.message || 'שגיאה', 'error');
+    }
+  } catch (e) { showToast('שגיאת תקשורת', 'error'); }
+});
+
+$('#pin-input').focus();
+</script>
+
+</body>
+</html>
