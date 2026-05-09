@@ -5,8 +5,8 @@
  */
 
 const CONFIG = {
-  // Apps Script Web App URL — יוגדר אחרי deploy
-  API_URL: 'https://script.google.com/macros/s/PLACEHOLDER/exec',
+  // Apps Script Web App URL
+  API_URL: 'https://script.google.com/macros/s/AKfycbx3myXebZIbXes6vK17K90R-rjh5FqAXHhXjsoVzwT7wNfcu_w6ZXBoDHB6pX9MFcj47w/exec',
 
   // Brand
   APP_NAME: 'ImpactOS Tnufa English',
