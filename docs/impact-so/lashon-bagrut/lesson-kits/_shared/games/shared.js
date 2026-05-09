@@ -207,7 +207,7 @@
       <div class="topbar">
         <a class="topbar-back" href="${opts.backHref || '../index.html'}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          חזרה לחבילה
+          חזרה למערך
         </a>
         <div class="topbar-title">${t.emoji} ${escapeHtml(opts.title || t.label)}</div>
         <div class="topbar-meta">${escapeHtml(opts.kitTitle || '')}</div>

@@ -10,7 +10,7 @@
 
   // ─── Default sidebar nav items (back to app.html) ───
   const SIDEBAR_ITEMS = [
-    { hash: 'day',          label: 'היום שלי',        icon: 'M12 6v6l4 2' },
+    { hash: 'day',          label: 'היום שלי',        icon: 'clock' },
     { hash: 'week',         label: 'השבוע שלי',       icon: 'rect' },
     { hash: 'year',         label: 'השנה שלי',        icon: 'cal' },
     { hash: 'classes',      label: 'הכיתות שלי',      icon: 'users' },
@@ -18,10 +18,12 @@
     { hash: 'schedule',     label: 'מערכת שעות',      icon: 'sched' },
     { hash: 'progress',     label: 'התקדמות',         icon: 'chart' },
     { hash: 'assessments',  label: 'הערכות',          icon: 'check' },
+    { hash: 'differentiated', label: 'למידה מותאמת',  icon: 'users', badge: 'בקרוב' },
+    { hash: 'ai-tools',     label: 'כלי AI',          icon: 'sparkle' },
   ];
 
   const SVG_ICONS = {
-    'M12 6v6l4 2': '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    'clock':       '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
     'rect':        '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>',
     'cal':         '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
     'users':       '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
@@ -29,6 +31,7 @@
     'sched':       '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
     'chart':       '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
     'check':       '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+    'sparkle':     '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M15 9h0M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/></svg>',
   };
 
   // ─── HTML escape ───
@@ -60,6 +63,7 @@
             '<a class="nav-item" href="' + appHref + '#' + item.hash + '">' +
               SVG_ICONS[item.icon] +
               esc(item.label) +
+              (item.badge ? ' <span style="font-size:8px;padding:1px 5px;border-radius:4px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.5);margin-right:4px">'+esc(item.badge)+'</span>' : '') +
             '</a>'
           ).join('') +
         '</nav>' +
