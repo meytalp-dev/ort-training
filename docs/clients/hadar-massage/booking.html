@@ -263,6 +263,65 @@ main{
 }
 
 /* ============================================================
+   ADD-ON (cupping)
+   ============================================================ */
+.addon{
+  display:block;
+  max-width:780px;margin:1.5rem auto 0;
+  cursor:pointer;
+}
+.addon input{position:absolute;opacity:0;pointer-events:none}
+.addon-box{
+  display:flex;align-items:center;gap:1rem;
+  background:var(--paper);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:1.2rem 1.4rem;
+  transition:all .25s cubic-bezier(.2,.7,.3,1);
+  position:relative;
+}
+.addon:hover .addon-box{border-color:var(--clay);transform:translateY(-2px);box-shadow:var(--shadow-soft)}
+.addon input:checked + .addon-box{
+  border-color:var(--ink);
+  background:var(--clay-soft);
+  box-shadow:var(--shadow-soft);
+}
+.addon-check{
+  width:26px;height:26px;flex-shrink:0;
+  border:1.5px solid var(--ink-quiet);
+  border-radius:6px;
+  background:var(--paper);
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s ease;
+}
+.addon-check svg{width:16px;height:16px;color:var(--paper);opacity:0;transition:opacity .15s}
+.addon input:checked + .addon-box .addon-check{
+  background:var(--ink);border-color:var(--ink);
+}
+.addon input:checked + .addon-box .addon-check svg{opacity:1}
+.addon-text{flex:1;display:flex;flex-direction:column;gap:.25rem}
+.addon-title{
+  font-family:var(--display);font-weight:400;font-size:1.1rem;
+  color:var(--ink);letter-spacing:-.005em;
+}
+.addon-desc{font-size:.88rem;color:var(--ink-soft);line-height:1.55;font-weight:300}
+.addon-badge{
+  font-family:var(--num);font-style:italic;font-weight:500;
+  font-size:.95rem;color:var(--clay-deep);
+  letter-spacing:.04em;
+  padding:.3rem .8rem;
+  background:var(--paper);
+  border:1px solid var(--clay);
+  border-radius:9999px;
+  flex-shrink:0;
+  text-transform:uppercase;
+}
+@media (max-width:600px){
+  .addon-box{flex-wrap:wrap;padding:1rem 1.1rem;gap:.8rem}
+  .addon-badge{order:3;margin-right:auto}
+}
+
+/* ============================================================
    CALENDAR
    ============================================================ */
 .cal-wrap{
@@ -540,6 +599,21 @@ footer .copy{color:rgba(250,246,238,.4);font-size:.78rem;letter-spacing:.05em}
     <h2>בחירת <span class="em">טיפול</span></h2>
     <p class="sub">איזו חוויה את מחפשת היום?</p>
     <div class="cards" id="services-cards"></div>
+
+    <label class="addon" id="cupping-addon">
+      <input type="checkbox" id="add-cupping">
+      <span class="addon-box">
+        <span class="addon-check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
+        </span>
+        <span class="addon-text">
+          <span class="addon-title">להוסיף כוסות רוח</span>
+          <span class="addon-desc">שיטת טיפול עתיקה לשחרור שרירים תפוסים ושיפור זרימת הדם — משולבות בטיפול ללא עלות נוספת.</span>
+        </span>
+        <span class="addon-badge">חינם</span>
+      </span>
+    </label>
+
     <div class="actions">
       <button class="btn btn-ghost" disabled>← חזרה</button>
       <button class="btn btn-primary" id="btn-next-1" disabled>המשך →</button>
@@ -657,22 +731,15 @@ const SERVICES = [
   {
     id: 'swedish',
     title: 'עיסוי שוודי',
-    desc: 'תנועות ארוכות וזורמות שמרפות שרירים, משפרות זרימת דם ומחזירות אותך אל עצמך. הקלאסי, המפנק.',
+    desc: 'עיסוי קלאסי, זורם ומרגיע, המשלב תנועות ארוכות לשחרור מתחים, שיפור זרימת הדם והרפיה כללית של הגוף. מושלם למי שמחפשת רגע של שלווה ופינוק.',
     duration: 60,
     price: null
   },
   {
     id: 'medical',
     title: 'עיסוי רפואי',
-    desc: 'טיפול ממוקד לכאבים כרוניים, פציעות ומתחים עמוקים. שחרור נקודות טריגר ושיקום תפקודי.',
+    desc: 'טיפול ממוקד להקלה על כאבים, עומסים ופציעות, תוך עבודה על אזורים תפוסים ומוגבלים בתנועה. משלב טכניקות עומק לשחרור שרירים ושיפור התפקוד היומיומי.',
     duration: 75,
-    price: null
-  },
-  {
-    id: 'cupping',
-    title: 'כוסות רוח',
-    desc: 'שיטה עתיקה ועדינה — שחרור שרירים תפוסים, שיפור זרימת דם וניקוי רעלים.',
-    duration: 50,
     price: null
   }
 ];
@@ -691,6 +758,7 @@ const HOURS = {
 const state = {
   step: 1,
   service: null,
+  addCupping: false,
   date: null,
   time: null,
   calMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -782,6 +850,10 @@ function renderServices(){
     });
   });
 }
+
+$('#add-cupping').addEventListener('change', e => {
+  state.addCupping = e.target.checked;
+});
 
 $('#btn-next-1').addEventListener('click', () => {
   if (state.service) { renderCalendar(); setStep(2); }
@@ -924,9 +996,13 @@ $('#btn-next-3').addEventListener('click', () => {
 
 // ---------- SCREEN 4: DETAILS ----------
 function renderSummary(){
+  const cuppingRow = state.addCupping
+    ? `<div class="row"><span class="lbl">תוספת</span><span class="val">כוסות רוח (חינם)</span></div>`
+    : '';
   const html = `
     <div class="row"><span class="lbl">טיפול</span><span class="val">${state.service.title}</span></div>
     <div class="row"><span class="lbl">משך</span><span class="val">${state.service.duration} דקות</span></div>
+    ${cuppingRow}
     <div class="row"><span class="lbl">תאריך</span><span class="val">${prettyDate(state.date)}</span></div>
     <div class="row"><span class="lbl">שעה</span><span class="val">${state.time}</span></div>
     <div class="row"><span class="lbl">מיקום</span><span class="val">וינגייט 74, באר שבע</span></div>
@@ -968,6 +1044,7 @@ function submitBooking(){
   const waText = `שלום הדר, רוצה לקבוע תור 🌿\n\n` +
     `🪷 טיפול: ${state.service.title}\n` +
     `⏱ משך: ${state.service.duration} דק׳\n` +
+    (state.addCupping ? `➕ תוספת: כוסות רוח (חינם)\n` : '') +
     `📅 תאריך: ${dateStr}\n` +
     `🕒 שעה: ${state.time}\n` +
     `📍 וינגייט 74, באר שבע\n` +
@@ -1016,7 +1093,7 @@ function submitBooking(){
   params.append('time', state.time);
   params.append('name', name.substring(0,100));
   params.append('phone', phone);
-  params.append('notes', notes.substring(0,500));
+  params.append('notes', (state.addCupping ? '[+כוסות רוח] ' : '') + notes.substring(0,500));
 
   const script = document.createElement('script');
   script.src = SHEETS_URL + '?' + params.toString();
@@ -1037,9 +1114,11 @@ $('#f-phone').addEventListener('input', e => {
 
 $('#btn-restart').addEventListener('click', () => {
   state.service = null;
+  state.addCupping = false;
   state.date = null;
   state.time = null;
   $$('.card.selected').forEach(c => c.classList.remove('selected'));
+  $('#add-cupping').checked = false;
   $('#btn-next-1').disabled = true;
   $('#btn-next-2').disabled = true;
   $('#btn-next-3').disabled = true;
