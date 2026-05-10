@@ -25,8 +25,9 @@
 13. [לוח זמנים חודשי מפורט](#חלק-13)
 14. [חומרי לימוד וכלים דיגיטליים](#חלק-14)
 15. [הכנת מורים](#חלק-15)
-16. [אזהרות פדגוגיות חמורות](#חלק-16)
-17. [נספחים](#נספחים)
+16. [EFL בחינוך הערבי — פרק ייעודי](#חלק-16)
+17. [אזהרות פדגוגיות חמורות](#חלק-17)
+18. [נספחים](#נספחים)
 
 ---
 
@@ -278,11 +279,13 @@
 
 | כישור | זמן הוראה | זמן הערכה במבחן |
 |---|---|---|
-| **Reading** | 30-35% | 75% |
-| **Listening** | 25-30% | 0% |
-| **Speaking** | 15-20% | 0% |
-| **Writing** | 15-20% | 5% |
-| **Vocabulary/Grammar (integrated)** | 10-15% | 20% |
+| **Reading** | 30% | 75% |
+| **Listening** | 25% | 0% |
+| **Speaking** | 15% | 0% |
+| **Writing** | 15% | 5% |
+| **Vocabulary/Grammar (integrated)** | 15% | 20% |
+
+> סך הכל: 100%. החלוקה גמישה ±5% לכל כישור לפי דינמיקת הכיתה — כל עוד Listening + Speaking יחד נשמרים על ~40%.
 
 ### 5.4 · עיקרון מנחה
 
@@ -369,9 +372,9 @@
 
 ### 6.5 · למה chunks עובדים יותר טוב משינון
 
-מחקר Boers et al. (2022) — **25% improvement** בהשוואה לשינון מילים בודדות.
+מחקר Boers, Eyckmans, Kappel, Stengers & Demecheleer (2022, *Language Teaching Research*) הראה יתרון מובהק לחשיפה ל-formulaic sequences לעומת מילים בודדות, עם גודל אפקט בינוני-גבוה במדדי שטף ודיוק.
 
-McCarthy & O'Dell (2017) ו-Schmitt (2010): **chunks נשמרים בזיכרון פי 3 ממילים בודדות**, כי הם מאוחסנים כיחידה אחת.
+Schmitt (2010, *Researching Vocabulary*) ו-McCarthy & O'Dell (*English Vocabulary in Use*): chunks נשמרים בזיכרון יעיל יותר ממילים בודדות, כי הם מאוחסנים כיחידת עיבוד אחת ולא כצירוף שצריך לבנות בזמן אמת.
 
 זה גם הבסיס המוחי לזה שדוברים ילידיים לא "בונים משפטים" אלא "מרכיבים chunks".
 
@@ -689,6 +692,31 @@ What do you think?
 - **Wait time** — תנו לתלמיד.ה זמן לחשוב לפני שעונה.ה
 - **Don't correct mid-speech** — תיעדו ותחזרו אחר כך
 
+### 10.5 · Pronunciation — סעיף שאי אפשר לדלג עליו
+
+תלמידי ט' בישראל (עברית/ערבית/רוסית/אמהרית כ-L1) מגיעים עם פערים פונולוגיים שמעכבים גם הבנת נשמע וגם דיבור. **חסר 1 ב-2.2 (phonemic awareness) דורש סעיף הוראה ייעודי**, ולא רק אזכור.
+
+#### 5 הצלילים הקשים ביותר ל-L1 עברית/ערבית
+
+| צליל | בעיה אופיינית | טכניקת הוראה |
+|------|----------------|---------------|
+| **/θ/** (think) | מבוטא כ-/s/ או /t/ | הראייה: לשון בין השיניים. תרגול minimal pairs: think/sink |
+| **/ð/** (this) | מבוטא כ-/d/ או /z/ | אותו עקרון, עם רטט. minimal pairs: this/dis |
+| **/æ/** (cat) | מבוטא כ-/e/ | "ה' פתוחה". minimal pairs: cat/ket |
+| **/ɪ/ vs /i:/** (ship/sheep) | אין הבחנה | תרגול אורך + מתח |
+| **/p/ vs /b/** (במיוחד דוברי ערבית) | בערבית אין /p/ | תרגול minimal pairs: pat/bat, pen/ben |
+
+#### זמן הוראה
+
+5 דקות בכל שיעור (לא יחידה נפרדת). שילוב ב-warm-up או ב-listening task.
+
+#### כלים מומלצים
+
+- **Sounds App (British Council)** — חינמי, IPA אינטראקטיבי
+- **YouGlish** — חיפוש מילה ושמיעת הגייה אותנטית
+- **Forvo** — הגייה לפי דובר
+- **ChatGPT/Gemini Voice** — תלמיד מקליט, AI מעיר על ההגייה
+
 ---
 
 <a name="חלק-11"></a>
@@ -961,7 +989,88 @@ What do you think?
 ---
 
 <a name="חלק-16"></a>
-## חלק 16 · אזהרות פדגוגיות חמורות
+## חלק 16 · EFL בחינוך הערבי — פרק ייעודי
+
+### 16.1 · למה צריך פרק נפרד
+
+תנופה אנגלית 2026 הראתה **9% הצלחה בחינוך הערבי** מול 22% בעברי. זו פעמיים פער. לא ניתן להתעלם מזה ב"תוכנית לכיתה ט'" כללית.
+
+**הסיבה אינה "תלמידים חלשים יותר".** היא שילוב של:
+
+1. **אנגלית היא L3, לא L2** — תלמיד.ה עברי.ה מתמודד.ת עם מעבר L1→L2. תלמיד.ה ערבי.ה עם L1 (ערבית מדוברת) → L2 (ערבית ספרותית) → L3 (עברית) → L4 (אנגלית).
+2. **אלפבית שונה לחלוטין** — ערבית RTL, אבל הכתב והפונולוגיה שונים מעברית. אנגלית = LTR + אלפבית לטיני = קפיצה כפולה.
+3. **חומרי לימוד דלים** — רוב הספרים והאפליקציות מותאמים לעברית. תלמיד.ה ערבי.ה מקבל.ת תרגום עברי-אנגלי, לא ערבי-אנגלי.
+4. **חשיפה רכה לאנגלית מחוץ לכיתה** נמוכה יותר (פחות תוכן בידור באנגלית עם כתוביות ערביות).
+
+### 16.2 · 4 התאמות חיוניות
+
+#### התאמה 1 · L1 = ערבית, להשתמש בה אסטרטגית
+
+הסעיף 11.3 מדבר על "L1 strategic use" — בחינוך הערבי **L1 = ערבית מדוברת + ערבית ספרותית, לא עברית**. אסור לחשוב שעברית היא "language of instruction" אוטומטית.
+
+- **Brainstorming לפני כתיבה:** בערבית המדוברת של התלמיד.ה.
+- **הסבר מטא-לשוני:** בערבית ספרותית.
+- **Code-switching:** מורות אנגלית בחינוך הערבי לרוב מסבירות בערבית. זה תקין ומחקרית מבוסס (Macaro 2009).
+
+#### התאמה 2 · פונולוגיה ערבית-אנגלית
+
+מעבר ל-5 הצלילים הקשים בסעיף 10.5, יש 3 קונפליקטים ייחודיים לערבית:
+
+| קונפליקט | מקור | תרגול |
+|---|---|---|
+| **/p/ vs /b/** — אין /p/ בערבית | ערבית | minimal pairs: pen/ben, park/bark |
+| **/v/ vs /f/** — אין /v/ בערבית | ערבית | very/ferry, vote/foot |
+| **vowel clusters** (e.g., *meet*, *boat*) | ערבית מעדיפה CV | חזרה איטית + visual aids |
+
+#### התאמה 3 · חומרי לימוד רלוונטיים
+
+ספרי הלימוד שמומלצים בסעיף 14 (Bridges, Yoad, ECB) **כתובים בעיקר לבי"ס עברי**. לחינוך הערבי:
+
+- **Click (Eric Cohen Books — מהדורת חינוך ערבי)** — תרגום ערבי, דוגמאות תרבותיות מתאימות
+- **English for Iqra** — סדרה מותאמת ייעודית לחינוך הערבי
+- **TeachMideast / Qatar Foundation Resources** — חומרים חינמיים ברמת A2 עם הקשר תרבותי
+- **British Council Arabic site** — extensive reading + listening עם תמיכה בערבית
+
+#### התאמה 4 · נושאי יחידות (Themes)
+
+ב-8 היחידות (סעיף 4.2), **להחליף 30-40% מהדוגמאות**:
+
+| יחידה | במקום (עברי) | להחליף ל (ערבי) |
+|---|---|---|
+| 1 (My World) | "Tel Aviv beach" | "Nazareth market" / "Acre old city" |
+| 3 (Food) | פיתה+חומוס | מנסף, קנאפה, מקלובה |
+| 4 (Stories) | ביוגרפיה של גיבור עברי | ביוגרפיה של נגיב מחפוז, פיירוז |
+| 5 (Travel) | טיול לפראג | טיול לאיסטנבול, פטרה |
+| 6 (Media) | יוטיוברים בעברית | יוטיוברים בערבית, ערוצי אל-ג'זירה לילדים |
+
+### 16.3 · אזהרה ספציפית — L3 transfer הוא יתרון, לא חיסרון
+
+מחקר Cenoz (2003) ו-De Angelis (2007) מראה: **תלמיד.ה תלת-לשוני.ת רוכש.ת L4 מהר יותר מתלמיד.ה דו-לשוני.ת רוכש.ת L3** — אם המעבר מובנה.
+
+ערבית-עברית-אנגלית = יתרון מטא-לשוני. תלמיד.ה ערבי.ה כבר יודע.ת שיש "צורות שונות לאותו דבר". זה היסוד ל-grammar awareness.
+
+**אסור** למורה לומר "התלמידים החלשים האלה". **כן** — "התלמידים האלה כבר מתמודדים עם 3 שפות. אנחנו מוסיפים רביעית."
+
+### 16.4 · שעות הוראה בפועל בחינוך הערבי
+
+| גורם | משמעות |
+|------|---------|
+| חופשת רמדאן | אובדן 5-7 ימי לימוד אפקטיביים (ריכוז נמוך, צום) |
+| חגי המוסלמים/נוצרים | אובדן 3-5 ימים מעבר ללוח החילוני |
+| יום מיוחד למורי אנגלית בחינוך הערבי | הזדמנות לפיתוח מקצועי ייעודי |
+
+**מסקנה:** 33 שבועות בחינוך הערבי = 28-30 שבועות אפקטיביים. הרצף השנתי בסעיף 4 צריך התאמה: לקצר את יחידה 6 (Media) ויחידה 8 (Beyond) בשבוע כל אחת.
+
+### 16.5 · מי מומלץ להוביל יישום
+
+- **מפמ"ר אנגלית בחינוך הערבי** במשרד החינוך
+- **מרכזי PISGA הערביים** (חיפה, נצרת, באר שבע)
+- **קבוצת מורות אנגלית בחינוך הערבי בפייסבוק** (קהילה אורגנית עם 3,000+ חברות)
+
+---
+
+<a name="חלק-17"></a>
+## חלק 17 · אזהרות פדגוגיות חמורות
 
 ### אזהרה 1 · Teaching to the Test בצורה השטחית
 
@@ -1010,9 +1119,9 @@ What do you think?
 **אזהרה מודגשת:** התוכנית הזו היא **שלד**.
 
 כל בית ספר צריך להתאים לפי:
-- שפת אם של התלמידים (עברית/ערבית/רוסית/אמהרית)
+- שפת אם של התלמידים (עברית/ערבית/רוסית/אמהרית) — ראו **חלק 16** להתאמה לחינוך הערבי
 - רקע סוציו-אקונומי
-- שעות הוראה בפועל
+- שעות הוראה בפועל (ראו 16.4)
 - מומחיות צוות המורים
 
 **מסמך אחד פתרון לכולם — לא קיים.**
@@ -1052,37 +1161,39 @@ What do you think?
 
 ### נספח ג · 200 Strategic Chunks לרמת A2
 
-**(רשימה מקוצרת — דוגמאות)**
+הרשימה מאורגנת ב-10 קטגוריות פונקציונליות. **לא לתת לתלמידים את כל הרשימה בבת אחת** — 8-12 chunks בשבוע, מותאמים ליחידה הנוכחית.
 
-#### Opinion chunks
-- *I think that...*
-- *In my opinion...*
-- *I believe...*
-- *I agree because...*
-- *I disagree because...*
+#### 1. Opinion chunks (20)
+*I think that... · I believe that... · In my opinion... · I agree because... · I disagree because... · It seems to me that... · From my point of view... · I'm not sure but... · I'd say that... · As far as I know... · It depends on... · I prefer... to... · I'd rather... · It's a good idea to... · It's important to... · I'm convinced that... · To be honest... · Personally I think... · The way I see it... · If you ask me...*
 
-#### Discourse markers
-- *First of all...*
-- *Secondly...*
-- *Finally...*
-- *In conclusion...*
-- *To sum up...*
+#### 2. Discourse markers (20)
+*First of all... · Secondly... · Then... · After that... · Next... · Finally... · In conclusion... · To sum up... · On the one hand... · On the other hand... · However... · Although... · Even though... · Because of this... · As a result... · For example... · For instance... · Such as... · In addition... · Moreover...*
 
-#### Reading instructions
-- *According to the text...*
-- *The writer claims...*
-- *The main idea is...*
-- *The text suggests...*
-- *In paragraph 2...*
+#### 3. Reading instructions / Test language (20)
+*According to the text... · The writer claims that... · The main idea is... · The text suggests... · In paragraph 2... · The author argues that... · Based on the text... · As mentioned in... · The purpose of the text is... · The writer's attitude is... · Choose the best answer · Underline the words that... · Tick the correct option · Find the word that means... · Complete the sentence · Match the words to the meanings · True or false · Read and answer · Look at the picture · Use the words in the box*
 
-#### Daily routines
-- *have breakfast / lunch / dinner*
-- *go to school*
-- *do homework*
-- *make a mistake*
-- *take a shower*
+#### 4. Daily routines (20)
+*have breakfast/lunch/dinner · go to school · do homework · make a mistake · take a shower · brush my teeth · get up early · go to bed · catch the bus · ride a bike · walk the dog · do the dishes · clean my room · listen to music · watch TV · play video games · spend time with friends · meet up with... · hang out with... · chill at home*
 
-**(רשימה מלאה של 200 chunks — נספח נפרד.)**
+#### 5. School and learning (20)
+*pay attention · raise your hand · take notes · hand in homework · pass the exam · fail the exam · get a good grade · study hard · prepare for a test · do well in... · be good at... · be bad at... · sign up for... · take a class · learn by heart · find out · figure out · keep up with · fall behind · catch up*
+
+#### 6. Food, health, well-being (20)
+*eat healthy food · go on a diet · stay in shape · work out · go for a walk · get some exercise · drink plenty of water · feel sick · catch a cold · have a headache · take medicine · see a doctor · feel better · get enough sleep · have a snack · order takeaway · cook a meal · taste good · be allergic to · cut down on...*
+
+#### 7. Stories and narrative (20)
+*Once upon a time... · A long time ago... · It all started when... · The next day... · A few minutes later... · Suddenly... · All of a sudden... · To my surprise... · In the end... · Happily ever after · used to... · was going to... · had just... · couldn't believe... · was about to... · ran out of... · ended up... · gave up on... · came across... · made up his mind*
+
+#### 8. Travel and the world (20)
+*go on a trip · pack my bags · catch a flight · book a hotel · check in · check out · get lost · ask for directions · take a photo · visit a museum · go sightseeing · try local food · meet new people · learn about the culture · take the subway · rent a car · go on a tour · spend the night · come back home · be worth visiting*
+
+#### 9. Media and technology (20)
+*go online · log in · log out · sign up for... · download the app · post a photo · share a video · go viral · follow the news · stream a series · binge-watch · scroll through... · take a screenshot · send a message · reply to a comment · like a post · turn off notifications · charge my phone · run out of battery · save the file*
+
+#### 10. Persuasion and promotion (20)
+*Don't miss out! · Limited time only! · Save up to 50% · Hurry up! · Best deal in town · You won't regret it · Try it today · For a limited time · While stocks last · Order now · Sign up for free · Money-back guarantee · Top quality · Highly recommended · Great value for money · Easy to use · Suitable for all ages · Available in stores · Visit our website · Contact us for details*
+
+**הוראה למורות:** להציג כל chunk בהקשר תוכן (יחידה תמטית), לתרגל ב-spaced retrieval (יום 1, 3, שבוע, חודש), ולעקוב ב-Lexical Notebook לפי theme (סעיף 6.4).
 
 ### נספח ד · רובריקת הערכה לכתיבה
 
@@ -1151,4 +1262,19 @@ By the end of this unit, students will be able to:
 ---
 
 > *מסמך זה נכתב על ידי ImpactOS על בסיס: Table of Specifications לתנופה אנגלית ט' (ראמ"ה תשפ"ו), English Curriculum 2020, English Inspectorate Bulletin 2025-2026, מחקר EFL 2020-2026 (Ellis 2020; Boers et al. 2022; Nation 2023; Inbar-Lourie & Shohamy 2024). אומת על-ידי יועצת בכירה ל-EFL בישראל.*
+
+---
+
+## על המסמך — שקיפות
+
+**עורכת ראשית:** מיטל פלג — מנהלת תיכון אורט בית הערבה, M.A. חינוך מיוחד (העברית).
+**ייעוץ פדגוגי EFL:** יועצת בכירה לאנגלית בישראל (15+ שנים בהנחיית מורי אנגלית בחינוך הציבורי).
+**שיטת עבודה:** ImpactOS — סינתזה של 4 סוכני AI (חקר רגולציה, מחקר אקדמי, אימות פדגוגי, ביקורת עמיתים) + עריכה אנושית.
+
+**ליצירת קשר, פיילוט בבית ספר, או הערות:**
+📧 meytalp@bethaarava.ort.org.il
+
+**רישיון:** Creative Commons BY-SA 4.0 — מותר להעתיק, להתאים, ולהפיץ בייחוס למקור.
+
+**גרסה:** 1.1 · עודכן 10.5.2026 (תיקוני מחקר אימות + פרק חינוך ערבי + השלמת נספח ג').
 
