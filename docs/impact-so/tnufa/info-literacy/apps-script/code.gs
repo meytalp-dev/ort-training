@@ -77,6 +77,7 @@ const HEADERS = {
     'whatIDidWithIt',
     'verifiedAgainst',       // איך אימתי
     'whatAIMissed',          // תשובה לכלל 3
+    'parentalConsent',       // bool — תאימות להנחיות משה"ח ינואר 2025
     'unitId',
   ],
   Activities: [
@@ -420,6 +421,7 @@ function logAIUse(p) {
     whatIDidWithIt: p.whatIDidWithIt || '',
     verifiedAgainst: p.verifiedAgainst || '',
     whatAIMissed: p.whatAIMissed || '',
+    parentalConsent: p.parentalConsent ? 'true' : 'false',
     unitId: p.unitId || '',
   });
   return { logId };

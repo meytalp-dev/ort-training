@@ -23,14 +23,14 @@ const DIAGNOSTIC_QUESTIONS = [
     id: 'a1',
     section: 'A',
     type: 'choice',
-    question: 'כמה פעמים בשבוע את.ה משתמש.ת בכלי AI כמו ChatGPT, Claude או Gemini?',
+    question: 'ראית כתבה בעיתון. מה הצעד הראשון שלך כדי להחליט אם להאמין למה שכתוב בה?',
     options: [
-      { value: 0, label: 'אף פעם — לא פתחתי' },
-      { value: 1, label: '1–2 פעמים' },
-      { value: 2, label: '3–7 פעמים' },
-      { value: 3, label: 'כל יום' },
+      { value: 1, label: 'אם זה בעיתון — זה מספיק' },
+      { value: 2, label: 'בודק.ת אם הכותב מוכר לי' },
+      { value: 3, label: 'בודק.ת מי הכותב, מתי פורסם, ואיזה עיתון' },
+      { value: 4, label: 'פותח.ת טאב נוסף — מחפש.ת מה אומרים על הכותב/העיתון/הנושא במקומות אחרים' },
     ],
-    measures: { aiHabits: { usesAI: 'value > 0' } },
+    measures: { components: { '1.2': 'value' } },
   },
 
   {
@@ -51,14 +51,14 @@ const DIAGNOSTIC_QUESTIONS = [
     id: 'a3',
     section: 'A',
     type: 'choice',
-    question: 'האם תיעדת אי פעם prompt ששאלת AI ושמרת אותו?',
+    question: 'חבר.ה אומר.ת לך משהו על אירוע שקרה. מה תעשה.י לפני שתשתף.י את זה הלאה?',
     options: [
-      { value: 1, label: 'מה זה תיעוד?' },
-      { value: 2, label: 'לא, אני סוגר.ת את הצ\'אט אחרי שמסיים.ה' },
-      { value: 3, label: 'לפעמים שומר.ת prompts טובים' },
-      { value: 4, label: 'כן, יש לי תיעוד מסודר' },
+      { value: 1, label: 'משתף.ת — חבר.ה לא ישקר.ת לי' },
+      { value: 2, label: 'שואל.ת איפה ה.היא ראה.תה את זה' },
+      { value: 3, label: 'מחפש.ת בגוגל לוודא' },
+      { value: 4, label: 'מצליב.ה 2-3 מקורות שונים לפני שאני משתף.ת' },
     ],
-    measures: { aiHabits: { documents: 'value >= 3' } },
+    measures: { components: { '1.3': 'value' } },
   },
 
   {
