@@ -40,7 +40,7 @@ const Auth = {
   /**
    * Register flow
    */
-  async register({ name, email, password, role }) {
+  async register({ name, email, password, role, classCode }) {
     if (!name || !email || !password || !role) {
       throw new Error('יש למלא את כל השדות');
     }
@@ -57,6 +57,7 @@ const Auth = {
         email: email.trim().toLowerCase(),
         password: password,
         role: role,  // 'student' | 'teacher' | 'parent'
+        classCode: (classCode || '').trim(),
       }),
     });
 
@@ -140,6 +141,8 @@ async function handleRegister(event) {
   const email = form.querySelector('input[type="email"]').value;
   const password = form.querySelector('input[type="password"]').value;
   const role = window.selectedRole || 'student';
+  const classCodeInput = form.querySelector('input[name="classCode"]');
+  const classCode = classCodeInput ? classCodeInput.value : '';
 
   const submitBtn = form.querySelector('button[type="submit"]');
   const originalText = submitBtn.textContent;
@@ -147,7 +150,11 @@ async function handleRegister(event) {
   submitBtn.textContent = 'יוצר.ת חשבון...';
 
   try {
-    const user = await Auth.register({ name, email, password, role });
+    const user = await Auth.register({ name, email, password, role, classCode });
+    if (user.role === 'teacher' && user.classId) {
+      // Show teachers their class code immediately so they can share it.
+      alert('נרשמת בהצלחה! קוד הכיתה שלך: ' + user.classId + '\nשתפי אותו עם התלמידים.ות שלך.');
+    }
     Auth.redirectToDashboard(user.role);
   } catch (error) {
     alert(error.message);

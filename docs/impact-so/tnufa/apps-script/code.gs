@@ -31,7 +31,7 @@ const SHEETS = {
 };
 
 const HEADERS = {
-  Users: ['userId', 'role', 'name', 'email', 'passwordHash', 'createdAt', 'token'],
+  Users: ['userId', 'role', 'name', 'email', 'passwordHash', 'createdAt', 'token', 'classId'],
   Profiles: ['userId', 'cefrLevel', 'diagnosticCompletedAt', 'componentStrengths', 'vocabularyKnown', 'preferences'],
   Sessions: ['sessionId', 'userId', 'startedAt', 'endedAt', 'activitiesCompleted', 'timeOnTaskSeconds'],
   Activities: ['activityId', 'sessionId', 'userId', 'type', 'unitId', 'lessonId', 'studentResponse', 'aiFeedback', 'isCorrect', 'createdAt'],
@@ -70,6 +70,9 @@ function handle(e) {
       case 'getProgress':    result = getProgress(payload); break;
       case 'aiFeedback':     result = aiFeedback(payload); break;
       case 'aiGenerateText': result = aiGenerateText(payload); break;
+      case 'getClassRoster': result = getClassRoster(payload); break;
+      case 'getClassStats':  result = getClassStats(payload); break;
+      case 'getStudentDetail': result = getStudentDetail(payload); break;
       case 'ping':           result = { ok: true, time: new Date().toISOString() }; break;
       default: throw new Error('Unknown action: ' + action);
     }
@@ -174,6 +177,19 @@ function register(p) {
   const userId = genId('usr');
   const token = genToken();
 
+  // classId logic:
+  // - teacher: assigned a class code derived from userId (last 8 chars of UUID portion)
+  // - student: optional classCode in payload — must match an existing teacher's classId
+  let classId = '';
+  if (p.role === 'teacher') {
+    classId = userId.slice(-8);
+  } else if (p.role === 'student' && p.classCode) {
+    const code = String(p.classCode).trim();
+    const teacher = findRow('Users', u => u.role === 'teacher' && u.classId === code);
+    if (teacher) classId = code;
+    // If no match, silently leave blank — student can be assigned later.
+  }
+
   appendRow('Users', {
     userId,
     role: p.role,
@@ -182,9 +198,9 @@ function register(p) {
     passwordHash: hashPassword(p.password),
     createdAt: new Date().toISOString(),
     token,
+    classId,
   });
 
-  // Auto-create empty profile for students
   if (p.role === 'student') {
     appendRow('Profiles', {
       userId,
@@ -197,7 +213,7 @@ function register(p) {
   }
 
   return {
-    user: { userId, role: p.role, name: p.name, email },
+    user: { userId, role: p.role, name: p.name, email, classId },
     token,
   };
 }
@@ -227,6 +243,7 @@ function login(p) {
       role: user.role,
       name: user.name,
       email: user.email,
+      classId: user.classId || '',
     },
     token: newToken,
   };
@@ -340,6 +357,154 @@ function getProgress(p) {
       totalTimeSeconds: totalTime,
       recentSessions: recentSessions.length,
     },
+  };
+}
+
+// ===== Teacher Dashboard =====
+
+const ACTIVITY_TYPES = ['vocabulary', 'reading', 'listening', 'grammar', 'writing'];
+const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
+
+function requireTeacher(p) {
+  const teacher = authenticateRequest(p);
+  if (teacher.role !== 'teacher') throw new Error('רק מורים יכולים לראות את הדשבורד הכיתתי');
+  if (!teacher.classId) throw new Error('אין כיתה משויכת — צרי קשר עם הצוות');
+  return teacher;
+}
+
+function getClassRoster(p) {
+  const teacher = requireTeacher(p);
+  const students = readAll('Users')
+    .filter(u => u.role === 'student' && u.classId === teacher.classId);
+
+  const profiles = readAll('Profiles');
+  const sessions = readAll('Sessions');
+  const activities = readAll('Activities');
+  const now = Date.now();
+
+  const roster = students.map(s => {
+    const profile = profiles.find(x => x.userId === s.userId);
+    const studentSessions = sessions.filter(x => x.userId === s.userId);
+    const studentActs = activities.filter(x => x.userId === s.userId);
+
+    const lastSession = studentSessions
+      .filter(x => x.startedAt)
+      .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))[0];
+
+    const correctActs = studentActs.filter(a => a.isCorrect === true || a.isCorrect === 'true');
+    const successRate = studentActs.length > 0 ? correctActs.length / studentActs.length : null;
+
+    const recentSessions = studentSessions
+      .filter(x => x.startedAt && (now - new Date(x.startedAt).getTime()) <= SEVEN_DAYS_MS).length;
+
+    return {
+      userId: s.userId,
+      name: s.name,
+      email: s.email,
+      cefrLevel: profile ? (profile.cefrLevel || 'unknown') : 'unknown',
+      diagnosticCompletedAt: profile ? profile.diagnosticCompletedAt : '',
+      lastSessionAt: lastSession ? lastSession.startedAt : '',
+      recentSessions: recentSessions,
+      totalSessions: studentSessions.length,
+      totalActivities: studentActs.length,
+      successRate: successRate !== null ? Number(successRate.toFixed(2)) : null,
+    };
+  });
+
+  return { classId: teacher.classId, students: roster };
+}
+
+function getClassStats(p) {
+  const teacher = requireTeacher(p);
+  const students = readAll('Users')
+    .filter(u => u.role === 'student' && u.classId === teacher.classId);
+  const studentIds = students.map(s => s.userId);
+
+  const activities = readAll('Activities')
+    .filter(a => studentIds.indexOf(a.userId) >= 0);
+
+  // Heatmap by activity type
+  const heatmap = {};
+  ACTIVITY_TYPES.forEach(type => {
+    const acts = activities.filter(a => a.type === type);
+    const correct = acts.filter(a => a.isCorrect === true || a.isCorrect === 'true').length;
+    heatmap[type] = {
+      attempts: acts.length,
+      correct,
+      successRate: acts.length > 0 ? Number((correct / acts.length).toFixed(2)) : null,
+      coverageRate: students.length > 0 ?
+        Number((new Set(acts.map(a => a.userId)).size / students.length).toFixed(2)) : 0,
+    };
+  });
+
+  // CEFR distribution
+  const profiles = readAll('Profiles').filter(x => studentIds.indexOf(x.userId) >= 0);
+  const cefrCounts = {};
+  profiles.forEach(p => {
+    const lvl = p.cefrLevel || 'unknown';
+    cefrCounts[lvl] = (cefrCounts[lvl] || 0) + 1;
+  });
+  const diagnosticsCompleted = profiles.filter(p => p.diagnosticCompletedAt).length;
+
+  return {
+    classId: teacher.classId,
+    studentCount: students.length,
+    diagnosticsCompleted,
+    heatmap,
+    cefrDistribution: cefrCounts,
+  };
+}
+
+function getStudentDetail(p) {
+  const teacher = requireTeacher(p);
+  if (!p.studentId) throw new Error('חסר מזהה תלמיד');
+
+  const student = findRow('Users', u => u.userId === p.studentId);
+  if (!student || student.classId !== teacher.classId) {
+    throw new Error('התלמיד לא בכיתה שלך');
+  }
+
+  const profile = findRow('Profiles', x => x.userId === p.studentId);
+  const sessions = readAll('Sessions')
+    .filter(x => x.userId === p.studentId)
+    .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))
+    .slice(0, 10);
+
+  const activities = readAll('Activities')
+    .filter(a => a.userId === p.studentId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 30);
+
+  const breakdown = {};
+  ACTIVITY_TYPES.forEach(type => {
+    const acts = activities.filter(a => a.type === type);
+    const correct = acts.filter(a => a.isCorrect === true || a.isCorrect === 'true').length;
+    breakdown[type] = {
+      attempts: acts.length,
+      correct,
+      successRate: acts.length > 0 ? Number((correct / acts.length).toFixed(2)) : null,
+    };
+  });
+
+  return {
+    student: {
+      userId: student.userId,
+      name: student.name,
+      email: student.email,
+      cefrLevel: profile ? (profile.cefrLevel || 'unknown') : 'unknown',
+      diagnosticCompletedAt: profile ? profile.diagnosticCompletedAt : '',
+      vocabularyKnown: profile ? tryParseJSON(profile.vocabularyKnown, []) : [],
+    },
+    sessions,
+    breakdown,
+    recentActivities: activities.slice(0, 15).map(a => ({
+      activityId: a.activityId,
+      type: a.type,
+      unitId: a.unitId,
+      lessonId: a.lessonId,
+      isCorrect: a.isCorrect,
+      createdAt: a.createdAt,
+    })),
   };
 }
 

@@ -103,6 +103,34 @@ const API = {
     return result.text;
   },
 
+  // ===== Teacher dashboard =====
+
+  async getClassRoster() {
+    const result = await this.call('getClassRoster');
+    return { classId: result.classId, students: result.students };
+  },
+
+  async getClassStats() {
+    const result = await this.call('getClassStats');
+    return {
+      classId: result.classId,
+      studentCount: result.studentCount,
+      diagnosticsCompleted: result.diagnosticsCompleted,
+      heatmap: result.heatmap,
+      cefrDistribution: result.cefrDistribution,
+    };
+  },
+
+  async getStudentDetail(studentId) {
+    const result = await this.call('getStudentDetail', { studentId });
+    return {
+      student: result.student,
+      sessions: result.sessions,
+      breakdown: result.breakdown,
+      recentActivities: result.recentActivities,
+    };
+  },
+
   // ===== Connectivity check =====
 
   async ping() {
