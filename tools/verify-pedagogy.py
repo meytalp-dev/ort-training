@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-verify-pedagogy.py
-──────────────────
+verify-pedagogy.py — בדיקת אימות פדגוגי
+────────────────────────────────────────
 Sends a list of pedagogical claims to Perplexity for source-based verification.
 
 Usage:
@@ -186,7 +186,7 @@ def main():
     claims = data.get("claims", [])
 
     lines = [
-        f"# דוח אימות פדגוגי — {topic}",
+        f"# בדיקת אימות פדגוגי — {topic}",
         f"_רמה: {level}_",
         f"_נבדקו {len(claims)} קביעות מול Perplexity (sonar-pro)._",
         "",
