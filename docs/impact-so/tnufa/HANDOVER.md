@@ -1,6 +1,6 @@
 # ImpactOS Tnufa English — סיכום מלא להמשך עבודה בשיחה חדשה
 
-> **תאריך:** 9.5.2026
+> **תאריך עדכון אחרון:** 11.5.2026
 > **מטרת המסמך:** סיכום כל מה שצריך לדעת כדי להמשיך לבנות בשיחה חדשה.
 > **קרא ראשון:** המסמך הזה. אחר כך עבור למסמכים הספציפיים.
 
@@ -36,19 +36,23 @@
 - [`curriculum/assets/style.css`](curriculum/assets/style.css) — CSS להמרת MD ל-HTML (התחלתי, לא הסתיים)
 
 #### קוד המערכת (פעיל)
-- [`index.html`](index.html) — דף נחיתה + login/register
+- [`index.html`](index.html) — דף נחיתה + login/register (כולל שדה classCode לתלמידים)
 - [`student.html`](student.html) — דשבורד תלמיד.ה
 - [`diagnostic.html`](diagnostic.html) — אבחון פתיחה
-- `teacher.html` — **לא נבנה עדיין**
+- [`session.html`](session.html) — שלד הסשן היומי (5 פעילויות)
+- [`teacher.html`](teacher.html) — דשבורד מורה (3 טאבים: רוסטר/חום-מפה/בסיכון)
 - `parent.html` — **לא נבנה עדיין**
 - [`README.md`](README.md) — הוראות הפעלה
 
 #### Assets
 - `assets/css/style.css` — סגנונות
 - `assets/js/config.js` — הגדרות מערכת + API_URL
-- `assets/js/auth.js` — login/register flow
-- `assets/js/api.js` — API wrapper ל-Apps Script
+- `assets/js/auth.js` — login/register flow (כולל classCode)
+- `assets/js/api.js` — API wrapper ל-Apps Script (כולל teacher endpoints)
 - `assets/js/diagnostic.js` — לוגיקת האבחון (20 שאלות)
+- `assets/js/session.js` — בקר הסשן + Resume מ-localStorage
+- `assets/js/activities/` — 5 מודולי פעילות (vocabulary/reading/listening/grammar/writing)
+- `assets/data/unit-1-content.js` — בנק התוכן של Unit 1 (My World)
 
 #### Backend
 - `apps-script/code.gs` — Apps Script + Google Sheets
@@ -69,20 +73,25 @@
 
 ### מה עובד עכשיו
 ✅ דף נחיתה יפה
-✅ הרשמה (Register)
+✅ הרשמה (Register) — כולל שדה classCode לתלמידים, classId אוטומטי למורים
 ✅ כניסה (Login)
 ✅ דשבורד תלמיד.ה (אם עברה אבחון או לא)
 ✅ אבחון פתיחה (20 שאלות, מחשב CEFR אוטומטית)
 ✅ שמירה לפרופיל
+✅ סשן יומי (5 פעילויות, ~18 דק', Unit 1 My World)
+✅ 5 מודולי פעילות: vocabulary / reading / listening (TTS) / grammar / writing
+✅ AI feedback על כתיבה (מוטמע ב-WritingActivity דרך API.aiFeedback)
+✅ Resume של סשן (שמירה ב-localStorage, TTL 12 שעות, "להמשיך מאיפה שעצרת?")
+✅ דשבורד מורה — רוסטר + חום-מפה + תלמידים בסיכון + modal פרטי תלמיד.ה
+✅ שיוך כיתה (classId — מורה מקבלת קוד אוטומטי, תלמידים מקלידים בהרשמה)
 
 ### מה לא עובד עדיין
-❌ סשן יומי (Today's Session)
-❌ יחידה ראשונה (My World)
-❌ AI feedback על כתיבה (יש backend, אין UI)
-❌ דשבורד מורה
-❌ דשבורד הורה
+❌ דשבורד הורה (parent.html)
+❌ עוד יחידות תוכן (Units 2-8) — רק Unit 1 בנוי
 ❌ Speaking practice
 ❌ Mock exam mode
+❌ ייצוא PDF / דוחות
+❌ שיוך תלמיד.ה לכיתה אחרי הרשמה (כרגע רק בעת ההרשמה)
 
 ---
 
@@ -144,41 +153,40 @@
 
 ## 6 · מה הבא — Phases פתוחות
 
-### Phase 4 (הבא בתור) · יחידה ראשונה (My World) — סשן יומי
-**מטרה:** משתמש לוחץ "התחל את הסשן של היום" → עובר 4-5 פעילויות תוך 15-20 דק'.
+### ✓ Phase 4 — סשן יומי (Unit 1 My World) — הושלם
+נבנה ב-9-10.5.2026:
+- `session.html` + `session.js` (בקר עם Resume דרך localStorage)
+- 5 מודולי פעילות תחת `assets/js/activities/`
+- בנק תוכן `assets/data/unit-1-content.js` (12 chunks, 3 טקסטים, listening, grammar, writing)
 
-**מה לבנות:**
-- `session.html` — מסך הסשן עצמו
-- `assets/js/session.js` — לוגיקת הסשן
-- `assets/js/activities/` — לוגיקה לכל סוג פעילות:
-  - `vocabulary.js` — Spaced Retrieval של chunks
-  - `reading.js` — טקסט + שאלות הבנה
-  - `listening.js` — אודיו + שאלות (TTS עם Web Speech API)
-  - `writing.js` — 6 שלבי כתיבה + AI feedback
-  - `grammar.js` — Text-based (5 שלבים)
-- בנק תוכן ראשוני: 12 chunks, 3 טקסטים, 1 משימת כתיבה
+### ✓ Phase 5 — AI feedback מוטמע — הושלם
+WritingActivity קורא ל-`API.aiFeedback()` ומציג Praise + Focus Error + Hint.
 
-### Phase 5 · AI feedback מוטמע
-- חיבור Writing activity ל-`API.aiFeedback()`
-- הצגת הפידבק בצורה ידידותית (Praise + Focus Error + Hint)
+### ✓ Phase 6 — דשבורד מורה — הושלם (חצי)
+נבנה `teacher.html` עם 3 טאבים + שיוך כיתה (classId). **חסר:**
+- `parent.html` — דשבורד הורה (טרם נבנה)
+- שאלה פתוחה: איך הורה ניגש? קישור-שיתוף עם token, או role=parent עם linkedStudent?
 
-### Phase 6 · דשבורדי מורה והורה
-- `teacher.html` — דשבורד כיתתי, חום-מפה, תלמידים בסיכון
-- `parent.html` — סיכום שבועי, התקדמות הילד.ה
+### ✓ Phase 7 — תוכנית פדגוגית כ-HTML — הושלם
+מייטל הזכירה ב-9.5.2026 שעשתה את זה בשיחה אחרת. ראה `curriculum/*.html` הקיימים.
 
-### Phase 7 · תוכנית פדגוגית כ-HTML
-**הבקשה האחרונה של מיטל:**
-המרת 4 הקבצי MD בתוכנית הפדגוגית ל-HTML יפים:
-- `curriculum/index.html`
-- `curriculum/hebrew-grade4.html`
-- `curriculum/english-grade9.html`
-- `curriculum/information-literacy-grade9.html`
-- `curriculum/glossary.html`
-- `curriculum/comparison-with-curriculum-2020.html`
+### Phase 8 (הבא בתור) · אחת מהאופציות:
+**א) דשבורד הורה (parent.html)**
+- read-only view של תלמיד.ה מסוים.ת
+- סיכום שבועי, התקדמות, רמת CEFR, מילים חדשות
+- אופציה לאקסס: קישור-שיתוף עם token, או role נפרד
 
-**מה הספקתי:** התחלתי את `curriculum/assets/style.css` (יש שם CSS מקיף לעיצוב prose). לא הספקתי לכתוב את ה-HTML עצמם.
+**ב) Unit 2 — School Life**
+- 12 chunks חדשים (theme: school, lessons, teachers, classroom)
+- 3 טקסטים A2, listening, grammar (Present Simple negatives/questions), writing
+- להוסיף ל-sessionSequence ולתת אפשרות לתלמיד.ה לבחור יחידה
 
-**המלצה לשיחה הבאה:** להתחיל מ-Phase 7 (HTML pages) כי זה מה שמיטל ביקשה לפני שעצרנו. אחר כך לחזור ל-Phase 4 (סשן יומי).
+**ג) Mock Exam Mode**
+- מצב מבחן ב-pace תנופה (75% reading, 25% listening, ללא AI feedback)
+- ציון אוטומטי + נקודות לעבודה
+
+**ד) שיוך תלמיד.ה לכיתה אחרי הרשמה**
+- כפתור ב-student.html "הצטרפי לכיתה" → הזנת classCode → עדכון Sheet
 
 ---
 
@@ -187,11 +195,9 @@
 ### צעד 1 · קריאת מסמכי בסיס
 
 ```
-1. HANDOVER.md (זה)
-2. spec.md (איפיון)
-3. pedagogy.md (בסיס פדגוגי)
-4. curriculum/english-grade9.md (התוכנית הפדגוגית)
-5. mvp-plan.md (תוכנית MVP)
+1. HANDOVER.md (זה) — קרא במלואו
+2. spec.md (איפיון) — סקירה
+3. pedagogy.md (בסיס פדגוגי) — סקירה
 ```
 
 ### צעד 2 · בדיקת מצב המערכת
@@ -203,20 +209,18 @@ ls docs/impact-so/tnufa/
 https://meytalp-dev.github.io/ort-training/impact-so/tnufa/
 ```
 
-### צעד 3 · המשך לפי הצורך
+### צעד 3 · הקרקע התפעולית — לא לשכוח!
 
-#### אם מיטל רוצה להמשיך עם HTML של התוכנית הפדגוגית:
-- צור 6 קבצי HTML ב-`curriculum/`
-- השתמש ב-`curriculum/assets/style.css` (כבר בנוי)
-- שמור על העיצוב Dream Theme
-- TOC sidebar בכל דף
-- TOC על הצד הימני (sticky)
+⚠ **לפני שדשבורד המורה והשיוך לכיתה יעבדו, יש פעולה ידנית שטרם בוצעה (נכון ל-11.5.2026):**
 
-#### אם מיטל רוצה להמשיך עם הסשן היומי:
-- צור `session.html` עם UI לסשן
-- חבר ל-Apps Script (כבר עובד)
-- בנה את 4 הפעילויות הראשונות
-- AI feedback על כתיבה
+1. **לעדכן את ה-Apps Script Deployment** — מייטל צריכה להעתיק את `apps-script/code.gs` החדש (כולל classId + 3 endpoints) ל-Apps Script ולעשות "Deploy → New version".
+2. **להוסיף עמודת `classId`** ידנית ל-Sheet "Users" (אחרי עמודת `token`).
+3. **חשבון מורה קיים** לא יקבל classId אוטומטית — צריך להירשם מחדש או לערוך ידנית בשיט.
+
+עד שזה לא קורה — `teacher.html` יציג "אין כיתה משויכת לחשבון" או יזרוק שגיאה.
+
+### צעד 4 · המשך לפי הצורך
+ראה סעיף 6 (Phase 8) — אופציות הבאות.
 
 ---
 
