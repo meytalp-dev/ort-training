@@ -104,26 +104,30 @@ async def scrape_linkedin_posts():
     from playwright.async_api import async_playwright
 
     posts = []
-    print("LinkedIn: launching Chrome Debug profile...")
+    print("LinkedIn: launching Chrome Debug profile...", flush=True)
 
     # Check if Chrome is already running — if so, skip LinkedIn (profile is locked)
     import subprocess
     chrome_running = subprocess.run(
         ['tasklist', '/FI', 'IMAGENAME eq chrome.exe', '/NH'],
-        capture_output=True, text=True
+        capture_output=True, text=True, timeout=10
     )
     if 'chrome.exe' in chrome_running.stdout.lower():
-        print("LinkedIn: skipped — Chrome is already running (profile locked)")
+        print("LinkedIn: skipped — Chrome is already running (profile locked)", flush=True)
         return []
 
     try:
+        # Wrap Chrome launch in a 45s timeout — if Chrome/profile is wedged, skip instead of hanging forever
         async with async_playwright() as p:
-            browser = await p.chromium.launch_persistent_context(
-                user_data_dir=CHROME_USER_DATA,
-                executable_path=CHROME_PATH,
-                headless=True,
-                args=["--disable-blink-features=AutomationControlled"],
-                timeout=30000,
+            browser = await asyncio.wait_for(
+                p.chromium.launch_persistent_context(
+                    user_data_dir=CHROME_USER_DATA,
+                    executable_path=CHROME_PATH,
+                    headless=True,
+                    args=["--disable-blink-features=AutomationControlled"],
+                    timeout=30000,
+                ),
+                timeout=45
             )
 
             page = browser.pages[0] if browser.pages else await browser.new_page()
@@ -152,8 +156,11 @@ async def scrape_linkedin_posts():
 
             await browser.close()
 
+    except asyncio.TimeoutError:
+        print("LinkedIn: Chrome launch timed out after 45s — skipping LinkedIn", flush=True)
+        return []
     except Exception as e:
-        print(f"LinkedIn scraping failed: {e}")
+        print(f"LinkedIn scraping failed: {e}", flush=True)
 
     # Deduplicate by content similarity
     seen = set()
@@ -481,7 +488,7 @@ async def create_daily_digest():
         try:
             chat_result = await client.chat.ask(
                 notebook.id,
-                "Based on all the sources (news sites AND LinkedIn posts), identify the 5–7 most important AI news items from today. "
+                "Based on all the sources (news sites AND LinkedIn posts), identify the 10–12 most important AI news items from today. Include a MIX of: new tools people can try, practical tips, feature updates, and industry trends. "
                 "Focus on NEW information only — skip anything older than 24 hours.\n\n"
                 "IMPORTANT CONTEXT — this digest is for Meytal Peleg, who runs 'Learni', a brand focused on "
                 "AI innovation for education, management, entrepreneurship, and marketing. She creates:\n"
@@ -511,9 +518,9 @@ async def create_daily_digest():
                 'אפשרויות: "Facebook", "Instagram", "LinkedIn", "Newsletter". '
                 'השתמש ב-[] ריק אם לא מתאים לאף פלטפורמה.\n\n'
                 "CRITICAL — BE VERY SELECTIVE with content_actions and platforms:\n"
-                "You are Meytal's content filter. Out of 5-7 items, typically:\n"
-                "- ONLY 1 item (max 2) should get real content_actions + platforms — the one standout item worth creating content about\n"
-                "- 1-2 items get ONLY [\"ניוזלטר\"] — good to know, not worth producing content\n"
+                "You are Meytal's content filter. Out of 10-12 items, typically:\n"
+                "- 1-2 items should get real content_actions + platforms — standout items worth creating content about\n"
+                "- 3-4 items get ONLY [\"ניוזלטר\"] — good to know, not worth producing content\n"
                 "- The rest get EMPTY [] for both fields — background noise\n\n"
                 "Ask yourself: would Meytal's audience (teachers, managers, entrepreneurs) actually CARE about this enough "
                 "to stop scrolling? Is there a NEW TOOL they can TRY TODAY? Is it visual/exciting enough for a reel?\n"

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הודעות — מתחברים</title>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Heebo:wght@400;600;700&family=Playpen+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark"><span></span><span></span><span></span></span>
+      מתחברים
+    </a>
+    <div class="nav-links">
+      <a href="index.html">בית</a>
+      <a href="browse.html">הכר חברים</a>
+      <a href="chat.html" class="active">הודעות</a>
+      <a href="admin.html">ניהול</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container" style="max-width: 1100px;">
+
+  <div id="login-needed" class="card" style="display:none;">
+    <h2>צריך להיכנס קודם</h2>
+    <p>כדי לראות את ההודעות שלך, היכנס/י מדף "הכר חברים חדשים".</p>
+    <a href="browse.html" class="btn">מעבר לכניסה</a>
+  </div>
+
+  <div id="chat-app" class="chat-container" style="display:none;">
+    <aside class="chat-sidebar">
+      <h3>שיחות</h3>
+      <div id="conversations"></div>
+    </aside>
+
+    <section class="chat-main">
+      <div id="chat-header" class="chat-header">
+        <div>
+          <strong id="chat-with-name">—</strong>
+          <div class="muted" id="chat-with-meta" style="font-size:0.85rem;"></div>
+        </div>
+        <button id="req-contact-btn" class="btn btn-warm" style="display:none;" onclick="requestContactClicked()">בקש/י חשיפת פרטי קשר</button>
+      </div>
+
+      <div id="chat-messages" class="chat-messages">
+        <div class="chat-empty">
+          <div class="chat-empty-art"></div>
+          <p>בחרו שיחה מהרשימה בצד</p>
+        </div>
+      </div>
+
+      <form id="chat-form" class="chat-input-row" style="display:none;" onsubmit="handleSend(event)">
+        <input type="text" id="chat-input" placeholder="כתוב/י הודעה..." autocomplete="off">
+        <button type="submit" class="btn">שלח</button>
+      </form>
+    </section>
+  </div>
+
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+let me = getCurrentUser();
+let activeOtherId = null;
+
+function init() {
+  if (!me || me.status !== 'approved') {
+    document.getElementById('login-needed').style.display = 'block';
+    return;
+  }
+  document.getElementById('chat-app').style.display = 'grid';
+
+  const matchIds = mutualMatchesFor(me.id);
+  const list = document.getElementById('conversations');
+  list.innerHTML = '';
+
+  if (!matchIds.length) {
+    list.innerHTML = '<p class="muted" style="padding: 1rem 0.3rem;">אין עדיין שיחות. מצאו התאמות ב"הכר חברים חדשים".</p>';
+    return;
+  }
+
+  const db = loadDB();
+  matchIds.forEach(otherId => {
+    const other = db.users.find(u => u.id === otherId);
+    if (!other) return;
+    const msgs = messagesFor(me.id, otherId);
+    const last = msgs[msgs.length - 1];
+    const item = document.createElement('div');
+    item.className = 'conversation-item';
+    item.innerHTML = `
+      <div class="conversation-name">${other.name}, ${other.age}</div>
+      <div class="conversation-preview">${last ? last.text.slice(0, 40) : 'התחילו שיחה...'}</div>
+    `;
+    item.onclick = () => openConversation(otherId);
+    list.appendChild(item);
+  });
+
+  // אם יש ?with= — לפתוח ישר
+  const params = new URLSearchParams(location.search);
+  const withId = params.get('with');
+  if (withId && matchIds.includes(withId)) {
+    openConversation(withId);
+  }
+}
+
+function openConversation(otherId) {
+  activeOtherId = otherId;
+  document.querySelectorAll('.conversation-item').forEach(el => el.classList.remove('active'));
+  const items = document.querySelectorAll('.conversation-item');
+  const idx = mutualMatchesFor(me.id).indexOf(otherId);
+  if (items[idx]) items[idx].classList.add('active');
+
+  const other = loadDB().users.find(u => u.id === otherId);
+  document.getElementById('chat-with-name').textContent = `${other.name}, ${other.age}`;
+  document.getElementById('chat-with-meta').textContent = `${other.area} · מחפש/ת ${lookingForLabel(other.lookingFor)}`;
+  document.getElementById('chat-form').style.display = 'flex';
+
+  renderMessages();
+
+  // לאפשר בקשת פרטי קשר רק אחרי 5 הודעות לפחות
+  const msgs = messagesFor(me.id, otherId);
+  const btn = document.getElementById('req-contact-btn');
+  btn.style.display = msgs.length >= 5 ? 'inline-flex' : 'none';
+}
+
+function renderMessages() {
+  if (!activeOtherId) return;
+  const msgs = messagesFor(me.id, activeOtherId);
+  const box = document.getElementById('chat-messages');
+
+  if (!msgs.length) {
+    box.innerHTML = `
+      <div class="chat-notice">
+        זו תחילת השיחה. תהיו נחמדים ושאלו שאלות פתוחות — למשל: "איזה אנימה אהבת בזמן האחרון?"
+      </div>
+    `;
+    return;
+  }
+
+  box.innerHTML = '';
+  msgs.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'msg ' + (m.from === me.id ? 'msg-me' : 'msg-them');
+    div.innerHTML = `${m.text}<div class="msg-time">${timeAgo(m.at)}</div>`;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function handleSend(e) {
+  e.preventDefault();
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || !activeOtherId) return;
+  sendMessage(me.id, activeOtherId, text);
+  input.value = '';
+  renderMessages();
+
+  const msgs = messagesFor(me.id, activeOtherId);
+  if (msgs.length >= 5) {
+    document.getElementById('req-contact-btn').style.display = 'inline-flex';
+  }
+}
+
+function requestContactClicked() {
+  if (!activeOtherId) return;
+  const sent = requestContact(me.id, activeOtherId);
+  if (sent) {
+    alert('בקשת חשיפת פרטי קשר נשלחה. ההורה של הצד השני יקבל הודעה ויוכל לאשר. אם יאושר — שני ההורים יקבלו את פרטי הקשר אחד של השני ויתאמו ביניהם.');
+  } else {
+    alert('כבר שלחת בקשה קודם.');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

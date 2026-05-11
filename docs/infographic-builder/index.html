@@ -774,12 +774,30 @@ ${S.notes?'בקשות מיוחדות: '+S.notes:''}
 {"title":"כותרת קצרה וקליטה","subtitle":"תת-כותרת במשפט אחד","steps":[{"title":"שם השלב","desc":"הסבר קצר 1-2 משפטים"}]}
 כללים: שפה פשוטה, משפטים קצרים, כותרות עד 4 מילים, הסברים עד 20 מילים, תוכן מדויק`;
 
+  // 🔒 המפתח לא בקוד — נשמר ב-localStorage של המשתמש בלבד
+  let userKey = localStorage.getItem('infographic-gemini-key') || '';
+  if (!userKey) {
+    userKey = (prompt('הכניסו מפתח Gemini API שלכם (נשמר רק במכשיר שלכם, לא נשלח לשום שרת):\nליצירת מפתח: https://aistudio.google.com/apikey') || '').trim();
+    if (userKey) localStorage.setItem('infographic-gemini-key', userKey);
+  }
+  if (!userKey) {
+    alert('צריך מפתח Gemini API כדי להשתמש במחולל. אפשר ליצור חינם ב-aistudio.google.com/apikey');
+    btn.disabled=false;btn.classList.remove('loading');
+    btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z"/></svg> צור';
+    return;
+  }
+
   try{
-    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAZNwwPvxKjtkr43TIA1c2zLLAnvua7L3Y',{
+    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(userKey),{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:1024}})
     });
     const data=await res.json();
+    if (data.error) {
+      // מפתח לא תקף — מחיקה ובקשה מחדש
+      if (data.error.code === 400 || data.error.code === 403) localStorage.removeItem('infographic-gemini-key');
+      throw new Error(data.error.message || 'API error');
+    }
     let text=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
     text=text.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
     S.content=JSON.parse(text);

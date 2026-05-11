@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניהול — מתחברים</title>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Heebo:wght@400;600;700&family=Playpen+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark"><span></span><span></span><span></span></span>
+      מתחברים
+    </a>
+    <div class="nav-links">
+      <a href="index.html">בית</a>
+      <a href="browse.html">הכר חברים</a>
+      <a href="chat.html">הודעות</a>
+      <a href="admin.html" class="active">ניהול</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div id="auth-gate" class="card narrow" style="margin: 2rem auto;">
+    <h2>כניסה לניהול</h2>
+    <p class="muted">לאדמין בלבד. הכניסו את קוד הניהול.</p>
+    <div class="field">
+      <input type="text" id="admin-code" placeholder="קוד ניהול">
+    </div>
+    <button class="btn" onclick="tryAdmin()">כניסה</button>
+    <p class="muted mt-1" style="font-size:0.85rem;">לבדיקה — הקוד הוא <code>meytal</code>. בפרודקשן מחליפים לקוד אישי/Google Auth.</p>
+  </div>
+
+  <div id="admin-panel" style="display:none;">
+    <div class="flex-between mb-2">
+      <h1 style="margin:0;">ניהול המערכת</h1>
+      <div class="flex">
+        <button class="btn btn-secondary" onclick="Mitchabrim.seedDemoData(); location.reload();">טען דמו</button>
+        <button class="btn btn-danger" onclick="Mitchabrim.resetDB()">אפס נתונים</button>
+        <button class="btn btn-secondary" onclick="setAdmin(false); location.reload();">יציאה</button>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card coral">
+        <div class="stat-num" id="stat-pending">0</div>
+        <div class="stat-label">ממתינים לאישור</div>
+      </div>
+      <div class="stat-card sage">
+        <div class="stat-num" id="stat-approved">0</div>
+        <div class="stat-label">מאושרים</div>
+      </div>
+      <div class="stat-card teal">
+        <div class="stat-num" id="stat-requests">0</div>
+        <div class="stat-label">בקשות חשיפה</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>ממתינים לאישור</h2>
+      <div id="pending-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>משתמשים מאושרים</h2>
+      <div id="approved-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>בקשות חשיפת פרטי קשר</h2>
+      <p class="muted">כשמשתמש/ת שולח/ת בקשה — ההורה של הצד השני צריך לאשר. כאן את רואה את הבקשות הממתינות.</p>
+      <div id="contact-reqs"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+const ADMIN_CODE = 'meytal';
+
+function tryAdmin() {
+  const code = document.getElementById('admin-code').value.trim().toLowerCase();
+  if (code === ADMIN_CODE) {
+    setAdmin(true);
+    showPanel();
+  } else {
+    alert('קוד שגוי');
+  }
+}
+
+function showPanel() {
+  document.getElementById('auth-gate').style.display = 'none';
+  document.getElementById('admin-panel').style.display = 'block';
+  renderAdmin();
+}
+
+function renderAdmin() {
+  const db = loadDB();
+  const pending = db.users.filter(u => u.status === 'pending');
+  const approved = db.users.filter(u => u.status === 'approved');
+
+  document.getElementById('stat-pending').textContent = pending.length;
+  document.getElementById('stat-approved').textContent = approved.length;
+  document.getElementById('stat-requests').textContent = db.contactRequests.filter(r => r.status === 'pending').length;
+
+  renderUserList('pending-list', pending, true);
+  renderUserList('approved-list', approved, false);
+  renderContactReqs();
+}
+
+function renderUserList(containerId, users, isPending) {
+  const box = document.getElementById(containerId);
+  box.innerHTML = '';
+
+  if (!users.length) {
+    box.innerHTML = '<p class="muted">אין משתמשים.</p>';
+    return;
+  }
+
+  users.forEach(u => {
+    const card = document.createElement('div');
+    card.className = 'profile-card';
+    card.innerHTML = `
+      <div class="profile-header">
+        <div class="flex" style="gap:0.8rem;">
+          <div class="profile-avatar">${initials(u.name)}</div>
+          <div>
+            <h3 class="profile-name">${u.name}, ${u.age}</h3>
+            <div class="profile-meta">${u.area} · מחפש/ת ${lookingForLabel(u.lookingFor)}</div>
+          </div>
+        </div>
+        <span class="status-badge status-${u.status}">${statusLabel(u.status)}</span>
+      </div>
+      <p class="profile-bio">${u.bio || ''}</p>
+      <div class="profile-tags">
+        ${(u.interests || []).map(i => `<span class="tag">${i}</span>`).join('')}
+      </div>
+      <div class="muted" style="font-size:0.9rem; margin-top:0.5rem;">
+        <strong>איש קשר בוגר:</strong> ${u.parentName || '—'} · ${u.parentPhone || '—'}
+      </div>
+      <div class="flex mt-1">
+        ${isPending
+          ? `<button class="btn btn-accent" onclick="approveUser('${u.id}')">אישור</button>
+             <button class="btn btn-danger" onclick="rejectUser('${u.id}')">דחייה</button>`
+          : `<button class="btn btn-secondary" onclick="deleteUser('${u.id}')">הסר/י מהמערכת</button>`
+        }
+      </div>
+    `;
+    box.appendChild(card);
+  });
+}
+
+function renderContactReqs() {
+  const db = loadDB();
+  const box = document.getElementById('contact-reqs');
+  const reqs = db.contactRequests.filter(r => r.status === 'pending');
+
+  if (!reqs.length) {
+    box.innerHTML = '<p class="muted">אין בקשות פעילות.</p>';
+    return;
+  }
+
+  box.innerHTML = '';
+  reqs.forEach(r => {
+    const from = db.users.find(u => u.id === r.from);
+    const to = db.users.find(u => u.id === r.to);
+    if (!from || !to) return;
+
+    const card = document.createElement('div');
+    card.className = 'card card-soft';
+    card.innerHTML = `
+      <h3>${from.name} מבקש/ת חשיפת פרטי קשר מ-${to.name}</h3>
+      <p><strong>הורה של ${from.name}:</strong> ${from.parentName} — ${from.parentPhone}</p>
+      <p><strong>הורה של ${to.name}:</strong> ${to.parentName} — ${to.parentPhone}</p>
+      <p class="muted">הפעולה שלך: ליצור קשר עם ההורה של ${to.name} ולבקש אישור. אם מאשר/ת — הפרטים יוחלפו בין ההורים.</p>
+      <div class="flex">
+        <button class="btn btn-accent" onclick="completeReq('${r.id}', 'approved')">ההורה אישר — סמן כהושלם</button>
+        <button class="btn btn-danger" onclick="completeReq('${r.id}', 'rejected')">ההורה דחה</button>
+      </div>
+    `;
+    box.appendChild(card);
+  });
+}
+
+function statusLabel(status) {
+  return {pending: 'ממתין', approved: 'מאושר', rejected: 'נדחה'}[status] || status;
+}
+
+function approveUser(id) {
+  updateUser(id, { status: 'approved' });
+  renderAdmin();
+}
+
+function rejectUser(id) {
+  if (!confirm('לדחות את המשתמש?')) return;
+  updateUser(id, { status: 'rejected' });
+  renderAdmin();
+}
+
+function deleteUser(id) {
+  if (!confirm('להסיר את המשתמש מהמערכת?')) return;
+  const db = loadDB();
+  db.users = db.users.filter(u => u.id !== id);
+  saveDB(db);
+  renderAdmin();
+}
+
+function completeReq(reqId, newStatus) {
+  const db = loadDB();
+  const r = db.contactRequests.find(x => x.id === reqId);
+  if (r) { r.status = newStatus; saveDB(db); }
+  renderAdmin();
+}
+
+// Init
+if (isAdmin()) showPanel();
+</script>
+</body>
+</html>

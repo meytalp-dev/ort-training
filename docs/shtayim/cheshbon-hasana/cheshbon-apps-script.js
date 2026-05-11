@@ -288,6 +288,9 @@ function sendReceiptEmail_(data) {
         '<span style="color:#D4D0C8;margin:0 6px;">·</span>' +
         '<a href="mailto:mlypeleg@gmail.com" style="color:#6B6980;text-decoration:none;">mlypeleg@gmail.com</a>' +
       '</div>' +
+      '<div style="margin-top:4px;">' +
+        '<a href="https://meytalp-dev.github.io/ort-training/" style="color:#6B6980;text-decoration:none;">תיק עבודות · Learni ←</a>' +
+      '</div>' +
       '<div style="margin-top:6px;">' +
         '<a href="https://www.instagram.com/learni.ai" style="color:#9B99AC;text-decoration:none;margin:0 4px;">Instagram</a>·' +
         '<a href="https://www.facebook.com/profile.php?id=61578395142579" style="color:#9B99AC;text-decoration:none;margin:0 4px;">Facebook</a>·' +
@@ -305,7 +308,8 @@ function sendReceiptEmail_(data) {
     'הכאב הראשי: ' + titleOf(top) + '\n' +
     'סה"כ השנה עלתה לך: ' + totalHours + ' שעות שחיקה\n\n' +
     'לקבלה האינטראקטיבית: https://meytalp-dev.github.io/ort-training/shtayim/cheshbon-hasana/\n\n' +
-    'רוצים לשמוע פרטים על פתרונות לכאבים?\nמיטל פלג · 053-625-6653 · mlypeleg@gmail.com';
+    'רוצים לשמוע פרטים על פתרונות לכאבים?\nמיטל פלג · 053-625-6653 · mlypeleg@gmail.com\n' +
+    'תיק עבודות · Learni: https://meytalp-dev.github.io/ort-training/';
 
   MailApp.sendEmail({
     to: to,

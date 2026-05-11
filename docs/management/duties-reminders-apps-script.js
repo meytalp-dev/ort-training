@@ -188,6 +188,8 @@ function sendLunchReminder() {
 function getDutyDayIndex_() {
   const jsDay = new Date().getDay();
   if (jsDay === 5 || jsDay === 6) return -1;
+  const todayStr = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'yyyy-MM-dd');
+  if (getHolidays_().includes(todayStr)) { Logger.log('חג — אין תורנויות'); return -1; }
   return jsDay;
 }
 
@@ -217,7 +219,7 @@ function getHolidays_() {
     '2026-03-29','2026-03-30','2026-03-31',
     '2026-04-01','2026-04-02','2026-04-03','2026-04-04','2026-04-05',
     '2026-04-06','2026-04-07','2026-04-08',
-    '2026-04-21','2026-04-22',
+    '2026-04-20','2026-04-21','2026-04-22',
   ];
 }
 
@@ -347,7 +349,7 @@ function sendReminderNow(rowIndex) {
 // ║           טריגרים                             ║
 // ╚══════════════════════════════════════════════╝
 
-const MANAGED_FUNCTIONS = ['checkAndSendReminders', 'sendRecessReminder', 'sendLunchReminder'];
+const MANAGED_FUNCTIONS = ['checkAndSendReminders', 'sendRecessReminder', 'sendLunchReminder', 'checkGreenApiStatus'];
 
 /** הריצי פעם אחת — מעדכן ל-3 טריגרים (בלי פתיחות בוקר) */
 function setupAllTriggers() {
@@ -358,6 +360,11 @@ function setupAllTriggers() {
       ScriptApp.deleteTrigger(t);
     }
   });
+
+  // 06:45 — בדיקת סטטוס Green API
+  ScriptApp.newTrigger('checkGreenApiStatus')
+    .timeBased().atHour(6).nearMinute(45).everyDays(1)
+    .inTimezone('Asia/Jerusalem').create();
 
   // 07:00 — תזכורות מרכזיות
   ScriptApp.newTrigger('checkAndSendReminders')
@@ -374,8 +381,51 @@ function setupAllTriggers() {
     .timeBased().atHour(12).nearMinute(0).everyDays(1)
     .inTimezone('Asia/Jerusalem').create();
 
-  Logger.log('3 טריגרים הוגדרו: 07:00 תזכורות, 07:30 הפסקות, 12:00 צהריים');
-  Logger.log('פתיחות בוקר (14:30 + 16:00) הוסרו — עברו ל-Sheet נפרד');
+  Logger.log('4 טריגרים הוגדרו: 06:45 סטטוס, 07:00 תזכורות, 07:30 הפסקות, 12:00 צהריים');
+}
+
+// ╔══════════════════════════════════════════════╗
+// ║      בדיקת סטטוס Green API (06:45)           ║
+// ╚══════════════════════════════════════════════╝
+
+/** רץ כל יום ב-06:45 — בודק אם Green API פעיל, שולח מייל אם לא */
+function checkGreenApiStatus() {
+  const url = `${GREEN_API_URL}/waInstance${GREEN_API_INSTANCE}/getStateInstance/${GREEN_API_TOKEN}`;
+  try {
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const code = response.getResponseCode();
+    const body = response.getContentText();
+
+    if (code !== 200) {
+      sendStatusAlert_('Green API מחזיר שגיאה ' + code, body);
+      return;
+    }
+
+    const state = JSON.parse(body);
+    if (state.stateInstance !== 'authorized') {
+      sendStatusAlert_(
+        'Green API לא מחובר — סטטוס: ' + state.stateInstance,
+        'הודעות WhatsApp לא יישלחו היום.\n\n' +
+        'מה לעשות:\n' +
+        '1. היכנסי ל-console.green-api.com\n' +
+        '2. סרקי מחדש את קוד ה-QR\n' +
+        '3. הריצי testWhatsApp לבדיקה'
+      );
+    } else {
+      Logger.log('Green API פעיל ומחובר');
+    }
+  } catch(err) {
+    sendStatusAlert_('Green API לא נגיש', err.message);
+  }
+}
+
+function sendStatusAlert_(subject, details) {
+  MailApp.sendEmail({
+    to: 'mlypeleg@gmail.com',
+    subject: '⚠ ' + subject + ' — אורט בית הערבה',
+    body: details + '\n\n(הודעה אוטומטית ממערכת התורנויות)'
+  });
+  Logger.log('התראה נשלחה במייל: ' + subject);
 }
 
 // ╔══════════════════════════════════════════════╗

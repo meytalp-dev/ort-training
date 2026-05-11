@@ -236,6 +236,20 @@
         #printRangeView table.pr-table tr.month-sep td { background: #F5F5F5; font-weight: 700; color: #00838F; }
         #printRangeView .pr-empty { text-align: center; padding: 20px; color: #78909C; font-style: italic; }
 
+        /* Print: monthly calendar grid */
+        #printRangeView .pr-month { margin-top: 22px; page-break-inside: avoid; page-break-before: auto; }
+        #printRangeView .pr-month + .pr-month { page-break-before: always; }
+        #printRangeView .pr-month h2 { font-size: 18px; color: #00838F; background: #E0F7FA; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; text-align: center; }
+        #printRangeView .pr-cal { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        #printRangeView .pr-cal th { background: #00838F; color: white; padding: 6px 4px; font-size: 12px; font-weight: 600; text-align: center; border: 1px solid #00838F; }
+        #printRangeView .pr-cal td { border: 1px solid #CFD8DC; vertical-align: top; padding: 4px; height: 90px; width: 14.28%; font-size: 11px; line-height: 1.3; }
+        #printRangeView .pr-cal td.pr-other { background: #FAFAFA; }
+        #printRangeView .pr-cal .pr-day-num { font-size: 12px; font-weight: 700; color: #263238; margin-bottom: 3px; }
+        #printRangeView .pr-cal .pr-cal-exam { padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; font-size: 10px; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #printRangeView .pr-cal .pr-cal-grade { display: inline-block; font-size: 9px; padding: 0 3px; border-radius: 2px;
+            background: rgba(0,0,0,0.08); margin-left: 3px; font-weight: 700; }
+
         @media print {
             .main-tabs, .action-bar, .class-bar, .modal-overlay, .toast, .review-actions, .btn-wa, .btn-print { display: none !important; }
             .header { padding: 12px; }
@@ -259,6 +273,7 @@
             body.printing-range [id^="tab"],
             body.printing-range .modal-overlay { display: none !important; }
             body.printing-range #printRangeView { display: block !important; padding: 0; }
+            body.printing-range.print-landscape #printRangeView .pr-cal td { height: 110px; }
         }
 
         /* ===== Accessibility ===== */
@@ -441,7 +456,12 @@
             <label><input type="checkbox" class="print-grade-cb" value="יא" checked> שכבה יא'</label>
             <label><input type="checkbox" class="print-grade-cb" value="יב" checked> שכבה יב'</label>
         </div>
-        <label style="margin-top:14px;"><input type="checkbox" id="printGroupByGrade" checked> הפרדה לפי שכבה</label>
+        <label style="margin-top:14px;">מתכונת הדפסה</label>
+        <div style="display:flex;gap:14px;margin-top:6px;">
+            <label><input type="radio" name="printLayout" value="list" checked> רשימה</label>
+            <label><input type="radio" name="printLayout" value="calendar"> לוח חודשי (מטריצה)</label>
+        </div>
+        <label style="margin-top:14px;"><input type="checkbox" id="printGroupByGrade" checked> הפרדה לפי שכבה (במצב רשימה)</label>
         <div class="modal-actions">
             <button class="action-btn btn-save" onclick="executePrintRange()">הדפס</button>
             <button class="action-btn" style="background:#ECEFF1;color:#37474F;" onclick="closeModal('printRangeModal')">ביטול</button>
@@ -1672,6 +1692,7 @@ function executePrintRange() {
         .filter(cb => cb.checked).map(cb => cb.value);
     if (grades.length === 0) { toast('יש לבחור לפחות שכבה אחת'); return; }
     const groupByGrade = document.getElementById('printGroupByGrade').checked;
+    const layout = (document.querySelector('input[name="printLayout"]:checked') || {}).value || 'list';
 
     const fromD = new Date(from); const toD = new Date(to);
     const fmtHeb = d => {
@@ -1679,6 +1700,11 @@ function executePrintRange() {
         return dd.getDate() + '.' + (dd.getMonth()+1) + '.' + dd.getFullYear();
     };
     const weekday = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+    if (layout === 'calendar') {
+        renderPrintCalendar_(from, to, grades);
+        return;
+    }
 
     const buildRow = (e, grade) => {
         const dObj = new Date(e.date);
@@ -1754,6 +1780,104 @@ function executePrintRange() {
     setTimeout(() => {
         window.print();
         setTimeout(() => document.body.classList.remove('printing-range'), 500);
+    }, 100);
+}
+
+function renderPrintCalendar_(fromStr, toStr, grades) {
+    const fmtHeb = d => { const dd = new Date(d); return dd.getDate() + '.' + (dd.getMonth()+1) + '.' + dd.getFullYear(); };
+    const dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+    const allExams = [];
+    grades.forEach(g => {
+        const gd = examData[g]; if (!gd) return;
+        gd.exams.filter(e => e.date >= fromStr && e.date <= toStr)
+            .forEach(e => allExams.push({...e, _grade: g}));
+    });
+
+    let html = `<div class="pr-header">
+        <h1>לוח בחינות — ${fmtHeb(fromStr)} עד ${fmtHeb(toStr)}</h1>
+        <div class="pr-sub">בית ספר אורט בית הערבה • ${allExams.length} בחינות • נוצר ${fmtHeb(new Date())}</div>
+    </div>`;
+
+    if (allExams.length === 0) {
+        toast('אין בחינות בטווח התאריכים שנבחר');
+        return;
+    }
+
+    const examsByDate = {};
+    allExams.forEach(e => {
+        if (!examsByDate[e.date]) examsByDate[e.date] = [];
+        examsByDate[e.date].push(e);
+    });
+
+    const fromD = new Date(fromStr); const toD = new Date(toStr);
+    const startMonth = new Date(fromD.getFullYear(), fromD.getMonth(), 1);
+    const endMonth = new Date(toD.getFullYear(), toD.getMonth(), 1);
+
+    const cur = new Date(startMonth);
+    while (cur <= endMonth) {
+        const y = cur.getFullYear(); const m = cur.getMonth();
+        const firstDay = new Date(y, m, 1);
+        const lastDay = new Date(y, m + 1, 0);
+        const startDow = firstDay.getDay();
+        const daysInMonth = lastDay.getDate();
+
+        let monthExamCount = 0;
+        const cellArr = [];
+        for (let i = 0; i < startDow; i++) cellArr.push('<td class="pr-other"></td>');
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+            const dayExams = examsByDate[dateStr] || [];
+            monthExamCount += dayExams.length;
+            let inner = `<div class="pr-day-num">${day}</div>`;
+            dayExams.forEach(e => {
+                const color = subjectColors[e.subject] || '#90A4AE';
+                const bg = color + '22';
+                const subj = e.subject || '';
+                const type = e.type ? ' (' + e.type + ')' : '';
+                const time = e.time ? ' · ' + e.time : '';
+                inner += `<div class="pr-cal-exam" style="background:${bg};color:#263238;border-right:3px solid ${color};">${subj}${type}${time}<span class="pr-cal-grade">${e._grade}'</span></div>`;
+            });
+            cellArr.push(`<td>${inner}</td>`);
+        }
+        const totalCells = startDow + daysInMonth;
+        const trailing = (7 - (totalCells % 7)) % 7;
+        for (let i = 0; i < trailing; i++) cellArr.push('<td class="pr-other"></td>');
+
+        let rows = '';
+        for (let i = 0; i < cellArr.length; i += 7) rows += '<tr>' + cellArr.slice(i, i + 7).join('') + '</tr>';
+
+        if (monthExamCount > 0) {
+            html += `<div class="pr-month">
+                <h2>${hebrewMonths[m + 1]} ${y} — ${monthExamCount} בחינות</h2>
+                <table class="pr-cal">
+                    <thead><tr>${dayNames.map(d => `<th>${d}</th>`).join('')}</tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        }
+        cur.setMonth(cur.getMonth() + 1);
+    }
+
+    document.getElementById('printRangeView').innerHTML = html;
+    document.getElementById('printRangeModal').classList.remove('show');
+    document.body.classList.add('printing-range', 'print-landscape');
+
+    let pageStyle = document.getElementById('printPageStyle');
+    if (!pageStyle) {
+        pageStyle = document.createElement('style');
+        pageStyle.id = 'printPageStyle';
+        document.head.appendChild(pageStyle);
+    }
+    pageStyle.textContent = '@media print { @page { size: A4 landscape; margin: 10mm; } }';
+
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => {
+            document.body.classList.remove('printing-range', 'print-landscape');
+            if (pageStyle) pageStyle.textContent = '';
+        }, 500);
     }, 100);
 }
 

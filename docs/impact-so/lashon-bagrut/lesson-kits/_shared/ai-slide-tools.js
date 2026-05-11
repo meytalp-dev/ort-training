@@ -26,32 +26,40 @@ const SlideAI = (() => {
     'chasrei-pn': {
       // Verbs where the nun is the first root letter (פ"א הפועל = נ).
       // Each entry shows the past tense (where nun stays) + a notable form.
+      // Levels for bagrut י"א — easy/medium/high.
+      // קל: יומיומי, ברור, מופיע בכל ספר. בינוני: דורש זיהוי שורש. גבוה: עלול להופיע בבחינה כשאלת אתגר.
       verbs: [
-        { root: 'נ.פ.ל', word: 'נָפַל', meaning: 'נפל',          future: 'יִפֹּל',   binyan: 'קל' },
-        { root: 'נ.ת.ן', word: 'נָתַן', meaning: 'נתן',          future: 'יִתֵּן',   binyan: 'קל' },
-        { root: 'נ.ג.ע', word: 'נָגַע', meaning: 'נגע',          future: 'יִגַּע',   binyan: 'קל' },
-        { root: 'נ.ס.ע', word: 'נָסַע', meaning: 'נסע',          future: 'יִסַּע',   binyan: 'קל' },
-        { root: 'נ.שׂ.א', word: 'נָשָׂא', meaning: 'נשא',         future: 'יִשָּׂא',  binyan: 'קל' },
-        { root: 'נ.כ.ר', word: 'הִכִּיר', meaning: 'הכיר',         future: 'יַכִּיר',  binyan: 'הפעיל' },
-        { root: 'נ.צ.ל', word: 'הִצִּיל', meaning: 'הציל',         future: 'יַצִּיל',  binyan: 'הפעיל' },
-        { root: 'נ.ב.ט', word: 'הִבִּיט', meaning: 'הביט',         future: 'יַבִּיט',  binyan: 'הפעיל' },
-        { root: 'נ.ג.ב', word: 'הִגִּיב', meaning: 'הגיב',         future: 'יָגִיב',   binyan: 'הפעיל' },
-        { root: 'נ.ג.ש', word: 'הִגִּישׁ', meaning: 'הגיש',         future: 'יַגִּישׁ', binyan: 'הפעיל' },
-        { root: 'נ.כ.ס', word: 'הִכְנִיס', meaning: 'הכניס',       future: 'יַכְנִיס', binyan: 'הפעיל' },
-        { root: 'נ.ג.ע', word: 'הִגִּיעַ', meaning: 'הגיע',        future: 'יַגִּיעַ', binyan: 'הפעיל' },
+        // ─ קל (יומיומי, ברור) ─
+        { root: 'נ.פ.ל', word: 'נָפַל',  meaning: 'נפל',  future: 'יִפֹּל',   binyan: 'קל',     level: 'easy' },
+        { root: 'נ.ת.ן', word: 'נָתַן',  meaning: 'נתן',  future: 'יִתֵּן',   binyan: 'קל',     level: 'easy' },
+        { root: 'נ.ג.ע', word: 'נָגַע',  meaning: 'נגע',  future: 'יִגַּע',   binyan: 'קל',     level: 'easy' },
+        { root: 'נ.ס.ע', word: 'נָסַע',  meaning: 'נסע',  future: 'יִסַּע',   binyan: 'קל',     level: 'easy' },
+        { root: 'נ.ג.ע', word: 'הִגִּיעַ', meaning: 'הגיע', future: 'יַגִּיעַ', binyan: 'הפעיל', level: 'easy' },
+        { root: 'נ.ג.ש', word: 'הִגִּישׁ', meaning: 'הגיש', future: 'יַגִּישׁ', binyan: 'הפעיל', level: 'easy' },
+        // ─ בינוני (דורש זיהוי שורש) ─
+        { root: 'נ.שׂ.א', word: 'נָשָׂא', meaning: 'נשא',  future: 'יִשָּׂא',  binyan: 'קל',     level: 'medium' },
+        { root: 'נ.כ.ר', word: 'הִכִּיר', meaning: 'הכיר', future: 'יַכִּיר',  binyan: 'הפעיל', level: 'medium' },
+        { root: 'נ.צ.ל', word: 'הִצִּיל', meaning: 'הציל', future: 'יַצִּיל',  binyan: 'הפעיל', level: 'medium' },
+        { root: 'נ.ב.ט', word: 'הִבִּיט', meaning: 'הביט', future: 'יַבִּיט',  binyan: 'הפעיל', level: 'medium' },
+        // ─ גבוה (אתגר לבגרות) ─
+        { root: 'נ.כ.ס', word: 'הִכְנִיס', meaning: 'הכניס', future: 'יַכְנִיס', binyan: 'הפעיל', level: 'high' },
+        { root: 'נ.ד.ב', word: 'הִתְנַדֵּב', meaning: 'התנדב', future: 'יִתְנַדֵּב', binyan: 'התפעל', level: 'high', note: 'בהתפעל הנ\' שמורה — אתגר בגרותי' },
+        { root: 'נ.כ.שׁ', word: 'הִכִּישׁ', meaning: 'הכיש (עקיצת נחש)', future: 'יַכִּישׁ', binyan: 'הפעיל', level: 'high' },
+        { root: 'נ.שׂ.א', word: 'הִשִּׂיא', meaning: 'הִשִּׂיא (חתונה / המליץ)', future: 'יַשִּׂיא', binyan: 'הפעיל', level: 'high', note: 'אותו שורש כמו נָשָׂא — בניין שונה' },
       ],
       // Verbs with a guttural as 2nd root letter — nun does NOT fall.
       // All entries are בניין קל so the כלל applies cleanly.
+      // הגרוניות הן בעצמן רמת אתגר — לכן מתחלקות בין בינוני (נפוצים) לגבוה (נדירים).
       gutturals: [
-        { root: 'נ.ה.ג', word: 'נָהַג', meaning: 'נהג',     future: 'יִנְהַג', guttural: 'ה' },
-        { root: 'נ.ה.ם', word: 'נָהַם', meaning: 'נהם',     future: 'יִנְהַם', guttural: 'ה' },
-        { root: 'נ.ה.ר', word: 'נָהַר', meaning: 'זרם/נהר', future: 'יִנְהַר', guttural: 'ה' },
-        { root: 'נ.ח.ת', word: 'נָחַת', meaning: 'נחת',     future: 'יִנְחַת', guttural: 'ח' },
-        { root: 'נ.ח.ל', word: 'נָחַל', meaning: 'ירש',     future: 'יִנְחַל', guttural: 'ח' },
-        { root: 'נ.ע.ר', word: 'נָעַר', meaning: 'ניער',    future: 'יִנְעַר', guttural: 'ע' },
-        { root: 'נ.ע.ל', word: 'נָעַל', meaning: 'נעל',     future: 'יִנְעַל', guttural: 'ע' },
-        { root: 'נ.ע.ם', word: 'נָעַם', meaning: 'היה נעים', future: 'יִנְעַם', guttural: 'ע' },
-        { root: 'נ.א.ם', word: 'נָאַם', meaning: 'נאם',     future: 'יִנְאַם', guttural: 'א' },
+        { root: 'נ.ה.ג', word: 'נָהַג', meaning: 'נהג (במכונית)',  future: 'יִנְהַג', guttural: 'ה', level: 'medium' },
+        { root: 'נ.ח.ת', word: 'נָחַת', meaning: 'נחת (מטוס)',     future: 'יִנְחַת', guttural: 'ח', level: 'medium' },
+        { root: 'נ.ע.ל', word: 'נָעַל', meaning: 'נעל (נעליים)',    future: 'יִנְעַל', guttural: 'ע', level: 'medium' },
+        { root: 'נ.ע.ר', word: 'נָעַר', meaning: 'ניער',           future: 'יִנְעַר', guttural: 'ע', level: 'medium' },
+        { root: 'נ.ה.ם', word: 'נָהַם', meaning: 'נהם (כמו אריה)', future: 'יִנְהַם', guttural: 'ה', level: 'high' },
+        { root: 'נ.ה.ר', word: 'נָהַר', meaning: 'זרם/נהר אליו',   future: 'יִנְהַר', guttural: 'ה', level: 'high' },
+        { root: 'נ.ח.ל', word: 'נָחַל', meaning: 'ירש',            future: 'יִנְחַל', guttural: 'ח', level: 'high' },
+        { root: 'נ.ע.ם', word: 'נָעַם', meaning: 'היה נעים',       future: 'יִנְעַם', guttural: 'ע', level: 'high' },
+        { root: 'נ.א.ם', word: 'נָאַם', meaning: 'נאם (נשא נאום)', future: 'יִנְאַם', guttural: 'א', level: 'high' },
       ],
       // Full conjugations for hand-picked exemplars (future-kal + hifil past).
       conjugations: {
@@ -59,6 +67,7 @@ const SlideAI = (() => {
         hifil_past: {
           'נ.ג.ש': {
             base: 'הִגִּישׁ',
+            level: 'easy',
             forms: [
               { p: 'אֲנִי',     f: 'הִגַּשְׁתִּי',  note: '' },
               { p: 'אַתָּה',     f: 'הִגַּשְׁתָּ',   note: '' },
@@ -74,6 +83,7 @@ const SlideAI = (() => {
           },
           'נ.כ.ר': {
             base: 'הִכִּיר',
+            level: 'medium',
             forms: [
               { p: 'אֲנִי',     f: 'הִכַּרְתִּי',  note: '' },
               { p: 'אַתָּה',     f: 'הִכַּרְתָּ',   note: '' },
@@ -89,6 +99,7 @@ const SlideAI = (() => {
           },
           'נ.ב.ט': {
             base: 'הִבִּיט',
+            level: 'high',
             forms: [
               { p: 'אֲנִי',     f: 'הִבַּטְתִּי',  note: '' },
               { p: 'אַתָּה',     f: 'הִבַּטְתָּ',   note: '' },
@@ -106,6 +117,7 @@ const SlideAI = (() => {
         future_kal: {
           'נ.פ.ל': {
             base: 'נָפַל',
+            level: 'easy',
             forms: [
               { p: 'אֲנִי',     f: 'אֶפֹּל',     note: '' },
               { p: 'אַתָּה',     f: 'תִּפֹּל',     note: '' },
@@ -121,6 +133,7 @@ const SlideAI = (() => {
           },
           'נ.ת.ן': {
             base: 'נָתַן',
+            level: 'medium',
             forms: [
               { p: 'אֲנִי',     f: 'אֶתֵּן',     note: '' },
               { p: 'אַתָּה',     f: 'תִּתֵּן',    note: '' },
@@ -136,6 +149,7 @@ const SlideAI = (() => {
           },
           'נ.ג.ע': {
             base: 'נָגַע',
+            level: 'easy',
             forms: [
               { p: 'אֲנִי',     f: 'אֶגַּע',     note: '' },
               { p: 'אַתָּה',     f: 'תִּגַּע',    note: '' },
@@ -151,6 +165,7 @@ const SlideAI = (() => {
           },
           'נ.ס.ע': {
             base: 'נָסַע',
+            level: 'easy',
             forms: [
               { p: 'אֲנִי',     f: 'אֶסַּע',     note: '' },
               { p: 'אַתָּה',     f: 'תִּסַּע',    note: '' },
@@ -166,6 +181,7 @@ const SlideAI = (() => {
           },
           'נ.שׂ.א': {
             base: 'נָשָׂא',
+            level: 'high',
             forms: [
               { p: 'אֲנִי',     f: 'אֶשָּׂא',    note: '' },
               { p: 'אַתָּה',     f: 'תִּשָּׂא',   note: '' },
@@ -253,27 +269,58 @@ const SlideAI = (() => {
     // ── 1) Verb generator (slide 2) ──
     'verb-generator': {
       title: 'מחולל פעלים מהגזרה',
-      subtitle: 'דוגמאות חיות מחסרי פ"נ — לחיצה = פעלים חדשים',
+      subtitle: 'דוגמאות חיות מחסרי פ"נ — לחיצה = פעלים חדשים. מדורג לפי רמת קושי לבגרות י"א.',
       eyebrow: '🎲 הקנייה · דוגמאות',
       run: async (config) => {
         const bank = BANK[config.gizra || 'chasrei-pn'].verbs;
-        const verbs = pick(bank, config.count || 6);
-        return verbs;
+        const level = config.level || 'all';
+        const count = config.count || 6;
+        if (level === 'all') {
+          // Stratified pick: balance levels so the teacher sees a spread.
+          const byLevel = { easy: [], medium: [], high: [] };
+          bank.forEach(v => { if (byLevel[v.level]) byLevel[v.level].push(v); });
+          const per = Math.ceil(count / 3);
+          return [
+            ...pick(byLevel.easy, per),
+            ...pick(byLevel.medium, per),
+            ...pick(byLevel.high, per),
+          ].slice(0, count);
+        }
+        const filtered = bank.filter(v => v.level === level);
+        return pick(filtered, Math.min(count, filtered.length));
       },
-      render: (verbs) => {
+      render: (verbs, ctx) => {
+        const levelLabels = { easy: 'קל', medium: 'בינוני', high: 'גבוה' };
+        const currentLevel = (ctx && ctx.config && ctx.config.level) || 'all';
+        const chips = ['all', 'easy', 'medium', 'high'].map(l => `
+          <button class="ai-level-chip ${l === 'all' ? '' : l} ${currentLevel === l ? 'active' : ''}" data-level="${l}">
+            ${l === 'all' ? 'הכל' : levelLabels[l]}
+          </button>
+        `).join('');
         const cards = verbs.map(v => `
           <div class="ai-card">
+            ${v.level ? `<div class="ai-level-badge ${v.level}">${levelLabels[v.level]}</div>` : ''}
             ${v.binyan ? `<div class="badge">${v.binyan}</div>` : ''}
             <div class="word">${v.word}</div>
             <div class="root">${v.root}</div>
             <div class="meaning">${v.meaning}</div>
+            ${v.note ? `<div class="meaning" style="margin-top:6px;font-style:italic;color:#94a3b8;font-size:10px">${v.note}</div>` : ''}
           </div>
         `).join('');
+        setTimeout(() => {
+          document.querySelectorAll('.ai-level-chip').forEach(chip => {
+            chip.addEventListener('click', () => ctx.rerun({ level: chip.dataset.level }));
+          });
+        }, 0);
         return `
+          <div class="ai-level-filter">
+            <span class="ai-level-filter-label">רמת קושי:</span>
+            ${chips}
+          </div>
           <div class="ai-tool-grid cols-3">${cards}</div>
           <div class="ai-tip">
             <span class="ai-tip-icon">💡</span>
-            <span>שימו לב — כל הפעלים מתחילים ב-<strong>נ'</strong> בעבר. בעתיד קל ובהפעיל — הנ' נופלת ובמקומה דגש חזק.</span>
+            <span>הרמות מותאמות לבגרות י"א (שאלון 011281). <strong>קל</strong> = יומיומי וברור · <strong>בינוני</strong> = דורש זיהוי שורש · <strong>גבוה</strong> = אתגר ברמת בחינה.</span>
           </div>
         `;
       },
@@ -298,11 +345,16 @@ const SlideAI = (() => {
       },
       render: (result, ctx) => {
         const { roots, selected, data } = result;
-        const chips = roots.map(r => `
+        const levelLabels = { easy: 'קל', medium: 'בינוני', high: 'גבוה' };
+        const chips = roots.map(r => {
+          const entry = BANK['chasrei-pn'].conjugations.future_kal[r];
+          const lvl = entry.level ? `<span class="ai-level-badge ${entry.level}" style="position:static;margin-right:5px;font-size:8px;padding:2px 5px">${levelLabels[entry.level]}</span>` : '';
+          return `
           <button class="ai-verb-chip ${r === selected ? 'active' : ''}" data-root="${r}">
-            ${BANK['chasrei-pn'].conjugations.future_kal[r].base}
+            ${entry.base}${lvl}
           </button>
-        `).join('');
+        `;
+        }).join('');
 
         // Highlight the dagesh (the strong letter that took the nun's place)
         const formsHtml = data.forms.map(row => {
@@ -358,11 +410,16 @@ const SlideAI = (() => {
       },
       render: (result, ctx) => {
         const { roots, selected, data } = result;
-        const chips = roots.map(r => `
+        const levelLabels = { easy: 'קל', medium: 'בינוני', high: 'גבוה' };
+        const chips = roots.map(r => {
+          const entry = BANK['chasrei-pn'].conjugations.hifil_past[r];
+          const lvl = entry.level ? `<span class="ai-level-badge ${entry.level}" style="position:static;margin-right:5px;font-size:8px;padding:2px 5px">${levelLabels[entry.level]}</span>` : '';
+          return `
           <button class="ai-verb-chip ${r === selected ? 'active' : ''}" data-root="${r}">
-            ${BANK['chasrei-pn'].conjugations.hifil_past[r].base}
+            ${entry.base}${lvl}
           </button>
-        `).join('');
+        `;
+        }).join('');
         const formsHtml = data.forms.map(row => `
           <div class="ai-conj-row">
             <span class="ai-conj-pronoun">${row.p}</span>
@@ -395,15 +452,31 @@ const SlideAI = (() => {
     // ── 4) Gutturals finder (slide 7) ──
     'gutturals-finder': {
       title: 'חריגי גרונית — הנ\' שמורה',
-      subtitle: 'פעלים שהאות השנייה שלהם גרונית. הנ\' לא נופלת.',
+      subtitle: 'פעלים שהאות השנייה שלהם גרונית. הנ\' לא נופלת. מדורג לפי רמת קושי.',
       eyebrow: '🔍 הקנייה · חריגים',
       run: async (config) => {
         const bank = BANK['chasrei-pn'].gutturals;
-        return pick(bank, config.count || 4);
+        const level = config.level || 'all';
+        const count = config.count || 4;
+        if (level === 'all') {
+          const byLevel = { medium: [], high: [] };
+          bank.forEach(v => { if (byLevel[v.level]) byLevel[v.level].push(v); });
+          return [...pick(byLevel.medium, 2), ...pick(byLevel.high, 2)].slice(0, count);
+        }
+        const filtered = bank.filter(v => v.level === level);
+        return pick(filtered, Math.min(count, filtered.length));
       },
-      render: (verbs) => {
+      render: (verbs, ctx) => {
+        const levelLabels = { medium: 'בינוני', high: 'גבוה' };
+        const currentLevel = (ctx && ctx.config && ctx.config.level) || 'all';
+        const chips = ['all', 'medium', 'high'].map(l => `
+          <button class="ai-level-chip ${l === 'all' ? '' : l} ${currentLevel === l ? 'active' : ''}" data-level="${l}">
+            ${l === 'all' ? 'הכל' : levelLabels[l]}
+          </button>
+        `).join('');
         const cards = verbs.map(v => `
           <div class="ai-card guttural">
+            ${v.level ? `<div class="ai-level-badge ${v.level}">${levelLabels[v.level]}</div>` : ''}
             <div class="badge">${v.guttural} גרונית</div>
             <div class="word">${v.word}</div>
             <div class="root">${v.root}</div>
@@ -413,11 +486,20 @@ const SlideAI = (() => {
             </div>
           </div>
         `).join('');
+        setTimeout(() => {
+          document.querySelectorAll('.ai-level-chip').forEach(chip => {
+            chip.addEventListener('click', () => ctx.rerun({ level: chip.dataset.level }));
+          });
+        }, 0);
         return `
+          <div class="ai-level-filter">
+            <span class="ai-level-filter-label">רמת קושי:</span>
+            ${chips}
+          </div>
           <div class="ai-tool-grid cols-2">${cards}</div>
           <div class="ai-tip">
             <span class="ai-tip-icon">⚠️</span>
-            <span>בכל הפעלים האלה האות השנייה היא <strong>אהח"ע ר'</strong> (גרונית). גרוניות לא מקבלות דגש חזק — לכן הנ' של השורש <strong>נשמרת</strong> גם בעתיד.</span>
+            <span>בכל הפעלים האלה האות השנייה היא <strong>אהח"ע ר'</strong> (גרונית). גרוניות לא מקבלות דגש חזק — לכן הנ' של השורש <strong>נשמרת</strong> גם בעתיד. החריגים כולם רמה בינונית-גבוהה כי הם חורגים מהכלל הבסיסי.</span>
           </div>
         `;
       },
@@ -531,13 +613,19 @@ const SlideAI = (() => {
     slot('body').innerHTML = '<div class="ai-tool-loading"><div class="ai-tool-spinner"></div><div>טוען…</div></div>';
 
     let currentResult = null;
+    let currentConfig = Object.assign({}, config);
     const ctx = {
-      rerun: (newConfig) => runOnce(Object.assign({}, config, newConfig)),
+      rerun: (newConfig) => {
+        currentConfig = Object.assign({}, currentConfig, newConfig);
+        runOnce(currentConfig);
+      },
+      get config() { return currentConfig; },
     };
 
     async function runOnce(cfg) {
       try {
-        currentResult = await tool.run(cfg || config);
+        currentConfig = cfg || currentConfig;
+        currentResult = await tool.run(currentConfig);
         slot('body').innerHTML = tool.render(currentResult, ctx);
       } catch (err) {
         slot('body').innerHTML = `

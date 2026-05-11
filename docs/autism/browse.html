@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הכר חברים — מתחברים</title>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Heebo:wght@400;600;700&family=Playpen+Sans+Hebrew:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-mark"><span></span><span></span><span></span></span>
+      מתחברים
+    </a>
+    <div class="nav-links">
+      <a href="index.html">בית</a>
+      <a href="browse.html" class="active">הכר חברים</a>
+      <a href="chat.html">הודעות</a>
+      <a href="admin.html">ניהול</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- לוגין — רק אם אין משתמש פעיל -->
+  <div id="login-area" class="card">
+    <h2>מי נכנס/ת?</h2>
+    <p class="muted">בשלב הדמו — בוחרים פרופיל מהרשימה. (בפרודקשן יוחלף בסיסמה.)</p>
+    <div id="user-picker" class="flex mt-1"></div>
+    <div class="mt-1 flex">
+      <a href="register.html" class="btn btn-secondary">רישום חדש</a>
+      <button class="btn btn-coral" onclick="Mitchabrim.seedDemoData(); location.reload();">טען דמו מהיר</button>
+      <button class="btn btn-sage" onclick="startTour()">התחל סיור מודרך</button>
+    </div>
+  </div>
+
+  <!-- מסך בית אחרי התחברות -->
+  <div id="browse-area" style="display:none;">
+
+    <!-- welcome — מופיע רק בפעם הראשונה -->
+    <div id="welcome-banner" class="welcome-card" style="display:none;">
+      <button class="welcome-close" onclick="closeWelcome()">×</button>
+      <h2 id="welcome-title">ברוכים הבאים למתחברים</h2>
+      <p id="welcome-text">כאן תראו אנשים שדומים לכם — לפי תחומי עניין, אזור ומה שאתם מחפשים. קחו את הזמן, הציצו בפרופילים, ושלחו "מעוניין/ת" למי שמדבר אליכם.</p>
+    </div>
+
+    <!-- Home header -->
+    <div class="home-header">
+      <span class="greet-emoji" id="time-greet">בוקר טוב</span>
+      <h1 id="greet-name">—</h1>
+      <p id="greet-sub">הנה האנשים שאנחנו חושבים שיתאימו לך היום</p>
+    </div>
+
+    <!-- Featured pick -->
+    <div id="featured-pick" style="display:none;"></div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <span class="filter-label">אני מחפש/ת:</span>
+      <select id="filter-looking" onchange="render()">
+        <option value="all">כולם</option>
+        <option value="friendship">חברות</option>
+        <option value="relationship">זוגיות</option>
+        <option value="group">קבוצת עניין</option>
+      </select>
+      <span class="filter-label">אזור:</span>
+      <select id="filter-area" onchange="render()">
+        <option value="all">כל האזורים</option>
+      </select>
+      <span class="count-label" id="count-label"></span>
+      <button class="btn btn-secondary" onclick="logoutBrowse()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">החלף פרופיל</button>
+    </div>
+
+    <div id="recs" class="profile-grid"></div>
+
+    <p class="footer-note">
+      כבוד, קצב, ושקט — לכולם <span class="heart">♥</span>
+    </p>
+  </div>
+
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+let me = null;
+
+function timeGreeting() {
+  const h = new Date().getHours();
+  if (h < 11) return 'בוקר טוב';
+  if (h < 16) return 'צהריים טובים';
+  if (h < 19) return 'אחר הצהריים';
+  return 'ערב טוב';
+}
+
+function refreshUserPicker() {
+  const picker = document.getElementById('user-picker');
+  picker.innerHTML = '';
+  const users = approvedUsers();
+  if (!users.length) {
+    picker.innerHTML = '<p class="muted">אין עדיין משתמשים מאושרים. לחצו "טען דמו מהיר" כדי לראות איך זה נראה.</p>';
+    return;
+  }
+  users.forEach(u => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-secondary';
+    btn.textContent = `${u.name}, ${u.age}`;
+    btn.onclick = () => {
+      setCurrentUser(u.id);
+      location.reload();
+    };
+    picker.appendChild(btn);
+  });
+}
+
+function startTour() {
+  Mitchabrim.createDemoActiveUser();
+  location.search = '?welcome=1';
+}
+
+function closeWelcome() {
+  document.getElementById('welcome-banner').style.display = 'none';
+  const url = new URL(location.href);
+  url.searchParams.delete('welcome');
+  history.replaceState(null, '', url.toString());
+}
+
+function cardHTML(r) {
+  const u = r.user;
+  const palette = paletteFor(u.name);
+  const liked = hasLiked(me.id, u.id);
+  const mutual = isMutualMatch(me.id, u.id);
+  const sharedSet = new Set(r.shared || []);
+
+  const commHTML = u.commPrefs && u.commPrefs.length
+    ? `<div class="profile-comm">
+         <span class="comm-dot"></span>
+         <span>מעדיף/ה: ${u.commPrefs.map(commPrefLabel).join(' · ')}</span>
+       </div>` : '';
+
+  const actionHTML = mutual
+    ? `<a href="chat.html?with=${u.id}" class="btn btn-sage btn-block">יש התאמה — שוחחו</a>`
+    : liked
+      ? `<button class="btn btn-secondary btn-block" disabled>בקשה נשלחה</button>`
+      : `<button class="btn btn-coral btn-block" onclick="handleLike('${u.id}')">מעוניין/ת להכיר</button>`;
+
+  const interestsHTML = (u.interests || []).slice(0, 6).map(i => {
+    const shared = sharedSet.has(i);
+    return `<span class="tag ${shared ? 'tag-accent' : ''}">${i}</span>`;
+  }).join('');
+
+  const moreInterests = u.interests && u.interests.length > 6
+    ? `<span class="tag">+${u.interests.length - 6}</span>` : '';
+
+  const lookingTag = {
+    friendship: 'tag-accent',
+    relationship: 'tag-warm',
+    group: 'tag-primary'
+  }[u.lookingFor] || 'tag-primary';
+
+  return `
+    <div class="profile-card" data-palette="${palette}">
+      <div class="profile-header">
+        <div class="flex" style="gap: 0.8rem;">
+          <div class="profile-avatar">${initials(u.name)}</div>
+          <div>
+            <h3 class="profile-name">${u.name}, ${u.age}</h3>
+            <div class="profile-meta">${u.area}</div>
+          </div>
+        </div>
+        ${r.score > 0 ? `<span class="match-score">${Math.min(100, r.score)}%</span>` : ''}
+      </div>
+      <div class="profile-tags">
+        <span class="tag ${lookingTag}">${lookingForLabel(u.lookingFor)}</span>
+        ${interestsHTML}${moreInterests}
+      </div>
+      <p class="profile-bio">${u.bio}</p>
+      ${commHTML}
+      ${actionHTML}
+    </div>
+  `;
+}
+
+function render() {
+  if (!me) return;
+  const lookingFilter = document.getElementById('filter-looking').value;
+  const areaFilter = document.getElementById('filter-area').value;
+
+  let recs = recommendationsFor(me);
+  if (lookingFilter !== 'all') recs = recs.filter(r => r.user.lookingFor === lookingFilter);
+  if (areaFilter !== 'all') recs = recs.filter(r => r.user.area === areaFilter);
+
+  document.getElementById('count-label').textContent = `${recs.length} התאמות`;
+
+  // Featured = ההתאמה הכי גבוהה, אם יש מעל 50%
+  const featured = document.getElementById('featured-pick');
+  if (recs.length > 0 && recs[0].score >= 50) {
+    const top = recs[0];
+    featured.style.display = 'block';
+    featured.innerHTML = `
+      <div class="featured-pick">
+        <span class="featured-label">ההתאמה הכי טובה שלך היום</span>
+        <div class="profile-card" data-palette="${paletteFor(top.user.name)}" style="margin-bottom:0;">
+          <div class="profile-header">
+            <div class="flex" style="gap: 0.8rem;">
+              <div class="profile-avatar">${initials(top.user.name)}</div>
+              <div>
+                <h3 class="profile-name">${top.user.name}, ${top.user.age}</h3>
+                <div class="profile-meta">${top.user.area} · ${lookingForLabel(top.user.lookingFor)}</div>
+              </div>
+            </div>
+            <span class="match-score">${Math.min(100, top.score)}%</span>
+          </div>
+          <p class="profile-bio">${top.user.bio}</p>
+          <div class="muted" style="font-size: 0.9rem; margin-bottom: 1rem;">
+            <strong>למה התאמנו:</strong> ${(top.reasons || []).join(' · ') || 'תחומי עניין דומים'}
+          </div>
+          <div class="flex">
+            ${hasLiked(me.id, top.user.id)
+              ? `<button class="btn btn-secondary" disabled>בקשה נשלחה</button>`
+              : `<button class="btn btn-coral" onclick="handleLike('${top.user.id}')">מעוניין/ת להכיר</button>`}
+          </div>
+        </div>
+      </div>`;
+    recs = recs.slice(1);
+  } else {
+    featured.style.display = 'none';
+  }
+
+  const container = document.getElementById('recs');
+  if (!recs.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column: 1 / -1;">
+        <div class="empty-art"></div>
+        <h3>לא מצאנו עדיין התאמות</h3>
+        <p>נסו לשנות סינון, או חזרו עוד כמה ימים כשיצטרפו חברים חדשים.</p>
+      </div>`;
+    return;
+  }
+  container.innerHTML = recs.map(cardHTML).join('');
+}
+
+function handleLike(otherId) {
+  const mutual = likeUser(me.id, otherId);
+  if (mutual) {
+    alert('יש התאמה הדדית! הצ׳אט נפתח עכשיו.');
+    location.href = 'chat.html?with=' + otherId;
+  } else {
+    render();
+  }
+}
+
+function logoutBrowse() {
+  setCurrentUser(null);
+  location.reload();
+}
+
+// Init
+me = getCurrentUser();
+const params = new URLSearchParams(location.search);
+
+if (me && me.status === 'approved') {
+  document.getElementById('login-area').style.display = 'none';
+  document.getElementById('browse-area').style.display = 'block';
+  document.getElementById('time-greet').textContent = timeGreeting();
+  document.getElementById('greet-name').textContent = me.name + '!';
+  document.getElementById('greet-sub').textContent =
+    me.lookingFor === 'friendship' ? 'הנה אנשים שמחפשים חברות כמוך' :
+    me.lookingFor === 'relationship' ? 'הנה אנשים שיכולים להתאים לך לזוגיות' :
+    'הנה אנשים שיכולים להיות בקבוצת עניין שלך';
+
+  if (params.get('welcome') === '1') {
+    const banner = document.getElementById('welcome-banner');
+    banner.style.display = 'block';
+    document.getElementById('welcome-title').textContent = `שלום ${me.name} — טוב שאת איתנו`;
+  }
+
+  const areaSel = document.getElementById('filter-area');
+  AREAS.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a; opt.textContent = a;
+    areaSel.appendChild(opt);
+  });
+  render();
+} else {
+  refreshUserPicker();
+}
+</script>
+</body>
+</html>
