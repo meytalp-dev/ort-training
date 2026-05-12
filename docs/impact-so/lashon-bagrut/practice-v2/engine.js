@@ -1,10 +1,12 @@
 /* ================================================================
-   תרגול חכם · לשון 70% · v2
-   מערכת תרגול דיפרנציאלית עם מנוע התאמת רמה ותובנות AI
+   מסע הצורות · לשון 70% · v2
+   Adaptive practice engine with Hebrew letter streak,
+   journey map progress, bagrut seal, and journey certificate.
    ================================================================ */
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';
 const STORAGE_KEY = 'lashonPracticeV2';
+const HEB_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י'];
 
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -12,7 +14,7 @@ const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</
 function showToast(msg, isError) {
   const t = $('toast');
   t.textContent = msg;
-  t.classList.toggle('toast-error', !!isError);
+  t.classList.toggle('error', !!isError);
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2400);
 }
@@ -24,7 +26,7 @@ function showScreen(id) {
 }
 
 /* ================================================================
-   APP — orchestration, navigation, session state
+   APP — orchestration & navigation
    ================================================================ */
 const App = {
   state: {
@@ -43,28 +45,24 @@ const App = {
         if (data.class) $('classInput').value = data.class;
       } catch (e) {}
     }
-
     try {
       const res = await fetch('banks/_index.json');
       this.state.index = await res.json();
     } catch (e) {
-      showToast('שגיאה בטעינת מערכת התרגול', true);
+      showToast('שגיאה בטעינת המערכת', true);
     }
   },
 
   startSession() {
     const name = $('nameInput').value.trim();
     const cls = $('classInput').value.trim();
-    let valid = true;
-
     $('nameError').classList.toggle('show', !name);
     $('classError').classList.toggle('show', !cls);
     if (!name || !cls) return;
 
     this.state.student = { name, class: cls };
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, class: cls }));
-
-    $('topbarUser').innerHTML = `<span class="user-chip">${escapeHtml(name)} · ${escapeHtml(cls)}</span><button class="btn-icon" onclick="App.signOut()">החלפת משתמש</button>`;
+    $('topbarUser').innerHTML = `<span class="user-tag">${escapeHtml(name)}</span><button class="btn-icon" onclick="App.signOut()">החלפת משתמש</button>`;
 
     this.renderTopics();
     showScreen('screenTopics');
@@ -80,73 +78,65 @@ const App = {
     const idx = this.state.index;
     if (!idx) return;
 
-    // Full exam button
-    $('fullExamSection').innerHTML = `
-      <div class="topic-grid" style="margin-bottom:14px">
-        <a class="topic-card" style="border-color:var(--purple);background:linear-gradient(135deg,#fff,var(--purple-l));grid-column:1/-1" onclick="App.startFullExam();return false;">
-          <div class="topic-card-head">
-            <div>
-              <div class="topic-card-title">📝 ${escapeHtml(idx.fullExam.label)}</div>
-              <div class="topic-card-desc" style="margin-top:6px">${escapeHtml(idx.fullExam.description)}</div>
-            </div>
-            <div class="topic-card-icon" style="background:linear-gradient(135deg,var(--purple),var(--pink))">בג</div>
-          </div>
-          <div class="topic-card-meta">
-            <span class="topic-pill topic-pill-bagrut">בגרות מלאה</span>
-            <span class="topic-pill">${idx.fullExam.examFormat.totalQuestions} שאלות</span>
-            <span class="topic-pill">${idx.fullExam.examFormat.timeMinutes} דק'</span>
-          </div>
-        </a>
-      </div>`;
-
-    // Categories
-    const html = idx.categories.map(cat => {
-      const cards = cat.topics.map(topic => {
-        const isAvailable = topic.status === 'draft' || topic.status === 'active';
-        const statusLabel = topic.status === 'soon' ? 'בקרוב' : (topic.status === 'active' ? 'זמין' : 'תרגול חי');
-        const statusClass = topic.status === 'soon' ? 'topic-pill-soon' : 'topic-pill-active';
-        return `
-          <a class="topic-card" ${isAvailable ? `onclick="App.startTopic('${topic.id}', '${topic.bank}');return false;"` : 'style="opacity:.55;cursor:not-allowed"'}>
-            <div class="topic-card-head">
-              <div>
-                <div class="topic-card-title">${escapeHtml(topic.label)}</div>
-              </div>
-              <div class="topic-card-icon" style="background:${cat.color}">${getCategoryInitial(cat.id)}</div>
-            </div>
-            <div class="topic-card-meta">
-              <span class="topic-pill ${statusClass}">${statusLabel}</span>
-            </div>
-          </a>`;
-      }).join('');
-
+    // ===== Exam cards (4 options) =====
+    const exams = idx.exams || [];
+    $('examGrid').innerHTML = exams.map(ex => {
+      const sealClass = ex.badgeType === 'real' ? 'seal-real' : (ex.badgeType === 'focused' ? 'seal-focused' : 'seal-practice');
+      const sealLines = ex.badge.split(' ');
       return `
-        <div class="section-head">
-          <h3 style="color:${cat.color}">${escapeHtml(cat.label)}</h3>
-        </div>
-        <p class="lead" style="font-size:.88rem;margin:0 4px 8px">${escapeHtml(cat.description)}</p>
-        <div class="topic-grid">${cards}</div>
-      `;
+        <a class="exam-card" onclick="App.startExam('${ex.id}', '${ex.bank}');return false;">
+          <div class="seal ${sealClass}">${sealLines.map(s => `<div>${escapeHtml(s)}</div>`).join('')}</div>
+          <h3>${escapeHtml(ex.label)}</h3>
+          <div class="sublabel">${escapeHtml(ex.fullLabel || '')}</div>
+          <div class="desc">${escapeHtml(ex.description || '')}</div>
+          <div class="meta">
+            <span>${ex.questionCount} שאלות</span>
+            <span>·</span>
+            <span>${ex.timeMinutes} דקות</span>
+          </div>
+        </a>`;
     }).join('');
 
+    // ===== Topic categories =====
+    const html = idx.categories.map((cat, idx_) => {
+      const letter = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז'][idx_] || '·';
+      const cards = cat.topics.map(topic => {
+        const isAvailable = topic.status === 'draft' || topic.status === 'active';
+        const statusLabel = topic.status === 'soon' ? 'בקרוב' : 'תרגול חי';
+        return `
+          <a class="topic-card ${isAvailable ? '' : 'disabled'}" ${isAvailable ? `onclick="App.startTopic('${topic.id}', '${topic.bank}');return false;"` : ''}>
+            <div class="topic-card-title">${escapeHtml(topic.label)}</div>
+            <div class="topic-card-status ${topic.status === 'soon' ? 'soon' : 'active'}">${statusLabel}</div>
+          </a>`;
+      }).join('');
+      return `
+        <div class="category-block">
+          <div class="category-label">
+            <span class="category-letter">${letter}</span>
+            <span class="category-name">${escapeHtml(cat.label)}</span>
+          </div>
+          <p class="category-desc">${escapeHtml(cat.description)}</p>
+          <div class="topic-grid">${cards}</div>
+        </div>`;
+    }).join('');
     $('topicsContainer').innerHTML = html;
   },
 
   async loadBank(bankFile) {
     try {
       const res = await fetch(`banks/${bankFile}`);
-      if (!res.ok) throw new Error('bank not found');
+      if (!res.ok) throw new Error('not found');
       return await res.json();
     } catch (e) {
-      showToast(`בנק השאלות ${bankFile} עדיין לא הוכן`, true);
+      showToast(`בנק ${bankFile} לא נמצא`, true);
       return null;
     }
   },
 
   async startTopic(topicId, bankFile) {
     const bank = await this.loadBank(bankFile);
-    if (!bank) return;
-    if (!bank.questions || bank.questions.length === 0) {
-      showToast('בנק שאלות ריק לנושא הזה', true);
+    if (!bank || !bank.questions || !bank.questions.length) {
+      showToast('בנק שאלות ריק', true);
       return;
     }
     this.state.currentTopic = topicId;
@@ -154,10 +144,10 @@ const App = {
     Practice.start(bank);
   },
 
-  async startFullExam() {
-    const bank = await this.loadBank(this.state.index.fullExam.bank);
+  async startExam(examId, bankFile) {
+    const bank = await this.loadBank(bankFile);
     if (!bank) return;
-    this.state.currentTopic = 'full-exam';
+    this.state.currentTopic = examId;
     this.state.currentBank = bank;
     Exam.start(bank);
   },
@@ -168,25 +158,73 @@ const App = {
   },
 
   confirmExitPractice() {
-    if (confirm('לצאת מהתרגול? ההתקדמות שלך תאבד.')) {
-      this.goTopics();
-    }
+    if (confirm('לצאת מהתרגול? ההתקדמות תאבד.')) this.goTopics();
   },
 };
 
-function getCategoryInitial(id) {
-  const map = { 'gizrot':'גז','binyanim':'בנ','tezurat-hashem':'תצ','shoresh':'שר','speech-parts':'חד','hagiya':'הג' };
-  return map[id] || '·';
+/* ================================================================
+   STREAK CHAIN — Hebrew letters animate as streak grows
+   ================================================================ */
+function renderStreakChain(streakCount) {
+  const max = 5; // show up to 5 letters
+  const arr = [];
+  for (let i = 0; i < max; i++) {
+    const lit = i < streakCount;
+    arr.push(`<span class="streak-chain-letter ${lit ? 'lit' : ''}">${HEB_LETTERS[i]}</span>`);
+  }
+  return arr.join('');
+}
+
+function renderLevelDots(currentLevel) {
+  for (let i = 1; i <= 3; i++) {
+    const el = $('lvl' + i);
+    el.classList.remove('filled', 'current');
+    if (i < currentLevel) el.classList.add('filled');
+    if (i === currentLevel) el.classList.add('current');
+  }
+}
+
+function renderJourneyMap(containerId, answered, total, currentIdx, bagrutFlags) {
+  const c = $(containerId);
+  if (!c) return;
+  const parts = [];
+  for (let i = 0; i < total; i++) {
+    let cls = 'journey-station';
+    if (i < answered) {
+      cls += ' passed';
+      if (bagrutFlags && bagrutFlags[i]) cls += ' bagrut';
+    }
+    if (i === currentIdx) cls += ' current';
+    parts.push(`<span class="${cls}"></span>`);
+    if (i < total - 1) {
+      parts.push(`<span class="journey-connector ${i < answered ? 'passed' : ''}"></span>`);
+    }
+  }
+  c.innerHTML = parts.join('');
+}
+
+function bagrutSealSVG(meta) {
+  const year = (meta && meta.year) || '';
+  const moed = (meta && meta.moed) || '';
+  return `
+    <div class="bagrut-seal">
+      <svg class="bagrut-seal-svg" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="36"/>
+        <circle cx="40" cy="40" r="31"/>
+        <text x="40" y="30" text-anchor="middle" font-size="8">בגרות</text>
+        <text x="40" y="46" text-anchor="middle" font-size="10">${escapeHtml(year)}</text>
+        <text x="40" y="58" text-anchor="middle" font-size="7">${escapeHtml(moed)}</text>
+      </svg>
+    </div>`;
 }
 
 /* ================================================================
-   PRACTICE — adaptive engine for topic practice
+   PRACTICE — adaptive engine
    ================================================================ */
 const Practice = {
   state: null,
 
   start(bank) {
-    // Group questions by level, prepare adaptive queue
     const byLevel = { 1: [], 2: [], 3: [] };
     bank.questions.forEach(q => { byLevel[q.level || 1].push(q); });
 
@@ -200,20 +238,16 @@ const Practice = {
       streak: 0,
       streakWrong: 0,
       hintsUsed: 0,
-      questionsAskedAtLevel: { 1: 0, 2: 0, 3: 0 },
-      correctAtLevel: { 1: 0, 2: 0, 3: 0 },
       maxQuestions: Math.min(bank.questions.length, 12),
       hintShown: false,
       answered: false,
-      skillStats: {}, // skillTag -> {correct, total}
+      skillStats: {},
     };
 
     $('practiceTopic').textContent = bank.topicLabel;
     $('practiceSub').textContent = bank.subtopics ? bank.subtopics.map(s => s.label).join(' · ') : '';
-
-    // Show teaching once
+    $('journeyHeading').textContent = bank.topicLabel;
     this.renderTeaching();
-
     showScreen('screenPractice');
     this.nextQuestion();
   },
@@ -221,22 +255,15 @@ const Practice = {
   renderTeaching() {
     const t = this.state.bank.lesson;
     if (!t) { $('teachingArea').innerHTML = ''; return; }
-    let html = `<div class="teaching">
-      <div class="teaching-title">📚 ${escapeHtml(t.title)}</div>
-      <p>${t.intro || ''}</p>`;
-    if (t.rules && t.rules.length) {
-      html += '<ul>' + t.rules.map(r => `<li>${r}</li>`).join('') + '</ul>';
-    }
+    let html = `<div class="teaching-paper"><h4>${escapeHtml(t.title)}</h4>`;
+    if (t.intro) html += `<p>${t.intro}</p>`;
+    if (t.rules && t.rules.length) html += '<ul>' + t.rules.map(r => `<li>${r}</li>`).join('') + '</ul>';
     if (t.examples && t.examples.length) {
-      html += `<div class="example"><strong>דוגמאות:</strong><br>` +
-        t.examples.map(ex => {
-          if (typeof ex === 'string') return ex;
-          return `<strong>${ex.word}</strong> → שורש: ${ex.shoresh || '—'} · משקל: ${ex.mishkal || '—'}${ex.meaning ? ' · ' + ex.meaning : ''}`;
-        }).join('<br>') + `</div>`;
+      html += `<div class="examples">` +
+        t.examples.map(ex => typeof ex === 'string' ? ex : `<strong>${ex.word}</strong> → שורש: ${ex.shoresh || '—'} · משקל: ${ex.mishkal || '—'}${ex.meaning ? ' · ' + ex.meaning : ''}`).join('<br>') +
+        `</div>`;
     }
-    if (t.warning) {
-      html += `<div class="warning">${t.warning}</div>`;
-    }
+    if (t.warning) html += `<div class="warning">${t.warning}</div>`;
     html += `</div>`;
     $('teachingArea').innerHTML = html;
   },
@@ -244,10 +271,7 @@ const Practice = {
   pickNextQuestion() {
     const s = this.state;
     const pool = s.byLevel[s.currentLevel].filter(q => !s.asked.has(q.id));
-    if (pool.length > 0) {
-      return pool[Math.floor(Math.random() * pool.length)];
-    }
-    // No more questions at this level — try adjacent levels
+    if (pool.length > 0) return pool[Math.floor(Math.random() * pool.length)];
     for (const lvl of [s.currentLevel - 1, s.currentLevel + 1, 1, 2, 3]) {
       if (lvl < 1 || lvl > 3) continue;
       const alt = s.byLevel[lvl].filter(q => !s.asked.has(q.id));
@@ -258,94 +282,83 @@ const Practice = {
 
   nextQuestion() {
     const s = this.state;
-    if (s.answeredList.length >= s.maxQuestions) {
-      this.finish();
-      return;
-    }
-
+    if (s.answeredList.length >= s.maxQuestions) { this.finish(); return; }
     const q = this.pickNextQuestion();
-    if (!q) {
-      this.finish();
-      return;
-    }
-
+    if (!q) { this.finish(); return; }
     s.currentQ = q;
     s.asked.add(q.id);
     s.hintShown = false;
     s.answered = false;
-    s.questionsAskedAtLevel[s.currentLevel]++;
     this.render(q);
   },
 
   render(q) {
     const s = this.state;
     const total = s.maxQuestions;
-    const current = s.answeredList.length + 1;
-    $('progFill').style.width = (current / total * 100) + '%';
-    $('progText').textContent = `שאלה ${current} מתוך ${total}`;
+    const current = s.answeredList.length;
 
-    // Stats
-    $('streakPill').textContent = `רצף: ${s.streak}`;
-    $('levelPill').textContent = `רמה: ${s.currentLevel}`;
-    $('levelPill').className = `stat-pill stat-level-${s.currentLevel}`;
+    // Streak chain
+    $('streakChain').innerHTML = renderStreakChain(s.streak);
+    renderLevelDots(s.currentLevel);
+
+    // Journey map
+    const bagrutFlags = s.answeredList.map(a => a.source === 'bagrut');
+    renderJourneyMap('journeyStations', current, total, current, bagrutFlags);
+    $('progText').textContent = `שאלה ${current + 1} מתוך ${total}`;
+
+    // Bagrut seal
+    if (q.source === 'bagrut') {
+      $('bagrutSealArea').innerHTML = bagrutSealSVG(q.bagrutMeta);
+    } else {
+      $('bagrutSealArea').innerHTML = '';
+    }
 
     // Tags
     const tags = [];
     if (q.source === 'bagrut') {
-      const meta = q.bagrutMeta || {};
-      tags.push(`<span class="q-tag tag-bagrut">⭐ בגרות${meta.year ? ' · ' + meta.year : ''}${meta.moed ? ' · ' + meta.moed : ''}</span>`);
+      tags.push(`<span class="q-tag bagrut-tag">בגרות אמיתית</span>`);
     } else {
-      tags.push(`<span class="q-tag tag-ours">תרגול שלנו</span>`);
+      tags.push(`<span class="q-tag ours">תרגול שלנו</span>`);
     }
-    tags.push(`<span class="q-tag tag-level">רמה ${q.level || 1}</span>`);
+    tags.push(`<span class="q-tag level">רמה ${q.level || 1}</span>`);
     $('qTags').innerHTML = tags.join('');
 
-    // Context
     $('qContext').innerHTML = q.context ? `<div class="q-context">${q.context}</div>` : '';
-
-    // Question text
     $('qText').innerHTML = q.question || '';
 
-    // Body — options or input
+    // Body
     const body = $('qBody');
     body.innerHTML = '';
-
     if (q.type === 'open_text') {
-      body.innerHTML = `<input type="text" class="q-input" id="openInput" placeholder="כתבי את התשובה כאן..." autocomplete="off">`;
-      $('submitBtn').style.display = 'block';
-      $('submitBtn').disabled = false;
+      body.innerHTML = `<input type="text" class="q-input" id="openInput" placeholder="כתבי את התשובה...">`;
+      $('submitBtn').style.display = 'inline-flex';
       setTimeout(() => $('openInput').focus(), 100);
-      $('openInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') this.submitAnswer();
-      });
+      $('openInput').addEventListener('keydown', e => { if (e.key === 'Enter') this.submitAnswer(); });
     } else {
-      const letters = ['א', 'ב', 'ג', 'ד'];
-      const opts = q.options || [];
-      const html = opts.map((opt, i) => `
-        <button class="opt-btn" data-i="${i}" onclick="Practice.selectOption(${i})">
+      const letters = ['א', 'ב', 'ג', 'ד', 'ה'];
+      body.innerHTML = `<div class="options">${(q.options || []).map((opt, i) => `
+        <button class="opt" data-i="${i}" onclick="Practice.selectOption(${i})">
           <span class="opt-letter">${letters[i] || (i+1)}</span>
           <span>${opt}</span>
-        </button>`).join('');
-      body.innerHTML = `<div class="options" id="optionsList">${html}</div>`;
+        </button>`).join('')}</div>`;
       $('submitBtn').style.display = 'none';
     }
 
-    // Reset UI
     $('hintBox').classList.remove('show');
     $('hintBox').textContent = '';
     $('feedbackBox').classList.remove('show', 'correct-fb', 'wrong-fb');
     $('feedbackBox').innerHTML = '';
     $('nextBtn').style.display = 'none';
     $('hintBtn').disabled = false;
-    $('hintBtn').style.display = q.hint ? 'inline-block' : 'none';
+    $('hintBtn').style.display = q.hint ? 'inline-flex' : 'none';
   },
 
   showHint() {
-    const q = this.state.currentQ;
-    if (!q || this.state.answered || this.state.hintShown) return;
-    this.state.hintShown = true;
-    this.state.hintsUsed++;
-    $('hintBox').textContent = q.hint || 'אין רמז זמין לשאלה זו.';
+    const s = this.state;
+    if (!s || s.answered || s.hintShown) return;
+    s.hintShown = true;
+    s.hintsUsed++;
+    $('hintBox').textContent = s.currentQ.hint || 'אין רמז';
     $('hintBox').classList.add('show');
     $('hintBtn').disabled = true;
   },
@@ -353,8 +366,7 @@ const Practice = {
   selectOption(i) {
     if (this.state.answered) return;
     const q = this.state.currentQ;
-    const isCorrect = (i === q.correctIndex);
-    this.recordAnswer(isCorrect, i);
+    this.recordAnswer(i === q.correctIndex, i);
   },
 
   submitAnswer() {
@@ -363,13 +375,9 @@ const Practice = {
     const input = $('openInput');
     if (!input) return;
     const value = input.value.trim();
-    if (!value) {
-      showToast('כתבי תשובה תחילה', true);
-      return;
-    }
-    // Loose match: any expected keyword
+    if (!value) { showToast('כתבי תשובה תחילה', true); return; }
     const expected = q.expectedKeywords || [q.expectedAnswer || ''];
-    const norm = (s) => s.replace(/[.,;'"\s־-]/g, '').toLowerCase();
+    const norm = (str) => str.replace(/[.,;'"\s־-]/g, '').toLowerCase();
     const userN = norm(value);
     const isCorrect = expected.some(k => k && (norm(k) === userN || userN.includes(norm(k)) || norm(k).includes(userN)));
     this.recordAnswer(isCorrect, value);
@@ -380,7 +388,6 @@ const Practice = {
     const q = s.currentQ;
     s.answered = true;
 
-    // Record
     s.answeredList.push({
       qid: q.id,
       level: q.level || 1,
@@ -391,25 +398,18 @@ const Practice = {
       bagrutMeta: q.bagrutMeta || null,
     });
 
-    // Track skills
     (q.skillTags || []).forEach(tag => {
       if (!s.skillStats[tag]) s.skillStats[tag] = { correct: 0, total: 0 };
       s.skillStats[tag].total++;
       if (isCorrect) s.skillStats[tag].correct++;
     });
 
-    if (isCorrect) {
-      s.correctAtLevel[s.currentLevel]++;
-      s.streak++;
-      s.streakWrong = 0;
-    } else {
-      s.streak = 0;
-      s.streakWrong++;
-    }
+    if (isCorrect) { s.streak++; s.streakWrong = 0; }
+    else { s.streak = 0; s.streakWrong++; }
 
-    // Visual feedback on options
+    // Visual feedback
     if (q.type !== 'open_text') {
-      document.querySelectorAll('.opt-btn').forEach(b => {
+      document.querySelectorAll('.opt').forEach(b => {
         b.classList.add('disabled');
         const i = parseInt(b.dataset.i);
         if (i === q.correctIndex) b.classList.add('correct');
@@ -418,91 +418,78 @@ const Practice = {
     } else {
       const input = $('openInput');
       input.disabled = true;
-      input.style.borderColor = isCorrect ? 'var(--green)' : 'var(--secondary)';
-      input.style.background = isCorrect ? 'var(--green-l)' : 'var(--sec-l)';
+      input.style.borderColor = isCorrect ? 'var(--sage)' : 'var(--crimson)';
+      input.style.background = isCorrect ? 'var(--sage-soft)' : 'var(--crimson-soft)';
       $('submitBtn').style.display = 'none';
     }
+
+    // Update streak chain
+    $('streakChain').innerHTML = renderStreakChain(s.streak);
 
     // Feedback box
     const fb = $('feedbackBox');
     fb.classList.add('show', isCorrect ? 'correct-fb' : 'wrong-fb');
-    let html = `<div class="fb-title">${isCorrect ? '✅ מצוין!' : '❌ לא נכון'}${s.hintShown && isCorrect ? ' (עם רמז)' : ''}</div>`;
+    let html = `<div class="fb-title">${isCorrect ? 'מצוין' : 'לא נכון'}${s.hintShown && isCorrect ? ' · עם רמז' : ''}</div>`;
     if (q.teaching) {
-      html += `<div class="fb-teaching"><strong>${escapeHtml(q.teaching.title || '')}</strong><br>${q.teaching.text || ''}${q.teaching.example ? '<br><em>' + q.teaching.example + '</em>' : ''}</div>`;
+      html += `<div class="fb-teach"><strong>${escapeHtml(q.teaching.title || '')}</strong><br>${q.teaching.text || ''}${q.teaching.example ? '<br><em>' + q.teaching.example + '</em>' : ''}</div>`;
     }
-    if (q.solution) {
-      html += `<div class="fb-solution"><strong>פתרון:</strong> ${q.solution}</div>`;
-    }
+    if (q.solution) html += `<div class="fb-solution"><strong>פתרון:</strong> ${q.solution}</div>`;
     fb.innerHTML = html;
 
     $('hintBtn').style.display = 'none';
-    $('nextBtn').style.display = 'block';
-    $('nextBtn').textContent = (s.answeredList.length >= s.maxQuestions) ? 'סיום וצפייה בתוצאות ←' : 'שאלה הבאה ←';
+    $('nextBtn').style.display = 'inline-flex';
+    $('nextBtn').textContent = (s.answeredList.length >= s.maxQuestions) ? 'תעודת המסע' : 'המשך';
 
-    // Adaptive difficulty
     this.adjustLevel();
   },
 
   adjustLevel() {
     const s = this.state;
-    // Level up after 2 correct in a row at current level
     if (s.streak >= 2 && s.currentLevel < 3) {
-      s.currentLevel++;
-      s.streak = 0;
+      s.currentLevel++; s.streak = 0;
+      $('streakChain').innerHTML = renderStreakChain(0);
+      renderLevelDots(s.currentLevel);
       this.celebrateLevelUp();
-    }
-    // Level down after 2 wrong in a row
-    else if (s.streakWrong >= 2 && s.currentLevel > 1) {
-      s.currentLevel--;
-      s.streakWrong = 0;
-      showToast(`חוזרים לרמה ${s.currentLevel} — נחזק לפני שנעלה שוב`);
+    } else if (s.streakWrong >= 2 && s.currentLevel > 1) {
+      s.currentLevel--; s.streakWrong = 0;
+      renderLevelDots(s.currentLevel);
+      showToast(`חוזרים לרמה ${s.currentLevel} — מחזקים יסודות`);
     }
   },
 
   celebrateLevelUp() {
     const lvl = this.state.currentLevel;
-    const messages = {
-      2: 'השאלות הבאות יהיו קצת יותר מאתגרות',
-      3: 'הגעת לרמת בגרות מתקדמת — כל הכבוד!',
-    };
-    $('levelUpText').textContent = messages[lvl] || 'ממשיכים!';
+    const msgs = { 2: 'השאלות הבאות מאתגרות יותר', 3: 'הגעת לרמת בגרות — מצוין' };
+    $('levelUpText').textContent = msgs[lvl] || 'ממשיכים במסע';
     $('levelUp').classList.add('show');
     setTimeout(() => $('levelUp').classList.remove('show'), 1800);
   },
 
-  next() {
-    this.nextQuestion();
-  },
+  next() { this.nextQuestion(); },
 
-  finish() {
-    Results.show(this.state, 'topic');
-  },
+  finish() { Results.show(this.state, 'topic'); },
 };
 
 /* ================================================================
-   EXAM — full Bagrut mode (no hints, feedback at end)
+   EXAM — full Bagrut mode with sections + hourglass
    ================================================================ */
 const Exam = {
   state: null,
 
   start(bank) {
-    const questions = [...bank.questions];
-    // Optionally shuffle
-    if (bank.examMode && bank.examMode.shuffleOptions) {
-      // Don't shuffle options because correctIndex relies on them
-    }
-
     this.state = {
       bank,
-      questions,
+      questions: [...bank.questions],
       currentIdx: 0,
-      answers: [], // per question: {selectedIndex, value}
+      answers: [],
       startTime: Date.now(),
       timerInterval: null,
       timeLimit: (bank.examMode && bank.examMode.timeLimit) || 3600,
     };
 
-    // Start timer
+    $('examTitle').textContent = bank.topicLabel;
+    $('examSubtitle').textContent = (bank.examMeta && bank.examMeta.fullLabel) || bank.instructions || '';
+
     this.state.timerInterval = setInterval(() => this.updateTimer(), 1000);
     this.updateTimer();
 
@@ -516,9 +503,23 @@ const Exam = {
     const m = Math.floor(remaining / 60);
     const s = remaining % 60;
     $('examTimer').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+    // Animate hourglass sand based on progress
+    const ratio = elapsed / this.state.timeLimit;
+    const sandTop = $('sandTop');
+    const sandBottom = $('sandBottom');
+    if (sandTop && sandBottom) {
+      // Top sand shrinks: clip path scales down
+      const topScale = Math.max(0.05, 1 - ratio);
+      sandTop.setAttribute('transform', `translate(14, 4) scale(1, ${topScale}) translate(-14, -4)`);
+      // Bottom sand grows
+      const botScale = Math.max(0.05, ratio);
+      sandBottom.setAttribute('transform', `translate(14, 30) scale(1, ${botScale}) translate(-14, -30)`);
+    }
+
     if (remaining === 0) {
       clearInterval(this.state.timerInterval);
-      showToast('הזמן נגמר — מסיימים ושולחים', false);
+      showToast('הזמן נגמר — מסיימים');
       this.finish();
     }
   },
@@ -527,52 +528,68 @@ const Exam = {
     const s = this.state;
     const q = s.questions[s.currentIdx];
     const total = s.questions.length;
-    const current = s.currentIdx + 1;
-    $('examProgFill').style.width = (current / total * 100) + '%';
-    $('examProgText').textContent = `שאלה ${current} מתוך ${total}`;
+    const current = s.currentIdx;
 
-    const tags = [`<span class="q-tag tag-bagrut">⭐ בגרות${q.bagrutMeta && q.bagrutMeta.year ? ' · ' + q.bagrutMeta.year : ''}${q.bagrutMeta && q.bagrutMeta.questionNum ? ' · שאלה ' + q.bagrutMeta.questionNum : ''}</span>`];
+    // Journey map
+    const bagrutFlags = s.questions.map(_ => true);
+    renderJourneyMap('examJourneyStations', current, total, current, bagrutFlags);
+    $('examProgText').textContent = `שאלה ${current + 1} מתוך ${total}`;
+
+    // Section banner — show when section changes
+    const prevQ = current > 0 ? s.questions[current - 1] : null;
+    const showBanner = !prevQ || prevQ.examSection !== q.examSection;
+    if (showBanner && q.sectionLabel) {
+      $('examSectionBanner').innerHTML = `
+        <div class="section-banner">
+          <span class="label">פרק חדש</span>
+          <span class="name">${escapeHtml(q.sectionLabel)}</span>
+        </div>`;
+    } else {
+      $('examSectionBanner').innerHTML = '';
+    }
+
+    // Bagrut seal
+    $('examBagrutSeal').innerHTML = bagrutSealSVG(q.bagrutMeta);
+
+    // Tags
+    const tags = [];
+    if (q.sectionLabel) tags.push(`<span class="q-tag section">${escapeHtml(q.sectionLabel)}</span>`);
+    if (q.tag) tags.push(`<span class="q-tag">${escapeHtml(q.tag)}</span>`);
     $('examQTags').innerHTML = tags.join('');
 
-    $('examQText').innerHTML = q.question;
+    $('examQContext').innerHTML = q.context ? `<div class="q-context">${q.context}</div>` : '';
+    $('examQText').innerHTML = q.question || '';
 
     const body = $('examQBody');
     body.innerHTML = '';
-
-    const saved = s.answers[s.currentIdx];
-
+    const saved = s.answers[current];
+    const letters = ['א', 'ב', 'ג', 'ד', 'ה'];
     if (q.type === 'open_text') {
-      body.innerHTML = `<input type="text" class="q-input" id="examOpenInput" placeholder="כתבי תשובה..." autocomplete="off" value="${saved ? escapeHtml(saved.value || '') : ''}">`;
+      body.innerHTML = `<input type="text" class="q-input" id="examOpenInput" value="${saved ? escapeHtml(saved.value || '') : ''}">`;
       setTimeout(() => $('examOpenInput').focus(), 100);
     } else {
-      const letters = ['א', 'ב', 'ג', 'ד'];
-      const opts = q.options || [];
-      const html = opts.map((opt, i) => {
-        const isSelected = saved && saved.selectedIndex === i;
-        return `
-          <button class="opt-btn${isSelected ? ' selected' : ''}" data-i="${i}" onclick="Exam.select(${i})">
-            <span class="opt-letter">${letters[i] || (i+1)}</span>
-            <span>${opt}</span>
-          </button>`;
-      }).join('');
-      body.innerHTML = `<div class="options">${html}</div>`;
+      body.innerHTML = `<div class="options">${(q.options || []).map((opt, i) => {
+        const sel = saved && saved.selectedIndex === i ? 'selected' : '';
+        return `<button class="opt ${sel}" data-i="${i}" onclick="Exam.select(${i})">
+          <span class="opt-letter">${letters[i] || (i+1)}</span>
+          <span>${opt}</span>
+        </button>`;
+      }).join('')}</div>`;
     }
 
-    $('examNextBtn').textContent = (s.currentIdx === total - 1) ? 'סיום וצפייה בתוצאות ←' : 'שאלה הבאה ←';
+    $('examNextBtn').textContent = (current === total - 1) ? 'סיום וצפייה בתעודה' : 'המשך';
   },
 
   select(i) {
-    const s = this.state;
-    s.answers[s.currentIdx] = { selectedIndex: i };
-    document.querySelectorAll('#examQBody .opt-btn').forEach(b => b.classList.remove('selected'));
-    document.querySelector(`#examQBody .opt-btn[data-i="${i}"]`).classList.add('selected');
+    this.state.answers[this.state.currentIdx] = { selectedIndex: i };
+    document.querySelectorAll('#examQBody .opt').forEach(b => b.classList.remove('selected'));
+    const btn = document.querySelector(`#examQBody .opt[data-i="${i}"]`);
+    if (btn) btn.classList.add('selected');
   },
 
   saveOpen() {
     const input = $('examOpenInput');
-    if (input) {
-      this.state.answers[this.state.currentIdx] = { value: input.value.trim() };
-    }
+    if (input) this.state.answers[this.state.currentIdx] = { value: input.value.trim() };
   },
 
   next() {
@@ -589,8 +606,6 @@ const Exam = {
   finish() {
     const s = this.state;
     if (s.timerInterval) clearInterval(s.timerInterval);
-
-    // Score
     const skillStats = {};
     const answeredList = [];
     s.questions.forEach((q, idx) => {
@@ -605,13 +620,10 @@ const Exam = {
         isCorrect = a && a.selectedIndex === q.correctIndex;
       }
       answeredList.push({
-        qid: q.id,
-        level: q.level || 2,
-        source: q.source,
-        isCorrect: !!isCorrect,
-        hintUsed: false,
-        skillTags: q.skillTags || [],
-        bagrutMeta: q.bagrutMeta || null,
+        qid: q.id, level: q.level || 2, source: q.source,
+        isCorrect: !!isCorrect, hintUsed: false,
+        skillTags: q.skillTags || [], bagrutMeta: q.bagrutMeta || null,
+        examSection: q.examSection,
       });
       (q.skillTags || []).forEach(tag => {
         if (!skillStats[tag]) skillStats[tag] = { correct: 0, total: 0 };
@@ -620,29 +632,21 @@ const Exam = {
       });
     });
 
-    const fakeState = {
-      bank: s.bank,
-      answeredList,
-      skillStats,
-      hintsUsed: 0,
-      currentLevel: 2,
-      maxQuestions: s.questions.length,
-    };
-    Results.show(fakeState, 'exam');
+    Results.show({
+      bank: s.bank, answeredList, skillStats,
+      hintsUsed: 0, currentLevel: 2, maxQuestions: s.questions.length,
+    }, 'exam');
   },
 };
 
 /* ================================================================
-   RESULTS — scoring, AI insights, send to teacher
+   RESULTS — Journey certificate + insights + send to teacher
    ================================================================ */
 const Results = {
-  state: null,
-  mode: null,
+  state: null, mode: null,
 
   show(practiceState, mode) {
-    this.state = practiceState;
-    this.mode = mode;
-
+    this.state = practiceState; this.mode = mode;
     const answers = practiceState.answeredList;
     const total = answers.length;
     const correct = answers.filter(a => a.isCorrect).length;
@@ -650,46 +654,38 @@ const Results = {
     const correctWithHint = answers.filter(a => a.isCorrect && a.hintUsed).length;
     const score = total > 0 ? Math.round((correctNoHint * 100 + correctWithHint * 50) / total) : 0;
 
+    $('certName').textContent = App.state.student.name;
     $('rScore').textContent = score;
     $('rCorrect').textContent = correct;
     $('rTotal').textContent = total;
     $('rLevel').textContent = practiceState.currentLevel || 1;
 
-    // Score message
     let msg = '';
-    if (score >= 85) msg = '🌟 ציון מעולה! יש לך שליטה מצוינת בחומר.';
-    else if (score >= 70) msg = '💪 כל הכבוד! המשך לתרגל ותגיע לציון גבוה יותר.';
-    else if (score >= 50) msg = '📖 יש מה לשפר. סקור את ההסברים ותרגל שוב.';
-    else msg = '💫 צריך עוד עבודה. אל תוותר — חזור על החומר ונסה שוב!';
+    if (score >= 85) msg = 'מסע מצוין! יש לך שליטה גבוהה בחומר. המשך כך, ותגיע מוכן לבגרות.';
+    else if (score >= 70) msg = 'מסע יפה. נקודות חזקות לצד אזורים שצריכים חיזוק. סקור את התובנות.';
+    else if (score >= 50) msg = 'דרך טובה התחלת. כדאי לחזור על הנושאים שסומנו כחלשים ולתרגל שוב.';
+    else msg = 'הצעד הראשון הוא להבין את החומר. סקור את ההסברים ותרגל שוב — תגיע רחוק.';
     $('rMsg').textContent = msg;
 
-    // AI Insights
     const insights = this.generateInsights(practiceState);
     $('insightsList').innerHTML = insights.map(i => `
-      <div class="insight-item ${i.type}">
-        <strong>${i.title}:</strong> ${i.text}
+      <div class="insight-row ${i.type}">
+        <strong>${escapeHtml(i.title)}:</strong> ${escapeHtml(i.text)}
       </div>`).join('');
 
-    // Store for sending
     window._results = {
-      score,
-      total,
-      correct,
-      correctNoHint,
-      correctWithHint,
+      score, total, correct, correctNoHint, correctWithHint,
       hintsUsed: practiceState.hintsUsed || 0,
       level: practiceState.currentLevel || 1,
-      mode,
-      topicLabel: practiceState.bank.topicLabel,
+      mode, topicLabel: practiceState.bank.topicLabel,
       topicId: practiceState.bank.topicId,
-      insights,
-      skillStats: practiceState.skillStats || {},
+      insights, skillStats: practiceState.skillStats || {},
       answeredList: answers,
     };
 
     showScreen('screenResults');
     $('sendBtn').disabled = false;
-    $('sendBtn').textContent = '📨 שליחת תוצאות למורה';
+    $('sendBtn').textContent = 'שליחת התעודה למורה';
     $('sendStatus').classList.remove('show', 'success', 'error');
   },
 
@@ -698,144 +694,100 @@ const Results = {
     const skills = state.skillStats || {};
     const answers = state.answeredList;
 
-    // Weak skills (< 50% correct, at least 2 questions)
     Object.entries(skills).forEach(([tag, stats]) => {
       if (stats.total >= 2) {
         const pct = stats.correct / stats.total;
         const label = SKILL_LABELS[tag] || tag;
-        if (pct < 0.5) {
-          insights.push({
-            type: 'weak',
-            title: 'דורש חיזוק',
-            text: `${label} — ${stats.correct}/${stats.total} נכון. כדאי לתרגל את הנושא הזה שוב.`,
-          });
-        } else if (pct === 1 && stats.total >= 2) {
-          insights.push({
-            type: 'strong',
-            title: 'נושא חזק',
-            text: `${label} — ${stats.correct}/${stats.total} נכון. שליטה מצוינת.`,
-          });
-        }
+        if (pct < 0.5) insights.push({ type: 'weak', title: 'דורש חיזוק', text: `${label} — ${stats.correct} מתוך ${stats.total} נכון. כדאי לתרגל שוב.` });
+        else if (pct === 1 && stats.total >= 2) insights.push({ type: 'strong', title: 'נושא חזק', text: `${label} — ${stats.correct} מתוך ${stats.total} נכון. שליטה מצוינת.` });
       }
     });
 
-    // Performance on Bagrut questions vs ours
+    // Per-section analysis for exams
+    if (answers.some(a => a.examSection)) {
+      const bySection = {};
+      answers.forEach(a => {
+        const sec = a.examSection || 'other';
+        if (!bySection[sec]) bySection[sec] = { correct: 0, total: 0 };
+        bySection[sec].total++;
+        if (a.isCorrect) bySection[sec].correct++;
+      });
+      const secLabels = { reading: 'חלק א — הבנה והבעה', mispar: 'חלק ב — שם המספר', morphology: 'חלק ג — מערכת הצורות' };
+      Object.entries(bySection).forEach(([sec, stats]) => {
+        const pct = Math.round(stats.correct / stats.total * 100);
+        const label = secLabels[sec] || sec;
+        if (pct < 50) insights.push({ type: 'weak', title: label, text: `${pct}% — נושא לחיזוק.` });
+        else if (pct >= 80) insights.push({ type: 'strong', title: label, text: `${pct}% — שליטה גבוהה.` });
+      });
+    }
+
     const bagrutAns = answers.filter(a => a.source === 'bagrut');
-    const oursAns = answers.filter(a => a.source === 'ours');
-    if (bagrutAns.length >= 2) {
+    if (bagrutAns.length >= 3) {
       const bPct = bagrutAns.filter(a => a.isCorrect).length / bagrutAns.length;
-      if (bPct < 0.5) {
-        insights.push({
-          type: 'weak',
-          title: 'שאלות בגרות',
-          text: `${Math.round(bPct*100)}% נכון מתוך ${bagrutAns.length} שאלות בגרות אמיתיות. כדאי לתרגל שאלות בגרות נוספות.`,
-        });
-      } else if (bPct >= 0.8 && bagrutAns.length >= 3) {
-        insights.push({
-          type: 'strong',
-          title: 'מוכן לבגרות',
-          text: `${Math.round(bPct*100)}% נכון בשאלות בגרות. רמת מוכנות גבוהה.`,
-        });
-      }
+      if (bPct < 0.5) insights.push({ type: 'weak', title: 'שאלות בגרות', text: `${Math.round(bPct*100)}% נכון מתוך ${bagrutAns.length} שאלות בגרות אמיתיות.` });
+      else if (bPct >= 0.8) insights.push({ type: 'strong', title: 'מוכן לבגרות', text: `${Math.round(bPct*100)}% נכון בשאלות בגרות. רמת מוכנות גבוהה.` });
     }
 
-    // Hint usage
-    const hintsUsed = answers.filter(a => a.hintUsed).length;
-    if (hintsUsed >= Math.ceil(answers.length / 2)) {
-      insights.push({
-        type: 'weak',
-        title: 'שימוש ברמזים',
-        text: `השתמשת ברמזים ב-${hintsUsed} מתוך ${answers.length} שאלות. נסה לפתור ללא רמזים בפעם הבאה.`,
-      });
-    }
-
-    // Level reached
     if (state.currentLevel === 3) {
-      insights.push({
-        type: 'strong',
-        title: 'התקדמות',
-        text: 'הגעת לרמה מתקדמת (רמה 3) — שאלות בקושי בגרות. המשך כך.',
-      });
+      insights.push({ type: 'strong', title: 'התקדמות', text: 'הגעת לרמה מתקדמת — שאלות ברמת בגרות.' });
     } else if (state.currentLevel === 1 && answers.length >= 5) {
-      insights.push({
-        type: 'weak',
-        title: 'התקדמות',
-        text: 'נשארת ברמה הבסיסית. כדאי לחזק את היסודות לפני המעבר לרמה גבוהה.',
-      });
+      insights.push({ type: 'weak', title: 'התקדמות', text: 'נשארת ברמה הבסיסית. כדאי לחזק יסודות לפני המעבר.' });
     }
 
     if (insights.length === 0) {
-      insights.push({
-        type: 'neutral',
-        title: 'התקדמות יציבה',
-        text: 'ביצוע יציב. המשך לתרגל בכל הנושאים לקראת הבגרות.',
-      });
+      insights.push({ type: 'neutral', title: 'מסע יציב', text: 'ביצוע טוב. המשך לתרגל לקראת בגרות.' });
     }
-
     return insights;
   },
 
   send() {
     const r = window._results;
     if (!r) return;
-
-    const btn = $('sendBtn');
-    const status = $('sendStatus');
-    btn.disabled = true;
-    btn.textContent = 'שולח...';
+    const btn = $('sendBtn'); const status = $('sendStatus');
+    btn.disabled = true; btn.textContent = 'שולח...';
 
     const insightsText = r.insights.map(i => `${i.title}: ${i.text}`).join(' | ');
-    const skillsText = Object.entries(r.skillStats)
-      .map(([tag, s]) => `${SKILL_LABELS[tag] || tag}: ${s.correct}/${s.total}`)
-      .join(' | ');
+    const skillsText = Object.entries(r.skillStats).map(([tag, s]) => `${SKILL_LABELS[tag] || tag}: ${s.correct}/${s.total}`).join(' | ');
 
     const params = new URLSearchParams({
       action: 'submit',
-      quizName: `${r.mode === 'exam' ? 'בגרות מלאה' : 'תרגול נושא'} — ${r.topicLabel}`,
-      studentName: App.state.student.name,
-      classroom: App.state.student.class,
-      score: r.score,
-      totalQuestions: r.total,
-      correctAnswers: r.correct,
-      hintsUsed: r.hintsUsed,
-      level: r.mode === 'exam' ? 'בגרות' : ('רמה ' + r.level),
+      quizName: `${r.mode === 'exam' ? 'בגרות' : 'תרגול'} — ${r.topicLabel}`,
+      studentName: App.state.student.name, classroom: App.state.student.class,
+      score: r.score, totalQuestions: r.total, correctAnswers: r.correct,
+      hintsUsed: r.hintsUsed, level: r.mode === 'exam' ? 'בגרות' : ('רמה ' + r.level),
       teacherEmail: 'meytalp@bethaarava.ort.org.il',
-      insights: insightsText.slice(0, 1000),
-      skillStats: skillsText.slice(0, 500),
-      topicId: r.topicId,
-      mode: r.mode,
+      insights: insightsText.slice(0, 1000), skillStats: skillsText.slice(0, 500),
+      topicId: r.topicId, mode: r.mode,
     });
 
     const cb = 'cb_' + Date.now();
     window[cb] = () => {
       status.classList.add('show', 'success');
-      status.textContent = '✅ התוצאות נשלחו בהצלחה למורה!';
-      btn.textContent = '✅ נשלח';
+      status.textContent = 'התעודה נשלחה למורה';
+      btn.textContent = 'נשלח';
       delete window[cb];
     };
     const s = document.createElement('script');
     s.src = APPS_SCRIPT_URL + '?' + params.toString() + '&callback=' + cb;
     s.onerror = () => {
       status.classList.add('show', 'error');
-      status.textContent = '❌ שגיאה בשליחה — אנא נסי שוב.';
-      btn.disabled = false;
-      btn.textContent = '📨 ניסיון נוסף';
+      status.textContent = 'שגיאה בשליחה — אנא נסי שוב';
+      btn.disabled = false; btn.textContent = 'ניסיון נוסף';
     };
     document.body.appendChild(s);
 
-    // Fallback success after 4 seconds (Apps Script JSONP often doesn't callback)
     setTimeout(() => {
       if (!status.classList.contains('show')) {
         status.classList.add('show', 'success');
-        status.textContent = '✅ התוצאות נשלחו למורה!';
-        btn.textContent = '✅ נשלח';
+        status.textContent = 'התעודה נשלחה למורה';
+        btn.textContent = 'נשלח';
       }
     }, 4000);
   },
 };
 
 /* ================================================================
-   SKILL_LABELS — Hebrew names for skill tags
+   SKILL_LABELS
    ================================================================ */
 const SKILL_LABELS = {
   'zihui-shoresh': 'זיהוי שורש',
@@ -854,27 +806,19 @@ const SKILL_LABELS = {
   'shlemim': 'גזרת השלמים',
   'nala': 'גזרת נל"א/נלי"ה',
   'naoy': 'גזרת נעו"י',
-  'kfulim': 'גזרת כפולים (ע"ע)',
+  'kfulim': 'גזרת כפולים',
   'guttural': 'אותיות גרון',
   'tricky': 'מקרים מורכבים',
   'advanced': 'רמה מתקדמת',
   'ayin-doubled': 'גזרת ע"ע',
-  'all-binyanim': 'הבניינים — סקירה',
+  'all-binyanim': 'הבניינים',
 };
 
-/* ================================================================
-   BOOT
-   ================================================================ */
-window.App = App;
-window.Practice = Practice;
-window.Exam = Exam;
-window.Results = Results;
+window.App = App; window.Practice = Practice; window.Exam = Exam; window.Results = Results;
 
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
-
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener('keydown', e => {
     if ($('screenPractice').classList.contains('active')) {
       if (!Practice.state || Practice.state.answered) {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -891,7 +835,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === '3' || e.key === 'ג') Practice.selectOption(2);
         if (e.key === '4' || e.key === 'ד') Practice.selectOption(3);
       }
-      if (e.key.toLowerCase() === 'h' || e.key === 'ר') Practice.showHint();
     }
   });
 });
