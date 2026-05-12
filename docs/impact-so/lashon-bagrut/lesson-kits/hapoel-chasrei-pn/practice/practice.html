@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>תרגול חי · גזרת חסרי פ"נ · Impact SO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../_shared/kit-shell.css">
+<style>
+.welcome { text-align:center; padding:32px 24px; }
+.welcome-icon {
+  width:64px; height:64px; margin:0 auto 14px;
+  background:var(--accent-bg); color:var(--accent);
+  border-radius:18px; display:grid; place-items:center;
+  font-size:32px;
+}
+.welcome h2 { font-size:24px; font-weight:800; letter-spacing:-.5px; margin-bottom:8px; }
+.welcome p { color:var(--text2); font-size:14px; line-height:1.6; margin-bottom:18px; }
+.welcome-form {
+  display:flex; flex-direction:column; gap:10px;
+  max-width:340px; margin:18px auto 0;
+}
+.welcome-form input, .welcome-form select {
+  padding:13px 16px; border:2px solid var(--border);
+  border-radius:12px; font-family:'Heebo',sans-serif;
+  font-size:15px; background:white; color:var(--text);
+  transition:border-color .15s; direction:rtl;
+}
+.welcome-form input:focus, .welcome-form select:focus { outline:none; border-color:var(--accent); }
+.welcome-info {
+  background:var(--blue-bg); color:#1E40AF;
+  border-radius:12px; padding:12px 16px;
+  margin:14px auto; max-width:380px;
+  font-size:12px; line-height:1.55;
+}
+
+.progress-bar {
+  height:6px; background:var(--border2);
+  border-radius:999px; overflow:hidden;
+  margin-bottom:18px;
+}
+.progress-fill {
+  height:100%;
+  background:linear-gradient(90deg, var(--accent), var(--accent-soft));
+  transition:width .4s var(--ease);
+}
+
+.q-meta {
+  display:flex; justify-content:space-between; align-items:center;
+  margin-bottom:14px; font-size:12px; color:var(--text3);
+  font-weight:600;
+}
+.q-level, .diagnostic-pill, .trap-pill {
+  padding:3px 10px; border-radius:999px;
+  font-weight:700; font-size:11px;
+}
+.level-easy { background:var(--green-l); color:var(--green); }
+.level-mid  { background:var(--blue-l); color:var(--blue); }
+.level-hard { background:var(--accent-bg); color:var(--accent-d); }
+.diagnostic-pill { background:var(--orange-l); color:var(--orange); }
+.q-text {
+  font-size:20px; font-weight:800; line-height:1.5;
+  margin-bottom:14px; color:var(--text); letter-spacing:-.3px;
+}
+.q-options { display:flex; flex-direction:column; gap:8px; }
+.q-opt {
+  background:white; border:2px solid var(--border);
+  border-radius:12px; padding:13px 18px;
+  font-family:'Heebo',sans-serif; font-size:14px; font-weight:600;
+  cursor:pointer; text-align:right; color:var(--text);
+  transition:all .15s;
+  line-height:1.5;
+}
+.q-opt:hover:not(:disabled) { border-color:var(--accent); }
+.q-opt.correct { background:var(--green-l); border-color:var(--green); color:var(--green); }
+.q-opt.incorrect { background:var(--red-l); border-color:var(--red); color:var(--red); }
+.q-opt:disabled { cursor:not-allowed; }
+
+.q-helpers {
+  display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;
+  padding-top:10px; border-top:1px dashed var(--border);
+}
+.q-helper {
+  padding:7px 11px; border-radius:8px;
+  background:var(--bg); border:1px solid var(--border);
+  font-family:'Heebo',sans-serif;
+  font-size:11.5px; font-weight:600; color:var(--text2);
+  cursor:pointer; transition:all .15s;
+  display:inline-flex; align-items:center; gap:5px;
+}
+.q-helper:hover { border-color:var(--purple); color:var(--purple); background:white; }
+.q-helper-icon { font-size:13px; }
+
+.q-feedback {
+  margin-top:14px; padding:13px 16px;
+  border-radius:12px; display:none;
+  font-size:13px; line-height:1.6;
+}
+.q-feedback.show { display:block; }
+.q-feedback.correct { background:var(--green-bg); color:var(--green); }
+.q-feedback.incorrect { background:var(--red-bg); color:var(--red); }
+.q-next {
+  display:none; margin-top:14px;
+  background:var(--accent); color:white;
+  padding:11px 28px; border:none; border-radius:10px;
+  font-family:'Heebo'; font-weight:700; font-size:14px; cursor:pointer;
+}
+.q-next.show { display:inline-block; }
+.q-next:hover { background:var(--accent-d); }
+
+/* Coach popup */
+.coach-overlay {
+  position:fixed; inset:0; background:rgba(17,24,39,.55);
+  display:none; align-items:center; justify-content:center;
+  z-index:100; padding:20px;
+  animation:fadeIn .2s var(--ease);
+}
+.coach-overlay.show { display:flex; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.coach-card {
+  background:white; border-radius:20px; max-width:500px; width:100%;
+  padding:28px 26px; box-shadow:var(--shadow-lg);
+  animation:slideUp .3s var(--ease);
+}
+@keyframes slideUp { from{transform:translateY(20px); opacity:0} to{transform:translateY(0); opacity:1} }
+.coach-head {
+  display:flex; align-items:center; gap:12px; margin-bottom:14px;
+}
+.coach-icon {
+  width:48px; height:48px; border-radius:14px;
+  background:linear-gradient(135deg, var(--purple), var(--accent));
+  color:white; display:grid; place-items:center;
+  font-size:24px; flex-shrink:0;
+}
+.coach-title { font-size:18px; font-weight:800; letter-spacing:-.3px; }
+.coach-sub { font-size:12px; color:var(--text3); font-weight:600; }
+.coach-body {
+  font-size:14px; line-height:1.65; color:var(--text);
+  margin-bottom:12px;
+}
+.coach-rule {
+  background:var(--blue-bg); color:#1E40AF;
+  padding:12px 14px; border-radius:10px;
+  font-size:13px; font-weight:700; margin-bottom:10px;
+}
+.coach-example {
+  background:var(--green-bg); color:var(--green);
+  padding:12px 14px; border-radius:10px;
+  font-size:13px; font-weight:600; margin-bottom:16px;
+  line-height:1.6;
+}
+.coach-actions { display:flex; gap:8px; justify-content:flex-end; }
+.coach-btn {
+  padding:10px 20px; border-radius:10px;
+  font-family:'Heebo'; font-weight:700; font-size:13px;
+  cursor:pointer; border:none; transition:all .15s;
+}
+.coach-btn.primary { background:var(--accent); color:white; }
+.coach-btn.primary:hover { background:var(--accent-d); }
+.coach-btn.secondary { background:var(--bg); color:var(--text2); }
+
+/* Hint box */
+.hint-box {
+  margin-top:10px; padding:11px 14px;
+  background:var(--purple-l); color:var(--purple);
+  border-radius:10px; font-size:12.5px; line-height:1.55;
+  font-weight:600; display:none;
+}
+.hint-box.show { display:block; }
+
+/* Result */
+.result { text-align:center; padding:28px 20px; }
+.result-icon { font-size:64px; line-height:1; margin-bottom:10px; }
+.result-score {
+  font-family:'Space Grotesk',sans-serif;
+  font-size:64px; font-weight:800; color:var(--accent);
+  line-height:1;
+}
+.result-label { font-size:13px; color:var(--text3); margin-top:4px; font-weight:600; }
+.encouragement {
+  margin:20px auto; max-width:380px;
+  padding:14px 18px; border-radius:14px;
+  font-size:14px; font-weight:700; line-height:1.55;
+}
+.encouragement.high { background:var(--green-l); color:var(--green); }
+.encouragement.mid  { background:var(--blue-l); color:var(--blue); }
+.encouragement.low  { background:var(--orange-l); color:var(--orange); }
+.result-stats {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  max-width:380px; margin:20px auto;
+}
+.stat-tile {
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:12px; padding:14px 8px; text-align:center;
+}
+.stat-tile-num {
+  font-family:'Space Grotesk',sans-serif;
+  font-size:24px; font-weight:800; line-height:1;
+}
+.stat-tile-label { font-size:11px; color:var(--text3); font-weight:600; margin-top:4px; }
+.trap-summary {
+  background:white; border:1px solid var(--border);
+  border-radius:14px; padding:16px 20px;
+  max-width:520px; margin:18px auto;
+  text-align:right;
+}
+.trap-summary h4 {
+  font-size:14px; font-weight:800; margin-bottom:12px;
+  display:flex; align-items:center; gap:8px;
+}
+.trap-row {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:8px 0; border-top:1px solid var(--border2);
+  font-size:13px;
+}
+.trap-row:first-of-type { border-top:none; }
+.trap-row-icon { flex-shrink:0; margin-top:2px; }
+.trap-row-icon.ok { color:var(--green); }
+.trap-row-icon.bad { color:var(--orange); }
+.trap-row-name { font-weight:700; color:var(--text); }
+.trap-row-desc { color:var(--text2); font-size:12px; margin-top:2px; line-height:1.5; }
+
+.recommendations {
+  background:white; border:1px solid var(--border);
+  border-radius:14px; padding:16px 20px;
+  max-width:480px; margin:20px auto;
+  text-align:right;
+}
+.recommendations h4 { font-size:14px; font-weight:800; margin-bottom:10px; }
+.recommendations ul { list-style:none; padding:0; }
+.recommendations li {
+  padding:6px 0 6px 22px; font-size:13px;
+  color:var(--text2); line-height:1.55; position:relative;
+}
+.recommendations li::before {
+  content:'✓'; position:absolute; right:0;
+  color:var(--green); font-weight:800;
+}
+.result-actions {
+  display:flex; gap:8px; justify-content:center;
+  flex-wrap:wrap; margin-top:18px;
+}
+#sendStatus {
+  font-size:12px; color:var(--text3); min-height:16px; margin-top:10px;
+}
+#sendStatus.ok { color:var(--green); }
+#sendStatus.err { color:var(--red); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">תרגול חי · חסרי פ"נ</div>
+    <div class="topbar-meta">10 שאלות מותאמות · זיהוי כשלים בזמן אמת · ציון נשלח אוטומטית</div>
+  </div>
+  <div class="topbar-actions">
+    <a href="../index.html#practice" class="topbar-btn">← חזרה למערך</a>
+    <button class="topbar-btn primary" id="shareBtn">📤 שתפי עם תלמידים</button>
+  </div>
+</div>
+
+<!-- Welcome screen -->
+<div id="welcome-screen" class="card">
+  <div class="welcome">
+    <div class="welcome-icon">🎯</div>
+    <h2>תרגול חי — חסרי פ"נ</h2>
+    <p>2 שאלות אבחון יקבעו את רמת ההתחלה שלך, ואז 8 שאלות מותאמות. אם תיתקעי על אותו סוג שאלה — אקפיץ הסבר ממוקד.</p>
+    <div class="welcome-info">
+      הציון נשלח אוטומטית למורה. כאן בודקים מה את יודעת — לא נותנים ציון בתעודה.
+    </div>
+    <form class="welcome-form" id="welcome-form" autocomplete="off">
+      <input type="text" id="student-name" placeholder="שם מלא" required maxlength="40">
+      <select id="student-class" required>
+        <option value="">בחר/י כיתה</option>
+        <option value='י"א-1'>י"א-1</option>
+        <option value='י"א-2'>י"א-2</option>
+        <option value='י"א-3'>י"א-3</option>
+      </select>
+      <button type="submit" class="btn btn-primary" id="start-btn" disabled style="margin-top:6px">התחלה</button>
+    </form>
+  </div>
+</div>
+
+<!-- Quiz screen -->
+<div id="quiz-screen" style="display:none">
+  <div class="progress-bar"><div class="progress-fill" id="quiz-progress"></div></div>
+  <div class="card">
+    <div class="q-meta" id="q-meta"></div>
+    <div class="q-text" id="q-text"></div>
+    <div class="q-options" id="q-options"></div>
+    <div class="hint-box" id="hint-box"></div>
+    <div class="q-helpers" id="q-helpers">
+      <button class="q-helper" id="hint-btn"><span class="q-helper-icon">💡</span>רמז</button>
+      <button class="q-helper" id="academy-btn"><span class="q-helper-icon">📚</span>שאלי את האקדמיה</button>
+      <button class="q-helper" id="explain-btn"><span class="q-helper-icon">🤖</span>הסבירי לי את הכלל</button>
+    </div>
+    <div class="q-feedback" id="q-feedback"></div>
+    <button class="q-next" id="q-next">המשך →</button>
+  </div>
+</div>
+
+<!-- Coach popup -->
+<div class="coach-overlay" id="coach-overlay">
+  <div class="coach-card">
+    <div class="coach-head">
+      <div class="coach-icon">🧠</div>
+      <div>
+        <div class="coach-title" id="coach-title"></div>
+        <div class="coach-sub">AI Coach · זיהוי דפוס</div>
+      </div>
+    </div>
+    <div class="coach-body" id="coach-body"></div>
+    <div class="coach-rule" id="coach-rule"></div>
+    <div class="coach-example" id="coach-example"></div>
+    <div class="coach-actions">
+      <button class="coach-btn primary" id="coach-continue">הבנתי, ממשיכה</button>
+    </div>
+  </div>
+</div>
+
+<!-- Result screen -->
+<div id="result-screen" style="display:none">
+  <div class="card result">
+    <div class="result-icon" id="result-icon">🎯</div>
+    <div class="result-score" id="result-score">0</div>
+    <div class="result-label">מתוך 100</div>
+    <div class="encouragement" id="encouragement"></div>
+    <div class="result-stats">
+      <div class="stat-tile"><div class="stat-tile-num" style="color:var(--green)" id="stat-correct">0</div><div class="stat-tile-label">נכונות</div></div>
+      <div class="stat-tile"><div class="stat-tile-num" style="color:var(--red)" id="stat-wrong">0</div><div class="stat-tile-label">שגויות</div></div>
+      <div class="stat-tile"><div class="stat-tile-num" style="color:var(--accent)" id="stat-level">בסיסי</div><div class="stat-tile-label">רמה הוערכה</div></div>
+    </div>
+    <div class="trap-summary" id="trap-summary" style="display:none">
+      <h4>📊 ניתוח לפי סוגי כשל</h4>
+      <div id="trap-rows"></div>
+    </div>
+    <div class="recommendations">
+      <h4>📚 המלצות להמשך</h4>
+      <ul id="recommendations-list"></ul>
+    </div>
+    <div id="sendStatus"></div>
+    <div class="result-actions">
+      <a href="../lesson.html" class="btn btn-secondary">חזרה למצגת</a>
+      <a href="../index.html" class="btn btn-primary">חזרה למערך</a>
+    </div>
+  </div>
+</div>
+
+<script src="../../_shared/kit-shell.js"></script>
+<script>
+KitShell.init({ kit: 'חסרי פ"נ — תרגול חי', kitId: 'hapoel-chasrei-pn' });
+
+document.getElementById('shareBtn').addEventListener('click', () => {
+  KitShell.openShare({
+    title: 'תרגול חי — חסרי פ"נ',
+    subtitle: '10 שאלות מותאמות + זיהוי דפוסי טעות. הציון נשלח למורה.',
+    url: location.href,
+    message: 'תרגול חי — חסרי פ"נ\n10 שאלות, ~15 דק\'\n' + location.href,
+  });
+});
+
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyLwo3jrseEDJ4GLnVNCzoJTRJBK_IAkJE0IiGGcx18buwJQ0XSRgOcJ2FmbMtA5ojU/exec';
+const TEACHER_EMAIL = 'meytalp@bethaarava.ort.org.il';
+
+const $ = id => document.getElementById(id);
+
+// State
+let BANK = null;
+let TRAPS = null;
+let answers = [];
+let currentIdx = 0;
+let level = 'mid';
+let questions = [];
+let trapErrors = {};      // {trap_id: count of errors}
+let trapAnswered = {};    // {trap_id: total answered}
+let coachShown = {};      // {trap_id: true} — already shown for this trap
+let hintUsed = 0;
+
+// Load bank + traps
+Promise.all([
+  fetch('bank.json').then(r => r.json()),
+  fetch('traps.json').then(r => r.json())
+]).then(([bank, traps]) => {
+  BANK = bank;
+  TRAPS = traps.traps;
+}).catch(err => {
+  alert('שגיאה בטעינת בנק השאלות: ' + err.message);
+});
+
+$('student-name').addEventListener('input', validateForm);
+$('student-class').addEventListener('change', validateForm);
+function validateForm() {
+  $('start-btn').disabled = !$('student-name').value.trim() || !$('student-class').value || !BANK;
+}
+
+document.getElementById('welcome-form').addEventListener('submit', e => {
+  e.preventDefault();
+  if ($('start-btn').disabled) return;
+  // Only MCQ questions for live practice
+  questions = BANK.diagnostic.filter(q => q.format === 'mcq');
+  $('welcome-screen').style.display = 'none';
+  $('quiz-screen').style.display = 'block';
+  showQuestion();
+});
+
+function pickAdaptivePool() {
+  const pool = (level === 'easy' ? BANK.easy : level === 'mid' ? BANK.mid : BANK.hard)
+    .filter(q => q.format === 'mcq');
+  // Shuffle, take 8
+  return pool.sort(() => Math.random() - .5).slice(0, 8);
+}
+
+function showQuestion() {
+  const q = questions[currentIdx];
+  const isDiagnostic = currentIdx < 2;
+
+  $('quiz-progress').style.width = (currentIdx / 10 * 100) + '%';
+  $('hint-box').classList.remove('show');
+  $('hint-box').textContent = '';
+
+  let levelLabel = '';
+  if (isDiagnostic) {
+    levelLabel = '<span class="diagnostic-pill">שאלת אבחון</span>';
+  } else {
+    const labels = {easy:'בסיסי', mid:'בינוני', hard:'מתקדם'};
+    const cls = {easy:'level-easy', mid:'level-mid', hard:'level-hard'};
+    levelLabel = '<span class="q-level '+cls[level]+'">רמה: '+labels[level]+'</span>';
+  }
+
+  $('q-meta').innerHTML = '<span>שאלה '+(currentIdx + 1)+' / 10</span>' + levelLabel;
+  $('q-text').textContent = q.q;
+  $('q-options').innerHTML = q.options.map((o,i) =>
+    '<button class="q-opt" data-idx="'+i+'">'+o+'</button>'
+  ).join('');
+  $('q-feedback').className = 'q-feedback';
+  $('q-feedback').innerHTML = '';
+  $('q-next').className = 'q-next';
+  $('q-helpers').style.display = 'flex';
+
+  document.querySelectorAll('.q-opt').forEach(btn => {
+    btn.addEventListener('click', () => answerQuestion(parseInt(btn.dataset.idx)));
+  });
+  $('q-next').onclick = nextQuestion;
+
+  // Helper buttons
+  $('hint-btn').onclick = () => showHint(q);
+  $('academy-btn').onclick = () => askAcademy(q);
+  $('explain-btn').onclick = () => explainRule(q);
+}
+
+function showHint(q) {
+  hintUsed++;
+  let hintText = '';
+  if (q.trap_id && TRAPS[q.trap_id]) {
+    hintText = '💡 ' + TRAPS[q.trap_id].rule;
+  } else {
+    // Generic hint: eliminate one wrong option
+    const wrongs = q.options.map((_, i) => i).filter(i => i !== q.correct);
+    const eliminated = wrongs[Math.floor(Math.random() * wrongs.length)];
+    hintText = '💡 רמז: אפשר לפסול את האפשרות "' + q.options[eliminated] + '"';
+  }
+  $('hint-box').textContent = hintText;
+  $('hint-box').classList.add('show');
+}
+
+function askAcademy(q) {
+  const query = encodeURIComponent('האקדמיה ללשון העברית site:hebrew-academy.org.il ' + q.q);
+  window.open('https://www.perplexity.ai/search?q=' + query, '_blank');
+}
+
+function explainRule(q) {
+  if (q.trap_id && TRAPS[q.trap_id]) {
+    const t = TRAPS[q.trap_id];
+    showCoach(t, true);
+  } else {
+    const query = encodeURIComponent('הסבר בעברית פשוטה: ' + q.q + ' (נושא: חסרי פ"נ)');
+    window.open('https://claude.ai/new?q=' + query, '_blank');
+  }
+}
+
+function answerQuestion(idx) {
+  const q = questions[currentIdx];
+  const correct = idx === q.correct;
+  const isDiagnostic = currentIdx < 2;
+
+  answers.push({
+    idx: currentIdx,
+    qid: q.id,
+    answer: idx,
+    correct,
+    level: isDiagnostic ? 'diagnostic' : level,
+    trap_id: q.trap_id || null
+  });
+
+  // Track trap statistics
+  if (q.trap_id) {
+    trapAnswered[q.trap_id] = (trapAnswered[q.trap_id] || 0) + 1;
+    if (!correct) {
+      trapErrors[q.trap_id] = (trapErrors[q.trap_id] || 0) + 1;
+    }
+  }
+
+  document.querySelectorAll('.q-opt').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === idx) btn.classList.add('incorrect');
+  });
+
+  $('q-feedback').className = 'q-feedback show ' + (correct ? 'correct' : 'incorrect');
+  $('q-feedback').innerHTML = (correct ? '<strong>✓ נכון!</strong> ' : '<strong>✗ לא נכון.</strong> ') + q.explain;
+  $('q-helpers').style.display = 'none';
+
+  // After diagnostic — set level
+  if (currentIdx === 1) {
+    const correctDiag = answers.filter(a => a.correct).length;
+    if (correctDiag === 2) level = 'hard';
+    else if (correctDiag === 1) level = 'mid';
+    else level = 'easy';
+    questions = [...questions, ...pickAdaptivePool()];
+  }
+
+  // Real-time trap detection — fire coach if 2 errors on same trap
+  if (!correct && q.trap_id && trapErrors[q.trap_id] === 2 && !coachShown[q.trap_id]) {
+    coachShown[q.trap_id] = true;
+    setTimeout(() => showCoach(TRAPS[q.trap_id], false), 800);
+  }
+
+  $('q-next').className = 'q-next show';
+  if (currentIdx >= 9) $('q-next').textContent = 'ראי תוצאות ←';
+}
+
+function showCoach(trap, isExplain) {
+  $('coach-title').textContent = isExplain ? trap.name : 'רגע — בוא נחזור על זה';
+  $('coach-body').textContent = trap.coach_message;
+  $('coach-rule').textContent = 'הכלל: ' + trap.rule;
+  $('coach-example').textContent = 'דוגמה: ' + trap.example;
+  $('coach-overlay').classList.add('show');
+}
+
+$('coach-continue').onclick = () => $('coach-overlay').classList.remove('show');
+$('coach-overlay').addEventListener('click', e => {
+  if (e.target === $('coach-overlay')) $('coach-overlay').classList.remove('show');
+});
+
+function nextQuestion() {
+  currentIdx++;
+  if (currentIdx >= 10) showResults();
+  else showQuestion();
+}
+
+function showResults() {
+  $('quiz-screen').style.display = 'none';
+  $('result-screen').style.display = 'block';
+
+  const correctCount = answers.filter(a => a.correct).length;
+  const score = Math.round(correctCount / 10 * 100);
+
+  $('result-score').textContent = score;
+  $('stat-correct').textContent = correctCount;
+  $('stat-wrong').textContent = 10 - correctCount;
+  const levelLabels = {easy:'בסיסי', mid:'בינוני', hard:'מתקדם'};
+  $('stat-level').textContent = levelLabels[level];
+
+  // Trap summary
+  const trapsInvolved = Object.keys(trapAnswered).map(id => parseInt(id));
+  if (trapsInvolved.length > 0) {
+    $('trap-summary').style.display = 'block';
+    const rows = trapsInvolved.map(tid => {
+      const trap = TRAPS[tid];
+      const errors = trapErrors[tid] || 0;
+      const answered = trapAnswered[tid];
+      const ok = errors === 0;
+      const iconColor = ok ? 'ok' : 'bad';
+      const icon = ok ? '✓' : '⚠';
+      const status = ok
+        ? '<span style="color:var(--green); font-weight:700">שולטת — '+answered+'/'+answered+'</span>'
+        : '<span style="color:var(--orange); font-weight:700">'+(answered-errors)+'/'+answered+' — שווה חזרה</span>';
+      return '<div class="trap-row">'+
+        '<div class="trap-row-icon '+iconColor+'">'+icon+'</div>'+
+        '<div style="flex:1">'+
+          '<div class="trap-row-name">'+trap.name+'</div>'+
+          '<div class="trap-row-desc">'+trap.short+' · '+status+'</div>'+
+        '</div></div>';
+    }).join('');
+    $('trap-rows').innerHTML = rows;
+  }
+
+  let category, icon, encouragement, recommendations;
+  if (score >= 80) {
+    category = 'high'; icon = '🏆';
+    encouragement = 'מעולה! את שולטת בנושא ברמה גבוהה. ממש מוכנה לבגרות בנושא הזה.';
+    recommendations = [
+      'תוכלי לעבור לנושא הבא — נחי ל"ה',
+      'לתרגול נוסף — שאלות בגרות עבר על חסרי פ"נ',
+      'נסי להסביר את הנושא לחברה — זה מקבע את הידע'
+    ];
+  } else if (score >= 60) {
+    category = 'mid'; icon = '👍';
+    encouragement = 'הבנה טובה. יש כמה נקודות לחזק כדי להגיע לרמה מצוינת.';
+    const weakTraps = Object.keys(trapErrors).filter(t => trapErrors[t] >= 2).map(t => TRAPS[t].name);
+    recommendations = weakTraps.length > 0
+      ? ['חזרה ממוקדת על: ' + weakTraps.join(', '), 'חזרה על המצגת — שקפים 4-7', 'תרגול חוזר בעוד יום-יומיים']
+      : ['חזרה על המצגת — שקפים 4-7', 'תרגול נוסף ברמה הנוכחית', 'בקשי מהמורה הסבר אישי'];
+  } else {
+    category = 'low'; icon = '🌱';
+    encouragement = 'זה הבסיס. עוד שיעור או שניים והנושא יהיה ברור. אל תוותרי.';
+    recommendations = [
+      'חזרה על המצגת מההתחלה',
+      'הדפסת דף עבודה ברמה בסיסית — לקצב אישי',
+      'בקשי הסבר חוזר מהמורה'
+    ];
+  }
+
+  $('result-icon').textContent = icon;
+  $('encouragement').className = 'encouragement ' + category;
+  $('encouragement').textContent = encouragement;
+  $('recommendations-list').innerHTML = recommendations.map(r => '<li>'+r+'</li>').join('');
+
+  // Send to Sheets
+  const studentName = $('student-name').value.trim();
+  const studentClass = $('student-class').value;
+  const status = $('sendStatus');
+  status.textContent = 'שולח ציון למורה...';
+  const trapsBreakdown = Object.keys(trapErrors).map(tid =>
+    'T'+tid+'='+trapErrors[tid]+'/'+trapAnswered[tid]
+  ).join('; ');
+  const params = new URLSearchParams({
+    action: 'submit',
+    quizName: 'חסרי פ"נ — תרגול חי',
+    studentName: studentName,
+    classroom: studentClass,
+    score: String(score),
+    totalQuestions: '10',
+    correctAnswers: String(correctCount),
+    level: levelLabels[level],
+    teacherEmail: TEACHER_EMAIL,
+    trapsBreakdown: trapsBreakdown || 'none',
+    hintsUsed: String(hintUsed),
+  });
+  const s = document.createElement('script');
+  s.src = SHEETS_URL + '?' + params.toString();
+  let done = false;
+  const finish = ok => {
+    if (done) return;
+    done = true;
+    status.textContent = ok ? '✓ הציון נשלח למורה' : '⚠ הציון לא נשלח (אפשר להציג למורה ידנית)';
+    status.className = ok ? 'ok' : 'err';
+    s.remove();
+  };
+  s.onload = () => finish(true);
+  s.onerror = () => finish(false);
+  setTimeout(() => finish(true), 3000);
+  document.body.appendChild(s);
+}
+</script>
+
+</body>
+</html>
