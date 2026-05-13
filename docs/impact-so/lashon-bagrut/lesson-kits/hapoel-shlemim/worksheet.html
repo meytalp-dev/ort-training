@@ -405,6 +405,116 @@
       76%, 100% { content: ''; }
     }
 
+    /* TTS — speakable words */
+    .item-context b, .item-word-solo {
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s;
+    }
+    .item-context b:hover, .item-word-solo:hover { transform: scale(1.05); }
+    .item-context b::after {
+      content: '';
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 0.25rem;
+      vertical-align: middle;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='11 5 6 9 2 9 2 15 6 15 11 19 11 5'/><path d='M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07'/></svg>");
+      background-size: contain;
+      background-repeat: no-repeat;
+      opacity: 0.5;
+    }
+    .item-context b:hover::after { opacity: 1; }
+    .item-word-solo {
+      position: relative;
+    }
+    .item-word-solo::after {
+      content: '';
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 22px;
+      height: 22px;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a78bfa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='11 5 6 9 2 9 2 15 6 15 11 19 11 5'/><path d='M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07'/></svg>");
+      background-size: contain;
+      background-repeat: no-repeat;
+      opacity: 0.6;
+    }
+    .item-word-solo:hover::after { opacity: 1; }
+    .item-word-solo.is-speaking, .item-context b.is-speaking {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    /* "Another like this" button */
+    .btn-another {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.5rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      color: var(--ink-soft);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-weight: 500;
+      font-size: 0.88rem;
+    }
+    .btn-another:hover { border-color: var(--cyan); color: #0891b2; }
+    .item.is-extra {
+      border-right: 4px solid var(--cyan);
+      background: linear-gradient(to left, rgba(34, 211, 238, 0.04), transparent 30%);
+    }
+    .extra-label {
+      display: inline-block;
+      margin-right: 0.5rem;
+      padding: 0.15rem 0.55rem;
+      background: var(--cyan-soft);
+      color: #0891b2;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    /* Review mode banner */
+    .review-banner {
+      background: linear-gradient(135deg, var(--amber-soft), var(--rose-soft));
+      border: 1px solid var(--amber);
+      border-radius: var(--radius-lg);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+    .review-banner-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: #92400e;
+    }
+    .review-banner-sub {
+      font-size: 0.88rem;
+      color: #92400e;
+      margin-top: 0.2rem;
+    }
+    .btn-review {
+      padding: 0.55rem 1.1rem;
+      background: var(--amber);
+      color: #78350f;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-review:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-review.is-active { background: #d97706; color: white; }
+
     /* Submit bar */
     .submit-bar {
       margin: 2rem 0 1rem;
@@ -510,6 +620,32 @@
     let currentLevel = 0;
     let sessionId = null;
     let attemptResults = {}; // { item_id: { field: { user_answer, expected, correct, attempts } } }
+    let reviewMode = false;
+    let extraCounter = 0; // for "another like this" — count per item, to disambiguate IDs
+
+    /* ── TTS ── */
+    function speak(text, sourceEl) {
+      if (!('speechSynthesis' in window)) return;
+      speechSynthesis.cancel();
+      const cleaned = (text || '').replace(/<[^>]*>/g, '').trim();
+      if (!cleaned) return;
+      const u = new SpeechSynthesisUtterance(cleaned);
+      u.lang = 'he-IL';
+      u.rate = 0.85;
+      u.pitch = 1.0;
+      if (sourceEl) {
+        sourceEl.classList.add('is-speaking');
+        u.onend = () => sourceEl.classList.remove('is-speaking');
+        u.onerror = () => sourceEl.classList.remove('is-speaking');
+      }
+      speechSynthesis.speak(u);
+    }
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t.matches('.item-context b') || t.matches('.item-word-solo') || t.matches('.paradigm-given-form')) {
+        speak(t.textContent, t);
+      }
+    });
 
     function getStudent() {
       return {
@@ -666,9 +802,57 @@
         actions.appendChild(el('button', { class: 'btn-hint', onclick: () => toggleHint(card, item) }, 'רמז'));
       }
       actions.appendChild(el('button', { class: 'btn-reveal', onclick: () => revealAnswer(card, item) }, 'הצגת הסבר'));
+      // "Another like this" button — only when not in review mode and there's another of same type
+      if (!item._isExtra && findSimilarItems(item).length > 0) {
+        actions.appendChild(el('button', {
+          class: 'btn-another',
+          onclick: () => loadAnotherLike(item, card)
+        }, '+ עוד פריט מאותו סוג'));
+      }
       card.appendChild(actions);
 
       return card;
+    }
+
+    /* ── "Another like this" ── */
+    function findSimilarItems(item) {
+      // Find all items in the bank with the same type, across all levels (excluding the item itself)
+      const baseId = (item.id || '').replace(/-extra-\d+$/, '');
+      const out = [];
+      bank.levels.forEach(lvl => {
+        lvl.items.forEach(it => {
+          if (it.type === item.type && it.id !== baseId) out.push({ item: it, level: lvl });
+        });
+      });
+      return out;
+    }
+    function loadAnotherLike(item, card) {
+      const similar = findSimilarItems(item);
+      if (similar.length === 0) return;
+      // Pick one not already shown adjacent to this card (cycle through)
+      const seenIds = Array.from(card.parentElement.querySelectorAll('.item.is-extra'))
+        .map(c => c.dataset.id ? c.dataset.id.replace(/-extra-\d+$/, '') : '');
+      const baseId = (item.id || '').replace(/-extra-\d+$/, '');
+      const candidates = similar.filter(s => !seenIds.includes(s.item.id) && s.item.id !== baseId);
+      const pool = candidates.length > 0 ? candidates : similar;
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
+
+      extraCounter++;
+      const clone = JSON.parse(JSON.stringify(chosen.item));
+      clone.id = chosen.item.id + '-extra-' + extraCounter;
+      clone._isExtra = true;
+      // Renumber: count among same-level items
+      const newCard = renderItem(clone, 0);
+      newCard.classList.add('is-extra');
+      newCard.dataset.id = clone.id;
+      // Replace item-num with extra label
+      const numEl = newCard.querySelector('.item-num');
+      if (numEl) {
+        numEl.innerHTML = '';
+        numEl.appendChild(el('span', { class: 'extra-label' }, 'דוגמה נוספת'));
+      }
+      card.parentElement.insertBefore(newCard, card.nextSibling);
+      newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     /* ── Check logic ── */
@@ -772,6 +956,7 @@
       const correct = document.querySelectorAll('.item.is-correct').length;
       document.getElementById('progress-correct').textContent = correct;
       document.getElementById('progress-total').textContent = total;
+      if (typeof updateReviewButton === 'function') updateReviewButton();
     }
 
     function resetCurrentLevel() {
@@ -910,9 +1095,29 @@
       document.getElementById('level-desc').textContent = level.description;
       const container = document.getElementById('items');
       container.innerHTML = '';
+
+      // Review mode banner (appears at top when active)
+      if (reviewMode) {
+        const wrongIds = getWrongItemIds(level);
+        const banner = el('div', { class: 'review-banner' });
+        const info = el('div', {});
+        info.appendChild(el('div', { class: 'review-banner-title' }, 'מצב חזרה אישית'));
+        info.appendChild(el('div', { class: 'review-banner-sub' }, `מוצגים רק ${wrongIds.length} הפריטים שטעית בהם. כשתשלימי — חזרי למצב רגיל.`));
+        banner.appendChild(info);
+        banner.appendChild(el('button', { class: 'btn-review is-active', onclick: () => exitReviewMode() }, 'סיום חזרה'));
+        container.appendChild(banner);
+      }
+
       const section = el('div', { class: 'level-section' });
-      level.items.forEach((item, i) => section.appendChild(renderItem(item, i)));
+      const itemsToShow = reviewMode
+        ? level.items.filter(it => getWrongItemIds(level).includes(it.id))
+        : level.items;
+      itemsToShow.forEach((item, i) => section.appendChild(renderItem(item, i)));
       container.appendChild(section);
+
+      if (itemsToShow.length === 0 && reviewMode) {
+        section.appendChild(el('div', { class: 'empty-state', style: 'padding: 2rem; text-align: center; color: var(--ink-muted);' }, 'יפה — אין פריטים שטעית בהם.'));
+      }
 
       // Submit bar at bottom of level
       const bar = el('div', { class: 'submit-bar', id: 'submit-bar' });
@@ -926,7 +1131,57 @@
 
       updateProgress();
       updateSubmitBar();
+      updateReviewButton();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    /* ── Review mode (personal review of wrong items) ── */
+    function getWrongItemIds(level) {
+      const out = [];
+      level.items.forEach(it => {
+        const res = attemptResults[it.id];
+        if (!res) return;
+        const anyWrong = Object.values(res).some(f => f.correct === false);
+        if (anyWrong) out.push(it.id);
+      });
+      return out;
+    }
+    function enterReviewMode() {
+      reviewMode = true;
+      // Clear inputs in wrong items so student can retry
+      const level = bank.levels[currentLevel];
+      const wrongIds = getWrongItemIds(level);
+      wrongIds.forEach(id => {
+        Object.keys(attemptResults[id] || {}).forEach(f => {
+          if (attemptResults[id][f].correct === false) {
+            // mark for retry (clear answer, keep attempts count)
+            attemptResults[id][f].user_answer = '';
+            attemptResults[id][f].correct = null;
+          }
+        });
+      });
+      renderLevel(level);
+    }
+    function exitReviewMode() {
+      reviewMode = false;
+      renderLevel(bank.levels[currentLevel]);
+    }
+    function updateReviewButton() {
+      const bar = document.getElementById('progress-bar');
+      let existing = bar.querySelector('.btn-review');
+      const level = bank.levels[currentLevel];
+      const wrongCount = getWrongItemIds(level).length;
+      if (wrongCount === 0 || reviewMode) {
+        if (existing) existing.remove();
+        return;
+      }
+      if (!existing) {
+        existing = el('button', { class: 'btn-review', onclick: () => enterReviewMode() });
+        // Insert before the reset button
+        const resetBtn = bar.querySelector('.btn-hint');
+        bar.insertBefore(existing, resetBtn);
+      }
+      existing.textContent = `תרגול חזרה (${wrongCount})`;
     }
 
     function buildDatalists() {
