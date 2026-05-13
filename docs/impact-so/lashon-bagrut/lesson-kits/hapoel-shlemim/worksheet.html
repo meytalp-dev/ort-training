@@ -342,6 +342,103 @@
         border-bottom: 1px solid #ccc;
       }
     }
+
+    /* Student bar */
+    .student-bar {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      font-size: 0.92rem;
+    }
+    .student-bar input {
+      padding: 0.4rem 0.7rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+    }
+    .student-bar input:focus { outline: none; border-color: var(--lavender); }
+    .student-bar label { color: var(--ink-soft); font-weight: 500; }
+
+    /* "Why wrong" button + popup */
+    .why-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin-right: 0.5rem;
+      padding: 0.3rem 0.7rem;
+      background: var(--rose-soft);
+      color: #991b1b;
+      border: 1px solid var(--rose);
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-body);
+    }
+    .why-btn:hover { background: var(--rose); color: white; }
+    .why-explanation {
+      margin-top: 0.65rem;
+      padding: 0.85rem 1rem;
+      background: linear-gradient(135deg, var(--rose-soft), #fff5f5);
+      border: 1px solid var(--rose);
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: #991b1b;
+    }
+    .why-explanation strong { font-family: var(--font-display); display: block; margin-bottom: 0.25rem; }
+    .why-explanation .loading-dots::after {
+      content: '.';
+      animation: dots 1.2s steps(4) infinite;
+    }
+    @keyframes dots {
+      0%, 25% { content: '.'; }
+      26%, 50% { content: '..'; }
+      51%, 75% { content: '...'; }
+      76%, 100% { content: ''; }
+    }
+
+    /* Submit bar */
+    .submit-bar {
+      margin: 2rem 0 1rem;
+      padding: 1.25rem 1.5rem;
+      background: linear-gradient(135deg, var(--lavender-soft), var(--cyan-soft));
+      border: 1px solid var(--lavender);
+      border-radius: var(--radius-lg);
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+    .submit-bar-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .submit-bar-sub { font-size: 0.88rem; color: var(--ink-soft); margin-top: 0.2rem; }
+    .btn-submit {
+      padding: 0.7rem 1.6rem;
+      background: var(--lavender);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--font-body);
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-submit.is-success { background: var(--mint); }
   </style>
 </head>
 <body>
@@ -375,6 +472,15 @@
       </div>
     </header>
 
+    <!-- Student identification bar -->
+    <div class="student-bar">
+      <label for="student-name">שמי:</label>
+      <input type="text" id="student-name" placeholder="הקלידו שם" autocomplete="off" />
+      <label for="student-id">או מספר:</label>
+      <input type="text" id="student-id" placeholder="לדוגמה: #14" autocomplete="off" style="max-width: 110px;" />
+      <span style="color: var(--ink-muted); font-size: 0.85rem; margin-right: auto;">תשובות נשמרות במכשיר. השליחה למורה רק בלחיצה על "שליחה".</span>
+    </div>
+
     <!-- Level tabs -->
     <div class="level-tabs" id="level-tabs"></div>
     <div class="level-desc" id="level-desc"></div>
@@ -394,8 +500,24 @@
   </div>
 
   <script>
+    /* ── Configuration ──
+       After deploying apps-script.gs as a Web App, paste the URL here.
+       If left empty, the worksheet still works locally but cannot submit grades or call "why wrong?". */
+    const API_ENDPOINT = '';
+    const WORKSHEET_ID = 'shlemim';
+
     let bank = null;
     let currentLevel = 0;
+    let sessionId = null;
+    let attemptResults = {}; // { item_id: { field: { user_answer, expected, correct, attempts } } }
+
+    function getStudent() {
+      return {
+        name: (document.getElementById('student-name') || {}).value || '',
+        id: (document.getElementById('student-id') || {}).value || 'anon-' + (sessionId || '').slice(0, 6)
+      };
+    }
+    function uuid() { return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c/4).toString(16)); }
 
     /* ── Normalization for answer matching ── */
     function stripNiqqud(s) {
@@ -550,34 +672,69 @@
     }
 
     /* ── Check logic ── */
+    function recordResult(itemId, field, userAnswer, expected, correct) {
+      attemptResults[itemId] = attemptResults[itemId] || {};
+      const prev = attemptResults[itemId][field] || { attempts: 0 };
+      attemptResults[itemId][field] = {
+        user_answer: userAnswer,
+        expected: expected,
+        correct: correct,
+        attempts: prev.attempts + 1,
+        timestamp: new Date().toISOString()
+      };
+      persistResults();
+      updateSubmitBar();
+    }
+
+    function persistResults() {
+      try { localStorage.setItem('shlemim-results-' + sessionId, JSON.stringify(attemptResults)); }
+      catch (e) { /* storage full or disabled */ }
+    }
+
     function checkItem(item, card) {
       let allCorrect = true;
       let anyChecked = false;
 
-      const setStatus = (inp, ok) => {
+      const setStatus = (inp, ok, fieldName, expectedVal) => {
         inp.classList.remove('is-correct', 'is-incorrect');
+        // Remove any previous "why" UI
+        const prevBtn = inp.parentElement.querySelector('.why-btn');
+        if (prevBtn) prevBtn.remove();
+        const prevExp = inp.parentElement.querySelector('.why-explanation');
+        if (prevExp) prevExp.remove();
         if (inp.value.trim() === '') return;
         anyChecked = true;
         inp.classList.add(ok ? 'is-correct' : 'is-incorrect');
+        // Record result for submission/teacher dashboard
+        recordResult(item.id, fieldName, inp.value, expectedVal, ok);
+        // Add "why wrong?" button on incorrect inputs (only if API configured)
+        if (!ok && API_ENDPOINT) {
+          const btn = el('button', {
+            class: 'why-btn',
+            type: 'button',
+            onclick: () => askWhyWrong(item, fieldName, inp.value, expectedVal, inp.parentElement)
+          }, 'למה טעיתי?');
+          inp.parentElement.appendChild(btn);
+        }
         if (!ok) allCorrect = false;
       };
 
       if (['root', 'binyan', 'root_and_binyan', 'full_analysis', 'trap'].includes(item.type)) {
         Object.entries(item.expected).forEach(([k, v]) => {
           const inp = card.querySelector(`#${item.id}-${k}`);
-          if (inp) setStatus(inp, matchAnswer(k, inp.value, v));
+          if (inp) setStatus(inp, matchAnswer(k, inp.value, v), k, v);
         });
       } else if (item.type === 'comparison') {
         item.words.forEach((w, i) => {
           Object.entries(w.expected).forEach(([k, v]) => {
             const inp = card.querySelector(`#${item.id}-${i}-${k}`);
-            if (inp) setStatus(inp, matchAnswer(k, inp.value, v));
+            if (inp) setStatus(inp, matchAnswer(k, inp.value, v), `word${i}-${k}`, v);
           });
         });
       } else if (item.type === 'paradigm') {
         item.blanks.forEach((b, i) => {
           const inp = card.querySelector(`#${item.id}-blank-${i}`);
-          if (inp) setStatus(inp, matchAnswer('paradigm', inp.value, b.expected));
+          if (inp) setStatus(inp, matchAnswer('paradigm', inp.value, b.expected), `blank-${i}-${b.binyan}`, b.expected);
         });
       }
 
@@ -623,8 +780,122 @@
         i.value = '';
         i.classList.remove('is-correct', 'is-incorrect');
       });
-      document.querySelectorAll('.hint-box, .explanation-box').forEach(b => b.remove());
+      document.querySelectorAll('.hint-box, .explanation-box, .why-explanation, .why-btn').forEach(b => b.remove());
+      attemptResults = {};
+      persistResults();
       updateProgress();
+      updateSubmitBar();
+    }
+
+    /* ── AI: "Why did I get this wrong?" ── */
+    async function askWhyWrong(item, fieldName, userAnswer, expected, container) {
+      // Remove existing explanation if any
+      const existing = container.querySelector('.why-explanation');
+      if (existing) { existing.remove(); return; }
+
+      const box = el('div', { class: 'why-explanation' });
+      box.appendChild(el('strong', {}, 'הסבר על הטעות'));
+      const body = el('span', { class: 'loading-dots' }, 'חושב');
+      box.appendChild(body);
+      container.appendChild(box);
+
+      if (!API_ENDPOINT) {
+        body.classList.remove('loading-dots');
+        body.textContent = 'נדרשת תצורת API_ENDPOINT.';
+        return;
+      }
+
+      try {
+        const r = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: 'explain',
+            item: {
+              instruction: item.instruction,
+              context: item.context,
+              word: item.word
+            },
+            field: fieldHebrewLabel(fieldName),
+            user_answer: userAnswer,
+            expected: expected
+          })
+        });
+        const data = await r.json();
+        body.classList.remove('loading-dots');
+        if (data.error) {
+          body.textContent = 'שגיאה: ' + data.error;
+        } else {
+          body.textContent = data.explanation || '(לא התקבל הסבר)';
+        }
+      } catch (err) {
+        body.classList.remove('loading-dots');
+        body.textContent = 'שגיאת רשת. נסו שוב.';
+      }
+    }
+    function fieldHebrewLabel(f) {
+      const map = { root: 'שורש', binyan: 'בניין', tense: 'זמן', person: 'גוף' };
+      return map[f] || f;
+    }
+
+    /* ── Submit results to teacher ── */
+    function updateSubmitBar() {
+      const bar = document.getElementById('submit-bar');
+      if (!bar) return;
+      const flat = flattenResults();
+      const stats = bar.querySelector('.submit-bar-sub');
+      const correct = flat.filter(r => r.correct).length;
+      const total = flat.length;
+      const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+      stats.textContent = `${total} פריטים נענו · ${correct} נכון · ${pct}%`;
+      const btn = bar.querySelector('#btn-submit');
+      btn.disabled = total === 0 || !API_ENDPOINT;
+      if (!API_ENDPOINT) bar.querySelector('.submit-bar-title').textContent = 'דשבורד מורה לא מחובר (API_ENDPOINT חסר)';
+    }
+    function flattenResults() {
+      const out = [];
+      Object.entries(attemptResults).forEach(([itemId, fields]) => {
+        Object.entries(fields).forEach(([fieldName, data]) => {
+          out.push({ item_id: itemId, field: fieldName, ...data });
+        });
+      });
+      return out;
+    }
+    async function submitToTeacher() {
+      const btn = document.getElementById('btn-submit');
+      const bar = document.getElementById('submit-bar');
+      const student = getStudent();
+      btn.disabled = true;
+      btn.textContent = 'שולח…';
+      try {
+        const r = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({
+            action: 'submit',
+            session_id: sessionId,
+            student_id: student.id,
+            student_name: student.name,
+            worksheet_id: WORKSHEET_ID,
+            level: bank.levels[currentLevel].id,
+            items: flattenResults()
+          })
+        });
+        const data = await r.json();
+        if (data.ok) {
+          btn.textContent = 'נשלח ✓';
+          btn.classList.add('is-success');
+          bar.querySelector('.submit-bar-sub').textContent = `נשלחו ${data.rows_written} תשובות למורה.`;
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'שליחה למורה';
+          alert('שגיאה: ' + (data.error || 'unknown'));
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'שליחה למורה';
+        alert('שגיאת רשת: ' + err.message);
+      }
     }
 
     /* ── Level switching ── */
@@ -642,7 +913,19 @@
       const section = el('div', { class: 'level-section' });
       level.items.forEach((item, i) => section.appendChild(renderItem(item, i)));
       container.appendChild(section);
+
+      // Submit bar at bottom of level
+      const bar = el('div', { class: 'submit-bar', id: 'submit-bar' });
+      const left = el('div', {});
+      left.appendChild(el('div', { class: 'submit-bar-title' }, 'סיימת? שלחי את התוצאות למורה'));
+      left.appendChild(el('div', { class: 'submit-bar-sub' }, '0 פריטים נענו'));
+      bar.appendChild(left);
+      const btn = el('button', { class: 'btn-submit', id: 'btn-submit', onclick: submitToTeacher }, 'שליחה למורה');
+      bar.appendChild(btn);
+      container.appendChild(bar);
+
       updateProgress();
+      updateSubmitBar();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -662,8 +945,18 @@
     /* ── Boot ── */
     async function boot() {
       try {
+        sessionId = uuid();
         bank = await fetch('../../curriculum/shlemim-worksheet-bank.json').then(r => r.json());
         document.getElementById('loading').style.display = 'none';
+
+        // Persist student name across sessions
+        try {
+          const savedName = localStorage.getItem('shlemim-student-name');
+          if (savedName) document.getElementById('student-name').value = savedName;
+        } catch (e) { /* localStorage disabled */ }
+        document.getElementById('student-name').addEventListener('change', e => {
+          try { localStorage.setItem('shlemim-student-name', e.target.value); } catch (_) {}
+        });
 
         // Build level tabs
         const tabsEl = document.getElementById('level-tabs');
