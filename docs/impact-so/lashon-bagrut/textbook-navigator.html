@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>אני בפרק... · Navigator הספר · לשון 011281</title>
+  <meta name="description" content="ניווט חכם בספר לשון 011281 — לכל פרק בספר, כל שאלות הבגרות והתרגולים שיש לנו עליו.">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    /* Hebrew font stack (declared here for completeness; full @import in assets/styles.css) */
+    body, input, button, select { font-family: 'Heebo', 'Assistant', 'Playpen Sans Hebrew', sans-serif; }
+
+    /* ── Layout ── */
+    .nav-shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    .nav-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .nav-header h1 {
+      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+      margin-bottom: 0.5rem;
+    }
+    .nav-header .subtitle { font-size: 1rem; }
+
+    .search-wrap {
+      max-width: 560px;
+      margin: 1.25rem auto 0;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      padding: 0.85rem 1.2rem 0.85rem 3rem;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      font-family: var(--font-text);
+      font-size: 1rem;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      direction: rtl;
+    }
+    .search-input:focus { outline: none; border-color: var(--lavender); box-shadow: var(--shadow-glow); }
+    .search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--ink-muted);
+      pointer-events: none;
+    }
+
+    /* ── Two-column grid ── */
+    .nav-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .nav-grid { grid-template-columns: 1fr; }
+      .sidebar { position: static !important; max-height: none !important; }
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 1.5rem;
+      max-height: calc(100vh - 3rem);
+      overflow-y: auto;
+    }
+    .part-group { margin-bottom: 1.25rem; }
+    .part-group:last-child { margin-bottom: 0; }
+    .part-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--lavender);
+      padding: 0.4rem 0.75rem;
+      background: var(--lavender-soft);
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.01em;
+    }
+    .part-title.part-2 { color: #0891b2; background: var(--cyan-soft); }
+    .part-title.part-3 { color: #059669; background: var(--mint-soft); }
+    .part-title.part-4 { color: #d97706; background: var(--amber-soft); }
+    .chapter-list { list-style: none; padding: 0; margin: 0; }
+    .chapter-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s;
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+      margin-bottom: 0.15rem;
+      border: 1px solid transparent;
+    }
+    .chapter-item:hover { background: var(--surface-2); color: var(--ink); }
+    .chapter-item.is-sub { padding-right: 1.5rem; font-size: 0.85rem; color: var(--ink-muted); }
+    .chapter-item.is-active {
+      background: var(--lavender-soft);
+      color: var(--lavender);
+      border-color: var(--lavender);
+      font-weight: 600;
+    }
+    .chapter-page {
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+      flex-shrink: 0;
+      margin-right: auto;
+    }
+    .chapter-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-ok { background: var(--mint); }
+    .status-thin { background: var(--amber); }
+    .status-gap { background: var(--rose); }
+
+    /* ── Main panel ── */
+    .main-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      min-height: 60vh;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--ink-muted);
+    }
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.5;
+    }
+
+    .chapter-hero {
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    .chapter-hero h2 {
+      font-size: 1.85rem;
+      margin-bottom: 0.5rem;
+    }
+    .chapter-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.75rem;
+    }
+
+    .counts-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin: 1.25rem 0;
+    }
+    .count-card {
+      padding: 1rem 1.25rem;
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .count-num {
+      font-family: var(--font-display);
+      font-size: 1.85rem;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--ink);
+    }
+    .count-label {
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+      margin-top: 0.25rem;
+    }
+    .count-card.lavender { background: var(--lavender-soft); border-color: var(--lavender-soft); }
+    .count-card.lavender .count-num { color: var(--lavender); }
+    .count-card.cyan { background: var(--cyan-soft); border-color: var(--cyan-soft); }
+    .count-card.cyan .count-num { color: #0891b2; }
+    .count-card.rose { background: var(--rose-soft); border-color: var(--rose-soft); }
+    .count-card.rose .count-num { color: #dc2626; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin: 1.5rem 0 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      padding: 0.7rem 1.1rem;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--ink-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .tab:hover { color: var(--ink); }
+    .tab.is-active {
+      color: var(--lavender);
+      border-bottom-color: var(--lavender);
+    }
+    .tab-count {
+      display: inline-block;
+      margin-inline-start: 0.4rem;
+      padding: 0.05rem 0.5rem;
+      background: var(--surface-2);
+      border-radius: 999px;
+      font-size: 0.78rem;
+    }
+
+    /* ── Filters ── */
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.85rem 1rem;
+      background: var(--surface-2);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .filter-row label {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--ink-soft);
+      cursor: pointer;
+    }
+    .filter-row select {
+      padding: 0.35rem 0.7rem;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+    }
+
+    /* ── Question card ── */
+    .q-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .q-card:hover { border-color: var(--lavender); box-shadow: var(--shadow); }
+    .q-card.is-pre-reform { border-right: 3px solid var(--amber); }
+    .q-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .q-id {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--ink);
+    }
+    .q-preview {
+      color: var(--ink-soft);
+      font-size: 0.93rem;
+      line-height: 1.65;
+      margin: 0.4rem 0;
+    }
+    .q-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+    }
+    .q-full {
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px dashed var(--border);
+      white-space: pre-wrap;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      color: var(--ink);
+    }
+    .q-answer {
+      margin-top: 0.85rem;
+      padding: 0.85rem 1rem;
+      background: var(--mint-soft);
+      border-radius: var(--radius-sm);
+      border-right: 3px solid var(--mint);
+      font-size: 0.92rem;
+      line-height: 1.7;
+      color: #065f46;
+      white-space: pre-wrap;
+    }
+    .q-answer-label {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: #047857;
+      margin-bottom: 0.3rem;
+      display: block;
+    }
+
+    /* ── Lashonimi card ── */
+    .lash-card {
+      background: linear-gradient(135deg, #faf5ff 0%, #f0fdfa 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .lash-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .lash-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--ink);
+      margin-bottom: 0.4rem;
+    }
+    .lash-desc {
+      font-size: 0.88rem;
+      color: var(--ink-soft);
+      line-height: 1.55;
+      margin-bottom: 0.6rem;
+    }
+    .lash-foot {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .lash-link {
+      margin-inline-start: auto;
+      color: var(--lavender);
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-decoration: none;
+    }
+    .lash-link:hover { text-decoration: underline; }
+
+    /* ── Empty pane ── */
+    .gap-notice {
+      padding: 2rem;
+      text-align: center;
+      background: var(--rose-soft);
+      border: 1px dashed var(--rose);
+      border-radius: var(--radius);
+      color: #991b1b;
+    }
+    .gap-notice h4 { color: #991b1b; margin-bottom: 0.4rem; font-family: var(--font-display); }
+
+    /* ── Loading ── */
+    .loading {
+      display: flex;
+      justify-content: center;
+      padding: 3rem;
+      color: var(--ink-muted);
+    }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--lavender);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Badge/pill overrides ── */
+    .pill-sm { padding: 0.15rem 0.55rem; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <!-- Top nav -->
+  <nav class="topnav">
+    <a href="./" class="topnav-brand" style="text-decoration: none; color: inherit;">
+      <span class="topnav-brand-mark" style="background: var(--lavender);">לש</span>
+      <div>
+        <div class="topnav-brand-text">לשון 011281</div>
+        <div class="topnav-brand-sub">Navigator הספר</div>
+      </div>
+    </a>
+    <div class="topnav-links">
+      <a href="./" class="topnav-link">חזרה</a>
+      <a href="./curriculum/bagrut-questions-table.html" class="topnav-link">בנק שאלות</a>
+      <a href="./curriculum/lashonimi-questions-viewer.html" class="topnav-link">לשונימי</a>
+    </div>
+  </nav>
+
+  <div class="nav-shell">
+
+    <!-- Header -->
+    <header class="nav-header">
+      <h1>אני בפרק…</h1>
+      <p class="subtitle">בחר/י את הפרק שבו את/ה לומד/ת בספר — וקבל/י <b>מיד</b> את כל שאלות הבגרות והתרגולים שאספנו עליו.</p>
+      <div class="search-wrap">
+        <input type="search" class="search-input" id="search" placeholder="חפש פרק, נושא או מספר עמוד…" />
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </div>
+    </header>
+
+    <!-- Loading state -->
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Main grid (hidden until loaded) -->
+    <div class="nav-grid" id="grid" style="display: none;">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar"></aside>
+
+      <!-- Main panel -->
+      <main class="main-panel" id="main">
+        <div class="empty-state">
+          <div class="empty-state-icon" style="display: inline-flex; opacity: 0.4;">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </div>
+          <h3 style="font-family: var(--font-display); color: var(--ink-soft); margin-bottom: 0.4rem;">בחר/י פרק מהתפריט</h3>
+          <p>הספר מחולק ל-3 חלקים: הבנה והבעה · צורות · תקינות. סך הכל 24 פרקים.</p>
+        </div>
+      </main>
+    </div>
+
+  </div>
+
+  <script>
+    /* ── State ── */
+    const state = {
+      toc: null,
+      index: null,
+      bagrutBank: null,        // lazy
+      bagrutById: null,        // lazy index
+      currentChapterId: null,
+      activeTab: 'bagrut',
+      filters: {
+        hidePreReform: false,
+        year: 'all',
+      },
+    };
+
+    /* ── Helpers ── */
+    function $(sel) { return document.querySelector(sel); }
+    function $$(sel) { return Array.from(document.querySelectorAll(sel)); }
+    function el(tag, attrs = {}, ...children) {
+      const n = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (k === 'class') n.className = v;
+        else if (k === 'onclick') n.onclick = v;
+        else if (k === 'html') n.innerHTML = v;
+        else n.setAttribute(k, v);
+      }
+      for (const c of children) {
+        if (c == null) continue;
+        n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      }
+      return n;
+    }
+
+    /* ── Inline SVG icons ── */
+    const ICONS = {
+      book: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+      warn: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>',
+      external: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+      circle: '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10"/></svg>',
+    };
+    function withIcon(iconName, text) {
+      const wrap = el('span', { style: 'display: inline-flex; align-items: center; gap: 0.35rem;' });
+      const ic = document.createElement('span');
+      ic.style.display = 'inline-flex';
+      ic.innerHTML = ICONS[iconName] || '';
+      wrap.appendChild(ic);
+      wrap.appendChild(document.createTextNode(text));
+      return wrap;
+    }
+
+    /* ── Data loading ── */
+    async function loadData() {
+      const [toc, index] = await Promise.all([
+        fetch('curriculum/textbook-toc.json').then(r => r.json()),
+        fetch('curriculum/textbook-questions-index.json').then(r => r.json()),
+      ]);
+      state.toc = toc;
+      state.index = index;
+    }
+
+    async function ensureBagrutBank() {
+      if (state.bagrutBank) return;
+      const bank = await fetch('curriculum/bagrut-questions.json').then(r => r.json());
+      state.bagrutBank = bank;
+      state.bagrutById = {};
+      for (const q of bank.questions) state.bagrutById[q.id] = q;
+    }
+
+    /* ── Sidebar rendering ── */
+    function chapterStatus(ch) {
+      const total = (ch.bagrut_count || 0) + (ch.lashonimi_count || 0);
+      if (total === 0) return 'gap';
+      if (total < 20) return 'thin';
+      return 'ok';
+    }
+
+    function renderSidebar() {
+      const sidebar = $('#sidebar');
+      sidebar.innerHTML = '';
+
+      state.toc.parts.forEach((part, partIdx) => {
+        const grp = el('div', { class: 'part-group' });
+        grp.appendChild(el('div', { class: `part-title part-${partIdx + 1}` }, part.title));
+
+        const list = el('ul', { class: 'chapter-list' });
+        part.chapters.forEach(chap => {
+          // Top-level chapter
+          if (chap.topic_id || (chap.subchapters && chap.subchapters.length)) {
+            list.appendChild(makeSidebarItem(chap, false));
+            // Subchapters
+            if (chap.subchapters) {
+              chap.subchapters.forEach(sub => {
+                if (sub.topic_id || sub.kind === 'summary') {
+                  list.appendChild(makeSidebarItem(sub, true));
+                }
+              });
+            }
+          }
+        });
+        grp.appendChild(list);
+        sidebar.appendChild(grp);
+      });
+    }
+
+    function makeSidebarItem(ch, isSub) {
+      const indexed = state.index.chapters[ch.id];
+      const status = indexed ? chapterStatus(indexed) : 'gap';
+      const li = el('li', {
+        class: `chapter-item ${isSub ? 'is-sub' : ''} ${state.currentChapterId === ch.id ? 'is-active' : ''}`,
+        onclick: () => selectChapter(ch.id),
+        'data-id': ch.id,
+        'data-title': ch.title,
+        'data-page': ch.page,
+      });
+      li.appendChild(el('span', { class: `chapter-status status-${status}` }));
+      li.appendChild(el('span', {}, ch.title));
+      if (ch.page) li.appendChild(el('span', { class: 'chapter-page' }, 'עמ׳ ' + ch.page));
+      return li;
+    }
+
+    /* ── Main panel rendering ── */
+    function selectChapter(id) {
+      state.currentChapterId = id;
+      state.activeTab = 'bagrut';
+      state.filters = { hidePreReform: false, year: 'all' };
+      history.replaceState(null, '', '#chapter=' + id);
+      renderSidebar();
+      renderMain();
+    }
+
+    function findChapterInToc(id) {
+      for (const part of state.toc.parts) {
+        for (const chap of part.chapters) {
+          if (chap.id === id) return { chap, part };
+          if (chap.subchapters) {
+            for (const sub of chap.subchapters) {
+              if (sub.id === id) return { chap: sub, part, parent: chap };
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    function renderMain() {
+      const main = $('#main');
+      const id = state.currentChapterId;
+      const found = findChapterInToc(id);
+      const indexed = state.index.chapters[id];
+
+      if (!found) {
+        main.innerHTML = '<div class="empty-state">פרק לא נמצא</div>';
+        return;
+      }
+
+      const ch = found.chap;
+      const bagrutCount = indexed ? indexed.bagrut_count : 0;
+      const lashCount = indexed ? indexed.lashonimi_count : 0;
+      const lashQuizCount = indexed ? indexed.lashonimi_quizzes.length : 0;
+      const totalQs = bagrutCount + lashCount;
+
+      main.innerHTML = '';
+
+      // Hero
+      const hero = el('div', { class: 'chapter-hero' });
+      const breadcrumb = el('div', { style: 'font-size: 0.85rem; color: var(--ink-muted); margin-bottom: 0.4rem;' },
+        found.part.title + (found.parent ? ' › ' + found.parent.title : '')
+      );
+      hero.appendChild(breadcrumb);
+      hero.appendChild(el('h2', {}, ch.title));
+      const meta = el('div', { class: 'chapter-meta' });
+      const pagePill = el('span', { class: 'pill pill-lavender' });
+      pagePill.appendChild(withIcon('book', 'עמ׳ ' + (ch.page || '—')));
+      meta.appendChild(pagePill);
+      if (indexed && indexed.topic_id) {
+        meta.appendChild(el('span', { class: 'pill pill-slate pill-sm' }, indexed.topic_id));
+      }
+      if (indexed && indexed.topic_status === 'new') {
+        const warnPill = el('span', { class: 'pill pill-rose pill-sm' });
+        warnPill.appendChild(withIcon('warn', 'topic חדש — עוד אין בנק'));
+        meta.appendChild(warnPill);
+      }
+      if (ch.gizra_id) {
+        meta.appendChild(el('span', { class: 'pill pill-cyan pill-sm' }, 'גזרה: ' + ch.gizra_id));
+      }
+      if (ch.binyan) {
+        meta.appendChild(el('span', { class: 'pill pill-pink pill-sm' }, 'בניין: ' + ch.binyan));
+      }
+      if (ch.kind === 'summary') {
+        meta.appendChild(el('span', { class: 'pill pill-amber pill-sm' }, 'תרגול מסכם'));
+      }
+      hero.appendChild(meta);
+      main.appendChild(hero);
+
+      // Counts
+      const counts = el('div', { class: 'counts-row' });
+      counts.appendChild(countCard(bagrutCount, 'שאלות בגרות זמינות', 'lavender'));
+      counts.appendChild(countCard(lashCount, 'שאלות תרגול lashonimi', 'cyan'));
+      counts.appendChild(countCard(lashQuizCount, 'תרגולים אינטראקטיביים', 'cyan'));
+      if (totalQs === 0) {
+        counts.appendChild(countCard('—', 'פער: אין תוכן עדיין', 'rose'));
+      }
+      main.appendChild(counts);
+
+      // Gap notice if empty
+      if (totalQs === 0) {
+        const notice = el('div', { class: 'gap-notice' });
+        notice.appendChild(el('h4', { html: '<span style="display:inline-flex; align-items:center; gap:0.4rem;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>פער זוהה</span>' }));
+        notice.appendChild(el('p', {}, 'לפרק זה אין עדיין שאלות במאגרים שלנו. זה אחד מ-4 הפערים שזוהו בדוח Gap.'));
+        notice.appendChild(el('p', { style: 'margin-top: 0.5rem; font-size: 0.88rem;' },
+          'הצעה: לבנות בנק שאלות ייעודי לנושא זה — מועמד מצוין למודול AI חדש.'));
+        main.appendChild(notice);
+        return;
+      }
+
+      // Tabs
+      const tabs = el('div', { class: 'tabs' });
+      tabs.appendChild(makeTab('bagrut', 'שאלות בגרות', bagrutCount));
+      tabs.appendChild(makeTab('lashonimi', 'תרגולי lashonimi', lashQuizCount));
+      main.appendChild(tabs);
+
+      // Content area
+      const content = el('div', { id: 'tab-content' });
+      main.appendChild(content);
+      renderTabContent();
+    }
+
+    function countCard(num, label, variant) {
+      const card = el('div', { class: 'count-card ' + (variant || '') });
+      card.appendChild(el('div', { class: 'count-num' }, String(num)));
+      card.appendChild(el('div', { class: 'count-label' }, label));
+      return card;
+    }
+
+    function makeTab(id, label, count) {
+      const tab = el('div', {
+        class: 'tab ' + (state.activeTab === id ? 'is-active' : ''),
+        onclick: () => { state.activeTab = id; renderMain(); },
+      });
+      tab.appendChild(el('span', {}, label));
+      tab.appendChild(el('span', { class: 'tab-count' }, String(count)));
+      return tab;
+    }
+
+    function renderTabContent() {
+      const content = $('#tab-content');
+      content.innerHTML = '';
+      const indexed = state.index.chapters[state.currentChapterId];
+      if (!indexed) return;
+
+      if (state.activeTab === 'bagrut') {
+        renderBagrutTab(content, indexed);
+      } else {
+        renderLashonimiTab(content, indexed);
+      }
+    }
+
+    function renderBagrutTab(content, indexed) {
+      const questions = indexed.bagrut_questions || [];
+      if (questions.length === 0) {
+        content.appendChild(el('div', { class: 'empty-state' }, 'אין שאלות בגרות מתויגות לפרק זה.'));
+        return;
+      }
+
+      // Filter row
+      const years = [...new Set(questions.map(q => q.year))].sort((a, b) => b - a);
+      const filters = el('div', { class: 'filter-row' });
+      filters.appendChild(el('label', { html:
+        `<input type="checkbox" id="hide-prereform" ${state.filters.hidePreReform ? 'checked' : ''} />
+         <span>הסתר שאלות לפני הרפורמה</span>`
+      }));
+      const yearLabel = el('label', {});
+      yearLabel.appendChild(el('span', {}, 'שנה:'));
+      const yearSel = el('select', { id: 'year-filter' });
+      yearSel.appendChild(el('option', { value: 'all' }, 'כל השנים'));
+      years.forEach(y => yearSel.appendChild(el('option', { value: String(y) }, String(y))));
+      yearSel.value = state.filters.year;
+      yearLabel.appendChild(yearSel);
+      filters.appendChild(yearLabel);
+      content.appendChild(filters);
+
+      filters.querySelector('#hide-prereform').addEventListener('change', e => {
+        state.filters.hidePreReform = e.target.checked;
+        renderTabContent();
+      });
+      yearSel.addEventListener('change', e => {
+        state.filters.year = e.target.value;
+        renderTabContent();
+      });
+
+      // Filter
+      let filtered = questions.slice();
+      if (state.filters.hidePreReform) filtered = filtered.filter(q => !q.pre_reform);
+      if (state.filters.year !== 'all') filtered = filtered.filter(q => String(q.year) === state.filters.year);
+
+      // Sort by year desc, then by question_num
+      filtered.sort((a, b) => (b.year - a.year) || ((+a.question_num || 0) - (+b.question_num || 0)));
+
+      // Summary
+      content.appendChild(el('div', { style: 'font-size: 0.88rem; color: var(--ink-muted); margin-bottom: 0.75rem;' },
+        `מציג ${filtered.length} מתוך ${questions.length} שאלות`));
+
+      filtered.forEach(q => content.appendChild(makeQuestionCard(q)));
+    }
+
+    function makeQuestionCard(q) {
+      const card = el('div', { class: 'q-card' + (q.pre_reform ? ' is-pre-reform' : ''), 'data-id': q.id });
+      const head = el('div', { class: 'q-head' });
+      head.appendChild(el('span', { class: 'q-id' }, q.year + ' · ' + q.moed_hebrew + ' · שאלה ' + q.question_num));
+      if (q.has_answer) {
+        const p = el('span', { class: 'pill pill-mint pill-sm' });
+        p.appendChild(withIcon('check', 'עם פתרון'));
+        head.appendChild(p);
+      } else {
+        head.appendChild(el('span', { class: 'pill pill-slate pill-sm' }, 'בלי פתרון'));
+      }
+      if (q.pre_reform) {
+        const p = el('span', { class: 'pill pill-amber pill-sm' });
+        p.appendChild(withIcon('warn', 'לפני הרפורמה'));
+        head.appendChild(p);
+      }
+      if (q.track && q.track !== 'shared') {
+        head.appendChild(el('span', { class: 'pill pill-blue pill-sm' }, 'מסלול: ' + q.track));
+      }
+      card.appendChild(head);
+
+      card.appendChild(el('div', { class: 'q-preview' }, q.preview + (q.preview.length >= 140 ? '…' : '')));
+
+      const actions = el('div', { class: 'q-actions' });
+      const toggleBtn = el('button', { class: 'btn btn-secondary btn-sm', onclick: () => toggleFullQuestion(card, q.id, toggleBtn) }, 'הצג שאלה מלאה');
+      actions.appendChild(toggleBtn);
+      card.appendChild(actions);
+
+      return card;
+    }
+
+    async function toggleFullQuestion(card, qid, btn) {
+      const existing = card.querySelector('.q-full');
+      if (existing) {
+        existing.remove();
+        const ans = card.querySelector('.q-answer');
+        if (ans) ans.remove();
+        btn.textContent = 'הצג שאלה מלאה';
+        return;
+      }
+      btn.textContent = 'טוען…';
+      btn.disabled = true;
+      await ensureBagrutBank();
+      const full = state.bagrutById[qid];
+      btn.disabled = false;
+      if (!full) {
+        btn.textContent = 'לא נמצא';
+        return;
+      }
+      card.appendChild(el('div', { class: 'q-full' }, full.question_text || ''));
+      if (full.answer_text) {
+        const ans = el('div', { class: 'q-answer' });
+        ans.appendChild(el('span', { class: 'q-answer-label' }, 'תשובה'));
+        ans.appendChild(document.createTextNode(full.answer_text));
+        card.appendChild(ans);
+      }
+      btn.textContent = 'הסתר שאלה מלאה';
+    }
+
+    function renderLashonimiTab(content, indexed) {
+      const quizzes = indexed.lashonimi_quizzes || [];
+      if (quizzes.length === 0) {
+        content.appendChild(el('div', { class: 'empty-state' }, 'אין תרגולי lashonimi מתויגים לפרק זה.'));
+        return;
+      }
+      content.appendChild(el('div', { style: 'font-size: 0.88rem; color: var(--ink-muted); margin-bottom: 0.75rem;' },
+        `${quizzes.length} תרגולים אינטראקטיביים · סך ${quizzes.reduce((s, q) => s + (q.question_count || 0), 0)} שאלות`));
+
+      // Sort by question_count desc
+      const sorted = quizzes.slice().sort((a, b) => (b.question_count || 0) - (a.question_count || 0));
+      sorted.forEach(q => content.appendChild(makeLashCard(q)));
+    }
+
+    function makeLashCard(q) {
+      const card = el('div', { class: 'lash-card' });
+      card.appendChild(el('div', { class: 'lash-title' }, q.title || q.slug));
+      if (q.description) {
+        card.appendChild(el('div', { class: 'lash-desc' }, q.description + (q.description.length >= 200 ? '…' : '')));
+      }
+      const foot = el('div', { class: 'lash-foot' });
+      foot.appendChild(el('span', { class: 'pill pill-cyan pill-sm' }, (q.question_count || 0) + ' שאלות'));
+      if (q.subcategory_hebrew) {
+        foot.appendChild(el('span', { class: 'pill pill-slate pill-sm' }, q.subcategory_hebrew));
+      }
+      if (q.has_correct_answers) {
+        const p = el('span', { class: 'pill pill-mint pill-sm' });
+        p.appendChild(withIcon('check', 'פתרונות מסומנים'));
+        foot.appendChild(p);
+      }
+      if (q.source_url) {
+        const link = el('a', { href: q.source_url, target: '_blank', rel: 'noopener', class: 'lash-link' });
+        link.appendChild(withIcon('external', 'תרגל ב-lashonimi'));
+        foot.appendChild(link);
+      }
+      card.appendChild(foot);
+      return card;
+    }
+
+    /* ── Search ── */
+    function handleSearch(query) {
+      const q = query.trim().toLowerCase();
+      const items = $$('.chapter-item');
+      if (!q) {
+        items.forEach(it => { it.style.display = ''; });
+        return;
+      }
+      items.forEach(it => {
+        const title = (it.dataset.title || '').toLowerCase();
+        const page = it.dataset.page || '';
+        const match = title.includes(q) || page.includes(q);
+        it.style.display = match ? '' : 'none';
+      });
+    }
+
+    /* ── Boot ── */
+    async function boot() {
+      try {
+        await loadData();
+        $('#loading').style.display = 'none';
+        $('#grid').style.display = '';
+        renderSidebar();
+
+        // Restore from hash
+        const hash = location.hash.match(/chapter=([^&]+)/);
+        if (hash) selectChapter(hash[1]);
+
+        // Search input
+        $('#search').addEventListener('input', e => handleSearch(e.target.value));
+      } catch (err) {
+        console.error(err);
+        $('#loading').innerHTML = '<div style="color: var(--rose); text-align: center;">שגיאה בטעינת הנתונים: ' + err.message + '</div>';
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>
