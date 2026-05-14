@@ -3182,29 +3182,16 @@ const ACTION_TO_BUCKET={saveClassSchedule:'classSchedule',savePosition:'position
 function remoteSave(action,data,isRetry){
   const bucket=ACTION_TO_BUCKET[action];
   if(bucket)markLocalEdit(bucket);
-  // JSONP GET — עוקף CORS, עובד אמין מכל דפדפן
-  return new Promise((resolve,reject)=>{
-    const cb='sv_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-    const payload=encodeURIComponent(JSON.stringify({action,...data}));
-    const url=APPS_SCRIPT+'?action=jsonpWrite&payload='+payload+'&callback='+cb;
-    // URL too long? fall back to fetch POST
-    if(url.length>7500){
-      return fetch(APPS_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action,...data})})
-        .then(r=>{if(r.ok)return r.text();throw new Error('HTTP '+r.status)})
-        .then(()=>{if(!isRetry)showSaveStatus(true);resolve(true)})
-        .catch(()=>{queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);resolve(false)});
-    }
-    const timeout=setTimeout(()=>{delete window[cb];s.remove();queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);resolve(false)},15000);
-    window[cb]=function(d){
-      clearTimeout(timeout);delete window[cb];s.remove();
-      if(d&&(d.status==='ok'||d.result==='ok')){if(!isRetry)showSaveStatus(true);resolve(true)}
-      else{queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);resolve(false)}
-    };
-    const s=document.createElement('script');
-    s.src=url;
-    s.onerror=()=>{clearTimeout(timeout);delete window[cb];queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);resolve(false)};
-    document.head.appendChild(s);
-  });
+  // fetch POST — ראשי. JSONP נחסם על ידי Chrome (ERR_BLOCKED_BY_ORB) כשהדפדפן מחובר לכמה חשבונות Google.
+  const body=JSON.stringify({action,...data});
+  return fetch(APPS_SCRIPT,{method:'POST',headers:{'Content-Type':'text/plain'},body})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
+    .then(t=>{
+      let ok=false;try{const j=JSON.parse(t);ok=j&&(j.status==='ok'||j.result==='ok')}catch(e){}
+      if(ok){if(!isRetry)showSaveStatus(true);return true}
+      queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);return false;
+    })
+    .catch(()=>{queueFailedSave(action,data);if(!isRetry)showSaveStatus(false);return false});
 }
 
 // Heuristics — does the local data contain ACTUAL user content, or just empty scaffolding?
@@ -3220,29 +3207,22 @@ function isMeaningful(bucket,d){
 
 function loadBucketSafely(opts){
   // opts: {bucket, action, storageKey, extractor, applyFn, selfHealFn}
-  const cb='cb_'+opts.bucket+'_'+Date.now();
-  window[cb]=function(d){
-    delete window[cb];
-    const serverData=opts.extractor(d);
-    if(!serverData)return;
-
-    // Always migrate server data
-    const migrated=MIGRATIONS[opts.bucket](serverData);
-
-    // Accept server data UNLESS user made local edits since page load
-    if(!localEditedSince[opts.bucket]){
-      opts.applyFn(migrated);
-      try{localStorage.setItem(opts.storageKey,JSON.stringify(migrated))}catch(e){}
-    }
-    // Self-heal: if migration changed server data, push the clean version back
-    if(opts.selfHealFn&&JSON.stringify(serverData)!==JSON.stringify(migrated)){
-      opts.selfHealFn(migrated);
-    }
-  };
-  const s=document.createElement('script');
-  s.src=`${APPS_SCRIPT}?action=${opts.action}&callback=${cb}`;
-  s.onerror=()=>delete window[cb];
-  document.head.appendChild(s);
+  // fetch GET — ראשי. JSONP נחסם על ידי Chrome (ERR_BLOCKED_BY_ORB) כשהדפדפן מחובר לכמה חשבונות Google.
+  fetch(`${APPS_SCRIPT}?action=${opts.action}&nocache=${Date.now()}`)
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+    .then(d=>{
+      const serverData=opts.extractor(d);
+      if(!serverData)return;
+      const migrated=MIGRATIONS[opts.bucket](serverData);
+      if(!localEditedSince[opts.bucket]){
+        opts.applyFn(migrated);
+        try{localStorage.setItem(opts.storageKey,JSON.stringify(migrated))}catch(e){}
+      }
+      if(opts.selfHealFn&&JSON.stringify(serverData)!==JSON.stringify(migrated)){
+        opts.selfHealFn(migrated);
+      }
+    })
+    .catch(()=>{});
 }
 
 function loadRemoteData(){
