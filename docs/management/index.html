@@ -3262,8 +3262,9 @@ function loadRemoteData(){
 function syncAllToServer(){
   const btn=document.getElementById('syncBtn');
   if(btn){btn.disabled=true;btn.textContent='שומר...'}
+  const total=CLASS_LIST.length+positions.length;
   let count=0,errors=0;
-  const done=()=>{count++;if(count>=CLASS_LIST.length+1){
+  const done=()=>{count++;if(count>=total){
     if(btn){btn.disabled=false;btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> סנכרון לשרת'}
     alert(errors?'סנכרון הושלם עם '+errors+' שגיאות — נסי שוב':'סנכרון הושלם בהצלחה! הנתונים זמינים מכל מחשב.');
   }};
@@ -3271,8 +3272,10 @@ function syncAllToServer(){
   CLASS_LIST.forEach(cls=>{
     remoteSave('saveClassSchedule',{classId:cls,schedule:classSchedule[cls]||[]}).then(ok=>{if(!ok)errors++;done()}).catch(()=>{errors++;done()});
   });
-  // Push positions
-  remoteSave('savePositions',{positions}).then(ok=>{if(!ok)errors++;done()}).catch(()=>{errors++;done()});
+  // Push positions — אחת-אחת. Apps Script מקבל savePosition (יחיד), אין handler ל-savePositions.
+  positions.forEach(pos=>{
+    remoteSave('savePosition',pos).then(ok=>{if(!ok)errors++;done()}).catch(()=>{errors++;done()});
+  });
 }
 
 // ===================== UTILS =====================
