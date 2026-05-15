@@ -1,6 +1,6 @@
 // add-expense.js — מודאל הוספת הוצאה ב-3 קליקים
 
-import { Store, daysSetbackFromExpense } from '../storage.js';
+import { Store, dreamProgress } from '../storage.js';
 import { t } from '../i18n.js';
 import { openModal, closeModal, toast, fmtMoney } from '../ui.js';
 
@@ -61,14 +61,10 @@ export function openAddExpense(onSave) {
 
     function updateImpact() {
       const amt = parseFloat(amountInput.value);
-      if (!amt || amt <= 0) { impactEl.hidden = true; return; }
-      const days = daysSetbackFromExpense(amt);
-      if (days > 0) {
-        impactEl.hidden = false;
-        impactEl.textContent = t('expense.impact_setback', { days });
-      } else {
-        impactEl.hidden = true;
-      }
+      const progress = dreamProgress();
+      if (!amt || amt <= 0 || !progress) { impactEl.hidden = true; return; }
+      impactEl.hidden = false;
+      impactEl.innerHTML = `${t('expense.impact_progress', { pct: Math.round(progress.pct) })}<br><span style="font-weight: var(--fw-regular); opacity: 0.85;">${t('expense.impact_choice')}</span>`;
     }
 
     function validate() {

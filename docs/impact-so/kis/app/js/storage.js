@@ -5,7 +5,7 @@ const KEY = 'kis_data_v1';
 const DEFAULT_STATE = {
   version: 1,
   created_at: null,
-  profile: null,         // { age, income_estimate }
+  profile: null,         // { name, age, income_estimate, fixed_expenses, extra_income }
   dream: null,           // { title, why_matters, target_amount, target_date, current_saved, started_at, status }
   dreams_archive: [],
   expenses: [],          // [{ id, date, amount, category, tag_fixed, tag_business, emotion }]
@@ -155,6 +155,15 @@ export function balanceThisMonth() {
   const data = Store.get();
   const income = data.profile?.income_estimate || 0;
   return income - spentThisMonth();
+}
+
+// "פנוי לחיסכון" = הכנסה + הכנסה נוספת − הוצאות חובה
+export function availableForSavings() {
+  const p = Store.get().profile || {};
+  const income = Number(p.income_estimate || 0);
+  const extra = Number(p.extra_income || 0);
+  const fixed = Number(p.fixed_expenses || 0);
+  return Math.max(0, income + extra - fixed);
 }
 
 export function byCategoryThisMonth() {

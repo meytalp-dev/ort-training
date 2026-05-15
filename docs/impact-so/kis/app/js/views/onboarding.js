@@ -82,6 +82,8 @@ export function renderOnboarding(root, navigate) {
         name: data.name,
         age: data.age,
         income_estimate: data.income,
+        fixed_expenses: 0,
+        extra_income: 0,
         created_at: new Date().toISOString(),
       });
       Store.markOnboarded();

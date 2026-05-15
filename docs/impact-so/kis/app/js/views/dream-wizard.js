@@ -1,20 +1,23 @@
-// dream-wizard.js — 7 שלבי אשף החלום, לב המוצר
+// dream-wizard.js — 8 שלבים. מתמטיקה הוגנת (פנוי לחיסכון, לא הכנסה ברוטו).
 
-import { Store } from '../storage.js';
+import { Store, availableForSavings } from '../storage.js';
 import { t } from '../i18n.js';
 import { toast, confetti, fmtMoney } from '../ui.js';
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 export function renderDreamWizard(root, navigate) {
   let step = 1;
+  const profile = Store.get().profile || {};
   const draft = {
     title: '',
     why_matters: '',
     target_amount: 0,
     current_saved: 0,
     target_date: '',
-    chosenAdjust: null,
+    fixed_expenses: Number(profile.fixed_expenses || 0),
+    extra_income: 0,
+    adjustments: [],
   };
 
   function render() {
@@ -35,27 +38,47 @@ export function renderDreamWizard(root, navigate) {
 
   function renderStep() {
     const stepEl = root.querySelector('#wizard-step');
-    if (step === 1) renderStep1(stepEl);
-    else if (step === 2) renderStep2(stepEl);
-    else if (step === 3) renderStep3(stepEl);
-    else if (step === 4) renderStep4(stepEl);
-    else if (step === 5) renderStep5(stepEl);
-    else if (step === 6) renderStep6(stepEl);
-    else if (step === 7) renderStep7(stepEl);
+    const fn = { 1: renderStep1, 2: renderStep2, 3: renderStep3, 4: renderStep4, 5: renderStep5, 6: renderStep6, 7: renderStep7, 8: renderStep8 }[step];
+    fn(stepEl);
   }
 
-  function actions(prevLabel, nextLabel, onPrev, onNext) {
+  function actions(prevLabel, nextLabel) {
     return `
       <div class="wizard-actions">
-        ${onPrev ? `<button class="btn btn-secondary" id="prev-btn" style="flex:1;">${prevLabel}</button>` : ''}
+        ${prevLabel ? `<button class="btn btn-secondary" id="prev-btn" style="flex:1;">${prevLabel}</button>` : ''}
         <button class="btn btn-primary" id="next-btn" style="flex:2;">${nextLabel}</button>
       </div>
     `;
   }
-
   function bindNav(el, onPrev, onNext) {
     if (onPrev) el.querySelector('#prev-btn')?.addEventListener('click', onPrev);
     el.querySelector('#next-btn')?.addEventListener('click', onNext);
+  }
+
+  // === Math helpers ===
+  function computeMonths() {
+    const today = new Date();
+    const target = new Date(draft.target_date);
+    const days = Math.max(1, Math.ceil((target - today) / (1000 * 60 * 60 * 24)));
+    return { days, months: Math.max(1, Math.ceil(days / 30)), weeks: Math.max(1, Math.ceil(days / 7)) };
+  }
+  function neededPerMonth() {
+    const remaining = Math.max(0, draft.target_amount - draft.current_saved);
+    return Math.ceil(remaining / computeMonths().months);
+  }
+  function availableNow() {
+    const income = Number(profile.income_estimate || 0);
+    const extra = Number(draft.extra_income || 0);
+    return Math.max(0, income + extra - Number(draft.fixed_expenses || 0));
+  }
+  function feasibility() {
+    const needed = neededPerMonth();
+    const available = availableNow();
+    if (available === 0) return 'red';
+    const ratio = needed / available;
+    if (ratio <= 0.5) return 'green';
+    if (ratio <= 1.0) return 'yellow';
+    return 'red';
   }
 
   // ===== Step 1 — Dream =====
@@ -68,20 +91,14 @@ export function renderDreamWizard(root, navigate) {
       <div class="wizard-step-body">
         <div class="field">
           <label for="dw-title">${t('dream_wizard.title_label')}</label>
-          <input id="dw-title" type="text" placeholder="${t('dream_wizard.title_placeholder')}" value="${draft.title}">
+          <input id="dw-title" type="text" placeholder="${t('dream_wizard.title_placeholder')}" value="${escAttr(draft.title)}">
         </div>
-
         <div class="field">
           <label for="dw-why">${t('dream_wizard.why_label')}</label>
-          <textarea id="dw-why" placeholder="${t('dream_wizard.why_placeholder')}">${draft.why_matters}</textarea>
+          <textarea id="dw-why" placeholder="${t('dream_wizard.why_placeholder')}">${escText(draft.why_matters)}</textarea>
         </div>
       </div>
-      ${actions('', t('common.next'), null, () => {
-        draft.title = el.querySelector('#dw-title').value.trim();
-        draft.why_matters = el.querySelector('#dw-why').value.trim();
-        if (!draft.title) { toast('צריך לכתוב את החלום', 'warning'); return; }
-        step = 2; render();
-      })}
+      ${actions(null, t('common.next'))}
     `;
     bindNav(el, null, () => {
       draft.title = el.querySelector('#dw-title').value.trim();
@@ -105,7 +122,6 @@ export function renderDreamWizard(root, navigate) {
             <input id="dw-amount" type="number" inputmode="numeric" min="0" placeholder="${t('dream_wizard.amount_placeholder')}" value="${draft.target_amount || ''}">
           </div>
         </div>
-
         <div class="field">
           <label for="dw-saved">${t('dream_wizard.current_saved_label')}</label>
           <div class="currency-input">
@@ -129,8 +145,8 @@ export function renderDreamWizard(root, navigate) {
   function renderStep3(el) {
     const today = new Date();
     const minDate = today.toISOString().slice(0, 10);
-    const sixMonthsFromNow = new Date(today.setMonth(today.getMonth() + 6));
-    const defaultDate = draft.target_date || sixMonthsFromNow.toISOString().slice(0, 10);
+    const six = new Date(today); six.setMonth(six.getMonth() + 6);
+    const defaultDate = draft.target_date || six.toISOString().slice(0, 10);
 
     el.innerHTML = `
       <div class="wizard-step-num">${t('dream_wizard.step3_num')}</div>
@@ -153,63 +169,40 @@ export function renderDreamWizard(root, navigate) {
     });
   }
 
-  // ===== Step 4 — Reality check =====
+  // ===== Step 4 — Fixed expenses (NEW) =====
   function renderStep4(el) {
-    const remaining = Math.max(0, draft.target_amount - draft.current_saved);
-    const targetDate = new Date(draft.target_date);
-    const today = new Date();
-    const days = Math.max(1, Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24)));
-    const months = Math.max(1, Math.ceil(days / 30));
-    const weeks = Math.max(1, Math.ceil(days / 7));
-    const perMonth = Math.ceil(remaining / months);
-    const perWeek = Math.ceil(remaining / weeks);
-    const perDay = Math.ceil(remaining / days);
-
-    draft._perMonth = perMonth;
-    draft._perWeek = perWeek;
-    draft._perDay = perDay;
-
     el.innerHTML = `
       <div class="wizard-step-num">${t('dream_wizard.step4_num')}</div>
       <h1 class="wizard-step-title">${t('dream_wizard.step4_title')}</h1>
       <p class="wizard-step-help">${t('dream_wizard.step4_help')}</p>
 
       <div class="wizard-step-body">
-        <div class="reality-check">
-          <div class="reality-tile">
-            <div class="reality-tile-label">${t('dream_wizard.per_month')}</div>
-            <div class="reality-tile-value">${fmtMoney(perMonth)}</div>
+        <div class="field field-large">
+          <label for="dw-fixed">${t('dream_wizard.fixed_expenses_label')}</label>
+          <div class="currency-input">
+            <input id="dw-fixed" type="number" inputmode="numeric" min="0" placeholder="${t('dream_wizard.fixed_expenses_placeholder')}" value="${draft.fixed_expenses || ''}">
           </div>
-          <div class="reality-tile">
-            <div class="reality-tile-label">${t('dream_wizard.per_week')}</div>
-            <div class="reality-tile-value">${fmtMoney(perWeek)}</div>
-          </div>
-          <div class="reality-tile">
-            <div class="reality-tile-label">${t('dream_wizard.per_day')}</div>
-            <div class="reality-tile-value">${fmtMoney(perDay)}</div>
-          </div>
-        </div>
-
-        <div class="card" style="text-align:center;">
-          <p class="muted" style="margin-bottom: var(--s-2);">לסיכום:</p>
-          <p>צריך לחסוך <strong style="color:var(--text-strong);font-size:20px;">${fmtMoney(remaining)}</strong> תוך <strong>${months} חודשים</strong></p>
+          <div class="field-hint">${t('dream_wizard.fixed_expenses_hint')}</div>
         </div>
       </div>
       ${actions(t('common.back'), t('common.next'))}
     `;
-    bindNav(el, () => { step = 3; render(); }, () => { step = 5; render(); });
+    bindNav(el, () => { step = 3; render(); }, () => {
+      const fixed = parseInt(el.querySelector('#dw-fixed').value, 10) || 0;
+      draft.fixed_expenses = fixed;
+      // persist fixed expenses to profile so home/dashboard use it too
+      Store.setProfile({ ...(Store.get().profile || {}), fixed_expenses: fixed });
+      step = 5; render();
+    });
   }
 
-  // ===== Step 5 — Feasibility light =====
+  // ===== Step 5 — The numbers (visible breakdown) =====
   function renderStep5(el) {
-    const income = Store.get().profile?.income_estimate || 0;
-    const perMonth = draft._perMonth || 0;
-    const ratio = income > 0 ? perMonth / income : 1;
-    let color, text;
-    if (ratio < 0.20) { color = 'green'; text = t('dream_wizard.light_green'); }
-    else if (ratio < 0.40) { color = 'yellow'; text = t('dream_wizard.light_yellow'); }
-    else { color = 'red'; text = t('dream_wizard.light_red'); }
-    draft._feasibility = color;
+    const income = Number(profile.income_estimate || 0);
+    const available = availableNow();
+    const needed = neededPerMonth();
+    const m = computeMonths();
+    const remaining = Math.max(0, draft.target_amount - draft.current_saved);
 
     el.innerHTML = `
       <div class="wizard-step-num">${t('dream_wizard.step5_num')}</div>
@@ -217,33 +210,108 @@ export function renderDreamWizard(root, navigate) {
       <p class="wizard-step-help">${t('dream_wizard.step5_help')}</p>
 
       <div class="wizard-step-body">
-        <div class="traffic-light ${color}">
-          <div class="traffic-light-icon"></div>
-          <div class="traffic-light-text">${text}</div>
+        <div class="card mb-3">
+          <div class="flex-row" style="justify-content:space-between; margin-bottom: var(--s-2);">
+            <span class="muted">${t('dream_wizard.income_summary')}</span>
+            <strong>${fmtMoney(income)}</strong>
+          </div>
+          <div class="flex-row" style="justify-content:space-between; margin-bottom: var(--s-2);">
+            <span class="muted">${t('dream_wizard.fixed_summary')}</span>
+            <strong style="color:var(--text-muted);">−${fmtMoney(draft.fixed_expenses)}</strong>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin: var(--s-3) 0;">
+          <div class="flex-row" style="justify-content:space-between;">
+            <span class="strong">${t('dream_wizard.available_summary')}</span>
+            <strong style="color: var(--success); font-size: 22px;">${fmtMoney(available)}</strong>
+          </div>
         </div>
 
-        <div class="card" style="margin-bottom: var(--s-4);">
-          <p class="muted" style="margin-bottom: var(--s-2);">החישוב שלכם:</p>
-          <p><strong>${fmtMoney(perMonth)}</strong> בחודש = <strong>${Math.round(ratio * 100)}%</strong> מההכנסה שלכם (${fmtMoney(income)}).</p>
+        <div class="card" style="background: var(--brand-gradient-soft); border-color: var(--border-strong);">
+          <div class="flex-row" style="justify-content:space-between; margin-bottom: var(--s-2);">
+            <span class="muted">${t('dream_wizard.needed_summary')}</span>
+            <strong style="font-size: 22px;">${fmtMoney(needed)}</strong>
+          </div>
+          <p class="muted" style="font-size: var(--fs-small);">
+            ${fmtMoney(remaining)} בסך הכל · על פני ${m.months} חודשים
+          </p>
         </div>
       </div>
-      ${actions(t('common.back'), color === 'green' ? t('common.next') : 'בואו נתאים')}
+      ${actions(t('common.back'), 'בא נראה')}
     `;
-    bindNav(el, () => { step = 4; render(); }, () => {
-      if (color === 'green') step = 7;
-      else step = 6;
+    bindNav(el, () => { step = 4; render(); }, () => { step = 6; render(); });
+  }
+
+  // ===== Step 6 — Feasibility (honest + encouraging) =====
+  function renderStep6(el) {
+    const status = feasibility();
+    const needed = neededPerMonth();
+    const available = availableNow();
+    const gap = Math.max(0, needed - available);
+
+    const titles = {
+      green: t('dream_wizard.feasibility_green_title'),
+      yellow: t('dream_wizard.feasibility_yellow_title'),
+      red: t('dream_wizard.feasibility_red_title'),
+    };
+    const bodies = {
+      green: t('dream_wizard.feasibility_green_body'),
+      yellow: t('dream_wizard.feasibility_yellow_body'),
+      red: t('dream_wizard.feasibility_red_body'),
+    };
+
+    el.innerHTML = `
+      <div class="wizard-step-num">${t('dream_wizard.step6_num')}</div>
+      <h1 class="wizard-step-title">${t('dream_wizard.step6_title')}</h1>
+
+      <div class="wizard-step-body">
+        <div class="traffic-light ${status}" style="flex-direction:column;align-items:flex-start;">
+          <div class="flex-row gap-3" style="margin-bottom: var(--s-2);">
+            <div class="traffic-light-icon" style="width:32px;height:32px;"></div>
+            <div class="traffic-light-text" style="font-size: var(--fs-h3);">${titles[status]}</div>
+          </div>
+          <p style="margin-right: 44px; line-height: var(--lh-normal); color: var(--text);">
+            ${bodies[status]}
+          </p>
+        </div>
+
+        ${status === 'red' ? `
+          <div class="card" style="margin-top: var(--s-4); border-color: var(--danger);">
+            <p class="muted" style="margin-bottom: var(--s-2);">${t('dream_wizard.feasibility_gap_help', { needed: fmtMoney(needed), available: fmtMoney(available) })}</p>
+            <p style="font-size: 22px; font-weight: var(--fw-black); color: var(--danger);">
+              ${t('dream_wizard.feasibility_gap', { gap: fmtMoney(gap) })}
+            </p>
+          </div>
+        ` : ''}
+
+        ${status === 'yellow' ? `
+          <div class="card" style="margin-top: var(--s-4);">
+            <p>הפנוי שלך: <strong>${fmtMoney(available)}</strong> · החיסכון הנדרש: <strong>${fmtMoney(needed)}</strong></p>
+            <p class="muted" style="font-size: var(--fs-small); margin-top: var(--s-2);">נשאר לך ${fmtMoney(Math.max(0, available - needed))} בחודש לכיף. הדוק, אבל אפשרי.</p>
+          </div>
+        ` : ''}
+      </div>
+      ${actions(t('common.back'), status === 'green' ? t('common.next') : 'בא ננצח את זה')}
+    `;
+    bindNav(el, () => { step = 5; render(); }, () => {
+      step = status === 'green' ? 8 : 7;
       render();
     });
   }
 
-  // ===== Step 6 — Adjust =====
-  function renderStep6(el) {
+  // ===== Step 7 — Closing the gap (collaborative) =====
+  function renderStep7(el) {
+    const needed = neededPerMonth();
+    const available = availableNow();
+    const gap = Math.max(0, needed - available);
+
     el.innerHTML = `
-      <div class="wizard-step-num">${t('dream_wizard.step6_num')}</div>
-      <h1 class="wizard-step-title">${t('dream_wizard.step6_title')}</h1>
-      <p class="wizard-step-help">${t('dream_wizard.step6_help')}</p>
+      <div class="wizard-step-num">${t('dream_wizard.step7_num')}</div>
+      <h1 class="wizard-step-title">${t('dream_wizard.step7_title')}</h1>
+      <p class="wizard-step-help">${t('dream_wizard.step7_help')}</p>
 
       <div class="wizard-step-body">
+        ${gap > 0 ? `<p class="muted center mb-4">הפער שצריך לסגור: <strong style="color: var(--text-strong);">${fmtMoney(gap)}</strong> בחודש</p>` : ''}
+
         <div class="adjust-options">
           <button class="adjust-option" data-adjust="timeline">
             <div class="adjust-option-title">${t('dream_wizard.adjust_timeline')}</div>
@@ -258,42 +326,59 @@ export function renderDreamWizard(root, navigate) {
             <div class="adjust-option-help">${t('dream_wizard.adjust_income_help')}</div>
           </button>
         </div>
+
+        <div id="extra-income-block" hidden style="margin-top: var(--s-4);">
+          <div class="field field-large">
+            <label for="dw-extra">${t('dream_wizard.income_extra_label')}</label>
+            <div class="currency-input">
+              <input id="dw-extra" type="number" inputmode="numeric" min="0" placeholder="${t('dream_wizard.income_extra_placeholder')}" value="${draft.extra_income || ''}">
+            </div>
+          </div>
+        </div>
       </div>
-      ${actions(t('common.back'), t('common.skip'))}
+      ${actions(t('common.back'), t('common.next'))}
     `;
 
     el.querySelectorAll('[data-adjust]').forEach(btn => {
       btn.addEventListener('click', () => {
         const type = btn.dataset.adjust;
         if (type === 'timeline') {
-          step = 3;
+          toast('בא נחזור לתאריך', 'success');
+          step = 3; render();
         } else if (type === 'scope') {
-          step = 2;
+          toast('בא נחזור למחיר', 'success');
+          step = 2; render();
         } else if (type === 'income') {
-          toast('הוסיפו עסק קטן — תוכלו לעקוב כתקציב פרויקט בכיס', 'success');
-          draft.chosenAdjust = 'income';
-          step = 7;
+          el.querySelector('#extra-income-block').hidden = false;
+          el.querySelector('#dw-extra').focus();
         }
-        render();
       });
     });
 
-    bindNav(el, () => { step = 5; render(); }, () => { step = 7; render(); });
+    bindNav(el, () => { step = 6; render(); }, () => {
+      const extra = parseInt(el.querySelector('#dw-extra')?.value, 10) || 0;
+      draft.extra_income = extra;
+      Store.setProfile({ ...(Store.get().profile || {}), extra_income: extra });
+      // re-check feasibility — if now green/yellow, proceed; if still red, allow continuing anyway with awareness
+      step = 8; render();
+    });
   }
 
-  // ===== Step 7 — SMART =====
-  function renderStep7(el) {
+  // ===== Step 8 — SMART =====
+  function renderStep8(el) {
+    const needed = neededPerMonth();
+    const remaining = Math.max(0, draft.target_amount - draft.current_saved);
     const sentence = t('dream_wizard.smart_template', {
-      amount: fmtMoney(draft.target_amount - draft.current_saved),
+      amount: fmtMoney(remaining),
       date: new Date(draft.target_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' }),
       what: draft.title,
-      monthly: fmtMoney(draft._perMonth),
+      monthly: fmtMoney(needed),
     });
 
     el.innerHTML = `
-      <div class="wizard-step-num">${t('dream_wizard.step7_num')}</div>
-      <h1 class="wizard-step-title">${t('dream_wizard.step7_title')}</h1>
-      <p class="wizard-step-help">${t('dream_wizard.step7_help')}</p>
+      <div class="wizard-step-num">${t('dream_wizard.step8_num')}</div>
+      <h1 class="wizard-step-title">${t('dream_wizard.step8_title')}</h1>
+      <p class="wizard-step-help">${t('dream_wizard.step8_help')}</p>
 
       <div class="wizard-step-body">
         <div class="smart-quote">
@@ -303,7 +388,7 @@ export function renderDreamWizard(root, navigate) {
       </div>
       ${actions(t('common.back'), t('dream_wizard.smart_finish'))}
     `;
-    bindNav(el, () => { step = draft._feasibility === 'green' ? 5 : 6; render(); }, () => {
+    bindNav(el, () => { step = feasibility() === 'green' ? 6 : 7; render(); }, () => {
       Store.setDream({
         title: draft.title,
         why_matters: draft.why_matters,
@@ -322,3 +407,6 @@ export function renderDreamWizard(root, navigate) {
 
   render();
 }
+
+function escAttr(s) { return String(s ?? '').replace(/"/g, '&quot;'); }
+function escText(s) { return String(s ?? '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])); }

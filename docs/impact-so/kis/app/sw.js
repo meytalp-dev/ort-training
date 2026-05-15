@@ -1,6 +1,6 @@
 // sw.js — Service Worker בסיסי, cache-first עם network fallback
 
-const VERSION = 'kis-v0.1.0';
+const VERSION = 'kis-v0.2.0';
 const ASSETS = [
   './',
   './index.html',
