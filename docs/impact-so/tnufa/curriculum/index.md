@@ -129,6 +129,7 @@
 | תוכנית | קובץ | אורך משוער | רמת מורכבות |
 |---------|-------|-------------|--------------|
 | **עברית כיתה ד'** | [hebrew-grade4.md](hebrew-grade4.md) | ~50 עמודים | מקיפה |
+| **אנגלית · רצף תלת-שנתי ז'-ח'-ט'** | [english-3year-plan.md](english-3year-plan.md) | ~30 עמודים | מסגרת + תוכניות ז'+ח' |
 | **אנגלית כיתה ט'** | [english-grade9.md](english-grade9.md) | ~60 עמודים | מקיפה |
 | **אוריינות מידע כיתה ט'** | [information-literacy-grade9.md](information-literacy-grade9.md) | ~40 עמודים | מקיפה |
 
