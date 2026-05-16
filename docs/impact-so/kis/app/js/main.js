@@ -17,6 +17,7 @@ import { renderPortfolio } from './views/portfolio.js';
 import { renderSimulation } from './views/simulation.js';
 import { renderToolbox } from './views/toolbox.js';
 import { renderWeeklyRecap, shouldShowWeeklyRecap } from './views/weekly-recap.js';
+import { renderWelcomeBack, shouldShowWelcomeBack } from './views/welcome-back.js';
 import { openAddExpense } from './views/add-expense.js';
 
 const view = document.getElementById('view');
@@ -37,6 +38,7 @@ const VIEWS = {
   simulation: renderSimulation,
   toolbox: renderToolbox,
   'weekly-recap': renderWeeklyRecap,
+  'welcome-back': renderWelcomeBack,
 };
 
 let currentView = 'home';
@@ -47,7 +49,7 @@ function navigate(name) {
     name = 'home';
   }
   currentView = name;
-  const hideNav = name === 'onboarding' || name === 'dream-wizard' || name === 'weekly-recap';
+  const hideNav = name === 'onboarding' || name === 'dream-wizard' || name === 'weekly-recap' || name === 'welcome-back';
   bottomNav.hidden = hideNav;
   bottomNav.querySelectorAll('[data-view]').forEach(btn => {
     const v = btn.dataset.view;
@@ -123,6 +125,7 @@ bottomNav.querySelectorAll('[data-view]').forEach(btn => {
   if (state.settings.theme === 'light') document.body.classList.add('light-mode');
   if (!state.settings.onboarded) navigate('onboarding');
   else if (shouldShowWeeklyRecap()) navigate('weekly-recap');
+  else if (shouldShowWelcomeBack()) navigate('welcome-back');
   else navigate('home');
 })();
 
