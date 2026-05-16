@@ -139,7 +139,7 @@
         <div class="welcome-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
         </div>
-        <div class="welcome-eyebrow">Impact SO · לשון 70%</div>
+        <div class="welcome-eyebrow">${escapeHtml(opts.eyebrow || opts.kitTitle || 'Impact SO')}</div>
         <h1 class="welcome-title">${escapeHtml(opts.title)}</h1>
         <div class="game-badge">${t.emoji} ${t.label}</div>
         <p class="welcome-sub">${escapeHtml(opts.subtitle || 'הזינו שם וכיתה כדי להתחיל')}</p>
