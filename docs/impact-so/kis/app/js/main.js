@@ -1,7 +1,9 @@
-// main.js — bootstrap + router
+// main.js — bootstrap + router + error boundary
 
 import { Store } from './storage.js';
-import { loadLanguage } from './i18n.js';
+import { loadLanguage, t } from './i18n.js';
+import { coinHTML } from './coin.js';
+import { vibrate } from './ui.js';
 import { renderOnboarding } from './views/onboarding.js';
 import { renderDreamWizard } from './views/dream-wizard.js';
 import { renderHome } from './views/home.js';
@@ -54,12 +56,46 @@ function navigate(name) {
     else if (v === 'menu' && ['menu','reflection','canvas','portfolio','simulation','toolbox','settings'].includes(name)) isActive = true;
     btn.classList.toggle('is-active', isActive);
   });
-  view.innerHTML = '';
-  VIEWS[name](view, navigate);
-  window.scrollTo(0, 0);
+  try {
+    view.innerHTML = '';
+    VIEWS[name](view, navigate);
+    window.scrollTo(0, 0);
+  } catch (err) {
+    console.error('view render failed', err);
+    showErrorBoundary(err);
+  }
 }
 
+// Error Boundary גלובלי
+function showErrorBoundary(err) {
+  bottomNav.hidden = true;
+  view.innerHTML = `
+    <div class="error-boundary">
+      ${coinHTML('lg', 'idle')}
+      <h1>${t('errors.boundary_title') || 'משהו נשבר. סליחה.'}</h1>
+      <p>${t('errors.boundary_body') || 'זה לא אתה. זה אנחנו.'}</p>
+      <button class="btn btn-primary btn-lg" id="reload-btn">${t('errors.boundary_reload') || 'טען מחדש'}</button>
+    </div>
+  `;
+  view.querySelector('#reload-btn').addEventListener('click', () => {
+    vibrate(10);
+    location.reload();
+  });
+}
+
+// תפיסת שגיאות לא מטופלות
+window.addEventListener('error', (e) => {
+  console.error('window.error', e.error || e.message);
+  if (!document.querySelector('.error-boundary')) {
+    showErrorBoundary(e.error || new Error(e.message));
+  }
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('unhandledrejection', e.reason);
+});
+
 fab.addEventListener('click', () => {
+  vibrate(10);
   openAddExpense(() => {
     if (currentView === 'home' || currentView === 'dashboard') navigate(currentView);
   });

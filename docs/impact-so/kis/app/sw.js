@@ -1,6 +1,6 @@
 // sw.js — Service Worker בסיסי, cache-first עם network fallback
 
-const VERSION = 'kis-v0.3.0';
+const VERSION = 'kis-v0.4.0';
 const ASSETS = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const ASSETS = [
   './js/storage.js',
   './js/i18n.js',
   './js/ui.js',
+  './js/coin.js',
   './js/views/onboarding.js',
   './js/views/dream-wizard.js',
   './js/views/home.js',
@@ -45,6 +46,13 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+// תמיכה בשליחת הודעת SKIP_WAITING מהאפליקציה (כפתור "טען גרסה חדשה")
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {

@@ -1,13 +1,17 @@
-// add-expense.js — מודאל הוספת הוצאה ב-3 קליקים
+// add-expense.js — מודאל הוספת הוצאה ב-3 קליקים + validation לתסריטי כשל
 
-import { Store, dreamProgress } from '../storage.js';
+import { Store, dreamProgress, expensesThisMonth } from '../storage.js';
 import { t } from '../i18n.js';
-import { openModal, closeModal, toast, fmtMoney } from '../ui.js';
+import { openModal, closeModal, toast, fmtMoney, vibrate } from '../ui.js';
+
+const HUGE_THRESHOLD = 9999;
+const LARGE_THRESHOLD = 200;
+const LATE_NIGHT_HOUR = 23;
 
 export function openAddExpense(onSave) {
-  let amount = '';
   let category = '';
   let emotion = '';
+  let isSaving = false; // debounce double-clicks
 
   openModal((body, close) => {
     body.innerHTML = `
@@ -20,7 +24,7 @@ export function openAddExpense(onSave) {
         </div>
       </div>
 
-      <div id="impact-line" class="dream-impact" hidden></div>
+      <div id="amount-warning" class="amount-warning" hidden></div>
 
       <div class="cat-grid">
         <button class="cat-card" data-cat="must">
@@ -56,32 +60,55 @@ export function openAddExpense(onSave) {
     `;
 
     const amountInput = body.querySelector('#exp-amount');
-    const impactEl = body.querySelector('#impact-line');
+    const warningEl = body.querySelector('#amount-warning');
     const saveBtn = body.querySelector('#save-expense');
 
-    function updateImpact() {
-      const amt = parseFloat(amountInput.value);
-      const progress = dreamProgress();
-      if (!amt || amt <= 0 || !progress) { impactEl.hidden = true; return; }
-      impactEl.hidden = false;
-      impactEl.innerHTML = `${t('expense.impact_progress', { pct: Math.round(progress.pct) })}<br><span style="font-weight: var(--fw-regular); opacity: 0.85;">${t('expense.impact_choice')}</span>`;
+    function showWarning(text) {
+      warningEl.hidden = false;
+      warningEl.textContent = text;
+    }
+    function hideWarning() {
+      warningEl.hidden = true;
+      warningEl.textContent = '';
     }
 
-    function validate() {
-      const amt = parseFloat(amountInput.value);
-      const valid = amt > 0 && category && emotion;
+    function getAmount() {
+      const raw = parseFloat(amountInput.value);
+      if (isNaN(raw)) return null;
+      return raw;
+    }
+
+    function validateAmount() {
+      const amt = getAmount();
+      if (amt === null) { hideWarning(); return false; }
+      if (amt < 0) {
+        showWarning(t('expense.amount_negative'));
+        return false;
+      }
+      if (amt === 0) {
+        showWarning(t('expense.amount_zero'));
+        return false;
+      }
+      hideWarning();
+      return true;
+    }
+
+    function validateAll() {
+      const amountOk = validateAmount();
+      const valid = amountOk && category && emotion;
       saveBtn.disabled = !valid;
       saveBtn.style.opacity = valid ? '1' : '0.5';
     }
 
-    amountInput.addEventListener('input', () => { amount = amountInput.value; updateImpact(); validate(); });
+    amountInput.addEventListener('input', validateAll);
 
     body.querySelectorAll('[data-cat]').forEach(btn => {
       btn.addEventListener('click', () => {
         category = btn.dataset.cat;
         body.querySelectorAll('[data-cat]').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
-        validate();
+        vibrate(5);
+        validateAll();
       });
     });
 
@@ -90,19 +117,102 @@ export function openAddExpense(onSave) {
         emotion = btn.dataset.emo;
         body.querySelectorAll('[data-emo]').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
-        validate();
+        vibrate(5);
+        validateAll();
       });
     });
 
-    saveBtn.addEventListener('click', () => {
-      const amt = parseFloat(amountInput.value);
-      if (!amt || !category || !emotion) return;
+    saveBtn.addEventListener('click', async () => {
+      if (isSaving) return;
+      isSaving = true;
+      saveBtn.disabled = true;
+
+      const amt = getAmount();
+      if (!validateAmount() || !category || !emotion) {
+        isSaving = false;
+        return;
+      }
+
+      // אישור על סכום עצום (>9999)
+      if (amt > HUGE_THRESHOLD) {
+        const confirmed = await confirmHugeAmount(body, amt);
+        if (!confirmed) {
+          isSaving = false;
+          saveBtn.disabled = false;
+          return;
+        }
+      }
+
       Store.addExpense({ amount: amt, category, emotion });
-      toast(t('expense.saved_toast'), 'success');
+      vibrate(15);
+
+      // הצגת הודעה הקשרית
+      const feedback = pickFeedback(amt, emotion);
+      toast(feedback, 'success');
+
       close();
       if (onSave) onSave();
     });
 
-    validate();
+    validateAll();
   }, 'expense-modal');
+}
+
+function confirmHugeAmount(body, amt) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'inline-confirm';
+    overlay.innerHTML = `
+      <div class="inline-confirm-card">
+        <h3>${t('expense.amount_huge_title', { amount: fmtMoney(amt) })}</h3>
+        <p>${t('expense.amount_huge_body')}</p>
+        <div class="inline-confirm-actions">
+          <button class="btn btn-secondary" data-act="no">${t('expense.amount_huge_no')}</button>
+          <button class="btn btn-primary" data-act="yes">${t('expense.amount_huge_yes')}</button>
+        </div>
+      </div>
+    `;
+    body.appendChild(overlay);
+    overlay.querySelector('[data-act="yes"]').addEventListener('click', () => {
+      overlay.remove();
+      resolve(true);
+    });
+    overlay.querySelector('[data-act="no"]').addEventListener('click', () => {
+      overlay.remove();
+      resolve(false);
+    });
+  });
+}
+
+function pickFeedback(amt, emotion) {
+  const hour = new Date().getHours();
+  const todayCount = expensesThisMonth().filter(e => {
+    const d = new Date(e.date);
+    const today = new Date();
+    return d.toDateString() === today.toDateString();
+  }).length;
+
+  const amtFmt = fmtMoney(amt);
+
+  // 4+ הוצאות היום (כולל זו שכרגע נוסף)
+  if (todayCount >= 4) return t('expense.feedback_4_today');
+
+  // הוצאה גדולה + רגש מתחרט
+  if (amt >= LARGE_THRESHOLD && emotion === 'regret') {
+    return t('expense.feedback_large_emotion_regret');
+  }
+
+  // הוצאה גדולה (≥200)
+  if (amt >= LARGE_THRESHOLD) return t('expense.feedback_large', { amount: amtFmt });
+
+  // לילה מאוחר (אחרי 23:00 או לפני 4:00)
+  if (hour >= LATE_NIGHT_HOUR || hour < 4) {
+    return t('expense.feedback_late_night', { amount: amtFmt });
+  }
+
+  // הוצאה קטנה לפי רגש
+  if (emotion === 'happy') return t('expense.feedback_small_emotion_happy');
+  if (emotion === 'regret') return t('expense.feedback_small_emotion_regret', { amount: amtFmt });
+
+  return t('expense.feedback_medium', { amount: amtFmt });
 }

@@ -61,6 +61,28 @@ export function confetti(amount = 40) {
   }
 }
 
+// haptic feedback למובייל — שקט כשלא נתמך, אין שגיאה
+export function vibrate(ms = 10) {
+  try {
+    if (navigator.vibrate) navigator.vibrate(ms);
+  } catch {
+    // silent
+  }
+}
+
+// בדיקת מילים אסורות בקלט משתמש
+const BLOCKED_PATTERNS = [
+  /\bסם\b/i, /סמים/i, /קוקאין/i, /גראס/i, /הרואין/i, /אקסטזי/i,
+  /\bאקדח\b/i, /רובה/i, /סכין\s+(כדי|על|ל)/i,
+  /אובדנות/i, /להרוג/i, /\bרצח\b/i, /התאבדות/i,
+  /להעלים\s+את\s+עצמ/i, /\bאנס\b/i,
+];
+
+export function containsBlockedContent(text) {
+  if (!text || typeof text !== 'string') return false;
+  return BLOCKED_PATTERNS.some(rx => rx.test(text));
+}
+
 export function greeting() {
   const h = new Date().getHours();
   if (h < 11) return 'home.greeting_morning';

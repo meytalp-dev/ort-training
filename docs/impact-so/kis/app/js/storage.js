@@ -3,9 +3,11 @@
 const KEY = 'kis_data_v1';
 
 const DEFAULT_STATE = {
-  version: 1,
+  version: 2,
   created_at: null,
-  profile: null,         // { name, age, income_estimate, fixed_expenses, extra_income }
+  profile: null,         // { age, gender_form, income_breakdown, income_estimate, fixed_expenses, extra_income, created_at }
+                         // gender_form: 'm' | 'f' | 'n'
+                         // income_breakdown: { allowance, gifts_yearly, side_job, other }
   dream: null,           // { title, why_matters, target_amount, target_date, current_saved, started_at, status }
   dreams_archive: [],
   expenses: [],          // [{ id, date, amount, category, tag_fixed, tag_business, emotion }]
@@ -56,6 +58,12 @@ export const Store = {
   setProfile(profile) {
     read();
     cache.profile = profile;
+    write();
+  },
+
+  updateProfile(patch) {
+    read();
+    cache.profile = { ...(cache.profile || {}), ...patch };
     write();
   },
 

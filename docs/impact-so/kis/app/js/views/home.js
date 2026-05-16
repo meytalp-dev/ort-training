@@ -3,6 +3,7 @@
 import { Store, dreamProgress, dreamPace, spentThisMonth, balanceThisMonth, expensesThisMonth, thisWeekReflection } from '../storage.js';
 import { t } from '../i18n.js';
 import { fmtMoney, fmtDate, greeting } from '../ui.js';
+import { coinHTML } from '../coin.js';
 
 const CAT_LABEL = {
   must: 'expense.cat_must',
@@ -24,19 +25,19 @@ export function renderHome(root, navigate) {
   const weekRef = thisWeekReflection();
   const showReflectionCard = isSunday && !weekRef;
 
+  // Empty state — בוחרים לפי משך השימוש
+  const totalExpenses = data.expenses.length;
+  const createdAt = new Date(data.created_at || Date.now());
+  const daysSinceCreated = Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24));
+
+  let emptyKey = 'home.empty_expenses_day1';
+  if (totalExpenses === 0 && daysSinceCreated >= 30) emptyKey = 'home.empty_expenses_30days';
+  else if (totalExpenses === 0 && daysSinceCreated >= 7) emptyKey = 'home.empty_expenses_week';
+
   root.innerHTML = `
     <div class="home-header">
-      <div class="home-greeting">${t(greeting())}</div>
-      <div class="home-name">${escapeText(profile.name || 'חבר')}</div>
+      <div class="home-greeting">${t(greeting())} טוב</div>
     </div>
-
-    ${showReflectionCard ? `
-      <button class="sunday-card" id="sunday-cta" style="width:100%;text-align:right;">
-        <span class="sunday-card-icon">✎</span>
-        <span class="sunday-card-text">${t('reflection.sunday_card_title')}</span>
-        <span class="sunday-card-cta">${t('reflection.sunday_card_cta')}</span>
-      </button>
-    ` : ''}
 
     ${dream ? renderDreamCard(dream, progress, pace) : renderNoDreamCard()}
 
@@ -54,7 +55,10 @@ export function renderHome(root, navigate) {
     <h2 class="section-title">${t('home.recent_title')}</h2>
     <div class="expense-list" id="recent-list">
       ${recent.length === 0
-        ? `<div class="empty-state">${t('home.empty_expenses')}</div>`
+        ? `<div class="empty-state empty-state-coin">
+            ${coinHTML('lg', 'idle')}
+            <p>${t(emptyKey)}</p>
+          </div>`
         : recent.map(renderExpenseItem).join('')}
     </div>
   `;
@@ -67,9 +71,6 @@ export function renderHome(root, navigate) {
   const noDreamCta = root.querySelector('#no-dream-cta');
   if (noDreamCta) noDreamCta.addEventListener('click', () => navigate('dream-wizard'));
 
-  // Bind sunday reflection card
-  const sundayCta = root.querySelector('#sunday-cta');
-  if (sundayCta) sundayCta.addEventListener('click', () => navigate('reflection'));
 }
 
 function renderDreamCard(dream, progress, pace) {

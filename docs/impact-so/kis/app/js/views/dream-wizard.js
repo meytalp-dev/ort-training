@@ -2,9 +2,31 @@
 
 import { Store, availableForSavings } from '../storage.js';
 import { t } from '../i18n.js';
-import { toast, confetti, fmtMoney } from '../ui.js';
+import { toast, confetti, fmtMoney, vibrate, containsBlockedContent, openModal, closeModal } from '../ui.js';
 
 const TOTAL_STEPS = 8;
+const MAX_TITLE_LEN = 100;
+const MAX_WHY_LEN = 200;
+const HUGE_AMOUNT = 3000000;
+
+function showBlockedModal() {
+  vibrate([20, 30, 20]);
+  openModal((body) => {
+    body.innerHTML = `
+      <div class="blocked-modal">
+        <h2>${t('expense.blocked_title')}</h2>
+        <p>${t('expense.blocked_body')}</p>
+        <p class="muted">${t('expense.blocked_help_intro')}</p>
+        <div class="blocked-help">
+          <div class="blocked-help-line">📞 <a href="tel:1201">${t('expense.blocked_help_eran')}</a></div>
+          <div class="blocked-help-line">📞 <a href="tel:1800120140">${t('expense.blocked_help_sahar')}</a></div>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="blocked-close">${t('expense.blocked_cta')}</button>
+      </div>
+    `;
+    body.querySelector('#blocked-close').addEventListener('click', closeModal);
+  });
+}
 
 export function renderDreamWizard(root, navigate) {
   let step = 1;
@@ -101,9 +123,32 @@ export function renderDreamWizard(root, navigate) {
       ${actions(null, t('common.next'))}
     `;
     bindNav(el, null, () => {
-      draft.title = el.querySelector('#dw-title').value.trim();
-      draft.why_matters = el.querySelector('#dw-why').value.trim();
-      if (!draft.title) { toast('צריך לכתוב את החלום', 'warning'); return; }
+      let title = el.querySelector('#dw-title').value.trim();
+      let why = el.querySelector('#dw-why').value.trim();
+
+      if (!title) {
+        toast(t('dream_wizard.title_required'), 'warning');
+        return;
+      }
+
+      // חסימת מילים אסורות (כולל בשדה "למה")
+      if (containsBlockedContent(title) || containsBlockedContent(why)) {
+        showBlockedModal();
+        return;
+      }
+
+      // חיתוך אוטומטי של תווים מרובים
+      if (title.length > MAX_TITLE_LEN) {
+        title = title.slice(0, MAX_TITLE_LEN);
+        toast(t('dream_wizard.title_truncated'), 'default');
+      }
+      if (why.length > MAX_WHY_LEN) {
+        why = why.slice(0, MAX_WHY_LEN);
+      }
+
+      draft.title = title;
+      draft.why_matters = why;
+      vibrate(10);
       step = 2; render();
     });
   }
@@ -134,9 +179,20 @@ export function renderDreamWizard(root, navigate) {
     bindNav(el, () => { step = 1; render(); }, () => {
       const amt = parseInt(el.querySelector('#dw-amount').value, 10);
       const saved = parseInt(el.querySelector('#dw-saved').value, 10) || 0;
-      if (!amt || amt <= 0) { toast('הזינו מחיר', 'warning'); return; }
+
+      if (!amt || amt <= 0) {
+        toast(t('dream_wizard.amount_zero_body'), 'warning');
+        return;
+      }
+
+      if (amt > HUGE_AMOUNT) {
+        toast(t('dream_wizard.amount_huge_body'), 'warning');
+        // לא חוסמים — רק מתריעים. נמשיך אם המשתמש לוחץ שוב.
+      }
+
       draft.target_amount = amt;
       draft.current_saved = saved;
+      vibrate(10);
       step = 3; render();
     });
   }
