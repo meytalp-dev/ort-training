@@ -3,6 +3,7 @@
 import { Store, dreamProgress, expensesThisMonth } from '../storage.js';
 import { t } from '../i18n.js';
 import { openModal, closeModal, toast, fmtMoney, vibrate } from '../ui.js';
+import { parseVoiceInput, isSpeechRecognitionSupported, createRecognition } from '../voice-parse.js';
 
 const HUGE_THRESHOLD = 9999;
 const LARGE_THRESHOLD = 200;
@@ -22,8 +23,18 @@ export function openAddExpense(onSave) {
         <div class="currency-input">
           <input id="exp-amount" type="number" inputmode="numeric" min="0" placeholder="${t('expense.amount_placeholder')}" autofocus>
         </div>
+        ${isSpeechRecognitionSupported() ? `
+          <button id="exp-mic-btn" class="mic-btn" type="button" aria-label="הוספה בקול">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+          </button>
+        ` : ''}
       </div>
 
+      <div id="voice-hint" class="voice-hint" hidden></div>
       <div id="amount-warning" class="amount-warning" hidden></div>
 
       <div class="cat-grid">
@@ -101,6 +112,77 @@ export function openAddExpense(onSave) {
     }
 
     amountInput.addEventListener('input', validateAll);
+
+    // === מיקרופון: קלט קולי ===
+    const micBtn = body.querySelector('#exp-mic-btn');
+    const voiceHint = body.querySelector('#voice-hint');
+    let recognition = null;
+    let isListening = false;
+
+    if (micBtn && isSpeechRecognitionSupported()) {
+      micBtn.addEventListener('click', () => {
+        if (isListening) {
+          recognition?.stop();
+          return;
+        }
+        recognition = createRecognition();
+        if (!recognition) return;
+
+        recognition.onstart = () => {
+          isListening = true;
+          micBtn.classList.add('is-listening');
+          voiceHint.hidden = false;
+          voiceHint.textContent = 'מקשיב... תגיד למשל "פלאפל 25"';
+          vibrate(15);
+        };
+
+        recognition.onresult = (event) => {
+          const text = event.results[0][0].transcript;
+          const parsed = parseVoiceInput(text);
+
+          if (parsed.amount !== null && parsed.amount > 0) {
+            amountInput.value = parsed.amount;
+          }
+          if (parsed.category) {
+            category = parsed.category;
+            body.querySelectorAll('[data-cat]').forEach(b => {
+              b.classList.toggle('is-active', b.dataset.cat === parsed.category);
+            });
+          }
+
+          voiceHint.hidden = false;
+          voiceHint.textContent = `שמעתי: "${text}"`;
+          setTimeout(() => { voiceHint.hidden = true; }, 3500);
+
+          vibrate(10);
+          validateAll();
+        };
+
+        recognition.onerror = (e) => {
+          isListening = false;
+          micBtn.classList.remove('is-listening');
+          if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            voiceHint.hidden = false;
+            voiceHint.textContent = 'צריך הרשאה למיקרופון. בהגדרות הדפדפן.';
+          } else if (e.error === 'no-speech') {
+            voiceHint.hidden = false;
+            voiceHint.textContent = 'לא שמעתי כלום. תנסה שוב?';
+          }
+          setTimeout(() => { voiceHint.hidden = true; }, 3500);
+        };
+
+        recognition.onend = () => {
+          isListening = false;
+          micBtn.classList.remove('is-listening');
+        };
+
+        try {
+          recognition.start();
+        } catch (err) {
+          console.warn('recognition start failed', err);
+        }
+      });
+    }
 
     body.querySelectorAll('[data-cat]').forEach(btn => {
       btn.addEventListener('click', () => {
