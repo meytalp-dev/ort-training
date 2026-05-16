@@ -2798,7 +2798,7 @@ footer a { color: var(--burgundy); text-decoration: none; border-bottom: 1px das
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/>
     </svg>
-    מחר בבוקר · 5 פעולות
+    לשיעור הבא · 5 פעולות
   </button>
   <button class="tab" data-view="practice">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2830,6 +2830,12 @@ footer a { color: var(--burgundy); text-decoration: none; border-bottom: 1px das
     </svg>
     תוכנית שנתית
   </button>
+  <button class="tab tab-tanach-only" data-view="games" style="display:none;">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M6 11h4M8 9v4"/><circle cx="16" cy="13" r="1.5"/><circle cx="18" cy="10" r="1.5"/><path d="M3 18a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3l-1.5-9a3 3 0 0 0-3-3H7.5a3 3 0 0 0-3 3z"/>
+    </svg>
+    משחקים לימודיים
+  </button>
   <button class="tab tab-coordinator-only" data-view="catalog">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -2846,7 +2852,7 @@ footer a { color: var(--burgundy); text-decoration: none; border-bottom: 1px das
       // Simplify visible tab labels — Moshe doesn't need "מבט מורה / מבט תלמיד" prefixes
       const tabRenames = {
         'class':       'מפת כיתה',
-        'actions':     'מחר בבוקר',
+        'actions':     'לשיעור הבא',
         'practice':    'תרגול',
         'lesson':      'מחולל שיעור',
         'annual-plan': 'תוכנית שנתית',
@@ -5533,11 +5539,17 @@ document.querySelectorAll('.subnav-btn').forEach(btn => {
 });
 
 // ============== Worksheet Print ==============
-const TRACK_META = {
+const LASHON_TRACK_META = {
   1: { name: 'מסלול א · בסיסי', subtitle: 'זיהוי המאפיין', level: 1, accent: '#4A9B7F' },
   2: { name: 'מסלול ב · בינוני', subtitle: 'שורש + בניין',  level: 2, accent: '#C88A2E' },
   3: { name: 'מסלול ג · מקדם',  subtitle: 'חריגים + ניתוח', level: 4, accent: '#8B3A4A' },
 };
+const TANACH_TRACK_META = {
+  1: { name: 'מסלול א · בסיסי', subtitle: 'מה קרה בסיפור?',                  level: 1, accent: '#8B3A4A' },
+  2: { name: 'מסלול ב · בינוני', subtitle: 'למה זה קרה? סיבה ותוצאה',         level: 2, accent: '#E8A849' },
+  3: { name: 'מסלול ג · מתקדם + העמקה', subtitle: 'ניתוח ספרותי + דילמות מוסריות', level: 4, accent: '#4A9B7F' },
+};
+const TRACK_META = PACK_ID === 'tanach' ? TANACH_TRACK_META : LASHON_TRACK_META;
 
 function getQuestionsForTrack(trackId) {
   // Track 1 (basic) gets level-1 + level-2 questions (easier)
@@ -5579,20 +5591,61 @@ function printWorksheet(trackId, mode) {
   const introMap = PACK_ID === 'tanach' ? tanachIntros : lashonIntros;
   const introHtml = introMap[trackId] || introMap[1];
 
+  // Render options per question type
+  const renderOptions = (q) => {
+    if (q.type === 'compare') {
+      // Compare: each option is { left, right } — render as two-column rows
+      return `<div class="q-options q-cmp-list">
+        ${q.options.map((opt, j) => `
+          <div class="q-cmp-row ${isTeacher && j === q.correct ? 'correct' : ''}">
+            <span class="opt-letter">${letters[j]}.</span>
+            <span class="q-cmp-cell">${opt.left || ''}</span>
+            <span class="q-cmp-sep">|</span>
+            <span class="q-cmp-cell">${opt.right || ''}</span>
+            ${isTeacher && j === q.correct ? '<span class="check">✓</span>' : ''}
+          </div>
+        `).join('')}
+      </div>`;
+    }
+    if (q.type === 'sequence') {
+      // Sequence: show items as a numbered list of possible events
+      return `<div class="q-options q-seq-list">
+        <div class="q-seq-instructions">${q.instruction || 'סדרו את האירועים בסדר הנכון:'}</div>
+        ${q.options.map((opt, j) => `
+          <div class="q-seq-row">
+            <span class="opt-letter">${letters[j]}.</span>
+            <span>${opt}</span>
+          </div>
+        `).join('')}
+        ${isTeacher && Array.isArray(q.correct) ? `<div class="q-seq-key"><strong>סדר נכון:</strong> ${q.correct.map(i => letters[i]).join(' ← ')}</div>` : ''}
+      </div>`;
+    }
+    if (q.type === 'open') {
+      // Open: render answer lines for student, answer text for teacher
+      return `<div class="q-options q-open">
+        ${isTeacher && q.modelAnswer
+          ? `<div class="q-open-model"><strong>תשובה לדוגמה:</strong> ${q.modelAnswer}</div>`
+          : `<div class="q-open-lines">${'<div class="q-line"></div>'.repeat(5)}</div>`}
+      </div>`;
+    }
+    // Default: single multiple-choice
+    return `<div class="q-options">
+      ${q.options.map((opt, j) => `
+        <div class="q-opt ${isTeacher && j === q.correct ? 'correct' : ''}">
+          <span class="opt-letter">${letters[j]}.</span>
+          <span>${opt}</span>
+          ${isTeacher && j === q.correct ? '<span class="check">✓</span>' : ''}
+        </div>
+      `).join('')}
+    </div>`;
+  };
+
   const questionsHtml = questions.map((q, i) => `
     <div class="q-block">
       <div class="q-num">${i + 1}.</div>
       <div class="q-content">
         <div class="q-body">${q.body}</div>
-        <div class="q-options">
-          ${q.options.map((opt, j) => `
-            <div class="q-opt ${isTeacher && j === q.correct ? 'correct' : ''}">
-              <span class="opt-letter">${letters[j]}.</span>
-              <span>${opt}</span>
-              ${isTeacher && j === q.correct ? '<span class="check">✓</span>' : ''}
-            </div>
-          `).join('')}
-        </div>
+        ${renderOptions(q)}
         ${isTeacher ? `<div class="q-explain"><strong>הסבר:</strong> ${q.explain}</div>` : ''}
       </div>
     </div>
@@ -5650,6 +5703,40 @@ function printWorksheet(trackId, mode) {
   .q-opt.correct { background: rgba(74, 155, 127, 0.15); font-weight: 700; }
   .q-opt .opt-letter { font-weight: 700; min-width: 18px; }
   .q-opt .check { color: #4A9B7F; font-weight: 900; margin-right: auto; }
+
+  /* Compare question (two-column pairs) */
+  .q-cmp-list { display: flex; flex-direction: column; grid-template-columns: none; gap: 6px; }
+  .q-cmp-row {
+    display: grid;
+    grid-template-columns: 22px 1fr 12px 1fr 18px;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 8px;
+    border: 1px solid #E8DFD0;
+    border-radius: 6px;
+    font-size: 10.5pt;
+    line-height: 1.4;
+  }
+  .q-cmp-row.correct { background: rgba(74,155,127,0.12); border-color: #4A9B7F; font-weight: 700; }
+  .q-cmp-row .opt-letter { font-weight: 700; }
+  .q-cmp-row .q-cmp-cell { font-size: 10pt; }
+  .q-cmp-row .q-cmp-sep { color: #C88A2E; font-weight: 700; text-align: center; }
+  .q-cmp-row .check { color: #4A9B7F; font-weight: 900; }
+
+  /* Sequence question (numbered list) */
+  .q-seq-list { display: flex; flex-direction: column; grid-template-columns: none; gap: 4px; }
+  .q-seq-list .q-seq-instructions {
+    font-size: 10pt; opacity: 0.8; margin-bottom: 6px;
+    background: rgba(232,168,73,0.10); padding: 6px 10px; border-radius: 4px;
+  }
+  .q-seq-row { display: flex; gap: 8px; padding: 4px 8px; border-bottom: 1px dashed #E8DFD0; font-size: 10.5pt; }
+  .q-seq-row .opt-letter { font-weight: 700; min-width: 18px; }
+  .q-seq-key { margin-top: 8px; padding: 8px 12px; background: rgba(74,155,127,0.12); border-radius: 4px; font-size: 10pt; }
+
+  /* Open question (answer lines or model answer) */
+  .q-open { display: flex; flex-direction: column; grid-template-columns: none; gap: 6px; }
+  .q-open .q-line { border-bottom: 1px solid #C88A2E; height: 24px; margin-bottom: 4px; }
+  .q-open .q-open-model { background: rgba(46,125,140,0.08); padding: 10px 14px; border-right: 3px solid #2E7D8C; border-radius: 0 4px 4px 0; font-size: 10pt; line-height: 1.55; }
   .q-explain {
     background: rgba(46, 125, 140, 0.07); border-right: 3px solid #2E7D8C;
     padding: 8px 12px; margin-top: 8px; font-size: 10pt; line-height: 1.5;
@@ -5672,7 +5759,7 @@ function printWorksheet(trackId, mode) {
   <div class="hdr">
     <div class="hdr-right">
       <h1>${meta.name}</h1>
-      <div class="sub">${meta.subtitle} · חסרי פ״נ וחפי״צ</div>
+      <div class="sub">${meta.subtitle} · ${TOPIC.name}</div>
       ${isTeacher ? '<div class="teacher-tag">דף מורה — עם מפתח תשובות והסברים</div>' : ''}
     </div>
     <div class="hdr-left">
@@ -6384,9 +6471,9 @@ function renderActionsView() {
   container.innerHTML = `
     <!-- HERO -->
     <div class="actions-hero">
-      <div class="actions-hero-eyebrow">${dateStr} · ${hour < 12 ? 'הבוקר' : 'היום'}</div>
-      <h2>${greeting} משה — 5 פעולות לטפל בהן השבוע</h2>
-      <p>פיילוט תנ"ך ט'1 + ט'2 (19 תלמידים) · פרק כ"ח · בעלת האוב. אל ההפעלה — לחיצה על כל פעולה תפתח את המסך המתאים.</p>
+      <div class="actions-hero-eyebrow">${dateStr}</div>
+      <h2>${greeting} משה — 5 פעולות שמוכנות לשיעור הבא</h2>
+      <p>פיילוט תנ"ך ט'1 + ט'2 (19 תלמידים) · פרק כ"ח — בעלת האוב. כל פעולה כאן מבוססת על מה שקרה בשיעור האחרון. אפשר לסקור, לערוך, לאשר — או לדחות.</p>
     </div>
 
     <!-- ACTION 1: EXIT TICKET → DO NOW -->
@@ -6394,19 +6481,19 @@ function renderActionsView() {
       <div class="action-head">
         <div class="action-badge">01</div>
         <div>
-          <h3 class="action-title">Exit Ticket אתמול → Do Now של היום</h3>
-          <div class="action-sub">סוף שיעור אתמול · 19 תלמידים ענו · clustering אוטומטי</div>
+          <h3 class="action-title">שאלת סיכום מהשיעור האחרון ← משימת פתיחה לשיעור הבא</h3>
+          <div class="action-sub">19 תלמידים ענו · המערכת זיהתה אוטומטית את הטעות הנפוצה</div>
         </div>
       </div>
       <div class="action-body">
         <div class="exit-ticket-mock">
           <div class="et-question">השאלה: "${exitTicketStats.question}"</div>
           <div class="et-stats">${exitTicketStats.correct} נכון · <strong>${exitTicketStats.wrong} שגוי</strong> · ${Math.round(exitTicketStats.wrong/19*100)}% מהכיתה</div>
-          <div style="margin-top:8px; font-size:14px; color:#2A4A56;"><strong>הדפוס שהמערכת זיהתה:</strong> ${exitTicketStats.wrongPattern}</div>
+          <div style="margin-top:8px; font-size:14px; color:#2A4A56;"><strong>מה שמשותף לכל הטעויות:</strong> ${exitTicketStats.wrongPattern}</div>
         </div>
-        <p><strong>ההצעה ל-Do Now של 5 דקות בבוקר:</strong> פתחו את השיעור בשאלה "כשאדם מאמין ב-X ועושה Y — איך אנחנו מסבירים את הסתירה?" → דיון של 3 דקות → חזרה לטקסט עם השאלה הזו במוקד.</p>
-        <button class="action-cta" onclick="alert('הופק Do Now של 5 דקות לפתיחת השיעור הבא. נשמר בלוח השיעורים של מחר.')">צרי Do Now אוטומטי</button>
-        <button class="action-cta secondary" onclick="alert('Exit Ticket חדש לשיעור הבא ייווצר אוטומטית עם השאלה המתקנת — לבדיקה שהפער נסגר.')">ראי את ה-Exit Ticket הבא</button>
+        <p><strong>ההצעה למשימת פתיחה של 5 דקות:</strong> פתחו את השיעור בשאלה "כשאדם מאמין במשהו ועושה את ההפך — איך אנחנו מסבירים את הסתירה?" ← דיון של 3 דקות ← חזרה לטקסט עם השאלה הזו במוקד.</p>
+        <button class="action-cta" onclick="alert('הופקה משימת פתיחה של 5 דקות לשיעור הבא. נשמרה בלוח השיעורים.')">צרי משימת פתיחה אוטומטית</button>
+        <button class="action-cta secondary" onclick="alert('שאלת סיכום חדשה לשיעור הבא תיווצר אוטומטית עם השאלה המתקנת — לבדיקה שהפער נסגר.')">ראי את שאלת הסיכום הבאה</button>
       </div>
     </div>
 
@@ -6415,37 +6502,37 @@ function renderActionsView() {
       <div class="action-head">
         <div class="action-badge">02</div>
         <div>
-          <h3 class="action-title">הצעת קיבוץ גמיש לשיעור הבא</h3>
-          <div class="action-sub">פרק כ"ח — קריאה מודרכת · 3 קבוצות לפי שליטה ב-prerequisite</div>
+          <h3 class="action-title">חלוקה לקבוצות עבודה — מבוססת על הנתונים</h3>
+          <div class="action-sub">פרק כ"ח · 3 קבוצות לפי רמת השליטה בידע הנדרש לשיעור</div>
         </div>
       </div>
       <div class="action-body">
-        <p>המערכת מציעה <strong>3 קבוצות לא קבועות</strong> לפי שליטה בקריאת טקסט מקראי + הבנת הקשר היסטורי. <em>התלמידים לא רואים רמות — שמות צבעוניים בלבד.</em></p>
+        <p>המערכת מציעה <strong>3 קבוצות שמשתנות לפי הצורך</strong> — לא חלוקה קבועה. החלוקה לפי השליטה בקריאת טקסט מקראי וההיכרות עם ההקשר ההיסטורי. <em>חשוב: התלמידים רואים רק את שם הצבע של הקבוצה שלהם, לא רמה ולא דירוג.</em></p>
         <div class="group-suggest">
           <div class="group-card blue">
             <div class="group-name">קבוצת כחול · ${lvl4.length + lvl3.length} תלמידים</div>
             <div class="group-students">
               ${[...lvl4, ...lvl3].map(s => `<span class="group-student-chip">${s.name.split(' ')[1] || s.name}</span>`).join('')}
             </div>
-            <div class="group-focus">קריאה עצמאית של הפרק + שאלת עיון מעמיקה. אתגר: מצא ניגוד פנימי בדמותו של שאול.</div>
+            <div class="group-focus">קוראים את הפרק לבד ועונים על שאלת עיון. האתגר: למצוא סתירה פנימית באישיותו של שאול.</div>
           </div>
           <div class="group-card green">
             <div class="group-name">קבוצת ירוק · ${lvl12.filter(s => s.grade && s.grade >= 60).length} תלמידים</div>
             <div class="group-students">
               ${lvl12.filter(s => s.grade && s.grade >= 60).map(s => `<span class="group-student-chip">${s.name.split(' ')[1] || s.name}</span>`).join('')}
             </div>
-            <div class="group-focus">קריאה מודרכת בזוגות + שאלות הבנה בסיסיות. תמיכה ע"י המורה לחלק האמצעי.</div>
+            <div class="group-focus">קוראים בזוגות לפי הנחיה, עונים על שאלות הבנה. המורה ניגש אליהם באמצע השיעור לעזרה.</div>
           </div>
           <div class="group-card orange">
             <div class="group-name">קבוצת כתום · ${lvl12.filter(s => !s.grade).length} תלמידים</div>
             <div class="group-students">
               ${lvl12.filter(s => !s.grade).map(s => `<span class="group-student-chip">${s.name.split(' ')[1] || s.name}</span>`).join('')}
             </div>
-            <div class="group-focus">סיכום הפרק בעברית פשוטה + תמונות. המורה איתם בכל הזמן. יעד מצומצם: 3 דמויות מרכזיות.</div>
+            <div class="group-focus">סיכום הפרק בעברית פשוטה עם תמונות. המורה יושב איתם כל השיעור. המטרה: להכיר 3 דמויות מרכזיות.</div>
           </div>
         </div>
-        <button class="action-cta" onclick="alert('הקיבוץ נשמר לשיעור ביום ראשון. ניתן לערוך מהמסך של מחולל השיעור.')">אשרי קיבוץ לשיעור הבא</button>
-        <button class="action-cta secondary" onclick="document.querySelector('[data-view=&quot;lesson&quot;]').click()">ערכי במחולל השיעור</button>
+        <button class="action-cta" onclick="alert('החלוקה נשמרה לשיעור הבא. אפשר לערוך אותה ממסך מחולל השיעור.')">אשר את החלוקה לשיעור הבא</button>
+        <button class="action-cta secondary" onclick="document.querySelector('[data-view=&quot;lesson&quot;]').click()">ערוך במחולל השיעור</button>
       </div>
     </div>
 
@@ -6454,7 +6541,7 @@ function renderActionsView() {
       <div class="action-head">
         <div class="action-badge">03</div>
         <div>
-          <h3 class="action-title">טיוטת Re-teach — טעות נפוצה זוהתה</h3>
+          <h3 class="action-title">טיוטת הוראה מתקנת — טעות נפוצה זוהתה</h3>
           <div class="action-sub">68% מהכיתה (13/19) שגו באותה דרך · הטיוטה מוכנה לעריכה</div>
         </div>
       </div>
@@ -6462,13 +6549,13 @@ function renderActionsView() {
         <p><strong>הטעות:</strong> תלמידים מתקשים לזהות סתירה פנימית בדמות תנ"כית (אמונה בה' מול פנייה לבעלת האוב). זה לא חסר ידע — חסר כלי <em>קריאה</em>.</p>
         <div class="reteach-plan">
           <div style="font-family:'Rubik',sans-serif; font-weight:800; margin-bottom:10px; color:#8B3A4A;">תוכנית 15 דקות לשיעור הבא</div>
-          <div class="reteach-step"><div class="reteach-step-num">1</div><div><strong>5 דק' פתיחה:</strong> שלוש דמויות מ-WhatsApp/חברה — "אדם אמר X, עשה Y. למה?" תלמידים מציעים הסברים.</div></div>
-          <div class="reteach-step"><div class="reteach-step-num">2</div><div><strong>5 דק' מודלינג:</strong> המורה מקריאה פסוקים ג-ז עם שאלות "מה הוא חשב?" / "מה הוא עשה?" — בכל פסוק.</div></div>
-          <div class="reteach-step"><div class="reteach-step-num">3</div><div><strong>5 דק' תרגול בזוגות:</strong> דף עבודה — שני עמודות "אמר" / "עשה" לכל פעולה של שאול. תלמידים ממלאים בזוגות.</div></div>
+          <div class="reteach-step"><div class="reteach-step-num">1</div><div><strong>5 דקות פתיחה:</strong> שלוש דוגמאות מהחיים — "אדם אמר משהו ועשה את ההפך. למה?" התלמידים מציעים הסברים.</div></div>
+          <div class="reteach-step"><div class="reteach-step-num">2</div><div><strong>5 דקות הדגמה:</strong> המורה קורא פסוקים ג-ז יחד עם הכיתה, ושואל בכל פסוק: "מה הוא חשב?" ו-"מה הוא עשה?".</div></div>
+          <div class="reteach-step"><div class="reteach-step-num">3</div><div><strong>5 דקות תרגול בזוגות:</strong> דף עבודה עם שתי עמודות — "אמר" ו-"עשה" — לכל פעולה של שאול. ממלאים בזוגות.</div></div>
         </div>
-        <p><strong>Exit Ticket חדש:</strong> "מצא בפרק עוד פעם אחת שדמות אמרה X ועשתה Y. הסבר את הסתירה." → 1 שאלה, 2 דקות.</p>
-        <button class="action-cta" onclick="alert('הטיוטה נשמרה. ניתן לעריכה ולאישור מהמסך של מחולל השיעור.')">פתחי לעריכה</button>
-        <button class="action-cta secondary" onclick="alert('הופיע במחולל שיעור עם כל המקורות. דחיה - המערכת לא תציע שוב את אותה טיוטה השבוע.')">דחי הצעה זו</button>
+        <p><strong>שאלת סיכום חדשה לסוף השיעור:</strong> "מצאו בפרק עוד פעם אחת שדמות אמרה דבר אחד ועשתה אחר. הסבירו את הסתירה." ← שאלה אחת, 2 דקות.</p>
+        <button class="action-cta" onclick="alert('הטיוטה נשמרה. אפשר לפתוח אותה לעריכה ולאישור ממסך מחולל השיעור.')">פתח לעריכה</button>
+        <button class="action-cta secondary" onclick="alert('דחית את ההצעה. המערכת לא תציע את אותה טיוטה השבוע.')">דחה הצעה זו</button>
       </div>
     </div>
 
@@ -6477,12 +6564,12 @@ function renderActionsView() {
       <div class="action-head">
         <div class="action-badge">04</div>
         <div>
-          <h3 class="action-title">סיכום שבועי להורים · אוטומטי</h3>
-          <div class="action-sub">19 הודעות WhatsApp מוכנות · חתימה אחת על כולן · אישית לכל תלמיד</div>
+          <h3 class="action-title">סיכום שבועי להורים — אוטומטי</h3>
+          <div class="action-sub">19 הודעות וואטסאפ מוכנות · אישור אחד על כולן · מותאמת אישית לכל תלמיד</div>
         </div>
       </div>
       <div class="action-body">
-        <p>טון חיובי-ראשון: הצלחה אחת + אתגר אחד + פעולה אחת לבית. דוגמה לאחת מההודעות:</p>
+        <p>כל הודעה כתובה בטון חיובי: הצלחה אחת, אתגר אחד, ופעולה אחת קצרה לבית. הנה דוגמה:</p>
         <div class="family-note-preview">
           <div class="fn-greeting">שלום להוריה של ${stuck[0]?.name.split(' ')[1] || 'הודיה'}, שבוע נעים</div>
           <div class="fn-bullet"><strong>השבוע ${stuck[0]?.name.split(' ')[1] || 'הודיה'} הצליחה</strong> להשתתף בדיון על דמותו של שאול ולהביא דוגמה משלה.</div>
@@ -6495,8 +6582,8 @@ function renderActionsView() {
           ${TANACH_STUDENTS.slice(0, 8).map(s => `<span>${s.name.split(' ')[1] || s.name}</span>`).join(' · ')}
           <span>+ עוד ${TANACH_STUDENTS.length - 8}</span>
         </div>
-        <button class="action-cta" onclick="alert('19 הודעות נשלחו בוואטסאפ. שיעור פתיחה: 47%')">שלחי 19 הודעות</button>
-        <button class="action-cta secondary" onclick="alert('בודקי כל הודעה אחת אחת לפני שליחה. מקסימום 30 שניות לכל הודעה.')">סקירה לפני שליחה</button>
+        <button class="action-cta" onclick="alert('19 ההודעות נשלחו בוואטסאפ. שיעור פתיחה: 47%')">שלח את 19 ההודעות</button>
+        <button class="action-cta secondary" onclick="alert('עוברים על כל הודעה בנפרד לפני השליחה. בערך 30 שניות לכל אחת.')">בדיקה לפני שליחה</button>
       </div>
     </div>
 
@@ -6506,20 +6593,20 @@ function renderActionsView() {
         <div class="action-badge">05</div>
         <div>
           <h3 class="action-title">תור שיחות אישיות השבוע · 5 תלמידים</h3>
-          <div class="action-sub">שיחה 5–7 דק' לכל אחד · תיעוד מהיר R-C-T (Research-Compliment-Teach) ב-30 שניות</div>
+          <div class="action-sub">שיחה 5–7 דק' לכל אחד · תיעוד מהיר ב-3 שאלות (ראיתי / החמאתי / לימדתי) — 30 שניות</div>
         </div>
       </div>
       <div class="action-body">
-        <p>המערכת בחרה את 5 התלמידים שזקוקים השבוע לשיחה אישית, לפי דחיפות — לא לפי "רמה". סדר העדיפויות:</p>
+        <p>המערכת בחרה את 5 התלמידים שזקוקים השבוע לשיחה אישית, לפי דחיפות — ולא לפי רמה. הסדר נקבע אוטומטית:</p>
         <ul class="conf-queue">
           ${stuck.slice(0, 5).map((s, i) => {
             const priorities = ['high', 'high', 'medium', 'medium', 'low'];
             const reasons = [
-              'לא ענתה ב-3 Exit Tickets ברצף · ייתכן חוסר ביטחון',
-              'ירידה מציון 65 → ביצוע נמוך בתרגול אחרון · בודקת שאינה תקוע.ה',
-              'התקדמה משמעותית — שיחת חיזוק חיובי + יעד אישי לחודש',
-              'מסומן.ת על-ידי המערכת — wheel-spinning (5 ניסיונות, אותה רמה)',
-              'שיחת חזרה — שבועיים מאז השיחה האחרונה, נוהל קבוע',
+              'לא ענה ב-3 שאלות סיכום ברצף — ייתכן חוסר ביטחון. שווה לבדוק.',
+              'ירידה מציון 65 לביצוע נמוך בתרגול האחרון. לוודא שהוא לא תקוע.',
+              'התקדם משמעותית — שיחת חיזוק חיובי וקביעת יעד אישי לחודש הקרוב.',
+              'תקוע בלולאה — 5 ניסיונות באותה רמה בלי התקדמות. צריך שינוי גישה.',
+              'שיחת מעקב שגרתית — שבועיים מאז השיחה האחרונה.',
             ];
             const labels = ['דחוף', 'דחוף', 'בינוני', 'בינוני', 'שגרתי'];
             return `
@@ -6533,9 +6620,9 @@ function renderActionsView() {
               </li>`;
           }).join('')}
         </ul>
-        <p style="margin-top:14px; font-size:14px; opacity:0.85;"><strong>תיעוד R-C-T אחרי כל שיחה:</strong> מה ראיתי (Research) · מה החמאתי (Compliment) · מה לימדתי (Teach). 3 שדות, 30 שניות, נשמר בכרטיס התלמיד.</p>
-        <button class="action-cta" onclick="alert('פתחתי את כרטיס התלמיד.ה הראשון.ה בתור. אחרי השיחה — תוכלי לתעד R-C-T בלחיצה אחת.')">התחילי בשיחה הראשונה</button>
-        <button class="action-cta secondary" onclick="alert('דחית את השיחה השבוע. תופיע שוב בתור בשבוע הבא.')">דחי לשבוע הבא</button>
+        <p style="margin-top:14px; font-size:14px; opacity:0.85;"><strong>תיעוד מהיר אחרי כל שיחה — 3 שאלות:</strong> מה ראיתי · על מה החמאתי · מה לימדתי. 3 שדות קצרים, 30 שניות, נשמר אוטומטית בכרטיס התלמיד.</p>
+        <button class="action-cta" onclick="alert('כרטיס התלמיד הראשון בתור נפתח. אחרי השיחה — תיעוד בלחיצה אחת.')">התחל בשיחה הראשונה</button>
+        <button class="action-cta secondary" onclick="alert('השיחה נדחתה לשבוע הבא. תופיע שוב בתור.')">דחה לשבוע הבא</button>
       </div>
     </div>
 
@@ -6543,8 +6630,8 @@ function renderActionsView() {
     <div class="banner" style="margin-top: 30px; background: linear-gradient(135deg, #f5f0e8, #fff);">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M8 14l3-6 4 4 5-9"/></svg>
       <div class="banner-text">
-        <strong>איך נדע שזה עובד?</strong> המערכת מודדת לא רק תלמידים אלא גם את עצמה:
-        Action Take-up Rate (יעד &gt;60%) · Re-teach Success Rate (&gt;65%) · Family Note Engagement (&gt;40%) · Time-Saved (&gt;20 דק'/יום) · Teacher Cognitive Load (חייב לרדת).
+        <strong>איך נדע שהמערכת באמת עוזרת?</strong> היא מודדת לא רק את התלמידים — גם את עצמה:
+        כמה מהפעולות המורה מבצע בפועל (יעד מעל 60%) · עד כמה ההוראה המתקנת הצליחה (מעל 65%) · כמה הורים פתחו את ההודעות (מעל 40%) · כמה זמן המערכת חוסכת ביום (מעל 20 דקות) · והכי חשוב — שעומס העבודה של המורה יורד, לא עולה.
       </div>
     </div>
   `;
