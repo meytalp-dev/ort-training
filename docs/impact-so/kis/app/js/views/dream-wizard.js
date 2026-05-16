@@ -2,12 +2,16 @@
 
 import { Store, availableForSavings } from '../storage.js';
 import { t } from '../i18n.js';
-import { toast, confetti, fmtMoney, vibrate, containsBlockedContent, openModal, closeModal } from '../ui.js';
+import { toast, confetti, fireworks, heroCelebration, fmtMoney, vibrate, containsBlockedContent, openModal, closeModal } from '../ui.js';
+import { coinHTML } from '../coin.js';
 
 const TOTAL_STEPS = 8;
 const MAX_TITLE_LEN = 100;
 const MAX_WHY_LEN = 200;
 const HUGE_AMOUNT = 3000000;
+
+// אייקונים לחלום — emojis פופולריים, צבעוניים, מקובלים אצל נוער
+const DREAM_ICONS = ['⭐', '📱', '🎧', '👟', '🎮', '✈️', '🚗', '🎸', '📷', '💻', '🎨', '🏀', '⚽', '🎤', '🍕', '🎬', '👕', '🏖️', '💍', '🎁'];
 
 function showBlockedModal() {
   vibrate([20, 30, 20]);
@@ -34,6 +38,7 @@ export function renderDreamWizard(root, navigate) {
   const draft = {
     title: '',
     why_matters: '',
+    icon: '⭐',
     target_amount: 0,
     current_saved: 0,
     target_date: '',
@@ -116,12 +121,30 @@ export function renderDreamWizard(root, navigate) {
           <input id="dw-title" type="text" placeholder="${t('dream_wizard.title_placeholder')}" value="${escAttr(draft.title)}">
         </div>
         <div class="field">
+          <label>בחר אייקון לחלום</label>
+          <div class="icon-picker">
+            ${DREAM_ICONS.map(icon => `
+              <button type="button" class="icon-pick ${draft.icon === icon ? 'is-active' : ''}" data-icon="${icon}">${icon}</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="field">
           <label for="dw-why">${t('dream_wizard.why_label')}</label>
           <textarea id="dw-why" placeholder="${t('dream_wizard.why_placeholder')}">${escText(draft.why_matters)}</textarea>
         </div>
       </div>
       ${actions(null, t('common.next'))}
     `;
+    // איקון picker
+    el.querySelectorAll('.icon-pick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        draft.icon = btn.dataset.icon;
+        el.querySelectorAll('.icon-pick').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        vibrate(5);
+      });
+    });
+
     bindNav(el, null, () => {
       let title = el.querySelector('#dw-title').value.trim();
       let why = el.querySelector('#dw-why').value.trim();
@@ -451,13 +474,21 @@ export function renderDreamWizard(root, navigate) {
         target_amount: draft.target_amount,
         current_saved: draft.current_saved,
         target_date: draft.target_date,
+        icon: draft.icon || '⭐',
         smart_sentence: sentence,
         started_at: new Date().toISOString(),
         status: 'active',
       });
-      confetti(60);
-      toast('החלום נשמר ✓', 'success');
-      setTimeout(() => navigate('home'), 800);
+      // Tier 4 celebration — חגיגה מלאה: זיקוקים + confetti + מטבע + hero
+      vibrate([20, 30, 20, 30, 50]);
+      fireworks(4);
+      confetti(80);
+      heroCelebration({
+        title: 'יש לך חלום',
+        subtitle: draft.title,
+        coinHTML: coinHTML('xl', 'celebrate'),
+        onClose: () => navigate('home'),
+      });
     });
   }
 

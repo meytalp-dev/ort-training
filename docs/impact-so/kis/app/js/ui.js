@@ -61,6 +61,88 @@ export function confetti(amount = 40) {
   }
 }
 
+// === Fireworks (Tier 4 — celebration שמורה ל-rare events) ===
+export function fireworks(bursts = 3) {
+  const colors = ['#8B5CF6', '#EC4899', '#FACC15', '#06B6D4', '#84CC16', '#FB923C'];
+
+  for (let b = 0; b < bursts; b++) {
+    setTimeout(() => {
+      const centerX = 20 + Math.random() * 60; // % from left
+      const centerY = 20 + Math.random() * 30; // % from top
+      const color = colors[Math.floor(Math.random() * colors.length)];
+
+      // Rocket trail (קצר)
+      const rocket = document.createElement('div');
+      rocket.className = 'firework firework-rocket';
+      rocket.style.left = centerX + '%';
+      rocket.style.bottom = '0';
+      rocket.style.background = color;
+      rocket.style.boxShadow = `0 0 8px ${color}`;
+      document.body.appendChild(rocket);
+      setTimeout(() => rocket.remove(), 700);
+
+      // Burst particles (30 חלקיקים בעיגול)
+      setTimeout(() => {
+        const particleCount = 30;
+        for (let i = 0; i < particleCount; i++) {
+          const angle = (i / particleCount) * Math.PI * 2;
+          const distance = 80 + Math.random() * 60;
+          const dx = Math.cos(angle) * distance;
+          const dy = Math.sin(angle) * distance;
+
+          const particle = document.createElement('div');
+          particle.className = 'firework firework-particle';
+          particle.style.left = centerX + '%';
+          particle.style.top = centerY + '%';
+          particle.style.background = color;
+          particle.style.boxShadow = `0 0 6px ${color}`;
+          particle.style.setProperty('--dx', dx + 'px');
+          particle.style.setProperty('--dy', dy + 'px');
+          document.body.appendChild(particle);
+          setTimeout(() => particle.remove(), 1400);
+        }
+      }, 500);
+    }, b * 400);
+  }
+}
+
+// === Hero celebration — מסך חגיגי מלא ===
+// title — כותרת גדולה
+// subtitle — משפט אישי (אופציונלי)
+// onClose — callback בלחיצה
+// duration — אם 0, ממתין ללחיצה. אחרת מסתיים אוטומטית
+export function heroCelebration({ title, subtitle, coinHTML, onClose, duration = 0 }) {
+  const overlay = document.createElement('div');
+  overlay.className = 'hero-celebration';
+  overlay.innerHTML = `
+    ${coinHTML || ''}
+    <h1>${title || ''}</h1>
+    ${subtitle ? `<p>${subtitle}</p>` : ''}
+    <button class="btn btn-secondary" id="hero-close">סגור</button>
+  `;
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.style.transition = 'opacity 300ms';
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+      if (onClose) onClose();
+    }, 320);
+  };
+
+  overlay.querySelector('#hero-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
+
+  if (duration > 0) {
+    setTimeout(close, duration);
+  }
+
+  return close;
+}
+
 // haptic feedback למובייל — שקט כשלא נתמך, אין שגיאה
 export function vibrate(ms = 10) {
   try {

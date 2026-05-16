@@ -4,6 +4,7 @@ import { Store, dreamProgress, dreamPace, spentThisMonth, balanceThisMonth, expe
 import { t } from '../i18n.js';
 import { fmtMoney, fmtDate, greeting } from '../ui.js';
 import { coinHTML } from '../coin.js';
+import { pickInsight } from '../insights.js';
 
 const CAT_LABEL = {
   must: 'expense.cat_must',
@@ -34,10 +35,19 @@ export function renderHome(root, navigate) {
   if (totalExpenses === 0 && daysSinceCreated >= 30) emptyKey = 'home.empty_expenses_30days';
   else if (totalExpenses === 0 && daysSinceCreated >= 7) emptyKey = 'home.empty_expenses_week';
 
+  const insight = pickInsight();
+
   root.innerHTML = `
     <div class="home-header">
       <div class="home-greeting">${t(greeting())} טוב</div>
     </div>
+
+    ${insight ? `
+      <div class="insight-card">
+        <div class="insight-icon">${coinHTML('sm', 'idle')}</div>
+        <div class="insight-text">${insight.text}</div>
+      </div>
+    ` : ''}
 
     ${dream ? renderDreamCard(dream, progress, pace) : renderNoDreamCard()}
 
@@ -79,10 +89,16 @@ function renderDreamCard(dream, progress, pace) {
   const daysLeft = pace ? pace.daysLeft : 0;
   const perDay = pace ? fmtMoney(pace.perDay) : '—';
 
+  const icon = dream.icon || '⭐';
   return `
     <div class="dream-card">
-      <div class="dream-card-label">${t('home.dream_label')}</div>
-      <div class="dream-card-title">${escapeText(dream.title)}</div>
+      <div class="dream-card-header">
+        <span class="dream-card-icon">${icon}</span>
+        <div>
+          <div class="dream-card-label">${t('home.dream_label')}</div>
+          <div class="dream-card-title">${escapeText(dream.title)}</div>
+        </div>
+      </div>
 
       <div class="dream-card-amounts">
         <div class="dream-card-progress">${fmtMoney(progress.saved)}</div>

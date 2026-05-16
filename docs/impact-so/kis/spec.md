@@ -769,6 +769,73 @@ docs/learni/kis/
 
 ---
 
+## 19.7 Retention & Celebrations — מבוסס מחקר SDT + Hooked
+
+> מבוסס על מחקרי Perplexity על אפליקציות נוער מצליחות (Duolingo, Apple Activity Rings, Notion, Forest), Self-Determination Theory (Ryan & Deci), Hooked Model (Eyal) ו-Time Well Spent (Harris).
+
+### 4 רמות חגיגה
+
+| רמה | משך | מתי | מימוש |
+|---|---|---|---|
+| **Tier 1 — Micro** | 0.3-0.8s | רישום הוצאה רגיל | `vibrate(10)` + bounce על FAB + flash קטגוריה |
+| **Tier 2 — Standard** | 1-2s | רישום משמעותי · רגש שווה | feedback hekshri ב-toast |
+| **Tier 3 — Milestone** | 2-4s | streak שבועי · 50%/75%/95% חלום | `confetti(60)` + מטבע celebrate |
+| **Tier 4 — Rare** | 4-5s | **השלמת אשף חלום · חלום הושלם 100%** | `fireworks(4)` + `confetti(80)` + `heroCelebration()` + `vibrate([20,30,20,30,50])` |
+
+### Daily Insight (מודול `insights.js`)
+
+10 תובנות possible, נבחרות לפי priority והקשר:
+- ברוך הבא (0-2 ימים מההצטרפות)
+- שבוע ראשון (יום 7-9)
+- חודש ראשון (יום 30-32)
+- קצב לחלום (יש חלום + pace ידוע)
+- השפעת מותרות על חלום (luxury > ₪50)
+- streak רישום (2+ ימים)
+- היום בלי הוצאות (5+ הוצאות במונה)
+- קטגוריה דומיננטית (סה"כ > ₪100)
+- want > 50% (אזהרה רכה)
+- תחזית הוצאה חודשית
+
+**העיקרון:** התובנה היומית נשמרת ב-localStorage למשך 24 שעות — לא משתנה בכניסה חוזרת באותו יום (אחרת זה מרגיש מקרי).
+
+### Weekly Recap (view: `weekly-recap.js`)
+
+- **טריגר:** יום ראשון, אחרי 3+ הוצאות, אם לא הוצג ב-6 ימים אחרונים
+- **מציג:** כותרת דינמית · 3 סטטיסטיקות · bar stack של קטגוריות · ההוצאה הכי גדולה · התקדמות חלום
+- **screenshot-shareable:** כל הכרטיס מעוצב כמסך ויראלי, מבנה Spotify Wrapped
+- **הערה:** האפליקציה לא משתפת את ה-screenshot — המשתמש מצלם בעצמו (פרטיות)
+
+### אייקון לחלום
+
+- 20 emojis פופולריים אצל נוער: ⭐📱🎧👟🎮✈️🚗🎸📷💻🎨🏀⚽🎤🍕🎬👕🏖️💍🎁
+- נשמר ב-`dream.icon`
+- מוצג בכרטיס החלום בדשבורד, ב-Weekly Recap, ובאשף
+
+### Anti-Patterns — אסור לעולם
+
+| ❌ | למה |
+|---|---|
+| Streak shaming ("Duo crying") | פוגע בנוער עם קשיי קשב/לקויות |
+| Leaderboards | אין social, פגיעה בפרטיות |
+| Loot boxes / גלגלי מזל | מניפולציה |
+| FOMO ("כולם חוסכים יותר ממך") | יוצר חרדה |
+| הזכרת מתחרים (Pepper, PayBox) | פרסומת חינם + הצעת אלטרנטיבה |
+| Push notifications | פרטיות + פולשני |
+| Endless scrolls / open loops סינתטיים | התמכרות |
+| Variable rewards רנדומליים | קזינו |
+
+### העיקרון המנחה (Self-Determination Theory)
+
+כל פיצ'ר חייב לתמוך באחד מ-3 הצירים:
+
+| ציר | בכיס |
+|---|---|
+| **Autonomy** (אני בוחר) | כל אלמנט gamification חייב להיות עם כפתור "השתק" בהגדרות (פאזה 2) |
+| **Competence** (אני מתקדם) | גרפים שמראים שיפור, milestone לציון "אתה יודע יותר עכשיו" |
+| **Relatedness** (אני שייך) | screenshot-shareable של Weekly Recap (חיבור חברתי בלי social אינטרני) |
+
+---
+
 ## נספח א' — מקורות
 
 - [פיננסקלאס — תוכנית שנתית](../financial-teacher-kit/annual-plan.md)
