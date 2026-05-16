@@ -107,13 +107,18 @@
   .mh-corner{background:transparent}
   .mh-row{display:flex;align-items:center;justify-content:center;font-weight:900;background:#F5F3F0}
   .mcell{padding:18px;min-height:120px;border-right:1px solid var(--line);border-top:1px solid var(--line);font-size:14px;line-height:1.6}
-  .mcell.dropzone{background:#FAFAF7}
-  .mcell.dropzone.over{background:var(--lavender-soft)}
+  .mcell.dropzone{background:#FAFAF7;cursor:pointer;transition:all .15s}
+  .mcell.dropzone.over,.mcell.dropzone.targetable{background:var(--lavender-soft);box-shadow:inset 0 0 0 2px var(--lavender)}
   .mcell ul{margin:0;padding-right:16px}
   .mcell li{margin-bottom:6px}
-  .chip{display:inline-block;background:#fff;border:1.5px solid var(--line);border-radius:99px;padding:8px 14px;margin:4px 4px 4px 0;font-size:14px;font-weight:700;cursor:grab;user-select:none;transition:all .15s}
+  .chip{display:inline-block;background:#fff;border:1.5px solid var(--line);border-radius:99px;padding:8px 14px;margin:4px 4px 4px 0;font-size:14px;font-weight:700;cursor:pointer;user-select:none;transition:all .15s;min-height:36px;line-height:1.2}
   .chip:hover{border-color:var(--lavender);transform:translateY(-1px)}
-  .chip.dragging{opacity:.4;cursor:grabbing}
+  .chip.selected{background:var(--graphite);color:#fff;border-color:var(--graphite);box-shadow:0 0 0 4px var(--lavender-soft)}
+  .chip.placed{background:var(--green-soft);border-color:var(--green);color:var(--green);cursor:default}
+  .chip.placed-wrong{background:var(--amber-soft);border-color:var(--amber);color:var(--amber);cursor:pointer}
+
+  .chip-instructions{font-size:13px;color:var(--lavender);font-weight:700;margin:10px 0;padding:8px 12px;background:#fff;border-radius:8px;display:none}
+  .chip-instructions.visible{display:block}
   .chip-bank{background:var(--lavender-soft);padding:16px 18px;border-radius:14px;margin-top:14px}
   .chip-bank-lbl{font-size:13px;font-weight:900;color:var(--lavender);letter-spacing:.04em;margin-bottom:10px}
   .matrix-reset{background:transparent;border:0;color:var(--lavender);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;padding:6px;margin-top:8px;text-decoration:underline}
@@ -343,21 +348,22 @@
       </div>
 
       <div class="chip-bank">
-        <div class="chip-bank-lbl">גרור כל פריט לרביעייה המתאימה — דוגמאות מהיומיום של נועה</div>
+        <div class="chip-bank-lbl">לחצו על פריט, ואז על הרביעייה המתאימה — דוגמאות מהיומיום של נועה</div>
         <div id="chip-bank">
-          <span class="chip" draggable="true" data-id="rent" data-correct="need-fixed">שכירות</span>
-          <span class="chip" draggable="true" data-id="bus" data-correct="need-fixed">רב קו חודשי</span>
-          <span class="chip" draggable="true" data-id="phone" data-correct="need-fixed">חבילת סלולר</span>
-          <span class="chip" draggable="true" data-id="grocery" data-correct="need-var">מכולת</span>
-          <span class="chip" draggable="true" data-id="dentist" data-correct="need-var">רופא שיניים</span>
-          <span class="chip" draggable="true" data-id="schoolbooks" data-correct="need-var">ספרי לימוד</span>
-          <span class="chip" draggable="true" data-id="spotify" data-correct="want-fixed">ספוטיפיי</span>
-          <span class="chip" draggable="true" data-id="netflix" data-correct="want-fixed">נטפליקס</span>
-          <span class="chip" draggable="true" data-id="gym" data-correct="want-fixed">חוג כדורסל</span>
-          <span class="chip" draggable="true" data-id="falafel" data-correct="want-var">פלאפל בהפסקה</span>
-          <span class="chip" draggable="true" data-id="movie" data-correct="want-var">סרט בקולנוע</span>
-          <span class="chip" draggable="true" data-id="zara" data-correct="want-var">חולצה מ-Zara</span>
+          <button class="chip" data-id="rent" data-correct="need-fixed">שכירות</button>
+          <button class="chip" data-id="bus" data-correct="need-fixed">רב קו חודשי</button>
+          <button class="chip" data-id="phone" data-correct="need-fixed">חבילת סלולר</button>
+          <button class="chip" data-id="grocery" data-correct="need-var">מכולת</button>
+          <button class="chip" data-id="dentist" data-correct="need-var">רופא שיניים</button>
+          <button class="chip" data-id="schoolbooks" data-correct="need-var">ספרי לימוד</button>
+          <button class="chip" data-id="spotify" data-correct="want-fixed">ספוטיפיי</button>
+          <button class="chip" data-id="netflix" data-correct="want-fixed">נטפליקס</button>
+          <button class="chip" data-id="gym" data-correct="want-fixed">חוג כדורסל</button>
+          <button class="chip" data-id="falafel" data-correct="want-var">פלאפל בהפסקה</button>
+          <button class="chip" data-id="movie" data-correct="want-var">סרט בקולנוע</button>
+          <button class="chip" data-id="zara" data-correct="want-var">חולצה מ-Zara</button>
         </div>
+        <div class="chip-instructions" id="chipInstr">בחרת — עכשיו לחצי על אחת מהרביעיות בטבלה למעלה</div>
         <button class="matrix-reset" id="resetMatrix">לאפס ולנסות שוב</button>
       </div>
     </div>
@@ -472,48 +478,64 @@
   setActive();
   window.addEventListener('scroll', setActive, {passive:true});
 
-  // Matrix drag and drop
+  // Matrix tap-to-place (works on touch + desktop)
   const chips = document.querySelectorAll('.chip');
   const zones = document.querySelectorAll('.dropzone');
-  let dragged = null;
+  const chipInstr = document.getElementById('chipInstr');
+  let selectedChip = null;
+
+  function clearSelection(){
+    selectedChip = null;
+    chips.forEach(c=> c.classList.remove('selected'));
+    zones.forEach(z=> z.classList.remove('targetable'));
+    chipInstr.classList.remove('visible');
+  }
 
   chips.forEach(c=>{
-    c.addEventListener('dragstart', e=>{
-      dragged = c;
-      c.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', c.dataset.id);
+    c.addEventListener('click', ()=>{
+      if(c.classList.contains('placed')) return;
+      if(selectedChip === c){ clearSelection(); return; }
+      clearSelection();
+      selectedChip = c;
+      c.classList.add('selected');
+      zones.forEach(z=> z.classList.add('targetable'));
+      chipInstr.classList.add('visible');
     });
-    c.addEventListener('dragend', ()=> c.classList.remove('dragging'));
   });
 
   zones.forEach(z=>{
-    z.addEventListener('dragover', e=>{ e.preventDefault(); z.classList.add('over'); });
-    z.addEventListener('dragleave', ()=> z.classList.remove('over'));
-    z.addEventListener('drop', e=>{
-      e.preventDefault();
-      z.classList.remove('over');
-      if(!dragged) return;
+    z.addEventListener('click', ()=>{
+      if(!selectedChip) return;
       const cat = z.dataset.cat;
-      const correct = dragged.dataset.correct;
+      const correct = selectedChip.dataset.correct;
       const ul = z.querySelector('ul');
       const li = document.createElement('li');
-      li.textContent = dragged.textContent;
-      if(cat === correct){
+      li.dataset.chipId = selectedChip.dataset.id;
+      const isCorrect = (cat === correct);
+      if(isCorrect){
+        li.textContent = selectedChip.textContent;
         li.style.color = 'var(--green)';
         li.style.fontWeight = '700';
+        selectedChip.classList.add('placed');
       }else{
-        li.style.color = 'var(--muted)';
-        li.textContent += ' (בדקו שוב)';
+        li.textContent = selectedChip.textContent + ' — נסי שוב';
+        li.style.color = 'var(--amber)';
+        selectedChip.classList.add('placed-wrong');
+        // Allow re-selection if wrong: remove the li after 2.5s and unmark chip
+        setTimeout(()=>{
+          li.remove();
+          selectedChip && selectedChip.classList.remove('placed-wrong');
+        }, 2500);
       }
       ul.appendChild(li);
-      dragged.style.display = 'none';
+      clearSelection();
     });
   });
 
   document.getElementById('resetMatrix').onclick = ()=>{
-    chips.forEach(c=>{ c.style.display = ''; });
+    chips.forEach(c=>{ c.classList.remove('placed','placed-wrong','selected'); });
     document.querySelectorAll('.dropzone ul').forEach(ul=> ul.innerHTML = '');
+    clearSelection();
   };
 </script>
 
