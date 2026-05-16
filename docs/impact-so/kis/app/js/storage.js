@@ -10,11 +10,14 @@ const DEFAULT_STATE = {
   dreams_archive: [],
   expenses: [],          // [{ id, date, amount, category, tag_fixed, tag_business, emotion }]
   budgets: [],           // [{ id, name, type, method, income, allocations }]
-  reflections: [],
-  lean_canvas: null,
+  reflections: [],       // [{ id, week, q1, q2, q3, q4, free_text, saved_at }]
+  lean_canvas: null,     // { offer, audience, cost, price, breakeven_units, saved_at }
+  ads_log: [],           // [{ id, what, how, did_buy, saved_at }]
   settings: {
     email: null,
     onboarded: false,
+    theme: 'dark',       // 'dark' | 'light'
+    teacher_code: null,
   },
 };
 
@@ -97,6 +100,43 @@ export const Store = {
     write();
   },
 
+  addReflection(reflection) {
+    read();
+    const entry = {
+      id: 'r' + Date.now().toString(36),
+      saved_at: new Date().toISOString(),
+      week: weekId(new Date()),
+      ...reflection,
+    };
+    cache.reflections.unshift(entry);
+    write();
+    return entry;
+  },
+
+  setLeanCanvas(canvas) {
+    read();
+    cache.lean_canvas = { ...canvas, saved_at: new Date().toISOString() };
+    write();
+  },
+
+  addAdLog(entry) {
+    read();
+    const item = {
+      id: 'a' + Date.now().toString(36),
+      saved_at: new Date().toISOString(),
+      ...entry,
+    };
+    cache.ads_log.unshift(item);
+    write();
+    return item;
+  },
+
+  setTheme(theme) {
+    read();
+    cache.settings.theme = theme;
+    write();
+  },
+
   setSetting(key, value) {
     read();
     cache.settings[key] = value;
@@ -133,6 +173,20 @@ export const Store = {
     write();
   },
 };
+
+// week id (YYYY-Www) - לזיהוי רפלקציה כפולה לשבוע
+function weekId(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - (d.getDay() || 0)); // start of week (Sunday)
+  return d.toISOString().slice(0, 10);
+}
+
+export function thisWeekReflection() {
+  const data = Store.get();
+  const wk = weekId(new Date());
+  return data.reflections.find(r => r.week === wk) || null;
+}
 
 // ===== Derived helpers =====
 

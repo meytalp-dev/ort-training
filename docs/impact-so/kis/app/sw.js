@@ -1,6 +1,6 @@
 // sw.js — Service Worker בסיסי, cache-first עם network fallback
 
-const VERSION = 'kis-v0.2.0';
+const VERSION = 'kis-v0.3.0';
 const ASSETS = [
   './',
   './index.html',
@@ -20,6 +20,12 @@ const ASSETS = [
   './js/views/budget.js',
   './js/views/settings.js',
   './js/views/add-expense.js',
+  './js/views/menu.js',
+  './js/views/reflection.js',
+  './js/views/canvas.js',
+  './js/views/portfolio.js',
+  './js/views/simulation.js',
+  './js/views/toolbox.js',
   './i18n/he.json',
   './icons/icon.svg',
   './icons/icon-maskable.svg',
@@ -47,7 +53,6 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(res => {
-        // cache same-origin requests we successfully fetched
         if (res && res.status === 200 && new URL(event.request.url).origin === location.origin) {
           const copy = res.clone();
           caches.open(VERSION).then(c => c.put(event.request, copy));

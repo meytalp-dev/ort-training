@@ -1,6 +1,6 @@
 // home.js — מסך בית: ברכה · כרטיס חלום · סיכום חודש · הוצאות אחרונות
 
-import { Store, dreamProgress, dreamPace, spentThisMonth, balanceThisMonth, expensesThisMonth } from '../storage.js';
+import { Store, dreamProgress, dreamPace, spentThisMonth, balanceThisMonth, expensesThisMonth, thisWeekReflection } from '../storage.js';
 import { t } from '../i18n.js';
 import { fmtMoney, fmtDate, greeting } from '../ui.js';
 
@@ -20,11 +20,23 @@ export function renderHome(root, navigate) {
   const balance = balanceThisMonth();
   const recent = expensesThisMonth().slice(0, 5);
 
+  const isSunday = new Date().getDay() === 0;
+  const weekRef = thisWeekReflection();
+  const showReflectionCard = isSunday && !weekRef;
+
   root.innerHTML = `
     <div class="home-header">
       <div class="home-greeting">${t(greeting())}</div>
       <div class="home-name">${escapeText(profile.name || 'חבר')}</div>
     </div>
+
+    ${showReflectionCard ? `
+      <button class="sunday-card" id="sunday-cta" style="width:100%;text-align:right;">
+        <span class="sunday-card-icon">✎</span>
+        <span class="sunday-card-text">${t('reflection.sunday_card_title')}</span>
+        <span class="sunday-card-cta">${t('reflection.sunday_card_cta')}</span>
+      </button>
+    ` : ''}
 
     ${dream ? renderDreamCard(dream, progress, pace) : renderNoDreamCard()}
 
@@ -54,6 +66,10 @@ export function renderHome(root, navigate) {
   // Bind no-dream CTA
   const noDreamCta = root.querySelector('#no-dream-cta');
   if (noDreamCta) noDreamCta.addEventListener('click', () => navigate('dream-wizard'));
+
+  // Bind sunday reflection card
+  const sundayCta = root.querySelector('#sunday-cta');
+  if (sundayCta) sundayCta.addEventListener('click', () => navigate('reflection'));
 }
 
 function renderDreamCard(dream, progress, pace) {
