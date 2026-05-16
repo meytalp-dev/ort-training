@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>חודש על קצה התהום — סימולציה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAFAF7;
+    --ink:#1A1A2E;
+    --muted:#5D5D6E;
+    --lavender:#7C6FE0;
+    --lavender-soft:#EDEAFB;
+    --graphite:#1A1A2E;
+    --green:#3F9168;
+    --green-soft:#E5F2EB;
+    --red:#C25450;
+    --red-soft:#F8E5E4;
+    --amber:#D89A3F;
+    --amber-soft:#FBF1DD;
+    --card:#FFFFFF;
+    --line:#E8E6EA;
+    --shadow:0 1px 2px rgba(26,26,46,.04),0 6px 24px rgba(26,26,46,.06);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Heebo',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px}
+
+  .stage{width:100%;max-width:640px}
+
+  /* HUD */
+  .hud{
+    position:sticky;top:12px;z-index:10;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:14px 18px;margin-bottom:20px;
+    display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;
+  }
+  .hud-day{font-weight:900;font-size:13px;color:var(--muted);letter-spacing:.04em}
+  .hud-day strong{display:block;font-size:22px;color:var(--ink);letter-spacing:0;margin-top:2px}
+  .hud-progress{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+  .hud-progress-bar{height:100%;background:var(--lavender);width:0;transition:width .4s ease}
+  .hud-balance{text-align:left}
+  .hud-balance-label{font-size:11px;color:var(--muted);letter-spacing:.04em}
+  .hud-balance-amount{font-weight:900;font-size:24px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .hud-balance.neg .hud-balance-amount{color:var(--red)}
+
+  /* Screens */
+  .screen{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px 24px;animation:in .35s ease}
+  @keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  /* Intro */
+  .intro h1{font-family:'Caveat',cursive;font-size:48px;line-height:1.1;margin:0 0 8px;color:var(--graphite)}
+  .intro .sub{color:var(--muted);font-weight:500;font-size:16px;margin-bottom:18px}
+  .intro p{font-size:17px;line-height:1.6;margin:0 0 12px}
+  .intro .you-are{background:var(--lavender-soft);border-radius:14px;padding:16px 18px;margin:16px 0}
+  .intro .you-are-title{font-weight:900;font-size:13px;color:var(--lavender);letter-spacing:.06em;margin-bottom:6px}
+
+  /* Decision */
+  .decision .scene-tag{display:inline-block;font-size:12px;font-weight:700;color:var(--lavender);background:var(--lavender-soft);padding:5px 12px;border-radius:99px;letter-spacing:.04em;margin-bottom:14px}
+  .decision h2{font-size:26px;line-height:1.25;margin:0 0 12px;font-weight:900}
+  .decision .desc{font-size:16px;line-height:1.6;color:var(--muted);margin:0 0 22px}
+  .options{display:grid;gap:12px}
+  .opt{
+    border:2px solid var(--line);background:var(--card);border-radius:14px;padding:18px 18px;cursor:pointer;
+    text-align:right;font-family:inherit;color:inherit;transition:all .15s;
+    display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;
+  }
+  .opt:hover{border-color:var(--lavender);background:#FAF8FF}
+  .opt:focus{outline:3px solid var(--lavender-soft);outline-offset:2px}
+  .opt-text{font-weight:700;font-size:16px;line-height:1.4}
+  .opt-cost{font-weight:900;font-size:18px;font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+  .opt-cost.free{color:var(--green)}
+  .opt-hint{grid-column:1/-1;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}
+
+  /* Reaction */
+  .reaction{padding:22px 22px 24px;border-radius:14px;margin-bottom:18px}
+  .reaction.good{background:var(--green-soft)}
+  .reaction.bad{background:var(--red-soft)}
+  .reaction.mid{background:var(--amber-soft)}
+  .reaction-emoji{font-family:'Caveat',cursive;font-size:42px;line-height:1;margin-bottom:6px;color:var(--graphite)}
+  .reaction p{margin:0;font-size:15px;line-height:1.55;font-weight:500}
+
+  /* Buttons */
+  .btn{
+    appearance:none;border:0;background:var(--graphite);color:#fff;
+    font-family:inherit;font-weight:700;font-size:16px;
+    padding:14px 22px;border-radius:99px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:8px;
+    transition:transform .12s;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn.lg{font-size:18px;padding:16px 28px}
+  .btn-row{display:flex;justify-content:flex-end;margin-top:6px}
+
+  /* End screen */
+  .end h1{font-family:'Caveat',cursive;font-size:56px;line-height:1;margin:0 0 6px}
+  .end .end-sub{color:var(--muted);font-size:15px;margin-bottom:22px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+  .stat{background:var(--lavender-soft);border-radius:14px;padding:14px 12px;text-align:center}
+  .stat-num{font-weight:900;font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
+  .stat-lbl{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-top:6px}
+  .stat.neg .stat-num{color:var(--red)}
+  .stat.pos .stat-num{color:var(--green)}
+  .verdict{padding:18px 20px;border-radius:14px;margin-bottom:18px;line-height:1.55}
+  .verdict.win{background:var(--green-soft);border-right:4px solid var(--green)}
+  .verdict.mid{background:var(--amber-soft);border-right:4px solid var(--amber)}
+  .verdict.loss{background:var(--red-soft);border-right:4px solid var(--red)}
+  .verdict h3{margin:0 0 6px;font-size:18px}
+
+  .reflect{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:18px;margin-top:8px}
+  .reflect h3{margin:0 0 10px;font-size:16px}
+  .reflect ul{margin:0;padding-right:20px;line-height:1.7;color:var(--muted)}
+  .restart{background:transparent;color:var(--lavender);border:0;font-family:inherit;font-weight:700;cursor:pointer;padding:14px;font-size:15px;text-decoration:underline;text-underline-offset:3px}
+
+  /* Icons */
+  .ic{width:18px;height:18px;flex-shrink:0}
+
+  @media (max-width:480px){
+    body{padding:16px 12px 40px}
+    .screen{padding:22px 18px}
+    .intro h1{font-size:38px}
+    .decision h2{font-size:22px}
+    .stats{grid-template-columns:1fr 1fr;gap:8px}
+    .stat-num{font-size:20px}
+    .hud-balance-amount{font-size:20px}
+  }
+</style>
+</head>
+<body>
+<main class="stage">
+
+  <div class="hud" id="hud" hidden>
+    <div class="hud-day"><span>שבוע</span><strong id="weekNum">1 / 4</strong></div>
+    <div class="hud-progress"><div class="hud-progress-bar" id="progress"></div></div>
+    <div class="hud-balance" id="balanceWrap">
+      <div class="hud-balance-label">יתרה</div>
+      <div class="hud-balance-amount" id="balance">₪3,000</div>
+    </div>
+  </div>
+
+  <section class="screen" id="screen"></section>
+
+</main>
+
+<script>
+const START_BALANCE = 3000;
+
+const SCENES = [
+  {
+    week: 1,
+    tag: 'שבוע 1 · מגורים',
+    title: 'איפה תגור החודש?',
+    desc: 'יצאת מהצבא לפני חודש. עכשיו צריך להחליט איפה לגור. החברים שלך עברו לדירה משותפת בתל אביב — מציעים לך חדר.',
+    options: [
+      { text: 'דירה משותפת בתל אביב', cost: 1800, social:+1, wellbeing:+1, hint:'שלוש שותפים. עצמאות. אבל הכי יקר.' },
+      { text: 'חדר אצל ההורים בפתח תקווה', cost: 0, social:-1, wellbeing:-1, hint:'חינם. אבל אמא רוצה שתחזור עד 23:00.' },
+      { text: 'שכר דירה בטירת הכרמל עם חבר', cost: 1100, social:0, wellbeing:0, hint:'זול יותר. נסיעה ארוכה לעבודה.' }
+    ]
+  },
+  {
+    week: 1,
+    tag: 'שבוע 1 · קבוע',
+    title: 'ביטוח רכב חובה',
+    desc: 'יש לך הסיאט איביזה שאבא נתן. הביטוח של דצמבר נגמר. **חובה** להאריך — אחרת לא נוסעים.',
+    options: [
+      { text: 'ביטוח חובה + צד ג׳', cost: 420, social:0, wellbeing:0, hint:'מינימום שמותר על הכביש.' },
+      { text: 'ביטוח מלא (כולל מקיף)', cost: 690, social:0, wellbeing:+1, hint:'יקר יותר אבל מכסה אם הרכב נגנב.' }
+    ],
+    forced: true
+  },
+  {
+    week: 1,
+    tag: 'שבוע 1 · תחבורה',
+    title: 'איך מגיעים לעבודה?',
+    desc: 'התחלת לעבוד במחסן של איקאה בנתניה. מהבית 35 דקות ברכב או שעה ב-3 אוטובוסים.',
+    options: [
+      { text: 'דלק לרכב', cost: 380, social:0, wellbeing:+1 },
+      { text: 'רב קו חופשי-חודשי', cost: 225, social:0, wellbeing:-1, hint:'יחסוך ₪155, אבל יוסיף שעה ביום.' }
+    ]
+  },
+  {
+    week: 2,
+    tag: 'שבוע 2 · מכולת',
+    title: 'קונים אוכל',
+    desc: 'יש שבת בבית. חבר אמר "תעשה עליי קמילצ׳ה — תקנה הכל ב-Shufersal Online ותחזור". המחיר זוחל...',
+    options: [
+      { text: 'רשימה מתוכננת בלבד', cost: 580, social:0, wellbeing:0, hint:'דבקות בתכנון.' },
+      { text: 'רשימה + "כי בא לי"', cost: 920, social:+1, wellbeing:+1, hint:'גם ביסקוויטים, גם בירה, גם חטיפי שוקולד.' }
+    ]
+  },
+  {
+    week: 2,
+    tag: 'שבוע 2 · חברים',
+    title: 'חתונה של חבר מקצרין',
+    desc: 'איציק מהמילואים מתחתן. הזמין אותך אישית. החתונה בקיבוץ ברמת הגולן. הוא רצה אותך שם.',
+    options: [
+      { text: 'מגיע + מתנה ₪300', cost: 460, social:+2, wellbeing:+1, hint:'דלק לרמת הגולן + מתנה.' },
+      { text: 'מגיע בלי מתנה', cost: 160, social:0, wellbeing:0, hint:'איציק לא יגיד כלום. אבל תרגיש מוזר.' },
+      { text: 'לא מגיע', cost: 0, social:-2, wellbeing:-1, hint:'תחסוך הכי הרבה. תפסיד חבר.' }
+    ]
+  },
+  {
+    week: 2,
+    tag: 'שבוע 2 · בריאות',
+    title: 'הכאב בשן לא עובר',
+    desc: 'שלושה ימים שאתה לועס רק בצד שמאל. דחית את זה כל הצבא. עכשיו אין לך חיל רפואה.',
+    options: [
+      { text: 'הולך לרופא שיניים פרטי', cost: 580, social:0, wellbeing:+2 },
+      { text: 'מחכה. אולי יעבור', cost: 0, social:0, wellbeing:-2, hint:'יש סיכוי שזה יחמיר ויעלה כפול בשבוע הבא.' }
+    ],
+    risk: { type:'pain', chance:0.7, futureCost:1200, futureMsg:'הכאב התפוצץ. תור דחוף לטיפול שורש — ₪1,200.' }
+  },
+  {
+    week: 3,
+    tag: 'שבוע 3 · בילוי',
+    title: 'הלילה של החבר׳ה',
+    desc: 'יום שישי. חבר׳ה מהיחידה מתאספים בבר ביפו. הם מגיעים מ-3 ערים שונות. שאלו עליך פעמיים.',
+    options: [
+      { text: 'יוצא איתם', cost: 180, social:+1, wellbeing:+1 },
+      { text: 'נשאר בבית עם סרט', cost: 0, social:-1, wellbeing:0 }
+    ]
+  },
+  {
+    week: 3,
+    tag: 'שבוע 3 · משפחה',
+    title: 'אמא מתקשרת',
+    desc: '"אחותך הקטנה צריכה כרטיס לפרידה של החברה הכי טובה שלה. שכחתי לקחת מהבנקומט. תעביר לה?"',
+    options: [
+      { text: 'מעביר ₪120', cost: 120, social:+1, wellbeing:0 },
+      { text: '"אין לי עכשיו, אמא"', cost: 0, social:-1, wellbeing:-1, hint:'אמא לא תכעס. אבל תזכור את זה כשתבקש משהו.' }
+    ]
+  },
+  {
+    week: 4,
+    tag: 'שבוע 4 · חירום',
+    title: 'המקרר התקלקל',
+    desc: 'חזרת מהעבודה. כל הקרח נמס. המתקן בן 9. ה-AC במקרר נשרף.',
+    options: [
+      { text: 'טכנאי + חלק חדש', cost: 720, social:0, wellbeing:0, hint:'תיקון מלא.' },
+      { text: 'מקרר יד שניה מ-Yad2', cost: 480, social:0, wellbeing:0, hint:'עובד אבל ישן. אולי יחזיק שנה.' },
+      { text: 'בלי מקרר עוד שבועיים', cost: 0, social:0, wellbeing:-2, hint:'תאכל רק בחוץ. תוציא יותר על אוכל.' }
+    ],
+    risk: { type:'fridge', chance:1, condition:'no-fridge', futureCost:380, futureMsg:'אכלת בחוץ שבועיים. עוד ₪380 על מסעדות.' }
+  },
+  {
+    week: 4,
+    tag: 'שבוע 4 · אישי',
+    title: 'הקורס שדחית כל השנה',
+    desc: 'יש קורס Excel בסיסי באוניברסיטה הפתוחה — מקנה זכאות להעלאה בעבודה. נרשמים השבוע.',
+    options: [
+      { text: 'נרשם — ₪500', cost: 500, social:0, wellbeing:+2, hint:'השקעה בעתיד. תרוויח את זה בחודש.' },
+      { text: 'אדחה לחודש הבא', cost: 0, social:0, wellbeing:0, hint:'הקורס הבא רק בעוד 4 חודשים.' }
+    ]
+  }
+];
+
+let state = {
+  i: 0,
+  balance: START_BALANCE,
+  social: 0,
+  wellbeing: 0,
+  choices: [],
+  futureCosts: []
+};
+
+const screen = document.getElementById('screen');
+const hud = document.getElementById('hud');
+const balanceEl = document.getElementById('balance');
+const balanceWrap = document.getElementById('balanceWrap');
+const progressEl = document.getElementById('progress');
+const weekEl = document.getElementById('weekNum');
+
+function fmt(n){ return '₪' + n.toLocaleString('he-IL'); }
+
+function updateHud(){
+  hud.hidden = false;
+  balanceEl.textContent = fmt(state.balance);
+  balanceWrap.classList.toggle('neg', state.balance < 0);
+  const week = SCENES[state.i] ? SCENES[state.i].week : 4;
+  weekEl.textContent = week + ' / 4';
+  progressEl.style.width = ((state.i / SCENES.length) * 100) + '%';
+}
+
+function renderIntro(){
+  hud.hidden = true;
+  screen.className = 'screen intro';
+  screen.innerHTML = `
+    <h1>חודש על קצה התהום</h1>
+    <p class="sub">סימולציה קצרה: 10 החלטות, חודש אחד</p>
+    <p>אתה בן 19, השתחררת מהצבא לפני חודש. התחלת לעבוד במחסן באיקאה. בחשבון יש לך <strong>₪3,000</strong>. עוד חודש מתחיל.</p>
+    <div class="you-are">
+      <div class="you-are-title">המטרה שלך</div>
+      <p style="margin:0">לסיים את החודש <strong>בלי לחרוג</strong>. רצוי גם לשמור על החברים, על המשפחה ועל עצמך. לא קל.</p>
+    </div>
+    <p>תקבל 10 החלטות. לכל החלטה מחיר. <strong>חלקן יכאיבו אחר כך.</strong> חלקן יעלמו לך מהראש.</p>
+    <div class="btn-row">
+      <button class="btn lg" id="startBtn">בואו נתחיל
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+    </div>
+  `;
+  document.getElementById('startBtn').onclick = next;
+}
+
+function renderScene(){
+  const s = SCENES[state.i];
+  if(!s){ return renderEnd(); }
+  updateHud();
+  screen.className = 'screen decision';
+  screen.innerHTML = `
+    <span class="scene-tag">${s.tag}</span>
+    <h2>${s.title}</h2>
+    <p class="desc">${s.desc}</p>
+    <div class="options">
+      ${s.options.map((o,idx)=>`
+        <button class="opt" data-idx="${idx}">
+          <span class="opt-text">${o.text}</span>
+          <span class="opt-cost ${o.cost===0?'free':''}">${o.cost===0?'חינם':'-' + fmt(o.cost)}</span>
+          ${o.hint?`<span class="opt-hint">${o.hint}</span>`:''}
+        </button>
+      `).join('')}
+    </div>
+  `;
+  screen.querySelectorAll('.opt').forEach(btn=>{
+    btn.onclick = ()=> choose(parseInt(btn.dataset.idx));
+  });
+}
+
+function choose(idx){
+  const s = SCENES[state.i];
+  const o = s.options[idx];
+  state.balance -= o.cost;
+  state.social += o.social || 0;
+  state.wellbeing += o.wellbeing || 0;
+  state.choices.push({scene:s.title, option:o.text, cost:o.cost});
+
+  // Future consequence trigger
+  if(s.risk){
+    const isCondition = !s.risk.condition || o.cost === 0;
+    if(isCondition && Math.random() < s.risk.chance){
+      state.futureCosts.push({trigger:s.title, ...s.risk});
+    }
+  }
+
+  renderReaction(s, o, idx);
+}
+
+function renderReaction(scene, opt, idx){
+  updateHud();
+  let tone = 'mid', msg = '';
+  const balanceNote = state.balance < 0 ? `<br><strong style="color:var(--red)">היתרה שלילית!</strong>` : '';
+
+  if(opt.cost === 0 && opt.wellbeing < 0){ tone='bad'; msg=`בחרת לחסוך עכשיו. ייתכן שתשלם בהמשך.`; }
+  else if(opt.cost === 0){ tone='mid'; msg=`חיסכון נקי. ${opt.social<0?'אבל המחיר החברתי קיים.':''}`; }
+  else if(opt.cost > 600){ tone='bad'; msg=`זו הוצאה גדולה. עוד הרבה החלטות לפניך.`; }
+  else if(opt.wellbeing > 0){ tone='good'; msg=`השקעה הגיונית. הזיכרון/הקשר/הבריאות שווים את זה.`; }
+  else{ tone='mid'; msg=`החלטה סבירה. נמשיך הלאה.`; }
+
+  screen.className = 'screen decision';
+  screen.innerHTML = `
+    <span class="scene-tag">${scene.tag}</span>
+    <h2 style="margin-bottom:18px">${scene.title}</h2>
+    <div class="reaction ${tone}">
+      <p><strong>בחרת:</strong> ${opt.text}${balanceNote}</p>
+      <p style="margin-top:8px">${msg}</p>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="nextBtn">הלאה
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
+    </div>
+  `;
+  document.getElementById('nextBtn').onclick = next;
+}
+
+function next(){
+  state.i++;
+  if(state.i >= SCENES.length){
+    // Apply future consequences
+    state.futureCosts.forEach(f=>{
+      state.balance -= f.futureCost;
+    });
+    renderEnd();
+  }else{
+    renderScene();
+  }
+}
+
+function renderEnd(){
+  hud.hidden = true;
+  let verdictClass = 'mid', verdictTitle = '', verdictBody = '';
+
+  if(state.balance >= 0 && state.social >= 0 && state.wellbeing >= 0){
+    verdictClass = 'win';
+    verdictTitle = 'הצלחת לסיים בחיוב';
+    verdictBody = 'נשארת חיובי בכסף, בחברים ובבריאות. זה לא טריוויאלי — רוב האנשים מגלים שלפחות אחד נופל.';
+  } else if(state.balance < 0){
+    verdictClass = 'loss';
+    verdictTitle = 'נשארת חייב';
+    verdictBody = `סיימת את החודש ב-${fmt(state.balance)}. חלק מההוצאות הפתיעו אותך — חלקן הם תוצאה של החלטות מוקדמות יותר. <strong>תקציב מראש היה משנה את התוצאה.</strong>`;
+  } else if(state.social < 0){
+    verdictClass = 'mid';
+    verdictTitle = 'חסכת — אבל המחיר היה חברתי';
+    verdictBody = 'נשארת חיובי בחשבון. אבל ויתרת על אנשים שיהיו לך חשובים בעוד שנה. <strong>תקציב לא רק חוסך — הוא מאפשר לבחור איפה כן להוציא.</strong>';
+  } else if(state.wellbeing < 0){
+    verdictClass = 'mid';
+    verdictTitle = 'חסכת — אבל על חשבון עצמך';
+    verdictBody = 'הצלחת לסיים בכסף, אבל החזקת חזק מדי. דחית טיפול שיניים, חיית בלי מקרר. <strong>בטווח ארוך זה עולה יותר.</strong>';
+  }
+
+  const futureNotes = state.futureCosts.length
+    ? `<div class="reaction bad" style="margin-bottom:14px"><p><strong>הפתעות שהגיעו אחר כך:</strong></p><ul style="margin:8px 0 0;padding-right:20px">${state.futureCosts.map(f=>`<li>${f.futureMsg}</li>`).join('')}</ul></div>`
+    : '';
+
+  screen.className = 'screen end';
+  screen.innerHTML = `
+    <h1>סוף החודש</h1>
+    <p class="end-sub">10 החלטות, חודש אחד, חשבון אחד</p>
+    <div class="stats">
+      <div class="stat ${state.balance<0?'neg':'pos'}">
+        <div class="stat-num">${fmt(state.balance)}</div>
+        <div class="stat-lbl">יתרה</div>
+      </div>
+      <div class="stat ${state.social<0?'neg':'pos'}">
+        <div class="stat-num">${state.social>0?'+':''}${state.social}</div>
+        <div class="stat-lbl">חברים ומשפחה</div>
+      </div>
+      <div class="stat ${state.wellbeing<0?'neg':'pos'}">
+        <div class="stat-num">${state.wellbeing>0?'+':''}${state.wellbeing}</div>
+        <div class="stat-lbl">בריאות וחוסן</div>
+      </div>
+    </div>
+    ${futureNotes}
+    <div class="verdict ${verdictClass}">
+      <h3>${verdictTitle}</h3>
+      <p style="margin:0">${verdictBody}</p>
+    </div>
+    <div class="reflect">
+      <h3>שאלות לדיון בכיתה</h3>
+      <ul>
+        <li>איזו החלטה הכי הפתיעה אותך?</li>
+        <li>איפה הרגשת לא נוח לבחור?</li>
+        <li>אם היית מקבל את המידע על ההוצאות הצפויות בהתחלה — מה היית משנה?</li>
+        <li>אילו הוצאות הן <strong>צרכים</strong> ואילו <strong>רצונות</strong>?</li>
+      </ul>
+    </div>
+    <div class="btn-row" style="margin-top:20px">
+      <button class="restart" id="restart">לשחק שוב מהתחלה</button>
+    </div>
+  `;
+  document.getElementById('restart').onclick = ()=>{
+    state = {i:0,balance:START_BALANCE,social:0,wellbeing:0,choices:[],futureCosts:[]};
+    renderIntro();
+  };
+}
+
+renderIntro();
+</script>
+</body>
+</html>
