@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FAF8F4">
+<title>פיננסקלאס · קורס תלמידים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&family=Rubik:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_student-shell.css">
+</head>
+<body>
+<a class="skip-link" href="#main">דלגי לתוכן הראשי</a>
+
+<main class="s-page" id="main">
+  <div id="appRoot"></div>
+</main>
+
+<script src="_student-shell.js"></script>
+<script>
+  (function () {
+    const root = document.getElementById('appRoot');
+    const shell = window.studentShell;
+
+    function renderHome() {
+      const u = shell.getUser();
+      const progress = shell.getProgress();
+      const course = shell.COURSE;
+
+      // Total lessons (only published)
+      let totalPublished = 0;
+      let doneCount = 0;
+      course.units.forEach(unit => {
+        unit.lessons.forEach(l => {
+          if (l.published !== false) {
+            totalPublished++;
+            if (progress[l.id]?.done) doneCount++;
+          }
+        });
+      });
+      const pct = totalPublished ? Math.round(doneCount / totalPublished * 100) : 0;
+
+      root.innerHTML = `
+        <div class="s-hero-greeting">
+          <h1>${shell.greeting(u.name)}</h1>
+          <p>בחרו יחידה כדי להתחיל. אפשר להתחיל מהראשונה.</p>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
+          <div class="s-prog-chip">
+            <span class="s-prog-chip-circle" style="--p:${pct}"></span>
+            <span>${doneCount}/${totalPublished} שיעורים</span>
+          </div>
+          <button type="button" class="s-prog-chip" id="logoutBtn" style="cursor:pointer;border:1px solid var(--line);background:var(--card);font-family:inherit;color:var(--muted)">
+            התנתקות
+          </button>
+        </div>
+
+        <div class="s-spacer"></div>
+
+        <div class="s-lessons-grid">
+          ${course.units.map(unit => {
+            const unitDone = unit.lessons.filter(l => progress[l.id]?.done).length;
+            const unitTotal = unit.lessons.filter(l => l.published !== false).length;
+            const locked = !unit.published;
+            const href = locked ? null : `${unit.slug}/index.html`;
+            return `
+              <a class="s-lesson-card${locked ? ' locked' : ''}" ${href ? `href="${href}"` : ''}>
+                <div class="s-lesson-card-num">${unit.id}</div>
+                <div class="s-lesson-card-body">
+                  <h3>${unit.title}</h3>
+                  <div class="s-lesson-card-meta">${locked ? 'משתחרר בהמשך השנה' : `${unitDone}/${unitTotal} שיעורים · ${unit.month}`}</div>
+                </div>
+                <div class="s-lesson-card-dot"></div>
+              </a>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="s-spacer-lg"></div>
+        <p style="text-align:center;color:var(--muted);font-size:13px;margin:0">
+          ההתקדמות נשמרת במכשיר שלך. אין הרשמה.
+        </p>
+      `;
+
+      document.getElementById('logoutBtn')?.addEventListener('click', () => {
+        if (confirm('להתחיל מחדש? תאבדו את שם המשתמש (ההתקדמות בשיעורים נשמרת).')) {
+          shell.clearUser();
+          showLogin();
+        }
+      });
+    }
+
+    function showLogin() {
+      shell.renderLogin(root, renderHome);
+    }
+
+    // Boot
+    if (shell.getUser()) renderHome();
+    else showLogin();
+  })();
+</script>
+</body>
+</html>
