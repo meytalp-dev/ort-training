@@ -129,9 +129,19 @@
 | תוכנית | קובץ | אורך משוער | רמת מורכבות |
 |---------|-------|-------------|--------------|
 | **עברית כיתה ד'** | [hebrew-grade4.md](hebrew-grade4.md) | ~50 עמודים | מקיפה |
-| **אנגלית · רצף תלת-שנתי ז'-ח'-ט'** | [english-3year-plan.md](english-3year-plan.md) | ~30 עמודים | מסגרת + תוכניות ז'+ח' |
-| **אנגלית כיתה ט'** | [english-grade9.md](english-grade9.md) | ~60 עמודים | מקיפה |
+| **אנגלית · רצף תלת-שנתי ז'-ח'-ט'** | [english-3year-plan.md](english-3year-plan.md) | ~30 עמודים | מסגרת תלת-שנתית |
+| **אנגלית כיתה ז'** | [english-grade7.md](english-grade7.md) | ~45 עמודים | מקיפה — A1 Foundation |
+| **אנגלית כיתה ח'** | [english-grade8.md](english-grade8.md) | ~50 עמודים | מקיפה — A1+ → A2 Lower |
+| **אנגלית כיתה ט'** | [english-grade9.md](english-grade9.md) | ~60 עמודים | מקיפה — A2 (Tnufa Year) |
 | **אוריינות מידע כיתה ט'** | [information-literacy-grade9.md](information-literacy-grade9.md) | ~40 עמודים | מקיפה |
+
+### תוכניות שנתיות (JSON · מערכת הלמידה הדיפרנציאלית)
+
+| תוכנית | קובץ | מטרה |
+|---------|-------|------|
+| **אנגלית כיתה ז' תשפ\"ז** | [english-tnufa-grade7.json](../../learning-engine/annual-plans/english-tnufa-grade7.json) | 32 שב' · 8 יחידות · אין mock |
+| **אנגלית כיתה ח' תשפ\"ז** | [english-tnufa-grade8.json](../../learning-engine/annual-plans/english-tnufa-grade8.json) | 32 שב' · 7 יחידות · 5 mini-Tnufa הדרגתיים |
+| **אנגלית כיתה ט' תשפ\"ז** | [english-tnufa-grade9.json](../../learning-engine/annual-plans/english-tnufa-grade9.json) | 32 שב' · 8 יחידות · 3 mock + מבחן תנופה 11.2.2027 |
 
 כל תוכנית כוללת:
 1. רציונל ויעדי למידה
