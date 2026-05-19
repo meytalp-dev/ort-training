@@ -99,6 +99,21 @@ h1,h2,h3,h4{font-family:'Playpen Sans Hebrew','Heebo',sans-serif}
 }
 .passport-header .stamp-count svg{width:16px;height:16px;fill:var(--muted)}
 
+.sync-badge{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+  border-radius:20px;font-size:.78rem;font-weight:600;
+  margin-right:8px;transition:all .3s ease;
+}
+.sync-badge.synced{background:#E8F5E9;color:#2E7D32}
+.sync-badge.pending{background:#FFF3E0;color:#E65100}
+.sync-badge.error{background:#FCE7EA;color:#C62828}
+.sync-badge svg{width:12px;height:12px;fill:currentColor}
+.stamp.unsynced{border-color:#FFB74D;background:#FFFBF5}
+.stamp.unsynced::after{
+  content:'מסונכרן בקרוב';position:absolute;bottom:8px;left:12px;
+  font-size:.7rem;color:#E65100;font-weight:600;
+}
+
 .stamps-grid{padding:24px;display:flex;flex-direction:column;gap:16px;min-height:200px}
 
 /* ===== STAMP (each teacher note) ===== */
@@ -256,9 +271,15 @@ textarea.note-input{min-height:80px;resize:none;line-height:1.6}
   <div class="passport" id="passport">
     <div class="passport-header">
       <div class="student-display" id="studentDisplay">---</div>
-      <div class="stamp-count">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
-        <span id="stampCountText">0 הודעות</span>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="sync-badge synced" id="syncBadge" style="display:none">
+          <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+          <span id="syncBadgeText">הכל בענן</span>
+        </div>
+        <div class="stamp-count">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+          <span id="stampCountText">0 הודעות</span>
+        </div>
       </div>
     </div>
     <div class="stamps-grid" id="stampsGrid">
@@ -298,10 +319,6 @@ textarea.note-input{min-height:80px;resize:none;line-height:1.6}
 
   <!-- ===== ACTIONS ===== -->
   <div class="action-bar">
-    <button class="action-btn btn-save" onclick="saveToSheet()">
-      <svg viewBox="0 0 24 24"><path d="M5 4v2h14V4H5zm0 10h4v6h6v-6h4l-7-7-7 7z"/></svg>
-      שמירה בענן
-    </button>
     <button class="action-btn btn-print" onclick="window.print()">
       <svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
       הדפסה
@@ -329,11 +346,15 @@ const AVATAR_COLORS = [
 let stamps = [];
 let currentStudent = '';
 let allStudents = [];
+let pendingSync = new Set(); // stamp IDs that haven't been confirmed in cloud yet
 
 // ===================== INIT =====================
 document.addEventListener('DOMContentLoaded', () => {
   loadLocal();
   loadStudents();
+  loadFromSheet();
+  // Retry sync for any pending stamps every 30 seconds
+  setInterval(retrySyncPending, 30000);
 });
 
 // ===================== LOAD STUDENTS =====================
@@ -394,6 +415,7 @@ function renderStamps() {
   const studentStamps = stamps.filter(s => s.student === currentStudent);
 
   document.getElementById('stampCountText').textContent = studentStamps.length + ' הודעות';
+  updateSyncBadge();
 
   if (!studentStamps.length) {
     empty.style.display = '';
@@ -408,8 +430,9 @@ function renderStamps() {
     const color = AVATAR_COLORS[Math.abs(hashStr(s.teacher)) % AVATAR_COLORS.length];
     const role = s.role ? ` (${esc(s.role)})` : '';
     const date = s.date ? new Date(s.date).toLocaleDateString('he-IL') : '';
+    const unsynced = pendingSync.has(s.id) ? ' unsynced' : '';
     return `
-      <div class="stamp" style="animation-delay:${i * .08}s">
+      <div class="stamp${unsynced}" style="animation-delay:${i * .08}s">
         <div class="stamp-top">
           <div class="stamp-avatar" style="background:${color}">${initials}</div>
           <div>
@@ -425,6 +448,23 @@ function renderStamps() {
   }).join('');
 }
 
+function updateSyncBadge() {
+  const badge = document.getElementById('syncBadge');
+  const text = document.getElementById('syncBadgeText');
+  if (!currentStudent) { badge.style.display = 'none'; return; }
+  const studentStamps = stamps.filter(s => s.student === currentStudent);
+  if (!studentStamps.length) { badge.style.display = 'none'; return; }
+  const unsyncedCount = studentStamps.filter(s => pendingSync.has(s.id)).length;
+  badge.style.display = 'inline-flex';
+  if (unsyncedCount === 0) {
+    badge.className = 'sync-badge synced';
+    badge.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg><span>הכל בענן</span>';
+  } else {
+    badge.className = 'sync-badge pending';
+    badge.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg><span>מסנכרן ' + unsyncedCount + '...</span>';
+  }
+}
+
 // ===================== ADD/DELETE =====================
 function addStamp() {
   const teacher = document.getElementById('teacherName').value.trim();
@@ -435,16 +475,21 @@ function addStamp() {
   if (!teacher) { showToast('נא למלא שם איש צוות', 'error'); return; }
   if (!text) { showToast('נא לכתוב הודעה', 'error'); return; }
 
-  stamps.push({
+  const newStamp = {
     id: 'TN' + Date.now(),
     student: currentStudent,
     teacher, role, text,
     date: new Date().toISOString()
-  });
+  };
 
+  stamps.push(newStamp);
+  pendingSync.add(newStamp.id);
   saveLocal();
   renderStamps();
-  showToast('ההודעה נוספה!', 'success');
+  showToast('ההודעה נוספה ונשמרת בענן...', 'success');
+
+  // Auto-save to cloud immediately
+  saveStampToSheet(newStamp);
 
   // Clear inputs
   document.getElementById('teacherName').value = '';
@@ -454,6 +499,7 @@ function addStamp() {
 
 function deleteStamp(id) {
   stamps = stamps.filter(s => s.id !== id);
+  pendingSync.delete(id);
   saveLocal();
   renderStamps();
 }
@@ -469,34 +515,75 @@ function newStudent() {
   document.getElementById('studentSelect').focus();
 }
 
-// ===================== SAVE TO SHEET =====================
-function saveToSheet() {
-  if (!currentStudent) { showToast('קודם כתבו שם תלמיד/ה', 'error'); return; }
-  const studentStamps = stamps.filter(s => s.student === currentStudent);
-  if (!studentStamps.length) { showToast('אין הודעות לשמור', 'error'); return; }
-
-  let saved = 0;
-  studentStamps.forEach(s => {
-    fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      mode: 'no-cors',
-      body: JSON.stringify({
-        action: 'saveForm',
-        sheet: SHEET_NAME,
-        fields: {
-          'מזהה': s.id,
-          'שם תלמיד': s.student,
-          'שם איש צוות': s.teacher,
-          'תפקיד': s.role || '',
-          'הודעה': s.text
-        }
-      })
-    }).then(() => {
-      saved++;
-      if (saved === studentStamps.length) showToast('נשמר בענן!', 'success');
-    }).catch(() => {});
+// ===================== SAVE TO SHEET (auto, per stamp) =====================
+function saveStampToSheet(s) {
+  return fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    mode: 'no-cors',
+    body: JSON.stringify({
+      action: 'saveForm',
+      sheet: SHEET_NAME,
+      fields: {
+        'מזהה': s.id,
+        'שם תלמיד': s.student,
+        'שם איש צוות': s.teacher,
+        'תפקיד': s.role || '',
+        'הודעה': s.text
+      }
+    })
+  }).then(() => {
+    // no-cors mode hides response — assume success on completed request
+    pendingSync.delete(s.id);
+    saveLocal();
+    updateSyncBadge();
+    if (pendingSync.size === 0) renderStamps();
+  }).catch(() => {
+    // network failed — leave in pendingSync for retry
+    updateSyncBadge();
   });
+}
+
+function retrySyncPending() {
+  if (!pendingSync.size) return;
+  stamps.forEach(s => {
+    if (pendingSync.has(s.id)) saveStampToSheet(s);
+  });
+}
+
+// ===================== LOAD FROM SHEET =====================
+function loadFromSheet() {
+  try {
+    const cb = 'cb_tn_' + Date.now();
+    window[cb] = function(d) {
+      delete window[cb];
+      if (d && d.rows && d.rows.length) {
+        const localIds = new Set(stamps.map(s => s.id));
+        let added = 0;
+        d.rows.forEach(r => {
+          if (r['מזהה'] && !localIds.has(r['מזהה'])) {
+            stamps.push({
+              id: r['מזהה'],
+              student: r['שם תלמיד'] || '',
+              teacher: r['שם איש צוות'] || '',
+              role: r['תפקיד'] || '',
+              text: r['הודעה'] || '',
+              date: r['תאריך'] ? new Date(r['תאריך']).toISOString() : ''
+            });
+            added++;
+          }
+        });
+        if (added) {
+          saveLocal();
+          renderStamps();
+        }
+      }
+    };
+    const s = document.createElement('script');
+    s.src = APPS_SCRIPT_URL + '?action=getForm&sheet=' + encodeURIComponent(SHEET_NAME) + '&callback=' + cb;
+    s.onerror = () => delete window[cb];
+    document.head.appendChild(s);
+  } catch(e) {}
 }
 
 // ===================== LOCAL STORAGE =====================
@@ -504,10 +591,15 @@ function loadLocal() {
   try {
     const d = JSON.parse(localStorage.getItem(LS_KEY));
     if (d && d.stamps) stamps = d.stamps;
+    if (d && d.pending) pendingSync = new Set(d.pending);
   } catch(e) {}
 }
 function saveLocal() {
-  localStorage.setItem(LS_KEY, JSON.stringify({ stamps, updated: new Date().toISOString() }));
+  localStorage.setItem(LS_KEY, JSON.stringify({
+    stamps,
+    pending: Array.from(pendingSync),
+    updated: new Date().toISOString()
+  }));
 }
 
 // ===================== HELPERS =====================

@@ -342,6 +342,7 @@ textarea.form-input{min-height:100px}
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz2QOG5BU0ET12IE5hUWMrhlqWDupWWeuiO2l5AoqJqRi8tfoj5mGPXMqPUcZw_pamH/exec';
 const SHEET_NAME = 'ספר מחזור';
 const LS_KEY = 'ort_yearbook';
+const DRAFT_KEY = 'ort_yearbook_draft';
 
 let selectedClass = '';
 let submissions = [];
@@ -351,13 +352,54 @@ document.addEventListener('DOMContentLoaded', () => {
   loadLocal();
   updateCounter();
   loadFromSheet();
+  restoreDraft();
+  attachDraftSavers();
 });
+
+// ===================== DRAFT (auto-save while typing) =====================
+function attachDraftSavers() {
+  ['fieldName','fieldNext','fieldDream','fieldMessage','fieldTakeaway'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', saveDraft);
+  });
+}
+function saveDraft() {
+  const draft = {
+    name: document.getElementById('fieldName').value,
+    next: document.getElementById('fieldNext').value,
+    dream: document.getElementById('fieldDream').value,
+    message: document.getElementById('fieldMessage').value,
+    takeaway: document.getElementById('fieldTakeaway').value,
+    class: selectedClass,
+    updated: new Date().toISOString()
+  };
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch(e) {}
+}
+function restoreDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY));
+    if (!d) return;
+    document.getElementById('fieldName').value = d.name || '';
+    document.getElementById('fieldNext').value = d.next || '';
+    document.getElementById('fieldDream').value = d.dream || '';
+    document.getElementById('fieldMessage').value = d.message || '';
+    document.getElementById('fieldTakeaway').value = d.takeaway || '';
+    if (d.class) {
+      const chip = document.querySelector('.class-chip[data-class="' + d.class + '"]');
+      if (chip) { chip.classList.add('active'); selectedClass = d.class; }
+    }
+  } catch(e) {}
+}
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch(e) {}
+}
 
 // ===================== CLASS SELECT =====================
 function selectClass(el) {
   document.querySelectorAll('.class-chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   selectedClass = el.dataset.class;
+  saveDraft();
 }
 
 // ===================== SUBMIT =====================
@@ -388,6 +430,7 @@ function submitForm() {
 
   // Send to Sheet
   saveToSheet(entry).then(() => {
+    clearDraft();
     showSuccess(entry);
     updateCounter();
     btn.disabled = false;
@@ -494,6 +537,7 @@ function resetForm() {
   document.getElementById('fieldTakeaway').value = '';
   document.querySelectorAll('.class-chip').forEach(c => c.classList.remove('active'));
   selectedClass = '';
+  clearDraft();
 }
 
 function showToast(msg, type) {
