@@ -80,7 +80,7 @@ def check_broken_links(html, file_path):
             continue
         seen.add(link)
         # דלג על URLs מוחלטים, data:, mailto:, tel:, anchors
-        if re.match(r'^(https?:|data:|mailto:|tel:|//|#|javascript:)', link, re.IGNORECASE):
+        if re.match(r'^(https?:|data:|mailto:|tel:|//|#|javascript:|about:|blob:|chrome:|file:)', link, re.IGNORECASE):
             continue
         # דלג על placeholders בתוך JS templates ("${...}", "{{...}}")
         if '${' in link or '{{' in link:
