@@ -582,56 +582,60 @@ function saveStampToSheet(s) {
 
 function retrySyncPending() {
   if (!pendingSync.size) return;
-  // Re-read sheet first — maybe stamps already arrived but we never confirmed
-  loadFromSheet();
-  stamps.forEach(s => {
-    if (pendingSync.has(s.id)) saveStampToSheet(s);
+  // Re-read sheet first to confirm what's already in the cloud, then re-post
+  // ONLY what is still missing. Without this guard, every 30s would create a
+  // duplicate row for any stamp whose original POST was actually successful.
+  loadFromSheet().then(() => {
+    stamps.forEach(s => {
+      if (pendingSync.has(s.id)) saveStampToSheet(s);
+    });
   });
 }
 
 // ===================== LOAD FROM SHEET =====================
+// Uses fetch + manual JSONP unwrap. The script-tag JSONP approach silently
+// failed in modern Chrome (onerror fires even though the response is valid),
+// causing pendingSync to never clear and the 30s retry to create duplicates.
 function loadFromSheet() {
-  try {
-    const cb = 'cb_tn_' + Date.now();
-    window[cb] = function(d) {
-      delete window[cb];
-      if (d && d.rows && d.rows.length) {
-        const localIds = new Set(stamps.map(s => s.id));
-        const cloudIds = new Set();
-        let added = 0;
-        d.rows.forEach(r => {
-          if (!r['מזהה']) return;
-          cloudIds.add(r['מזהה']);
-          if (!localIds.has(r['מזהה'])) {
-            stamps.push({
-              id: r['מזהה'],
-              student: r['שם תלמיד'] || '',
-              teacher: r['שם איש צוות'] || '',
-              role: r['תפקיד'] || '',
-              text: r['הודעה'] || '',
-              date: r['תאריך'] ? new Date(r['תאריך']).toISOString() : ''
-            });
-            added++;
-          }
-        });
-        // Any pending stamp that now appears in the cloud is verified-saved
-        let confirmed = 0;
-        Array.from(pendingSync).forEach(id => {
-          if (cloudIds.has(id)) { pendingSync.delete(id); confirmed++; }
-        });
-        if (added || confirmed) {
-          saveLocal();
-          renderStamps();
-        } else {
-          updateSyncBadge();
+  const url = APPS_SCRIPT_URL + '?action=getForm&sheet=' + encodeURIComponent(SHEET_NAME) + '&callback=cb';
+  return fetch(url)
+    .then(r => r.text())
+    .then(text => {
+      const m = text.match(/^cb\((.*)\);?\s*$/s);
+      if (!m) throw new Error('invalid JSONP wrapper');
+      const d = JSON.parse(m[1]);
+      if (!d || !d.rows) return;
+      const localIds = new Set(stamps.map(s => s.id));
+      const cloudIds = new Set();
+      let added = 0;
+      d.rows.forEach(r => {
+        if (!r['מזהה']) return;
+        cloudIds.add(r['מזהה']);
+        if (!localIds.has(r['מזהה'])) {
+          stamps.push({
+            id: r['מזהה'],
+            student: r['שם תלמיד'] || '',
+            teacher: r['שם איש צוות'] || '',
+            role: r['תפקיד'] || '',
+            text: r['הודעה'] || '',
+            date: r['תאריך'] ? new Date(r['תאריך']).toISOString() : ''
+          });
+          added++;
         }
+      });
+      // Any pending stamp that now appears in the cloud is verified-saved
+      let confirmed = 0;
+      Array.from(pendingSync).forEach(id => {
+        if (cloudIds.has(id)) { pendingSync.delete(id); confirmed++; }
+      });
+      if (added || confirmed) {
+        saveLocal();
+        renderStamps();
+      } else {
+        updateSyncBadge();
       }
-    };
-    const s = document.createElement('script');
-    s.src = APPS_SCRIPT_URL + '?action=getForm&sheet=' + encodeURIComponent(SHEET_NAME) + '&callback=' + cb;
-    s.onerror = () => delete window[cb];
-    document.head.appendChild(s);
-  } catch(e) {}
+    })
+    .catch(e => console.warn('[trip-notes] loadFromSheet failed:', e.message));
 }
 
 // ===================== LOCAL STORAGE =====================
