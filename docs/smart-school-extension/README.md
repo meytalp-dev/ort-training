@@ -38,7 +38,7 @@ smart-school-extension/
 
 ## איך לבדוק את השלד
 
-1. פתח את הדמו של ImpactOS: `http://localhost:8765/impact-so/learning-engine/demo.html?pack=tanach`
+1. פתח את הדמו של ImpactOS: `https://impact-os.app/learning-engine/demo.html?pack=tanach`
 2. לחץ על אייקון התוסף → "משוך ציונים מ-ImpactOS" — תופיע רשימת 5 ציונים דמו
 3. נווט ל-SmartSchool (כל דף שלו)
 4. אמור להופיע תג ירוק בפינה: "⚡ ImpactOS פעיל"
