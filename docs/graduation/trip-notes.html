@@ -224,9 +224,12 @@ textarea.note-input{min-height:80px;resize:none;line-height:1.6}
 @media print{
   body{background:#fff}
   body::before{display:none}
-  .add-note,.action-bar,.header .school,.counter,.stamp-delete{display:none!important}
+  .student-card,.add-note,.action-bar,.counter,.stamp-delete,.sync-badge{display:none!important}
+  .header{padding:24px 0 16px}
+  .header .school{display:inline-block!important;margin-top:8px}
   .passport{box-shadow:none;border:2px solid #ddd}
   .stamp{break-inside:avoid;border:1px solid #ddd}
+  .passport-header{background:#FFF8E7!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 
 /* ===== RESPONSIVE ===== */
@@ -349,22 +352,44 @@ let allStudents = [];
 let pendingSync = new Set(); // stamp IDs that haven't been confirmed in cloud yet
 
 // ===================== INIT =====================
+const STUDENT_VIEW_PARAM = new URLSearchParams(location.search).get('student');
+const isStudentView = !!STUDENT_VIEW_PARAM;
+
 document.addEventListener('DOMContentLoaded', () => {
   loadLocal();
   loadStudents();
   loadFromSheet();
   // Retry sync for any pending stamps every 30 seconds
   setInterval(retrySyncPending, 30000);
+
+  if (isStudentView) applyStudentViewMode();
 });
+
+function applyStudentViewMode() {
+  // Hide teacher controls — show only the passport for this one student
+  document.querySelector('.student-card').style.display = 'none';
+  document.querySelector('.add-note').style.display = 'none';
+  document.querySelector('.btn-new').style.display = 'none';
+  // Hide all delete buttons (CSS rule covers future-rendered stamps too)
+  const style = document.createElement('style');
+  style.textContent = '.stamp-delete{display:none!important}.sync-badge{display:none!important}';
+  document.head.appendChild(style);
+
+  currentStudent = STUDENT_VIEW_PARAM;
+  document.getElementById('studentDisplay').textContent = currentStudent;
+  renderStamps();
+}
 
 // ===================== LOAD STUDENTS =====================
 function loadStudents() {
   const script = document.createElement('script');
   script.src = '../management/student-data.js';
   script.onload = () => {
-    if (typeof STUDENTS !== 'undefined') {
-      allStudents = STUDENTS.filter(s => s.status === 'active');
-      populateStudentSelect();
+    // Render immediately from cache (if available)
+    refreshStudentSelect();
+    // Then re-render after fresh API data arrives
+    if (typeof STUDENTS_READY !== 'undefined' && STUDENTS_READY && typeof STUDENTS_READY.then === 'function') {
+      STUDENTS_READY.then(refreshStudentSelect).catch(() => {});
     }
   };
   script.onerror = () => {
@@ -373,8 +398,16 @@ function loadStudents() {
   document.head.appendChild(script);
 }
 
+function refreshStudentSelect() {
+  if (typeof STUDENTS === 'undefined' || !Array.isArray(STUDENTS)) return;
+  allStudents = STUDENTS.filter(s => s.status === 'active');
+  if (allStudents.length) populateStudentSelect();
+}
+
 function populateStudentSelect() {
   const select = document.getElementById('studentSelect');
+  // Clear previous optgroups so we don't duplicate when called twice (cache + fresh API)
+  Array.from(select.querySelectorAll('optgroup')).forEach(g => g.remove());
   // Group by class
   const classes = {};
   allStudents.forEach(s => {
@@ -476,7 +509,7 @@ function addStamp() {
   if (!text) { showToast('נא לכתוב הודעה', 'error'); return; }
 
   const newStamp = {
-    id: 'TN' + Date.now(),
+    id: 'TN' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     student: currentStudent,
     teacher, role, text,
     date: new Date().toISOString()
@@ -498,6 +531,8 @@ function addStamp() {
 }
 
 function deleteStamp(id) {
+  const ok = confirm('המחיקה היא רק במכשיר הזה. ההודעה תישאר שמורה בענן ותחזור ברענון הבא.\n\nלמחיקה מלאה — להסיר את השורה ישירות מגיליון "פנקס טיולים".\n\nלהמשיך?');
+  if (!ok) return;
   stamps = stamps.filter(s => s.id !== id);
   pendingSync.delete(id);
   saveLocal();
@@ -516,6 +551,8 @@ function newStudent() {
 }
 
 // ===================== SAVE TO SHEET (auto, per stamp) =====================
+// no-cors blinds us to actual success. We verify by reading the sheet back
+// and confirming the ID appeared. pendingSync is cleared only after verification.
 function saveStampToSheet(s) {
   return fetch(APPS_SCRIPT_URL, {
     method: 'POST',
@@ -533,11 +570,10 @@ function saveStampToSheet(s) {
       }
     })
   }).then(() => {
-    // no-cors mode hides response — assume success on completed request
-    pendingSync.delete(s.id);
-    saveLocal();
+    // Network call completed but no-cors hides whether the server actually saved.
+    // Verify by re-reading the sheet after 3 seconds.
+    setTimeout(loadFromSheet, 3000);
     updateSyncBadge();
-    if (pendingSync.size === 0) renderStamps();
   }).catch(() => {
     // network failed — leave in pendingSync for retry
     updateSyncBadge();
@@ -546,6 +582,8 @@ function saveStampToSheet(s) {
 
 function retrySyncPending() {
   if (!pendingSync.size) return;
+  // Re-read sheet first — maybe stamps already arrived but we never confirmed
+  loadFromSheet();
   stamps.forEach(s => {
     if (pendingSync.has(s.id)) saveStampToSheet(s);
   });
@@ -559,9 +597,12 @@ function loadFromSheet() {
       delete window[cb];
       if (d && d.rows && d.rows.length) {
         const localIds = new Set(stamps.map(s => s.id));
+        const cloudIds = new Set();
         let added = 0;
         d.rows.forEach(r => {
-          if (r['מזהה'] && !localIds.has(r['מזהה'])) {
+          if (!r['מזהה']) return;
+          cloudIds.add(r['מזהה']);
+          if (!localIds.has(r['מזהה'])) {
             stamps.push({
               id: r['מזהה'],
               student: r['שם תלמיד'] || '',
@@ -573,9 +614,16 @@ function loadFromSheet() {
             added++;
           }
         });
-        if (added) {
+        // Any pending stamp that now appears in the cloud is verified-saved
+        let confirmed = 0;
+        Array.from(pendingSync).forEach(id => {
+          if (cloudIds.has(id)) { pendingSync.delete(id); confirmed++; }
+        });
+        if (added || confirmed) {
           saveLocal();
           renderStamps();
+        } else {
+          updateSyncBadge();
         }
       }
     };
