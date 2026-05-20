@@ -1,9 +1,24 @@
 # תוכנית שנתית — אוריינות, קריאה וכתיבה לכיתות א'-ב'
 ## מנוע למידה דיפרנציאלי · ImpactOS Literacy
 
-> **גרסה:** טיוטה 0.2 · 20.5.2026
-> **בנוי על:** תוכנית הלימודים הרשמית של משה"ח (2025) · מבדק ראמ"ה לכיתה א' · 9 מסגרות מבוססות-ראיות · השראה מ-Heggerty Phonemic Awareness ושיטת ליט"ף
-> **מאומת מול:** [vocab-bank.json](vocab-bank.json) — סריקה אמיתית של "קסם וחברים" (מטח), 5 חוברות, 60 שיעורים
+> **גרסה:** טיוטה 0.3 · 20.5.2026
+> **בנוי על:** תוכנית משה"ח החדשה תשפ"ו 2026 (פרופ' מיכל שני) · מבדק ראמ"ה לכיתה א' · מודל IDL של Kim (2022) · 6 שלבי בר־און + Share · 6 גורמי קושי במודעות פונולוגית · RTI 3 נדבכים · מחקר השוואתי של 10 מערכות עולמיות
+> **מאומת מול:** [vocab-bank.json](vocab-bank.json) (קסם וחברים) · [knowledge-base/sources/moe-curriculum-tashpav-2026.json](knowledge-base/sources/moe-curriculum-tashpav-2026.json) · [knowledge-base/sources/world-systems-comparison.json](knowledge-base/sources/world-systems-comparison.json)
+
+---
+
+## 🆕 עדכון 0.3 (20.5.2026 — אחרי קריאת תוכנית משה"ח תשפ"ו)
+
+**מה השתנה:**
+- ✅ **מסגרת-על חדשה**: מודל IDL של Kim (2022) במקום SoR ליניארי. מוסיף ניהוליות (זיכרון עבודה, קשב) והיבטים רגשיים (מסוגלות עצמית).
+- ✅ **6 שלבי רכישה** של בר־און + Share — סיווג ראשי לכל פאק. שלב 4 = כיתה א' מנוקדת, שלב 6 = כיתה ב' לא-מנוקדת.
+- ✅ **6 גורמי קושי במודעות פונולוגית** — מטריצה דו-ממדית במקום 4 רמות שטוחות. גורמים: סוג מטלה × גודל יחידה × מיקום × אורך × מבנה הברתי × שכיחות.
+- ✅ **RTI רשמי**: 3 נדבכים (80-90% / 5-15% / 1-5%) במקום 4 רמות. למיפוי: עצמאי+חלקית = Tier 1, התאמות = Tier 2, תמיכה = Tier 3.
+- ✅ **כלי הערכה רשמיים חדשים**: פרופיל אורייני (2025), מבדק קול קורא, מבדק תנופה דיגיטלי.
+- ❌ **הורד**: השראה מ-Heggerty כליבה (פותח לאנגלית, לא תרגום נכון לעברית). נשאר רק כהשראה למבנה יומי-קצר.
+- ⏳ **לעקוב**: ASR לעברית לקול ילדים — לא בשל ב-2026, לא לבנות עליו רכיב קריטי.
+
+**אין סתירה למחקר הקודם** — יש חיזוק והעמקה. ראה השוואה מלאה ב-[knowledge-base/sources/world-systems-comparison.json](knowledge-base/sources/world-systems-comparison.json).
 
 ---
 
@@ -198,28 +213,40 @@
 
 ## 8. מערכות בעולם — מה הן עושות, מה אנחנו דומים, מה שונים
 
-מתוך [המחקר המלא ב-docs/research/early-literacy-systems](../../../research/early-literacy-systems/index.html):
+> **📋 השוואה מלאה ומובנית**: [knowledge-base/sources/world-systems-comparison.json](knowledge-base/sources/world-systems-comparison.json) (כרטיסיה פעילה בדף הידע הפדגוגי)
+>
+> **🎯 המסקנה**: אין סתירה למסגרת משה"ח 2026. ההבדל המרכזי — המערכות העולמיות לאנגלית, ועברית דורשת מודל ספציפי משלה (בר-און + Share + Kim/IDL).
 
 | מערכת | מה היא עושה | אנחנו דומים | אנחנו שונים |
 |---|---|---|---|
-| **Lexia Core5** (ארה"ב, $25-60/תלמיד) | SoR מובהק, אדפטיבית, K-2 | מבנה SoR, אדפטיביות | עברית, ניקוד, רצף עברית-מקובל |
-| **Lalilo / Renaissance** (ארה"ב) | SoR + פונמיקה, K-2 | פונמיקה מפורשת | אין בעברית |
-| **Heggerty PA** (ארה"ב, $70-100/מורה) | 8 מיומנויות × 35 שבועות יומיות | מבנה 35-שבועות, 8 מיומנויות | בעל-פה בלבד; שלנו משלב גם כתב |
-| **Amira Learning** (ארה"ב, $20-40) | טוטור AI לקריאה בקול | מטרה דומה (קריאה אוראלית) | ASR לעברית עדיין לא בשל ב-2026 |
-| **mCLASS DIBELS** (ארה"ב, $10-20) | סקרינר 3×בשנה | 3 בנצ'מרקים | משתמשים בראמ"ה — מקבילה ישראלית |
-| **עת הדעת** (ישראל) | פלטפורמת ליבה דיפרנציאלית | data-driven, התאמה לרמה | מבנה מיומנויות מוצהר; שלהם פחות שקוף |
-| **מטח אופק יסודי** (ישראל) | תכנים לפי ספרי לימוד | תוכנית רשמית | אין מסמך פומבי על המבנה |
+| **Lexia Core5** (ארה"ב, $25-60/תלמיד) | SoR מובהק, אדפטיבית, K-2 | מבנה SoR + RTI, אדפטיביות | עברית, ניקוד, IDL במקום SoR ליניארי |
+| **Lalilo / Renaissance** (ארה"ב, $8-15) | SoR + פונמיקה, K-2 | פונמיקה מפורשת | אין בעברית; אצלנו 6 גורמי קושי |
+| **Amplify CKLA** (ארה"ב, ליבה שלמה) | SoR + בניית ידע תוכן | אינטגרציה הוליסטית | תואם משה"ח 2026 — להוסיף ידע תוכן |
+| **Heggerty PA** (ארה"ב, $70-100/מורה) | 8 מיומנויות × 35 שבועות יומיות | מבנה יומי-קצר | **הוצא מהליבה** — לעברית 6 גורמי קושי של משה"ח |
+| **Amira Learning** (ארה"ב, $20-40) | טוטור AI לקריאה בקול | מטרה דומה (קריאה אוראלית) | ASR לעברית **לא בשל ב-2026** |
+| **Microsoft Reading Coach** (חינם ב-M365) | ASR ב-Teams | פוטנציאל עתידי | תמיכת עברית מתפתחת — לעקוב |
+| **i-Ready Reading** (ארה"ב, $30-50) | דיאגנוסטיקה + תרגול אישי | RTI מובנה, סקרינר | המודל המסחרי המלא |
+| **mCLASS DIBELS 8** (ארה"ב, $10-20) | סקרינר 3×בשנה | 3 בנצ'מרקים (BOY/MOY/EOY) | משתמשים בראמ"ה — המקבילה הישראלית |
+| **עת הדעת** (ישראל) | פלטפורמת ליבה דיפרנציאלית | data-driven, התאמה לרמה | **הם סגורים; אנחנו שקופים** |
+| **מטח אופק יסודי** (ישראל) | תכנים לפי ספרי לימוד | פלטפורמה רשמית | אין רצף פדגוגי שקוף; אנחנו עם מסגרת מבוססת |
+
+### 3 חידושים שמשה"ח 2026 + אבני יסוד מציעים שלא קיימים בעולם
+1. **מודל IDL של Kim (2022)** — SoR + ניהוליות (זיכרון עבודה, קשב) + רגשיות (מסוגלות עצמית) במסגרת אחת
+2. **6 שלבי בר-און + Share** — מודל התפתחותי ייחודי לעברית (מנוקדת → לא-מנוקדת)
+3. **שקיפות פדגוגית** — כל פאק, כל מקור, כל החלטה פתוחים (לעומת עת-הדעת ומטח)
 
 ---
 
 ## 9. מקורות
 
 ### מקורות ראשוניים (סמכותיים)
-1. **משרד החינוך — תוכנית לימודים** (2025) · [pop.education.gov.il](https://pop.education.gov.il/tchumey_daat/ivrit_chinhch_leshony/yesodi/pedagogy-hebrew-linguistic-education/curriculum/)
-2. **משרד החינוך — יעדי עברית כיתות א-ב** · [PDF](https://meyda.education.gov.il/files/olim/hatmatyeadeyhebrew.pdf)
-3. **משרד החינוך — מדיניות כיתה א'** · [pop.education.gov.il](https://pop.education.gov.il/tchumey_daat/ivrit_chinhch_leshony/yesodi/pedagogy-hebrew-linguistic-education/teaching-hebrew-grade1/)
-4. **ראמ"ה — מאגר כלי הערכה לכיתה א'** · [rama.education.gov.il](https://rama.education.gov.il)
-5. **שיטת ליט"ף (נירה אלטלף, אישור 2499)** · [litaf.co.il](http://litaf.co.il)
+1. **🆕 משרד החינוך — תוכנית הלימודים החדשה תשפ"ו** (2026) — רצף הגן לכיתות א-ב · בראשות פרופ' מיכל שני · [PDF מקורי](https://meyda.education.gov.il/files/Pop/0files/ivrit_hinuch_leshoni/Yesodi/tohnit-limudim-safa.pdf) · [JSON מובנה](knowledge-base/sources/moe-curriculum-tashpav-2026.json)
+2. **משרד החינוך — תוכנית לימודים** (2025, מסמך קודם) · [pop.education.gov.il](https://pop.education.gov.il/tchumey_daat/ivrit_chinhch_leshony/yesodi/pedagogy-hebrew-linguistic-education/curriculum/)
+3. **משרד החינוך — יעדי עברית כיתות א-ב** · [PDF](https://meyda.education.gov.il/files/olim/hatmatyeadeyhebrew.pdf)
+4. **משרד החינוך — מדיניות כיתה א'** · [pop.education.gov.il](https://pop.education.gov.il/tchumey_daat/ivrit_chinhch_leshony/yesodi/pedagogy-hebrew-linguistic-education/teaching-hebrew-grade1/)
+5. **ראמ"ה — מאגר כלי הערכה לכיתה א'** · [rama.education.gov.il](https://rama.education.gov.il) · כולל הפרופיל האורייני (2025), מבדק קול קורא (2021), מבדק תנופה דיגיטלי (2025)
+6. **שיטת ליט"ף (נירה אלטלף, אישור 2499)** · [litaf.co.il](http://litaf.co.il)
+7. **🆕 מחקר השוואתי — מערכות אוריינות בעולם** · [knowledge-base/sources/world-systems-comparison.json](knowledge-base/sources/world-systems-comparison.json) · 10 מערכות עולמיות מול מסגרת ישראלית
 
 ### מקורות משניים (השראה מחקרית)
 6. **Heggerty Phonemic Awareness Curriculum** — Primary (G1) + Primary Extension (G2), 2020-2024 · [heggerty.org](https://heggerty.org)
