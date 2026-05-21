@@ -4,7 +4,7 @@
 // ===== הגדרות =====
 // אחרי הקמת Apps Script — הדביקי כאן את ה-URL שתקבלי מ-Deploy
 const PREP_CONFIG = {
-  APPS_SCRIPT_URL: 'PASTE_YOUR_APPS_SCRIPT_URL_HERE',
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzzBX-iYxCxnovY32VjRNlDZTjQq_Pndai0DRvE6U12Ksp8eivgWJn3Dubd1_7Pn2qI0w/exec',
   DEADLINE_FINAL: '2026-07-01',
   SCHOOL_YEAR: 'תשפ"ז',
 };
