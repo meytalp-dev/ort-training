@@ -564,7 +564,7 @@
 
 <section class="stats" id="stats">
   <div class="stat-card v-lav"><div class="stat-num" id="stat-total">—</div><div class="stat-label">דפי עבודה במאגר</div></div>
-  <div class="stat-card v-mint"><div class="stat-num" id="stat-sources">1</div><div class="stat-label">מקורות פעילים</div></div>
+  <div class="stat-card v-mint"><div class="stat-num" id="stat-sources">4</div><div class="stat-label">מקורות פעילים</div></div>
   <div class="stat-card v-sky"><div class="stat-num" id="stat-rw">—</div><div class="stat-label">קריאה וכתיבה</div></div>
   <div class="stat-card v-rose"><div class="stat-num" id="stat-rc">—</div><div class="stat-label">הבנת הנקרא</div></div>
   <div class="stat-card v-amber"><div class="stat-num" id="stat-pa">—</div><div class="stat-label">מודעות פונולוגית</div></div>
@@ -605,6 +605,17 @@
         <div><b>60</b>שיעורים</div>
         <div><b>5</b>חוברות</div>
         <div><b>17/60</b>נסרק</div>
+      </div>
+    </article>
+
+    <article class="source-card" data-source="ofek-grade1" data-type="lomda_catalog">
+      <span class="source-tag" style="background:#fce7f3;color:#9d174d">לומדות תרגול · כיתה א'</span>
+      <h3>אופק — מטח (לומדות תרגול)</h3>
+      <p>79 לומדות אינטראקטיביות של מטח, 10-20 דק' כל אחת. 11 משפחות פדגוגיות. השלמה תרגולית לקסם וחברים, עם שכבת מודעות פונולוגית מקדימה ופידבק עדין.</p>
+      <div class="source-meta">
+        <div><b>79</b>לומדות</div>
+        <div><b>11</b>משפחות</div>
+        <div><b>9</b>נסרקו</div>
       </div>
     </article>
 
@@ -727,6 +738,7 @@ const SOURCES = {
   'negba-grade1':                 {file:'sources/negba-grade1.json',                 type:'worksheets'},
   'moe-curriculum-tashpav-2026':  {file:'sources/moe-curriculum-tashpav-2026.json',  type:'framework'},
   'kesem-vehaverim-grade1':       {file:'sources/kesem-vehaverim-grade1.json',       type:'lessons_books'},
+  'ofek-grade1':                  {file:'sources/ofek-grade1.json',                  type:'lomda_catalog'},
   'world-systems-comparison':     {file:'sources/world-systems-comparison.json',     type:'framework'}
 };
 const CAT_LABELS = {
@@ -770,6 +782,7 @@ function render(){
   if(DATA_TYPE === 'worksheets') renderWorksheets();
   else if(DATA_TYPE === 'framework') renderFramework();
   else if(DATA_TYPE === 'lessons_books') renderLessonsBooks();
+  else if(DATA_TYPE === 'lomda_catalog') renderLomdaCatalog();
 }
 
 function renderWorksheets(){
@@ -1103,6 +1116,136 @@ function renderLessonsBooks(){
       '<ul>' + d.open_questions.map(q => '<li>' + q + '</li>').join('') + '</ul>' +
     '</div>'
   );
+
+  document.querySelector('.viewer-body').innerHTML = html;
+}
+
+function renderLomdaCatalog(){
+  const d = DATA;
+  const totalLomadot = d.source.total_lomadot;
+
+  document.getElementById('stat-total').textContent = totalLomadot;
+  document.getElementById('stat-rw').textContent = d.lomda_families.length;
+  document.getElementById('stat-rc').textContent = d.scanned_questions.length;
+  document.getElementById('stat-pa').textContent = d.pedagogical_principles ? Object.keys(d.pedagogical_principles).length : 6;
+  document.getElementById('stat-sources').textContent = '4';
+  document.querySelector('.stat-card.v-lav .stat-label').textContent = 'לומדות בקטלוג';
+  document.querySelector('.stat-card.v-sky .stat-label').textContent = 'משפחות פדגוגיות';
+  document.querySelector('.stat-card.v-rose .stat-label').textContent = 'שאלות שנסרקו';
+  document.querySelector('.stat-card.v-amber .stat-label').textContent = 'עקרונות פדגוגיים';
+
+  document.getElementById('viewer-head').innerHTML =
+    '<h2>' + d.source.name + '</h2>' +
+    '<div class="src-meta">' +
+    d.source.publisher + ' · ' +
+    'כיתה ' + d.source.grade + ' · ' +
+    totalLomadot + ' לומדות · ' +
+    'נסרק: ' + d.source.scanned_at + ' · ' +
+    '<a href="' + d.source.url + '" target="_blank" rel="noopener">פלטפורמת אופק</a> · ' +
+    '<a href="' + d.source.sample_lomda_url + '" target="_blank" rel="noopener">לומדה לדוגמה</a>' +
+    '</div>';
+
+  let html = '';
+
+  // Section 1: Key insights
+  html += sectionWrap('1', 'תובנות מפתח — איך אופק שונה מקסם',
+    '<p class="sec-intro">' + d.source.platform_role + '</p>' +
+    '<ul class="insights-list">' +
+      d.source.key_insights.map(i => '<li>' + i + '</li>').join('') +
+    '</ul>'
+  );
+
+  // Section 2: Pedagogical principles
+  const principleLabels = {
+    from_ear_to_eye: '🎧 מאוזן לעין',
+    spaced_repetition_letters: '🔁 הפצה חוזרת',
+    scaffolded_vowel_progression: '📈 סקאפולד תנועות',
+    integrated_grammar_from_start: '📐 דקדוק משולב',
+    cultural_integration: '🎉 חגים כעטיפה',
+    '10_minute_chunks': '⏱️ יחידות של 10 דק\''
+  };
+  let principlesHtml = '<div class="concept-grid">';
+  Object.entries(d.pedagogical_principles).forEach(([k,v]) => {
+    principlesHtml += '<div class="concept-card">' +
+      '<h4>' + (principleLabels[k] || k) + '</h4>' +
+      '<p style="margin:0;font-size:13px;color:var(--ink-muted);line-height:1.55">' + v + '</p>' +
+    '</div>';
+  });
+  principlesHtml += '</div>';
+  html += sectionWrap('2', '6 עקרונות פדגוגיים מנחים', principlesHtml);
+
+  // Section 3: Lomda families catalog
+  let familiesHtml = '';
+  d.lomda_families.forEach((f, idx) => {
+    const lomCount = Array.isArray(f.lomadot) ? f.lomadot.length : (f.letter_groupings_observed ? f.letter_groupings_observed.length : (f.sequence ? f.sequence.length : '?'));
+    familiesHtml +=
+      '<div class="book-block book-' + ((idx % 5) + 1) + '">' +
+        '<div class="book-head">' +
+          '<div class="book-pill">' + (idx+1) + '</div>' +
+          '<div>' +
+            '<h4>' + f.name + '</h4>' +
+            '<div class="book-meta">' + (typeof lomCount === 'number' ? lomCount + ' פריטים' : '') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="book-rationale">' + (f.description || '') + '</div>' +
+        (f.pedagogical_role ? '<p style="margin:6px 0 0;font-size:12.5px;color:var(--lavender-deep);font-weight:600">תפקיד: ' + f.pedagogical_role + '</p>' : '') +
+        (f.comparison_with_kesem ? '<p style="margin:8px 0 0;font-size:12.5px;color:var(--ink-muted);font-style:italic">↔ מול קסם: ' + f.comparison_with_kesem + '</p>' : '') +
+        (f.key_insight ? '<div class="ok-box" style="margin-top:10px"><h5>💡 תובנה</h5><p style="margin:0;font-size:13px;color:#065f46">' + f.key_insight + '</p></div>' : '') +
+      '</div>';
+  });
+  html += sectionWrap('3', '11 משפחות לומדות באופק', familiesHtml);
+
+  // Section 4: Scanned questions
+  let questionsHtml = '';
+  d.scanned_questions.forEach((q, idx) => {
+    questionsHtml +=
+      '<div class="book-block book-' + ((idx % 5) + 1) + '" style="margin-bottom:14px">' +
+        '<h4 style="margin:0 0 8px;font-size:15px;color:var(--ink)">' + q.lomda_full_title + '</h4>' +
+        (q.instruction_he ? '<p style="margin:4px 0 8px;font-size:13px;color:var(--ink-muted);font-style:italic">«' + q.instruction_he + '»</p>' : '') +
+        (q.ui_pattern ? '<p style="margin:4px 0;font-size:12.5px;color:var(--ink-muted)"><b>UI:</b> ' + q.ui_pattern + '</p>' : '') +
+        (q.game_mechanic ? '<p style="margin:4px 0;font-size:12.5px;color:var(--ink-muted)"><b>מנגנון:</b> ' + q.game_mechanic + '</p>' : '') +
+        (q.pedagogical_breakthrough ? '<div class="ok-box" style="margin-top:10px"><h5>🎯 פריצת דרך פדגוגית</h5><p style="margin:0;font-size:13px;color:#065f46">' + q.pedagogical_breakthrough + '</p></div>' : '') +
+        (Array.isArray(q.pedagogical_breakthroughs) ? '<div class="ok-box" style="margin-top:10px"><h5>🎯 תובנות פדגוגיות</h5><ul style="margin:0;padding-inline-start:18px;font-size:13px;color:#065f46;line-height:1.7">' + q.pedagogical_breakthroughs.map(b => '<li>' + b + '</li>').join('') + '</ul></div>' : '') +
+      '</div>';
+  });
+  html += sectionWrap('4', '9 שאלות שנסרקו לעומק', questionsHtml);
+
+  // Section 5: Ofek vs Kesem comparison
+  if(d.summary_insights_for_engine_design && d.summary_insights_for_engine_design.ofek_vs_kesem_table){
+    let tblHtml = '<table class="niqqud-tbl"><thead><tr><th>ממד</th><th>אופק</th><th>קסם וחברים</th></tr></thead><tbody>';
+    d.summary_insights_for_engine_design.ofek_vs_kesem_table.forEach(row => {
+      tblHtml += '<tr><td style="font-weight:700">' + row.dimension + '</td><td>' + row.ofek + '</td><td>' + row.kesem + '</td></tr>';
+    });
+    tblHtml += '</tbody></table>';
+    html += sectionWrap('5', 'אופק ↔ קסם וחברים — השוואה', tblHtml);
+  }
+
+  // Section 6: Design principles to borrow
+  if(d.summary_insights_for_engine_design && d.summary_insights_for_engine_design.design_principles_to_borrow_for_engine){
+    html += sectionWrap('6', '11 עקרונות עיצוב לאמץ ב-Learning Engine',
+      '<ul class="insights-list">' +
+        d.summary_insights_for_engine_design.design_principles_to_borrow_for_engine.map(p => '<li>' + p + '</li>').join('') +
+      '</ul>'
+    );
+  }
+
+  // Section 7: Complementary strengths
+  if(d.summary_insights_for_engine_design){
+    const ofekStrengths = d.summary_insights_for_engine_design.what_ofek_offers_that_kesem_doesnt || [];
+    const kesemStrengths = d.summary_insights_for_engine_design.what_kesem_offers_that_ofek_doesnt || [];
+    html += sectionWrap('7', 'משלימים — לא תחליפים',
+      '<div class="compat-grid">' +
+        '<div class="compat-col ok">' +
+          '<h4>אופק נותן · קסם לא</h4>' +
+          '<ul>' + ofekStrengths.map(s => '<li>' + s + '</li>').join('') + '</ul>' +
+        '</div>' +
+        '<div class="compat-col gap">' +
+          '<h4>קסם נותן · אופק לא</h4>' +
+          '<ul>' + kesemStrengths.map(s => '<li>' + s + '</li>').join('') + '</ul>' +
+        '</div>' +
+      '</div>'
+    );
+  }
 
   document.querySelector('.viewer-body').innerHTML = html;
 }
