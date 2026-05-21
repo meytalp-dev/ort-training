@@ -400,7 +400,7 @@
 
 </div>
 
-<script src="prep-shared.js?v=2"></script>
+<script src="prep-shared.js?v=3"></script>
 <script>
 // ===== Get role from URL =====
 const params = new URLSearchParams(location.search);
@@ -493,15 +493,17 @@ async function loadTasks() {
 
   let cloudTasks = result.tasks || [];
 
-  // 3. If empty cloud — seed defaults
+  // 3. If empty cloud — seed defaults in ONE call
   if (cloudTasks.length === 0) {
-    setStatus('saving', 'מאתחל משימות…');
+    setStatus('saving', 'מאתחל משימות ראשוניות…');
     const seeded = role.defaultTasks.map((t,i) => ({ ...t, order:i, done:false }));
-    for (const t of seeded) {
-      const r = await prepAddTask(role.slug, t);
-      if (r.id) {
-        cloudTasks.push({ ...t, id: r.id });
-      }
+    const seedResult = await prepApi('seed', { role: role.slug, tasks: seeded });
+    if (seedResult.ids && seedResult.ids.length === seeded.length) {
+      cloudTasks = seeded.map((t,i) => ({ ...t, id: seedResult.ids[i] }));
+    } else {
+      // Fallback: refetch
+      const refetch = await prepListTasks(role.slug);
+      cloudTasks = refetch.tasks || [];
     }
   }
 

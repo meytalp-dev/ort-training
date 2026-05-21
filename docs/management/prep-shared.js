@@ -220,15 +220,32 @@ async function prepApi(action, data) {
     console.warn('Apps Script URL not configured');
     return { error: 'not_configured' };
   }
+  // 20s timeout כדי לא להיתקע אינסוף
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
   try {
     const res = await fetch(url, {
       method: 'POST',
       body: JSON.stringify({ action, ...data }),
+      redirect: 'follow',
+      signal: controller.signal,
     });
-    return await res.json();
+    clearTimeout(timeoutId);
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (parseErr) {
+      console.error('prepApi: response is not JSON:', text.substring(0, 300));
+      return { error: 'invalid_response', raw: text.substring(0, 300) };
+    }
   } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') {
+      console.error('prepApi timeout for action:', action);
+      return { error: 'timeout' };
+    }
     console.error('prepApi error:', e);
-    return { error: 'network' };
+    return { error: 'network', message: String(e) };
   }
 }
 
