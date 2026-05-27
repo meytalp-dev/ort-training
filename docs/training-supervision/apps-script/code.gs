@@ -21,19 +21,22 @@
 // SETUP
 // ============================================================
 
-const TABS = ['networks','schools','teachers','trainings','attendance','pd','questions','knowledge'];
+const TABS = ['networks','schools','teachers','trainings','attendance','pd','questions','knowledge','feedback','alerts'];
 
 const SCHEMA = {
   networks:   ['id','name','color','contactEmail'],
-  schools:    ['id','name','network','principalName','principalEmail','principalPhone'],
+  schools:    ['id','name','network','principalName','principalEmail','principalPhone','attendanceTarget'],
   teachers:   ['id','school','network','name','subject','type','sector','seniority',
                'units','students','phone','email','moeApproval','moeFile',
                'pdActive','pdFile','pdYear','createdAt'],
-  trainings:  ['id','date','subject','guideName','guideEmail','network','sector','location','notes'],
-  attendance: ['id','trainingId','teacherId','status','notes','timestamp'],
+  trainings:  ['id','date','subject','guideName','guideEmail','network','sector','location','notes',
+               'qrToken','materialsUrl','curriculumTopic','feedbackEnabled'],
+  attendance: ['id','trainingId','teacherId','status','notes','timestamp','checkedInVia'],
   pd:         ['id','teacherId','subject','year','status','fileUrl','addedAt'],
   questions:  ['id','teacherId','question','answer','status','createdAt','answeredAt'],
-  knowledge:  ['id','title','category','audience','link','description','addedAt']
+  knowledge:  ['id','title','category','audience','link','description','addedAt'],
+  feedback:   ['id','trainingId','teacherId','rating','comment','createdAt'],
+  alerts:     ['id','type','severity','message','targetRole','targetId','createdAt','resolvedAt']
 };
 
 const SEED_NETWORKS = [
@@ -55,6 +58,16 @@ function setupSchema() {
            .setFontWeight('bold')
            .setBackground('#f5f7fa');
       sheet.setFrozenRows(1);
+    } else {
+      // הוספת עמודות חסרות לטאבים קיימים (לא שובר נתונים קיימים)
+      const existing = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      const expected = SCHEMA[name];
+      const missing = expected.filter(col => !existing.includes(col));
+      if (missing.length) {
+        const startCol = sheet.getLastColumn() + 1;
+        sheet.getRange(1, startCol, 1, missing.length).setValues([missing])
+             .setFontWeight('bold').setBackground('#fff7ed');
+      }
     }
   });
 
@@ -67,10 +80,10 @@ function setupSchema() {
   // Sample school + sample teacher (delete later)
   const schools = ss.getSheetByName('schools');
   if (schools.getLastRow() === 1) {
-    schools.appendRow(['sch_ort_beit_haarava', 'אורט בית הערבה', 'net_ort', 'מיטל פלג', 'meytalp@bethaarava.ort.org.il', '']);
+    schools.appendRow(['sch_ort_beit_haarava', 'אורט בית הערבה', 'net_ort', 'מיטל פלג', 'meytalp@bethaarava.ort.org.il', '', 80]);
   }
 
-  SpreadsheetApp.getUi().alert('✓ הסכמה הוקמה. הסשן מוכן לפריסה.');
+  SpreadsheetApp.getUi().alert('✓ הסכמה הוקמה / עודכנה. הסשן מוכן לפריסה.');
 }
 
 // ============================================================
@@ -110,6 +123,7 @@ function handleRequest(params) {
       case 'attendance.bulk':     result = recordBulkAttendance(params); break;
       case 'attendance.monthly':  result = monthlyAttendance(params); break;
       case 'attendance.teacher':  result = teacherAttendance(params.teacherId); break;
+      case 'attendance.training': result = trainingAttendance(params.trainingId); break;
 
       case 'pd.list':             result = listPD(params.teacherId); break;
       case 'pd.create':           result = createPD(params); break;
@@ -124,6 +138,21 @@ function handleRequest(params) {
       case 'reports.school':      result = schoolReport(params); break;
       case 'reports.network':     result = networkReport(params); break;
       case 'reports.ministry':    result = ministryReport(params); break;
+      case 'reports.trend':       result = trendReport(params); break;
+      case 'reports.heatmap':     result = heatmapReport(params); break;
+
+      case 'qr.checkin':          result = qrCheckin(params); break;
+      case 'qr.training':         result = getTrainingByToken(params.token); break;
+
+      case 'feedback.submit':     result = submitFeedback(params); break;
+      case 'feedback.list':       result = listFeedback(params); break;
+
+      case 'certificate.generate':result = generateCertificate(params); break;
+
+      case 'alerts.list':         result = listAlerts(params); break;
+      case 'alerts.compute':      result = computeAlerts(); break;
+
+      case 'calendar.ics':        result = exportIcs(params); break;
 
       default: result = { ok: false, error: 'unknown_action: ' + action };
     }
@@ -330,7 +359,11 @@ function createTraining(p) {
     network: p.network || '',
     sector: p.sector || '',
     location: p.location || '',
-    notes: p.notes || ''
+    notes: p.notes || '',
+    qrToken: Utilities.getUuid().replace(/-/g, '').slice(0, 16),
+    materialsUrl: p.materialsUrl || '',
+    curriculumTopic: p.curriculumTopic || '',
+    feedbackEnabled: p.feedbackEnabled !== false
   };
   appendRow('trainings', obj);
   return { ok: true, data: obj };
@@ -395,6 +428,11 @@ function monthlyAttendance(p) {
     };
   });
   return { ok: true, data: out };
+}
+
+function trainingAttendance(trainingId) {
+  const data = readAll('attendance').filter(a => a.trainingId === trainingId);
+  return { ok: true, data };
 }
 
 function teacherAttendance(teacherId) {
@@ -620,4 +658,354 @@ function installMonthlyTrigger() {
     .atHour(8)
     .create();
   SpreadsheetApp.getUi().alert('✓ הטריגר החודשי הותקן.');
+}
+
+// ============================================================
+// QR CHECK-IN — מורה סורקת ב-QR ונרשמת אוטומטית
+// ============================================================
+
+function getTrainingByToken(token) {
+  if (!token) return { ok: false, error: 'missing_token' };
+  const t = readAll('trainings').find(x => x.qrToken === token);
+  if (!t) return { ok: false, error: 'token_not_found' };
+  return { ok: true, data: t };
+}
+
+function qrCheckin(p) {
+  if (!p.token || !p.teacherId) return { ok: false, error: 'missing_params' };
+  const training = readAll('trainings').find(x => x.qrToken === p.token);
+  if (!training) return { ok: false, error: 'invalid_token' };
+
+  // הימנעות מרישום כפול
+  const existing = readAll('attendance').find(a => a.trainingId === training.id && a.teacherId === p.teacherId);
+  if (existing) {
+    return { ok: true, data: { duplicate: true, training } };
+  }
+
+  const obj = {
+    id: newId('att'),
+    trainingId: training.id,
+    teacherId: p.teacherId,
+    status: 'present',
+    notes: 'check-in via QR',
+    timestamp: new Date().toISOString(),
+    checkedInVia: 'qr'
+  };
+  appendRow('attendance', obj);
+  return { ok: true, data: { duplicate: false, training, attendance: obj } };
+}
+
+// ============================================================
+// FEEDBACK — דירוג איכות הדרכה ע"י המורה
+// ============================================================
+
+function submitFeedback(p) {
+  // הימנעות מדירוג כפול
+  const existing = readAll('feedback').find(f => f.trainingId === p.trainingId && f.teacherId === p.teacherId);
+  if (existing) {
+    updateRowById('feedback', existing.id, { rating: p.rating, comment: p.comment || '' });
+    return { ok: true, data: { updated: true } };
+  }
+  const obj = {
+    id: newId('fb'),
+    trainingId: p.trainingId,
+    teacherId: p.teacherId,
+    rating: parseInt(p.rating, 10),
+    comment: p.comment || '',
+    createdAt: new Date().toISOString()
+  };
+  appendRow('feedback', obj);
+  return { ok: true, data: obj };
+}
+
+function listFeedback(p) {
+  let data = readAll('feedback');
+  if (p.trainingId) data = data.filter(f => f.trainingId === p.trainingId);
+  if (p.guideEmail) {
+    const trainings = readAll('trainings').filter(t => t.guideEmail === p.guideEmail).map(t => t.id);
+    data = data.filter(f => trainings.includes(f.trainingId));
+  }
+  // אגרגציה אופציונלית
+  if (data.length) {
+    const avg = data.reduce((s, f) => s + (parseFloat(f.rating) || 0), 0) / data.length;
+    return { ok: true, data, avg: Math.round(avg * 10) / 10, count: data.length };
+  }
+  return { ok: true, data: [], avg: 0, count: 0 };
+}
+
+// ============================================================
+// TREND REPORTS — גרף מגמות חודשי
+// ============================================================
+
+function trendReport(p) {
+  // מחזיר 6 חודשים אחרונים — אחוז נוכחות פר חודש
+  const months = lastNMonths(p.months || 6);
+  const allTrainings = readAll('trainings');
+  const allAttendance = readAll('attendance');
+  let teachers = readAll('teachers');
+  if (p.network) teachers = teachers.filter(t => t.network === p.network);
+  if (p.school)  teachers = teachers.filter(t => t.school === p.school);
+  const teacherIds = new Set(teachers.map(t => t.id));
+
+  const series = months.map(m => {
+    const monthTrainings = allTrainings.filter(t => monthKey(t.date) === m);
+    if (p.network) monthTrainings.filter(t => !t.network || t.network === p.network);
+    if (!monthTrainings.length || !teachers.length) {
+      return { month: m, rate: null, present: 0, total: 0 };
+    }
+    const trainingIdSet = new Set(monthTrainings.map(t => t.id));
+    const presentTeachers = new Set(
+      allAttendance
+        .filter(a => trainingIdSet.has(a.trainingId) && a.status === 'present' && teacherIds.has(a.teacherId))
+        .map(a => a.teacherId)
+    );
+    return {
+      month: m,
+      rate: Math.round((presentTeachers.size / teachers.length) * 100),
+      present: presentTeachers.size,
+      total: teachers.length
+    };
+  });
+
+  return { ok: true, data: { series, months, totalTeachers: teachers.length } };
+}
+
+function lastNMonths(n) {
+  const out = [];
+  const d = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    out.push(m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0'));
+  }
+  return out;
+}
+
+function heatmapReport(p) {
+  // מטריצה: רשת × מקצוע = אחוז נוכחות
+  const teachers = readAll('teachers');
+  const attendance = readAll('attendance');
+  const trainings = readAll('trainings');
+  const month = p.month || thisMonthKey();
+  const monthTrainings = trainings.filter(t => monthKey(t.date) === month);
+  const trainingMap = Object.fromEntries(monthTrainings.map(t => [t.id, t]));
+
+  const cells = {};
+  TS_subjects().forEach(subj => {
+    cells[subj] = {};
+    readAll('networks').forEach(net => {
+      const cellTeachers = teachers.filter(t => t.subject === subj && t.network === net.id);
+      if (!cellTeachers.length) { cells[subj][net.id] = null; return; }
+      const present = cellTeachers.filter(t =>
+        attendance.some(a => a.teacherId === t.id && a.status === 'present' && trainingMap[a.trainingId])
+      ).length;
+      cells[subj][net.id] = Math.round((present / cellTeachers.length) * 100);
+    });
+  });
+
+  return { ok: true, data: { cells, subjects: Object.keys(cells) } };
+}
+
+function TS_subjects() {
+  return ['מתמטיקה','אנגלית','עברית','היסטוריה','אזרחות','תנ"ך',
+          'ביולוגיה','כימיה','פיזיקה','מדעי המחשב',
+          'עיצוב שיער','איפור ויופי','חינוך גופני','אומנות'];
+}
+
+// ============================================================
+// CERTIFICATE — תעודה אוטומטית בסוף שנה
+// ============================================================
+
+function generateCertificate(p) {
+  if (!p.teacherId) return { ok: false, error: 'missing_teacherId' };
+  const teacher = readAll('teachers').find(t => t.id === p.teacherId);
+  if (!teacher) return { ok: false, error: 'teacher_not_found' };
+
+  const school = readAll('schools').find(s => s.id === teacher.school);
+  const network = readAll('networks').find(n => n.id === teacher.network);
+  const year = p.year || new Date().getFullYear();
+  const target = (school && school.attendanceTarget) || 80;
+
+  // חישוב נוכחות שנתית
+  const attendance = readAll('attendance').filter(a => a.teacherId === teacher.id);
+  const trainings = readAll('trainings');
+  const yearTrainings = trainings.filter(t => new Date(t.date).getFullYear() === year);
+  const yearAttendance = attendance.filter(a =>
+    yearTrainings.some(t => t.id === a.trainingId)
+  );
+  const present = yearAttendance.filter(a => a.status === 'present').length;
+  const total = yearTrainings.filter(t =>
+    !t.subject || t.subject === teacher.subject
+  ).length;
+  const rate = total ? Math.round((present / total) * 100) : 0;
+  const eligible = rate >= target;
+
+  // יצירת מסמך
+  const docName = `תעודה — ${teacher.name} — ${year}`;
+  const doc = DocumentApp.create(docName);
+  const body = doc.getBody();
+  body.setMarginTop(72).setMarginBottom(72).setMarginLeft(72).setMarginRight(72);
+
+  // כותרת
+  const title = body.appendParagraph('תעודת השתתפות');
+  title.setHeading(DocumentApp.ParagraphHeading.TITLE);
+  title.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+
+  const subtitle = body.appendParagraph(`תוכנית הדרכות מורים ${year}`);
+  subtitle.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  subtitle.editAsText().setBold(true).setFontSize(14);
+
+  body.appendParagraph('').setSpacingAfter(20);
+  body.appendParagraph('ניתנת בזה ל-')
+    .setAlignment(DocumentApp.HorizontalAlignment.CENTER)
+    .editAsText().setFontSize(12);
+
+  const name = body.appendParagraph(teacher.name);
+  name.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  name.editAsText().setBold(true).setFontSize(28);
+
+  body.appendParagraph('').setSpacingAfter(20);
+  const summary = [
+    `מורה ל${teacher.subject}`,
+    `${(network && network.name) || ''} · ${(school && school.name) || ''}`,
+    '',
+    `אחוז השתתפות שנתי: ${rate}%`,
+    `(${present} מתוך ${total} הדרכות)`,
+    '',
+    eligible
+      ? `עמדה בדרישות התוכנית (מינימום ${target}% השתתפות)`
+      : `יעד התוכנית: ${target}% — לא הושלם השנה`
+  ];
+  summary.forEach(line => {
+    const p2 = body.appendParagraph(line);
+    p2.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    p2.editAsText().setFontSize(13);
+  });
+
+  body.appendParagraph('').setSpacingAfter(40);
+  const stamp = body.appendParagraph('משרד העבודה · יחידת הפיקוח על הדרכות');
+  stamp.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  stamp.editAsText().setItalic(true).setFontSize(11);
+
+  const dateLine = body.appendParagraph(`הופק: ${new Date().toLocaleDateString('he-IL')}`);
+  dateLine.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  dateLine.editAsText().setFontSize(10).setForegroundColor('#666666');
+
+  doc.saveAndClose();
+  const file = DriveApp.getFileById(doc.getId());
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  // המרה ל-PDF
+  const pdfBlob = file.getAs('application/pdf');
+  const pdfFile = DriveApp.createFile(pdfBlob).setName(docName + '.pdf');
+  pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  return {
+    ok: true,
+    data: {
+      eligible, rate, present, total, target,
+      docUrl: doc.getUrl(),
+      pdfUrl: pdfFile.getUrl(),
+      pdfId: pdfFile.getId()
+    }
+  };
+}
+
+// ============================================================
+// ALERTS — התראות יזומות
+// ============================================================
+
+function listAlerts(p) {
+  let data = readAll('alerts').filter(a => !a.resolvedAt);
+  if (p.targetRole) data = data.filter(a => a.targetRole === p.targetRole);
+  if (p.targetId)   data = data.filter(a => a.targetId === p.targetId);
+  return { ok: true, data };
+}
+
+function computeAlerts() {
+  // לוגיקה: מורה שפספסה 2 חודשים ברציפות
+  const teachers = readAll('teachers');
+  const trainings = readAll('trainings');
+  const attendance = readAll('attendance');
+  const newAlerts = [];
+  const months = lastNMonths(2);
+
+  teachers.forEach(t => {
+    const missed = months.every(m => {
+      const monthTrainings = trainings.filter(tr =>
+        monthKey(tr.date) === m &&
+        (!tr.subject || tr.subject === t.subject)
+      );
+      if (!monthTrainings.length) return false;
+      const wasPresent = monthTrainings.some(tr =>
+        attendance.some(a => a.trainingId === tr.id && a.teacherId === t.id && a.status === 'present')
+      );
+      return !wasPresent;
+    });
+
+    if (missed) {
+      // האם כבר יש התראה פתוחה לזה?
+      const existing = readAll('alerts').find(a =>
+        a.targetId === t.id && a.type === 'missed_2months' && !a.resolvedAt
+      );
+      if (existing) return;
+      const obj = {
+        id: newId('alr'),
+        type: 'missed_2months',
+        severity: 'warn',
+        message: `${t.name} (${t.subject}) פספסה הדרכות חודשיים ברציפות`,
+        targetRole: 'school',
+        targetId: t.school,
+        createdAt: new Date().toISOString(),
+        resolvedAt: ''
+      };
+      appendRow('alerts', obj);
+      newAlerts.push(obj);
+    }
+  });
+
+  return { ok: true, data: { newAlerts, count: newAlerts.length } };
+}
+
+// ============================================================
+// CALENDAR ICS EXPORT
+// ============================================================
+
+function exportIcs(p) {
+  let trainings = readAll('trainings');
+  if (p.teacherId) {
+    const teacher = readAll('teachers').find(t => t.id === p.teacherId);
+    if (teacher) {
+      trainings = trainings.filter(t => !t.subject || t.subject === teacher.subject);
+      if (teacher.sector) trainings = trainings.filter(t => !t.sector || t.sector === teacher.sector);
+    }
+  }
+  if (p.guideEmail) trainings = trainings.filter(t => t.guideEmail === p.guideEmail);
+
+  const ics = buildIcs(trainings);
+  return { ok: true, data: { ics } };
+}
+
+function buildIcs(trainings) {
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Training Supervision//HE',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH'
+  ];
+  trainings.forEach(t => {
+    const d = new Date(t.date);
+    if (isNaN(d)) return;
+    const dt = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + t.id + '@training-supervision');
+    lines.push('DTSTART;VALUE=DATE:' + dt);
+    lines.push('DTEND;VALUE=DATE:' + dt);
+    lines.push('SUMMARY:הדרכת ' + (t.subject || ''));
+    lines.push('LOCATION:' + (t.location || ''));
+    lines.push('DESCRIPTION:' + (t.notes || '').replace(/\n/g, '\\n'));
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
 }

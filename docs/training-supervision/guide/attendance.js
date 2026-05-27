@@ -13,30 +13,87 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupFilters();
   document.getElementById('btn-save').addEventListener('click', saveAttendance);
   document.getElementById('btn-mark-all').addEventListener('click', () => markAll('present'));
+  document.getElementById('btn-qr').addEventListener('click', openQr);
 });
+
+// QR display
+function openQr() {
+  if (!training) return;
+  const token = training.qrToken || 'demo-token-' + training.id;
+  const base = window.location.origin + window.location.pathname.replace(/\/guide\/attendance\.html.*$/, '/checkin/');
+  const url = base + '?t=' + token;
+  const target = document.getElementById('qr-target');
+  target.innerHTML = '';
+  if (typeof QRCode !== 'undefined') {
+    QRCode.toCanvas(url, { width: 320, margin: 1 }, (err, canvas) => {
+      if (canvas) target.appendChild(canvas);
+    });
+  } else {
+    target.innerHTML = '<div class="empty">QR לא נטען</div>';
+  }
+  document.getElementById('qr-url').textContent = url;
+  document.getElementById('qr-modal').classList.add('open');
+}
+function closeQr() {
+  document.getElementById('qr-modal').classList.remove('open');
+}
+function copyCheckInUrl() {
+  const url = document.getElementById('qr-url').textContent;
+  navigator.clipboard.writeText(url).then(() => TS.toast('הקישור הועתק'));
+}
+function openCheckInUrl() {
+  window.open(document.getElementById('qr-url').textContent, '_blank');
+}
 
 async function load() {
   if (!TS.getAppsScriptUrl()) {
-    training = { id:'tr1', date:'2026-05-19', subject:'מתמטיקה', sector:'', location:'זום' };
+    training = { id:'tr1', date:'2026-05-19', subject:'מתמטיקה', sector:'', location:'זום', qrToken:'demoQR123' };
     teachers = demoTeachers();
     render();
     return;
   }
-  const [trainRes, teachersRes] = await Promise.all([
+  const [trainRes, teachersRes, attRes] = await Promise.all([
     TS.api('trainings.list', {}),
-    TS.api('teachers.list', {})
+    TS.api('teachers.list', {}),
+    TS.api('attendance.training', { trainingId })
   ]);
   training = (trainRes.data || []).find(t => t.id === trainingId);
   teachers = teachersRes.data || [];
   if (training) {
-    // הדרכה היא לפי מקצוע — מציגים את כל מורי המקצוע מכל הרשתות
     teachers = teachers.filter(t => !training.subject || t.subject === training.subject);
-    // סינון אופציונלי לפי מגזר אם ההדרכה מיועדת למגזר ספציפי
     if (training.sector) {
       teachers = teachers.filter(t => t.sector === training.sector);
     }
   }
+  // Pre-fill existing attendance (כולל QR check-ins)
+  (attRes.data || []).forEach(a => {
+    attendance[a.teacherId] = a.status;
+    if (a.checkedInVia === 'qr') notesById[a.teacherId] = 'check-in via QR';
+  });
   render();
+
+  // Auto-refresh כל 15 שניות כדי לקלוט check-ins חדשים
+  if (!window._refreshTimer) {
+    window._refreshTimer = setInterval(refreshAttendance, 15000);
+  }
+}
+
+async function refreshAttendance() {
+  if (!TS.getAppsScriptUrl()) return;
+  const res = await TS.api('attendance.training', { trainingId });
+  if (res.ok && res.data) {
+    let changed = false;
+    res.data.forEach(a => {
+      if (attendance[a.teacherId] !== a.status) {
+        attendance[a.teacherId] = a.status;
+        changed = true;
+      }
+    });
+    if (changed) {
+      renderList();
+      TS.toast('עודכן — מורים חדשים נכנסו דרך QR');
+    }
+  }
 }
 
 function setupFilters() {

@@ -12,15 +12,34 @@ async function load() {
     networks = TS.NETWORKS.map(n => ({ id: 'net_'+n.id, name: n.name, color: n.color, contactEmail: '' }));
     report = demoReport();
     render();
+    renderTrend(demoTrend());
     return;
   }
-  const [rptRes, netsRes] = await Promise.all([
+  const [rptRes, netsRes, trendRes] = await Promise.all([
     TS.api('reports.ministry', { month: '' }),
-    TS.api('networks.list')
+    TS.api('networks.list'),
+    TS.api('reports.trend', { months: 6 })
   ]);
   report = rptRes.data || {};
   networks = netsRes.data || [];
   render();
+  renderTrend((trendRes.data && trendRes.data.series) || []);
+}
+
+function renderTrend(series) {
+  const target = document.getElementById('trend-chart');
+  if (target) TS.renderTrendChart(target, series);
+}
+
+function demoTrend() {
+  return [
+    { month:'2025-12', rate: 83, present: 590, total: 712 },
+    { month:'2026-01', rate: 81, present: 577, total: 712 },
+    { month:'2026-02', rate: 85, present: 605, total: 712 },
+    { month:'2026-03', rate: 87, present: 620, total: 712 },
+    { month:'2026-04', rate: 89, present: 634, total: 712 },
+    { month:'2026-05', rate: 90, present: 638, total: 712 }
+  ];
 }
 
 function render() {

@@ -13,12 +13,14 @@ async function loadData() {
     document.getElementById('user-name').textContent = 'דמו';
     document.getElementById('user-network').textContent = 'רשת אורט';
     render();
+    renderTrend(demoTrend());
     return;
   }
 
-  const [reportRes, netsRes] = await Promise.all([
+  const [reportRes, netsRes, trendRes] = await Promise.all([
     TS.api('reports.network', { network: networkId, month: '' }),
-    TS.api('networks.list')
+    TS.api('networks.list'),
+    TS.api('reports.trend', { network: networkId, months: 6 })
   ]);
 
   report = reportRes.data || {};
@@ -28,6 +30,23 @@ async function loadData() {
     document.querySelector('.network-tag').innerHTML = TS.netChip(net.color);
   }
   render();
+  renderTrend((trendRes.data && trendRes.data.series) || []);
+}
+
+function renderTrend(series) {
+  const target = document.getElementById('trend-chart');
+  if (target) TS.renderTrendChart(target, series);
+}
+
+function demoTrend() {
+  return [
+    { month:'2025-12', rate: 82, present: 153, total: 187 },
+    { month:'2026-01', rate: 78, present: 146, total: 187 },
+    { month:'2026-02', rate: 86, present: 161, total: 187 },
+    { month:'2026-03', rate: 88, present: 165, total: 187 },
+    { month:'2026-04', rate: 92, present: 172, total: 187 },
+    { month:'2026-05', rate: 90, present: 168, total: 187 }
+  ];
 }
 
 function render() {

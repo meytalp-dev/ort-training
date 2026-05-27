@@ -7,7 +7,58 @@ let questions = [];
 document.addEventListener('DOMContentLoaded', async () => {
   await load();
   document.getElementById('form-question').addEventListener('submit', submitQuestion);
+  document.getElementById('btn-cert').addEventListener('click', requestCertificate);
 });
+
+async function requestCertificate() {
+  const btn = document.getElementById('btn-cert');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> מפיק...';
+
+  if (!TS.getAppsScriptUrl()) {
+    showCertResult({ eligible: true, rate: 92, present: 11, total: 12, target: 80, pdfUrl: '#', docUrl: '#' });
+    btn.disabled = false;
+    btn.textContent = 'הפק תעודה';
+    return;
+  }
+  const res = await TS.apiPost('certificate.generate', { teacherId });
+  btn.disabled = false;
+  btn.textContent = 'הפק תעודה';
+  if (res.ok && res.data) {
+    showCertResult(res.data);
+  } else {
+    TS.toast('שגיאה בהפקת התעודה');
+  }
+}
+
+function showCertResult(data) {
+  const box = document.getElementById('cert-result');
+  box.hidden = false;
+  if (data.eligible) {
+    box.innerHTML = `
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>
+        <div style="flex:1;">
+          <div style="font-weight:700; color:#15803d; margin-bottom:4px;">עמדת בדרישות התוכנית</div>
+          <div style="font-size:14px; color:var(--text-2);">${data.rate}% נוכחות (${data.present} מתוך ${data.total} הדרכות) · יעד: ${data.target}%</div>
+          <div class="btn-row" style="margin: 12px 0 0;">
+            <a class="btn btn-primary" href="${data.pdfUrl}" target="_blank">הורדת PDF</a>
+            <a class="btn btn-soft" href="${data.docUrl}" target="_blank">פתיחה ב-Docs</a>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div style="display:flex; gap:12px; align-items:flex-start;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div style="flex:1;">
+          <div style="font-weight:700; color:#92400e; margin-bottom:4px;">עוד לא עמדת ביעד</div>
+          <div style="font-size:14px; color:var(--text-2);">${data.rate}% נוכחות (${data.present} מתוך ${data.total}) · יעד: ${data.target}%</div>
+          <div style="font-size:13px; color:var(--text-3); margin-top:8px;">הצטרפי להדרכות הבאות כדי לעמוד ביעד והתעודה תופק אוטומטית.</div>
+        </div>
+      </div>`;
+  }
+}
 
 async function load() {
   if (!TS.getAppsScriptUrl()) {

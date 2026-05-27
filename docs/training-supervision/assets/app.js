@@ -146,6 +146,70 @@ const TS = (() => {
     return APPS_SCRIPT_URL;
   }
 
+  // SVG sparkline / trend chart — לא דורש ספריית chart חיצונית
+  function renderTrendChart(targetEl, series, options = {}) {
+    const w = options.width || 720;
+    const h = options.height || 220;
+    const padX = 40, padY = 30, padBottom = 40;
+    const innerW = w - padX * 2;
+    const innerH = h - padY - padBottom;
+
+    const validPoints = series.filter(p => p.rate !== null);
+    if (!validPoints.length) {
+      targetEl.innerHTML = `<div class="empty" style="padding:32px;">אין מספיק נתונים להצגת מגמה</div>`;
+      return;
+    }
+    const maxY = 100;
+    const minY = 0;
+    const step = innerW / Math.max(1, series.length - 1);
+
+    function xy(i, rate) {
+      const x = padX + step * i;
+      const y = padY + innerH - ((rate - minY) / (maxY - minY)) * innerH;
+      return [x, y];
+    }
+
+    const pointsArr = series.map((p, i) => p.rate !== null ? xy(i, p.rate) : null);
+    const linePath = pointsArr.filter(Boolean).map((pt, i) => (i === 0 ? 'M' : 'L') + pt[0] + ',' + pt[1]).join(' ');
+
+    const months = ['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'];
+    function shortMonth(ym) {
+      const m = parseInt(ym.split('-')[1], 10);
+      return months[m - 1] || '';
+    }
+
+    const yLabels = [0, 25, 50, 75, 100];
+
+    targetEl.innerHTML = `
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto; max-height:${h}px;" aria-label="גרף מגמת נוכחות">
+        <!-- gridlines -->
+        ${yLabels.map(v => {
+          const y = padY + innerH - (v / maxY) * innerH;
+          return `<line x1="${padX}" y1="${y}" x2="${w - padX}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>
+                  <text x="${padX - 8}" y="${y + 4}" text-anchor="end" fill="#9ca3af" font-size="11" font-family="Heebo">${v}%</text>`;
+        }).join('')}
+        <!-- target line at 80% -->
+        <line x1="${padX}" y1="${padY + innerH - 0.8 * innerH}" x2="${w - padX}" y2="${padY + innerH - 0.8 * innerH}" stroke="#16a34a" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+        <text x="${w - padX + 4}" y="${padY + innerH - 0.8 * innerH + 4}" fill="#16a34a" font-size="10" font-family="Heebo">יעד 80%</text>
+        <!-- line -->
+        <path d="${linePath}" fill="none" stroke="#0891b2" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- points -->
+        ${series.map((p, i) => {
+          if (p.rate === null) return '';
+          const [x, y] = xy(i, p.rate);
+          const color = p.rate >= 90 ? '#16a34a' : p.rate >= 70 ? '#f59e0b' : '#dc2626';
+          return `<circle cx="${x}" cy="${y}" r="5" fill="${color}" stroke="white" stroke-width="2"/>
+                  <text x="${x}" y="${y - 12}" text-anchor="middle" fill="${color}" font-size="11" font-weight="700" font-family="Heebo">${p.rate}%</text>`;
+        }).join('')}
+        <!-- X labels -->
+        ${series.map((p, i) => {
+          const [x] = xy(i, 0);
+          return `<text x="${x}" y="${h - 14}" text-anchor="middle" fill="#6b7280" font-size="12" font-family="Heebo">${shortMonth(p.month)}</text>`;
+        }).join('')}
+      </svg>
+    `;
+  }
+
   return {
     NETWORKS, SECTORS, SUBJECTS, TYPES,
     api, apiPost,
@@ -153,6 +217,7 @@ const TS = (() => {
     attendanceBadge, toast, urlParam,
     monthLabel, formatDate,
     gmailCompose, whatsappLink,
-    setAppsScriptUrl, getAppsScriptUrl
+    setAppsScriptUrl, getAppsScriptUrl,
+    renderTrendChart
   };
 })();

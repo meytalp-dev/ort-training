@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>צ'ק-אין להדרכה</title>
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+body { font-family: 'Heebo', 'Playpen Sans Hebrew', sans-serif; }
+.checkin-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #cffafe 0%, #ede9fe 100%);
+  padding: 16px;
+}
+.checkin-card {
+  background: white;
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.12);
+}
+.checkin-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--ok-soft);
+  color: var(--ok);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.checkin-icon svg { width: 40px; height: 40px; }
+.teacher-search {
+  position: relative;
+}
+.teacher-list {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+.teacher-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.teacher-item:last-child { border-bottom: none; }
+.teacher-item:hover { background: var(--surface-2); }
+.teacher-item .name { font-weight: 700; }
+.teacher-item .meta { font-size: 13px; color: var(--text-2); display:flex; gap:6px; flex-wrap:wrap;}
+</style>
+</head>
+<body>
+<div class="checkin-shell">
+  <div class="checkin-card">
+
+    <div id="loading" style="text-align:center; padding: 24px;">
+      <div class="spinner" style="width:32px; height:32px; margin: 0 auto 16px;"></div>
+      <p style="color:var(--text-2);">בודק/ת את ההדרכה...</p>
+    </div>
+
+    <div id="invalid" hidden style="text-align:center;">
+      <div class="checkin-icon" style="background:var(--err-soft); color:var(--err);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      </div>
+      <h2>קישור לא תקין</h2>
+      <p style="color:var(--text-2); margin-top:8px;">הקישור פג תוקף או שגוי. בקשי מהמדריך/ה את קוד ה-QR החדש.</p>
+    </div>
+
+    <div id="select-teacher" hidden>
+      <div class="checkin-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      </div>
+      <h2 style="text-align:center;">צ'ק-אין להדרכה</h2>
+      <div style="text-align:center; color:var(--text-2); margin: 8px 0 20px;">
+        <strong id="t-subject">—</strong> · <span id="t-date">—</span>
+        <div id="t-location" style="margin-top:4px; font-size:13px;"></div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">בחרי את שמך מהרשימה</label>
+        <div class="teacher-search">
+          <input type="search" class="input" id="search" placeholder="התחילי להקליד את השם...">
+          <div class="teacher-list" id="list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="success" hidden style="text-align:center;">
+      <div class="checkin-icon" style="background:var(--ok-soft); color:var(--ok);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h2>נרשמת בהצלחה</h2>
+      <p style="color:var(--text-2); margin-top:8px;" id="success-name">—</p>
+      <p style="color:var(--text-3); font-size:13px; margin-top:4px;" id="success-meta">—</p>
+      <div id="duplicate-note" hidden style="background:var(--warn-soft); color:#78350f; padding:12px; border-radius:8px; margin-top:16px; font-size:14px;">
+        כבר נרשמת קודם — לא יוצר רישום כפול.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="../assets/app.js"></script>
+<script>
+const token = TS.urlParam('t', '');
+let training = null;
+let teachers = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!token) { showInvalid(); return; }
+
+  if (!TS.getAppsScriptUrl()) {
+    // Demo mode
+    training = { id:'tr1', subject:'מתמטיקה', date:'2026-05-19', location:'אורט בית הערבה', sector:'' };
+    teachers = demoTeachers();
+    showSelect();
+    return;
+  }
+  const [trainRes, teachersRes] = await Promise.all([
+    TS.api('qr.training', { token }),
+    TS.api('teachers.list', {})
+  ]);
+  if (!trainRes.ok) { showInvalid(); return; }
+  training = trainRes.data;
+  teachers = (teachersRes.data || []).filter(t =>
+    !training.subject || t.subject === training.subject
+  );
+  if (training.sector) {
+    teachers = teachers.filter(t => t.sector === training.sector);
+  }
+  showSelect();
+});
+
+function showInvalid() {
+  document.getElementById('loading').hidden = true;
+  document.getElementById('invalid').hidden = false;
+}
+
+function showSelect() {
+  document.getElementById('loading').hidden = true;
+  document.getElementById('select-teacher').hidden = false;
+  document.getElementById('t-subject').textContent = training.subject || '';
+  document.getElementById('t-date').textContent = TS.formatDate(training.date);
+  document.getElementById('t-location').textContent = training.location || '';
+  renderList();
+  document.getElementById('search').addEventListener('input', renderList);
+}
+
+function renderList() {
+  const search = (document.getElementById('search').value || '').trim().toLowerCase();
+  const list = teachers.filter(t => !search || (t.name || '').toLowerCase().includes(search));
+  const cont = document.getElementById('list');
+  if (!list.length) {
+    cont.innerHTML = '<div class="empty" style="padding:16px;">לא נמצאו מורים. בקשי מהמדריך/ה לוודא שאת רשומה במערכת.</div>';
+    return;
+  }
+  cont.innerHTML = list.slice(0, 20).map(t => `
+    <div class="teacher-item" onclick="checkin('${t.id}', '${(t.name||'').replace(/'/g, "\\'")}')">
+      <div class="name">${t.name}</div>
+      <div class="meta">${t.subject || ''} · ${TS.netChip(t.network)}</div>
+    </div>
+  `).join('');
+}
+
+async function checkin(teacherId, name) {
+  if (!TS.getAppsScriptUrl()) {
+    showSuccess(name, false);
+    return;
+  }
+  const res = await TS.apiPost('qr.checkin', { token, teacherId });
+  if (res.ok) {
+    showSuccess(name, res.data.duplicate);
+  } else {
+    TS.toast('שגיאה — ' + (res.error || ''));
+  }
+}
+
+function showSuccess(name, duplicate) {
+  document.getElementById('select-teacher').hidden = true;
+  document.getElementById('success').hidden = false;
+  document.getElementById('success-name').textContent = name;
+  document.getElementById('success-meta').textContent =
+    `הדרכת ${training.subject} · ${TS.formatDate(training.date)}`;
+  document.getElementById('duplicate-note').hidden = !duplicate;
+}
+
+function demoTeachers() {
+  return [
+    { id:'t1', name:'שרה כהן',    subject:'מתמטיקה', sector:'kelali', network:'ort'  },
+    { id:'t2', name:'אחמד עלי',    subject:'מתמטיקה', sector:'arab',   network:'amal' },
+    { id:'t3', name:'יעל לוי',     subject:'מתמטיקה', sector:'kelali', network:'atid' },
+    { id:'t4', name:'מרים פרידמן', subject:'מתמטיקה', sector:'haredi', network:'dror' }
+  ];
+}
+</script>
+</body>
+</html>
