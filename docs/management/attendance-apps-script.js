@@ -453,6 +453,11 @@ function sendBnotReminder() {
 }
 
 function sendReminderCheck() {
+  // 🚫 בוטל 27.5.2026 — מייטל ביקשה להפסיק את ההתראות על נוכחות ליסכה/הנהלה
+  // להפעלה מחדש: למחוק את 3 השורות הללו
+  logInfo('reminder', 'DISABLED — attendance alerts to management turned off (27.5.2026)', '');
+  return 'disabled by request';
+
   const now = new Date();
   const dow = now.getDay(); // 0=Sunday, 6=Saturday
   // Skip Friday (5) and Saturday (6)
@@ -609,6 +614,11 @@ function getConsecutiveAbsences(records, studentId, classReportingDays) {
 }
 
 function sendDailySummary() {
+  // 🚫 בוטל 27.5.2026 — מייטל ביקשה להפסיק את כל ההתראות ליועצות וליסכה על חוסרים בנוכחות
+  // להפעלה מחדש: למחוק את 3 השורות הללו
+  logInfo('daily-summary', 'DISABLED — alerts to counselors and Yiskah turned off (27.5.2026)', '');
+  return 'disabled by request';
+
   const now = new Date();
   const dow = now.getDay();
   // Skip Friday and Saturday
@@ -844,6 +854,32 @@ function testDailySummaryDryRun() {
   };
   Logger.log(JSON.stringify(output, null, 2));
   return output;
+}
+
+// ============================================================
+// 🚫 כיבוי התראות נוכחות — להריץ פעם אחת ב-Apps Script
+// ============================================================
+// מסיר את הטריגרים של:
+//   • sendReminderCheck (13:30) — התראה להנהלה על כיתות שלא דיווחו
+//   • sendDailySummary (14:00) — סיכום ליועצות + יסכה על חיסורים רצופים
+//
+// לא נוגע ב:
+//   • sendBnotReminder (10:30) — תזכורת לבנות שירות למלא טופס
+//   • טריגרים של תורנויות בוקר/צהריים (קובץ נפרד)
+function disableAttendanceAlerts() {
+  const FUNCTIONS_TO_REMOVE = ['sendReminderCheck', 'sendDailySummary'];
+  let removed = 0;
+  const removedDetails = [];
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    const fn = t.getHandlerFunction();
+    if (FUNCTIONS_TO_REMOVE.indexOf(fn) >= 0) {
+      ScriptApp.deleteTrigger(t);
+      removed++;
+      removedDetails.push(fn);
+    }
+  });
+  logInfo('disableAlerts', 'removed ' + removed + ' triggers', removedDetails.join(','));
+  return 'disabled — removed ' + removed + ' triggers (' + removedDetails.join(', ') + ')';
 }
 
 // ============================================================
