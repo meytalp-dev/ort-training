@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מנהל בית ספר — פיקוח הדרכות</title>
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="../" style="color:inherit; display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </a>
+      <span style="font-family: 'Playpen Sans Hebrew', sans-serif; font-weight:800;">מנהל בית ספר</span>
+    </div>
+    <div class="topbar-user">
+      <div>
+        <div class="topbar-user-name" id="user-name">—</div>
+        <div class="topbar-user-meta" id="user-school">—</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+      <h1>תמונת מצב חודשית — <span id="month-label"></span></h1>
+      <div class="btn-row" style="margin:0;">
+        <button class="btn btn-primary" id="btn-send-report">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          שליחת דוח לרשת
+        </button>
+        <button class="btn btn-secondary" onclick="openAddTeacher()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          הוסף מורה
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">מורים בבית הספר</div>
+        <div class="stat-value" id="stat-teachers">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">אחוז נוכחות החודש</div>
+        <div class="stat-value ok" id="stat-attendance">—</div>
+        <div class="stat-sub" id="stat-attendance-sub">מתוך כל המורים</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">בהשתלמות פעילה</div>
+        <div class="stat-value info" id="stat-pd">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">פספסו החודש</div>
+        <div class="stat-value warn" id="stat-missed">—</div>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div id="alerts-section"></div>
+
+    <!-- Filters -->
+    <div class="filter-bar" style="margin-top:24px;">
+      <input type="search" class="input" id="filter-search" placeholder="חיפוש מורה..." style="max-width:240px;">
+      <select class="select" id="filter-subject">
+        <option value="">כל המקצועות</option>
+      </select>
+      <select class="select" id="filter-type">
+        <option value="">בגרות וגמר</option>
+        <option value="bagrut">בגרות</option>
+        <option value="gemer">גמר</option>
+      </select>
+      <select class="select" id="filter-sector">
+        <option value="">כל המגזרים</option>
+        <option value="haredi">חרדי</option>
+        <option value="arab">ערבי</option>
+        <option value="kelali">כללי</option>
+      </select>
+    </div>
+
+    <!-- Teachers table -->
+    <div class="card" style="padding:0;">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>שם המורה</th>
+              <th>מקצוע</th>
+              <th>סוג</th>
+              <th>מגזר</th>
+              <th>ותק</th>
+              <th>יח"ל</th>
+              <th>תלמידים</th>
+              <th>נוכחות החודש</th>
+              <th>השתלמות</th>
+              <th>אישור משה"ח</th>
+              <th>פעולות</th>
+            </tr>
+          </thead>
+          <tbody id="teachers-body">
+            <tr><td colspan="11" class="empty">טוען נתונים...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Add teacher modal -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title">הוספת מורה חדש</h3>
+      <button class="modal-close" onclick="closeAddTeacher()">×</button>
+    </div>
+    <form id="form-teacher">
+      <input type="hidden" name="id" id="t-id">
+      <div class="form-grid">
+        <div class="form-row">
+          <label class="form-label">שם מלא *</label>
+          <input class="input" name="name" id="t-name" required>
+        </div>
+        <div class="form-row">
+          <label class="form-label">מקצוע *</label>
+          <select class="select" name="subject" id="t-subject" required></select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">סוג מקצוע *</label>
+          <select class="select" name="type" id="t-type" required>
+            <option value="bagrut">בגרות</option>
+            <option value="gemer">גמר</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">מגזר *</label>
+          <select class="select" name="sector" id="t-sector" required>
+            <option value="kelali">כללי</option>
+            <option value="haredi">חרדי</option>
+            <option value="arab">ערבי</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">שנות ותק במקצוע *</label>
+          <input type="number" class="input" name="seniority" id="t-seniority" min="0" max="60" required>
+        </div>
+        <div class="form-row">
+          <label class="form-label">יחידות לימוד</label>
+          <input class="input" name="units" id="t-units" placeholder='למשל: 5 יח"ל'>
+        </div>
+        <div class="form-row">
+          <label class="form-label">מספר תלמידים</label>
+          <input type="number" class="input" name="students" id="t-students" min="0" max="500">
+        </div>
+        <div class="form-row">
+          <label class="form-label">טלפון</label>
+          <input class="input" name="phone" id="t-phone" placeholder="050-1234567">
+        </div>
+        <div class="form-row" style="grid-column: 1/-1;">
+          <label class="form-label">מייל</label>
+          <input type="email" class="input" name="email" id="t-email">
+        </div>
+        <div class="form-row" style="grid-column: 1/-1;">
+          <div class="checkbox-row">
+            <input type="checkbox" id="t-moe" name="moeApproval">
+            <label for="t-moe" style="font-weight:600;">מודרך גם במשרד החינוך</label>
+          </div>
+        </div>
+        <div class="form-row" style="grid-column: 1/-1;" id="moe-file-row" hidden>
+          <label class="form-label">קישור לאישור הדרכת משה"ח</label>
+          <input type="url" class="input" name="moeFile" id="t-moe-file" placeholder="https://drive.google.com/...">
+          <small class="form-hint">העלי לדרייב, שמרי קישור-שיתוף, והדביקי כאן</small>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="submit" class="btn btn-primary">שמירה</button>
+        <button type="button" class="btn btn-secondary" onclick="closeAddTeacher()">ביטול</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="../assets/app.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

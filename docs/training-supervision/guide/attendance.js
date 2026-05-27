@@ -1,0 +1,153 @@
+// Guide — Attendance recording
+const trainingId = TS.urlParam('training', '');
+let training = null;
+let teachers = [];
+let attendance = {}; // teacherId → 'present' | 'absent' | undefined
+let notesById = {};
+let filterNet = '';
+let filterSector = '';
+let filterSubject = '';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await load();
+  setupFilters();
+  document.getElementById('btn-save').addEventListener('click', saveAttendance);
+  document.getElementById('btn-mark-all').addEventListener('click', () => markAll('present'));
+});
+
+async function load() {
+  if (!TS.getAppsScriptUrl()) {
+    training = { id:'tr1', date:'2026-05-19', subject:'מתמטיקה', network:'ort', sector:'kelali', location:'זום' };
+    teachers = demoTeachers();
+    render();
+    return;
+  }
+  const [trainRes, teachersRes] = await Promise.all([
+    TS.api('trainings.list', {}),
+    TS.api('teachers.list', {})
+  ]);
+  training = (trainRes.data || []).find(t => t.id === trainingId);
+  teachers = teachersRes.data || [];
+  if (training) {
+    // Filter teachers relevant to this training (same network + subject)
+    teachers = teachers.filter(t =>
+      (!training.network || t.network === training.network) &&
+      (!training.subject || t.subject === training.subject)
+    );
+  }
+  render();
+}
+
+function setupFilters() {
+  populateNetworkFilter();
+  TS.SUBJECTS.forEach(s => document.getElementById('filter-subject').insertAdjacentHTML('beforeend', `<option value="${s}">${s}</option>`));
+  ['filter-net','filter-sector','filter-subject','filter-search'].forEach(id => {
+    document.getElementById(id).addEventListener('input', e => {
+      if (id==='filter-net') filterNet = e.target.value;
+      if (id==='filter-sector') filterSector = e.target.value;
+      if (id==='filter-subject') filterSubject = e.target.value;
+      renderList();
+    });
+  });
+}
+function populateNetworkFilter() {
+  const sel = document.getElementById('filter-net');
+  TS.NETWORKS.forEach(n => sel.insertAdjacentHTML('beforeend', `<option value="${n.id}">${n.name}</option>`));
+}
+
+function render() {
+  // Training header
+  if (training) {
+    document.getElementById('train-subject').textContent = training.subject;
+    document.getElementById('train-date').textContent = TS.formatDate(training.date);
+    document.getElementById('train-net').innerHTML = TS.netChip(training.network);
+    document.getElementById('train-loc').textContent = training.location || '';
+  }
+  renderList();
+}
+
+function renderList() {
+  const search = (document.getElementById('filter-search').value || '').trim().toLowerCase();
+  const list = teachers.filter(t => {
+    if (search && !(t.name||'').toLowerCase().includes(search)) return false;
+    if (filterNet && t.network !== filterNet) return false;
+    if (filterSector && t.sector !== filterSector) return false;
+    if (filterSubject && t.subject !== filterSubject) return false;
+    return true;
+  });
+  document.getElementById('count').textContent = `${list.length} מורים`;
+
+  const cont = document.getElementById('list');
+  if (!list.length) {
+    cont.innerHTML = `<div class="empty">אין מורים תואמים לסינון</div>`;
+    return;
+  }
+  cont.innerHTML = list.map(t => {
+    const status = attendance[t.id];
+    return `
+      <div class="att-row">
+        <div class="att-info">
+          <div class="att-name">${t.name}</div>
+          <div class="att-meta">${t.subject} · ${TS.secChip(t.sector)} · ${TS.netChip(t.network)}</div>
+        </div>
+        <div class="att-actions">
+          <button class="btn ${status==='present'?'btn-primary':'btn-secondary'}" data-id="${t.id}" data-status="present">נכח</button>
+          <button class="btn ${status==='absent'?'btn-warn':'btn-secondary'}" data-id="${t.id}" data-status="absent">לא נכח</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  cont.querySelectorAll('button[data-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id, status = btn.dataset.status;
+      attendance[id] = attendance[id] === status ? undefined : status;
+      renderList();
+      renderSummary();
+    });
+  });
+  renderSummary();
+}
+
+function renderSummary() {
+  const present = Object.values(attendance).filter(v => v==='present').length;
+  const absent = Object.values(attendance).filter(v => v==='absent').length;
+  document.getElementById('sum-present').textContent = present;
+  document.getElementById('sum-absent').textContent = absent;
+}
+
+function markAll(status) {
+  teachers.forEach(t => attendance[t.id] = status);
+  renderList();
+}
+
+async function saveAttendance() {
+  const records = Object.entries(attendance)
+    .filter(([_, status]) => status)
+    .map(([teacherId, status]) => ({ teacherId, status, notes: notesById[teacherId] || '' }));
+
+  if (!records.length) {
+    TS.toast('לא סומנו מורים');
+    return;
+  }
+  if (!TS.getAppsScriptUrl()) {
+    TS.toast(`דמו — נשמרו ${records.length} רישומים`);
+    return;
+  }
+  const res = await TS.apiPost('attendance.bulk', { trainingId, records });
+  if (res.ok) {
+    TS.toast(`נשמרו ${res.count} רישומים`);
+    setTimeout(() => { window.location.href = './'; }, 1200);
+  } else {
+    TS.toast('שגיאה — ' + (res.error || ''));
+  }
+}
+
+function demoTeachers() {
+  return [
+    { id:'t1', name:'שרה כהן',     subject:'מתמטיקה', sector:'kelali', network:'ort' },
+    { id:'t2', name:'אחמד עלי',     subject:'מתמטיקה', sector:'arab',   network:'ort' },
+    { id:'t3', name:'יעל לוי',      subject:'מתמטיקה', sector:'kelali', network:'ort' },
+    { id:'t4', name:'מרים פרידמן',  subject:'מתמטיקה', sector:'haredi', network:'ort' },
+    { id:'t5', name:'דני אבן',      subject:'מתמטיקה', sector:'kelali', network:'ort' }
+  ];
+}
