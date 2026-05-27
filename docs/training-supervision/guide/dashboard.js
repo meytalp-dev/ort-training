@@ -38,32 +38,36 @@ function render() {
     </td></tr>`;
     return;
   }
-  tbody.innerHTML = trainings.map(t => `
+  tbody.innerHTML = trainings.map(t => {
+    const audience = t.sector
+      ? `<span class="sec-chip ${t.sector}">${TS.secById(t.sector).name}</span>`
+      : `<span class="badge info">כל המגזרים</span>`;
+    return `
     <tr>
       <td>${TS.formatDate(t.date)}</td>
       <td><strong>${t.subject}</strong></td>
-      <td>${TS.netChip(t.network)}</td>
+      <td>${audience}</td>
       <td>${t.location || '—'}</td>
       <td>
         <a class="btn btn-primary" href="attendance.html?training=${t.id}">רישום נוכחות</a>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 function openNewTraining() {
   document.getElementById('form-training').reset();
   document.getElementById('t-date').value = new Date().toISOString().slice(0,10);
-  populateNetworks('t-network');
+  populateSubjects('t-subject');
   document.getElementById('modal-training').classList.add('open');
 }
 function closeNewTraining() {
   document.getElementById('modal-training').classList.remove('open');
 }
-function populateNetworks(id) {
+function populateSubjects(id) {
   const sel = document.getElementById(id);
-  sel.innerHTML = '';
-  TS.NETWORKS.forEach(n => sel.insertAdjacentHTML('beforeend', `<option value="${n.id}">${n.name}</option>`));
+  if (sel.options.length > 1) return;
+  TS.SUBJECTS.forEach(s => sel.insertAdjacentHTML('beforeend', `<option value="${s}">${s}</option>`));
 }
 
 async function submitTraining(e) {

@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function load() {
   if (!TS.getAppsScriptUrl()) {
-    training = { id:'tr1', date:'2026-05-19', subject:'מתמטיקה', network:'ort', sector:'kelali', location:'זום' };
+    training = { id:'tr1', date:'2026-05-19', subject:'מתמטיקה', sector:'', location:'זום' };
     teachers = demoTeachers();
     render();
     return;
@@ -29,11 +29,12 @@ async function load() {
   training = (trainRes.data || []).find(t => t.id === trainingId);
   teachers = teachersRes.data || [];
   if (training) {
-    // Filter teachers relevant to this training (same network + subject)
-    teachers = teachers.filter(t =>
-      (!training.network || t.network === training.network) &&
-      (!training.subject || t.subject === training.subject)
-    );
+    // הדרכה היא לפי מקצוע — מציגים את כל מורי המקצוע מכל הרשתות
+    teachers = teachers.filter(t => !training.subject || t.subject === training.subject);
+    // סינון אופציונלי לפי מגזר אם ההדרכה מיועדת למגזר ספציפי
+    if (training.sector) {
+      teachers = teachers.filter(t => t.sector === training.sector);
+    }
   }
   render();
 }
@@ -60,7 +61,10 @@ function render() {
   if (training) {
     document.getElementById('train-subject').textContent = training.subject;
     document.getElementById('train-date').textContent = TS.formatDate(training.date);
-    document.getElementById('train-net').innerHTML = TS.netChip(training.network);
+    const audience = training.sector
+      ? `<span class="sec-chip ${training.sector}">${TS.secById(training.sector).name}</span>`
+      : `<span class="badge info">פתוחה לכל המגזרים</span>`;
+    document.getElementById('train-net').innerHTML = audience;
     document.getElementById('train-loc').textContent = training.location || '';
   }
   renderList();
@@ -143,11 +147,15 @@ async function saveAttendance() {
 }
 
 function demoTeachers() {
+  // הדרכת מקצוע — מורים מכל הרשתות מגיעים יחד
   return [
-    { id:'t1', name:'שרה כהן',     subject:'מתמטיקה', sector:'kelali', network:'ort' },
-    { id:'t2', name:'אחמד עלי',     subject:'מתמטיקה', sector:'arab',   network:'ort' },
-    { id:'t3', name:'יעל לוי',      subject:'מתמטיקה', sector:'kelali', network:'ort' },
-    { id:'t4', name:'מרים פרידמן',  subject:'מתמטיקה', sector:'haredi', network:'ort' },
-    { id:'t5', name:'דני אבן',      subject:'מתמטיקה', sector:'kelali', network:'ort' }
+    { id:'t1', name:'שרה כהן',     subject:'מתמטיקה', sector:'kelali', network:'ort'     },
+    { id:'t2', name:'אחמד עלי',     subject:'מתמטיקה', sector:'arab',   network:'amal'    },
+    { id:'t3', name:'יעל לוי',      subject:'מתמטיקה', sector:'kelali', network:'atid'    },
+    { id:'t4', name:'מרים פרידמן',  subject:'מתמטיקה', sector:'haredi', network:'dror'    },
+    { id:'t5', name:'דני אבן',      subject:'מתמטיקה', sector:'kelali', network:'amal'    },
+    { id:'t6', name:'מוחמד חאלד',   subject:'מתמטיקה', sector:'arab',   network:'sakhnin' },
+    { id:'t7', name:'רותם שפירא',   subject:'מתמטיקה', sector:'kelali', network:'ort'     },
+    { id:'t8', name:'נועה לביא',    subject:'מתמטיקה', sector:'kelali', network:'atid'    }
   ];
 }
