@@ -66,7 +66,7 @@ function render() {
             <div style="color:var(--text-2); font-size:14px;">${n.teachers} מורים</div>
           </div>
           <div style="text-align:left;">
-            <div style="font-family:'Playpen Sans Hebrew'; font-size:28px; font-weight:800; line-height:1;">${n.rate}%</div>
+            <div style="font-family:'Frank Ruhl Libre'; font-size:28px; font-weight:800; line-height:1;">${n.rate}%</div>
             <div style="font-size:12px; color:var(--text-3);">נוכחות</div>
           </div>
         </div>

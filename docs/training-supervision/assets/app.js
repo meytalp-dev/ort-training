@@ -2,8 +2,9 @@
 // קישור ל-Apps Script + פונקציות עזר משותפות
 
 const TS = (() => {
-  // *** APPS SCRIPT URL — מיטל תעדכן אחרי deploy ***
-  const APPS_SCRIPT_URL = localStorage.getItem('ts.appsScriptUrl') || '';
+  // Apps Script URL — נטען כברירת מחדל; localStorage גובר אם הוגדר אחר
+  const DEFAULT_URL = 'https://script.google.com/macros/s/AKfycbwDOLGv0Hr7KNjFJBIslJkDt9cDa2g4-Gfho3dTfI0AP3uwjlM3NGCwSnQkXZd4DUlyHg/exec';
+  const APPS_SCRIPT_URL = localStorage.getItem('ts.appsScriptUrl') || DEFAULT_URL;
 
   const NETWORKS = [
     { id: 'ort',     name: 'אורט',  color: 'ort'    },
