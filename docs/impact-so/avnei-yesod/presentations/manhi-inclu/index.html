@@ -1,0 +1,3337 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImpactOS אבני יסוד · פיילוט לתוכנית החומש להכלה</title>
+<meta name="description" content="ImpactOS אבני יסוד — מערכת תרגול דיפרנציאלית לקריאה וכתיבה בכיתות א'-ב'. הצגה למנח״י ולעמותת אינקלו במסגרת תוכנית החומש להכלה הירושלמית.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Rubik:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ════════════════════════════════════════════════════════
+   ImpactOS · אבני יסוד · מצגת למנח״י + אינקלו
+   סגנון: מגזין עריכתי × מודרני רך
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* Brand */
+  --indigo: #4F46E5;
+  --indigo-dark: #3730A3;
+  --violet: #7C3AED;
+  --violet-soft: #8B5CF6;
+  --magenta: #A21CAF;
+  --sky: #2563EB;
+  --grad: linear-gradient(135deg, #2563EB 0%, #4F46E5 35%, #7C3AED 65%, #A21CAF 100%);
+  --grad-quiet: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(124,58,237,0.06) 60%, rgba(162,28,175,0.05));
+
+  /* Ink */
+  --ink: #0B1220;
+  --ink-2: #1E293B;
+  --slate: #334155;
+  --slate-2: #475569;
+  --muted: #64748B;
+  --soft: #94A3B8;
+  --hush: #CBD5E1;
+
+  /* Paper */
+  --paper: #FCFCFD;
+  --paper-2: #F6F7FB;
+  --paper-3: #EEF1F7;
+  --line: #E5E9F2;
+  --line-soft: #EFF2F8;
+  --line-hush: #F3F5FA;
+  --white: #FFFFFF;
+
+  /* Type scale */
+  --t-display: clamp(44px, 5.4vw, 78px);
+  --t-h1: clamp(36px, 4.4vw, 60px);
+  --t-h2: clamp(26px, 3.2vw, 42px);
+  --t-h3: clamp(19px, 2vw, 24px);
+  --t-lede: clamp(15.5px, 1.2vw, 18px);
+  --t-body: clamp(14px, 1vw, 16px);
+  --t-small: clamp(12px, 0.9vw, 14px);
+  --t-kicker: 11px;
+
+  /* Rhythm */
+  --gutter: clamp(40px, 4.5vw, 80px);
+  --spine: 1px;
+  --r-sm: 14px;
+  --r-md: 18px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+
+  /* Shadow — refined, not heavy */
+  --sh-1: 0 1px 2px rgba(15,23,42,0.04), 0 0 0 1px rgba(15,23,42,0.03);
+  --sh-2: 0 2px 6px rgba(15,23,42,0.04), 0 0 0 1px rgba(15,23,42,0.04);
+  --sh-3: 0 8px 24px rgba(15,23,42,0.06), 0 0 0 1px rgba(15,23,42,0.04);
+  --sh-glow: 0 24px 80px rgba(79,70,229,0.14), 0 0 0 1px rgba(79,70,229,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: 'Heebo', sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Rubik', sans-serif;
+  line-height: 1.05;
+  letter-spacing: -0.022em;
+  color: var(--ink);
+}
+
+/* ════════════════════════════════════════════════════════
+   DECK
+   ═══════════════════════════════════════════════════════ */
+.deck {
+  position: relative;
+  width: 100vw; height: 100vh;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  padding: clamp(28px, 3.5vh, 48px) var(--gutter) clamp(70px, 7vh, 88px);
+  opacity: 0; visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+              transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+              visibility 0s linear 0.7s;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.slide.active {
+  opacity: 1; visibility: visible;
+  transform: translateY(0);
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+              transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+              visibility 0s;
+}
+
+/* Editorial spine — vertical thin line that runs across slides */
+.slide::before {
+  content: '';
+  position: absolute;
+  top: clamp(28px, 3.5vh, 48px);
+  bottom: clamp(70px, 7vh, 88px);
+  right: calc(var(--gutter) * 0.45);
+  width: var(--spine);
+  background: var(--line);
+  z-index: 0;
+}
+.slide.title-slide::before,
+.slide.closing-slide::before { display: none; }
+
+/* Header strip — logo + slide marker */
+.header-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: clamp(16px, 2.5vh, 28px);
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.logo-row {
+  display: flex; align-items: center; gap: 12px;
+}
+.logo-row svg.logo-mark { width: 34px; height: 34px; flex-shrink: 0; }
+.logo-row .name {
+  font-family: 'Inter', 'Rubik', sans-serif;
+  font-weight: 800; font-size: 16px;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.012em;
+  line-height: 1.1;
+}
+.logo-row .product {
+  font-family: 'Heebo', sans-serif;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+
+.slide-marker {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: 'Inter', monospace;
+  font-size: 11.5px;
+  letter-spacing: 2.5px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.slide-marker .current {
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+}
+.slide-marker .divider {
+  width: 24px; height: 1px;
+  background: var(--line);
+}
+
+/* ════════════════════════════════════════════════════════
+   TYPOGRAPHY — display elements
+   ═══════════════════════════════════════════════════════ */
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Inter', 'Rubik', sans-serif;
+  font-size: var(--t-kicker);
+  font-weight: 700;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 2;
+}
+.kicker::before {
+  content: '';
+  width: 22px; height: 1.5px;
+  background: var(--grad);
+}
+
+.eyebrow {
+  font-family: 'Inter', 'Rubik', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--violet);
+}
+
+h1.display {
+  font-size: var(--t-display);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+  margin-bottom: 32px;
+}
+h1.display .accent {
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h2.section-title {
+  font-size: var(--t-h2);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  margin-bottom: 14px;
+  max-width: 22ch;
+}
+h2.section-title .accent {
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.lede {
+  font-size: var(--t-lede);
+  font-weight: 400;
+  color: var(--slate);
+  max-width: 72ch;
+  line-height: 1.5;
+  margin-bottom: clamp(18px, 2.5vh, 28px);
+  position: relative;
+  z-index: 2;
+}
+.lede strong { color: var(--ink); font-weight: 700; }
+
+.body-region { position: relative; z-index: 2; flex: 1; min-height: 0; }
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 1 — TITLE
+   ═══════════════════════════════════════════════════════ */
+.title-slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: var(--gutter);
+  padding-left: var(--gutter);
+  position: relative;
+}
+.title-slide::after {
+  content: '';
+  position: absolute;
+  top: -200px; right: -100px;
+  width: 900px; height: 900px;
+  background: radial-gradient(circle, rgba(124,58,237,0.10), transparent 65%);
+  filter: blur(40px);
+  z-index: 0;
+}
+.title-slide::after,
+.title-slide > * { position: relative; }
+
+.title-logo {
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: clamp(28px, 4vh, 48px);
+}
+.title-logo svg.logo-mark { width: 60px; height: 60px; }
+.title-logo .name {
+  font-family: 'Inter', 'Rubik', sans-serif;
+  font-weight: 800; font-size: 32px;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.title-logo .product {
+  font-size: 13px;
+  color: var(--slate-2);
+  margin-top: 6px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.title-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.title-eyebrow .line {
+  width: 40px; height: 1.5px;
+  background: var(--grad);
+}
+.title-eyebrow .text {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: var(--violet);
+}
+
+.title-headline {
+  font-size: clamp(40px, 5.2vw, 80px);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+  margin-bottom: 22px;
+  max-width: 24ch;
+}
+.title-headline .accent {
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.title-headline .quiet {
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
+.title-sub {
+  font-family: 'Heebo', sans-serif;
+  font-size: clamp(15px, 1.3vw, 19px);
+  font-weight: 400;
+  color: var(--slate);
+  max-width: 72ch;
+  line-height: 1.55;
+  margin-bottom: clamp(28px, 4vh, 48px);
+}
+
+.title-meta {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 0;
+  width: fit-content;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.title-meta-item {
+  padding: 14px 40px 14px 0;
+  border-left: 1px solid var(--line);
+  min-width: 180px;
+}
+.title-meta-item:last-child { border-left: none; padding-left: 0; }
+.title-meta-item:first-child { padding-right: 0; }
+.title-meta-item .label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.title-meta-item .value {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 2 — GOAL
+   ═══════════════════════════════════════════════════════ */
+.goal-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 40px;
+  margin-top: 4px;
+  align-items: start;
+}
+.goal-narrative .figure {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: clamp(64px, 9vw, 124px);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+.goal-narrative .fig-label {
+  font-family: 'Rubik', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--slate);
+  margin-bottom: 16px;
+  max-width: 30ch;
+  line-height: 1.35;
+}
+.goal-narrative .body-text {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--slate);
+  max-width: 46ch;
+}
+.goal-narrative .body-text strong { color: var(--ink); font-weight: 700; }
+
+.goal-callouts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.callout {
+  padding: 18px 22px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-1);
+  position: relative;
+}
+.callout::before {
+  content: '';
+  position: absolute;
+  top: 18px; right: -1px;
+  width: 3px;
+  height: calc(100% - 36px);
+  background: var(--grad);
+  border-radius: 3px 0 0 3px;
+}
+.callout .label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 6px;
+}
+.callout .text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--slate);
+}
+.callout .text strong { color: var(--ink); font-weight: 700; }
+
+.callout.dark {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: white;
+  overflow: hidden;
+}
+.callout.dark::after {
+  content: '';
+  position: absolute;
+  top: -100px; right: -50px;
+  width: 280px; height: 280px;
+  background: radial-gradient(circle, rgba(124,58,237,0.40), transparent 65%);
+  filter: blur(30px);
+}
+.callout.dark .label { color: rgba(255,255,255,0.65); position: relative; z-index: 1; }
+.callout.dark .text { color: rgba(255,255,255,0.88); position: relative; z-index: 1; }
+.callout.dark .text strong { color: white; }
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 3 — 3 CONDITIONS
+   ═══════════════════════════════════════════════════════ */
+.conditions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 4px;
+}
+.condition {
+  position: relative;
+  padding: 24px 24px 22px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-2);
+  transition: transform 0.3s cubic-bezier(0.2,0.7,0.2,1), box-shadow 0.3s;
+}
+.condition:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-3);
+}
+.condition .num {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: 52px;
+  line-height: 1;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.05em;
+  margin-bottom: 4px;
+  display: block;
+}
+.condition .h-line {
+  width: 28px; height: 2px;
+  background: var(--grad);
+  margin-bottom: 14px;
+  border-radius: 2px;
+}
+.condition h3 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 10px;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+}
+.condition p {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--slate);
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 4 — INTRO
+   ═══════════════════════════════════════════════════════ */
+.intro-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 40px;
+  margin-top: 4px;
+}
+.intro-side {
+  position: relative;
+}
+.intro-side .pair-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 8px;
+}
+.intro-side h3 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 12px;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+.intro-side .h-line {
+  width: 32px; height: 2px;
+  background: var(--grad);
+  margin-bottom: 14px;
+  border-radius: 2px;
+}
+.intro-side p {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--slate);
+  margin-bottom: 10px;
+  max-width: 46ch;
+}
+.intro-side p:last-child { margin-bottom: 0; }
+.intro-side p strong { color: var(--ink); font-weight: 700; }
+.intro-side p .underline {
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom: 2px solid;
+  border-image: var(--grad) 1;
+  padding-bottom: 1px;
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 5 — DEMO KID
+   ═══════════════════════════════════════════════════════ */
+.demo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 36px;
+  margin-top: 4px;
+  align-items: start;
+}
+.demo-content h2 {
+  font-family: 'Rubik', sans-serif;
+  font-size: clamp(24px, 2.8vw, 34px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  margin-bottom: 10px;
+}
+.demo-content h2 .accent {
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.demo-content .lede {
+  font-size: 14.5px;
+  color: var(--slate);
+  margin-bottom: 18px;
+  max-width: 46ch;
+}
+.demo-bullets {
+  list-style: none;
+  display: flex; flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+.demo-bullets li {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.demo-bullets li .check {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--grad);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(124,58,237,0.22);
+}
+.demo-bullets li .check svg { width: 12px; height: 12px; stroke: white; }
+.demo-bullets li .text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--slate);
+  padding-top: 2px;
+}
+.demo-bullets li .text strong { color: var(--ink); font-weight: 700; }
+
+/* Browser-style demo frame */
+.demo-frame {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--sh-glow);
+}
+.demo-chrome {
+  background: var(--paper-2);
+  padding: 12px 18px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.demo-chrome .dots {
+  display: flex; gap: 6px;
+}
+.demo-chrome .dots span {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--hush);
+}
+.demo-chrome .url {
+  flex: 1;
+  font-family: 'Inter', monospace;
+  font-size: 12px;
+  background: var(--white);
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 0.1px;
+}
+.demo-screen {
+  position: relative;
+  height: clamp(280px, 42vh, 380px);
+  background: linear-gradient(180deg, #B8E5F5 0%, #5BB5E8 50%, #2E7BC4 100%);
+  overflow: hidden;
+}
+.demo-screen::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.20), transparent);
+}
+
+.bubbles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.1));
+  border: 1px solid rgba(255,255,255,0.5);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  color: rgba(46,123,196,0.85);
+  text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+  animation: bubble-rise 7s ease-in-out infinite;
+}
+@keyframes bubble-rise {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-380px) translateX(8px); opacity: 0; }
+}
+
+.demo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
+}
+.demo-overlay .panel {
+  background: rgba(255,255,255,0.96);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  padding: 30px 36px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.8);
+}
+.demo-overlay .game-title {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: 30px;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+.demo-overlay .game-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.demo-overlay .live-link {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 12px 24px;
+  background: var(--grad);
+  color: white !important;
+  border-radius: 999px;
+  text-decoration: none;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700; font-size: 14px;
+  box-shadow: 0 8px 20px rgba(124,58,237,0.30);
+  transition: transform 0.2s, box-shadow 0.2s;
+  letter-spacing: 0.2px;
+}
+.demo-overlay .live-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(124,58,237,0.40);
+}
+.demo-overlay .live-link svg { width: 14px; height: 14px; stroke: white; }
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 2 — EVIDENCE HERO (Finland · Italy · Stanford)
+   ═══════════════════════════════════════════════════════ */
+.evidence-hero {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 4px;
+}
+.ev-hero-card {
+  position: relative;
+  padding: 22px 22px 20px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-2);
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.ev-hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 22px; left: 22px;
+  height: 3px;
+  background: var(--grad);
+  border-radius: 0 0 2px 2px;
+}
+.ev-hero-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-3);
+}
+.ev-hero-num {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: clamp(56px, 7vw, 88px);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+.ev-hero-where {
+  font-family: 'Rubik', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 8px;
+}
+.ev-hero-claim {
+  font-family: 'Rubik', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+  margin-bottom: 12px;
+  letter-spacing: -0.005em;
+  min-height: 42px;
+}
+.ev-hero-src {
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+  line-height: 1.45;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 8px;
+}
+
+.unifying-statement {
+  margin-top: 18px;
+  padding: 18px 26px;
+  background: var(--ink);
+  color: white;
+  border-radius: var(--r-md);
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 22px;
+  align-items: center;
+}
+.unifying-statement::before {
+  content: '';
+  position: absolute;
+  top: -100px; right: -50px;
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(124,58,237,0.32), transparent 65%);
+  filter: blur(28px);
+}
+.unifying-statement > * { position: relative; z-index: 1; }
+.us-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.65);
+  white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.15);
+  padding-left: 22px;
+}
+.us-text {
+  font-family: 'Rubik', sans-serif;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: white;
+}
+.us-text .accent {
+  background: linear-gradient(135deg, #A78BFA, #F0ABFC);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 6 — PACK × BKT VISUAL FLOW
+   ═══════════════════════════════════════════════════════ */
+.pack-bkt-flow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 18px;
+  margin-top: 4px;
+  align-items: stretch;
+}
+.pbk-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 18px 20px;
+  box-shadow: var(--sh-2);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.pbk-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 20px; left: 20px;
+  height: 2.5px;
+  background: var(--grad);
+  border-radius: 0 0 2px 2px;
+}
+.pbk-card .pbk-tag {
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 6px;
+}
+.pbk-card h3 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 8px;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+}
+.pbk-card .pbk-term {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 10px;
+  background: var(--paper-2);
+  border-radius: 6px;
+  padding: 4px 9px;
+  display: inline-block;
+  border: 1px solid var(--line-soft);
+}
+.pbk-card p {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--slate);
+  margin-bottom: 8px;
+}
+.pbk-card p strong { color: var(--ink); font-weight: 700; }
+.pbk-mini-list {
+  list-style: none;
+  display: flex; flex-direction: column;
+  gap: 5px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+.pbk-mini-list li {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--slate);
+  padding-right: 12px;
+  position: relative;
+}
+.pbk-mini-list li::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 7px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--violet);
+}
+
+.pbk-operator {
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: 64px;
+  line-height: 1;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.04em;
+  padding: 0 8px;
+}
+
+.pack-bkt-result {
+  margin-top: 16px;
+  padding: 16px 24px;
+  background: var(--grad);
+  color: white;
+  border-radius: var(--r-md);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 22px;
+  align-items: center;
+  box-shadow: 0 10px 30px rgba(124,58,237,0.20);
+}
+.pack-bkt-result .pbr-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.75);
+  white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.25);
+  padding-left: 22px;
+}
+.pack-bkt-result .pbr-text {
+  font-family: 'Rubik', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: white;
+  letter-spacing: -0.005em;
+}
+.pack-bkt-result .pbr-text em {
+  font-style: normal;
+  background: rgba(255,255,255,0.20);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 800;
+}
+
+/* ════════════════════════════════════════════════════════
+   GLOBAL FIRSTS STRIP — for slide 8
+   ═══════════════════════════════════════════════════════ */
+.global-firsts {
+  margin-top: 18px;
+  padding: 18px 22px 18px;
+  background: var(--ink);
+  color: white;
+  border-radius: var(--r-md);
+  position: relative;
+  overflow: hidden;
+}
+.global-firsts::before {
+  content: '';
+  position: absolute;
+  top: -120px; left: -60px;
+  width: 380px; height: 380px;
+  background: radial-gradient(circle, rgba(124,58,237,0.30), transparent 65%);
+  filter: blur(28px);
+}
+.global-firsts > * { position: relative; z-index: 1; }
+.gf-head {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 14px;
+}
+.gf-head .gf-tag {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: white;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.20);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.gf-head .gf-title {
+  font-family: 'Rubik', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.012em;
+}
+.gf-head .gf-title .accent {
+  background: linear-gradient(135deg, #A78BFA, #F0ABFC);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.gf-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--r-sm);
+  padding: 14px 16px;
+}
+.gf-item .gf-name {
+  font-family: 'Rubik', sans-serif;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 5px;
+  letter-spacing: -0.01em;
+}
+.gf-item .gf-name .badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #F0ABFC;
+  margin-right: 6px;
+  border: 1px solid rgba(240,171,252,0.4);
+  border-radius: 4px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+.gf-item p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.78);
+  margin: 0;
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE — ENGINE + LITERACY PROFILE (new)
+   ═══════════════════════════════════════════════════════ */
+.engine-flow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 4px;
+  position: relative;
+}
+.engine-flow::before {
+  content: '';
+  position: absolute;
+  top: 56px;
+  right: 33.33%;
+  width: 33.33%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--violet) 30%, var(--violet) 70%, transparent);
+  opacity: 0.18;
+  z-index: 0;
+  display: none; /* simplified: use card chrome */
+}
+.engine-step {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 22px 22px;
+  box-shadow: var(--sh-2);
+  position: relative;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.engine-step:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-3);
+}
+.engine-step::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 22px; left: 22px;
+  height: 2.5px;
+  background: var(--grad);
+  border-radius: 0 0 2px 2px;
+}
+.engine-step .step-num {
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 1.8px;
+  color: var(--violet);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.engine-step .step-num .circ {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--grad);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+}
+.engine-step h3 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+  line-height: 1.25;
+}
+.engine-step .term {
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+  margin-bottom: 10px;
+  background: var(--paper-2);
+  border-radius: 6px;
+  padding: 5px 9px;
+  display: inline-block;
+  border: 1px solid var(--line-soft);
+}
+.engine-step p {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--slate);
+}
+.engine-step p strong { color: var(--ink); font-weight: 700; }
+.engine-step .detail {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.engine-step .detail strong { color: var(--ink); font-weight: 700; }
+
+/* Profile facets — used inside engine step 1 */
+.facets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  margin-top: 8px;
+}
+.facet {
+  font-size: 11.5px;
+  color: var(--slate);
+  padding-right: 10px;
+  position: relative;
+  line-height: 1.4;
+}
+.facet::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 7px;
+  width: 3px; height: 3px;
+  border-radius: 50%;
+  background: var(--violet);
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE — TEACHER DASHBOARD (expanded with heatmap)
+   ═══════════════════════════════════════════════════════ */
+.dash-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  margin-top: 4px;
+  align-items: stretch;
+}
+.heatmap-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-2);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.heatmap-card .h-title {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.heatmap-card h4 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+}
+.heatmap-card .h-legend {
+  display: flex; gap: 10px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.heatmap-card .h-legend span {
+  display: flex; align-items: center; gap: 4px;
+}
+.heatmap-card .h-legend i {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: 76px repeat(9, 1fr);
+  gap: 2px;
+  font-family: 'Heebo', sans-serif;
+  margin-bottom: 8px;
+}
+.heatmap-grid .h-col-head {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  padding-bottom: 4px;
+  letter-spacing: 0.1px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.heatmap-grid .h-row-head {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  padding-right: 6px;
+  white-space: nowrap;
+}
+.heatmap-grid .cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: var(--paper-2);
+}
+.heatmap-grid .cell.r { background: #FECACA; } /* red */
+.heatmap-grid .cell.y { background: #FDE68A; } /* yellow */
+.heatmap-grid .cell.g { background: #BBF7D0; } /* green */
+.heatmap-grid .cell.gd { background: #86EFAC; } /* deep green */
+.heatmap-grid .cell.empty { background: var(--paper-2); }
+
+.dash-questions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-content: start;
+}
+.dash-q {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 14px 14px;
+  box-shadow: var(--sh-1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+.dash-q:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh-2);
+}
+.dash-q .q-icon {
+  width: 24px; height: 24px;
+  border-radius: 7px;
+  background: var(--grad-quiet);
+  border: 1px solid rgba(124,58,237,0.10);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 4px;
+}
+.dash-q .q-icon svg {
+  width: 13px; height: 13px;
+  stroke: var(--violet);
+  fill: none;
+  stroke-width: 2;
+}
+.dash-q .q-num {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--violet);
+}
+.dash-q h5 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 0;
+}
+.dash-q p {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--slate);
+  margin: 0;
+}
+
+.lesson-gen-strip {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--slate);
+}
+.lesson-gen-strip .lg-tag {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: var(--violet);
+  text-transform: uppercase;
+}
+.lesson-gen-strip strong { color: var(--ink); font-weight: 700; }
+
+/* ════════════════════════════════════════════════════════
+   QUOTE CALLOUT — for Ram Cohen on evidence slide
+   ═══════════════════════════════════════════════════════ */
+.quote-callout {
+  background: var(--ink);
+  color: white;
+  border-radius: var(--r-md);
+  padding: 20px 26px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 22px;
+  align-items: center;
+}
+.quote-callout::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -50px;
+  width: 280px; height: 280px;
+  background: radial-gradient(circle, rgba(124,58,237,0.32), transparent 65%);
+  filter: blur(28px);
+}
+.quote-callout > * { position: relative; z-index: 1; }
+.quote-callout .qc-text {
+  font-family: 'Rubik', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: white;
+  letter-spacing: -0.01em;
+}
+.quote-callout .qc-text .accent {
+  background: linear-gradient(135deg, #A78BFA, #F0ABFC);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+}
+.quote-callout .qc-sub {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(255,255,255,0.82);
+  margin-top: 6px;
+  font-weight: 400;
+  font-family: 'Heebo', sans-serif;
+}
+.quote-callout .qc-attr {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 6 — TEACHER MOMENTS
+   ═══════════════════════════════════════════════════════ */
+.moments {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 4px;
+}
+.moment-card {
+  padding: 24px 24px 22px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-2);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.moment-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-3);
+}
+.moment-card .ord {
+  position: absolute;
+  top: 16px; left: 20px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 900;
+  font-size: 68px;
+  color: var(--paper-3);
+  line-height: 0.85;
+  letter-spacing: -0.05em;
+  z-index: 0;
+}
+.moment-card .icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: var(--grad-quiet);
+  border: 1px solid rgba(124,58,237,0.10);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+.moment-card .icon svg {
+  width: 18px; height: 18px;
+  stroke: var(--violet);
+  fill: none;
+  stroke-width: 1.8;
+}
+.moment-card .moment-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+.moment-card h3 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.22;
+  margin-bottom: 10px;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+  position: relative;
+  z-index: 1;
+}
+.moment-card p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--slate);
+  position: relative;
+  z-index: 1;
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 7 — UNIQUENESS
+   ═══════════════════════════════════════════════════════ */
+.uniques {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-top: 4px;
+}
+.unique {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 18px;
+  padding: 20px 22px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-1);
+  align-items: start;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.unique:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh-3);
+}
+.unique .ord-circle {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+}
+.unique .ord-circle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--grad);
+  opacity: 0.85;
+}
+.unique .ord-circle span {
+  position: relative;
+  z-index: 1;
+}
+.unique h3 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 6px;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+}
+.unique p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--slate);
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 8 — FOUNDATIONS
+   ═══════════════════════════════════════════════════════ */
+.foundations {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 4px;
+}
+.foundation {
+  padding: 18px 18px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-1);
+  position: relative;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.foundation::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 18px; left: 18px;
+  height: 2.5px;
+  background: var(--grad);
+  border-radius: 0 0 2px 2px;
+}
+.foundation:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-3);
+}
+.foundation .code {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+  display: block;
+}
+.foundation h4 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.foundation p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--slate);
+}
+
+.evidence-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+.evidence {
+  background: var(--ink);
+  color: white;
+  border-radius: var(--r-sm);
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+}
+.evidence::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -40px;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(124,58,237,0.35), transparent 65%);
+  filter: blur(25px);
+}
+.evidence > * { position: relative; z-index: 1; }
+.evidence .num {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: clamp(24px, 2.4vw, 32px);
+  letter-spacing: -0.025em;
+  line-height: 1;
+  margin-bottom: 8px;
+  color: white;
+}
+.evidence .lbl {
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.90);
+  margin-bottom: 6px;
+  max-width: 30ch;
+}
+.evidence .src {
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.2px;
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 9 — WHAT'S BUILT + ROADMAP
+   ═══════════════════════════════════════════════════════ */
+.built {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 4px;
+  margin-bottom: 16px;
+}
+.island {
+  padding: 18px 20px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-1);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.island:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh-3);
+}
+.island .marker {
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 4px;
+}
+.island h4 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 10px;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+.status-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+}
+.status-chip.live {
+  background: rgba(16,185,129,0.10);
+  color: #047857;
+}
+.status-chip.live .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.20);
+}
+.status-chip.dev {
+  background: rgba(245,158,11,0.10);
+  color: #B45309;
+}
+.status-chip.dev .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #F59E0B;
+}
+.island ul {
+  list-style: none;
+  display: flex; flex-direction: column;
+  gap: 5px;
+}
+.island li {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--slate);
+  padding-right: 12px;
+  position: relative;
+}
+.island li::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 8px;
+  width: 4px; height: 4px;
+  background: var(--violet);
+  border-radius: 50%;
+}
+
+/* Roadmap dark panel */
+.roadmap {
+  background: var(--ink);
+  color: white;
+  border-radius: var(--r-lg);
+  padding: 26px 32px;
+  position: relative;
+  overflow: hidden;
+}
+.roadmap::before {
+  content: '';
+  position: absolute;
+  top: -180px; right: -80px;
+  width: 480px; height: 480px;
+  background: radial-gradient(circle, rgba(124,58,237,0.40), transparent 65%);
+  filter: blur(30px);
+}
+.roadmap::after {
+  content: '';
+  position: absolute;
+  bottom: -160px; left: -100px;
+  width: 460px; height: 460px;
+  background: radial-gradient(circle, rgba(162,28,175,0.36), transparent 65%);
+  filter: blur(30px);
+}
+.roadmap > * { position: relative; z-index: 1; }
+.roadmap .road-kicker {
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 8px;
+}
+.roadmap h3 {
+  font-family: 'Rubik', sans-serif;
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  color: white;
+  line-height: 1.1;
+}
+.roadmap > p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255,255,255,0.82);
+  max-width: 70ch;
+  margin-bottom: 18px;
+}
+.road-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.road-step {
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--r-sm);
+  backdrop-filter: blur(8px);
+}
+.road-step .when {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 6px;
+}
+.road-step h4 {
+  font-family: 'Rubik', sans-serif;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 4px;
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+}
+.road-step p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.78);
+}
+
+/* ════════════════════════════════════════════════════════
+   SLIDE 10 — CLOSING
+   ═══════════════════════════════════════════════════════ */
+.closing-slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: var(--gutter);
+  padding-left: var(--gutter);
+  position: relative;
+}
+.closing-slide::after {
+  content: '';
+  position: absolute;
+  top: -200px; right: -120px;
+  width: 900px; height: 900px;
+  background: radial-gradient(circle, rgba(79,70,229,0.10), transparent 65%);
+  filter: blur(50px);
+  z-index: 0;
+}
+.closing-slide > * { position: relative; z-index: 1; }
+
+.closing-logo {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: clamp(20px, 3vh, 36px);
+}
+.closing-logo svg.logo-mark { width: 50px; height: 50px; }
+.closing-logo .name {
+  font-family: 'Inter', 'Rubik', sans-serif;
+  font-weight: 800; font-size: 24px;
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+.closing-logo .product {
+  font-size: 12px;
+  color: var(--slate-2);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.closing-quote {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 900;
+  font-size: clamp(32px, 4.2vw, 58px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+  max-width: 24ch;
+  color: var(--ink);
+}
+.closing-quote .accent {
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.closing-quote .em {
+  position: relative;
+  display: inline-block;
+}
+
+.closing-sub {
+  font-family: 'Heebo', sans-serif;
+  font-size: clamp(15px, 1.2vw, 19px);
+  font-weight: 400;
+  color: var(--slate);
+  max-width: 66ch;
+  line-height: 1.5;
+  margin-bottom: clamp(24px, 3.5vh, 40px);
+}
+.closing-sub strong { color: var(--ink); font-weight: 700; }
+
+.partners {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 0;
+  width: fit-content;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.partner {
+  padding: 14px 36px 14px 0;
+  border-left: 1px solid var(--line);
+  min-width: 160px;
+}
+.partner:last-child { border-left: none; padding-left: 0; }
+.partner:first-child { padding-right: 0; }
+.partner .name {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 800;
+  font-size: 15.5px;
+  color: var(--ink);
+  letter-spacing: -0.012em;
+  margin-bottom: 3px;
+}
+.partner .role {
+  font-family: 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ════════════════════════════════════════════════════════
+   NAV
+   ═══════════════════════════════════════════════════════ */
+.deck-nav {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.90);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(15,23,42,0.06), 0 0 0 1px rgba(15,23,42,0.03);
+  z-index: 100;
+}
+.deck-nav button {
+  background: none; border: none; cursor: pointer;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  color: var(--ink);
+}
+.deck-nav button:hover {
+  background: var(--paper-2);
+  transform: scale(1.05);
+}
+.deck-nav button:active { transform: scale(0.95); }
+.deck-nav button svg {
+  width: 16px; height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.5;
+}
+.deck-nav .counter {
+  font-family: 'Inter', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  min-width: 56px;
+  text-align: center;
+}
+.deck-nav .counter .current {
+  background: var(--grad);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+}
+
+/* Progress bar — subtle, at top */
+.progress {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: transparent;
+  z-index: 99;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--grad);
+  transition: width 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  width: 10%;
+}
+
+/* ════════════════════════════════════════════════════════
+   ENTER ANIMATIONS
+   ═══════════════════════════════════════════════════════ */
+.slide.active .kicker,
+.slide.active .header-strip {
+  animation: slideUp 0.6s 0.05s cubic-bezier(0.2,0.7,0.2,1) backwards;
+}
+.slide.active h1,
+.slide.active h2.section-title,
+.slide.active .title-headline,
+.slide.active .closing-quote {
+  animation: slideUp 0.6s 0.15s cubic-bezier(0.2,0.7,0.2,1) backwards;
+}
+.slide.active .lede,
+.slide.active .title-sub,
+.slide.active .closing-sub {
+  animation: slideUp 0.6s 0.25s cubic-bezier(0.2,0.7,0.2,1) backwards;
+}
+.slide.active .body-region,
+.slide.active .title-meta,
+.slide.active .partners {
+  animation: slideUp 0.7s 0.35s cubic-bezier(0.2,0.7,0.2,1) backwards;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards stagger in */
+.slide.active .condition:nth-child(1),
+.slide.active .moment-card:nth-child(1),
+.slide.active .unique:nth-child(1),
+.slide.active .foundation:nth-child(1),
+.slide.active .island:nth-child(1) {
+  animation: cardIn 0.6s 0.40s cubic-bezier(0.2,0.7,0.2,1) backwards;
+}
+.slide.active .condition:nth-child(2),
+.slide.active .moment-card:nth-child(2),
+.slide.active .unique:nth-child(2),
+.slide.active .foundation:nth-child(2),
+.slide.active .island:nth-child(2) {
+  animation: cardIn 0.6s 0.50s cubic-bezier(0.2,0.7,0.2,1) backwards;
+}
+.slide.active .condition:nth-child(3),
+.slide.active .moment-card:nth-child(3),
+.slide.active .unique:nth-child(3),
+.slide.active .foundation:nth-child(3),
+.slide.active .island:nth-child(3) {
+  animation: cardIn 0.6s 0.60s cubic-bezier(0.2,0.7,0.2,1) backwards;
+}
+.slide.active .unique:nth-child(4),
+.slide.active .foundation:nth-child(4) {
+  animation: cardIn 0.6s 0.70s cubic-bezier(0.2,0.7,0.2,1) backwards;
+}
+.slide.active .evidence:nth-child(1) { animation: cardIn 0.6s 0.80s cubic-bezier(0.2,0.7,0.2,1) backwards; }
+.slide.active .evidence:nth-child(2) { animation: cardIn 0.6s 0.90s cubic-bezier(0.2,0.7,0.2,1) backwards; }
+.slide.active .evidence:nth-child(3) { animation: cardIn 0.6s 1.00s cubic-bezier(0.2,0.7,0.2,1) backwards; }
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════ */
+@media (max-width: 1280px) {
+  :root { --gutter: clamp(40px, 5vw, 80px); }
+}
+@media (max-width: 1024px) {
+  .conditions, .moments, .built, .road-steps { grid-template-columns: 1fr; }
+  .uniques, .foundations, .goal-grid, .intro-grid, .demo-grid { grid-template-columns: 1fr; gap: 36px; }
+  .foundations { grid-template-columns: repeat(2, 1fr); }
+  .evidence-row { grid-template-columns: 1fr; }
+  .title-meta, .partners { grid-template-columns: 1fr; }
+  .title-meta-item, .partner { border-left: none; border-top: 1px solid var(--line); padding: 18px 0; }
+  .title-meta-item:first-child, .partner:first-child { border-top: none; padding-top: 0; }
+}
+@media (max-width: 720px) {
+  .slide { padding: 32px 24px 80px; }
+  .foundations { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- Logo SVG (reused via <use>) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="50%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#A21CAF"/>
+    </linearGradient>
+    <symbol id="logo-mark" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="26" stroke="url(#brand-grad)" stroke-width="2.5" fill="none"/>
+      <ellipse cx="32" cy="32" rx="18" ry="9" stroke="url(#brand-grad)" stroke-width="2.2" fill="none" transform="rotate(45 32 32)"/>
+      <ellipse cx="32" cy="32" rx="18" ry="9" stroke="url(#brand-grad)" stroke-width="2.2" fill="none" transform="rotate(-45 32 32)"/>
+      <circle cx="32" cy="32" r="4.5" fill="url(#brand-grad)"/>
+      <circle cx="32" cy="6" r="3" fill="#2563EB"/>
+      <circle cx="58" cy="32" r="3" fill="#7C3AED"/>
+      <circle cx="32" cy="58" r="3" fill="#A21CAF"/>
+      <circle cx="6" cy="32" r="3" fill="#2563EB"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="deck" id="deck">
+
+  <!-- ═══════════════════ SLIDE 1: TITLE ═══════════════════ -->
+  <section class="slide title-slide active" data-slide="1">
+
+    <div class="title-logo">
+      <svg class="logo-mark"><use href="#logo-mark"/></svg>
+      <div>
+        <div class="name">Impact OS</div>
+        <div class="product">טכנולוגיה יוצרת אימפקט</div>
+      </div>
+    </div>
+
+    <div class="title-eyebrow">
+      <span class="line"></span>
+      <span class="text">פיילוט · תוכנית החומש להכלה</span>
+    </div>
+
+    <h1 class="title-headline">
+      <span class="accent">אבני יסוד.</span><br>
+      <span class="quiet">כלי שעובד לצד המורה.</span><br>
+      <span class="quiet">תרגול אישי לכל ילד.</span>
+    </h1>
+
+    <p class="title-sub">
+      בתשפ"ט תוכנית החומש קובעת — אין כיתות מקדמות בא'-ג'. אבני יסוד = כלי שעוזר למורה לתת לכל ילד תרגול קריאה ברמה שלו, בלי שתצטרך להכין 5 דפים מותאמים. <strong>משלים את המורה, לא מחליף אותה.</strong>
+    </p>
+
+    <div class="title-meta">
+      <div class="title-meta-item">
+        <div class="label">הוצג ל</div>
+        <div class="value">מנח״י · עמותת אינקלו</div>
+      </div>
+      <div class="title-meta-item">
+        <div class="label">במסגרת</div>
+        <div class="value">תוכנית החומש להכלה</div>
+      </div>
+      <div class="title-meta-item">
+        <div class="label">מאי</div>
+        <div class="value">2026</div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 2: THE NEED ═══════════════════ -->
+  <section class="slide" data-slide="2">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">02</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">הכיתה אחרי תשפ"ט</div>
+    <h2 class="section-title">28 ילדים. <span class="accent">אין יותר כיתה מקדמת.</span><br>איך מורה אחת מלמדת קריאה לכל אחד?</h2>
+    <p class="lede">
+      הילד שהיה הולך לכיתה מקדמת — לומד עכשיו בכיתה הרגילה. ילד שמכיר 22 אותיות לצד ילד שמכיר 5. <strong>המורה לא יכולה להכין 25 דפי עבודה שונים בכל לילה.</strong> היא צריכה כלי שיודע מה כל ילד צריך — ונותן לו את זה ב-15 דקות של תרגול ביום.
+    </p>
+
+    <div class="body-region">
+
+      <div class="conditions">
+
+        <article class="condition">
+          <span class="num">8</span>
+          <div class="h-line"></div>
+          <h3>ילדים בקצב יסוד</h3>
+          <p>מכירים פחות מ-12 אותיות. צריכים הרבה חזרה, קצב איטי, פירוק לצעדים קטנים.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">14</span>
+          <div class="h-line"></div>
+          <h3>ילדים בקצב הרגיל</h3>
+          <p>מתחילים לבנות הברות. צריכים תרגול שטף ומילים שכיחות.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">6</span>
+          <div class="h-line"></div>
+          <h3>ילדים בקצב מואץ</h3>
+          <p>קוראים מילים מנוקדות. צריכים אתגרים והבנת משפט.</p>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 24px;">
+        <div class="us-label">המסר</div>
+        <div class="us-text">
+          המורה <span class="accent">מלמדת</span>. אבני יסוד <span class="accent">מתרגלת</span>. יחד — <strong style="color:white">והמורה מקבלת זמן לעבוד 1:1 עם מי שצריך אותה הכי.</strong>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 3: FOUNDATIONS ═══════════════════ -->
+  <section class="slide" data-slide="3">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">03</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">בסיס פדגוגי מאומת</div>
+    <h2 class="section-title">לא המצאנו את הגלגל.<br><span class="accent">על מה המערכת נשענת.</span></h2>
+    <p class="lede">
+      ישבנו על המסמכים הרשמיים, על מחקר רכישת הקריאה בעברית, ועל המערכות שעובדות בעולם. <strong>המורה עובדת לפי תוכנית הלימודים — אבני יסוד מתרגלת לפי אותה תוכנית בדיוק.</strong>
+    </p>
+
+    <div class="body-region">
+
+      <div class="evidence-hero">
+
+        <article class="ev-hero-card">
+          <div class="ev-hero-where">בסיס · 1</div>
+          <div class="ev-hero-claim">תוכנית משרד החינוך תשפ"ו</div>
+          <div class="ev-hero-src">מודל פרופ' מיכל שני (מרכז אדמונד ספרא, אונ' חיפה). שלושה רכיבים מעגליים שנלמדים במקביל.</div>
+        </article>
+
+        <article class="ev-hero-card">
+          <div class="ev-hero-where">בסיס · 2</div>
+          <div class="ev-hero-claim">מבדקי ראמ"ה</div>
+          <div class="ev-hero-src">הכלי הרשמי שמודד היכן כל ילד עומד. 3 פעימות בשנה, 10 משימות.</div>
+        </article>
+
+        <article class="ev-hero-card">
+          <div class="ev-hero-where">בסיס · 3</div>
+          <div class="ev-hero-claim">Science of Reading</div>
+          <div class="ev-hero-src">הסטנדרט הבינלאומי (NRP 2000) + מחקר עברי של בר־און, רביד ושייר.</div>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 24px;">
+        <div class="us-label">הקו<br>המנחה</div>
+        <div class="us-text">
+          לא חידוש לשם החידוש. <span class="accent">יישום של מה שכבר עובד</span> — בידיים של המורה.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 4: ONBOARDING + LITERACY PROFILE ═══════════════════ -->
+  <section class="slide" data-slide="4">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">04</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">יום ראשון בכיתה — חוויית הילד</div>
+    <h2 class="section-title">בששה דקות — <span class="accent">המערכת מכירה את כל ילד.</span></h2>
+    <p class="lede">
+      ילד שנכנס לאבני יסוד לראשונה לא מקבל מבחן. הוא יוצא <strong>למסע בים עם נוני התמנון</strong>. חמישה שלבים, בערך 6 דקות — והמערכת מקבלת תמונה ראשונית: מה הילד יודע, מה הוא צריך, איפה להתחיל.
+    </p>
+
+    <div class="body-region">
+      <div class="demo-grid">
+
+        <div class="demo-content">
+          <ul class="demo-bullets">
+            <li>
+              <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="text"><strong>בועות צליל</strong> — מודעות פונולוגית בסיסית (איזה צליל פותח את המילה).</span>
+            </li>
+            <li>
+              <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="text"><strong>אלמוגי אותיות</strong> — זיהוי של 3 אותיות שכיחות.</span>
+            </li>
+            <li>
+              <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="text"><strong>תיבת מילים</strong> — אוצר מילים מוכר.</span>
+            </li>
+            <li>
+              <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="text"><strong>סיפור הרעב</strong> — הבנת הנשמע.</span>
+            </li>
+            <li>
+              <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <span class="text"><strong>בועת מילה</strong> — קריאה ראשונית, אם הילד יודע.</span>
+            </li>
+          </ul>
+          <div class="callout" style="margin-top: 20px;">
+            <div class="label">העיקרון</div>
+            <div class="text">
+              זה לא מבחן. זאת <strong>דלת רגשית.</strong> הילד נכנס דרך משחק — ואבני יסוד מתחילה ללוות אותו.
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-frame">
+          <div class="demo-chrome">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="url">avnei-yesod / onboarding</div>
+          </div>
+          <img src="screenshots/onboarding.png" alt="המסע הראשון — בוקר טוב מנוני התמנון" style="display:block; width:100%; height:auto;">
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 5: GAME DEMO (ISLAND 1 + ISLAND 3) ═══════════════════ -->
+  <section class="slide" data-slide="5">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">05</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">חוויית הלמידה</div>
+    <h2 class="section-title">ילד לא יודע שזה תרגול. <span class="accent">הוא משחק.</span></h2>
+    <p class="lede">
+      כל פעילות באבני יסוד היא משחקון עם סיפור — לא דף עבודה דיגיטלי. הילד שומע צליל ומחפש בועה. שומע אות ופותח צדף קסום. <strong>גם החזק וגם המתקשה משחקים את אותו משחק.</strong>
+    </p>
+
+    <div class="body-region">
+
+      <div class="evidence-hero" style="grid-template-columns: 1fr 1fr;">
+
+        <article class="ev-hero-card" style="padding: 0; overflow: hidden;">
+          <div class="ev-hero-where" style="padding: 14px 18px 0;">אי 1 · מודעות פונולוגית</div>
+          <div class="ev-hero-claim" style="padding: 0 18px 10px; min-height: auto;">הבועה שרוצה לעלות</div>
+          <img src="screenshots/island-1-game-active.png" alt="משחקון BubbleRise — בועות צליל" style="display:block; width:100%; height:auto; border-top: 1px solid var(--line-soft);">
+          <div class="ev-hero-src" style="padding: 10px 18px; border-top: 1px solid var(--line-soft);">הילד מקשיב לכל בועה ובוחר את הצליל הנכון. מנגנון: זיהוי צליל פותח.</div>
+        </article>
+
+        <article class="ev-hero-card" style="padding: 0; overflow: hidden;">
+          <div class="ev-hero-where" style="padding: 14px 18px 0;">אי 3 · זיהוי אותיות</div>
+          <div class="ev-hero-claim" style="padding: 0 18px 10px; min-height: auto;">הצדף הקסום</div>
+          <img src="screenshots/island-3-shell-intro.png" alt="משחקון הצדף הקסום — אות מ'" style="display:block; width:100%; height:auto; border-top: 1px solid var(--line-soft);">
+          <div class="ev-hero-src" style="padding: 10px 18px; border-top: 1px solid var(--line-soft);">הילד שומע צליל אות ובוחר את התמונה שמתחילה בו. מנגנון: צליל ↔ מילה.</div>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 22px;">
+        <div class="us-label">המסר<br>למורה</div>
+        <div class="us-text">
+          ב-15 דקות של תרגול יומי, המערכת אוספת <span class="accent">כ-50 נקודות נתון</span> על כל ילד. כל תגובה — נכון, לא נכון, מהיר, איטי — <strong style="color:white">מזינה את המנוע שיודע מה התרגיל הבא הנכון.</strong>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 6: BKT ENGINE — WHAT THE SYSTEM REMEMBERS ═══════════════════ -->
+  <section class="slide" data-slide="6">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">06</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">המנוע — במילים פשוטות</div>
+    <h2 class="section-title">לכל ילד, לכל מיומנות — <span class="accent">אחוז של "שולט".</span></h2>
+    <p class="lede">
+      כל פעם שילד מתרגל, המערכת מעדכנת לעצמה: "כמה הילד הזה שולט באות מ'? בחיריק? בבניית הברה?". האחוז עולה כשהוא מצליח, יורד כשהוא נכשל. <strong>ככה היא יודעת בכל רגע מה התרגיל הבא הנכון לו.</strong>
+    </p>
+
+    <div class="body-region">
+      <div class="conditions">
+
+        <article class="condition">
+          <span class="num">×1</span>
+          <div class="h-line"></div>
+          <h3>לא ניחוש בודד</h3>
+          <p>ילד שניחש נכון פעם אחת לא קופץ ל"שולט". המערכת מחכה לדיוק עקבי לפני שמעלה את האחוז — מונעת מסקנות שגויות.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">↻</span>
+          <div class="h-line"></div>
+          <h3>לא יום עייף</h3>
+          <p>ילד שטעה היום אחרי שלושה ימי דיוק — לא מאבד את ההתקדמות. המערכת מבדילה בין דעיכה אמיתית לבין יום קשה אחד.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">◉</span>
+          <div class="h-line"></div>
+          <h3>שקוף למורה</h3>
+          <p>כל החלטה ניתנת להסבר. המורה רואה אחוז ומבינה למה התרגיל נבחר. אין "קסם של אלגוריתם" שאי אפשר להסביר.</p>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 24px;">
+        <div class="us-label">בשורה<br>אחת</div>
+        <div class="us-text">
+          זה לא קסם. זה <span class="accent">מודל מתמטי פשוט</span> שעוקב אחרי כל ילד בכל מיומנות, בכל יום. <strong style="color:white">המורה לא צריכה להבין אותו — אבל היא יכולה לראות בדיוק מה הוא אומר.</strong>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 7: LITERACY PROFILE — 4 GROUPS ═══════════════════ -->
+  <section class="slide" data-slide="7">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">07</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">הפרופיל האורייני המתפתח</div>
+    <h2 class="section-title">יום 1: תמונה ראשונית. <span class="accent">יום 3-5: פרופיל מלא</span> — אחד מתוך 4.</h2>
+    <p class="lede">
+      האונבורדינג של 6 דקות נותן רמזים ראשונים. אבל הפרופיל האמיתי של הילד מתגבש רק אחרי <strong>3-5 ימי משחק</strong> — כשהמערכת אספה כ-200 אינטראקציות ויודעת באמת איפה הוא עומד. אז המערכת משייכת אותו לאחת מ-4 קבוצות — וההתאמה האישית מתחדדת.
+    </p>
+
+    <div class="body-region">
+      <div class="engine-flow" style="grid-template-columns: repeat(4, 1fr); gap: 14px;">
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">1</span><span>פרופיל א</span></div>
+          <h3>שליטה מצוינת</h3>
+          <span class="term">מסלול: אי 3 + אי 2</span>
+          <p>כל האותיות + רמת פונמה + כתיב פונטי מלא.</p>
+          <div class="detail"><strong>דילוג</strong> על אי 1 ישר לתרגולים מתקדמים.</div>
+        </article>
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">2</span><span>פרופיל ב</span></div>
+          <h3>שליטה טובה</h3>
+          <span class="term">מסלול: אי 3 + אי 2</span>
+          <p>רוב האותיות + רמת צירוף/פונמה.</p>
+          <div class="detail"><strong>קצב רגיל</strong> — בלי דילוגים, בלי האטה.</div>
+        </article>
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">3</span><span>פרופיל ג</span></div>
+          <h3>שליטה חלקית</h3>
+          <span class="term">מסלול: אי 1 → 2 → 3</span>
+          <p>חלק מהאותיות + רמת הברה/צירוף.</p>
+          <div class="detail"><strong>חיזוק יסוד</strong> לפני המעבר לאי הבא.</div>
+        </article>
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">4</span><span>פרופיל ד</span></div>
+          <h3>פערים משמעותיים</h3>
+          <span class="term">מסלול: אי 1 אינטנסיבי</span>
+          <p>פערים ברכיבי יסוד פונולוגיים.</p>
+          <div class="detail"><strong>התראה למורה</strong> + תמיכה מוגברת אוטומטית.</div>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 22px;">
+        <div class="us-label">פרטיות<br>וכבוד</div>
+        <div class="us-text">
+          הילד לא רואה את הפרופיל. גם לא קבוצת השוואה. <span class="accent">רק המערכת והמורה רואות</span> — <strong style="color:white">והמורה היא תמיד הסמכות. היא יכולה לאשר, לדרוס, או לעדכן.</strong>
+          <br><span style="font-size: 12px; opacity: 0.7; display: block; margin-top: 8px;">מבוסס על: ד"ר לימור קולן, מפמ"ר עברית · משה"ח 2025 · פרופיל אורייני</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 8: PACK × CHILD — THE HEART OF DIFFERENTIATION ═══════════════════ -->
+  <section class="slide" data-slide="8">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">08</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">האינטגרציה — לב המערכת</div>
+    <h2 class="section-title">אותו פאק חודשי — <span class="accent">4 חוויות שונות</span> בכיתה.</h2>
+    <p class="lede">
+      הפאק קובע את הנושא של החודש. הרמה האישית קובעת איך כל ילד יחווה אותו. <strong>זאת הדיפרנציאליות בפועל — אותה מטרה, ארבעה מסלולים, אותו רגע.</strong>
+    </p>
+
+    <div class="body-region">
+
+      <div style="display: inline-block; padding: 6px 14px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 11.5px; font-weight: 700; letter-spacing: 1px; color: var(--violet); margin-bottom: 16px;">דוגמה · פאק ינואר = חיריק</div>
+
+      <div class="engine-flow" style="grid-template-columns: repeat(4, 1fr); gap: 14px;">
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">1</span><span>רמה 1 — עצמאי</span></div>
+          <h3>רוני</h3>
+          <span class="term">חיריק + אתגר</span>
+          <p>תרגול חיריק עם <strong>משפטים מורכבים</strong>. אתגר נוסף.</p>
+          <div class="detail">מהירות תגובה גבוהה, דיוק עקבי — מוכנה לקפיצה.</div>
+        </article>
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">2</span><span>רמה 2 — חלקית</span></div>
+          <h3>דניאל</h3>
+          <span class="term">חיריק + רמז זמין</span>
+          <p>תרגול חיריק עם <strong>רמז זמין בלחיצה</strong> אם צריך.</p>
+          <div class="detail">ברוב הזמן לא צריך — אבל זה שם כשהוא צריך.</div>
+        </article>
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">3</span><span>רמה 3 — התאמות</span></div>
+          <h3>מאיה</h3>
+          <span class="term">חיריק + פירוק + רמזים</span>
+          <p>תרגול חיריק עם <strong>פירוק לצעדים</strong> + רמזים אוטומטיים.</p>
+          <div class="detail">המערכת מובילה אותה צעד-צעד, בלי לחץ.</div>
+        </article>
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">4</span><span>רמה 4 — תמיכה מוגברת</span></div>
+          <h3>תמר</h3>
+          <span class="term">חיריק + 50% תוכן קודם</span>
+          <p>תרגול חיריק עם <strong>50% תוכן מהחודש הקודם</strong> כתמיכה.</p>
+          <div class="detail">חוזרת לבסיס תוך כדי שהיא מתקדמת.</div>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 22px;">
+        <div class="us-label">המהפכה<br>השקטה</div>
+        <div class="us-text">
+          ארבע ילדות. אותה כיתה. אותו רגע. אותה מטרה. <span class="accent">ארבעה מסלולים שונים</span> — <strong style="color:white">ואף אחת מהן לא יודעת באיזו רמה היא. כולן משחקות את אותו משחק.</strong>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 9: SUPPORT MOMENTS — REAL-TIME RESPONSE ═══════════════════ -->
+  <section class="slide" data-slide="9">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">09</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">המורה לא צריכה להיות בכל מקום</div>
+    <h2 class="section-title">כשילד מהסס — <span class="accent">המערכת לא מחכה לטעות.</span><br>היא מגיבה תוך שניות.</h2>
+    <p class="lede">
+      מורה לא יכולה להיות ליד 28 ילדים בכל שנייה. <strong>המערכת רואה את ההיסוס בזמן אמת</strong> — ומציעה עזרה ברגע הנכון, בלי שהמורה תצטרך להתערב באמצע השיעור.
+    </p>
+
+    <div class="body-region">
+      <div class="conditions">
+
+        <article class="condition">
+          <span class="num">1</span>
+          <div class="h-line"></div>
+          <h3>טעות ראשונה</h3>
+          <p>רעידה עדינה. "נסה שוב." הילד מתמודד בעצמו — בלי תיוג, בלי "תפסיק".</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">2</span>
+          <div class="h-line"></div>
+          <h3>טעות שנייה</h3>
+          <p>רמז ויזואלי + הצליל מושמע. הילד מקבל יותר מידע — אבל עדיין מנסה לבד.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">3</span>
+          <div class="h-line"></div>
+          <h3>טעות שלישית</h3>
+          <p>"הקש פה" — הצבעה ישירה לתשובה הנכונה. <strong>הילד מצליח, לא נשבר.</strong></p>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 24px;">
+        <div class="us-label">למה<br>זה חשוב</div>
+        <div class="us-text">
+          ילד לא חייב להגיע ל"אני לא יודע" כדי לקבל עזרה. <span class="accent">הוא מקבל אותה ברגע ההיסוס</span> — <strong style="color:white">וממשיך הלאה. בלי תסכול, בלי סטיגמה, בלי להפסיק את השיעור.</strong>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 10: TEACHER MORNING DASHBOARD ═══════════════════ -->
+  <section class="slide" data-slide="10">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">10</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">07:30 בבוקר · גרסה 1 — מבט ראמ"ה</div>
+    <h2 class="section-title">דשבורד מבדק ראמ"ה — <span class="accent">סקירה של כל הכיתה ב-5 שניות.</span></h2>
+    <p class="lede">
+      טבלה אחת. <strong>23 תלמידות × 10 משימות ראמ"ה × 3 פעימות.</strong> פעימה 1 פעילה — רחל סורקת בעין את עמודת אותיות + מודעות פונולוגית, רואה מי תקין (✓), מי קרוב (~), מי מתחת לרף (✗), ומי עוד לא נמדדה (○).
+    </p>
+
+    <div class="body-region">
+      <div class="demo-frame">
+        <div class="demo-chrome">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="url">avnei-yesod / teacher-rama-dashboard (F.21A)</div>
+        </div>
+        <img src="screenshots/f21a-mockup.png" alt="דשבורד מורה — מבדק ראמ"ה · טבלת תלמידות × 10 משימות × 3 פעימות" style="display:block; width:100%; height:auto;">
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 20px;">
+        <div class="us-label">למה<br>זה עובד</div>
+        <div class="us-text">
+          המסך מדבר בשפת <span class="accent">משרד החינוך + ראמ"ה</span>. <strong style="color:white">לא BKT, לא אלגוריתם — 10 משימות וסטטוס. אותה שפה שרחל מדברת בה עם המפקחת ועם ההורה.</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 11: GROUPS DASHBOARD (Alt view) ═══════════════════ -->
+  <section class="slide" data-slide="11">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">11</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">מבט אחר על אותו דשבורד</div>
+    <h2 class="section-title">או — <span class="accent">תכנון יום שלם בקבוצות.</span></h2>
+    <p class="lede">
+      גרסה שנייה של הדשבורד: <strong>"ניתחתי את 8 הילדים שתרגלו אתמול וזיהיתי 4 קבוצות התערבות + 2 דגלים — מוכנות לאישור."</strong> במקום טבלת ראמ"ה — קבוצות פעולה. רחל מאשרת קבוצה-קבוצה, ויודעת בדיוק עם מי לעבוד היום ולמה.
+    </p>
+
+    <div class="body-region">
+      <div class="demo-frame">
+        <div class="demo-chrome">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="url">avnei-yesod / teacher-dashboard / יום 2 · ספטמבר</div>
+        </div>
+        <img src="screenshots/teacher-dashboard-day2.png" alt="דשבורד הקבוצות — בוקר טוב + 4 קבוצות התערבות + סטטיסטיקות יום" style="display:block; width:100%; height:auto;">
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 20px;">
+        <div class="us-label">שתי גישות.<br>אותה כיתה.</div>
+        <div class="us-text">
+          <span class="accent">ראמ"ה</span> — סטטוס פר משימה (לדיווח / מפקחת). <strong style="color:white">קבוצות</strong> — תוכנית פעולה ליום (לתכנון השיעור). שתי הגרסאות מבוססות על אותו מנוע — בוחרים לפי השאלה שהמורה שואלת באותו רגע.
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 12: ERROR PATTERNS (EPA) ═══════════════════ -->
+  <section class="slide" data-slide="12">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">12</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">הבדל קריטי</div>
+    <h2 class="section-title">מורה רגילה רואה: "8 ילדים טעו". <br><span class="accent">רחל רואה: "8 ילדים בלבלו ב' עם ר'."</span></h2>
+    <p class="lede">
+      מה ההבדל בין "תרגול נוסף" לבין "תרגול נכון"? לדעת <strong>על מה הילד טועה.</strong> המערכת מנתחת 3 צירים פר טעות — <strong>סוג הכשל × ההקשר × סוג המשימה</strong> — ומציגה למורה דפוסים שחוזרים.
+    </p>
+
+    <div class="body-region">
+      <div class="conditions">
+
+        <article class="condition">
+          <span class="num">×</span>
+          <div class="h-line"></div>
+          <h3>סוג הכשל</h3>
+          <p>בלבול ב'/ר' (צורה דומה) · בלבול שורוק/חולם (תנועה דומה) · השמטת אות · החלפת סדר.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">◷</span>
+          <div class="h-line"></div>
+          <h3>ההקשר</h3>
+          <p>בידוד · תחילת מילה · אמצע · סוף · פונט שונה · עם רעש רקע.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">◇</span>
+          <div class="h-line"></div>
+          <h3>סוג המשימה</h3>
+          <p>זיהוי (קל) · שיום (בינוני) · מציאה בתוך מילה · כתיבה (קשה).</p>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 24px;">
+        <div class="us-label">למה<br>זה משנה</div>
+        <div class="us-text">
+          במקום "תרגיל אקראי באות ב'" — <span class="accent">תרגיל ספציפי שמטפל בבלבול ב/ר במיקום אמצע מילה.</span>
+          <strong style="color:white">זה ההבדל בין שעה שאיבדה לבין שעה שעזרה.</strong>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 13: TRANSPARENCY + OVERRIDE ═══════════════════ -->
+  <section class="slide" data-slide="13">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">13</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">המערכת מציעה. המורה מחליטה.</div>
+    <h2 class="section-title">"תראי לי למה" — <span class="accent">כל המלצה ניתנת להסבר.</span></h2>
+    <p class="lede">
+      רחל לא צריכה לקבל את ההצעות בעיניים עצומות. כל המלצה — קבוצה, רמה, תרגיל — <strong>מגובה בכפתור "תראי לי למה"</strong> שמסביר את הלוגיקה בשפה אנושית. ואם רחל לא מסכימה, היא יכולה לדרוס.
+    </p>
+
+    <div class="body-region">
+      <div class="intro-grid">
+
+        <div class="intro-side">
+          <div class="pair-label">שקיפות</div>
+          <h3>תראי לי למה</h3>
+          <div class="h-line"></div>
+          <p>לחיצה על "תראי לי למה" על כל קבוצה / המלצה →</p>
+          <p style="background: var(--paper-2); padding: 14px 18px; border-radius: 12px; border-right: 3px solid var(--violet); margin-top: 12px; font-size: 13.5px;">
+            <strong>"מאיה הציגה אחוז שליטה נמוך על ר' שלושה ימים רצופים. דפוס שגיאות: בחרה ד' בשליש מהפעמים. ההמלצה: משחקון זיכרון-מיון להבחנה ויזואלית בין ר' ל-ד'."</strong>
+          </p>
+          <p style="margin-top: 10px;">רחל מקבלת תובנה — לא רק החלטה.</p>
+        </div>
+
+        <div class="intro-side">
+          <div class="pair-label">סמכות</div>
+          <h3>רחל יכולה לדרוס</h3>
+          <div class="h-line"></div>
+          <p>רחל יכולה: <strong>לבטל קבוצה</strong>, <strong>לשנות רמה</strong>, <strong>לשייך ילד אחר</strong>, או <strong>להסביר למערכת למה</strong>.</p>
+          <p style="background: var(--paper-2); padding: 14px 18px; border-radius: 12px; border-right: 3px solid var(--violet); margin-top: 12px; font-size: 13.5px;">
+            <strong>"הוא בסדר עם ר' — הקושי שלו ב-PA"</strong> · <strong>"אני יודעת מבחוץ — לא הייתה אתמול"</strong> · <strong>"אני רוצה לאתגר אותה, לא להאט"</strong>
+          </p>
+          <p style="margin-top: 10px;"><span class="underline">המערכת לומדת מהדריסה</span> — ומשתפרת בכיתה הזו.</p>
+        </div>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 22px;">
+        <div class="us-label">החלוקה<br>הנכונה</div>
+        <div class="us-text">
+          אבני יסוד לא <span class="accent">מחליטה במקום</span> רחל. היא <strong style="color:white">מציעה לה התחלה.</strong> רחל מתחילה משם — לא מ-0.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 14: REVOLUTIONARY DIFFERENTIATION — BEFORE/AFTER ═══════════════════ -->
+  <section class="slide" data-slide="14">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">14</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">המהפכה השקטה</div>
+    <h2 class="section-title">מה שלא היה אפשרי 30 שנה — <span class="accent">אבני יסוד עושה כשגרה.</span></h2>
+    <p class="lede">
+      דיפרנציאליות הייתה תמיד "תיאוריה" שמורות מנסות לעשות עם 28 ילדים, בלי תקציב. <strong>אבני יסוד הופכת אותה לברירת מחדל אוטומטית</strong> — שכבת תוכנה שעובדת לצד המורה.
+    </p>
+
+    <div class="body-region">
+      <div class="intro-grid">
+
+        <div class="intro-side" style="background: var(--paper-2); padding: 22px; border-radius: var(--r-md); border: 1px solid var(--line);">
+          <div class="pair-label" style="color: var(--muted);">בלי אבני יסוד</div>
+          <h3 style="color: var(--slate);">המצב הקיים</h3>
+          <div class="h-line" style="background: var(--hush);"></div>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px;">
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: var(--soft); font-weight: 900;">✗</span><span>5 דפי עבודה בלילה — או רמה אחת לכל הכיתה.</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: var(--soft); font-weight: 900;">✗</span><span>ילד חלש = "קבוצת חיזוק" גלויה לכולם.</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: var(--soft); font-weight: 900;">✗</span><span>המורה <strong style="color: var(--ink);">מנחשת</strong> מה כל ילד יודע.</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: var(--soft); font-weight: 900;">✗</span><span><strong style="color: var(--ink);">כיתה מקדמת</strong> = הפתרון לפערים.</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: var(--soft); font-weight: 900;">✗</span><span>"תרגול נוסף" אקראי על כל אות בלי הבחנה.</span></li>
+          </ul>
+        </div>
+
+        <div class="intro-side" style="padding: 22px; border-radius: var(--r-md); border: 1px solid var(--violet); box-shadow: 0 8px 24px rgba(124,58,237,0.10); background: linear-gradient(135deg, rgba(124,58,237,0.04), rgba(162,28,175,0.04));">
+          <div class="pair-label">עם אבני יסוד</div>
+          <h3>השינוי בכיתה</h3>
+          <div class="h-line"></div>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px;">
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;">✓</span><span>דשבורד אחד — <strong>4 רמות פעילות בו-זמנית</strong> באותו תוכן.</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;">✓</span><span>ילד חלש משחק את אותו משחק — <strong>אין סטיגמה</strong>.</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;">✓</span><span>המערכת <strong>יודעת</strong> — אחוז אמיתי פר ילד פר מיומנות.</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;">✓</span><span><strong>הכיתה הרגילה</strong> = הפתרון. דיפרנציאליות מובנית.</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;">✓</span><span><strong>"תרגול נכון"</strong> — לפי דפוס הכשל הספציפי של הילד.</span></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 24px;">
+        <div class="us-label">שינוי<br>תפיסה</div>
+        <div class="us-text">
+          זאת לא שיפור הדרגתי. <span class="accent">דיפרנציאליות עוברת מ"רעיון פדגוגי" ל"שכבת תוכנה אוטומטית"</span> — <strong style="color:white">בידיים של כל מורה, בכל כיתה, מהיום הראשון.</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 15: WORLD EVIDENCE — COMPTON + DC + FIRST IN HEBREW ═══════════════════ -->
+  <section class="slide" data-slide="15">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">15</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">"Learning Recession" · סטנפורד · NYT 2025</div>
+    <h2 class="section-title">83% ממחוזות החינוך בארה"ב — ירידה ברכישת קריאה מאז 2015. <span class="accent">אבל יש מי שהצליח להפוך את המגמה.</span></h2>
+    <p class="lede">
+      הירידה ברכישת קריאה היא תופעה גלובלית — לא רק ישראל. אבל <strong>שני מחוזות בארה"ב הצליחו להפוך את המגמה</strong> — בעקרונות שאבני יסוד עושה אוטומטית.
+    </p>
+
+    <div class="body-region">
+      <div class="evidence-hero" style="grid-template-columns: 1fr 1fr;">
+
+        <article class="ev-hero-card">
+          <div class="ev-hero-where">קומפטון · קליפורניה</div>
+          <div class="ev-hero-claim">מחוז עני שהשתפר דרמטית</div>
+          <ul style="list-style: none; padding: 0; margin: 10px 0 14px; display: flex; flex-direction: column; gap: 6px;">
+            <li style="font-size: 13px; color: var(--slate); display: flex; gap: 8px;"><span style="color: var(--violet); font-weight: 700;">→</span>מעקב צמוד פר תלמיד</li>
+            <li style="font-size: 13px; color: var(--slate); display: flex; gap: 8px;"><span style="color: var(--violet); font-weight: 700;">→</span>מבחנים שבועיים קצרים</li>
+            <li style="font-size: 13px; color: var(--slate); display: flex; gap: 8px;"><span style="color: var(--violet); font-weight: 700;">→</span>תגבור בזמן יום הלימודים</li>
+            <li style="font-size: 13px; color: var(--slate); display: flex; gap: 8px;"><span style="color: var(--violet); font-weight: 700;">→</span>מלחמה בהיעדרויות</li>
+          </ul>
+          <div class="ev-hero-src">השקיעו מאמץ אדיר ידני — מורות נוספות, שעות תגבור, ניטור אישי.</div>
+        </article>
+
+        <article class="ev-hero-card">
+          <div class="ev-hero-where">וושינגטון · D.C.</div>
+          <div class="ev-hero-claim">מחוז עירוני שהשתפר דרמטית</div>
+          <ul style="list-style: none; padding: 0; margin: 10px 0 14px; display: flex; flex-direction: column; gap: 6px;">
+            <li style="font-size: 13px; color: var(--slate); display: flex; gap: 8px;"><span style="color: var(--violet); font-weight: 700;">→</span>Science of Reading שיטתי</li>
+            <li style="font-size: 13px; color: var(--slate); display: flex; gap: 8px;"><span style="color: var(--violet); font-weight: 700;">→</span>עזרה אינטנסיבית לחלשים</li>
+            <li style="font-size: 13px; color: var(--slate); display: flex; gap: 8px;"><span style="color: var(--violet); font-weight: 700;">→</span>תגמול מורים מצטיינים</li>
+            <li style="font-size: 13px; color: var(--slate); display: flex; gap: 8px;"><span style="color: var(--violet); font-weight: 700;">→</span>השקעה ארוכת טווח</li>
+          </ul>
+          <div class="ev-hero-src">תוכנית רחבה ומתמשכת — תקציב מיוחד, שינוי שיטתי של ההוראה.</div>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 22px;">
+        <div class="us-label">למה זה<br>משנה</div>
+        <div class="us-text">
+          מה ש<strong style="color:white">מחוזות שלמים</strong> מצליחים בקושי דרך הוספת מורים + שעות תגבור — <span class="accent">אבני יסוד עושה אוטומטית, בכיתה רגילה, בלי תקציב מיוחד.</span>
+          <br><br>
+          <strong style="color:white">ובעברית — אבני יסוד היא הראשונה שמשלבת אדפטיביות + שקיפות פדגוגית + התאמה פר-יום + שפה למורה.</strong>
+          <br><span style="font-size: 11.5px; opacity: 0.7; display: block; margin-top: 8px;">מקור: NYT 2025 · Stanford University · ניתוח רם כהן</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 16: INCLUSION PROGRAM FIT ═══════════════════ -->
+  <section class="slide" data-slide="16">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">16</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">התאמה מבנית לתוכנית החומש</div>
+    <h2 class="section-title">אבני יסוד = <span class="accent">מענה תוספתי #4</span> — כוח אדם מומחה בהוראה מותאמת בקריאה.</h2>
+    <p class="lede">
+      תוכנית החומש מגדירה 4 מענים שבית-ספר מקבל. <strong>מענה #4 מבקש "כוח אדם מומחה בהוראה מותאמת בקריאה וכתיבה"</strong> — אבני יסוד מספקת את זה כשכבת תוכנה, בלי להוסיף עוד מורות לתקציב.
+    </p>
+
+    <div class="body-region">
+      <div class="conditions">
+
+        <article class="condition">
+          <span class="num">4</span>
+          <div class="h-line"></div>
+          <h3>זרוע #4 — מענים תוספתיים</h3>
+          <p>אבני יסוד מספקת <strong>מומחיות קריאה דיגיטלית</strong> — חוסכת עלות של מורה נוספת פר כיתה.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">5</span>
+          <div class="h-line"></div>
+          <h3>זרוע #5 — שינוי הלמידה</h3>
+          <p>"פחות 30 תלמידים-מורה-לוח · יותר למידה מותאמת" — אבני יסוד <strong>=</strong> הכלי שמאפשר את זה.</p>
+        </article>
+
+        <article class="condition">
+          <span class="num">▲</span>
+          <div class="h-line"></div>
+          <h3>יעד תשפ"ט</h3>
+          <p>אין כיתות מקדמות בא'-ג'. אבני יסוד עוזרת לכיתה הרגילה <strong>להחזיק את הילד</strong> שהיה הולך לכיתה מקדמת.</p>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 24px;">
+        <div class="us-label">הצעת<br>הערך</div>
+        <div class="us-text">
+          הפיילוט הזה לא מציע "עוד כלי" — הוא מציע <span class="accent">אבן בניין מרכזית</span> בתוכנית החומש. כלי שעונה במישרין על <strong style="color:white">שאלת רכישת הקריאה</strong> — שהיא הסיבה המספר אחת שילדים מופנים לכיתות מקדמות.
+          <br><span style="font-size: 11.5px; opacity: 0.75; display: block; margin-top: 10px;"><a href="../../../../consulting/inclusion-program/index.html" target="_blank" style="color: rgba(255,255,255,0.85); text-decoration: underline;">תוכנית החומש להכלה ↗</a></span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 17: CURRENT STATUS — WHAT'S LIVE / IN DEVELOPMENT ═══════════════════ -->
+  <section class="slide" data-slide="17">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">17</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">סטטוס פיתוח · מאי 2026</div>
+    <h2 class="section-title">לא עיצוב על נייר — <span class="accent">מערכת חיה.</span></h2>
+    <p class="lede">
+      אבני יסוד היא פרויקט פיתוח אקטיבי. <strong>רוב הרכיבים החיוניים כבר נבנו ועובדים בפועל</strong> — מה שחסר ל-MVP מלא ידרוש פיתוח נוסף בחודשי הפיילוט.
+    </p>
+
+    <div class="body-region">
+      <div class="intro-grid">
+
+        <div class="intro-side" style="padding: 22px; border-radius: var(--r-md); border: 1px solid #22C55E; box-shadow: 0 8px 24px rgba(34,197,94,0.10); background: linear-gradient(135deg, rgba(34,197,94,0.05), rgba(74,222,128,0.03));">
+          <div class="pair-label" style="color: #166534;">🟢 חי היום</div>
+          <h3>מה כבר עובד</h3>
+          <div class="h-line" style="background: linear-gradient(90deg, #22C55E, #86EFAC);"></div>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #22C55E; font-weight: 900;">✓</span><span><strong style="color: var(--ink);">9 משחקונים פעילים</strong> (4 באי 1 · 5 באי 3)</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #22C55E; font-weight: 900;">✓</span><span>מנוע BKT עם <strong style="color: var(--ink);">sub-BKT פר אות</strong> (22 אותיות)</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #22C55E; font-weight: 900;">✓</span><span>מנגנון EPA — ניתוח דפוסי כשלים</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #22C55E; font-weight: 900;">✓</span><span>אונבורדינג + פרופיל אורייני ראשוני</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #22C55E; font-weight: 900;">✓</span><span><strong style="color: var(--ink);">11 פאקס חודשיים</strong> מוגדרים (ספט-יוני)</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #22C55E; font-weight: 900;">✓</span><span>vocab-bank מאומת מול ספרי מטח</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #22C55E; font-weight: 900;">✓</span><span><strong style="color: var(--ink);">2 גרסאות דשבורד</strong> (ראמ"ה + קבוצות)</span></li>
+          </ul>
+        </div>
+
+        <div class="intro-side" style="padding: 22px; border-radius: var(--r-md); border: 1px solid #F59E0B; box-shadow: 0 8px 24px rgba(245,158,11,0.10); background: linear-gradient(135deg, rgba(245,158,11,0.05), rgba(253,224,71,0.03));">
+          <div class="pair-label" style="color: #92400E;">🟡 בפיתוח לפיילוט</div>
+          <h3>מה נשלים</h3>
+          <div class="h-line" style="background: linear-gradient(90deg, #F59E0B, #FDE68A);"></div>
+          <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #F59E0B; font-weight: 900;">→</span><span><strong style="color: var(--ink);">13 משחקונים נוספים</strong> (איים 2, 4-22)</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #F59E0B; font-weight: 900;">→</span><span>F.21A — מסך מורה סופי עם PIN פרטיות</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #F59E0B; font-weight: 900;">→</span><span>מנגנון <strong style="color: var(--ink);">דריסה ולמידה</strong> מהמורה</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #F59E0B; font-weight: 900;">→</span><span>Apps Script לסנכרון נתונים בענן</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #F59E0B; font-weight: 900;">→</span><span>תצוגת הורה (Phase B)</span></li>
+            <li style="font-size: 13.5px; color: var(--slate); display: flex; gap: 10px;"><span style="color: #F59E0B; font-weight: 900;">→</span><span><strong style="color: var(--ink);">תמיכה במובייל</strong> מלאה (טאבלט)</span></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 22px;">
+        <div class="us-label">המסר<br>לפיילוט</div>
+        <div class="us-text">
+          המערכת <span class="accent">כבר עובדת היום</span> באי 1 + אי 3. הפיילוט יחל בכיתת א' אמיתית עם החומר הקיים — <strong style="color:white">ויתרחב הדרגתית תוך כדי שאר האיים מתווספים.</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 18: NEXT STEPS ═══════════════════ -->
+  <section class="slide" data-slide="18">
+
+    <div class="header-strip">
+      <div class="logo-row">
+        <svg class="logo-mark"><use href="#logo-mark"/></svg>
+        <div>
+          <div class="name">Impact OS</div>
+          <div class="product">אבני יסוד · פיילוט להכלה</div>
+        </div>
+      </div>
+      <div class="slide-marker">
+        <span class="current">18</span><span class="divider"></span><span>19</span>
+      </div>
+    </div>
+
+    <div class="kicker">מה עכשיו?</div>
+    <h2 class="section-title">3 צעדים <span class="accent">כדי להתחיל.</span></h2>
+    <p class="lede">
+      הפיילוט מוכן להפעלה. הצעדים הבאים — קצרים, מסודרים, ואפשר להתחיל אותם <strong>השבוע</strong>.
+    </p>
+
+    <div class="body-region">
+      <div class="engine-flow" style="grid-template-columns: repeat(3, 1fr); gap: 18px;">
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">1</span><span>החלטה משותפת</span></div>
+          <h3>קביעת היקף הפיילוט</h3>
+          <span class="term">פגישה · 60 דק'</span>
+          <p>פגישה עם מנח"י + אינקלו לקבוע: <strong>כמה כיתות, באילו בתי ספר, ומה התקציב.</strong></p>
+          <div class="detail">להתחיל ב-2-3 כיתות א' בבתי ספר שונים — או גדול יותר אם יש עניין.</div>
+        </article>
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">2</span><span>בחירת בתי ספר</span></div>
+          <h3>גיוס בתי ספר ומורות</h3>
+          <span class="term">תהליך · 2-3 שבועות</span>
+          <p>פנייה מנהלות בתוך <strong>מועדון ההכלה</strong> · אישור מרצון של המנהלת והמורה · התאמת ציפיות.</p>
+          <div class="detail">אישור מרצון בלבד — לפי עקרון הוולנטריות של תוכנית החומש.</div>
+        </article>
+
+        <article class="engine-step">
+          <div class="step-num"><span class="circ">3</span><span>הכנה והפעלה</span></div>
+          <h3>התקנה + הכשרת מורות</h3>
+          <span class="term">לפני ספטמבר 2026</span>
+          <p>התקנה טכנית · <strong>הכשרת המורות</strong> · תחילת תרגול בכיתה עם ליווי שבועי.</p>
+          <div class="detail">צוות אבני יסוד מלווה את הפיילוט מהיום הראשון.</div>
+        </article>
+
+      </div>
+
+      <div class="unifying-statement" style="margin-top: 26px;">
+        <div class="us-label">הזמינות<br>שלנו</div>
+        <div class="us-text">
+          <span class="accent">אנחנו מוכנים להתחיל מיד</span> אחרי החלטה משותפת. <strong style="color:white">צוות הפיתוח מחזיק במערכת חיה — לא בעיצוב — ויכול לפתוח כיתה ראשונה תוך 4-6 שבועות מהאישור.</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════ SLIDE 19: CLOSING ═══════════════════ -->
+  <section class="slide closing-slide" data-slide="19">
+
+    <div class="closing-logo">
+      <svg class="logo-mark"><use href="#logo-mark"/></svg>
+      <div>
+        <div class="name">Impact OS</div>
+        <div class="product">טכנולוגיה יוצרת אימפקט</div>
+      </div>
+    </div>
+
+    <div class="title-eyebrow">
+      <span class="line"></span>
+      <span class="text">לסיכום · אבני יסוד × תוכנית החומש להכלה</span>
+    </div>
+
+    <div class="closing-quote">
+      כלי שעובד <span class="accent">לצד המורה</span>.<br>
+      כיתה רגילה — <span class="accent">שמכילה</span>.<br>
+      בעברית, שקופה, מוכנה לפיילוט.
+    </div>
+
+    <div class="closing-sub">
+      אבני יסוד היא מערכת תרגול חיה — לא חזון על נייר. מוכנה לפיילוט בתשפ"ז במסגרת תוכנית החומש להכלה הירושלמית.
+      <br><br>
+      <strong>מה שמדינות שלמות מצליחות בקושי — אנחנו עושים אוטומטית, בכיתה הרגילה, בידיים של המורה.</strong>
+    </div>
+
+    <div class="partners">
+      <div class="partner">
+        <div class="name">מיטל פלג</div>
+        <div class="role">פדגוגיה · מוצר</div>
+      </div>
+      <div class="partner">
+        <div class="name">meytalp@gmail.com</div>
+        <div class="role">דרך התקשרות</div>
+      </div>
+      <div class="partner">
+        <div class="name">impact-os.app/avnei-yesod</div>
+        <div class="role">מערכת חיה</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<div class="deck-nav">
+  <button id="prev" aria-label="הקודם">
+    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <div class="counter"><span class="current" id="currentSlide">01</span> / 19</div>
+  <button id="next" aria-label="הבא">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+</div>
+
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const counter = document.getElementById('currentSlide');
+  const progressFill = document.getElementById('progressFill');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  let current = 0;
+
+  function show(idx) {
+    if (idx < 0 || idx >= total) return;
+    slides[current].classList.remove('active');
+    current = idx;
+    slides[current].classList.add('active');
+    counter.textContent = String(current + 1).padStart(2, '0');
+    progressFill.style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  prevBtn.addEventListener('click', () => show(current - 1));
+  nextBtn.addEventListener('click', () => show(current + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === ' ' || e.key === 'PageDown') {
+      e.preventDefault();
+      show(current + 1);
+    }
+    if (e.key === 'ArrowRight' || e.key === 'PageUp') {
+      e.preventDefault();
+      show(current - 1);
+    }
+    if (e.key === 'Home') { e.preventDefault(); show(0); }
+    if (e.key === 'End') { e.preventDefault(); show(total - 1); }
+  });
+
+  let touchStart = 0;
+  document.addEventListener('touchstart', e => { touchStart = e.changedTouches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const delta = e.changedTouches[0].clientX - touchStart;
+    if (Math.abs(delta) > 60) {
+      if (delta < 0) show(current + 1);
+      else show(current - 1);
+    }
+  }, { passive: true });
+
+  progressFill.style.width = (1 / total * 100) + '%';
+</script>
+
+</body>
+</html>
