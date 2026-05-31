@@ -310,6 +310,10 @@ tr.trim-row td{background:linear-gradient(90deg,#3D3328,#5C4C40)!important;color
       סנכרון יומן
     </button>
     <a href="staff-calendar.html" class="btn btn-outline">לוח צוות</a>
+    <button class="btn btn-outline" onclick="exportToCSV()" title="הורדת רשימת אירועים כ-CSV — נפתח ב-Google Sheets / Excel">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      ייצוא ל-Sheets
+    </button>
     <button class="btn btn-outline" onclick="window.print()">הדפסה</button>
   </div>
 </div>
@@ -1498,6 +1502,59 @@ function updateAdminUI(){
 document.getElementById('adminModal').addEventListener('click',function(e){
   if(e.target===this) closeAdminModal();
 });
+
+// ═══════════════════════════════════════════════════
+// EXPORT TO CSV (for Google Sheets / Excel)
+// ═══════════════════════════════════════════════════
+const TYPE_BY_CLS={
+  'c-teal':'שייכות / פתיחה','c-purple':'כבוד / יום שיא',
+  'c-orange':'מוטיבציה פנימית','c-red':'מסוגלות','c-green':'אוטונומיה',
+  'c-gold':'לוח עברי / הפסקה פעילה','c-pink':'פולס','c-blue':'בגרות',
+  'c-deep-cyan':'אסיפת הורים','c-lime':'תעודות','c-deep-red':'בחינת גמר',
+  'c-cyan':'אסיפת הורים','c-yellow':'מבחנים','c-pink-deep':'פולס'
+};
+function dimByDate(dt){
+  const m=dt.getMonth(),y=dt.getFullYear();
+  if(y===2026&&(m===8||m===9))return'שייכות';
+  if(y===2026&&(m===10||m===11))return'כבוד';
+  if(y===2027&&(m===0||m===1))return'מוטיבציה פנימית';
+  if(y===2027&&(m===2||m===3))return'מסוגלות ומימוש עצמי';
+  if(y===2027&&(m===4||m===5))return'אוטונומיה';
+  return'';
+}
+function csvCell(v){
+  if(v==null)return'';
+  const s=String(v);
+  if(/[,"\r\n]/.test(s))return'"'+s.replace(/"/g,'""')+'"';
+  return s;
+}
+function exportToCSV(){
+  const headers=['#','תאריך התחלה','תאריך סיום','יום','חודש','ממד','סוג אירוע','כותרת','אחראי','יעד','הכנה','עלות','הערות'];
+  const all=[...EVENTS,...customEvents].sort((a,b)=>{
+    if(a.date!==b.date)return a.date.localeCompare(b.date);
+    return(a.title||'').localeCompare(b.title||'','he');
+  });
+  const lines=[headers.map(csvCell).join(',')];
+  all.forEach((ev,i)=>{
+    const start=new Date(ev.date);
+    lines.push([
+      i+1,ev.date,ev.endDate||'',
+      DAYS_HE[start.getDay()],
+      MONTHS_HE[start.getMonth()+1]+' '+start.getFullYear(),
+      dimByDate(start),
+      TYPE_BY_CLS[ev.cls]||'',
+      ev.title||'',ev.responsible||'',ev.target||'',
+      ev.prep||'',ev.cost||'',ev.notes||''
+    ].map(csvCell).join(','));
+  });
+  // UTF-8 BOM so Sheets/Excel detects Hebrew
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='גאנט-תשפז.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
+}
 
 // INIT
 render();
