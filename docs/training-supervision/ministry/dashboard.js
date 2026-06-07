@@ -118,18 +118,22 @@ function sendToNetwork(netId, netName, netEmail) {
 
 function demoReport() {
   return {
-    networks: 5,
-    schools: 47,
-    teachers: 712,
-    present: 638,
-    missed: 74,
-    inPD: 198,
+    networks: 9,
+    schools: 58,
+    teachers: 798,
+    present: 712,
+    missed: 86,
+    inPD: 215,
     networkBreakdown: [
-      { id:'net_ort',     name:'אורט',  color:'ort',     teachers:187, present:168, missed:19, rate:90, sector:{haredi:28, arab:45, kelali:114} },
-      { id:'net_amal',    name:'עמל',   color:'amal',    teachers:163, present:148, missed:15, rate:91, sector:{haredi:12, arab:38, kelali:113} },
-      { id:'net_atid',    name:'עתיד',  color:'atid',    teachers:142, present:122, missed:20, rate:86, sector:{haredi:8,  arab:24, kelali:110} },
-      { id:'net_sakhnin', name:'סכנין', color:'sakhnin', teachers:128, present:118, missed:10, rate:92, sector:{haredi:0,  arab:128, kelali:0  } },
-      { id:'net_dror',    name:'דרור',  color:'dror',    teachers:92,  present:82,  missed:10, rate:89, sector:{haredi:0,  arab:8,  kelali:84 } }
+      { id:'net_ort',             name:'אורט',         color:'ort',             teachers:187, present:168, missed:19, rate:90, sector:{haredi:28, arab:45,  kelali:114} },
+      { id:'net_amal',            name:'עמל',          color:'amal',            teachers:163, present:148, missed:15, rate:91, sector:{haredi:12, arab:38,  kelali:113} },
+      { id:'net_atid',            name:'עתיד',         color:'atid',            teachers:142, present:122, missed:20, rate:86, sector:{haredi:8,  arab:24,  kelali:110} },
+      { id:'net_sakhnin',         name:'סכנין',        color:'sakhnin',         teachers:128, present:118, missed:10, rate:92, sector:{haredi:0,  arab:128, kelali:0  } },
+      { id:'net_dror',            name:'דרור',         color:'dror',            teachers:92,  present:82,  missed:10, rate:89, sector:{haredi:0,  arab:8,   kelali:84 } },
+      { id:'net_ezraei_haredi',   name:'עצמאי חרדי',   color:'ezraei_haredi',   teachers:38,  present:30,  missed:8,  rate:79, sector:{haredi:38, arab:0,   kelali:0  } },
+      { id:'net_beit_el',         name:'בית אל',       color:'beit_el',         teachers:18,  present:16,  missed:2,  rate:89, sector:{haredi:0,  arab:0,   kelali:18 } },
+      { id:'net_kanada_israel',   name:'קנדה ישראל',   color:'kanada_israel',   teachers:16,  present:15,  missed:1,  rate:94, sector:{haredi:0,  arab:0,   kelali:16 } },
+      { id:'net_shulamit_haredi', name:'שלומית חרדי',  color:'shulamit_haredi', teachers:14,  present:13,  missed:1,  rate:93, sector:{haredi:14, arab:0,   kelali:0  } }
     ]
   };
 }

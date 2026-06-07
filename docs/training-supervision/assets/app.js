@@ -7,11 +7,15 @@ const TS = (() => {
   const APPS_SCRIPT_URL = localStorage.getItem('ts.appsScriptUrl') || DEFAULT_URL;
 
   const NETWORKS = [
-    { id: 'ort',     name: 'אורט',  color: 'ort'    },
-    { id: 'amal',    name: 'עמל',   color: 'amal'   },
-    { id: 'atid',    name: 'עתיד',  color: 'atid'   },
-    { id: 'sakhnin', name: 'סכנין', color: 'sakhnin'},
-    { id: 'dror',    name: 'דרור',  color: 'dror'   }
+    { id: 'ort',             name: 'אורט',        color: 'ort'             },
+    { id: 'amal',            name: 'עמל',         color: 'amal'            },
+    { id: 'atid',            name: 'עתיד',        color: 'atid'            },
+    { id: 'sakhnin',         name: 'סכנין',       color: 'sakhnin'         },
+    { id: 'dror',            name: 'דרור',        color: 'dror'            },
+    { id: 'ezraei_haredi',   name: 'עצמאי חרדי',  color: 'ezraei_haredi'   },
+    { id: 'beit_el',         name: 'בית אל',      color: 'beit_el'         },
+    { id: 'kanada_israel',   name: 'קנדה ישראל',  color: 'kanada_israel'   },
+    { id: 'shulamit_haredi', name: 'שלומית חרדי', color: 'shulamit_haredi' }
   ];
 
   const SECTORS = [

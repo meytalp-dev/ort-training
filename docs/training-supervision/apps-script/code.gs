@@ -40,11 +40,15 @@ const SCHEMA = {
 };
 
 const SEED_NETWORKS = [
-  ['net_ort',     'אורט',  'ort',     ''],
-  ['net_amal',    'עמל',   'amal',    ''],
-  ['net_atid',    'עתיד',  'atid',    ''],
-  ['net_sakhnin', 'סכנין', 'sakhnin', ''],
-  ['net_dror',    'דרור',  'dror',    '']
+  ['net_ort',             'אורט',         'ort',             ''],
+  ['net_amal',            'עמל',          'amal',            ''],
+  ['net_atid',            'עתיד',         'atid',            ''],
+  ['net_sakhnin',         'סכנין',        'sakhnin',         ''],
+  ['net_dror',            'דרור',         'dror',            ''],
+  ['net_ezraei_haredi',   'עצמאי חרדי',   'ezraei_haredi',   ''],
+  ['net_beit_el',         'בית אל',       'beit_el',         ''],
+  ['net_kanada_israel',   'קנדה ישראל',   'kanada_israel',   ''],
+  ['net_shulamit_haredi', 'שלומית חרדי',  'shulamit_haredi', '']
 ];
 
 function setupSchema() {
