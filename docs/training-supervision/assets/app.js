@@ -136,7 +136,7 @@ const TS = (() => {
   // WhatsApp
   function whatsappLink(phone, text='') {
     const u = new URL('https://api.whatsapp.com/send');
-    if (phone) u.searchParams.set('phone', phone.replace(/[^\d]/g, ''));
+    if (phone) u.searchParams.set('phone', String(phone).replace(/[^\d]/g, ''));
     if (text) u.searchParams.set('text', text);
     return u.toString();
   }
