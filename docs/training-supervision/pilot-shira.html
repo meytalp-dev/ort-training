@@ -130,6 +130,21 @@
       <div id="import-result" style="margin-top:16px;"></div>
     </div>
 
+    <!-- שלב 1.5 — דמו שאר המקצועות -->
+    <div class="pilot-step" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-color: #86efac;">
+      <div class="step-num" style="background: #16a34a;">+</div>
+      <h3>אופציונלי — טעון דמו של 5 מקצועות נוספים</h3>
+      <p>10 מורים פר מקצוע (אנגלית, עברית, ספרות, אזרחות, תנ"ך) פרוסים על 10 בתי ספר קיימים. <strong>אלה לא נתונים אמיתיים</strong> — רק כדי לראות איך הדשבורדים של רויטל ושל המנהלים נראים כשיש כמה מקצועות במקביל. אפשר למחוק מ-Sheet בכל רגע.</p>
+      <div class="actions-row">
+        <button class="btn btn-soft" id="btn-import-demo" onclick="runImportDemo()" style="background: #dcfce7; color: #14532d; border: 1px solid #86efac;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          טעון דמו לאנגלית · עברית · ספרות · אזרחות · תנ"ך
+        </button>
+        <span class="status-pill idle" id="import-demo-status">לא הופעל</span>
+      </div>
+      <div id="import-demo-result" style="margin-top:16px;"></div>
+    </div>
+
     <!-- שלב 2 -->
     <div class="pilot-step">
       <div class="step-num">2</div>
@@ -298,6 +313,58 @@ async function loadSummary() {
   }
 }
 loadSummary();
+
+async function runImportDemo() {
+  const btn = document.getElementById('btn-import-demo');
+  const status = document.getElementById('import-demo-status');
+  const result = document.getElementById('import-demo-result');
+
+  if (!TS.getAppsScriptUrl()) {
+    status.className = 'status-pill err';
+    status.textContent = 'אין Apps Script';
+    return;
+  }
+  btn.disabled = true;
+  status.className = 'status-pill warn';
+  status.textContent = 'טוען...';
+  result.innerHTML = '';
+
+  try {
+    const dataRes = await fetch('_data/demo-other-subjects.json');
+    const data = await dataRes.json();
+
+    const payload = {
+      tabs: {
+        teachers: data.teachers.map(t => ({
+          id: t.id, school: t.school, network: 'net_' + t.network,
+          name: t.name, subject: t.subject, phone: t.phone,
+          createdAt: t.createdAt
+        })),
+        trainings: data.trainings.map(tr => ({ ...tr, network: 'net_cross' })),
+        attendance: data.attendance
+      }
+    };
+
+    const res = await TS.apiPost('seed.import', payload);
+    if (res.ok) {
+      status.className = 'status-pill ok';
+      status.textContent = '✓ הצליח';
+      const lines = Object.entries(res.data).map(([k, v]) =>
+        `<strong>${k}:</strong> ${v.added || 0} נוספו, ${v.updated || 0} עודכנו`);
+      result.innerHTML = '<div class="alert ok"><div class="alert-body"><strong>הדמו נטען</strong><br>' + lines.join('<br>') + '<br><br>פתחי עכשיו את הדשבורד של רויטל אמיר או מנהל בית ספר.</div></div>';
+    } else {
+      status.className = 'status-pill err';
+      status.textContent = 'שגיאה';
+      result.innerHTML = '<div class="alert err"><div class="alert-body">' + (res.error || 'שגיאה לא ידועה') + '</div></div>';
+    }
+  } catch (e) {
+    status.className = 'status-pill err';
+    status.textContent = 'שגיאה';
+    result.innerHTML = '<div class="alert err"><div class="alert-body">' + e.message + '</div></div>';
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 async function runImport() {
   const btn = document.getElementById('btn-import');

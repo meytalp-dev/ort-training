@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindTabs();
   document.getElementById('filter-search').addEventListener('input', renderTeachers);
   document.getElementById('filter-subject').addEventListener('change', renderTeachers);
-  document.getElementById('btn-send-report').addEventListener('click', sendReport);
   await loadData();
 });
 
@@ -103,7 +102,6 @@ function renderAll() {
   renderAlerts();
   renderTeachers();
   renderTrainings();
-  renderReportPreview();
 }
 
 function populateSubjectFilter() {
@@ -263,43 +261,3 @@ function renderTrainings() {
   }).join('');
 }
 
-function buildReportBody() {
-  const s = state.school;
-  const month = TS.monthLabel();
-  const atRisk = state.teachers.filter(t => t.stats.rate < 50);
-  const above80 = state.teachers.filter(t => t.stats.rate >= 80);
-  const lines = [
-    `דוח חודשי — ${s.name}`,
-    `רשת: ${s.networkName || ''}`,
-    `חודש דיווח: ${month}`,
-    '',
-    `סה"כ מורים: ${state.teachers.length}`,
-    `אחוז נוכחות ממוצע: ${state.stats.avgRate}%`,
-    `יעד: ${s.attendanceTarget || 80}%`,
-    '',
-    `✓ מורים שעומדים ביעד (80%+): ${above80.length}`,
-    `⚠ מורים בסיכון (פחות מ-50%): ${atRisk.length}`,
-    ''
-  ];
-  if (atRisk.length) {
-    lines.push('מורים בסיכון:');
-    atRisk.forEach(t => {
-      lines.push(`  • ${t.name} (${t.subject}) — ${t.stats.rate}%`);
-    });
-    lines.push('');
-  }
-  lines.push('בברכה,');
-  lines.push(s.principalName || '');
-  return lines.join('\n');
-}
-
-function renderReportPreview() {
-  document.getElementById('report-preview').textContent = buildReportBody();
-}
-
-function sendReport() {
-  const s = state.school;
-  const subject = `דוח חודשי — ${s.name} — ${TS.monthLabel()}`;
-  const url = TS.gmailCompose({ to: '', subject, body: buildReportBody() });
-  window.open(url, '_blank');
-}
