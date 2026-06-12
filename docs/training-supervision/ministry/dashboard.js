@@ -1,4 +1,4 @@
-// Ministry / National Inspector Dashboard — רויטל אמיר
+// Ministry / National Inspector Dashboard — מצפן הפיקוח · רויטל אמיר
 let state = {
   filter: { subject: '', availableSubjects: [] },
   summary: {},
@@ -8,6 +8,7 @@ let state = {
 let currentSubject = '';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('month-label').textContent = TS.monthLabel();
   await load();
 });
 
@@ -27,105 +28,165 @@ async function load() {
 }
 
 function render() {
-  renderSubjectTabs();
-  renderStats();
-  renderNetworkCards();
+  renderSubjectPills();
+  renderCommandStrip();
+  renderNetworkLenses();
   renderWeakSchools();
 }
 
-function renderSubjectTabs() {
-  const container = document.getElementById('subject-tabs');
+function renderSubjectPills() {
+  const container = document.getElementById('subject-filter-bar');
+  container.innerHTML = '<span class="filter-label">סינון מקצוע</span>';
+  const all = document.createElement('button');
+  all.className = 'subject-pill' + (currentSubject === '' ? ' active' : '');
+  all.dataset.subject = '';
+  all.textContent = 'כל המקצועות';
+  all.onclick = () => switchSubject('');
+  container.appendChild(all);
+
   const subjects = state.filter?.availableSubjects || [];
-  container.innerHTML = `
-    <button class="subject-tab ${currentSubject === '' ? 'active' : ''}" data-subject="">כל המקצועות</button>
-    ${subjects.map(s => `
-      <button class="subject-tab ${currentSubject === s ? 'active' : ''}" data-subject="${s}">${s}</button>
-    `).join('')}
-  `;
-  container.querySelectorAll('.subject-tab').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      currentSubject = btn.dataset.subject;
-      await load();
-    });
+  subjects.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'subject-pill' + (currentSubject === s ? ' active' : '');
+    btn.dataset.subject = s;
+    btn.textContent = s;
+    btn.onclick = () => switchSubject(s);
+    container.appendChild(btn);
   });
-
-  const sub = currentSubject
-    ? 'מקצוע נבחר: ' + currentSubject + '. סקירה של כל הרשתות.'
-    : 'סקירה של כל הרשתות בפיקוח. סינון לפי מקצוע, ושליחת דוחות לכל רשת.';
-  document.getElementById('page-sub').textContent = sub;
 }
+async function switchSubject(s) { currentSubject = s; await load(); }
 
-function renderStats() {
+function renderCommandStrip() {
   const s = state.summary || {};
-  document.getElementById('stat-networks').textContent = s.networks || 0;
-  document.getElementById('stat-schools').textContent = s.schools || 0;
-  document.getElementById('stat-teachers').textContent = s.teachers || 0;
-  document.getElementById('stat-trainings').textContent = s.trainings || 0;
-  document.getElementById('stat-rate').textContent = (s.avgRate || 0) + '%';
-  document.getElementById('stat-rate').className = 'stat-value ' +
-    (s.avgRate >= 80 ? 'ok' : s.avgRate >= 50 ? 'warn' : 'err');
-  document.getElementById('stat-records').textContent = s.attendanceRecords || 0;
+  document.getElementById('cmd-networks').textContent = s.networks || 0;
+  document.getElementById('cmd-schools').textContent = s.schools || 0;
+  document.getElementById('cmd-teachers').textContent = s.teachers || 0;
+  document.getElementById('cmd-trainings').textContent = s.trainings || 0;
+  document.getElementById('cmd-rate').textContent = (s.avgRate || 0) + '%';
+  const rateEl = document.getElementById('cmd-rate');
+  rateEl.classList.remove('ok', 'warn', 'err', 'mint');
+  rateEl.classList.add(s.avgRate >= 80 ? 'mint' : s.avgRate >= 50 ? 'warn' : 'err');
+  document.getElementById('cmd-records').textContent = s.attendanceRecords || 0;
 }
 
-function renderNetworkCards() {
-  const cards = document.getElementById('cards');
-  const nets = state.networkBreakdown || [];
+function renderNetworkLenses() {
+  const nets = (state.networkBreakdown || []).slice();
   if (!nets.length) {
-    cards.innerHTML = '<div class="empty card">אין נתונים עבור הסינון הנוכחי</div>';
+    document.getElementById('networks-featured').innerHTML = emptyMsg('אין נתונים עבור הסינון הנוכחי');
+    document.getElementById('networks-grid').innerHTML = '';
     return;
   }
-  cards.innerHTML = nets.map(n => {
-    const rate = n.rate || 0;
-    const rateClass = rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'err';
-    return `
-      <div class="card net-card">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-          <div>
-            <div class="net-chip ${n.color || ''}" style="margin-bottom:8px;">${escapeHtml(n.name)}</div>
-            <div style="color:var(--text-2); font-size:14px;">${n.teachers} מורים · ${n.schools} בתי ספר</div>
-          </div>
-          <div style="text-align:left;">
-            <div style="font-family:'Frank Ruhl Libre'; font-size:28px; font-weight:800; line-height:1;" class="${rateClass}">${rate}%</div>
-            <div style="font-size:12px; color:var(--text-3);">נוכחות ממוצעת</div>
-          </div>
+
+  // מיון: חלשות ראשונות
+  nets.sort((a, b) => (a.rate || 0) - (b.rate || 0));
+
+  // 2-3 חלשות לטוף Featured
+  const featuredCount = Math.min(3, Math.max(1, Math.floor(nets.length * 0.3)));
+  const featured = nets.slice(0, featuredCount);
+  const rest = nets.slice(featuredCount);
+
+  document.getElementById('networks-featured').innerHTML = featured.map(n => networkLensCard(n, true)).join('');
+  document.getElementById('networks-grid').innerHTML = rest.map(n => networkLensCard(n, false)).join('');
+}
+
+function networkLensCard(n, isFeatured) {
+  const rate = n.rate || 0;
+  const rateClass = rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'err';
+  const cssVar = `--lens-net: var(--net-${n.color || 'ort'});`;
+  const action = recommendAction(n, rate);
+  const circumference = 2 * Math.PI * 30;
+  const dash = (rate / 100) * circumference;
+  return `
+    <div class="net-lens" style="${cssVar}">
+      <div class="net-lens-row-1">
+        <div class="net-lens-name-block">
+          <span class="net-lens-chip">${escapeHtml(n.name)}</span>
+          <span class="net-lens-status-tag ${rateClass}">${rateClass === 'ok' ? 'תקין' : rateClass === 'warn' ? 'מעקב' : 'דורש פעולה'}</span>
         </div>
-        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; font-size:13px; color:var(--text-2);">
-          <span><strong style="color:var(--ok);">${n.present}</strong> עומדים ביעד</span>
-          ${n.missed > 0 ? `<span>· <strong style="color:var(--err);">${n.missed}</strong> בסיכון</span>` : ''}
-        </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <a class="btn btn-secondary" href="../admin-network/?network=${encodeURIComponent(n.id)}" style="flex:1; justify-content:center;">פתח דשבורד</a>
-          <button class="btn btn-soft" onclick="sendToNetwork('${n.id}', '${escapeAttr(n.name)}', '${n.contactEmail || ''}')" style="flex:1; justify-content:center;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            שליחה
-          </button>
+        <div class="net-lens-ring" aria-label="${rate}% נוכחות">
+          <svg viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="30" fill="none" stroke="var(--surface-soft)" stroke-width="6"/>
+            <circle cx="36" cy="36" r="30" fill="none" stroke="var(--lens-net)" stroke-width="6" stroke-linecap="round"
+                    stroke-dasharray="${dash} ${circumference}" stroke-dashoffset="0"/>
+          </svg>
+          <div class="net-lens-ring-text">${rate}%<small>נוכחות</small></div>
         </div>
       </div>
-    `;
-  }).join('');
+
+      <div class="net-lens-stats">
+        <div class="net-lens-stat">
+          <div class="net-lens-stat-num">${n.teachers || 0}</div>
+          <div class="net-lens-stat-label">מורים</div>
+        </div>
+        <div class="net-lens-stat">
+          <div class="net-lens-stat-num">${n.schools || 0}</div>
+          <div class="net-lens-stat-label">בתי ספר</div>
+        </div>
+        <div class="net-lens-stat">
+          <div class="net-lens-stat-num ${n.missed > 0 ? 'coral' : 'mint'}">${n.missed || 0}</div>
+          <div class="net-lens-stat-label">בסיכון</div>
+        </div>
+      </div>
+
+      ${isFeatured ? `
+        <div class="net-lens-action">
+          <div class="net-lens-action-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          </div>
+          <div class="net-lens-action-text">
+            <strong>פעולה מומלצת:</strong> ${escapeHtml(action)}
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="net-lens-cta">
+        <a class="btn-soft-sm" href="../admin-network/?network=${encodeURIComponent(n.id)}">
+          פתח דשבורד
+        </a>
+        <button class="btn-soft-sm primary" onclick="sendToNetwork('${n.id}', '${escapeAttr(n.name)}', '${n.contactEmail || ''}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          שליחה
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function recommendAction(n, rate) {
+  if (rate >= 80) return 'המשך מעקב חודשי שגרתי.';
+  if (rate >= 50) return 'שיחה עם מנהל הרשת על מורים בסיכון.';
+  if (n.missed > 5) return 'התראה ל-' + n.missed + ' מורים שמתחת ל-50%.';
+  return 'שליחת דוח דחוף ובקשת תוכנית התערבות.';
 }
 
 function renderWeakSchools() {
   const tbody = document.getElementById('weak-schools-body');
   const schools = (state.schoolBreakdown || []).slice(0, 10);
   if (!schools.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty">אין נתוני בתי ספר</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:var(--text-muted);">אין נתוני בתי ספר</td></tr>';
     return;
   }
   tbody.innerHTML = schools.map(s => {
     const school = s.school || {};
     const rate = s.rate || 0;
-    const rateClass = rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'err';
+    const fillClass = rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : '';
     const netColor = s.networkColor || (school.network || '').replace(/^net_/, '');
     const netName = s.networkName || netColor || '—';
-    const networkChip = netColor ? `<span class="net-chip ${netColor}">${escapeHtml(netName)}</span>` : '—';
+    const netChip = netColor ? `<span class="net-chip ${netColor}">${escapeHtml(netName)}</span>` : '—';
     return `
       <tr>
-        <td><strong>${escapeHtml(school.name || '')}</strong></td>
-        <td>${networkChip}</td>
+        <td class="school-cell">${escapeHtml(school.name || '')}</td>
+        <td>${netChip}</td>
         <td>${s.teachers}</td>
-        <td><span class="badge ${rateClass}">${rate}%</span></td>
-        <td><a class="btn btn-secondary" href="../admin-school/?school=${encodeURIComponent(school.id)}&network=${encodeURIComponent(school.network || '')}">פתח</a></td>
+        <td>
+          <div class="att-progress">
+            <div class="att-progress-bar">
+              <div class="att-progress-fill ${fillClass}" style="width:${rate}%"></div>
+            </div>
+            <span class="att-progress-val">${rate}%</span>
+          </div>
+        </td>
+        <td><a class="open-btn" href="../admin-school/?school=${encodeURIComponent(school.id)}&network=${encodeURIComponent(school.network || '')}">פתח</a></td>
       </tr>
     `;
   }).join('');
@@ -160,6 +221,10 @@ function sendToNetwork(netId, netName, netEmail) {
   window.open(TS.gmailCompose({ to: netEmail, subject, body }), '_blank');
 }
 
+function emptyMsg(text) {
+  return `<div style="grid-column:1/-1; padding:24px; text-align:center; color:var(--text-muted);">${text}</div>`;
+}
+
 function escapeHtml(s) {
   return (s || '').toString()
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -172,16 +237,25 @@ function escapeAttr(s) {
 function demoState() {
   return {
     filter: { subject: '', availableSubjects: ['מתמטיקה', 'אנגלית', 'עברית'] },
-    summary: { networks: 8, schools: 34, teachers: 95, trainings: 5, attendanceRecords: 176, avgRate: 38 },
+    summary: { networks: 8, schools: 34, teachers: 145, trainings: 36, attendanceRecords: 426, avgRate: 39 },
     networkBreakdown: [
-      { id:'net_atid', name:'עתיד', color:'atid', teachers:32, schools:12, present:8, missed:14, rate:35 },
-      { id:'net_ort',  name:'אורט', color:'ort',  teachers:18, schools:6,  present:7, missed:6,  rate:48 },
-      { id:'net_amal', name:'עמל',  color:'amal', teachers:12, schools:5,  present:5, missed:4,  rate:50 },
-      { id:'net_dror', name:'דרור', color:'dror', teachers:13, schools:5,  present:3, missed:7,  rate:30 }
+      { id:'net_shulamit_haredi', name:'שלומית חרדי', color:'shulamit_haredi', teachers:5, schools:1, present:0, missed:5, rate:0 },
+      { id:'net_amal', name:'עמל', color:'amal', teachers:21, schools:5, present:4, missed:12, rate:35 },
+      { id:'net_dror', name:'דרור', color:'dror', teachers:29, schools:5, present:1, missed:16, rate:38 },
+      { id:'net_atid', name:'עתיד', color:'atid', teachers:40, schools:12, present:4, missed:15, rate:41 },
+      { id:'net_ort',  name:'אורט', color:'ort',  teachers:35, schools:7, present:8, missed:15, rate:45 },
+      { id:'net_kanada_israel', name:'קנדה ישראל', color:'kanada_israel', teachers:2, schools:1, present:0, missed:0, rate:67 },
+      { id:'net_ezraei_haredi', name:'עצמאי חרדי', color:'ezraei_haredi', teachers:14, schools:3, present:0, missed:8, rate:38 },
+      { id:'net_beit_el', name:'בית אל', color:'beit_el', teachers:1, schools:1, present:0, missed:1, rate:33 }
     ],
     schoolBreakdown: [
-      { school:{id:'s1', name:'בית ספר א׳', network:'atid'}, teachers:3, rate:10 },
-      { school:{id:'s2', name:'בית ספר ב׳', network:'ort'},  teachers:2, rate:25 }
+      { school:{id:'s1', name:'עמל טק אין', network:'amal'}, teachers:4, rate:0, networkColor:'amal', networkName:'עמל' },
+      { school:{id:'s2', name:'עתיד בדרך תמים', network:'atid'}, teachers:1, rate:0, networkColor:'atid', networkName:'עתיד' },
+      { school:{id:'s3', name:'תיכון הדר', network:'shulamit_haredi'}, teachers:5, rate:0, networkColor:'shulamit_haredi', networkName:'שלומית חרדי' },
+      { school:{id:'s4', name:'תיכון עתיד תפן ליזמות ומדיה', network:'atid'}, teachers:2, rate:0, networkColor:'atid', networkName:'עתיד' },
+      { school:{id:'s5', name:'תיכון עמל שיח', network:'amal'}, teachers:2, rate:9, networkColor:'amal', networkName:'עמל' },
+      { school:{id:'s6', name:'עתיד אור מנחם- תורני אשקלון', network:'atid'}, teachers:5, rate:10, networkColor:'atid', networkName:'עתיד' },
+      { school:{id:'s7', name:'אורט אורמת יבנה', network:'ort'}, teachers:5, rate:17, networkColor:'ort', networkName:'אורט' }
     ]
   };
 }
