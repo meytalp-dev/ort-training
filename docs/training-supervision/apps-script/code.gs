@@ -162,6 +162,7 @@ function handleRequest(params) {
       case 'guide.dashboard':     result = guideDashboard(params); break;
       case 'school.dashboard':    result = schoolDashboard(params); break;
       case 'ministry.dashboard':  result = ministryDashboard(params); break;
+      case 'network.dashboard':   result = networkDashboard(params); break;
 
       default: result = { ok: false, error: 'unknown_action: ' + action };
     }
@@ -1244,6 +1245,97 @@ function schoolDashboard(params) {
 }
 
 // ============================================================
+// NETWORK DASHBOARD — למנהל/ת רשת
+// ============================================================
+// קלט: { network: 'net_ort' | 'ort', subject?: 'מתמטיקה' }
+// פלט: כל בתי הספר ברשת + סטטיסטיקות שנתיות (לא חודשיות)
+
+function networkDashboard(params) {
+  const netParam = (params.network || '').replace(/^net_/, '');
+  if (!netParam) return { ok: false, error: 'missing_network' };
+  const subjectFilter = params.subject || '';
+
+  const networks = readAll('networks');
+  const network = networks.filter(n =>
+    n.id === netParam || n.id === ('net_' + netParam) || (n.color || '') === netParam
+  )[0];
+  if (!network) return { ok: false, error: 'network_not_found' };
+
+  const schools = readAll('schools').filter(s =>
+    s.network === network.id || s.network === netParam
+  );
+  let teachers = readAll('teachers').filter(t =>
+    t.network === network.id || t.network === netParam
+  );
+  if (subjectFilter) teachers = teachers.filter(t => t.subject === subjectFilter);
+
+  let trainings = readAll('trainings');
+  if (subjectFilter) trainings = trainings.filter(t => t.subject === subjectFilter);
+  const trainingIds = trainings.map(t => t.id);
+  const attendance = readAll('attendance').filter(a => trainingIds.indexOf(a.trainingId) >= 0);
+
+  // חישוב פר מורה (שנתי - כל ההדרכות שהיו)
+  const teacherStats = {};
+  teachers.forEach(t => {
+    const records = attendance.filter(a => a.teacherId === t.id);
+    const teacherTrainings = trainings.filter(tr => tr.subject === t.subject);
+    const present = records.filter(r => r.status === 'present').length;
+    const partial = records.filter(r => r.status === 'partial').length;
+    const total = teacherTrainings.length;
+    teacherStats[t.id] = {
+      present, partial, total,
+      rate: total ? Math.round(((present + 0.5 * partial) / total) * 100) : 0
+    };
+  });
+
+  // חישוב פר בית ספר
+  const schoolBreakdown = schools.map(s => {
+    const schoolTeachers = teachers.filter(t => t.school === s.id);
+    if (!schoolTeachers.length) {
+      return { id: s.id, name: s.name, teachers: 0, present: 0, rate: 0,
+               principalName: s.principalName, principalEmail: s.principalEmail };
+    }
+    const rates = schoolTeachers.map(t => teacherStats[t.id]?.rate || 0);
+    const avgRate = Math.round(rates.reduce((a,b)=>a+b, 0) / rates.length);
+    const presentTeachers = schoolTeachers.filter(t => (teacherStats[t.id]?.rate || 0) >= 80).length;
+    return {
+      id: s.id, name: s.name,
+      teachers: schoolTeachers.length,
+      present: presentTeachers,
+      rate: avgRate,
+      principalName: s.principalName || '',
+      principalEmail: s.principalEmail || ''
+    };
+  }).filter(s => s.teachers > 0)  // רק בתי ספר עם מורים
+    .sort((a, b) => a.rate - b.rate);  // חלשים למעלה
+
+  // סכימת רשת
+  const allRates = Object.values(teacherStats).map(s => s.rate);
+  const avgRate = allRates.length ? Math.round(allRates.reduce((a,b)=>a+b, 0) / allRates.length) : 0;
+  const atRisk = Object.values(teacherStats).filter(s => s.rate < 50).length;
+  const onTarget = Object.values(teacherStats).filter(s => s.rate >= 80).length;
+
+  // מקצועות זמינים
+  const availableSubjects = Array.from(new Set(teachers.map(t => t.subject))).filter(Boolean);
+
+  return {
+    ok: true,
+    data: {
+      network: { id: network.id, name: network.name, color: network.color, contactEmail: network.contactEmail || '' },
+      filter: { subject: subjectFilter, availableSubjects },
+      summary: {
+        schools: schoolBreakdown.length,
+        teachers: teachers.length,
+        trainings: trainings.length,
+        attendanceRecords: attendance.length,
+        avgRate, atRisk, onTarget
+      },
+      schoolBreakdown
+    }
+  };
+}
+
+// ============================================================
 // MINISTRY DASHBOARD — לרויטל אמיר ופיקוח ארצי
 // ============================================================
 // קלט: { subject?: 'מתמטיקה' }
@@ -1282,6 +1374,14 @@ function ministryDashboard(params) {
     };
   });
 
+  // מילון רשתות לחיפוש שם בעברית
+  const networkByKey = {};
+  networks.forEach(n => {
+    networkByKey[n.id] = n;
+    networkByKey[(n.id || '').replace(/^net_/, '')] = n;
+    if (n.color) networkByKey[n.color] = n;
+  });
+
   // חישוב פר בית ספר
   const schoolStats = {};
   schools.forEach(s => {
@@ -1289,8 +1389,11 @@ function ministryDashboard(params) {
     if (!schoolTeachers.length) return;
     const rates = schoolTeachers.map(t => teacherStats[t.id]?.rate || 0);
     const avgRate = rates.length ? Math.round(rates.reduce((a,b)=>a+b, 0) / rates.length) : 0;
+    const net = networkByKey[s.network] || {};
     schoolStats[s.id] = {
       school: s,
+      networkName: net.name || s.network,
+      networkColor: net.color || s.network,
       teachers: schoolTeachers.length,
       rate: avgRate
     };

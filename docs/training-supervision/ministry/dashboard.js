@@ -116,7 +116,9 @@ function renderWeakSchools() {
     const school = s.school || {};
     const rate = s.rate || 0;
     const rateClass = rate >= 80 ? 'ok' : rate >= 50 ? 'warn' : 'err';
-    const networkChip = school.network ? `<span class="net-chip ${school.network.replace(/^net_/, '')}">${school.network.replace(/^net_/, '')}</span>` : '—';
+    const netColor = s.networkColor || (school.network || '').replace(/^net_/, '');
+    const netName = s.networkName || netColor || '—';
+    const networkChip = netColor ? `<span class="net-chip ${netColor}">${escapeHtml(netName)}</span>` : '—';
     return `
       <tr>
         <td><strong>${escapeHtml(school.name || '')}</strong></td>

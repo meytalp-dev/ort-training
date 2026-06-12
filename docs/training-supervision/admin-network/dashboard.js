@@ -1,137 +1,126 @@
-// Network Admin Dashboard
+// Network Admin Dashboard — מנהל/ת רשת
 const networkId = TS.urlParam('network', '');
-let report = {};
+let data = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('month-label').textContent = TS.monthLabel();
+  const btn = document.getElementById('btn-send-report');
+  if (btn) btn.addEventListener('click', sendReportToNetwork);
   await loadData();
 });
 
 async function loadData() {
   if (!TS.getAppsScriptUrl()) {
-    report = demoReport();
+    data = demoData();
     document.getElementById('user-name').textContent = 'דמו';
     document.getElementById('user-network').textContent = 'רשת אורט';
     render();
-    renderTrend(demoTrend());
     return;
   }
-
-  const [reportRes, netsRes, trendRes] = await Promise.all([
-    TS.api('reports.network', { network: networkId, month: '' }),
-    TS.api('networks.list'),
-    TS.api('reports.trend', { network: networkId, months: 6 })
-  ]);
-
-  report = reportRes.data || {};
-  const net = (netsRes.data || []).find(n => n.id === networkId);
-  if (net) {
-    document.getElementById('user-network').textContent = 'רשת ' + net.name;
-    document.querySelector('.network-tag').innerHTML = TS.netChip(net.color);
+  const res = await TS.api('network.dashboard', { network: networkId });
+  if (res.ok && res.data) {
+    data = res.data;
+    if (data.network) {
+      document.getElementById('user-network').textContent = 'רשת ' + data.network.name;
+      const tag = document.querySelector('.network-tag');
+      if (tag) tag.innerHTML = `<span class="net-chip ${data.network.color}">${data.network.name}</span>`;
+    }
+    render();
+  } else {
+    data = demoData();
+    render();
   }
-  render();
-  renderTrend((trendRes.data && trendRes.data.series) || []);
-}
-
-function renderTrend(series) {
-  const target = document.getElementById('trend-chart');
-  if (target) TS.renderTrendChart(target, series);
-}
-
-function demoTrend() {
-  return [
-    { month:'2025-12', rate: 82, present: 153, total: 187 },
-    { month:'2026-01', rate: 78, present: 146, total: 187 },
-    { month:'2026-02', rate: 86, present: 161, total: 187 },
-    { month:'2026-03', rate: 88, present: 165, total: 187 },
-    { month:'2026-04', rate: 92, present: 172, total: 187 },
-    { month:'2026-05', rate: 90, present: 168, total: 187 }
-  ];
 }
 
 function render() {
-  document.getElementById('stat-schools').textContent = report.schools || 0;
-  document.getElementById('stat-teachers').textContent = report.teachers || 0;
-  document.getElementById('stat-attendance').textContent = (report.rate || 0) + '%';
+  if (!data) return;
+  const s = data.summary || {};
+  document.getElementById('stat-schools').textContent = s.schools || 0;
+  document.getElementById('stat-teachers').textContent = s.teachers || 0;
+  document.getElementById('stat-attendance').textContent = (s.avgRate || 0) + '%';
   document.getElementById('stat-attendance').className = 'stat-value ' +
-    (report.rate >= 90 ? 'ok' : report.rate >= 70 ? 'warn' : 'err');
-  document.getElementById('stat-pd').textContent = report.inPD || 0;
-  document.getElementById('stat-missed').textContent = report.missed || 0;
+    (s.avgRate >= 80 ? 'ok' : s.avgRate >= 50 ? 'warn' : 'err');
 
-  // Sector breakdown
-  const sec = report.bySector || {};
-  const total = (sec.haredi || 0) + (sec.arab || 0) + (sec.kelali || 0);
-  document.getElementById('sec-haredi').textContent = sec.haredi || 0;
-  document.getElementById('sec-arab').textContent = sec.arab || 0;
-  document.getElementById('sec-kelali').textContent = sec.kelali || 0;
-  document.getElementById('sec-haredi-pct').textContent = total ? Math.round((sec.haredi||0)/total*100)+'%' : '—';
-  document.getElementById('sec-arab-pct').textContent = total ? Math.round((sec.arab||0)/total*100)+'%' : '—';
-  document.getElementById('sec-kelali-pct').textContent = total ? Math.round((sec.kelali||0)/total*100)+'%' : '—';
+  const pdEl = document.getElementById('stat-pd');
+  if (pdEl) pdEl.textContent = s.onTarget || 0;
+  const missedEl = document.getElementById('stat-missed');
+  if (missedEl) missedEl.textContent = s.atRisk || 0;
+
+  // Sector breakdown — placeholder (אין לנו עדיין נתוני מגזר)
+  ['sec-haredi','sec-arab','sec-kelali','sec-haredi-pct','sec-arab-pct','sec-kelali-pct'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
 
   // Schools table
   const tbody = document.getElementById('schools-body');
-  const schools = report.schoolBreakdown || [];
+  const schools = data.schoolBreakdown || [];
   if (!schools.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty">אין בתי ספר ברשת</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">אין בתי ספר עם נתונים ברשת</td></tr>`;
     return;
   }
   tbody.innerHTML = schools.map(s => `
     <tr>
-      <td><strong>${s.name}</strong></td>
+      <td><strong>${escapeHtml(s.name)}</strong></td>
       <td>${s.teachers}</td>
       <td>${s.present}</td>
-      <td>${TS.attendanceBadge(s.rate)}</td>
+      <td><span class="badge ${s.rate >= 80 ? 'ok' : s.rate >= 50 ? 'warn' : 'err'}">${s.rate}%</span></td>
       <td>
-        <a class="btn btn-secondary" href="../admin-school/?school=${s.id}&network=${networkId}">פתח</a>
+        <a class="btn btn-secondary" href="../admin-school/?school=${encodeURIComponent(s.id)}&network=${encodeURIComponent(networkId)}">פתח</a>
       </td>
     </tr>
   `).join('');
 }
 
-function sendReport() {
-  const subject = `דוח הדרכות חודשי — ${document.getElementById('user-network').textContent} — ${TS.monthLabel()}`;
-  const body = [
-    `דוח חודשי — ${document.getElementById('user-network').textContent}`,
-    `${TS.monthLabel()}`,
-    '',
-    `בתי ספר ברשת: ${report.schools || 0}`,
-    `מורים: ${report.teachers || 0}`,
-    `נוכחות החודש: ${report.rate || 0}%`,
-    `בהשתלמות פעילה: ${report.inPD || 0}`,
-    `פספסו: ${report.missed || 0}`,
-    '',
-    'פילוח לפי מגזר:',
-    `- חרדי: ${report.bySector?.haredi || 0}`,
-    `- ערבי: ${report.bySector?.arab || 0}`,
-    `- כללי: ${report.bySector?.kelali || 0}`,
-    '',
-    'פירוט לפי בית ספר:',
-    ...(report.schoolBreakdown || []).map(s => `- ${s.name}: ${s.present}/${s.teachers} (${s.rate}%)`)
-  ].join('\n');
-  window.open(TS.gmailCompose({ subject, body }), '_blank');
+function escapeHtml(s) {
+  return (s || '').toString()
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.getElementById('btn-send-report');
-  if (btn) btn.addEventListener('click', sendReport);
-});
+function sendReportToNetwork() {
+  if (!data || !data.network) return;
+  const net = data.network;
+  const s = data.summary || {};
+  const subject = `דוח חודשי — רשת ${net.name} — ${TS.monthLabel()}`;
+  const lines = [
+    `שלום,`,
+    ``,
+    `מצורף דוח חודשי על הדרכות המורים ברשת ${net.name}.`,
+    ``,
+    `סיכום:`,
+    `• בתי ספר עם מורים בהדרכה: ${s.schools}`,
+    `• סה"כ מורים: ${s.teachers}`,
+    `• אחוז נוכחות ממוצע: ${s.avgRate}%`,
+    `• עומדים ביעד (80%+): ${s.onTarget}`,
+    `• מורים בסיכון (מתחת ל-50%): ${s.atRisk}`,
+    ``,
+    `פירוט לפי בית ספר (מהחלש לחזק):`,
+    ...(data.schoolBreakdown || []).slice(0, 15).map(sc =>
+      `• ${sc.name}: ${sc.rate}% (${sc.teachers} מורים)`
+    ),
+    ``,
+    `דשבורד מלא של הרשת:`,
+    `${location.origin}${location.pathname}?network=${networkId}`,
+    ``,
+    `בברכה,`,
+    `יחידת הפיקוח על הדרכות · משרד העבודה`
+  ];
+  const body = lines.join('\n');
+  window.open(TS.gmailCompose({ to: net.contactEmail || '', subject, body }), '_blank');
+}
 
-function demoReport() {
+function demoData() {
   return {
-    schools: 12,
-    teachers: 187,
-    present: 168,
-    missed: 19,
-    inPD: 54,
-    rate: 90,
-    bySector: { haredi: 28, arab: 45, kelali: 114 },
+    network: { id: 'net_ort', name: 'אורט', color: 'ort', contactEmail: '' },
+    filter: { subject: '', availableSubjects: ['מתמטיקה'] },
+    summary: { schools: 6, teachers: 22, trainings: 6, attendanceRecords: 90, avgRate: 47, atRisk: 5, onTarget: 4 },
     schoolBreakdown: [
-      { id:'sch_ort_beit_haarava', name:'אורט בית הערבה', teachers:18, present:17, rate:94 },
-      { id:'s2', name:'אורט אבן יהודה', teachers:22, present:20, rate:91 },
-      { id:'s3', name:'אורט גוש דן',     teachers:15, present:13, rate:87 },
-      { id:'s4', name:'אורט יד ליבוביץ', teachers:24, present:22, rate:92 },
-      { id:'s5', name:'אורט רחובות',     teachers:19, present:16, rate:84 },
-      { id:'s6', name:'אורט אופקים',     teachers:14, present:13, rate:93 }
+      { id: 'sch_005', name: 'אורט בית הערבה',      teachers: 3, present: 1, rate: 35 },
+      { id: 'sch_006', name: 'אורט דן גורמה',       teachers: 2, present: 0, rate: 20 },
+      { id: 'sch_007', name: 'אורט תל נוף',         teachers: 6, present: 4, rate: 78 },
+      { id: 'sch_008', name: 'אורט תעשייה אווירית', teachers: 4, present: 2, rate: 55 },
+      { id: 'sch_009', name: 'אורט אורמת יבנה',     teachers: 5, present: 3, rate: 60 }
     ]
   };
 }
