@@ -21,23 +21,48 @@
 // SETUP
 // ============================================================
 
-const TABS = ['networks','schools','teachers','trainings','attendance','pd','questions','knowledge','feedback','alerts'];
+const TABS = ['networks','schools','teachers','trainings','attendance','pd','questions','knowledge','feedback','alerts','users','subjects','audit_log'];
 
 const SCHEMA = {
   networks:   ['id','name','color','contactEmail'],
   schools:    ['id','name','network','principalName','principalEmail','principalPhone','attendanceTarget'],
-  teachers:   ['id','school','network','name','subject','type','sector','seniority',
+  teachers:   ['id','school','network','name','subject','subjectId','type','sector','seniority',
                'units','students','phone','email','moeApproval','moeFile',
                'pdActive','pdFile','pdYear','createdAt'],
-  trainings:  ['id','date','subject','guideName','guideEmail','network','sector','location','notes',
+  trainings:  ['id','date','subject','subjectId','guideName','guideEmail','network','sector','location','notes',
                'qrToken','materialsUrl','curriculumTopic','feedbackEnabled'],
   attendance: ['id','trainingId','teacherId','status','notes','timestamp','checkedInVia'],
   pd:         ['id','teacherId','subject','year','status','fileUrl','addedAt'],
   questions:  ['id','teacherId','question','answer','status','createdAt','answeredAt'],
   knowledge:  ['id','title','category','audience','link','description','addedAt'],
   feedback:   ['id','trainingId','teacherId','rating','comment','createdAt'],
-  alerts:     ['id','type','severity','message','targetRole','targetId','createdAt','resolvedAt']
+  alerts:     ['id','type','severity','message','targetRole','targetId','createdAt','resolvedAt'],
+  // Phase 1 hardening
+  users:      ['id','email','name','role','networkId','schoolId','subjectId','guideId','active','createdAt'],
+  subjects:   ['id','name','code','order','active'],
+  audit_log:  ['id','timestamp','userEmail','action','targetType','targetId','status','notes']
 };
+
+// תפקידים נתמכים — סדר היררכי
+const ROLES = {
+  MINISTRY_ADMIN: 'ministry_admin',
+  NETWORK_ADMIN: 'network_admin',
+  SCHOOL_ADMIN: 'school_admin',
+  SUBJECT_COORDINATOR: 'school_subject_coordinator',
+  GUIDE: 'guide'
+};
+const ADMIN_ROLES = [ROLES.MINISTRY_ADMIN];  // לפעולות seed/alerts/certificate
+
+// מקצועות עיוניים — לסידור subjects tab בטעינה ראשונה
+const SEED_SUBJECTS = [
+  ['subj_math',    'מתמטיקה',  'MATH', 1, 'TRUE'],
+  ['subj_eng',     'אנגלית',   'ENG',  2, 'TRUE'],
+  ['subj_heb',     'עברית',    'HEB',  3, 'TRUE'],
+  ['subj_lit',     'ספרות',    'LIT',  4, 'TRUE'],
+  ['subj_history', 'היסטוריה', 'HIST', 5, 'TRUE'],
+  ['subj_civics',  'אזרחות',   'CIV',  6, 'TRUE'],
+  ['subj_bible',   'תנ"ך',     'BIBL', 7, 'TRUE']
+];
 
 const SEED_NETWORKS = [
   ['net_ort',             'אורט',         'ort',             ''],
@@ -81,6 +106,23 @@ function setupSchema() {
     SEED_NETWORKS.forEach(row => netsSheet.appendRow(row));
   }
 
+  // Seed subjects (Phase 1)
+  const subjSheet = ss.getSheetByName('subjects');
+  if (subjSheet.getLastRow() === 1) {
+    SEED_SUBJECTS.forEach(row => subjSheet.appendRow(row));
+  }
+
+  // Seed first ministry admin — Owner של ה-Sheet הופך לאדמין ראשי
+  const usersSheet = ss.getSheetByName('users');
+  if (usersSheet.getLastRow() === 1) {
+    const ownerEmail = (ss.getOwner() && ss.getOwner().getEmail()) || Session.getActiveUser().getEmail();
+    usersSheet.appendRow([
+      'usr_seed_admin', ownerEmail, 'אדמין ראשי',
+      ROLES.MINISTRY_ADMIN, '', '', '', '', 'TRUE',
+      new Date().toISOString()
+    ]);
+  }
+
   // Sample school + sample teacher (delete later)
   const schools = ss.getSheetByName('schools');
   if (schools.getLastRow() === 1) {
@@ -105,9 +147,211 @@ function doPost(e) {
   return handleRequest(body);
 }
 
+// ============================================================
+// AUTH + SCOPING (Phase 1 hardening)
+// ============================================================
+// כל endpoint שלא נמצא ב-PUBLIC_ACTIONS חייב לעבור requireAuthAndScope.
+// המשתמש מזוהה לפי Session.getActiveUser().getEmail() — דורש שב-Web App יוגדר
+// "Execute as: User accessing the web app" + "Who has access: Anyone in Google Workspace".
+
+const PUBLIC_ACTIONS = new Set([
+  // צ'ק-אין QR חייב להישאר פתוח — מורות לא מחוברות
+  'qr.training', 'qr.checkin'
+]);
+
+const ADMIN_ONLY_ACTIONS = new Set([
+  'seed.import',
+  'alerts.compute',
+  'certificate.generate'
+]);
+
+function getActiveUserEmail_() {
+  try {
+    return (Session.getActiveUser().getEmail() || '').toLowerCase();
+  } catch (e) { return ''; }
+}
+
+function findUserByEmail_(email) {
+  if (!email) return null;
+  const users = readAll('users');
+  return users.find(u =>
+    (u.email || '').toLowerCase() === email.toLowerCase() &&
+    String(u.active).toUpperCase() !== 'FALSE'
+  ) || null;
+}
+
+// requireAuthAndScope(params, action) → { user, scope } | throws
+// Backward compat: אם users tab ריק (mode הקמה), פותח את הכל כדי לא לשבור פיילוטים פעילים.
+// ברגע שמוסיפים משתמש ראשון לטאב users — Auth נכפה אוטומטית על כל הפעולות שאינן ציבוריות.
+function requireAuthAndScope(params, action) {
+  if (PUBLIC_ACTIONS.has(action)) {
+    return { user: null, scope: { public: true } };
+  }
+  // Bootstrap mode: אם אין משתמשים מוגדרים — לאפשר כדי לא להפיל מערכת חיה
+  const usersAll = readAll('users');
+  if (!usersAll.length) {
+    return { user: null, scope: { role: 'bootstrap' } };
+  }
+  const email = getActiveUserEmail_();
+  if (!email) {
+    throw new Error('unauthenticated — נא להיכנס עם חשבון Google');
+  }
+  const user = findUserByEmail_(email);
+  if (!user) {
+    throw new Error('user_not_provisioned: ' + email);
+  }
+  if (ADMIN_ONLY_ACTIONS.has(action) && ADMIN_ROLES.indexOf(user.role) < 0) {
+    throw new Error('forbidden_admin_required');
+  }
+  // אכיפת scope לפי תפקיד
+  const scope = enforceScope_(user, params, action);
+  return { user, scope };
+}
+
+// מחזיר את ה-scope של המשתמש + מאמת ש-params לא חורגים מ-scope
+function enforceScope_(user, params, action) {
+  const role = user.role;
+  const out = { role };
+
+  if (role === ROLES.MINISTRY_ADMIN) {
+    return out;  // ministry רואה הכל
+  }
+  if (role === ROLES.NETWORK_ADMIN) {
+    if (!user.networkId) throw new Error('user_missing_network');
+    out.networkId = user.networkId;
+    // אם פעולה דורשת network פרמטר — חייב להיות שלו
+    if (params.network && params.network !== user.networkId && params.network !== user.networkId.replace(/^net_/, '')) {
+      throw new Error('forbidden_network_scope');
+    }
+    return out;
+  }
+  if (role === ROLES.SCHOOL_ADMIN || role === ROLES.SUBJECT_COORDINATOR) {
+    if (!user.schoolId) throw new Error('user_missing_school');
+    out.schoolId = user.schoolId;
+    if (role === ROLES.SUBJECT_COORDINATOR) {
+      if (!user.subjectId) throw new Error('coordinator_missing_subject');
+      out.subjectId = user.subjectId;
+    }
+    if (params.school && params.school !== user.schoolId) {
+      throw new Error('forbidden_school_scope');
+    }
+    return out;
+  }
+  if (role === ROLES.GUIDE) {
+    if (!user.guideId && !user.email) throw new Error('user_missing_guide');
+    out.guideEmail = user.email.toLowerCase();
+    if (params.guide && params.guide.toLowerCase() !== out.guideEmail) {
+      throw new Error('forbidden_guide_scope');
+    }
+    return out;
+  }
+  throw new Error('unknown_role: ' + role);
+}
+
+// ============================================================
+// CACHE (Phase 1 hardening) — CacheService.getScriptCache()
+// ============================================================
+// CacheService מוגבל ל-100KB פר key, ו-9KB עבור key name. אם הערך גדול מ-90KB
+// נחלק ל-chunks. TTL מקסימלי 6 שעות.
+
+const CACHE_TTLS = {
+  'guide.dashboard':    8 * 60,   // 8 דק'
+  'school.dashboard':   8 * 60,   // 8 דק'
+  'network.dashboard':  12 * 60,  // 12 דק'
+  'ministry.dashboard': 20 * 60,  // 20 דק'
+  'networks.list':      30 * 60,
+  'subjects.list':      30 * 60
+};
+const CACHE_BYTE_LIMIT = 90 * 1024;
+const CHUNK_PREFIX = '__chunk__';
+
+function cacheKeyFor_(action, scope, params) {
+  const scopeKey = JSON.stringify({
+    role: scope.role || 'public',
+    nid: scope.networkId || '',
+    sid: scope.schoolId || '',
+    subj: scope.subjectId || '',
+    g: scope.guideEmail || ''
+  });
+  const paramsKey = JSON.stringify(params || {});
+  return action + '|' + scopeKey + '|' + paramsKey;
+}
+
+function withCache_(action, scope, params, computeFn) {
+  const ttl = CACHE_TTLS[action];
+  if (!ttl) return computeFn();
+  const cache = CacheService.getScriptCache();
+  const key = cacheKeyFor_(action, scope, params);
+  const cached = readCacheChunked_(cache, key);
+  if (cached) return cached;
+  const fresh = computeFn();
+  writeCacheChunked_(cache, key, fresh, ttl);
+  return fresh;
+}
+
+function readCacheChunked_(cache, key) {
+  try {
+    const meta = cache.get(key);
+    if (!meta) return null;
+    if (!meta.startsWith(CHUNK_PREFIX)) return JSON.parse(meta);
+    const chunkCount = parseInt(meta.slice(CHUNK_PREFIX.length), 10);
+    let combined = '';
+    for (let i = 0; i < chunkCount; i++) {
+      const part = cache.get(key + '#' + i);
+      if (!part) return null;  // chunk missing → cache miss
+      combined += part;
+    }
+    return JSON.parse(combined);
+  } catch (e) { return null; }
+}
+
+function writeCacheChunked_(cache, key, value, ttl) {
+  try {
+    const s = JSON.stringify(value);
+    if (s.length <= CACHE_BYTE_LIMIT) {
+      cache.put(key, s, ttl);
+      return;
+    }
+    const chunks = [];
+    for (let i = 0; i < s.length; i += CACHE_BYTE_LIMIT) {
+      chunks.push(s.slice(i, i + CACHE_BYTE_LIMIT));
+    }
+    const map = { [key]: CHUNK_PREFIX + chunks.length };
+    chunks.forEach((c, i) => { map[key + '#' + i] = c; });
+    cache.putAll(map, ttl);
+  } catch (e) { /* silent */ }
+}
+
+function invalidateCache_(prefix) {
+  // Apps Script CacheService לא תומך ב-remove-by-prefix. הפתרון: TTL קצר וגישת
+  // "stale-write" — אחרי כל כתיבה משמעותית, הקליינט יעדכן את ה-cache שלו בעצמו.
+  // כאן נשמור hook ריק לטובת קוד עתידי.
+}
+
+// ============================================================
+// AUDIT LOG (Phase 1 hardening)
+// ============================================================
+function auditLog_(userEmail, action, targetType, targetId, status, notes) {
+  try {
+    appendRow('audit_log', {
+      id: newId('aud'),
+      timestamp: new Date().toISOString(),
+      userEmail: userEmail || 'anonymous',
+      action: action,
+      targetType: targetType || '',
+      targetId: targetId || '',
+      status: status || 'ok',
+      notes: notes || ''
+    });
+  } catch (e) { /* never break the request on audit failure */ }
+}
+
 function handleRequest(params) {
   const action = params.action || '';
+  let userEmail = '';
   try {
+    const { user, scope } = requireAuthAndScope(params, action);
+    userEmail = user ? user.email : '';
     let result;
     switch (action) {
       case 'networks.list':       result = listNetworks(); break;
@@ -159,17 +403,39 @@ function handleRequest(params) {
       case 'calendar.ics':        result = exportIcs(params); break;
 
       case 'seed.import':         result = seedImport(params); break;
-      case 'guide.dashboard':     result = guideDashboard(params); break;
-      case 'school.dashboard':    result = schoolDashboard(params); break;
-      case 'ministry.dashboard':  result = ministryDashboard(params); break;
-      case 'network.dashboard':   result = networkDashboard(params); break;
+      case 'guide.dashboard':     result = withCache_('guide.dashboard',    scope, params, () => guideDashboard(applyScopeParams_(params, scope, 'guide'))); break;
+      case 'school.dashboard':    result = withCache_('school.dashboard',   scope, params, () => schoolDashboard(applyScopeParams_(params, scope, 'school'))); break;
+      case 'ministry.dashboard':  result = withCache_('ministry.dashboard', scope, params, () => ministryDashboard(params)); break;
+      case 'network.dashboard':   result = withCache_('network.dashboard',  scope, params, () => networkDashboard(applyScopeParams_(params, scope, 'network'))); break;
 
       default: result = { ok: false, error: 'unknown_action: ' + action };
     }
+    auditLog_(userEmail, action, 'endpoint', '', result && result.ok ? 'ok' : 'error', '');
     return jsonOut(result);
   } catch (err) {
+    auditLog_(userEmail, action, 'endpoint', '', 'error', err.message);
     return jsonOut({ ok: false, error: err.message, stack: err.stack });
   }
+}
+
+// השלמת פרמטרים מתוך scope (כדי שמנהל ביה"ס לא יכול לטעון בית ספר אחר)
+function applyScopeParams_(params, scope, kind) {
+  const out = Object.assign({}, params);
+  if (kind === 'school') {
+    if (scope.schoolId) out.school = scope.schoolId;
+    if (scope.subjectId && scope.role === ROLES.SUBJECT_COORDINATOR) {
+      // רכז פדגוגי תקוע במקצוע שלו
+      const subj = readAll('subjects').find(s => s.id === scope.subjectId);
+      if (subj) out.subject = subj.name;
+    }
+  }
+  if (kind === 'network') {
+    if (scope.networkId) out.network = scope.networkId;
+  }
+  if (kind === 'guide') {
+    if (scope.guideEmail) out.guide = scope.guideEmail;
+  }
+  return out;
 }
 
 // ============================================================
@@ -817,6 +1083,53 @@ function heatmapReport(p) {
 
 function TS_subjects() {
   return ['מתמטיקה','אנגלית','עברית','ספרות','היסטוריה','אזרחות','תנ"ך'];
+}
+
+// ============================================================
+// SUBJECTS MIGRATION HELPERS (Phase 1)
+// ============================================================
+// ממפים את ה-subject (מחרוזת חופשית בעברית) ל-subjectId קנוני בטאב subjects.
+// קריאה: migrateSubjects() → עוברת על teachers + trainings ומעדכנת subjectId.
+
+function getSubjectIdMap_() {
+  const map = {};
+  readAll('subjects').forEach(s => {
+    if (s.name) map[s.name] = s.id;
+  });
+  return map;
+}
+
+function migrateSubjects() {
+  const map = getSubjectIdMap_();
+  const summary = { teachers: 0, trainings: 0, unmapped: [] };
+
+  // teachers
+  const teachers = readAll('teachers');
+  teachers.forEach(t => {
+    if (t.subjectId || !t.subject) return;
+    const id = map[t.subject];
+    if (id) {
+      updateRowById('teachers', t.id, { subjectId: id });
+      summary.teachers++;
+    } else if (summary.unmapped.indexOf(t.subject) < 0) {
+      summary.unmapped.push(t.subject);
+    }
+  });
+
+  // trainings
+  const trainings = readAll('trainings');
+  trainings.forEach(tr => {
+    if (tr.subjectId || !tr.subject) return;
+    const id = map[tr.subject];
+    if (id) {
+      updateRowById('trainings', tr.id, { subjectId: id });
+      summary.trainings++;
+    } else if (summary.unmapped.indexOf(tr.subject) < 0) {
+      summary.unmapped.push(tr.subject);
+    }
+  });
+
+  return summary;
 }
 
 // ============================================================
