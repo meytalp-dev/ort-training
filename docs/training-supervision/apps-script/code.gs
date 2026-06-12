@@ -158,6 +158,9 @@ function handleRequest(params) {
 
       case 'calendar.ics':        result = exportIcs(params); break;
 
+      case 'seed.import':         result = seedImport(params); break;
+      case 'guide.dashboard':     result = guideDashboard(params); break;
+
       default: result = { ok: false, error: 'unknown_action: ' + action };
     }
     return jsonOut(result);
@@ -1010,4 +1013,127 @@ function buildIcs(trainings) {
   });
   lines.push('END:VCALENDAR');
   return lines.join('\r\n');
+}
+
+// ============================================================
+// SEED IMPORT — טעינת חבילת נתונים מ-JSON (לפיילוטים)
+// ============================================================
+// קלט: { tabs: { networks: [...], schools: [...], teachers: [...], trainings: [...], attendance: [...] } }
+// מתנהג כ-upsert לפי id: רשומה קיימת תעודכן, חדשה תתווסף.
+
+function seedImport(params) {
+  const tabs = params.tabs || (params.payload && params.payload.tabs) || {};
+  const order = ['networks','schools','teachers','trainings','attendance','pd','knowledge'];
+  const summary = {};
+
+  order.forEach(name => {
+    if (!Array.isArray(tabs[name])) return;
+    const s = sheet(name);
+    if (!s) { summary[name] = { error: 'sheet_missing' }; return; }
+    const range = s.getDataRange().getValues();
+    const headers = range[0];
+    const idCol = headers.indexOf('id');
+    const existingIds = {};
+    for (let i = 1; i < range.length; i++) {
+      if (range[i][idCol]) existingIds[range[i][idCol]] = i + 1;
+    }
+    let added = 0, updated = 0;
+    tabs[name].forEach(obj => {
+      const id = obj.id;
+      if (!id) return;
+      if (existingIds[id]) {
+        const rowNum = existingIds[id];
+        Object.keys(obj).forEach(k => {
+          const col = headers.indexOf(k);
+          if (col >= 0) {
+            let v = obj[k];
+            if (typeof v === 'boolean') v = v ? 'TRUE' : 'FALSE';
+            s.getRange(rowNum, col + 1).setValue(v);
+          }
+        });
+        updated++;
+      } else {
+        appendRow(name, obj);
+        added++;
+      }
+    });
+    summary[name] = { added, updated, total: tabs[name].length };
+  });
+
+  return { ok: true, data: summary };
+}
+
+// ============================================================
+// GUIDE DASHBOARD — כל המידע שמדריכ/ה צריכ/ה במסך אחד
+// ============================================================
+// קלט: { guide: 'email' }
+// פלט: { guide, trainings, teachers (כולל היסטוריית נוכחות) }
+
+function guideDashboard(params) {
+  const guideEmail = (params.guide || '').toLowerCase();
+  if (!guideEmail) return { ok: false, error: 'missing_guide_email' };
+
+  const allTrainings = readAll('trainings').filter(
+    t => (t.guideEmail || '').toLowerCase() === guideEmail
+  );
+  if (!allTrainings.length) {
+    return { ok: true, data: { guide: guideEmail, trainings: [], teachers: [], subject: '' } };
+  }
+
+  const subject = allTrainings[0].subject || '';
+  const trainingIds = allTrainings.map(t => t.id);
+
+  const allAttendance = readAll('attendance').filter(a => trainingIds.indexOf(a.trainingId) >= 0);
+  const teachers = readAll('teachers').filter(t => t.subject === subject);
+  const schools = {};
+  readAll('schools').forEach(s => { schools[s.id] = s; });
+  const networks = {};
+  readAll('networks').forEach(n => { networks[n.id] = n; });
+
+  // הצמדת היסטוריית נוכחות לכל מורה
+  const enriched = teachers.map(t => {
+    const records = allAttendance.filter(a => a.teacherId === t.id);
+    const byTraining = {};
+    records.forEach(r => { byTraining[r.trainingId] = { status: r.status, notes: r.notes }; });
+    const presentCount = records.filter(r => r.status === 'present').length;
+    const partialCount = records.filter(r => r.status === 'partial').length;
+    const totalSessions = allTrainings.length;
+    const sch = schools[t.school] || {};
+    return {
+      id: t.id,
+      name: t.name,
+      phone: t.phone,
+      school: t.school,
+      schoolName: sch.name || '',
+      network: t.network,
+      networkName: (networks['net_' + t.network] || {}).name || t.network,
+      attendance: byTraining,
+      stats: {
+        present: presentCount,
+        partial: partialCount,
+        total: totalSessions,
+        rate: totalSessions ? Math.round(((presentCount + 0.5 * partialCount) / totalSessions) * 100) : 0
+      }
+    };
+  });
+
+  // מיון: לפי בית ספר, אז לפי שם
+  enriched.sort((a, b) => {
+    if (a.schoolName !== b.schoolName) return a.schoolName.localeCompare(b.schoolName, 'he');
+    return (a.name || '').localeCompare(b.name || '', 'he');
+  });
+
+  // מיון הדרכות מהכי ישנה לכי חדשה
+  allTrainings.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return {
+    ok: true,
+    data: {
+      guide: guideEmail,
+      guideName: allTrainings[0].guideName || '',
+      subject,
+      trainings: allTrainings,
+      teachers: enriched
+    }
+  };
 }

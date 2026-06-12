@@ -8,6 +8,78 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=Frank+Ruhl+Libre:wght@500;700;900&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/styles.css">
+<style>
+  .tabs-bar {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-2);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--brand-accent); border-bottom-color: var(--brand-accent); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .att-grid { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .att-grid th, .att-grid td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: center; }
+  .att-grid th { background: var(--surface-2); font-weight: 700; color: var(--text); }
+  .att-grid td.name-cell { text-align: right; font-weight: 600; }
+  .att-grid td.school-cell { text-align: right; color: var(--text-2); font-size: 13px; }
+  .att-cell { width: 50px; }
+  .att-mark { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-weight:700; font-size:13px; }
+  .att-mark.present { background: var(--ok-soft); color: var(--ok); }
+  .att-mark.partial { background: var(--warn-soft); color: #92400e; }
+  .att-mark.absent { background: var(--surface-2); color: var(--text-3); }
+  .att-mark.future { background: #f1f5f9; color: var(--text-3); border: 1px dashed var(--border); }
+
+  .rate-cell { font-weight: 700; }
+  .rate-cell.high { color: var(--ok); }
+  .rate-cell.mid { color: #d97706; }
+  .rate-cell.low { color: var(--err); }
+
+  .school-group { margin-bottom: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .school-header { padding: 12px 16px; background: var(--surface-2); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .school-header h3 { margin: 0; font-size: 16px; }
+  .school-header .meta { font-size: 13px; color: var(--text-2); }
+
+  .search-bar { margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .search-bar input { flex: 1; min-width: 220px; }
+
+  .copy-link-btn {
+    display:inline-flex; align-items:center; gap:6px;
+    padding: 6px 12px; border-radius: 8px;
+    background: var(--brand-accent); color: white;
+    border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600;
+  }
+  .copy-link-btn.copied { background: var(--ok); }
+  .copy-link-btn svg { width: 14px; height: 14px; }
+
+  .training-row { padding: 14px 16px; border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .training-row:last-child { border-bottom: none; }
+  .training-row .when { font-weight: 700; }
+  .training-row .where { color: var(--text-2); font-size: 13px; }
+  .training-row .actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+  @media (max-width: 720px) {
+    .att-grid { font-size: 12px; }
+    .att-grid th, .att-grid td { padding: 6px 4px; }
+    .att-grid .school-cell { display: none; }
+  }
+</style>
 </head>
 <body>
 <div class="app-shell">
@@ -28,8 +100,11 @@
   </header>
 
   <main class="container">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
-      <h1>ההדרכות שלי — <span id="month-label"></span></h1>
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+      <div>
+        <h1 style="margin:0;" id="page-title">דשבורד מדריכה</h1>
+        <div style="color:var(--text-2); margin-top:4px;" id="page-subtitle">—</div>
+      </div>
       <button class="btn btn-primary" id="btn-new-training">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         הדרכה חדשה
@@ -38,32 +113,50 @@
 
     <div class="stats">
       <div class="stat">
-        <div class="stat-label">הדרכות החודש</div>
+        <div class="stat-label">מורים שלי</div>
+        <div class="stat-value" id="stat-teachers">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">בתי ספר</div>
+        <div class="stat-value" id="stat-schools">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">הדרכות השנה</div>
         <div class="stat-value" id="stat-trainings">—</div>
-        <div class="stat-sub">פעמיים בחודש מומלץ</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">אחוז נוכחות ממוצע</div>
+        <div class="stat-value" id="stat-rate">—</div>
       </div>
     </div>
 
-    <div class="card" style="padding:0;">
-      <div style="padding: 20px 24px 8px;">
-        <h2 style="margin:0;">לוח הדרכות החודש</h2>
-        <p style="color:var(--text-2); font-size:14px; margin-top:6px;">לחיצה על "רישום נוכחות" — דף פשוט לסימון מי הגיע ומי לא</p>
+    <div class="tabs-bar">
+      <button class="tab-btn active" data-tab="teachers">המורים שלי</button>
+      <button class="tab-btn" data-tab="trainings">ההדרכות שלי</button>
+      <button class="tab-btn" data-tab="stats">סטטיסטיקה חודשית</button>
+    </div>
+
+    <div class="tab-pane active" id="tab-teachers">
+      <div class="search-bar">
+        <input type="search" class="input" id="teacher-search" placeholder="חיפוש מורה / בית ספר...">
       </div>
-      <div class="table-wrap" style="border:none;">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>תאריך</th>
-              <th>מקצוע</th>
-              <th>קהל יעד</th>
-              <th>מיקום</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="trainings-body">
-            <tr><td colspan="5" class="empty">טוען...</td></tr>
-          </tbody>
-        </table>
+      <div id="teachers-container">
+        <div class="empty" style="padding:32px;">טוען...</div>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="tab-trainings">
+      <div class="card" style="padding:0;">
+        <div id="trainings-list">
+          <div class="empty" style="padding:32px;">טוען...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="tab-stats">
+      <div class="card">
+        <div class="card-title">אחוז נוכחות חודשי</div>
+        <div id="stats-chart"></div>
       </div>
     </div>
   </main>
@@ -83,27 +176,16 @@
           <select class="select" name="subject" id="t-subject" required>
             <option value="">בחרי מקצוע</option>
           </select>
-          <small class="form-hint">המורים שיוצגו לרישום נוכחות הם כל מורי המקצוע מכל הרשתות</small>
         </div>
         <div class="form-row">
           <label class="form-label">תאריך *</label>
           <input type="date" class="input" name="date" id="t-date" required>
         </div>
         <div class="form-row">
-          <label class="form-label">סוג הדרכה</label>
-          <select class="select" name="sector">
-            <option value="">פתוחה לכל המגזרים</option>
-            <option value="haredi">מגזר חרדי</option>
-            <option value="arab">מגזר ערבי</option>
-            <option value="kelali">מגזר כללי</option>
-          </select>
-          <small class="form-hint">אופציונלי. השאירי "פתוחה" אם ההדרכה לכלל המורים</small>
+          <label class="form-label">מיקום</label>
+          <input class="input" name="location" placeholder='זום / בית הספר X'>
         </div>
         <div class="form-row">
-          <label class="form-label">מיקום</label>
-          <input class="input" name="location" placeholder='למשל: זום / בית הספר X'>
-        </div>
-        <div class="form-row" style="grid-column:1/-1;">
           <label class="form-label">שם מדריך/ה</label>
           <input class="input" name="guideName">
         </div>
@@ -117,7 +199,7 @@
         </div>
       </div>
       <div class="btn-row" style="margin-top:16px;">
-        <button type="submit" class="btn btn-primary">צור והתחל רישום</button>
+        <button type="submit" class="btn btn-primary">צרי הדרכה</button>
         <button type="button" class="btn btn-secondary" onclick="closeNewTraining()">ביטול</button>
       </div>
     </form>
