@@ -33,11 +33,59 @@ const TS = (() => {
     { id: 'gemer',  name: 'גמר'   }
   ];
 
-  async function api(action, params = {}) {
+  // Client-side cache (5 דקות) — מאיץ פתיחת דשבורדים אחרי הקריאה הראשונה
+  const CACHE_TTL_MS = 5 * 60 * 1000;
+  function cacheKey(action, params) {
+    return 'ts.cache.' + action + '.' + JSON.stringify(params || {});
+  }
+  function cacheGet(action, params) {
+    try {
+      const raw = localStorage.getItem(cacheKey(action, params));
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (Date.now() - obj.ts > CACHE_TTL_MS) return null;
+      return obj.data;
+    } catch (e) { return null; }
+  }
+  function cacheSet(action, params, data) {
+    try {
+      localStorage.setItem(cacheKey(action, params), JSON.stringify({ ts: Date.now(), data }));
+    } catch (e) {}
+  }
+  function cacheInvalidate(prefix) {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith('ts.cache.' + (prefix || ''))) localStorage.removeItem(k);
+    });
+  }
+
+  // opts.cache: 'fresh' (default) → cache-first, refresh background. 'no' → always fetch. 'only' → cache or null.
+  async function api(action, params = {}, opts = {}) {
     if (!APPS_SCRIPT_URL) {
       console.warn('Apps Script URL לא הוגדר. בעמוד הראשי יש כפתור להגדרה.');
       return { ok: false, error: 'no_url' };
     }
+    const cacheMode = opts.cache || 'fresh';
+    if (cacheMode !== 'no') {
+      const cached = cacheGet(action, params);
+      if (cached) {
+        // refresh in background if mode is 'fresh'
+        if (cacheMode === 'fresh') {
+          fetchFromApi(action, params).then(res => {
+            if (res && res.ok) {
+              cacheSet(action, params, res);
+              if (typeof opts.onRefresh === 'function') opts.onRefresh(res);
+            }
+          });
+        }
+        return cached;
+      }
+    }
+    const res = await fetchFromApi(action, params);
+    if (res && res.ok && cacheMode !== 'no') cacheSet(action, params, res);
+    return res;
+  }
+
+  async function fetchFromApi(action, params) {
     try {
       const url = new URL(APPS_SCRIPT_URL);
       url.searchParams.set('action', action);
@@ -60,7 +108,10 @@ const TS = (() => {
         body: JSON.stringify({ action, ...body }),
         headers: { 'Content-Type': 'text/plain' }
       });
-      return await res.json();
+      const json = await res.json();
+      // הזרמת cache אחרי POST שמשנה נתונים
+      if (json && json.ok) cacheInvalidate();
+      return json;
     } catch (e) {
       console.error('API error', e);
       return { ok: false, error: e.message };
