@@ -160,6 +160,8 @@ function handleRequest(params) {
 
       case 'seed.import':         result = seedImport(params); break;
       case 'guide.dashboard':     result = guideDashboard(params); break;
+      case 'school.dashboard':    result = schoolDashboard(params); break;
+      case 'ministry.dashboard':  result = ministryDashboard(params); break;
 
       default: result = { ok: false, error: 'unknown_action: ' + action };
     }
@@ -1134,6 +1136,194 @@ function guideDashboard(params) {
       subject,
       trainings: allTrainings,
       teachers: enriched
+    }
+  };
+}
+
+// ============================================================
+// SCHOOL DASHBOARD — לכל מנהל/רכז פדגוגי של בית ספר
+// ============================================================
+// קלט: { school: 'sch_xxx', subject?: 'מתמטיקה' }
+// פלט: כל המורים של בית הספר + היסטוריית נוכחות חוצת מקצועות
+
+function schoolDashboard(params) {
+  const schoolId = params.school || '';
+  const subjectFilter = params.subject || '';
+  if (!schoolId) return { ok: false, error: 'missing_school' };
+
+  const schools = readAll('schools');
+  const school = schools.filter(s => s.id === schoolId)[0];
+  if (!school) return { ok: false, error: 'school_not_found' };
+
+  const networks = {};
+  readAll('networks').forEach(n => { networks[n.id] = n; });
+
+  let teachers = readAll('teachers').filter(t => t.school === schoolId);
+  if (subjectFilter) teachers = teachers.filter(t => t.subject === subjectFilter);
+
+  // הדרכות בכל המקצועות של המורים הנ"ל
+  const allSubjects = subjectFilter ? [subjectFilter] : Array.from(new Set(teachers.map(t => t.subject)));
+  const allTrainings = readAll('trainings').filter(t => allSubjects.indexOf(t.subject) >= 0);
+  const trainingIds = allTrainings.map(t => t.id);
+
+  const allAttendance = readAll('attendance').filter(a => trainingIds.indexOf(a.trainingId) >= 0);
+
+  // הצמדת נוכחות לכל מורה
+  const enriched = teachers.map(t => {
+    const records = allAttendance.filter(a => a.teacherId === t.id);
+    const byTraining = {};
+    records.forEach(r => { byTraining[r.trainingId] = { status: r.status, notes: r.notes }; });
+    const teacherTrainings = allTrainings.filter(tr => tr.subject === t.subject);
+    const presentCount = records.filter(r => r.status === 'present').length;
+    const partialCount = records.filter(r => r.status === 'partial').length;
+    const total = teacherTrainings.length;
+    return {
+      id: t.id,
+      name: t.name,
+      subject: t.subject,
+      phone: t.phone,
+      email: t.email,
+      attendance: byTraining,
+      stats: {
+        present: presentCount,
+        partial: partialCount,
+        total: total,
+        rate: total ? Math.round(((presentCount + 0.5 * partialCount) / total) * 100) : 0
+      }
+    };
+  });
+
+  // מיון: לפי מקצוע אז לפי שם
+  enriched.sort((a, b) => {
+    if (a.subject !== b.subject) return (a.subject || '').localeCompare(b.subject || '', 'he');
+    return (a.name || '').localeCompare(b.name || '', 'he');
+  });
+
+  // מקצועות + הדרכותיהם
+  const subjects = {};
+  allSubjects.forEach(subj => {
+    const subjTrainings = allTrainings
+      .filter(tr => tr.subject === subj)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    subjects[subj] = subjTrainings;
+  });
+
+  const totalTeachers = enriched.length;
+  const avgRate = totalTeachers
+    ? Math.round(enriched.reduce((s, t) => s + t.stats.rate, 0) / totalTeachers)
+    : 0;
+
+  const networkName = (networks['net_' + school.network] || networks[school.network] || {}).name || school.network;
+
+  return {
+    ok: true,
+    data: {
+      school: { id: school.id, name: school.name, network: school.network, networkName: networkName,
+                principalName: school.principalName, principalEmail: school.principalEmail,
+                principalPhone: school.principalPhone, attendanceTarget: school.attendanceTarget || 80 },
+      subjects: subjects,
+      teachers: enriched,
+      stats: { teachers: totalTeachers, avgRate: avgRate }
+    }
+  };
+}
+
+// ============================================================
+// MINISTRY DASHBOARD — לרויטל אמיר ופיקוח ארצי
+// ============================================================
+// קלט: { subject?: 'מתמטיקה' }
+// פלט: כל הרשתות עם נתוני נוכחות + סיכום ארצי + פילטר אופציונלי למקצוע
+
+function ministryDashboard(params) {
+  const subjectFilter = params.subject || '';
+
+  const networks = readAll('networks');
+  const schools = readAll('schools');
+  let teachers = readAll('teachers');
+  let trainings = readAll('trainings');
+
+  if (subjectFilter) {
+    teachers = teachers.filter(t => t.subject === subjectFilter);
+    trainings = trainings.filter(t => t.subject === subjectFilter);
+  }
+
+  const trainingIds = trainings.map(t => t.id);
+  const attendance = readAll('attendance').filter(a => trainingIds.indexOf(a.trainingId) >= 0);
+
+  // חישוב פר מורה
+  const teacherStats = {};
+  teachers.forEach(t => {
+    const records = attendance.filter(a => a.teacherId === t.id);
+    const teacherTrainings = trainings.filter(tr => tr.subject === t.subject);
+    const present = records.filter(r => r.status === 'present').length;
+    const partial = records.filter(r => r.status === 'partial').length;
+    const total = teacherTrainings.length;
+    teacherStats[t.id] = {
+      teacher: t,
+      present,
+      partial,
+      total,
+      rate: total ? Math.round(((present + 0.5 * partial) / total) * 100) : 0
+    };
+  });
+
+  // חישוב פר בית ספר
+  const schoolStats = {};
+  schools.forEach(s => {
+    const schoolTeachers = teachers.filter(t => t.school === s.id);
+    if (!schoolTeachers.length) return;
+    const rates = schoolTeachers.map(t => teacherStats[t.id]?.rate || 0);
+    const avgRate = rates.length ? Math.round(rates.reduce((a,b)=>a+b, 0) / rates.length) : 0;
+    schoolStats[s.id] = {
+      school: s,
+      teachers: schoolTeachers.length,
+      rate: avgRate
+    };
+  });
+
+  // חישוב פר רשת
+  const networkBreakdown = networks.map(n => {
+    const netId = n.id;
+    const netKey = netId.replace(/^net_/, '');
+    const netSchools = schools.filter(s => s.network === netId || s.network === netKey);
+    const netTeachers = teachers.filter(t => t.network === netId || t.network === netKey);
+    if (!netTeachers.length) {
+      return { id: netId, name: n.name, color: n.color, teachers: 0, schools: netSchools.length,
+               present: 0, missed: 0, rate: 0, contactEmail: n.contactEmail };
+    }
+    const totalRate = netTeachers.reduce((sum, t) => sum + (teacherStats[t.id]?.rate || 0), 0);
+    const avgRate = Math.round(totalRate / netTeachers.length);
+    const presentCount = netTeachers.filter(t => (teacherStats[t.id]?.rate || 0) >= 80).length;
+    const missedCount = netTeachers.filter(t => (teacherStats[t.id]?.rate || 0) < 50).length;
+    return {
+      id: netId, name: n.name, color: n.color,
+      teachers: netTeachers.length, schools: netSchools.length,
+      present: presentCount, missed: missedCount,
+      rate: avgRate, contactEmail: n.contactEmail || ''
+    };
+  }).filter(n => n.teachers > 0);
+
+  // סכימה ארצית
+  const allRates = Object.values(teacherStats).map(s => s.rate);
+  const ministryRate = allRates.length ? Math.round(allRates.reduce((a,b)=>a+b, 0) / allRates.length) : 0;
+
+  // מקצועות זמינים (בנתונים)
+  const availableSubjects = Array.from(new Set(readAll('trainings').map(t => t.subject))).filter(Boolean);
+
+  return {
+    ok: true,
+    data: {
+      filter: { subject: subjectFilter, availableSubjects },
+      summary: {
+        networks: networkBreakdown.length,
+        schools: Object.keys(schoolStats).length,
+        teachers: teachers.length,
+        trainings: trainings.length,
+        attendanceRecords: attendance.length,
+        avgRate: ministryRate
+      },
+      networkBreakdown,
+      schoolBreakdown: Object.values(schoolStats).sort((a, b) => a.rate - b.rate)  // הכי נמוכים למעלה
     }
   };
 }
