@@ -1034,32 +1034,47 @@ function seedImport(params) {
     if (!s) { summary[name] = { error: 'sheet_missing' }; return; }
     const range = s.getDataRange().getValues();
     const headers = range[0];
+    const schemaHeaders = SCHEMA[name] || headers;
     const idCol = headers.indexOf('id');
     const existingIds = {};
     for (let i = 1; i < range.length; i++) {
       if (range[i][idCol]) existingIds[range[i][idCol]] = i + 1;
     }
-    let added = 0, updated = 0;
+
+    // Phase 1 — אסוף שורות חדשות לכתיבה בקריאה אחת (setValues)
+    const newRows = [];
+    let updated = 0;
     tabs[name].forEach(obj => {
       const id = obj.id;
       if (!id) return;
       if (existingIds[id]) {
+        // עדכון — קריאה פר שורה
         const rowNum = existingIds[id];
-        Object.keys(obj).forEach(k => {
-          const col = headers.indexOf(k);
-          if (col >= 0) {
-            let v = obj[k];
-            if (typeof v === 'boolean') v = v ? 'TRUE' : 'FALSE';
-            s.getRange(rowNum, col + 1).setValue(v);
-          }
+        const updates = headers.map((h, idx) => {
+          if (obj[h] === undefined) return range[rowNum - 1][idx];  // נשאר ערך קיים
+          let v = obj[h];
+          if (typeof v === 'boolean') v = v ? 'TRUE' : 'FALSE';
+          return v;
         });
+        s.getRange(rowNum, 1, 1, headers.length).setValues([updates]);
         updated++;
       } else {
-        appendRow(name, obj);
-        added++;
+        const row = schemaHeaders.map(h => {
+          if (obj[h] === undefined) return '';
+          if (typeof obj[h] === 'boolean') return obj[h] ? 'TRUE' : 'FALSE';
+          return obj[h];
+        });
+        newRows.push(row);
       }
     });
-    summary[name] = { added, updated, total: tabs[name].length };
+
+    // Phase 2 — הוספת כל השורות החדשות בקריאה אחת
+    if (newRows.length) {
+      const startRow = s.getLastRow() + 1;
+      s.getRange(startRow, 1, newRows.length, schemaHeaders.length).setValues(newRows);
+    }
+
+    summary[name] = { added: newRows.length, updated, total: tabs[name].length };
   });
 
   return { ok: true, data: summary };
