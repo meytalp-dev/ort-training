@@ -1,5 +1,8 @@
 // Guide Dashboard — מציג כל מורי המדריכ/ה + היסטוריית נוכחות + הדרכות
-const guideEmail = TS.urlParam('guide', '');
+const guideSlug = TS.urlParam('g', '');
+let guideEmail = TS.urlParam('guide', '');
+const GUIDE_CFG = (window.TS_resolveGuide ? (window.TS_resolveGuide(guideSlug, guideEmail) || {}) : {});
+if (!guideEmail && GUIDE_CFG.email) guideEmail = GUIDE_CFG.email;
 
 let state = {
   guide: '',
@@ -14,6 +17,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-new-training').addEventListener('click', openNewTraining);
   document.getElementById('form-training').addEventListener('submit', submitTraining);
   document.getElementById('teacher-search').addEventListener('input', renderTeachers);
+  const addBtn = document.getElementById('btn-add-teacher');
+  if (addBtn) addBtn.addEventListener('click', () => openTeacherModal());
+  const teacherForm = document.getElementById('form-teacher');
+  if (teacherForm) teacherForm.addEventListener('submit', submitTeacher);
+  renderResources();
   await loadData();
 });
 
@@ -44,9 +52,9 @@ async function loadData() {
 }
 
 function loadDemoData() {
-  state.guide = guideEmail || 'demo@example.com';
-  state.guideName = 'דמו — מדריכה';
-  state.subject = 'מתמטיקה';
+  state.guide = guideEmail || (GUIDE_CFG.email || 'demo@example.com');
+  state.guideName = GUIDE_CFG.name || 'דמו — מדריכה';
+  state.subject = GUIDE_CFG.subject || 'מתמטיקה';
   state.trainings = [
     { id:'tr_01_26', date:'2026-01-15', subject:'מתמטיקה', guideName:'דמו', location:'זום', notes:'ינואר' },
     { id:'tr_02_26', date:'2026-02-15', subject:'מתמטיקה', guideName:'דמו', location:'זום', notes:'פברואר' },
@@ -63,8 +71,10 @@ function loadDemoData() {
 }
 
 function renderAll() {
-  document.getElementById('user-name').textContent = state.guideName || state.guide || '—';
-  document.getElementById('page-title').textContent = (state.guideName || 'מדריכה') + ' · ' + (state.subject || '');
+  const gName = GUIDE_CFG.name || state.guideName || state.guide || 'מדריכה';
+  const gSubject = GUIDE_CFG.subject || state.subject || '';
+  document.getElementById('user-name').textContent = gName;
+  document.getElementById('page-title').textContent = gName + (gSubject ? ' · ' + gSubject : '');
   document.getElementById('page-subtitle').textContent =
     state.teachers.length + ' מורים · ' + new Set(state.teachers.map(t => t.schoolName)).size + ' בתי ספר';
 
@@ -106,7 +116,12 @@ function renderTeachers() {
   container.innerHTML = Object.values(bySchool).map(group => {
     const teachersHtml = group.teachers.map(t => `
       <tr>
-        <td class="name-cell">${escapeHtml(t.name)}</td>
+        <td class="name-cell">
+          ${escapeHtml(t.name)}
+          <button class="te-edit" title="עריכת מורה" onclick='editTeacherById(${JSON.stringify(String(t.id))})' style="background:none;border:none;cursor:pointer;color:var(--text-muted);margin-right:6px;vertical-align:middle;padding:2px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          </button>
+        </td>
         ${state.trainings.map(tr => attCell(t.attendance[tr.id], tr.date, today)).join('')}
         <td class="rate-cell ${rateClass(t.stats.rate)}">${t.stats.rate}%</td>
       </tr>
@@ -251,6 +266,103 @@ function renderStats() {
       <strong>יעד נוכחות:</strong> 80%. מורים מתחת ל-50% נוכחות שנתית נחשבים בסיכון.
     </div>
   `;
+}
+
+/* ===== חומרים וקישורים (Drive / זום / שליחת חומרים) ===== */
+function renderResources() {
+  const card = document.getElementById('resources-card');
+  const grid = document.getElementById('resources-grid');
+  if (!card || !grid) return;
+  const items = [];
+  if (GUIDE_CFG.drive) {
+    items.push(`<a class="resource-link" href="${GUIDE_CFG.drive}" target="_blank" rel="noopener">
+      <span class="ic drive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-3H5a2 2 0 0 0-2 2z"/></svg></span>
+      <span class="tx"><strong>חומרי ההוראה ב-Drive</strong><span>פתיחת התיקייה</span></span></a>`);
+  }
+  if (GUIDE_CFG.zoom) {
+    items.push(`<a class="resource-link" href="${GUIDE_CFG.zoom}" target="_blank" rel="noopener">
+      <span class="ic zoom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l5-3v10l-5-3v-4z"/><rect x="3" y="6" width="12" height="12" rx="2"/></svg></span>
+      <span class="tx"><strong>הזום הקבוע</strong><span>כניסה למפגש</span></span></a>`);
+  }
+  if (GUIDE_CFG.drive) {
+    items.push(`<button type="button" class="resource-link" onclick="sendMaterials(this)">
+      <span class="ic send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
+      <span class="tx"><strong>שליחת חומרים למורים</strong><span>העתקת הודעה מוכנה לוואטסאפ</span></span></button>`);
+  }
+  if (!items.length) { card.hidden = true; return; }
+  grid.innerHTML = items.join('');
+  card.hidden = false;
+}
+
+function sendMaterials(btn) {
+  const subject = GUIDE_CFG.subject || '';
+  const lines = ['שלום,', '', `מצורפים חומרי ההוראה${subject ? ' ל' + subject : ''}:`, GUIDE_CFG.drive];
+  if (GUIDE_CFG.zoom) lines.push('', 'הזום הקבוע למפגשים:', GUIDE_CFG.zoom);
+  lines.push('', 'בהצלחה!');
+  navigator.clipboard.writeText(lines.join('\n')).then(() => {
+    const tx = btn.querySelector('.tx span');
+    const orig = tx ? tx.textContent : '';
+    btn.classList.add('copied');
+    if (tx) tx.textContent = '✓ ההודעה הועתקה — הדביקי בוואטסאפ';
+    setTimeout(() => { btn.classList.remove('copied'); if (tx) tx.textContent = orig; }, 2600);
+  });
+}
+
+/* ===== הוספה / עריכת מורה ===== */
+function editTeacherById(id) {
+  const t = state.teachers.find(x => String(x.id) === String(id));
+  if (t) openTeacherModal(t);
+}
+function openTeacherModal(teacher) {
+  const f = document.getElementById('form-teacher');
+  f.reset();
+  document.getElementById('te-id').value = teacher ? (teacher.id || '') : '';
+  document.getElementById('teacher-modal-title').textContent = teacher ? 'עריכת מורה' : 'הוספת מורה';
+  if (teacher) {
+    document.getElementById('te-name').value = teacher.name || '';
+    document.getElementById('te-school').value = teacher.schoolName || '';
+    document.getElementById('te-network').value = (teacher.network || '').replace(/^net_/, '');
+    document.getElementById('te-phone').value = teacher.phone || '';
+    document.getElementById('te-email').value = teacher.email || '';
+  }
+  document.getElementById('modal-teacher').classList.add('open');
+}
+function closeTeacherModal() {
+  document.getElementById('modal-teacher').classList.remove('open');
+}
+async function submitTeacher(e) {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  data.subject = GUIDE_CFG.subject || state.subject || '';
+  data.guide = guideEmail || (GUIDE_CFG.email || '');
+  const editing = !!data.id;
+
+  if (!TS.getAppsScriptUrl()) {
+    if (editing) {
+      const t = state.teachers.find(x => String(x.id) === String(data.id));
+      if (t) Object.assign(t, { name: data.name, schoolName: data.schoolName, network: data.network, networkName: data.network, phone: data.phone, email: data.email });
+    } else {
+      state.teachers.push({
+        id: 'local_' + Object.keys(state.teachers).length + '_' + state.teachers.length,
+        name: data.name, schoolName: data.schoolName || '— ללא שיוך —',
+        network: data.network, networkName: data.network, phone: data.phone, email: data.email,
+        attendance: {}, stats: { present: 0, partial: 0, total: state.trainings.length, rate: 0 }
+      });
+    }
+    TS.toast('דמו — נשמר מקומית בלבד (ללא Apps Script)');
+    closeTeacherModal();
+    renderAll();
+    return;
+  }
+
+  const res = await TS.apiPost(editing ? 'teachers.update' : 'teachers.create', data);
+  if (res.ok) {
+    TS.toast(editing ? 'המורה עודכן' : 'המורה נוסף');
+    closeTeacherModal();
+    await loadData();
+  } else {
+    TS.toast('שגיאה — ' + (res.error || ''));
+  }
 }
 
 function openNewTraining() {
