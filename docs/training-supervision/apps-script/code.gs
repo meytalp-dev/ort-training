@@ -26,8 +26,8 @@ const TABS = ['networks','schools','teachers','trainings','attendance','pd','que
 const SCHEMA = {
   networks:   ['id','name','color','contactEmail'],
   schools:    ['id','name','network','principalName','principalEmail','principalPhone','attendanceTarget'],
-  teachers:   ['id','school','network','name','subject','subjectId','type','sector','seniority',
-               'units','students','phone','email','moeApproval','moeFile',
+  teachers:   ['id','school','schoolName','network','name','subject','subjectId','type','sector','seniority',
+               'units','students','phone','email','notes','moeApproval','moeFile',
                'pdActive','pdFile','pdYear','createdAt'],
   trainings:  ['id','date','subject','subjectId','guideName','guideEmail','network','sector','location','notes',
                'qrToken','materialsUrl','curriculumTopic','feedbackEnabled'],
@@ -579,7 +579,8 @@ function createTeacher(p) {
   const obj = {
     id: newId('tch'),
     school: p.school || '',
-    network: p.network || '',
+    schoolName: p.schoolName || '',
+    network: (p.network || '').toString().replace(/^net_/, ''),
     name: p.name,
     subject: p.subject,
     type: p.type || 'bagrut',
@@ -589,6 +590,7 @@ function createTeacher(p) {
     students: parseInt(p.students || 0, 10),
     phone: p.phone || '',
     email: p.email || '',
+    notes: p.notes || '',
     moeApproval: toBool(p.moeApproval),
     moeFile: p.moeFile || '',
     pdActive: toBool(p.pdActive),
@@ -603,9 +605,13 @@ function createTeacher(p) {
 function updateTeacher(p) {
   if (!p.id) return { ok: false, error: 'missing_id' };
   const updates = {};
-  ['name','subject','type','sector','seniority','units','students','phone','email','moeApproval','moeFile','pdActive','pdFile','pdYear'].forEach(k => {
+  ['name','schoolName','subject','type','sector','seniority','units','students','phone','email','moeApproval','moeFile','pdActive','pdFile','pdYear'].forEach(k => {
     if (p[k] !== undefined && p[k] !== '') updates[k] = p[k];
   });
+  // notes — מותר לעדכן גם לערך ריק (מחיקת הערה)
+  if (p.notes !== undefined) updates.notes = p.notes;
+  // network — מנרמלים (ללא קידומת net_) כדי לתאום את תצוגת הצ'יפ
+  if (p.network !== undefined && p.network !== '') updates.network = p.network.toString().replace(/^net_/, '');
   if (p.moeApproval !== undefined) updates.moeApproval = toBool(p.moeApproval);
   if (p.pdActive !== undefined) updates.pdActive = toBool(p.pdActive);
   const ok = updateRowById('teachers', p.id, updates);
@@ -948,12 +954,54 @@ function getTrainingByToken(token) {
 }
 
 function qrCheckin(p) {
-  if (!p.token || !p.teacherId) return { ok: false, error: 'missing_params' };
+  if (!p.token) return { ok: false, error: 'missing_params' };
   const training = readAll('trainings').find(x => x.qrToken === p.token);
   if (!training) return { ok: false, error: 'invalid_token' };
 
+  let teacherId = p.teacherId;
+
+  // רישום פתוח — מורה שאינה ברשימה: מאתרים לפי טלפון/שם או יוצרים רשומה חדשה
+  if (!teacherId) {
+    const name = (p.teacherName || '').toString().trim();
+    if (!name) return { ok: false, error: 'missing_params' };
+    const phoneDigits = (p.phone || '').toString().replace(/\D/g, '');
+    const net = (p.network || '').toString().replace(/^net_/, '');
+    const subject = training.subject || p.subject || '';
+    const schoolName = (p.schoolName || '').toString().trim();
+    const teachers = readAll('teachers');
+
+    let match = null;
+    if (phoneDigits) {
+      match = teachers.find(t => (t.phone || '').toString().replace(/\D/g, '') === phoneDigits && phoneDigits.length >= 9);
+    }
+    if (!match) {
+      match = teachers.find(t =>
+        (t.name || '').toString().trim() === name &&
+        (!subject || t.subject === subject) &&
+        (
+          (schoolName && (t.schoolName || '').toString().trim() === schoolName) ||
+          (net && (t.network || '').toString().replace(/^net_/, '') === net)
+        )
+      );
+    }
+
+    if (match) {
+      teacherId = match.id;
+    } else {
+      const created = createTeacher({
+        name: name,
+        schoolName: schoolName,
+        network: net,
+        subject: subject,
+        phone: phoneDigits,
+        sector: p.sector || 'kelali'
+      });
+      teacherId = created.data.id;
+    }
+  }
+
   // הימנעות מרישום כפול
-  const existing = readAll('attendance').find(a => a.trainingId === training.id && a.teacherId === p.teacherId);
+  const existing = readAll('attendance').find(a => a.trainingId === training.id && a.teacherId === teacherId);
   if (existing) {
     return { ok: true, data: { duplicate: true, training } };
   }
@@ -961,7 +1009,7 @@ function qrCheckin(p) {
   const obj = {
     id: newId('att'),
     trainingId: training.id,
-    teacherId: p.teacherId,
+    teacherId: teacherId,
     status: 'present',
     notes: 'check-in via QR',
     timestamp: new Date().toISOString(),
@@ -1430,14 +1478,17 @@ function guideDashboard(params) {
     const partialCount = records.filter(r => r.status === 'partial').length;
     const totalSessions = allTrainings.length;
     const sch = schools[t.school] || {};
+    const netKey = (t.network || '').toString().replace(/^net_/, '');
     return {
       id: t.id,
       name: t.name,
       phone: t.phone,
+      email: t.email,
+      notes: t.notes || '',
       school: t.school,
-      schoolName: sch.name || '',
-      network: t.network,
-      networkName: (networks['net_' + t.network] || {}).name || t.network,
+      schoolName: t.schoolName || sch.name || '— ללא שיוך —',
+      network: netKey,
+      networkName: (networks['net_' + netKey] || networks[netKey] || {}).name || netKey,
       attendance: byTraining,
       stats: {
         present: presentCount,

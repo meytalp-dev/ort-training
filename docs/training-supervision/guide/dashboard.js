@@ -118,9 +118,13 @@ function renderTeachers() {
       <tr>
         <td class="name-cell">
           ${escapeHtml(t.name)}
-          <button class="te-edit" title="עריכת מורה" onclick='editTeacherById(${JSON.stringify(String(t.id))})' style="background:none;border:none;cursor:pointer;color:var(--text-muted);margin-right:6px;vertical-align:middle;padding:2px;">
+          <button class="te-edit" title="עריכת מורה / הערה" onclick='editTeacherById(${JSON.stringify(String(t.id))})' style="background:none;border:none;cursor:pointer;color:var(--text-muted);margin-right:6px;vertical-align:middle;padding:2px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
           </button>
+          ${t.notes ? `<div class="te-note">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>${escapeHtml(t.notes)}</span>
+          </div>` : ''}
         </td>
         ${state.trainings.map(tr => attCell(t.attendance[tr.id], tr.date, today)).join('')}
         <td class="rate-cell ${rateClass(t.stats.rate)}">${t.stats.rate}%</td>
@@ -324,6 +328,7 @@ function openTeacherModal(teacher) {
     document.getElementById('te-network').value = (teacher.network || '').replace(/^net_/, '');
     document.getElementById('te-phone').value = teacher.phone || '';
     document.getElementById('te-email').value = teacher.email || '';
+    document.getElementById('te-notes').value = teacher.notes || '';
   }
   document.getElementById('modal-teacher').classList.add('open');
 }
@@ -340,12 +345,12 @@ async function submitTeacher(e) {
   if (!TS.getAppsScriptUrl()) {
     if (editing) {
       const t = state.teachers.find(x => String(x.id) === String(data.id));
-      if (t) Object.assign(t, { name: data.name, schoolName: data.schoolName, network: data.network, networkName: data.network, phone: data.phone, email: data.email });
+      if (t) Object.assign(t, { name: data.name, schoolName: data.schoolName, network: data.network, networkName: data.network, phone: data.phone, email: data.email, notes: data.notes });
     } else {
       state.teachers.push({
         id: 'local_' + Object.keys(state.teachers).length + '_' + state.teachers.length,
         name: data.name, schoolName: data.schoolName || '— ללא שיוך —',
-        network: data.network, networkName: data.network, phone: data.phone, email: data.email,
+        network: data.network, networkName: data.network, phone: data.phone, email: data.email, notes: data.notes,
         attendance: {}, stats: { present: 0, partial: 0, total: state.trainings.length, rate: 0 }
       });
     }

@@ -206,18 +206,46 @@ h2 {
     <div id="state-school" hidden>
       <div class="step-pill">שלב 3 מתוך 4</div>
       <h2>בחרי את בית הספר שלך</h2>
-      <label class="field-label">חיפוש בית ספר</label>
-      <input type="search" class="field-input" id="school-search" placeholder="התחילי להקליד שם בית ספר...">
-      <div class="list-card" id="school-list"></div>
+      <div id="school-pick-wrap">
+        <label class="field-label">חיפוש בית ספר</label>
+        <input type="search" class="field-input" id="school-search" placeholder="התחילי להקליד שם בית ספר...">
+        <div class="list-card" id="school-list"></div>
+        <div style="text-align:center;">
+          <button class="btn-text" type="button" onclick="showFreeSchool()">בית הספר שלי לא מופיע ברשימה</button>
+        </div>
+      </div>
+      <div id="school-free-wrap" hidden>
+        <label class="field-label">שם בית הספר</label>
+        <input type="text" class="field-input" id="school-free" placeholder="הקלידי את שם בית הספר המלא">
+        <button class="btn-primary" type="button" onclick="useFreeSchool()">המשך</button>
+        <div style="text-align:center;">
+          <button class="btn-text" type="button" onclick="hideFreeSchool()">חזרה לרשימה</button>
+        </div>
+      </div>
     </div>
 
     <!-- Step 4: בחירת מורה + אישור -->
     <div id="state-teacher" hidden>
       <div class="step-pill">שלב 4 מתוך 4</div>
       <h2>בחרי את שמך</h2>
-      <label class="field-label">חיפוש מורה</label>
-      <input type="search" class="field-input" id="teacher-search" placeholder="התחילי להקליד שם...">
-      <div class="list-card" id="teacher-list"></div>
+      <div id="teacher-pick-wrap">
+        <label class="field-label">חיפוש מורה</label>
+        <input type="search" class="field-input" id="teacher-search" placeholder="התחילי להקליד שם...">
+        <div class="list-card" id="teacher-list"></div>
+        <div style="text-align:center;">
+          <button class="btn-text" type="button" onclick="showFreeTeacher()">השם שלי לא מופיע ברשימה</button>
+        </div>
+      </div>
+      <div id="teacher-free-wrap" hidden>
+        <label class="field-label">שם מלא *</label>
+        <input type="text" class="field-input" id="teacher-free-name" placeholder="שם פרטי ושם משפחה">
+        <label class="field-label">טלפון (לא חובה)</label>
+        <input type="tel" inputmode="tel" class="field-input" id="teacher-free-phone" placeholder="05...">
+        <button class="btn-primary" type="button" onclick="useFreeTeacher()">המשך</button>
+        <div style="text-align:center;">
+          <button class="btn-text" type="button" onclick="hideFreeTeacher()">חזרה לרשימה</button>
+        </div>
+      </div>
     </div>
 
     <!-- Step 5: אישור סופי -->
@@ -308,14 +336,62 @@ function goToStep(step) {
     populateNetworks();
     show('network');
   } else if (step === 'school') {
+    hideFreeSchool();
     populateSchools();
     show('school');
   } else if (step === 'teacher') {
-    populateTeachers();
-    show('teacher');
+    // בית ספר שהוקלד ידנית — אין מורות ברשימה, עוברים ישר להזנת שם
+    if (pickedSchool && pickedSchool.free) {
+      show('teacher');
+      showFreeTeacher();
+    } else {
+      hideFreeTeacher();
+      populateTeachers();
+      show('teacher');
+    }
   } else if (step === 'confirm-training') {
     show('confirm-training');
   }
+}
+
+/* ===== רישום פתוח — בית ספר שאינו ברשימה ===== */
+function showFreeSchool() {
+  document.getElementById('school-pick-wrap').hidden = true;
+  document.getElementById('school-free-wrap').hidden = false;
+  document.getElementById('school-free').focus();
+}
+function hideFreeSchool() {
+  const free = document.getElementById('school-free-wrap');
+  const pick = document.getElementById('school-pick-wrap');
+  if (free) free.hidden = true;
+  if (pick) pick.hidden = false;
+}
+function useFreeSchool() {
+  const name = (document.getElementById('school-free').value || '').trim();
+  if (!name) { document.getElementById('school-free').focus(); return; }
+  pickedSchool = { id: '', name: name, free: true };
+  goToStep('teacher');
+}
+
+/* ===== רישום פתוח — מורה שאינה ברשימה ===== */
+function showFreeTeacher() {
+  document.getElementById('teacher-pick-wrap').hidden = true;
+  document.getElementById('teacher-free-wrap').hidden = false;
+  document.getElementById('teacher-free-name').focus();
+}
+function hideFreeTeacher() {
+  document.getElementById('teacher-free-wrap').hidden = true;
+  document.getElementById('teacher-pick-wrap').hidden = false;
+}
+function useFreeTeacher() {
+  const name = (document.getElementById('teacher-free-name').value || '').trim();
+  if (!name) { document.getElementById('teacher-free-name').focus(); return; }
+  const phone = (document.getElementById('teacher-free-phone').value || '').trim();
+  pickedTeacher = { id: '', name: name, phone: phone, free: true };
+  document.getElementById('fc-name').textContent = name;
+  document.getElementById('fc-school').textContent = 'בית ספר: ' + (pickedSchool.name || '');
+  document.getElementById('fc-subject').textContent = 'מקצוע: ' + (training.subject || '');
+  show('final-confirm');
 }
 
 function populateTraining() {
@@ -355,7 +431,7 @@ function renderSchoolList() {
   });
   const cont = document.getElementById('school-list');
   if (!list.length) {
-    cont.innerHTML = '<div class="empty" style="padding:16px;">לא נמצא בית ספר ברשת הזאת. בדקי שבחרת רשת נכונה.</div>';
+    cont.innerHTML = '<div class="empty" style="padding:16px;">לא נמצא בית ספר ברשת הזאת. אם הוא לא ברשימה — לחצי על "בית הספר שלי לא מופיע ברשימה".</div>';
     return;
   }
   cont.innerHTML = list.slice(0, 50).map(s => `
@@ -385,7 +461,7 @@ function renderTeacherList() {
   });
   const cont = document.getElementById('teacher-list');
   if (!list.length) {
-    cont.innerHTML = '<div class="empty" style="padding:16px;">לא נמצאו מורות בבית ספר זה. בקשי מהמדריכ/ה לוודא שאת רשומה במערכת.</div>';
+    cont.innerHTML = '<div class="empty" style="padding:16px;">לא נמצאו מורות בבית ספר זה. אם שמך לא מופיע — לחצי על "השם שלי לא מופיע ברשימה".</div>';
     return;
   }
   // זיהוי כפילויות בשם — נציג meta disambiguation
@@ -423,7 +499,17 @@ async function confirmCheckin() {
     showSuccess(pickedTeacher.name, false);
     return;
   }
-  const res = await TS.apiPost('qr.checkin', { token, teacherId: pickedTeacher.id });
+  const payload = { token };
+  if (pickedTeacher.id) {
+    payload.teacherId = pickedTeacher.id;
+  } else {
+    // רישום פתוח — שולחים שם + בית ספר + רשת כדי שהשרת יאתר/ייצור רשומת מורה
+    payload.teacherName = pickedTeacher.name;
+    payload.schoolName = (pickedSchool && pickedSchool.name) || '';
+    payload.network = (pickedNetwork || '').replace(/^net_/, '');
+    payload.phone = pickedTeacher.phone || '';
+  }
+  const res = await TS.apiPost('qr.checkin', payload);
   if (res.ok) {
     showSuccess(pickedTeacher.name, res.data && res.data.duplicate);
   } else {
