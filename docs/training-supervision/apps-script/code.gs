@@ -363,6 +363,7 @@ function handleRequest(params) {
       case 'teacher.get':         result = getTeacher(params.id); break;
       case 'teachers.create':     result = createTeacher(params); break;
       case 'teachers.update':     result = updateTeacher(params); break;
+      case 'teachers.delete':     result = deleteTeacher(params); break;
 
       case 'trainings.list':      result = listTrainings(params); break;
       case 'training.create':     result = createTraining(params); break;
@@ -621,6 +622,31 @@ function updateTeacher(p) {
   if (p.pdActive !== undefined) updates.pdActive = toBool(p.pdActive);
   const ok = updateRowById('teachers', p.id, updates);
   return { ok };
+}
+
+// מחיקת מורה — מסירה את שורת המורה. רישומי נוכחות היסטוריים נשארים אך לא יוצגו
+// בדשבורד (מוצגים רק מורים שקיימים בטאב). אם cleanAttendance=true — מוחק גם נוכחות.
+function deleteTeacher(p) {
+  if (!p.id) return { ok: false, error: 'missing_id' };
+  const s = sheet('teachers');
+  const range = s.getDataRange().getValues();
+  const headers = range[0];
+  const idCol = headers.indexOf('id');
+  let removed = false;
+  for (let i = range.length - 1; i >= 1; i--) {
+    if (range[i][idCol] === p.id) { s.deleteRow(i + 1); removed = true; break; }
+  }
+  if (!removed) return { ok: false, error: 'not_found' };
+
+  if (toBool(p.cleanAttendance)) {
+    const as = sheet('attendance');
+    const ar = as.getDataRange().getValues();
+    const tCol = ar[0].indexOf('teacherId');
+    for (let i = ar.length - 1; i >= 1; i--) {
+      if (ar[i][tCol] === p.id) as.deleteRow(i + 1);
+    }
+  }
+  return { ok: true };
 }
 
 // ============================================================
