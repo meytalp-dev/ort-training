@@ -26,9 +26,9 @@ const TABS = ['networks','schools','teachers','trainings','attendance','pd','que
 const SCHEMA = {
   networks:   ['id','name','color','contactEmail'],
   schools:    ['id','name','network','principalName','principalEmail','principalPhone','attendanceTarget'],
-  teachers:   ['id','school','schoolName','network','name','subject','subjectId','type','sector','seniority',
-               'units','students','phone','email','notes','moeApproval','moeFile',
-               'pdActive','pdFile','pdYear','createdAt'],
+  teachers:   ['id','school','network','name','subject','subjectId','type','sector','seniority',
+               'units','students','phone','email','moeApproval','moeFile',
+               'pdActive','pdFile','pdYear','createdAt','schoolName','notes'],
   trainings:  ['id','date','subject','subjectId','guideName','guideEmail','network','sector','location','notes',
                'qrToken','materialsUrl','curriculumTopic','feedbackEnabled'],
   attendance: ['id','trainingId','teacherId','status','notes','timestamp','checkedInVia'],
@@ -467,7 +467,12 @@ function readAll(name) {
 
 function appendRow(name, obj) {
   const s = sheet(name);
-  const headers = SCHEMA[name];
+  // חשוב: כותבים לפי סדר העמודות הפיזי בגיליון (לא לפי SCHEMA), כי setupSchema
+  // מוסיף עמודות חדשות בסוף ולכן הסדר עלול להיות שונה מ-SCHEMA. כתיבה לפי SCHEMA
+  // הזיזה את כל הערכים עמודה (שם→מקצוע וכו'). שורת הכותרות הפיזית היא מקור האמת.
+  const headers = (s.getLastColumn() >= 1)
+    ? s.getRange(1, 1, 1, s.getLastColumn()).getValues()[0].filter(String)
+    : SCHEMA[name];
   const row = headers.map(h => {
     if (obj[h] === undefined) return '';
     if (typeof obj[h] === 'boolean') return obj[h] ? 'TRUE' : 'FALSE';
@@ -1396,7 +1401,9 @@ function seedImport(params) {
     if (!s) { summary[name] = { error: 'sheet_missing' }; return; }
     const range = s.getDataRange().getValues();
     const headers = range[0];
-    const schemaHeaders = SCHEMA[name] || headers;
+    // שורות חדשות נכתבות לפי הכותרות הפיזיות (headers), לא לפי SCHEMA — אחרת
+    // הערכים מוסטים כשסדר העמודות בגיליון שונה מסדר SCHEMA.
+    const schemaHeaders = headers && headers.length ? headers : (SCHEMA[name] || []);
     const idCol = headers.indexOf('id');
     const existingIds = {};
     for (let i = 1; i < range.length; i++) {
