@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>נתיבים לבוגרים · מערכת לאומית למדידה, ליווי ומוביליות | הופה × נתיבים לחניכות וקריירה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pink:#E8348A; --pink-deep:#C2185B; --pink-soft:#FCE7F2;
+  --yellow:#FFF200; --yellow-deep:#FFD500; --yellow-soft:#FFFCE6; --yellow-line:#F0E8B8;
+  --black:#0A0A0A; --ink:#141414; --white:#FFFFFF;
+  --bg:#F6F6F4; --gray:#5E5E5E; --gray-l:#8A8A8A; --border:#E6E6E6;
+  --green:#3BA55C; --blue:#3D7DD8; --orange:#F5A623; --purple:#7E57C2;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:'Rubik',sans-serif;direction:rtl;background:#000;color:var(--ink);
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+::selection{background:var(--yellow);color:var(--black)}
+
+/* ====== STAGE / SCALING ====== */
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 50%,#1a1a1a,#000)}
+#deck{width:1920px;height:1080px;position:relative;transform-origin:center center;flex:none}
+
+/* ====== SLIDE ====== */
+.slide{
+  position:absolute;inset:0;background:var(--white);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .55s cubic-bezier(.4,0,.2,1);
+  overflow:hidden;display:flex;flex-direction:column;
+}
+.slide.active{opacity:1;visibility:visible;pointer-events:auto;z-index:2}
+
+/* chrome */
+.chrome-top{position:absolute;top:0;left:0;right:0;height:8px;z-index:30;background:linear-gradient(90deg,var(--pink),var(--yellow))}
+.kicker{position:absolute;top:48px;right:96px;display:flex;align-items:center;gap:14px;z-index:20;font-size:20px;font-weight:700;color:var(--gray);letter-spacing:.01em}
+.kicker .dot{width:14px;height:14px;border-radius:4px;background:var(--pink)}
+.pagenum{position:absolute;bottom:46px;left:96px;z-index:20;font-size:20px;font-weight:700;color:var(--gray-l)}
+.brandmark{position:absolute;bottom:42px;right:96px;z-index:20;display:flex;align-items:center;gap:10px}
+.brandmark .logo{font-weight:900;font-size:26px;color:var(--ink);letter-spacing:-.02em}
+.brandmark .logo i{font-style:normal;background:var(--yellow);padding:1px 9px 4px;border-radius:8px}
+.brandmark small{font-size:16px;color:var(--gray-l);font-weight:600}
+
+/* content frame */
+.body{flex:1;padding:150px 96px 120px;display:flex;flex-direction:column;justify-content:center}
+.eyebrow{font-size:24px;font-weight:800;color:var(--pink);letter-spacing:.02em;margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.eyebrow::before{content:"";width:46px;height:5px;border-radius:3px;background:var(--pink)}
+h1.title{font-size:104px;font-weight:900;line-height:1.02;letter-spacing:-.025em}
+h2.title{font-size:72px;font-weight:900;line-height:1.08;letter-spacing:-.02em;margin-bottom:14px}
+.subtitle{font-size:30px;color:var(--gray);font-weight:500;line-height:1.5;max-width:1300px}
+.hl{background:linear-gradient(transparent 55%,var(--yellow) 55%);padding:0 4px}
+.pink-word{color:var(--pink-deep)}
+
+/* ====== TITLE SLIDE ====== */
+.cover{background:var(--black);color:var(--white)}
+.cover .body{justify-content:center}
+.cover .radar-deco{position:absolute;left:-260px;top:50%;transform:translateY(-50%);width:900px;height:900px;opacity:.16;pointer-events:none}
+.cover .eyebrow{color:var(--yellow)}
+.cover .eyebrow::before{background:var(--yellow)}
+.cover h1.title{font-size:118px;color:#fff}
+.cover h1.title em{font-style:normal;color:var(--yellow)}
+.cover .lead{font-size:34px;color:#D9D9D9;font-weight:500;margin-top:26px;max-width:1250px;line-height:1.45}
+.cover .partners{display:flex;align-items:center;gap:30px;margin-top:64px;flex-wrap:wrap}
+.cover .ptag{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18);border-radius:100px;padding:16px 30px;font-size:23px;font-weight:700;display:flex;align-items:center;gap:12px}
+.cover .ptag b{color:var(--yellow)}
+.cover .meta{position:absolute;bottom:120px;right:96px;display:flex;gap:54px}
+.cover .meta .m b{display:block;font-size:46px;font-weight:900;color:var(--yellow);line-height:1}
+.cover .meta .m span{font-size:21px;color:#BdBdBd;font-weight:600}
+
+/* ====== CARDS / GRID ====== */
+.grid{display:grid;gap:30px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g5{grid-template-columns:repeat(5,1fr)}
+.card{background:var(--white);border:1.5px solid var(--border);border-radius:22px;padding:34px 32px;position:relative;overflow:hidden}
+.card .bar{position:absolute;top:0;right:0;left:0;height:6px;background:var(--pink)}
+.card.y .bar{background:var(--yellow-deep)}
+.card.g .bar{background:var(--green)}
+.card.b .bar{background:var(--blue)}
+.card.p .bar{background:var(--purple)}
+.card .ico{width:64px;height:64px;border-radius:16px;background:var(--pink-soft);display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.card.y .ico{background:var(--yellow-soft)}
+.card.g .ico{background:#E4F3E9}
+.card.b .ico{background:#E1ECFB}
+.card.p .ico{background:#EDE7F6}
+.card h3{font-size:30px;font-weight:800;margin-bottom:10px;line-height:1.25}
+.card p{font-size:22px;color:var(--gray);line-height:1.5;font-weight:500}
+.card .num{position:absolute;top:24px;left:30px;font-size:26px;font-weight:900;color:#EDEDED}
+
+/* tag */
+.tags{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.tag{font-size:19px;font-weight:700;padding:8px 18px;border-radius:100px;background:var(--pink-soft);color:var(--pink-deep)}
+.tag.y{background:var(--yellow-soft);color:#9A7B00}
+.tag.dk{background:var(--ink);color:#fff}
+
+/* feature dark slides */
+.dark{background:var(--black);color:#fff}
+.dark .eyebrow{color:var(--yellow)}.dark .eyebrow::before{background:var(--yellow)}
+.dark h2.title{color:#fff}
+.dark .subtitle{color:#C9C9C9}
+.dark .card{background:#161616;border-color:#262626}
+.dark .card h3{color:#fff}.dark .card p{color:#B5B5B5}
+.dark .pagenum,.dark .kicker{color:#8a8a8a}
+.dark .brandmark .logo{color:#fff}
+
+/* ====== STAGES / TIMELINE ====== */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:22px;margin-top:18px}
+.step{background:var(--white);border:1.5px solid var(--border);border-radius:20px;padding:30px 26px;position:relative}
+.step .age{display:inline-block;background:var(--ink);color:#fff;font-size:21px;font-weight:800;padding:7px 18px;border-radius:100px;margin-bottom:16px}
+.step:nth-child(1) .age{background:var(--pink)}
+.step:nth-child(2) .age{background:var(--yellow-deep);color:var(--black)}
+.step:nth-child(3) .age{background:var(--green)}
+.step:nth-child(4) .age{background:var(--blue)}
+.step:nth-child(5) .age{background:var(--purple)}
+.step h4{font-size:26px;font-weight:800;margin-bottom:10px;line-height:1.2}
+.step ul{list-style:none}
+.step li{font-size:19.5px;color:var(--gray);font-weight:500;line-height:1.45;padding-right:20px;position:relative;margin-bottom:7px}
+.step li::before{content:"";position:absolute;right:0;top:11px;width:9px;height:9px;border-radius:3px;background:var(--pink)}
+.step .out{margin-top:16px;padding-top:14px;border-top:1.5px dashed var(--border);font-size:19px;font-weight:700;color:var(--ink)}
+.step .out span{color:var(--pink-deep)}
+
+/* ====== WHO/HOW row ====== */
+.synth{display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;margin-top:24px}
+.org{border-radius:24px;padding:40px 34px;color:#fff;position:relative;overflow:hidden;min-height:430px;display:flex;flex-direction:column}
+.org.hopa{background:linear-gradient(160deg,#E8348A,#C2185B)}
+.org.gal{background:linear-gradient(160deg,#161616,#000)}
+.org.gal .lbl b{color:var(--yellow)}
+.org.netiv{background:linear-gradient(160deg,#3D7DD8,#2A5BA8)}
+.org .lbl{font-size:22px;font-weight:800;opacity:.9;margin-bottom:6px}
+.org .lbl b{font-style:normal}
+.org h3{font-size:42px;font-weight:900;margin-bottom:6px;line-height:1.05}
+.org .role{font-size:25px;font-weight:700;opacity:.92;margin-bottom:22px}
+.org ul{list-style:none;margin-top:auto}
+.org li{font-size:22px;font-weight:600;line-height:1.4;padding-right:26px;position:relative;margin-bottom:11px}
+.org li::before{content:"✓";position:absolute;right:0;top:0;font-weight:900;opacity:.9}
+.org.gal li::before{color:var(--yellow)}
+
+/* ====== COMPARE ====== */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:18px}
+.col{border-radius:22px;padding:36px 34px}
+.col.bad{background:#F4F4F4;border:1.5px solid var(--border)}
+.col.good{background:var(--ink);color:#fff}
+.col h3{font-size:32px;font-weight:900;margin-bottom:22px;display:flex;align-items:center;gap:12px}
+.col.good h3 .pin{color:var(--yellow)}
+.col ul{list-style:none}
+.col li{font-size:24px;font-weight:600;line-height:1.4;padding-right:38px;position:relative;margin-bottom:18px}
+.col.bad li{color:var(--gray)}
+.col.bad li::before{content:"✕";position:absolute;right:0;color:#C9C9C9;font-weight:900}
+.col.good li::before{content:"✓";position:absolute;right:0;color:var(--yellow);font-weight:900}
+
+/* ====== big stat / impact ====== */
+.statrow{display:grid;grid-template-columns:repeat(4,1fr);gap:30px;margin-top:30px}
+.bigstat{text-align:center}
+.bigstat b{display:block;font-size:88px;font-weight:900;color:var(--yellow);line-height:1}
+.bigstat span{font-size:24px;color:#C9C9C9;font-weight:600;margin-top:10px;display:block}
+.eq{display:flex;align-items:center;justify-content:center;gap:40px;margin-top:30px;flex-wrap:wrap}
+.eq .box{background:#161616;border:1.5px solid #2a2a2a;border-radius:22px;padding:36px 48px;text-align:center}
+.eq .box b{display:block;font-size:64px;font-weight:900;color:#fff;line-height:1}
+.eq .box.win b{color:var(--yellow)}
+.eq .box span{font-size:22px;color:#B5B5B5;font-weight:600;margin-top:8px;display:block}
+.eq .op{font-size:60px;font-weight:900;color:var(--pink)}
+
+/* requirement list */
+.reqlist{display:grid;grid-template-columns:1fr 1fr;gap:20px 40px;margin-top:24px}
+.req{display:flex;gap:20px;align-items:flex-start;background:var(--white);border:1.5px solid var(--border);border-radius:18px;padding:26px 28px}
+.req .n{flex:none;width:54px;height:54px;border-radius:14px;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900}
+.req.y .n{background:var(--yellow-deep);color:var(--black)}
+.req h4{font-size:25px;font-weight:800;margin-bottom:4px}
+.req p{font-size:20px;color:var(--gray);font-weight:500;line-height:1.4}
+
+/* two-col text */
+.pull{font-size:40px;font-weight:800;line-height:1.3;color:var(--ink);border-right:8px solid var(--yellow-deep);padding-right:34px;margin-top:10px;max-width:1450px}
+.pull em{font-style:normal;color:var(--pink-deep)}
+
+/* closing */
+.closing{background:var(--black);color:#fff}
+.closing .body{justify-content:center;align-items:center;text-align:center}
+.closing h2{font-size:74px;font-weight:900;line-height:1.12;max-width:1560px}
+.closing h2 em{font-style:normal;color:var(--yellow)}
+.closing .sub{font-size:32px;color:#CFCFCF;margin-top:30px;max-width:1240px;font-weight:500;line-height:1.5}
+.closing .contact{margin-top:54px;display:flex;gap:20px}
+.closing .contact .c{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.16);border-radius:16px;padding:20px 34px;font-size:23px;font-weight:600}
+.closing .contact .c b{color:var(--yellow)}
+
+/* radar mockup */
+.radar-mock{display:flex;gap:46px;align-items:center;margin-top:22px}
+.radar-mock .profile{flex:1.6;max-width:none;margin-top:0}
+.profile{background:#fff;border:1.5px solid var(--border);border-radius:24px;overflow:hidden;box-shadow:0 14px 44px rgba(0,0,0,.08)}
+.profile .ph{background:linear-gradient(120deg,#E8348A,#C2185B);color:#fff;padding:26px 36px;display:flex;align-items:center;justify-content:space-between}
+.profile .ph .who{font-size:32px;font-weight:900}
+.profile .ph .who span{font-weight:600;opacity:.9;font-size:24px}
+.profile .ph .score{font-size:21px;font-weight:700;background:rgba(255,255,255,.22);padding:9px 22px;border-radius:100px}
+.profile .rows{padding:8px 36px 24px}
+.prow{display:grid;grid-template-columns:230px 1fr 150px;align-items:center;gap:28px;padding:19px 0;border-bottom:1px solid var(--border)}
+.prow:last-child{border-bottom:none}
+.prow .lab{font-size:26px;font-weight:800;color:var(--ink)}
+.prow .track{height:16px;border-radius:8px;background:#F0F0F0;overflow:hidden}
+.prow .fill{height:100%;border-radius:8px}
+.prow .st{font-size:20px;font-weight:800;text-align:center;padding:9px 0;border-radius:100px}
+.st.green{background:#E4F3E9;color:#2C7C44}.fill.green{background:var(--green)}
+.st.yellow{background:#FEF3C7;color:#A66A00}.fill.yellow{background:var(--orange)}
+.st.red{background:#FBE3E3;color:#C0271F}.fill.red{background:#D63333}
+.profile .alert{background:#FBE3E3;color:#B92020;font-size:22px;font-weight:800;padding:18px 36px}
+.mock-side{flex:1}
+.legend{display:flex;flex-direction:column;gap:18px;margin-bottom:30px}
+.legel{display:flex;align-items:center;gap:16px;font-size:25px;font-weight:700;color:var(--ink)}
+.legel .dotc{flex:none;width:26px;height:26px;border-radius:8px}
+.dotc.green{background:var(--green)}.dotc.yellow{background:var(--orange)}.dotc.red{background:#D63333}
+.mock-side .msg{font-size:31px;font-weight:800;color:var(--ink);line-height:1.3}
+.mock-side .msg em{font-style:normal;color:var(--pink-deep)}
+
+.credit{margin-top:36px;font-size:30px;font-weight:700;color:var(--ink);background:var(--yellow-soft);border:1.5px solid var(--yellow-line);border-radius:16px;padding:24px 34px;align-self:flex-start}
+.credit b{color:var(--pink-deep);font-weight:800}
+
+.banner{margin-top:34px;background:var(--ink);color:#fff;border-radius:20px;padding:28px 40px;text-align:center;font-size:36px;font-weight:800}
+.banner em{font-style:normal;color:var(--yellow)}
+
+/* ====== NEW: shock numbers ====== */
+.shocks{display:flex;gap:64px;margin-top:34px;flex-wrap:wrap}
+.shock b{display:block;font-size:120px;font-weight:900;color:var(--pink-deep);line-height:.92;letter-spacing:-.03em}
+.shock span{font-size:27px;color:var(--gray);font-weight:600;margin-top:10px;display:block;max-width:380px;line-height:1.35}
+.source{margin-top:28px;font-size:18px;color:var(--gray-l);font-weight:500}
+.proof{margin-top:28px;background:#E4F3E9;border:1.5px solid #BFE3CC;border-radius:16px;padding:24px 34px;font-size:29px;font-weight:700;color:#236B3A;align-self:flex-start;line-height:1.35}
+.proof b{color:#19532C;font-weight:900}
+
+/* ====== NEW: operating model ====== */
+.opmodel{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:26px}
+.opcell{background:#fff;border:1.5px solid var(--border);border-radius:20px;padding:30px 34px;display:flex;gap:24px;align-items:flex-start}
+.opcell .oi{flex:none;width:60px;height:60px;border-radius:15px;background:var(--pink-soft);display:flex;align-items:center;justify-content:center}
+.opcell.y .oi{background:var(--yellow-soft)}.opcell.g .oi{background:#E4F3E9}.opcell.b .oi{background:#E1ECFB}
+.opcell .ol{font-size:20px;font-weight:800;color:var(--pink-deep);margin-bottom:6px;letter-spacing:.01em}
+.opcell h4{font-size:30px;font-weight:800;color:var(--ink);line-height:1.25;margin-bottom:4px}
+.opcell p{font-size:21px;color:var(--gray);font-weight:500;line-height:1.4}
+.opcell .sug{font-size:17px;font-weight:700;color:var(--gray-l);background:var(--bg);padding:3px 12px;border-radius:100px;display:inline-block;margin-top:8px}
+
+/* ====== NEW: pilot table ====== */
+.ptable{margin-top:24px;border:1.5px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.05)}
+.pthead{background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:22px 36px}
+.pthead b{font-size:30px;font-weight:900}
+.pthead span{font-size:24px;font-weight:700;color:var(--yellow)}
+.ptrow{display:grid;grid-template-columns:380px 1fr;align-items:center;background:#fff}
+.ptrow:nth-child(even){background:#FAFAF8}
+.ptrow .k{font-size:27px;font-weight:800;color:var(--ink);padding:24px 36px;display:flex;align-items:center;gap:16px}
+.ptrow .k .kd{flex:none;width:13px;height:13px;border-radius:4px;background:var(--pink)}
+.ptrow .v{font-size:24px;color:var(--gray);font-weight:500;padding:24px 36px;border-right:1.5px solid var(--border)}
+
+/* ====== animations ====== */
+.slide.active .anim{animation:fadeUp .6s cubic-bezier(.2,.7,.3,1) backwards}
+@keyframes fadeUp{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:none}}
+.slide.active .a1{animation-delay:.08s}.slide.active .a2{animation-delay:.18s}
+.slide.active .a3{animation-delay:.28s}.slide.active .a4{animation-delay:.38s}
+.slide.active .a5{animation-delay:.48s}.slide.active .a6{animation-delay:.58s}
+.slide.active .a7{animation-delay:.68s}
+
+/* ====== NAV ====== */
+.nav{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:100;display:flex;align-items:center;gap:14px;background:rgba(20,20,20,.82);backdrop-filter:blur(10px);padding:10px 16px;border-radius:100px;border:1px solid rgba(255,255,255,.1)}
+.nav button{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;transition:.15s;border:none;cursor:pointer;font-family:inherit}
+.nav button:hover{background:var(--yellow);color:#000}
+.nav .count{color:#fff;font-size:17px;font-weight:700;min-width:62px;text-align:center;letter-spacing:.04em}
+.progress{position:fixed;top:0;left:0;height:5px;background:linear-gradient(90deg,var(--pink),var(--yellow));z-index:101;transition:width .4s ease}
+.hint{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:100;color:rgba(255,255,255,.5);font-size:15px;font-weight:600;transition:opacity .4s}
+
+/* ====== PRINT / PDF ====== */
+@media print{
+  @page{size:1920px 1080px;margin:0}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  html,body{background:#fff!important;overflow:visible!important;height:auto!important}
+  #stage{position:static!important;display:block!important;background:#fff!important;inset:auto!important}
+  #deck{transform:none!important;width:1920px!important;height:auto!important}
+  .slide{position:relative!important;inset:auto!important;opacity:1!important;visibility:visible!important;display:flex!important;width:1920px!important;height:1080px!important;page-break-after:always!important;break-after:page!important;overflow:hidden!important}
+  .slide:last-child{page-break-after:auto!important;break-after:auto!important}
+  .nav,.hint,.progress{display:none!important}
+  .anim{animation:none!important;opacity:1!important;transform:none!important}
+}
+
+/* ====== LIGHT THEME (white backgrounds) ====== */
+.dark{background:#fff!important;color:var(--ink)!important}
+.cover{background:#fff!important;color:var(--ink)!important}
+.closing{background:#fff!important;color:var(--ink)!important}
+.dark::before,.cover::before,.closing::before{content:"";position:absolute;top:0;left:0;right:0;height:8px;background:linear-gradient(90deg,var(--pink),var(--yellow));z-index:30}
+
+.cover h1.title,.dark h2.title,.closing h2{color:var(--ink)!important}
+.cover .lead,.dark .subtitle,.closing .sub{color:var(--gray)!important}
+.cover .lead b{color:var(--ink)!important}
+.cover h1.title em,.dark .title em,.closing h2 em{color:var(--pink-deep)!important}
+.cover .eyebrow,.dark .eyebrow{color:var(--pink)!important}
+.cover .eyebrow::before,.dark .eyebrow::before{background:var(--pink)!important}
+.dark .pagenum,.dark .kicker,.cover .pagenum,.closing .pagenum{color:var(--gray-l)!important}
+.dark .brandmark .logo,.closing .brandmark .logo,.cover .brandmark .logo{color:var(--ink)!important}
+.cover .brandmark small,.closing .brandmark small{color:var(--gray-l)!important}
+
+.dark .card{background:#fff!important;border-color:var(--border)!important}
+.dark .card h3{color:var(--ink)!important}
+.dark .card p{color:var(--gray)!important}
+.dark .card p b{color:var(--pink-deep)!important}
+
+.dark .pull{color:var(--ink)!important;border-color:var(--pink)!important}
+.dark .pull em{color:var(--pink-deep)!important}
+
+.eq .box{background:#fff!important;border-color:var(--border)!important}
+.eq .box b{color:var(--ink)!important}
+.eq .box.win b{color:var(--pink-deep)!important}
+.eq .box span{color:var(--gray)!important}
+.eq .op{color:var(--pink)!important}
+.bigstat b{color:var(--pink-deep)!important}
+.bigstat span{color:var(--gray)!important}
+
+.cover .ptag{background:#fff!important;border-color:var(--border)!important;color:var(--ink)!important}
+.cover .ptag b{color:var(--pink-deep)!important}
+.cover .meta .m b{color:var(--pink-deep)!important}
+.cover .meta .m span{color:var(--gray)!important}
+.cover .radar-deco{opacity:.10!important}
+.cover .radar-deco g{stroke:var(--pink)!important}
+
+.closing .contact .c{background:#fff!important;border-color:var(--border)!important;color:var(--ink)!important}
+.closing .contact .c b{color:var(--pink-deep)!important}
+
+.org.gal{background:linear-gradient(160deg,#FFF200,#FFD500)!important;color:var(--ink)!important}
+.org.gal .lbl{color:var(--ink)!important}
+.org.gal .lbl b{color:var(--pink-deep)!important}
+.org.gal li::before{color:var(--pink-deep)!important}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div id="stage">
+  <div id="deck">
+
+  <!-- ============ 1 · COVER ============ -->
+  <section class="slide cover active">
+    <svg class="radar-deco" viewBox="0 0 200 200"><g fill="none" stroke="#FFF200" stroke-width="1.2"><circle cx="100" cy="100" r="90"/><circle cx="100" cy="100" r="65"/><circle cx="100" cy="100" r="40"/><circle cx="100" cy="100" r="16"/><line x1="100" y1="10" x2="100" y2="190"/><line x1="10" y1="100" x2="190" y2="100"/></g></svg>
+    <div class="body">
+      <div class="eyebrow anim a1">הצעה לפיילוט ארצי · משרד העבודה</div>
+      <h1 class="title anim a2">נתיבים <em>לבוגרים</em></h1>
+      <p class="lead anim a3">מערכת לאומית ל<b style="color:#fff">מדידה, ליווי ומוביליות</b> של בוגרי החינוך המקצועי —<br>רצף אחד מגיל 15 עד 26.</p>
+      <div class="partners anim a4">
+        <div class="ptag"><b>הופה</b> · רצף, ליווי ומדידה</div>
+        <div class="ptag"><b>נתיבים לחניכות וקריירה</b> · תכנון הקריירה</div>
+      </div>
+    </div>
+    <div class="meta anim a5">
+      <div class="m"><b>15</b><span>בתי ספר בפיילוט</span></div>
+      <div class="m"><b>10,000 ₪</b><span>לכל בית ספר</span></div>
+      <div class="m"><b>18–26</b><span>גיל הליווי</span></div>
+    </div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span><small>פתאום הכל נראה אפשרי</small></div>
+  </section>
+
+  <!-- ============ 2 · WHY (national problem) ============ -->
+  <section class="slide dark">
+    <div class="kicker"><span class="dot"></span>הצורך הלאומי</div>
+    <div class="body">
+      <div class="eyebrow anim a1">למה בכלל צריך את זה?</div>
+      <h2 class="title anim a2">היום אנחנו <span class="pink-word">מאבדים את הקשר</span> עם הבוגרים</h2>
+      <div class="grid g2" style="margin-top:30px;gap:18px 70px">
+        <div class="card anim a3" style="border:none;padding:0;display:flex;gap:22px;align-items:center"><div style="flex:none;width:54px;height:54px;border-radius:14px;background:#FBE3E3;color:#D63333;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900">✕</div><p style="font-size:30px;font-weight:600;color:var(--ink)">אין כיום <b style="color:var(--pink-deep)">מדידה ארצית רציפה</b> של מצב הבוגרים</p></div>
+        <div class="card anim a4" style="border:none;padding:0;display:flex;gap:22px;align-items:center"><div style="flex:none;width:54px;height:54px;border-radius:14px;background:#FBE3E3;color:#D63333;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900">✕</div><p style="font-size:30px;font-weight:600;color:var(--ink)">בתי הספר מסיימים ללוות <b style="color:var(--pink-deep)">בטקס הסיום</b></p></div>
+        <div class="card anim a4" style="border:none;padding:0;display:flex;gap:22px;align-items:center"><div style="flex:none;width:54px;height:54px;border-radius:14px;background:#FBE3E3;color:#D63333;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900">✕</div><p style="font-size:30px;font-weight:600;color:var(--ink)">משברים מתגלים <b style="color:var(--pink-deep)">מאוחר מדי</b></p></div>
+        <div class="card anim a5" style="border:none;padding:0;display:flex;gap:22px;align-items:center"><div style="flex:none;width:54px;height:54px;border-radius:14px;background:#FBE3E3;color:#D63333;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900">✕</div><p style="font-size:30px;font-weight:600;color:var(--ink)">אין בעל תפקיד שמחזיק את <b style="color:var(--pink-deep)">רצף המעבר</b></p></div>
+        <div class="card anim a5" style="border:none;padding:0;display:flex;gap:22px;align-items:center"><div style="flex:none;width:54px;height:54px;border-radius:14px;background:#FBE3E3;color:#D63333;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900">✕</div><p style="font-size:30px;font-weight:600;color:var(--ink)">ההשקעה בחינוך המקצועי <b style="color:var(--pink-deep)">אינה נמדדת לאורך זמן</b></p></div>
+        <div class="card anim a6" style="border:none;padding:0;display:flex;gap:22px;align-items:center"><div style="flex:none;width:54px;height:54px;border-radius:14px;background:#FBE3E3;color:#D63333;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900">✕</div><p style="font-size:30px;font-weight:600;color:var(--ink)">הזדמנויות ומלגות <b style="color:var(--pink-deep)">לא מגיעות בזמן</b></p></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 3 · THE NUMBER ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>סדר הגודל</div>
+    <div class="body">
+      <div class="eyebrow anim a1">המספר שצריך להדאיג</div>
+      <h2 class="title anim a2">כ-200,000 צעירים בסיכון — ורק <span class="pink-word">3 מתוך 10</span> מקבלים סיוע</h2>
+      <div class="shocks">
+        <div class="shock anim a3"><b>200K</b><span>צעירים בישראל במצבי סיכון</span></div>
+        <div class="shock anim a4"><b>~70%</b><span>מהם אינם מקבלים שום סיוע</span></div>
+        <div class="shock anim a5"><b>4,500</b><span>צעירים חסרי עורף משפחתי</span></div>
+      </div>
+      <div class="proof anim a6">כשקיים <b>ליווי כוללני ורציף</b> — הנשירה צונחת מ-16.6% ל-<b>9.2%</b>. ההתערבות עובדת.</div>
+      <div class="source anim a7">מקור: הערכות משרדי הממשלה ומסמך הכנסת (2015); מחקר השוואתי על ליווי כוללני רציף.</div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 4 · BOGER STORY (אור) ============ -->
+  <section class="slide dark">
+    <div class="kicker"><span class="dot"></span>סיפור בוגר</div>
+    <div class="body">
+      <div class="eyebrow anim a1">המשבר לא קורה ביום אחד</div>
+      <h2 class="title anim a2">אור לא נשר <span class="pink-word">ביום אחד</span></h2>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);margin-top:50px;position:relative">
+        <div style="position:absolute;top:62px;right:9%;left:9%;height:5px;background:var(--border);z-index:0"></div>
+        <div class="anim a3" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px"><div style="width:124px;height:124px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:900;color:#fff;border:7px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,.14);background:var(--blue)">18</div><h4 style="font-size:29px;font-weight:800;margin-top:24px;color:var(--ink)">גיוס</h4><p style="font-size:21px;color:var(--gray);font-weight:500;margin-top:6px">מתגייס לצה״ל</p></div>
+        <div class="anim a4" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px"><div style="width:124px;height:124px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:900;color:#fff;border:7px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,.14);background:var(--gray-l)">20</div><h4 style="font-size:29px;font-weight:800;margin-top:24px;color:var(--ink)">שחרור</h4><p style="font-size:21px;color:var(--gray);font-weight:500;margin-top:6px">חוזר הביתה</p></div>
+        <div class="anim a5" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px"><div style="width:124px;height:124px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:900;color:#fff;border:7px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,.14);background:var(--orange)">21</div><h4 style="font-size:29px;font-weight:800;margin-top:24px;color:var(--ink)">עבודה זמנית</h4><p style="font-size:21px;color:var(--gray);font-weight:500;margin-top:6px">בלי אופק וכיוון</p></div>
+        <div class="anim a6" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px"><div style="width:124px;height:124px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:900;color:#fff;border:7px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,.14);background:#D63333">22</div><h4 style="font-size:29px;font-weight:800;margin-top:24px;color:var(--ink)">ניתוק</h4><p style="font-size:21px;color:var(--gray);font-weight:500;margin-top:6px">נושר מהעבודה, מאבד קשר</p></div>
+        <div class="anim a7" style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px"><div style="width:124px;height:124px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:900;color:#fff;border:7px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,.14);background:var(--green)">23</div><h4 style="font-size:29px;font-weight:800;margin-top:24px;color:var(--ink)">חזרה למסלול</h4><p style="font-size:21px;color:var(--gray);font-weight:500;margin-top:6px">הליווי מחזיר אותו לדרך</p></div>
+      </div>
+      <div class="pull anim a7" style="margin-top:50px;text-align:center;border:none;padding:0;font-size:36px">המשבר נבנה לאורך זמן — לכן נדרש <em>רצף ליווי</em>, לא התערבות חד-פעמית.</div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 5 · THE TURN (thesis) ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>התפיסה</div>
+    <div class="body">
+      <div class="eyebrow anim a1">נקודת המוצא</div>
+      <h2 class="title anim a2">לא תוכנית בוגרים — <span class="pink-word">מערכת מדידה וליווי לאומית</span></h2>
+      <div class="cmp">
+        <div class="col bad anim a3"><h3>מיזם בוגרים נוסף</h3><ul><li>מתמקד במניעת נשירה</li><li>פועל אחרי שנוצר משבר</li><li>מדידה מקומית וחלקית</li><li>תלוי ביוזמת הבוגר</li><li>נפרד בטקס הסיום</li></ul></div>
+        <div class="col good anim a4"><h3><span class="pin">★</span> תשתית לאומית</h3><ul><li>מדידה רציפה של אימפקט</li><li>זיהוי מוקדם ופעולה יזומה</li><li>נתונים לאומיים אחידים</li><li>מערכת שרואה ופועלת עבורו</li><li>רצף אחד 15→26</li></ul></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 6 · STRATEGIC ASSET + METRICS ============ -->
+  <section class="slide dark">
+    <div class="kicker"><span class="dot"></span>הנכס האסטרטגי</div>
+    <div class="body">
+      <div class="eyebrow anim a1">מה משרד העבודה מקבל</div>
+      <h2 class="title anim a2" style="font-size:58px">לראשונה — תדעו מה קרה לבוגרים <span class="pink-word">חמש שנים</span> אחרי הסיום</h2>
+      <p class="subtitle anim a3" style="margin-bottom:26px">לא מודדים פעילות — מודדים אימפקט. שישה מדדים לאומיים אחידים לכל בית ספר.</p>
+      <div class="grid g3 anim a4">
+        <div class="card"><h3>% בקשר פעיל</h3><p>בוגרים ברצף קשר עם המערכת</p></div>
+        <div class="card y"><h3>% בשירות / לימודים / עבודה</h3><p>השתלבות מול ניתוק</p></div>
+        <div class="card g"><h3>% שקיבלו מלגה / השמה</h3><p>חיבור בפועל למענים</p></div>
+        <div class="card b"><h3>שיפור שכר לאורך זמן</h3><p>המדד המרכזי למוביליות</p></div>
+        <div class="card p"><h3>בוגרים שחזרו כמנטורים</h3><p>חוזק הרשת</p></div>
+        <div class="card"><h3>שותפויות עם מעסיקים</h3><p>עומק האקוסיסטם</p></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ RADAR — THE DATA ENGINE ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>מנוע הנתונים</div>
+    <div class="body">
+      <div class="eyebrow anim a1">רדאר 360 · כך נראה תיק בוגר</div>
+      <h2 class="title anim a2">מזהים סיכון <span class="pink-word">לפני</span> שהוא הופך למשבר</h2>
+      <div class="radar-mock anim a3">
+        <div class="profile">
+          <div class="ph"><div class="who">אור · <span>בן 22</span></div><div class="score">סטטוס: דורש התערבות</div></div>
+          <div class="rows">
+            <div class="prow"><div class="lab">שירות</div><div class="track"><div class="fill green" style="width:100%"></div></div><div class="st green">הושלם</div></div>
+            <div class="prow"><div class="lab">לימודים</div><div class="track"><div class="fill yellow" style="width:45%"></div></div><div class="st yellow">בהמתנה</div></div>
+            <div class="prow"><div class="lab">עבודה</div><div class="track"><div class="fill red" style="width:20%"></div></div><div class="st red">בסיכון</div></div>
+            <div class="prow"><div class="lab">עצמאות כלכלית</div><div class="track"><div class="fill red" style="width:25%"></div></div><div class="st red">בסיכון</div></div>
+            <div class="prow"><div class="lab">שייכות</div><div class="track"><div class="fill yellow" style="width:55%"></div></div><div class="st yellow">חלקית</div></div>
+          </div>
+          <div class="alert">⚠ התראה: ירידה בתעסוקה — נשלחה משימה לרכז הנתיבים והבוגרים</div>
+        </div>
+        <div class="mock-side">
+          <div class="legend">
+            <div class="legel"><span class="dotc green"></span>ירוק · יציב</div>
+            <div class="legel"><span class="dotc yellow"></span>צהוב · דורש מעקב</div>
+            <div class="legel"><span class="dotc red"></span>אדום · בסיכון</div>
+          </div>
+          <p class="msg">חמישה מדדים לכל בוגר.<br>הנתונים מצטברים ל<em>תמונת מצב לאומית</em>.</p>
+        </div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ SUPPORT IN CRISIS + AID ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>ליווי וסיוע בפועל</div>
+    <div class="body">
+      <div class="eyebrow anim a1">כשמתגלה סיכון</div>
+      <h2 class="title anim a2"><span class="pink-word">הופה נכנסת לפעולה</span> — לא רק מודדת</h2>
+      <p class="subtitle anim a3" style="margin-bottom:34px">ליווי במצבי משבר, עזרה במלגות ובסיוע — כדי שהבוגר ישתלב בצורה המיטבית בתעסוקה ובאזרחות.</p>
+      <div class="grid g4">
+        <div class="card anim a3"><div class="num">01</div><h3>זיהוי מוקדם</h3><p>הרדאר מזהה משבר או נקודת מעבר</p></div>
+        <div class="card y anim a4"><div class="num">02</div><h3>ליווי אישי במשבר</h3><p>רכז ומלגאי הופה לצד הבוגר ברגע הקריטי</p></div>
+        <div class="card g anim a5"><div class="num">03</div><h3>מלגות וסיוע ישיר</h3><p>מלגות, סיוע כלכלי במשבר, דיור ומיצוי זכויות</p></div>
+        <div class="card b anim a6"><div class="num">04</div><h3>השתלבות מיטבית</h3><p>תעסוקה יציבה ואזרחות פעילה</p></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 10 · THE JOURNEY 15-26 ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>מפת הרצף</div>
+    <div class="body" style="padding-top:130px;padding-bottom:90px">
+      <div class="eyebrow anim a1">מסע הבוגר — מגיל 15 עד 26</div>
+      <h2 class="title anim a2" style="font-size:62px;margin-bottom:24px">חמישה שלבים. רצף אחד. <span class="pink-word">אף אחד לא נושר בדרך.</span></h2>
+      <div class="flow">
+        <div class="step anim a3"><span class="age">כיתה י׳</span><h4>היכרות עם עצמי</h4><ul><li>חוזקות וכישורים</li><li>מקצועות העתיד</li><li>סדנאות מסוגלות</li></ul><div class="out">תוצר: <span>פרופיל קריירה ראשוני</span></div></div>
+        <div class="step anim a4"><span class="age">כיתה י״א</span><h4>התנסות ובחירה</h4><ul><li>סיורים והתנסויות</li><li>מנטורינג מבוגרים</li><li>קו״ח וראיונות</li></ul><div class="out">תוצר: <span>מפת הזדמנויות</span></div></div>
+        <div class="step anim a5"><span class="age">כיתה י״ב</span><h4>תוכנית יציאה</h4><ul><li>שירות / צבא / לאומי</li><li>לימודים ומלגות</li><li>ניהול כסף בסיסי</li></ul><div class="out">תוצר: <span>תיק מעבר לגיל 18</span></div></div>
+        <div class="step anim a6"><span class="age">18–20</span><h4>שנתיים קריטיות</h4><ul><li>קשר רבעוני קבוע</li><li>מעקב שירות/עבודה</li><li>חיבור מהיר למענה</li></ul><div class="out">תוצר: <span>סטטוס בוגר פעיל</span></div></div>
+        <div class="step anim a7"><span class="age">21–26</span><h4>מוביליות</h4><ul><li>השמה איכותית</li><li>קידום שכר ומקצוע</li><li>בוגר כמנטור</li></ul><div class="out">תוצר: <span>מסלול התקדמות</span></div></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 11 · NEW ROLE ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>תפקיד חדש בבית הספר</div>
+    <div class="body">
+      <div class="eyebrow anim a1">בעל התפקיד שמחזיק את הרצף</div>
+      <h2 class="title anim a2">רכז <span class="pink-word">הנתיבים והבוגרים</span></h2>
+      <div class="grid g3" style="margin-top:30px">
+        <div class="card anim a3"><div class="num">01</div><h3>תיק קריירה אישי</h3><p>לכל תלמיד כבר מכיתה י׳</p></div>
+        <div class="card y anim a4"><div class="num">02</div><h3>ניהול המעבר י״ב–חיים</h3><p>אף תלמיד לא מסיים בלי תוכנית</p></div>
+        <div class="card g anim a5"><div class="num">03</div><h3>ניהול קהילת בוגרים</h3><p>קבוצות, אירועים ומנטורים</p></div>
+        <div class="card b anim a3"><div class="num">04</div><h3>דאטה ורדאר</h3><p>מעקב סיכון ולוח מחוונים</p></div>
+        <div class="card p anim a4"><div class="num">05</div><h3>חיבור לאקוסיסטם</h3><p>מעסיקים, מכללות ומלגות</p></div>
+        <div class="card anim a5"><div class="num">06</div><h3>זיהוי מוקדם</h3><p>פנייה יזומה בעת קושי</p></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 12 · OPERATING MODEL ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>מודל הפעלה בית ספרי</div>
+    <div class="body">
+      <div class="eyebrow anim a1">איך זה עובד בבית הספר</div>
+      <h2 class="title anim a2">מי עושה את זה — ובאיזה היקף</h2>
+      <div class="opmodel">
+        <div class="opcell anim a3"><div class="oi"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#E8348A" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg></div><div><div class="ol">כפיפות</div><h4>מנהל/ת בית הספר</h4><p>בשיתוף רכז/ת התעסוקה והיועצת</p><span class="sug">מוצע</span></div></div>
+        <div class="opcell y anim a4"><div class="oi"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9A7B00" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div><div><div class="ol">היקף</div><h4>2 שעות שבועיות</h4><p>במסגרת תפקיד הרכז החברתי בבית הספר</p></div></div>
+        <div class="opcell g anim a5"><div class="oi"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3BA55C" stroke-width="2"><circle cx="9" cy="7" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/></svg></div><div><div class="ol">עובד עם</div><h4>הצוות והאקוסיסטם</h4><p>יועצות, מחנכי י״ב, מלגאי הופה, מעסיקים ומכללות</p></div></div>
+        <div class="opcell b anim a6"><div class="oi"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3D7DD8" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div><div class="ol">אחריות</div><h4>תיק קריירה · מעבר · קהילה · דאטה</h4><p>מחזיק את הרצף ואת תמונת המצב של כל בוגר</p></div></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 13 · TRAINING ACADEMY ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>ההכשרה</div>
+    <div class="body">
+      <div class="eyebrow anim a1">אקדמיית רכזי נתיבים ובוגרים · 60 שעות</div>
+      <h2 class="title anim a2">ארבעה אשכולות — סביב <span class="pink-word">מסגרת חוסן לאומית</span></h2>
+      <div class="grid g4" style="margin-top:30px">
+        <div class="card anim a3"><div class="num">01</div><h3>זהות ומסוגלות</h3><p>חוזקות, ערכים וקבלת החלטות <b style="color:var(--pink-deep)">· הופה</b></p></div>
+        <div class="card y anim a4"><div class="num">02</div><h3>חוסן תעסוקתי</h3><p>התמדה, הסתגלות וניהול עצמי <b style="color:var(--pink-deep)">· הופה</b></p></div>
+        <div class="card g anim a5"><div class="num">03</div><h3>קריירה והזדמנויות</h3><p>מסלול, השכלה והשמה <b style="color:var(--pink-deep)">· נתיבים</b></p></div>
+        <div class="card b anim a6"><div class="num">04</div><h3>קהילה ורצף</h3><p>קשר, מנטורינג ואימפקט <b style="color:var(--pink-deep)">· הופה</b></p></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 14 · WHAT THE PILOT INCLUDES ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>הצד הכלכלי</div>
+    <div class="body">
+      <div class="eyebrow anim a1">מה כולל הפיילוט</div>
+      <h2 class="title anim a2">מה מקבלים ב-<span class="pink-word">10,000 ₪</span> לבית ספר</h2>
+      <div class="ptable anim a3">
+        <div class="pthead"><b>חבילת הפיילוט</b><span>10,000 ₪ · לכל בית ספר · לשנה</span></div>
+        <div class="ptrow"><div class="k"><span class="kd"></span>הכשרת רכז</div><div class="v">אקדמיה ייעודית · 60 שעות · 9 מפגשים</div></div>
+        <div class="ptrow"><div class="k"><span class="kd"></span>מערכת רדאר ובוגרים</div><div class="v">ניטור, ניתוח נתונים, אוטומציות והתראות</div></div>
+        <div class="ptrow"><div class="k"><span class="kd"></span>מאגר 600 מענים</div><div class="v">מלגות, הכשרות, דיור, תעסוקה ומיצוי זכויות</div></div>
+        <div class="ptrow"><div class="k"><span class="kd"></span>ליווי מקצועי</div><div class="v">זום חודשי לרכז + כנס רכזים ארצי</div></div>
+        <div class="ptrow"><div class="k"><span class="kd"></span>קהילת רכזים</div><div class="v">רשת ארצית ללמידת עמיתים ושיתוף ידע</div></div>
+        <div class="ptrow"><div class="k"><span class="kd"></span>מדידה ודוחות אימפקט</div><div class="v">תמונת מצב ומדדים לאומיים לאורך זמן</div></div>
+        <div class="ptrow" style="background:var(--yellow-soft)"><div class="k" style="color:var(--pink-deep)"><span class="kd" style="background:var(--yellow-deep)"></span>תוכניות וסיוע ישיר לבוגרים</div><div class="v" style="color:var(--ink);font-weight:600">קיום תוכניות בבית הספר · סיוע במלגות ובמצבי משבר</div></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 15 · WHAT SCHOOLS COMMIT ============ -->
+  <section class="slide">
+    <div class="chrome-top"></div>
+    <div class="kicker"><span class="dot"></span>ההתחייבות</div>
+    <div class="body">
+      <div class="eyebrow anim a1">הדרישות מבית הספר</div>
+      <h2 class="title anim a2">שותפות — לא רק תקציב</h2>
+      <div class="reqlist">
+        <div class="req anim a3"><div class="n">1</div><div><h4>תוכנית עבודה ל-10,000 ₪</h4><p>תוכנית שנתית לתקציב התוכנית</p></div></div>
+        <div class="req y anim a4"><div class="n">2</div><div><h4>זום חודשי</h4><p>פגישה אחת לחודש עם צוות הופה</p></div></div>
+        <div class="req anim a5"><div class="n">3</div><div><h4>כנס רכזי בוגרים</h4><p>השתתפות בכנס הארצי</p></div></div>
+        <div class="req y anim a6"><div class="n">4</div><div><h4>קשר שוטף עם הופה והבוגרים</h4><p>מענה שוטף ושמירה על רצף</p></div></div>
+        <div class="req anim a5"><div class="n">5</div><div><h4>ניהול קבוצת בוגרים</h4><p>הודעות ותכנים שוטפים</p></div></div>
+        <div class="req y anim a6"><div class="n">6</div><div><h4>חיבור הבוגרים לבית הספר</h4><p>החזרת בוגרים כמנטורים</p></div></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 16 · WHY NOW ============ -->
+  <section class="slide dark">
+    <div class="kicker"><span class="dot"></span>חלון ההזדמנויות</div>
+    <div class="body">
+      <div class="eyebrow anim a1">למה השנה — ולא בעוד שלוש שנים?</div>
+      <h2 class="title anim a2">הצורך <span class="pink-word">דחוף עכשיו</span></h2>
+      <div class="grid g4" style="margin-top:34px">
+        <div class="card anim a3"><div class="ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#E8348A" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h3>שיקום אחרי המלחמה</h3><p>גל צעירים שזקוקים לליווי ויציבות</p></div>
+        <div class="card y anim a4"><div class="ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9A7B00" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/></svg></div><h3>עולם עבודה משתנה</h3><p>AI ומקצועות חדשים מחייבים חוסן והכוונה</p></div>
+        <div class="card g anim a5"><div class="ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3BA55C" stroke-width="2"><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 13h6"/></svg></div><h3>מחסור בכוח אדם מקצועי</h3><p>המשק זקוק לבוגרי החינוך המקצועי</p></div>
+        <div class="card b anim a6"><div class="ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3D7DD8" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg></div><h3>עלייה בניתוק צעירים</h3><p>חלון לפעולה לפני שהפער גדל</p></div>
+      </div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 17 · CLIMAX — 5 YEARS ============ -->
+  <section class="slide dark">
+    <div class="kicker"><span class="dot"></span>המבט קדימה</div>
+    <div class="body">
+      <div class="eyebrow anim a1">מה יקרה בעוד 5 שנים?</div>
+      <h2 class="title anim a2">לא תוכנית — <em style="color:var(--yellow);font-style:normal">תשתית לאומית</em></h2>
+      <div class="grid g3 anim a3" style="margin-top:28px">
+        <div class="card"><div class="num">01</div><h3>מאגר נתונים לאומי</h3><p>תמונת מצב חיה של הבוגרים</p></div>
+        <div class="card y"><div class="num">02</div><h3>מדדי מוביליות</h3><p>אימפקט נמדד לאורך זמן</p></div>
+        <div class="card g"><div class="num">03</div><h3>מערכת התרעה מוקדמת</h3><p>מזהה סיכון בזמן אמת</p></div>
+        <div class="card b"><div class="num">04</div><h3>15 בתי ספר</h3><p>פרוסים ארצית · אלפי בוגרים</p></div>
+        <div class="card p"><div class="num">05</div><h3>רשת מנטורים</h3><p>בוגרים מלווים בוגרים</p></div>
+        <div class="card"><div class="num">06</div><h3>תשתית ניתנת להרחבה</h3><p>ממודל מוכח לפריסה ארצית מלאה</p></div>
+      </div>
+      <div class="banner anim a4">אנחנו לא מקימים תוכנית — אנחנו מקימים <em>תשתית לאומית למדידה ומוביליות</em>.</div>
+    </div>
+    <div class="pagenum"></div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span></div>
+  </section>
+
+  <!-- ============ 18 · CLOSING ============ -->
+  <section class="slide closing">
+    <div class="body">
+      <div class="eyebrow anim a1" style="align-self:center;color:var(--pink)">המסר המרכזי</div>
+      <h2 class="anim a2">לראשונה — מערכת לאומית אחת ל<em>מדידה, ליווי ומוביליות</em><br>של בוגרי החינוך המקצועי, מגיל 15 עד 26</h2>
+      <p class="sub anim a3">הופה מביאה את הרצף, הליווי והמדידה · נתיבים את תכנון הקריירה.<br>פיילוט ב-15 בתי ספר — שמשרד העבודה יוכל לאמץ ולהרחיב ארצית.</p>
+      <div class="contact anim a4">
+        <div class="c"><b>הופה</b></div>
+        <div class="c"><b>משרד העבודה</b></div>
+      </div>
+    </div>
+    <div class="brandmark"><span class="logo">H<i>o</i>pa!</span><small>פתאום הכל נראה אפשרי</small></div>
+  </section>
+
+  </div>
+</div>
+
+<div class="hint" id="hint">← → מקשי החצים למעבר בין שקפים</div>
+<div class="nav">
+  <button id="prev" aria-label="הקודם">›</button>
+  <span class="count" id="count">1 / 18</span>
+  <button id="next" aria-label="הבא">‹</button>
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+const deck=document.getElementById('deck');
+let i=0;
+slides.forEach((s,k)=>{const p=s.querySelector('.pagenum');if(p)p.textContent=String(k+1).padStart(2,'0');});
+function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);deck.style.transform='scale('+s+')';}
+function show(n){
+  i=Math.max(0,Math.min(slides.length-1,n));
+  slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+  document.getElementById('count').textContent=(i+1)+' / '+slides.length;
+  document.getElementById('progress').style.width=((i+1)/slides.length*100)+'%';
+}
+function next(){show(i+1)}
+function prev(){show(i-1)}
+document.getElementById('next').onclick=next;
+document.getElementById('prev').onclick=prev;
+addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key===' '||e.key==='PageDown'){next();e.preventDefault();}
+  else if(e.key==='ArrowRight'||e.key==='PageUp'){prev();e.preventDefault();}
+  else if(e.key==='Home')show(0);
+  else if(e.key==='End')show(slides.length-1);
+  if(e.key!=='Tab')document.getElementById('hint').style.opacity='0';
+});
+let tx=0;
+addEventListener('touchstart',e=>tx=e.changedTouches[0].clientX,{passive:true});
+addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50){dx>0?next():prev();}},{passive:true});
+addEventListener('resize',fit);
+fit();show(0);
+setTimeout(()=>{document.getElementById('hint').style.opacity='0';},6000);
+</script>
+</body>
+</html>
