@@ -127,6 +127,30 @@ function todayIL(offsetDays) {
   return Utilities.formatDate(d, 'Asia/Jerusalem', 'yyyy-MM-dd');
 }
 
+// ── נרמול תאריך/שעה ──
+// Google Sheets לפעמים שומר תא תאריך/שעה כאובייקט Date (לפי עיצוב התא),
+// ואז getValues() מחזיר אותו ולא מחרוזת. הפונקציות האלה תמיד מחזירות
+// מחרוזת אחידה: yyyy-MM-dd לתאריך, HH:mm לשעה. כך כל ההשוואות והתצוגה עובדות.
+var TZ = 'Asia/Jerusalem';
+function isDate(v) { return Object.prototype.toString.call(v) === '[object Date]'; }
+function asDateStr(v) {
+  if (v == null || v === '') return '';
+  if (isDate(v)) return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+  var s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.split('T')[0]; // ISO עם זמן → תאריך בלבד
+  return s;
+}
+function asTimeStr(v) {
+  if (v == null || v === '') return '';
+  if (isDate(v)) return Utilities.formatDate(v, TZ, 'HH:mm');
+  var s = String(v);
+  var m = s.match(/T(\d{2}:\d{2})/);       // ISO/serial 1899-..T07:00..
+  if (m) return m[1];
+  m = s.match(/^(\d{1,2}:\d{2})/);          // "07:00:00" → "07:00"
+  if (m) return m[1];
+  return s;
+}
+
 function jsonp(callback, obj) {
   var name = String(callback || 'callback').replace(/[^a-zA-Z0-9_]/g, '');
   return ContentService
@@ -242,6 +266,8 @@ function submitBooking(p, cb) {
   var date  = safe(p.date, 20);
   var time  = safe(p.time, 10);
 
+  // עמודות תאריך_פגישה (G) ושעה (H) כטקסט — שלא יומרו אוטומטית לאובייקט Date ע"י Sheets
+  sheet.getRange('G:H').setNumberFormat('@');
   // id | תאריך_שליחה | שם | טלפון | שירות | משך | תאריך_פגישה | שעה | הערות | סטטוס | health_id | cal | תזכורת | אימייל
   sheet.appendRow([id, p.timestamp || nowISO(), name, phone, safe(p.service, 80),
                    dur, date, time, safe(p.notes, 500), 'חדש', '', '', '', email]);
@@ -305,8 +331,8 @@ function busyForDate(date) {
   var busy = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
-    if (String(r[6]) === date && String(r[9]) !== 'נדחה') {
-      busy.push({ time: String(r[7]), dur: parseInt(r[5], 10) || TREATMENT_MIN });
+    if (asDateStr(r[6]) === date && String(r[9]) !== 'נדחה') {
+      busy.push({ time: asTimeStr(r[7]), dur: parseInt(r[5], 10) || TREATMENT_MIN });
     }
   }
   return busy;
@@ -320,7 +346,7 @@ function getDaysOff(p, cb) {
   if (!sheet) return ok(cb, { dates: [] });
   var data = sheet.getDataRange().getValues();
   var dates = [];
-  for (var i = 1; i < data.length; i++) if (data[i][0]) dates.push(String(data[i][0]));
+  for (var i = 1; i < data.length; i++) if (data[i][0]) dates.push(asDateStr(data[i][0]));
   return ok(cb, { dates: dates });
 }
 
@@ -337,7 +363,7 @@ function listBookings(p, cb) {
     var r = data[i];
     out.push({
       id: r[0], submitted: r[1], name: r[2], phone: r[3], service: r[4],
-      duration: r[5], date: r[6], time: r[7], notes: r[8], status: r[9],
+      duration: r[5], date: asDateStr(r[6]), time: asTimeStr(r[7]), notes: r[8], status: r[9],
       health_id: r[10] || '', calendar_event_id: r[11] || '', reminder_sent: r[12] || '', email: r[13] || ''
     });
   }
@@ -365,11 +391,12 @@ function updateStatus(p, cb) {
       var resp = { id: id, status: status };
 
       if (status === 'אושר') {
+        var dStr = asDateStr(r[6]), tStr = asTimeStr(r[7]);
         if (!r[11]) { // צור אירוע ביומן אם עוד לא נוצר
-          var evId = createCalEvent(r[2], r[3], r[4], String(r[6]), String(r[7]), parseInt(r[5], 10) || TREATMENT_MIN, r[8]);
+          var evId = createCalEvent(r[2], r[3], r[4], dStr, tStr, parseInt(r[5], 10) || TREATMENT_MIN, r[8]);
           if (evId) sheet.getRange(row, 12).setValue(evId);
         }
-        var wa = waSend(r[3], msgApproved(r[2], prettyDate(r[6]), r[7]));
+        var wa = waSend(r[3], msgApproved(r[2], prettyDate(dStr), tStr));
         resp.wa_sent = wa.sent; resp.wa_url = wa.wa_url;
       } else if (status === 'נדחה') {
         deleteCalEvent(r[11]); sheet.getRange(row, 12).setValue('');
@@ -422,10 +449,10 @@ function setDayOff(p, cb) {
   if (!sheet) return err(cb, 'sheet "ימי_חופש" not found');
 
   var data = sheet.getDataRange().getValues(), rowIdx = -1;
-  for (var i = 1; i < data.length; i++) if (String(data[i][0]) === date) { rowIdx = i + 1; break; }
+  for (var i = 1; i < data.length; i++) if (asDateStr(data[i][0]) === date) { rowIdx = i + 1; break; }
 
   if (op === 'remove') { if (rowIdx > 0) sheet.deleteRow(rowIdx); return ok(cb, { date: date, op: 'removed' }); }
-  if (rowIdx === -1) sheet.appendRow([date, safe(p.reason, 100)]);
+  if (rowIdx === -1) { sheet.getRange('A:A').setNumberFormat('@'); sheet.appendRow([date, safe(p.reason, 100)]); }
   return ok(cb, { date: date, op: 'added' });
 }
 
@@ -654,10 +681,11 @@ function runReminders(returnList) {
   var out = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
-    if (String(r[6]) === tomorrow && String(r[9]) === 'אושר' && String(r[12] || '') !== 'כן') {
-      var wa = waSend(r[3], msgReminder(r[2], prettyDate(r[6]), r[7]));
+    var dStr = asDateStr(r[6]), tStr = asTimeStr(r[7]);
+    if (dStr === tomorrow && String(r[9]) === 'אושר' && String(r[12] || '') !== 'כן') {
+      var wa = waSend(r[3], msgReminder(r[2], prettyDate(dStr), tStr));
       if (wa.sent) sheet.getRange(i + 1, 13).setValue('כן');
-      out.push({ name: r[2], phone: r[3], time: r[7], date: r[6], sent: wa.sent, wa_url: wa.wa_url });
+      out.push({ name: r[2], phone: r[3], time: tStr, date: dStr, sent: wa.sent, wa_url: wa.wa_url });
     }
   }
   // במצב manual — מרכז את כל התזכורות במייל אחד להדר עם קישורי לחיצה
@@ -691,7 +719,7 @@ function getAvailableSlots(p, cb) {
   var data = sheet.getDataRange().getValues();
   var hasAny = data.length > 1;
   var slots = [];
-  for (var i = 1; i < data.length; i++) if (String(data[i][0]) === date) slots.push(String(data[i][1]));
+  for (var i = 1; i < data.length; i++) if (asDateStr(data[i][0]) === date) slots.push(asTimeStr(data[i][1]));
   slots.sort();
   return ok(cb, { slots: slots, busy: busyForDate(date), buffer: BUFFER_MIN, configured: hasAny });
 }
@@ -703,13 +731,13 @@ function slotsAdmin(p, cb) {
   if (!date) return err(cb, 'date required');
   var data = ssSlots().getDataRange().getValues();
   var open = [];
-  for (var i = 1; i < data.length; i++) if (String(data[i][0]) === date) open.push(String(data[i][1]));
+  for (var i = 1; i < data.length; i++) if (asDateStr(data[i][0]) === date) open.push(asTimeStr(data[i][1]));
   var booked = busyForDate(date).map(function (b) { return b.time; });
   return ok(cb, { open: open.sort(), booked: booked });
 }
 
 function slotExists(data, date, time) {
-  for (var i = 1; i < data.length; i++) if (String(data[i][0]) === date && String(data[i][1]) === time) return i + 1;
+  for (var i = 1; i < data.length; i++) if (asDateStr(data[i][0]) === date && asTimeStr(data[i][1]) === time) return i + 1;
   return -1;
 }
 
@@ -718,6 +746,7 @@ function addSlot(p, cb) {
   var date = safe(p.date, 20), time = safe(p.time, 10);
   if (!date || !time) return err(cb, 'date, time required');
   var sheet = ssSlots(), data = sheet.getDataRange().getValues();
+  sheet.getRange('A:B').setNumberFormat('@'); // תאריך+שעה כטקסט
   if (slotExists(data, date, time) === -1) sheet.appendRow([date, time]);
   return ok(cb, { date: date, time: time, op: 'added' });
 }
@@ -737,6 +766,7 @@ function addSlotsBulk(p, cb) {
   var date = safe(p.date, 20), times = safe(p.times, 600);
   if (!date || !times) return err(cb, 'date, times required');
   var sheet = ssSlots(), data = sheet.getDataRange().getValues();
+  sheet.getRange('A:B').setNumberFormat('@'); // תאריך+שעה כטקסט
   var arr = times.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
   var added = 0;
   arr.forEach(function (t) { if (slotExists(data, date, t) === -1) { sheet.appendRow([date, t]); data.push([date, t]); added++; } });
@@ -748,7 +778,7 @@ function blockAllSlots(p, cb) {
   var date = safe(p.date, 20);
   if (!date) return err(cb, 'date required');
   var sheet = ssSlots(), data = sheet.getDataRange().getValues();
-  for (var i = data.length - 1; i >= 1; i--) if (String(data[i][0]) === date) sheet.deleteRow(i + 1);
+  for (var i = data.length - 1; i >= 1; i--) if (asDateStr(data[i][0]) === date) sheet.deleteRow(i + 1);
   return ok(cb, { date: date, op: 'blocked' });
 }
 
@@ -760,15 +790,15 @@ function slotsMonth(p, cb) {
   if (!month) return err(cb, 'month required');
   var openDates = {}, bookedDates = {};
   var sd = ssSlots().getDataRange().getValues();
-  for (var i = 1; i < sd.length; i++) { var d = String(sd[i][0]); if (d.indexOf(month) === 0) openDates[d] = true; }
+  for (var i = 1; i < sd.length; i++) { var d = asDateStr(sd[i][0]); if (d.indexOf(month) === 0) openDates[d] = true; }
   var bd = ssBookings() ? ssBookings().getDataRange().getValues() : [];
   for (var j = 1; j < bd.length; j++) {
-    var r = bd[j];
-    if (String(r[6]).indexOf(month) === 0 && String(r[9]) !== 'נדחה') bookedDates[String(r[6])] = true;
+    var r = bd[j], rd = asDateStr(r[6]);
+    if (rd.indexOf(month) === 0 && String(r[9]) !== 'נדחה') bookedDates[rd] = true;
   }
   var off = [];
   var od = ssDaysOff() ? ssDaysOff().getDataRange().getValues() : [];
-  for (var k = 1; k < od.length; k++) { var dd = String(od[k][0]); if (dd.indexOf(month) === 0) off.push(dd); }
+  for (var k = 1; k < od.length; k++) { var dd = asDateStr(od[k][0]); if (dd.indexOf(month) === 0) off.push(dd); }
   return ok(cb, { open: Object.keys(openDates), booked: Object.keys(bookedDates), off: off });
 }
 

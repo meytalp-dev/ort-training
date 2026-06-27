@@ -672,10 +672,34 @@ $('#search').addEventListener('input', e => {
 // ---- Render ----
 function fmtDateLabel(iso) {
   if (!iso) return '';
-  const parts = iso.split('-');
-  if (parts.length !== 3) return iso;
-  const d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+  let d;
+  if (String(iso).indexOf('T') > -1) {
+    // ISO עם זמן (תא Sheets שהומר ל-Date) — לפענח כתאריך מלא
+    d = new Date(iso);
+  } else {
+    const parts = String(iso).split('-');
+    if (parts.length !== 3) return iso;
+    d = new Date(+parts[0], +parts[1]-1, +parts[2]);
+  }
+  if (isNaN(d.getTime())) return iso;
   return HE_DOW[d.getDay()] + ' · ' + d.getDate() + ' ' + HE_MONTHS_SHORT[d.getMonth()];
+}
+// שעה נקייה HH:mm — גם אם הגיע כ-ISO ("1899-12-30T07:00..") מ-Sheets
+function fmtTime(t) {
+  if (!t) return '';
+  const s = String(t);
+  const m = s.match(/T(\d{2}:\d{2})/) || s.match(/^(\d{1,2}:\d{2})/);
+  return m ? m[1] : s;
+}
+// yyyy-MM-dd ל-<input type=date> — גם אם הגיע כ-ISO עם זמן
+function fmtDateInput(iso) {
+  if (!iso) return '';
+  const s = String(iso);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s.split('T')[0] || '';
+  const mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + mm + '-' + dd;
 }
 
 function renderAll() {
@@ -715,11 +739,11 @@ function renderTable() {
   tbody.innerHTML = rows.map(b => {
     const phoneClean = String(b.phone||'').replace(/\D/g,'');
     const waPhone = phoneClean.startsWith('0') ? '972' + phoneClean.substring(1) : phoneClean;
-    const waMsg = encodeURIComponent(`שלום ${b.name}, קיבלתי את בקשתך לתור ${b.service} ב-${fmtDateLabel(b.date)} בשעה ${b.time}.`);
+    const waMsg = encodeURIComponent(`שלום ${b.name}, קיבלתי את בקשתך לתור ${b.service} ב-${fmtDateLabel(b.date)} בשעה ${fmtTime(b.time)}.`);
     return `
       <tr data-id="${b.id}">
         <td data-lbl="תאריך">${fmtDateLabel(b.date)}</td>
-        <td data-lbl="שעה">${b.time||''}</td>
+        <td data-lbl="שעה">${fmtTime(b.time)}</td>
         <td data-lbl="שם"><strong>${b.name||''}</strong></td>
         <td data-lbl="טלפון">${b.phone||''}</td>
         <td data-lbl="טיפול">${b.service||''} <small style="color:#8B8B8B">${b.duration?b.duration+' דק׳':''}</small></td>
@@ -802,9 +826,10 @@ function openReschedule(id){
   const b = allBookings.find(x => x.id === id);
   if (!b) return;
   reschedId = id;
-  $('#resched-name').textContent = b.name + ' · ' + (b.date||'') + ' ' + (b.time||'');
-  $('#resched-date').value = b.date || '';
-  $('#resched-time').value = b.time || '';
+  const dInput = fmtDateInput(b.date), tInput = fmtTime(b.time);
+  $('#resched-name').textContent = b.name + ' · ' + fmtDateLabel(b.date) + ' ' + tInput;
+  $('#resched-date').value = dInput;
+  $('#resched-time').value = tInput;
   openModal('m-resched');
 }
 $('#resched-save').addEventListener('click', async () => {
