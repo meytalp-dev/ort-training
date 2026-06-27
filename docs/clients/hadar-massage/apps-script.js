@@ -144,10 +144,9 @@ function asTimeStr(v) {
   if (v == null || v === '') return '';
   if (isDate(v)) return Utilities.formatDate(v, TZ, 'HH:mm');
   var s = String(v);
-  var m = s.match(/T(\d{2}:\d{2})/);       // ISO/serial 1899-..T07:00..
-  if (m) return m[1];
-  m = s.match(/^(\d{1,2}:\d{2})/);          // "07:00:00" → "07:00"
-  if (m) return m[1];
+  var m = s.match(/T(\d{1,2}):(\d{2})/)     // ISO/serial 1899-..T7:00..
+       || s.match(/(\d{1,2}):(\d{2})/);     // "7:30" / "07:00:00"
+  if (m) return ('0' + m[1]).slice(-2) + ':' + m[2]; // תמיד HH:mm עם אפס מוביל
   return s;
 }
 

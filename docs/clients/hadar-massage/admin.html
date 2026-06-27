@@ -253,16 +253,16 @@ tbody tr:hover{background:var(--bg-cream)}
 .slot-bulk{display:flex;gap:.6rem;justify-content:flex-end;margin-bottom:1rem;flex-wrap:wrap}
 .slot-quick-lbl{font-size:.85rem;color:var(--text-light);margin-bottom:.6rem;text-align:right}
 .slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.6rem}
-.slotchip{display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1.5px solid var(--bg-beige);border-radius:10px;padding:.35rem .35rem .35rem .6rem;font-family:var(--display);font-weight:600;font-size:.95rem;color:var(--text);transition:all .2s}
-.slotchip.open{border-color:var(--status-ok);background:rgba(78,110,93,.06)}
-.slotchip.booked{opacity:.55;background:var(--bg-cream)}
+.slotchip{display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1.5px solid var(--bg-beige);border-radius:10px;padding:.45rem .45rem .45rem .7rem;font-family:var(--display);font-weight:600;font-size:.95rem;color:var(--text);transition:all .2s;cursor:pointer;user-select:none}
+.slotchip:not(.booked):hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow)}
+.slotchip.open{border-color:var(--status-ok);background:rgba(78,110,93,.08)}
+.slotchip.booked{opacity:.6;background:var(--bg-cream);cursor:default}
 .slotchip .t{flex:1;text-align:center}
-.slotchip button{width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--bg-cream);color:var(--text-mid);transition:all .15s}
-.slotchip button svg{width:15px;height:15px}
-.slotchip .add:hover{background:var(--status-ok);color:#fff}
-.slotchip .rem{color:var(--status-no)}
-.slotchip .rem:hover{background:var(--status-no);color:#fff}
-.slotchip.booked button{visibility:hidden}
+.slotchip .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--bg-cream);color:var(--text-mid);transition:all .15s;flex-shrink:0}
+.slotchip .ic svg{width:15px;height:15px}
+.slotchip:hover .ic.add{background:var(--status-ok);color:#fff}
+.slotchip .ic.rem{color:var(--status-no)}
+.slotchip:hover .ic.rem{background:var(--status-no);color:#fff}
 .slotchip .bk{font-size:.72rem;color:var(--status-no);font-weight:600;padding:0 .3rem}
 
 /* Toast */
@@ -684,12 +684,12 @@ function fmtDateLabel(iso) {
   if (isNaN(d.getTime())) return iso;
   return HE_DOW[d.getDay()] + ' · ' + d.getDate() + ' ' + HE_MONTHS_SHORT[d.getMonth()];
 }
-// שעה נקייה HH:mm — גם אם הגיע כ-ISO ("1899-12-30T07:00..") מ-Sheets
+// שעה נקייה HH:mm עם אפס מוביל — גם אם הגיע "7:30" או ISO ("1899-12-30T07:00..") מ-Sheets
 function fmtTime(t) {
   if (!t) return '';
   const s = String(t);
-  const m = s.match(/T(\d{2}:\d{2})/) || s.match(/^(\d{1,2}:\d{2})/);
-  return m ? m[1] : s;
+  const m = s.match(/T(\d{1,2}):(\d{2})/) || s.match(/(\d{1,2}):(\d{2})/);
+  return m ? (('0'+m[1]).slice(-2) + ':' + m[2]) : s;
 }
 // yyyy-MM-dd ל-<input type=date> — גם אם הגיע כ-ISO עם זמן
 function fmtDateInput(iso) {
@@ -978,19 +978,28 @@ async function loadDaySlots(iso){
     const r = await api({ action:'slots_admin', pin:PIN, date:iso });
     if(r && r.result==='success'){ open=r.open||[]; booked=r.booked||[]; }
   } catch(e){ $('#slotgrid').innerHTML='<div class="rec-empty">שגיאת תקשורת</div>'; return; }
+  // נרמול לכל השעות ל-HH:mm כדי ש-"7:30" ו-"07:30" ייחשבו זהים (מונע כפילויות + כפתורי + מיותרים)
+  open = open.map(fmtTime); booked = booked.map(fmtTime);
   const openSet=new Set(open), bookedSet=new Set(booked);
-  const times = Array.from(new Set(SLOT_TEMPLATE.concat(open))).sort();
+  const times = Array.from(new Set(SLOT_TEMPLATE.map(fmtTime).concat(open))).sort();
   $('#slotgrid').innerHTML = times.map(t=>{
     const isBooked=bookedSet.has(t), isOpen=openSet.has(t);
     const cls = isBooked?'booked':(isOpen?'open':'');
-    let btn;
-    if(isBooked) btn=`<span class="bk">תפוס</span>`;
-    else if(isOpen) btn=`<button class="rem" data-rem="${t}" title="הסרה"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg></button>`;
-    else btn=`<button class="add" data-add="${t}" title="פתיחה"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>`;
-    return `<div class="slotchip ${cls}"><span class="t">${t}</span>${btn}</div>`;
+    let icon;
+    if(isBooked) icon=`<span class="bk">תפוס</span>`;
+    else if(isOpen) icon=`<span class="ic rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg></span>`;
+    else icon=`<span class="ic add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>`;
+    return `<div class="slotchip ${cls}" data-time="${t}" data-state="${isBooked?'booked':(isOpen?'open':'closed')}"><span class="t">${t}</span>${icon}</div>`;
   }).join('');
-  $('#slotgrid').querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>slotAction('add_slot',{time:b.dataset.add})));
-  $('#slotgrid').querySelectorAll('[data-rem]').forEach(b=>b.addEventListener('click',()=>slotAction('remove_slot',{time:b.dataset.rem})));
+  // לחיצה על כל הצ'יפ (לא רק על האייקון הקטן) מחליפה מצב: סגור→פתוח, פתוח→הסרה
+  $('#slotgrid').querySelectorAll('.slotchip').forEach(chip=>{
+    if(chip.dataset.state==='booked') return;
+    chip.addEventListener('click',()=>{
+      const t=chip.dataset.time;
+      if(chip.dataset.state==='open') slotAction('remove_slot',{time:t});
+      else slotAction('add_slot',{time:t});
+    });
+  });
 }
 async function slotAction(action, extra){
   if(!selectedSlotDate) return;
