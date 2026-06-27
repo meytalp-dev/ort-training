@@ -173,6 +173,12 @@ tbody tr:hover{background:var(--bg-cream)}
 .qa-row .qa-a.yes{color:var(--clay-deep)}
 .qa-row .qa-a.no{color:var(--status-ok)}
 .qa-row .qa-detail{color:var(--text-light);font-size:.85rem;display:block;margin-top:.2rem}
+.qa-row.crit{background:rgba(192,88,74,.07);border-radius:8px;padding-right:.6rem;padding-left:.6rem}
+.qa-row.crit .qa-q{color:var(--status-no);font-weight:600}
+.qa-row.crit .qa-a.yes{color:#fff;background:var(--status-no);padding:.1rem .6rem;border-radius:9999px}
+.crit-banner{background:var(--status-no);color:#fff;border-radius:12px;padding:.9rem 1.1rem;margin-bottom:1.2rem;font-weight:600;font-size:.92rem;line-height:1.5;display:flex;gap:.6rem;align-items:flex-start}
+.crit-banner svg{width:20px;height:20px;flex-shrink:0;margin-top:1px}
+.decl-crit{color:var(--status-no);font-weight:700}
 
 /* Patient records */
 .rec-card{background:var(--bg-cream);border:1px solid var(--bg-beige);border-radius:12px;padding:1rem 1.2rem;margin-bottom:.8rem}
@@ -221,6 +227,13 @@ tbody tr:hover{background:var(--bg-cream)}
 .scal-grid .cell.past{color:#C7CFC9;cursor:pointer}
 .scal-grid .cell:not(.empty):hover{background:var(--bg-cream)}
 .scal-grid .cell.selected{border-color:var(--accent);background:var(--accent-soft)}
+.scal-grid .cell.blocked{background:rgba(192,88,74,.10)}
+.scal-grid .cell.blocked > span:first-child{color:var(--status-no);text-decoration:line-through}
+.scal-grid .cell .lock{position:absolute;top:3px;left:5px;font-size:.62rem;color:var(--status-no)}
+.block-banner{display:flex;align-items:center;justify-content:space-between;gap:1rem;background:rgba(192,88,74,.09);border:1px solid rgba(192,88,74,.3);border-radius:12px;padding:1rem 1.2rem;flex-wrap:wrap}
+.block-banner .bb-text{color:var(--status-no);font-weight:600}
+.block-banner button{background:var(--white);border:1px solid var(--status-no);color:var(--status-no);border-radius:9999px;padding:.5rem 1.2rem;cursor:pointer;font-family:inherit;font-weight:600;font-size:.88rem}
+.block-banner button:hover{background:var(--status-no);color:#fff}
 .scal-grid .cell .dots{display:flex;gap:3px;height:6px;align-items:center}
 .scal-grid .cell .dot{width:6px;height:6px;border-radius:50%}
 .scal-grid .cell .dot.open{background:var(--status-ok)}
@@ -385,6 +398,7 @@ tbody tr:hover{background:var(--bg-cream)}
       <div id="slot-day">
         <div class="slot-day-head" id="slot-day-head">בחרי תאריך בלוח כדי לנהל שעות</div>
         <div id="slot-day-body" style="display:none">
+          <div id="slot-block-banner"></div>
           <div class="slot-manual">
             <div><label>תאריך</label><input type="date" id="slot-date"></div>
             <div><label>שעה</label><input type="time" id="slot-time" step="900"></div>
@@ -822,17 +836,27 @@ function renderHealth(h){
   if (!h) { $('#health-body').innerHTML = '<div class="rec-empty">לא נמצאה הצהרת בריאות ללקוחה זו.<br><small>הלקוחה לא מילאה את הטופס המקוון.</small></div>'; return; }
   let qa = [];
   try { qa = JSON.parse(h.answers_json || '[]'); } catch(e){ qa = []; }
-  let html = `<div class="health-meta">
+  const critYes = qa.filter(i => i.critical && i.a === 'כן');
+  let html = '';
+  if (critYes.length){
+    html += `<div class="crit-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span>🔴 קונטראינדיקציה — לא לקבל לטיפול ללא בירור:<br>${critYes.map(i=>i.q.replace(/\?$/,'')).join(' · ')}</span>
+    </div>`;
+  }
+  html += `<div class="health-meta">
     <strong>${h.name||''}</strong> · ${h.phone||''}${h.age?' · גיל '+h.age:''}<br>
     ${h.appointment?'📅 '+h.appointment+'<br>':''}
     <small style="color:var(--text-light)">נשלח: ${fmtTimestamp(h.submitted)}</small>
   </div>`;
   if (qa.length){
-    html += qa.map(item => `
-      <div class="qa-row">
+    html += qa.map(item => {
+      const isCrit = item.critical && item.a === 'כן';
+      return `
+      <div class="qa-row${isCrit?' crit':''}">
         <span class="qa-q">${item.q}${item.detail?`<span class="qa-detail">↳ ${item.detail}</span>`:''}</span>
         <span class="qa-a ${item.a==='כן'?'yes':'no'}">${item.a}</span>
-      </div>`).join('');
+      </div>`; }).join('');
   } else {
     // גיבוי — הצגת שדה הדגלים אם אין JSON מלא (הצהרות ישנות)
     html += `<div class="qa-row"><span class="qa-q">דגלים רפואיים שסומנו:</span></div>
@@ -853,7 +877,7 @@ function pad2(n){ return String(n).padStart(2,'0'); }
 function fmtDateISO(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
 
 let scalMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let monthOpen = new Set(), monthBooked = new Set();
+let monthOpen = new Set(), monthBooked = new Set(), monthOff = new Set();
 let selectedSlotDate = null;
 
 async function loadHours(){ await renderMonth(); }
@@ -862,10 +886,10 @@ async function renderMonth(){
   const m = scalMonth;
   $('#scal-month').textContent = HE_MONTHS_FULL[m.getMonth()] + ' ' + m.getFullYear();
   // fetch month summary
-  monthOpen = new Set(); monthBooked = new Set();
+  monthOpen = new Set(); monthBooked = new Set(); monthOff = new Set();
   try {
     const r = await api({ action:'slots_month', pin:PIN, month: m.getFullYear()+'-'+pad2(m.getMonth()+1) });
-    if (r && r.result === 'success'){ monthOpen = new Set(r.open||[]); monthBooked = new Set(r.booked||[]); }
+    if (r && r.result === 'success'){ monthOpen = new Set(r.open||[]); monthBooked = new Set(r.booked||[]); monthOff = new Set(r.off||[]); }
   } catch(e){}
   const grid = $('#scal-grid'); grid.innerHTML='';
   HE_DOW.forEach(d=>{ const c=document.createElement('div'); c.className='dow'; c.textContent=d; grid.appendChild(c); });
@@ -879,8 +903,10 @@ async function renderMonth(){
     const cell = document.createElement('div'); cell.className='cell';
     if(date<today) cell.classList.add('past');
     if(selectedSlotDate===iso) cell.classList.add('selected');
+    const isOff = monthOff.has(iso);
+    if(isOff) cell.classList.add('blocked');
     const hasOpen = monthOpen.has(iso), hasBooked = monthBooked.has(iso);
-    cell.innerHTML = `<span>${d}</span><span class="dots">${hasBooked?'<span class="dot booked"></span>':''}${hasOpen?'<span class="dot open"></span>':''}</span>`;
+    cell.innerHTML = `${isOff?'<span class="lock">חסום</span>':''}<span>${d}</span><span class="dots">${hasBooked?'<span class="dot booked"></span>':''}${hasOpen?'<span class="dot open"></span>':''}</span>`;
     cell.addEventListener('click', ()=>selectSlotDate(iso));
     grid.appendChild(cell);
   }
@@ -903,6 +929,15 @@ async function selectSlotDate(iso){
   await loadDaySlots(iso);
 }
 async function loadDaySlots(iso){
+  // באנר חסימת-יום + הסרה
+  const blocked = monthOff.has(iso);
+  $('#slot-block-banner').innerHTML = blocked
+    ? `<div class="block-banner"><span class="bb-text">⊘ היום מסומן כחסום — לא ניתן לקבוע בו תורים.</span><button id="unblock-day">הסר חסימה</button></div>`
+    : '';
+  if (blocked) $('#unblock-day').addEventListener('click', async ()=>{
+    try { await api({ action:'set_day_off', pin:PIN, date:iso, op:'remove' }); showToast('החסימה הוסרה ✓','success'); await renderMonth(); await loadDaySlots(iso); }
+    catch(e){ showToast('שגיאת תקשורת','error'); }
+  });
   $('#slotgrid').innerHTML = '<div class="loading">טוען</div>';
   let open=[], booked=[];
   try {
@@ -972,7 +1007,7 @@ function renderDeclarations(){
       <td data-lbl="תאריך">${fmtTimestamp(d.submitted)}</td>
       <td data-lbl="שם"><strong>${d.name||''}</strong></td>
       <td data-lbl="טלפון">${d.phone||''}</td>
-      <td data-lbl="דגלים" class="notes-cell">${(d.flags&&d.flags!=='אין דגלים')?d.flags:'—'}</td>
+      <td data-lbl="דגלים" class="notes-cell ${(d.flags&&d.flags.indexOf('🔴')>=0)?'decl-crit':''}">${(d.flags&&d.flags!=='אין דגלים')?d.flags:'—'}</td>
       <td class="row-actions-cell"><div class="row-actions"><button class="act health" data-dview>צפייה בטופס מלא</button></div></td>
     </tr>`).join('');
   $('#decl-tbody').querySelectorAll('[data-dview]').forEach(btn=>btn.addEventListener('click',()=>{

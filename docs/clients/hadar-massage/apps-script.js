@@ -199,8 +199,7 @@ function waSend(phone, message) {
 // הודעות מוכנות
 function msgReceived(name) {
   return 'היי ' + name + ' 🌿\n' +
-    'הבקשה לתור התקבלה בהצלחה.\n' +
-    'אמתין לאישור הסופי שלי ואחזור אלייך בהקדם 🙏\n\nהדר בק';
+    'הבקשה לתור התקבלה בהצלחה. אנא המתן/י לאישור סופי.\n\nהדר בק';
 }
 function msgApproved(name, prettyDate, time) {
   return 'היי ' + name + ' 🌿\n' +
@@ -763,7 +762,10 @@ function slotsMonth(p, cb) {
     var r = bd[j];
     if (String(r[6]).indexOf(month) === 0 && String(r[9]) !== 'נדחה') bookedDates[String(r[6])] = true;
   }
-  return ok(cb, { open: Object.keys(openDates), booked: Object.keys(bookedDates) });
+  var off = [];
+  var od = ssDaysOff() ? ssDaysOff().getDataRange().getValues() : [];
+  for (var k = 1; k < od.length; k++) { var dd = String(od[k][0]); if (dd.indexOf(month) === 0) off.push(dd); }
+  return ok(cb, { open: Object.keys(openDates), booked: Object.keys(bookedDates), off: off });
 }
 
 // ============================================================
