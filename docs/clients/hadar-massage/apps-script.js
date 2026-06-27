@@ -33,16 +33,16 @@
  * 2. צור את הגיליונות (Tabs). שורת כותרת בכל אחד:
  *
  *    "הזמנות"
- *      id | תאריך_שליחה | שם | טלפון | שירות | משך_דקות | תאריך_פגישה | שעה_פגישה | הערות | סטטוס | health_id | calendar_event_id | תזכורת_נשלחה
+ *      id | תאריך_שליחה | שם | טלפון | שירות | משך_דקות | תאריך_פגישה | שעה_פגישה | הערות | סטטוס | health_id | calendar_event_id | תזכורת_נשלחה | אימייל
  *
  *    "ימי_חופש"
  *      תאריך | סיבה
  *
  *    "הצהרות_בריאות"      (נוצר אוטומטית אם חסר)
- *      id | תאריך_שליחה | שם | טלפון | גיל | תאריך_טיפול | דגלים | הערות | אישור | answers_json
+ *      id | תאריך_שליחה | שם | טלפון | גיל | תאריך_טיפול | דגלים | הערות | אישור | answers_json | אימייל
  *
  *    "לקוחות"             (נוצר אוטומטית אם חסר)
- *      טלפון | שם | גיל | תאריך_הצטרפות | מספר_טיפולים | תאריך_אחרון | תיוג | הערות
+ *      טלפון | שם | גיל | תאריך_הצטרפות | מספר_טיפולים | תאריך_אחרון | תיוג | הערות | אימייל
  *
  *    "תיק_מטופל"          (נוצר אוטומטית אם חסר)
  *      id | טלפון | שם | תאריך_טיפול | סיבת_פנייה | סיכום_טיפול | תאריך_עדכון
@@ -91,13 +91,13 @@ function ssDaysOff()  { return ss().getSheetByName('ימי_חופש'); }
 function ssHealth() {
   var s = ss().getSheetByName('הצהרות_בריאות');
   if (!s) { s = ss().insertSheet('הצהרות_בריאות');
-    s.appendRow(['id','תאריך_שליחה','שם','טלפון','גיל','תאריך_טיפול','דגלים','הערות','אישור','answers_json']); }
+    s.appendRow(['id','תאריך_שליחה','שם','טלפון','גיל','תאריך_טיפול','דגלים','הערות','אישור','answers_json','אימייל']); }
   return s;
 }
 function ssClients() {
   var s = ss().getSheetByName('לקוחות');
   if (!s) { s = ss().insertSheet('לקוחות');
-    s.appendRow(['טלפון','שם','גיל','תאריך_הצטרפות','מספר_טיפולים','תאריך_אחרון','תיוג','הערות']); }
+    s.appendRow(['טלפון','שם','גיל','תאריך_הצטרפות','מספר_טיפולים','תאריך_אחרון','תיוג','הערות','אימייל']); }
   return s;
 }
 function ssPatient() {
@@ -237,15 +237,16 @@ function submitBooking(p, cb) {
   var id    = 'B' + Date.now() + Math.floor(Math.random() * 1000);
   var name  = safe(p.name, 100);
   var phone = safe(p.phone, 20);
+  var email = safe(p.email, 80);
   var dur   = safe(p.duration, 5) || String(TREATMENT_MIN);
   var date  = safe(p.date, 20);
   var time  = safe(p.time, 10);
 
-  // id | תאריך_שליחה | שם | טלפון | שירות | משך | תאריך_פגישה | שעה | הערות | סטטוס | health_id | cal | תזכורת
+  // id | תאריך_שליחה | שם | טלפון | שירות | משך | תאריך_פגישה | שעה | הערות | סטטוס | health_id | cal | תזכורת | אימייל
   sheet.appendRow([id, p.timestamp || nowISO(), name, phone, safe(p.service, 80),
-                   dur, date, time, safe(p.notes, 500), 'חדש', '', '', '']);
+                   dur, date, time, safe(p.notes, 500), 'חדש', '', '', '', email]);
 
-  upsertClient(phone, name, p.age);
+  upsertClient(phone, name, p.age, email);
 
   // הודעת "הבקשה התקבלה" ללקוחה (אוטומטי רק ב-Green API)
   var wa = waSend(phone, msgReceived(name));
@@ -268,21 +269,22 @@ function submitBooking(p, cb) {
 }
 
 // מאגר לקוחות — יצירה/עדכון אוטומטי לפי טלפון
-function upsertClient(phone, name, age) {
+function upsertClient(phone, name, age, email) {
   var key = normPhone(phone);
   if (!key) return;
   var sheet = ssClients();
   var data  = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (normPhone(data[i][0]) === key) {
-      if (name) sheet.getRange(i + 1, 2).setValue(name);
-      if (age)  sheet.getRange(i + 1, 3).setValue(safe(age, 4));
+      if (name)  sheet.getRange(i + 1, 2).setValue(name);
+      if (age)   sheet.getRange(i + 1, 3).setValue(safe(age, 4));
+      if (email) sheet.getRange(i + 1, 9).setValue(safe(email, 80)); // אימייל
       sheet.getRange(i + 1, 5).setValue((parseInt(data[i][4], 10) || 0) + 1); // מספר_טיפולים
       sheet.getRange(i + 1, 6).setValue(todayIL());                           // תאריך_אחרון
       return;
     }
   }
-  sheet.appendRow([key, name || '', safe(age, 4), todayIL(), 1, todayIL(), '', '']);
+  sheet.appendRow([key, name || '', safe(age, 4), todayIL(), 1, todayIL(), '', '', safe(email, 80)]);
 }
 
 // ============================================================
@@ -336,7 +338,7 @@ function listBookings(p, cb) {
     out.push({
       id: r[0], submitted: r[1], name: r[2], phone: r[3], service: r[4],
       duration: r[5], date: r[6], time: r[7], notes: r[8], status: r[9],
-      health_id: r[10] || '', calendar_event_id: r[11] || '', reminder_sent: r[12] || ''
+      health_id: r[10] || '', calendar_event_id: r[11] || '', reminder_sent: r[12] || '', email: r[13] || ''
     });
   }
   out.sort(function (a, b) { return String(b.submitted).localeCompare(String(a.submitted)); });
@@ -437,15 +439,16 @@ function submitHealth(p, cb) {
   var id    = 'H' + Date.now() + Math.floor(Math.random() * 1000);
   var name  = safe(p.name, 100);
   var phone = safe(p.phone, 20);
+  var email = safe(p.email, 80);
   sheet.appendRow([id, p.timestamp || nowISO(), name, phone, safe(p.age, 4),
                    safe(p.appointment, 60), safe(p.flags, 1500), safe(p.notes, 600),
-                   safe(p.consent, 10), safe(p.answers_json, 4000)]);
+                   safe(p.consent, 10), safe(p.answers_json, 4000), email]);
 
   // קשירה לתור קיים אם נמסר booking_id
   var bid = safe(p.booking_id, 60);
   if (bid) linkHealthToBooking(bid, id);
 
-  upsertClient(phone, name, p.age);
+  upsertClient(phone, name, p.age, email);
 
   if (HADAR_EMAIL) {
     try {
@@ -484,7 +487,7 @@ function getHealth(p, cb) {
     var match = id ? (r[0] === id) : (phone && normPhone(r[3]) === phone);
     if (match) {
       found = { id: r[0], submitted: r[1], name: r[2], phone: r[3], age: r[4],
-                appointment: r[5], flags: r[6], notes: r[7], consent: r[8], answers_json: r[9] || '' };
+                appointment: r[5], flags: r[6], notes: r[7], consent: r[8], answers_json: r[9] || '', email: r[10] || '' };
       if (id) break; // id מדויק — עצור. טלפון — שמור את האחרון
     }
   }
@@ -502,7 +505,7 @@ function listClients(p, cb) {
     var r = data[i];
     if (!r[0] && !r[1]) continue;
     out.push({ phone: r[0], name: r[1], age: r[2], joined: r[3],
-               visits: r[4], last: r[5], tag: r[6], notes: r[7] });
+               visits: r[4], last: r[5], tag: r[6], notes: r[7], email: r[8] || '' });
   }
   out.sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'he'); });
   return ok(cb, { clients: out });
@@ -521,10 +524,11 @@ function saveClient(p, cb) {
       if (p.age !== undefined)   sheet.getRange(row, 3).setValue(safe(p.age, 4));
       if (p.tag !== undefined)   sheet.getRange(row, 7).setValue(safe(p.tag, 60));
       if (p.notes !== undefined) sheet.getRange(row, 8).setValue(safe(p.notes, 400));
+      if (p.email !== undefined) sheet.getRange(row, 9).setValue(safe(p.email, 80));
       return ok(cb, { phone: key, op: 'updated' });
     }
   }
-  sheet.appendRow([key, safe(p.name, 100), safe(p.age, 4), todayIL(), 0, '', safe(p.tag, 60), safe(p.notes, 400)]);
+  sheet.appendRow([key, safe(p.name, 100), safe(p.age, 4), todayIL(), 0, '', safe(p.tag, 60), safe(p.notes, 400), safe(p.email, 80)]);
   return ok(cb, { phone: key, op: 'created' });
 }
 
@@ -779,7 +783,7 @@ function listHealth(p, cb) {
     var r = data[i];
     if (!r[0]) continue;
     out.push({ id: r[0], submitted: r[1], name: r[2], phone: r[3], age: r[4],
-               appointment: r[5], flags: r[6], notes: r[7], consent: r[8], answers_json: r[9] || '' });
+               appointment: r[5], flags: r[6], notes: r[7], consent: r[8], answers_json: r[9] || '', email: r[10] || '' });
   }
   out.sort(function (a, b) { return String(b.submitted).localeCompare(String(a.submitted)); });
   return ok(cb, { declarations: out });
