@@ -60,6 +60,10 @@
  * 7. תזכורות 24 שעות:  Triggers (השעון בצד) → Add Trigger →
  *      Function: dailyReminders · Event: Time-driven · Day timer · 8am–9am.
  *
+ * 7ב. תזכורת שבועית להדר (מוצ"ש) לעדכן שעות:  Add Trigger →
+ *      Function: weeklyHoursReminder · Time-driven · Week timer · Saturday · 9pm–10pm.
+ *      (כדי שזה יגיע אליה — להגדיר HADAR_EMAIL למעלה, או להפעיל Green API ל-WhatsApp.)
+ *
  * 8. ⚠️ כל שינוי בקוד דורש Deploy → Manage deployments → עיפרון → New version.
  * ============================================================
  */
@@ -69,6 +73,8 @@
 // ============================================================
 const ADMIN_PIN   = '1234';        // ⚠️ להחליף לפני מסירה להדר
 const HADAR_EMAIL = '';            // ריק = ללא מיילים. למשל 'hadarback2@gmail.com'
+const HADAR_PHONE = '972543270619'; // הטלפון של הדר — לתזכורת השבועית (אם Green API פעיל)
+const ADMIN_URL   = 'https://meytalp-dev.github.io/ort-training/clients/hadar-massage/admin.html'; // קישור לדשבורד
 
 const CLINIC_ADDRESS = 'וינגייט 74, דירה 24, קומה 6, קוד כניסה 3740, באר שבע';
 const TREATMENT_MIN  = 60;         // משך טיפול סטנדרטי
@@ -190,6 +196,8 @@ function doGet(e) {
       case 'block_all_slots':       return blockAllSlots(p, cb);
       case 'slots_month':           return slotsMonth(p, cb);
       case 'list_health':           return listHealth(p, cb);
+      case 'find_booking':          return findBooking(p, cb);
+      case 'client_reschedule':     return clientReschedule(p, cb);
       default: return err(cb, 'unknown action: ' + p.action);
     }
   } catch (ex) { return err(cb, ex.toString()); }
@@ -699,6 +707,35 @@ function runReminders(returnList) {
 }
 
 // ============================================================
+// 13ב. תזכורת שבועית להדר — כל מוצ"ש לעדכן שעות בדשבורד
+//   weeklyHoursReminder() — לחבר כטריגר Time-driven, יום שבת בערב.
+//   שולח WhatsApp (אם Green API פעיל) + מייל (אם HADAR_EMAIL מוגדר).
+//   להרצה ידנית לבדיקה: פשוט מריצים את הפונקציה מתוך העורך.
+// ============================================================
+function weeklyHoursReminder() {
+  var sunday = todayIL(1);  // מוצ"ש → "מחר" הוא יום ראשון, תחילת השבוע
+  var msg = 'מוצ"ש טוב הדר 🌿\n' +
+    'תזכורת קטנה: זה הזמן לפתוח את *השעות הזמינות* לשבוע הקרוב בדשבורד הניהול,\n' +
+    'כדי שהלקוחות יוכלו לקבוע תורים 💆‍♀️\n\n' +
+    '🗓️ פתיחת שעות לשבוע (החל מ-' + prettyDate(sunday) + '):\n' + ADMIN_URL + '\n\n' +
+    'אפשר "לפתוח את כל השעות" ליום בלחיצה אחת. שבוע נעים! 🌿\nמערכת התורים';
+
+  // WhatsApp — נשלח אוטומטית רק אם Green API מוגדר
+  waSend(HADAR_PHONE, msg);
+
+  // מייל — ערוץ אמין במצב manual (אם HADAR_EMAIL מוגדר)
+  if (HADAR_EMAIL) {
+    try {
+      MailApp.sendEmail({
+        to: HADAR_EMAIL,
+        subject: '🌿 תזכורת: לעדכן שעות זמינות לשבוע הקרוב',
+        body: msg
+      });
+    } catch (e) {}
+  }
+}
+
+// ============================================================
 // 14. שעות זמינות — מודל "שעות מפורסמות" (כמו AvailableSlot)
 //   הדר פותחת ידנית שעות לכל תאריך. דף ההזמנה מציג רק שעות פתוחות.
 //   גיליון "שעות_זמינות": תאריך | שעה   (נוצר אוטומטית)
@@ -816,4 +853,55 @@ function listHealth(p, cb) {
   }
   out.sort(function (a, b) { return String(b.submitted).localeCompare(String(a.submitted)); });
   return ok(cb, { declarations: out });
+}
+
+// ============================================================
+// 16. שירות עצמי ללקוחה — מציאת תור ושינוי מועד (ללא PIN)
+//   הזיהוי לפי שם מלא. שינוי מועד מאמת שהשם תואם לתור.
+// ============================================================
+function normName(s) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().toLowerCase(); }
+
+// find_booking — התורים הפעילים והעתידיים של לקוחה לפי שם
+function findBooking(p, cb) {
+  var name = safe(p.name, 100);
+  if (!normName(name)) return err(cb, 'name required');
+  var sheet = ssBookings();
+  if (!sheet) return ok(cb, { bookings: [] });
+  var data = sheet.getDataRange().getValues();
+  var today = todayIL(), key = normName(name), out = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i], status = String(r[9]), dStr = asDateStr(r[6]);
+    if (normName(r[2]) === key && status !== 'נדחה' && status !== 'בוצע' && dStr >= today) {
+      out.push({ id: r[0], date: dStr, time: asTimeStr(r[7]), service: r[4], status: status });
+    }
+  }
+  out.sort(function (a, b) { return (a.date + a.time).localeCompare(b.date + b.time); });
+  return ok(cb, { bookings: out });
+}
+
+// client_reschedule — שינוי מועד ע"י הלקוחה. מאמת שם, מחזיר את התור ל"חדש" (לאישור הדר).
+// לא יוצר הצהרת בריאות חדשה — שומר את ההצהרה המקורית.
+function clientReschedule(p, cb) {
+  var id = safe(p.id, 60), name = safe(p.name, 100), date = safe(p.date, 20), time = safe(p.time, 10);
+  if (!id || !name || !date || !time) return err(cb, 'id, name, date, time required');
+  var sheet = ssBookings();
+  var data  = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      var r = data[i];
+      if (normName(r[2]) !== normName(name)) return err(cb, 'name mismatch');
+      var row = i + 1;
+      sheet.getRange(row, 7).setValue(date);    // תאריך_פגישה
+      sheet.getRange(row, 8).setValue(time);    // שעה_פגישה
+      sheet.getRange(row, 10).setValue('חדש');  // חוזר לאישור הדר
+      sheet.getRange(row, 13).setValue('');     // איפוס תזכורת
+      deleteCalEvent(r[11]); sheet.getRange(row, 12).setValue(''); // אירוע ישן יוסר; ייווצר מחדש באישור
+      if (HADAR_EMAIL) {
+        try { MailApp.sendEmail({ to: HADAR_EMAIL, subject: '🔄 לקוחה שינתה מועד תור — ' + r[2],
+          body: r[2] + ' שינתה את מועד התור ל:\n📅 ' + prettyDate(date) + '  🕐 ' + time + '\n\nממתין לאישורך במערכת הניהול.' }); } catch (e) {}
+      }
+      return ok(cb, { id: id, date: date, time: time, status: 'חדש' });
+    }
+  }
+  return err(cb, 'id not found');
 }
