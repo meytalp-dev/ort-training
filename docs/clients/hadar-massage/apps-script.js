@@ -159,6 +159,14 @@ function doGet(e) {
       case 'save_patient_record':   return savePatientRecord(p, cb);
       case 'delete_patient_record': return deletePatientRecord(p, cb);
       case 'send_reminders':        return sendRemindersAction(p, cb);
+      case 'available_slots':       return getAvailableSlots(p, cb);
+      case 'slots_admin':           return slotsAdmin(p, cb);
+      case 'add_slot':              return addSlot(p, cb);
+      case 'remove_slot':           return removeSlot(p, cb);
+      case 'add_slots_bulk':        return addSlotsBulk(p, cb);
+      case 'block_all_slots':       return blockAllSlots(p, cb);
+      case 'slots_month':           return slotsMonth(p, cb);
+      case 'list_health':           return listHealth(p, cb);
       default: return err(cb, 'unknown action: ' + p.action);
     }
   } catch (ex) { return err(cb, ex.toString()); }
@@ -283,11 +291,15 @@ function upsertClient(phone, name, age) {
 // מחזיר רשימת { time, dur } לכל הזמנה פעילה ביום. הסינון בצד הלקוח.
 // ============================================================
 function getBusyTimes(p, cb) {
-  var sheet = ssBookings();
-  if (!sheet) return ok(cb, { busy: [], buffer: BUFFER_MIN });
   var date = safe(p.date, 20);
   if (!date) return err(cb, 'date required');
+  return ok(cb, { busy: busyForDate(date), buffer: BUFFER_MIN });
+}
 
+// תורים פעילים (לא נדחו) לתאריך → [{time,dur}]
+function busyForDate(date) {
+  var sheet = ssBookings();
+  if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
   var busy = [];
   for (var i = 1; i < data.length; i++) {
@@ -296,7 +308,7 @@ function getBusyTimes(p, cb) {
       busy.push({ time: String(r[7]), dur: parseInt(r[5], 10) || TREATMENT_MIN });
     }
   }
-  return ok(cb, { busy: busy, buffer: BUFFER_MIN });
+  return busy;
 }
 
 // ============================================================
@@ -654,4 +666,119 @@ function runReminders(returnList) {
     try { MailApp.sendEmail({ to: HADAR_EMAIL, subject: '🔔 תזכורות לתורים של מחר', body: body }); } catch (e) {}
   }
   return returnList ? out : [];
+}
+
+// ============================================================
+// 14. שעות זמינות — מודל "שעות מפורסמות" (כמו AvailableSlot)
+//   הדר פותחת ידנית שעות לכל תאריך. דף ההזמנה מציג רק שעות פתוחות.
+//   גיליון "שעות_זמינות": תאריך | שעה   (נוצר אוטומטית)
+// ============================================================
+function ssSlots() {
+  var s = ss().getSheetByName('שעות_זמינות');
+  if (!s) { s = ss().insertSheet('שעות_זמינות'); s.appendRow(['תאריך', 'שעה']); }
+  return s;
+}
+
+// ציבורי — שעות פתוחות לתאריך + תפוסות + האם המערכת הוגדרה בכלל
+// configured=false → דף ההזמנה נופל חזרה לשעות העבודה הקבועות (תאימות).
+function getAvailableSlots(p, cb) {
+  var date = safe(p.date, 20);
+  if (!date) return err(cb, 'date required');
+  var sheet = ssSlots();
+  var data = sheet.getDataRange().getValues();
+  var hasAny = data.length > 1;
+  var slots = [];
+  for (var i = 1; i < data.length; i++) if (String(data[i][0]) === date) slots.push(String(data[i][1]));
+  slots.sort();
+  return ok(cb, { slots: slots, busy: busyForDate(date), buffer: BUFFER_MIN, configured: hasAny });
+}
+
+// אדמין — שעות פתוחות + תפוסות לתאריך (לניהול)
+function slotsAdmin(p, cb) {
+  if (!requirePin(p)) return err(cb, 'unauthorized');
+  var date = safe(p.date, 20);
+  if (!date) return err(cb, 'date required');
+  var data = ssSlots().getDataRange().getValues();
+  var open = [];
+  for (var i = 1; i < data.length; i++) if (String(data[i][0]) === date) open.push(String(data[i][1]));
+  var booked = busyForDate(date).map(function (b) { return b.time; });
+  return ok(cb, { open: open.sort(), booked: booked });
+}
+
+function slotExists(data, date, time) {
+  for (var i = 1; i < data.length; i++) if (String(data[i][0]) === date && String(data[i][1]) === time) return i + 1;
+  return -1;
+}
+
+function addSlot(p, cb) {
+  if (!requirePin(p)) return err(cb, 'unauthorized');
+  var date = safe(p.date, 20), time = safe(p.time, 10);
+  if (!date || !time) return err(cb, 'date, time required');
+  var sheet = ssSlots(), data = sheet.getDataRange().getValues();
+  if (slotExists(data, date, time) === -1) sheet.appendRow([date, time]);
+  return ok(cb, { date: date, time: time, op: 'added' });
+}
+
+function removeSlot(p, cb) {
+  if (!requirePin(p)) return err(cb, 'unauthorized');
+  var date = safe(p.date, 20), time = safe(p.time, 10);
+  if (!date || !time) return err(cb, 'date, time required');
+  var sheet = ssSlots(), data = sheet.getDataRange().getValues();
+  var row = slotExists(data, date, time);
+  if (row > 0) sheet.deleteRow(row);
+  return ok(cb, { date: date, time: time, op: 'removed' });
+}
+
+function addSlotsBulk(p, cb) {
+  if (!requirePin(p)) return err(cb, 'unauthorized');
+  var date = safe(p.date, 20), times = safe(p.times, 600);
+  if (!date || !times) return err(cb, 'date, times required');
+  var sheet = ssSlots(), data = sheet.getDataRange().getValues();
+  var arr = times.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
+  var added = 0;
+  arr.forEach(function (t) { if (slotExists(data, date, t) === -1) { sheet.appendRow([date, t]); data.push([date, t]); added++; } });
+  return ok(cb, { date: date, op: 'bulk', added: added });
+}
+
+function blockAllSlots(p, cb) {
+  if (!requirePin(p)) return err(cb, 'unauthorized');
+  var date = safe(p.date, 20);
+  if (!date) return err(cb, 'date required');
+  var sheet = ssSlots(), data = sheet.getDataRange().getValues();
+  for (var i = data.length - 1; i >= 1; i--) if (String(data[i][0]) === date) sheet.deleteRow(i + 1);
+  return ok(cb, { date: date, op: 'blocked' });
+}
+
+// סיכום חודשי לתצוגת הלוח — אילו תאריכים יש בהם שעות פתוחות / תורים
+// ?action=slots_month&pin=..&month=YYYY-MM
+function slotsMonth(p, cb) {
+  if (!requirePin(p)) return err(cb, 'unauthorized');
+  var month = safe(p.month, 7); // YYYY-MM
+  if (!month) return err(cb, 'month required');
+  var openDates = {}, bookedDates = {};
+  var sd = ssSlots().getDataRange().getValues();
+  for (var i = 1; i < sd.length; i++) { var d = String(sd[i][0]); if (d.indexOf(month) === 0) openDates[d] = true; }
+  var bd = ssBookings() ? ssBookings().getDataRange().getValues() : [];
+  for (var j = 1; j < bd.length; j++) {
+    var r = bd[j];
+    if (String(r[6]).indexOf(month) === 0 && String(r[9]) !== 'נדחה') bookedDates[String(r[6])] = true;
+  }
+  return ok(cb, { open: Object.keys(openDates), booked: Object.keys(bookedDates) });
+}
+
+// ============================================================
+// 15. list_health — כל הצהרות הבריאות (אדמין, לטאב "הצהרות")
+// ============================================================
+function listHealth(p, cb) {
+  if (!requirePin(p)) return err(cb, 'unauthorized');
+  var sheet = ssHealth();
+  var data = sheet.getDataRange().getValues(), out = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!r[0]) continue;
+    out.push({ id: r[0], submitted: r[1], name: r[2], phone: r[3], age: r[4],
+               appointment: r[5], flags: r[6], notes: r[7], consent: r[8], answers_json: r[9] || '' });
+  }
+  out.sort(function (a, b) { return String(b.submitted).localeCompare(String(a.submitted)); });
+  return ok(cb, { declarations: out });
 }

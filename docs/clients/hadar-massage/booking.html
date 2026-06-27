@@ -478,7 +478,7 @@ const state = {
   name:'', phone:'', notes:'',
   answers:{}, details:{},
   calMonth:new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-  daysOff:new Set(), busy:[], buffer:BUFFER_MIN, lastBookingId:null
+  daysOff:new Set(), busy:[], buffer:BUFFER_MIN, publishedSlots:null, lastBookingId:null
 };
 
 // ---------- HELPERS ----------
@@ -572,14 +572,18 @@ $('#btn-next-2').addEventListener('click',async()=>{
   if(!state.date) return;
   setStep(3);
   $('#times-grid').innerHTML='<div class="no-slots">טוענת שעות פנויות...</div>';
-  state.busy=[];
+  state.busy=[]; state.publishedSlots=null;
   if(SHEETS_URL){
     try{
-      const resp=await jsonpGet({action:'busy_times',date:fmtDate(state.date)});
+      const resp=await jsonpGet({action:'available_slots',date:fmtDate(state.date)});
       if(resp&&resp.busy) state.busy=resp.busy;
-      else if(resp&&resp.times) state.busy=resp.times.map(t=>({time:t,dur:TREATMENT_MIN}));
       if(resp&&resp.buffer!=null) state.buffer=Number(resp.buffer);
-    }catch(e){}
+      // אם הדר פרסמה שעות (configured) — נשתמש בשעות שהיא פתחה. אחרת fallback לשעות הקבועות.
+      if(resp&&resp.configured&&Array.isArray(resp.slots)) state.publishedSlots=resp.slots;
+    }catch(e){
+      // שרת ישן — ניסיון busy_times לתאימות לאחור
+      try{ const r2=await jsonpGet({action:'busy_times',date:fmtDate(state.date)}); if(r2&&r2.busy) state.busy=r2.busy; else if(r2&&r2.times) state.busy=r2.times.map(t=>({time:t,dur:TREATMENT_MIN})); }catch(e2){}
+    }
   }
   renderTimes();
 });
@@ -589,12 +593,19 @@ function renderTimes(){
   const d=state.date;
   $('#times-date').innerHTML=HE_DOW[d.getDay()]+', '+d.getDate()+' <span class="em">'+HE_MONTHS[d.getMonth()]+'</span>';
   const grid=$('#times-grid'); grid.innerHTML='';
-  const hrs=HOURS[d.getDay()];
-  if(!hrs){ grid.innerHTML='<div class="no-slots">אין טיפולים ביום זה</div>'; return; }
-  const dur=state.service.duration, slotInterval=30;
-  const startMin=hrs.open*60, endMin=hrs.close*60-dur;
-  const slots=[];
-  for(let t=startMin;t<=endMin;t+=slotInterval){ slots.push(pad(Math.floor(t/60))+':'+pad(t%60)); }
+  const dur=state.service.duration;
+  let slots;
+  if(state.publishedSlots){
+    // הדר פתחה שעות ספציפיות ליום הזה
+    slots=state.publishedSlots.slice().sort();
+  } else {
+    // fallback — שעות עבודה קבועות
+    const hrs=HOURS[d.getDay()];
+    if(!hrs){ grid.innerHTML='<div class="no-slots">אין טיפולים ביום זה</div>'; return; }
+    const startMin=hrs.open*60, endMin=hrs.close*60-dur;
+    slots=[];
+    for(let t=startMin;t<=endMin;t+=30){ slots.push(pad(Math.floor(t/60))+':'+pad(t%60)); }
+  }
   if(!slots.length){ grid.innerHTML='<div class="no-slots">אין שעות זמינות ליום זה</div>'; return; }
 
   const buf=state.buffer;
