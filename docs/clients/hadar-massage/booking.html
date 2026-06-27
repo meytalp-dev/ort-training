@@ -117,6 +117,14 @@ body::before{
   font-size:1.05rem;color:var(--ink-soft);max-width:46ch;margin:0 auto;
   line-height:1.7;font-weight:300;
 }
+.duration-note{
+  display:inline-flex;align-items:center;gap:.5rem;
+  margin-top:1.6rem;padding:.55rem 1.2rem;
+  background:var(--clay-soft);border:1px solid rgba(200,162,143,.5);
+  border-radius:9999px;font-size:.9rem;color:var(--clay-deep);font-weight:400;
+  letter-spacing:.01em;
+}
+.duration-note svg{width:16px;height:16px}
 
 @media (max-width:760px){.page-head{padding:3rem 1.25rem 2rem}}
 
@@ -581,6 +589,10 @@ footer .copy{color:rgba(250,246,238,.4);font-size:.78rem;letter-spacing:.05em}
   <div class="page-eyebrow">קביעת תור אונליין</div>
   <h1 class="page-title">בואי <span class="em">נקבע</span> זמן.</h1>
   <p class="page-lead">בחירת טיפול, תאריך ושעה — ואני אחזור אלייך בוואטסאפ לאישור הפגישה.</p>
+  <div class="duration-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    שימו לב — הטיפול אורך שעה.
+  </div>
 </div>
 
 <div class="stepper-wrap">
@@ -695,7 +707,11 @@ footer .copy{color:rgba(250,246,238,.4);font-size:.78rem;letter-spacing:.05em}
       <p>תודה! נפתח לך עכשיו וואטסאפ עם ההודעה — <strong>שלחי כדי לסיים את ההזמנה</strong>.<br>אחזור אלייך לאישור הפגישה בהקדם.</p>
       <div class="summary" id="summary-success"></div>
       <div class="success-actions">
-        <a href="health.html" class="btn btn-secondary" style="margin-bottom:.4rem">
+        <a id="gcal-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary" style="margin-bottom:.4rem">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-left:.4rem"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          הוספה ליומן Google שלי
+        </a>
+        <a id="health-link" href="health.html" class="btn btn-secondary" style="margin-bottom:.4rem">
           ✓ למילוי הצהרת בריאות מראש (2 דקות)
         </a>
         <a id="wa-fallback" href="#" target="_blank" rel="noopener" class="btn btn-whatsapp" style="display:none">
@@ -730,6 +746,10 @@ footer .copy{color:rgba(250,246,238,.4);font-size:.78rem;letter-spacing:.05em}
 const HADAR_PHONE = '972543270619';
 const SHEETS_URL  = 'https://script.google.com/macros/s/AKfycbx2NWe0Ghe0FFCP82DICxgE7B_KxPfuPcz_AFB__1TYVKPe15vT52BMDo2wBR149vCv6A/exec';
 
+// כל הטיפולים אורכים שעה. למערכת מרווח קבוע של BUFFER_MIN דקות בין מטופלות.
+const TREATMENT_MIN = 60;
+const BUFFER_MIN = 15;
+
 const SERVICES = [
   {
     id: 'swedish',
@@ -742,7 +762,7 @@ const SERVICES = [
     id: 'medical',
     title: 'עיסוי רפואי',
     desc: 'טיפול ממוקד להקלה על כאבים, עומסים ופציעות, תוך עבודה על אזורים תפוסים ומוגבלים בתנועה. משלב טכניקות עומק לשחרור שרירים ושיפור התפקוד היומיומי.',
-    duration: 75,
+    duration: 60,
     price: null
   }
 ];
@@ -766,8 +786,13 @@ const state = {
   time: null,
   calMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   daysOff: new Set(),
-  busyTimes: new Set()
+  busy: [],            // [{time:'HH:MM', dur:60}] — תורים פעילים בתאריך הנבחר
+  buffer: BUFFER_MIN,
+  lastBookingId: null
 };
+
+// המרת שעה למספר דקות מתחילת היום
+function toMin(hhmm){ const [h,m] = String(hhmm).split(':').map(Number); return h*60+m; }
 
 // ---------- HELPERS ----------
 const $ = (s, r = document) => r.querySelector(s);
@@ -925,11 +950,13 @@ $('#btn-next-2').addEventListener('click', async () => {
   if (!state.date) return;
   setStep(3);
   $('#times-grid').innerHTML = '<div class="no-slots">טוענת שעות פנויות...</div>';
-  state.busyTimes = new Set();
+  state.busy = [];
   if (SHEETS_URL) {
     try {
       const resp = await jsonpGet({ action: 'busy_times', date: fmtDate(state.date) });
-      if (resp && resp.times) state.busyTimes = new Set(resp.times);
+      if (resp && resp.busy) state.busy = resp.busy;                 // שרת חדש: [{time,dur}]
+      else if (resp && resp.times) state.busy = resp.times.map(t => ({ time: t, dur: TREATMENT_MIN })); // תאימות לשרת ישן
+      if (resp && resp.buffer != null) state.buffer = Number(resp.buffer);
     } catch (e) { /* fall back */ }
   }
   renderTimes();
@@ -965,13 +992,29 @@ function renderTimes(){
     return;
   }
 
+  // חסימה לפי חלון טיפול + מרווח:
+  // תור קיים בשעה T (משך durT) תופס עד T+durT+buffer.
+  // מועד מבוקש C (משך 60) פנוי רק אם הוא כולו לפני תור קיים (כולל מרווח),
+  // או כולו אחריו (כולל מרווח). אחרת — בתוך הטיפול/המרווח = חסום.
+  const buf = state.buffer;
+  function isBlocked(slotStr){
+    const c = toMin(slotStr);
+    const cEnd = c + dur;                       // סוף המועד המבוקש
+    return state.busy.some(b => {
+      const t = toMin(b.time);
+      const tEnd = t + (Number(b.dur) || dur);  // סוף התור הקיים
+      // פנוי אם: cEnd+buf <= t  (לפני, עם מרווח)  או  c >= tEnd+buf (אחרי, עם מרווח)
+      const free = (cEnd + buf <= t) || (c >= tEnd + buf);
+      return !free;
+    });
+  }
+
   const now = new Date();
   const isToday = fmtDate(state.date) === fmtDate(now);
   const filtered = slots.filter(s => {
-    if (state.busyTimes.has(s)) return false;
+    if (isBlocked(s)) return false;
     if (!isToday) return true;
-    const [h,m] = s.split(':').map(Number);
-    return (h*60+m) > (now.getHours()*60 + now.getMinutes() + 30);
+    return toMin(s) > (now.getHours()*60 + now.getMinutes() + 30);
   });
 
   if (filtered.length === 0) {
@@ -1017,6 +1060,23 @@ function renderSummary(){
 function validatePhone(p){
   const cleaned = p.replace(/[\s-]/g,'');
   return /^0\d{9}$/.test(cleaned);
+}
+
+// קישור "הוספה ליומן Google" ללקוחה — שעה אחת מהמועד שנבחר
+function buildGCalUrl(){
+  const d = state.date, [h,m] = state.time.split(':').map(Number);
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0);
+  const end = new Date(start.getTime() + TREATMENT_MIN * 60000);
+  const stamp = dt => dt.getFullYear() + pad(dt.getMonth()+1) + pad(dt.getDate()) +
+    'T' + pad(dt.getHours()) + pad(dt.getMinutes()) + '00';
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: 'עיסוי אצל הדר בק' + (state.service ? ' — ' + state.service.title : ''),
+    dates: stamp(start) + '/' + stamp(end),
+    details: 'התור שלך אצל הדר בק.\nנא להגיע בבגדים נוחים.',
+    location: 'וינגייט 74, דירה 24, קומה 6, באר שבע'
+  });
+  return 'https://calendar.google.com/calendar/render?' + params.toString();
 }
 
 $('#btn-confirm').addEventListener('click', submitBooking);
@@ -1069,6 +1129,14 @@ function submitBooking(){
     } else {
       $('#wa-fallback').style.display = 'none';
     }
+    // קישור להצהרת בריאות — עם פרטי הלקוחה והתור, כדי שתיקשר אוטומטית
+    const hp = new URLSearchParams();
+    hp.set('name', name); hp.set('phone', phone);
+    hp.set('appt', dateStr + ' ' + state.time);
+    if (state.lastBookingId) hp.set('booking', state.lastBookingId);
+    $('#health-link').href = 'health.html?' + hp.toString();
+    // קישור "הוספה ליומן Google" של הלקוחה
+    $('#gcal-link').href = buildGCalUrl();
     setStep(5);
   };
 
@@ -1084,6 +1152,7 @@ function submitBooking(){
   window[callbackName] = function(resp) {
     clearTimeout(timeout);
     delete window[callbackName];
+    if (resp && resp.id) state.lastBookingId = resp.id;
     finish();
   };
 

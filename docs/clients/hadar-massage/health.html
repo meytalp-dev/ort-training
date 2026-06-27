@@ -653,6 +653,13 @@ $('#health-form').addEventListener('submit', e => {
     .map(q => q.text.replace(/\?$/, '') + (details[q.id] ? ' (' + details[q.id] + ')' : ''))
     .join(' | ') || 'אין דגלים';
 
+  // טופס מלא (כל שאלה + כן/לא + פירוט) לשמירה — לכפתור "צפייה בטופס מלא" באדמין
+  const answersFull = JSON.stringify(QUESTIONS.map(q => ({
+    q: q.text,
+    a: answers[q.id] === 'yes' ? 'כן' : 'לא',
+    detail: details[q.id] || ''
+  })));
+
   const cbName = 'hadarHcb_' + Date.now();
   const timeout = setTimeout(() => { try{delete window[cbName];}catch(e){} showToast('נשלח לוואטסאפ. השמירה לא אומתה.', true); finish(); }, 8000);
   window[cbName] = function(){ clearTimeout(timeout); try{delete window[cbName];}catch(e){} finish(); };
@@ -668,6 +675,8 @@ $('#health-form').addEventListener('submit', e => {
   params.append('flags', flagsText.substring(0,1200));
   params.append('notes', notes.substring(0,600));
   params.append('consent', 'כן');
+  params.append('answers_json', answersFull.substring(0,4000));
+  if (PREFILL.booking) params.append('booking_id', PREFILL.booking);
 
   const script = document.createElement('script');
   script.src = SHEETS_URL + '?' + params.toString();
@@ -676,8 +685,20 @@ $('#health-form').addEventListener('submit', e => {
   document.body.appendChild(script);
 });
 
+// ---------- Prefill from booking link (health.html?name=&phone=&appt=&booking=) ----------
+const PREFILL = (() => {
+  const u = new URLSearchParams(location.search);
+  return { name: u.get('name')||'', phone: u.get('phone')||'', appt: u.get('appt')||'', booking: u.get('booking')||'' };
+})();
+function applyPrefill(){
+  if (PREFILL.name)  $('#f-name').value  = PREFILL.name;
+  if (PREFILL.phone) $('#f-phone').value = PREFILL.phone;
+  if (PREFILL.appt)  $('#f-appt').value  = PREFILL.appt;
+}
+
 // ---------- INIT ----------
 renderQuestions();
+applyPrefill();
 updateProgress();
 </script>
 
