@@ -126,7 +126,7 @@ id | תאריך_שליחה | שם | טלפון | שירות | משך_דקות | 
 
 ## כתובות
 
-- **אתר:** `https://meytalp-dev.github.io/ort-presentation-builder/clients/hadar-massage/`
+- **אתר:** `https://meytalp-dev.github.io/ort-training/clients/hadar-massage/`
 - **קביעת תור:** `…/clients/hadar-massage/booking.html`
 - **ניהול:** `…/clients/hadar-massage/admin.html`
 
