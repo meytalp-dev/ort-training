@@ -8,6 +8,7 @@
  *   4. update_status   — עדכון סטטוס הזמנה (אדמין, דורש PIN)
  *   5. days_off        — החזרת ימי חופש (ציבורי)
  *   6. set_day_off     — הוספה/הסרה של יום חופש (אדמין, דורש PIN)
+ *   7. submit_health   — שמירת הצהרת בריאות חדשה (ציבורי)
  *
  * ============================================================
  * הוראות התקנה (פעם אחת):
@@ -18,6 +19,8 @@
  * 2. צור 2 גיליונות (Tabs בתחתית):
  *    "הזמנות"  ← שורה 1: id | תאריך_שליחה | שם | טלפון | שירות | משך_דקות | תאריך_פגישה | שעה_פגישה | הערות | סטטוס
  *    "ימי_חופש" ← שורה 1: תאריך | סיבה
+ *    "הצהרות_בריאות" ← שורה 1: id | תאריך_שליחה | שם | טלפון | גיל | תאריך_טיפול | דגלים | הערות | אישור
+ *      (נוצר אוטומטית בפעם הראשונה אם חסר)
  *
  * 3. Extensions → Apps Script
  *    מחק את כל הקוד והדבק את הקובץ הזה
@@ -60,6 +63,15 @@ const HADAR_EMAIL = '';       // ריק = ללא התראות מייל. למלא
 // ---- Sheets helpers ----
 function ssBookings()  { return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('הזמנות'); }
 function ssDaysOff()   { return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('ימי_חופש'); }
+function ssHealth()    {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('הצהרות_בריאות');
+  if (!sheet) {
+    sheet = ss.insertSheet('הצהרות_בריאות');
+    sheet.appendRow(['id','תאריך_שליחה','שם','טלפון','גיל','תאריך_טיפול','דגלים','הערות','אישור']);
+  }
+  return sheet;
+}
 
 function safe(val, maxLen) {
   var s = (val == null) ? '' : String(val);
@@ -91,6 +103,7 @@ function doGet(e) {
     if (action === 'list')          return listBookings(p, cb);
     if (action === 'update_status') return updateStatus(p, cb);
     if (action === 'set_day_off')   return setDayOff(p, cb);
+    if (action === 'submit_health') return submitHealth(p, cb);
     return err(cb, 'unknown action: ' + action);
   } catch (e) {
     return err(cb, e.toString());
@@ -255,4 +268,44 @@ function setDayOff(p, cb) {
     sheet.appendRow([date, safe(p.reason, 100)]);
   }
   return ok(cb, { date: date, op: 'added' });
+}
+
+// ============================================================
+// 7. submit_health — שמירת הצהרת בריאות (ציבורי)
+// ?action=submit_health&name=...&phone=...&age=...&appointment=...&flags=...&notes=...&consent=כן
+// ============================================================
+function submitHealth(p, cb) {
+  var sheet = ssHealth();
+  if (!sheet) return err(cb, 'sheet "הצהרות_בריאות" not found');
+
+  var id       = 'H' + Date.now() + Math.floor(Math.random() * 1000);
+  var ts       = p.timestamp || new Date().toISOString();
+  var name     = safe(p.name, 100);
+  var phone    = safe(p.phone, 20);
+  var age      = safe(p.age, 4);
+  var appt     = safe(p.appointment, 60);
+  var flags    = safe(p.flags, 1200);
+  var notes    = safe(p.notes, 600);
+  var consent  = safe(p.consent, 10);
+
+  sheet.appendRow([id, ts, name, phone, age, appt, flags, notes, consent]);
+
+  if (HADAR_EMAIL) {
+    try {
+      MailApp.sendEmail({
+        to: HADAR_EMAIL,
+        subject: '🌿 הצהרת בריאות חדשה — ' + name,
+        body:
+          'התקבלה הצהרת בריאות חדשה דרך האתר:\n\n' +
+          '👤 שם: ' + name + '\n' +
+          '📱 טלפון: ' + phone + (age ? '  ·  גיל ' + age : '') + '\n' +
+          (appt ? '📅 תאריך טיפול: ' + appt + '\n' : '') +
+          '\n⚠️ דגלים רפואיים:\n' + (flags || 'אין') + '\n' +
+          (notes ? '\n📝 הערות: ' + notes + '\n' : '') +
+          '\n✓ אישרה את ההצהרה.'
+      });
+    } catch (e) {}
+  }
+
+  return ok(cb, { id: id });
 }
