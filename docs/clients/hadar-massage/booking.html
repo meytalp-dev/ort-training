@@ -159,6 +159,7 @@ main{padding:2.5rem 2rem 5rem;max-width:880px;margin:0 auto;position:relative;z-
 .time-slot{background:var(--surface);border:1.5px solid var(--line);color:var(--ink);padding:.9rem;border-radius:12px;cursor:pointer;font-family:var(--display);font-size:1.02rem;font-weight:600;transition:all .2s}
 .time-slot:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--primary)}
 .time-slot.selected{background:var(--primary);color:#fff;border-color:var(--primary);transform:scale(1.04);box-shadow:0 6px 14px -4px rgba(66,96,79,.5)}
+.time-slot.busy-slot{opacity:.55;cursor:not-allowed;background:var(--surface-2);border-color:var(--line);color:var(--ink-quiet);font-size:.88rem}
 .no-slots{text-align:center;color:var(--ink-quiet);padding:2.5rem;background:var(--surface-2);border-radius:14px;font-weight:600}
 
 /* Form */
@@ -458,7 +459,7 @@ const state = {
   name:'', phone:'', email:'', notes:'',
   answers:{}, details:{},
   calMonth:new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-  daysOff:new Set(), busy:[], buffer:BUFFER_MIN, publishedSlots:null, lastBookingId:null
+  daysOff:new Set(), busy:[], buffer:BUFFER_MIN, publishedSlots:null, blockedSlots:[], lastBookingId:null
 };
 
 // ---------- HELPERS ----------
@@ -535,13 +536,14 @@ async function selectDate(date){
   $('#times-block').style.display='';
   $('#times-grid').innerHTML='<div class="no-slots">טוענת שעות פנויות...</div>';
   $('#times-block').scrollIntoView({behavior:'smooth',block:'nearest'});
-  state.busy=[]; state.publishedSlots=null;
+  state.busy=[]; state.publishedSlots=null; state.blockedSlots=[];
   if(SHEETS_URL){
     try{
       const resp=await jsonpGet({action:'available_slots',date:fmtDate(state.date)});
       if(resp&&resp.busy) state.busy=resp.busy;
       if(resp&&resp.buffer!=null) state.buffer=Number(resp.buffer);
       if(resp&&resp.configured&&Array.isArray(resp.slots)) state.publishedSlots=resp.slots;
+      if(resp&&Array.isArray(resp.blocked_slots)) state.blockedSlots=resp.blocked_slots;
     }catch(e){
       try{ const r2=await jsonpGet({action:'busy_times',date:fmtDate(state.date)}); if(r2&&r2.busy) state.busy=r2.busy; else if(r2&&r2.times) state.busy=r2.times.map(t=>({time:t,dur:TREATMENT_MIN})); }catch(e2){}
     }
@@ -565,7 +567,7 @@ function renderTimes(){
     if(!hrs){ grid.innerHTML='<div class="no-slots">אין טיפולים ביום זה</div>'; return; }
     const startMin=hrs.open*60, endMin=hrs.close*60-dur;
     slots=[];
-    for(let t=startMin;t<=endMin;t+=30){ slots.push(pad(Math.floor(t/60))+':'+pad(t%60)); }
+    for(let t=startMin;t<=endMin;t+=75){ slots.push(pad(Math.floor(t/60))+':'+pad(t%60)); }
   }
   if(!slots.length){ grid.innerHTML='<div class="no-slots">אין שעות זמינות ליום זה</div>'; return; }
 
@@ -576,11 +578,29 @@ function renderTimes(){
   }
   const now=new Date(), isToday=fmtDate(d)===fmtDate(now);
   const filtered=slots.filter(s=>{ if(isBlocked(s)) return false; if(!isToday) return true; return toMin(s)>(now.getHours()*60+now.getMinutes()+30); });
-  if(!filtered.length){ grid.innerHTML='<div class="no-slots">אין שעות פנויות ביום זה</div>'; return; }
 
-  filtered.forEach(s=>{
-    const btn=document.createElement('button'); btn.className='time-slot'; btn.textContent=s;
-    btn.addEventListener('click',()=>{ grid.querySelectorAll('.time-slot').forEach(x=>x.classList.remove('selected')); btn.classList.add('selected'); state.time=s; $('#btn-next-2').disabled=false; });
+  // שעות חסומות ע"י תור קיים — מוצגות כ"תפוס" (לא נמחקות)
+  const busySlots=slots.filter(s=>isBlocked(s));
+  // שעות חסומות ידנית — גם מוצגות כ"תפוס"
+  const manualBlocked=(state.blockedSlots||[]).filter(s=>!filtered.includes(s)&&!busySlots.includes(s));
+  const allBusyVisible=[...busySlots,...manualBlocked];
+
+  if(!filtered.length && !allBusyVisible.length){ grid.innerHTML='<div class="no-slots">אין שעות פנויות ביום זה</div>'; return; }
+
+  // מיזוג ומיון לפי שעה
+  const allDisplay=[
+    ...filtered.map(s=>({t:s,avail:true})),
+    ...allBusyVisible.map(s=>({t:s,avail:false}))
+  ].sort((a,b)=>a.t.localeCompare(b.t));
+
+  allDisplay.forEach(({t:s,avail})=>{
+    const btn=document.createElement('button');
+    if(avail){
+      btn.className='time-slot'; btn.textContent=s;
+      btn.addEventListener('click',()=>{ grid.querySelectorAll('.time-slot').forEach(x=>x.classList.remove('selected')); btn.classList.add('selected'); state.time=s; $('#btn-next-2').disabled=false; });
+    } else {
+      btn.className='time-slot busy-slot'; btn.textContent=s+' — תפוס'; btn.disabled=true;
+    }
     grid.appendChild(btn);
   });
 }

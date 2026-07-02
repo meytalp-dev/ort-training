@@ -155,6 +155,11 @@ footer .info{color:rgba(255,255,255,.6);font-size:.9rem}
         <input type="text" id="f-name" autocomplete="name" placeholder="שם פרטי ומשפחה">
         <div class="error">נא להזין שם</div>
       </div>
+      <div class="field">
+        <label for="f-email">כתובת מייל <span style="color:var(--error)">*</span></label>
+        <input type="email" id="f-email" autocomplete="email" placeholder="example@email.com">
+        <div class="error">נא להזין כתובת מייל תקינה</div>
+      </div>
       <button class="btn btn-primary btn-block" id="btn-find">
         <span class="btn-text">מצא את התור שלי</span>
         <span class="spinner"></span>
@@ -245,12 +250,18 @@ function setScreen(id){$$('.screen').forEach(s=>s.classList.remove('active'));$(
 
 // ---------- STEP 1: find ----------
 $('#f-name').addEventListener('input',()=>$('#f-name').closest('.field').classList.remove('invalid'));
+$('#f-email').addEventListener('input',()=>$('#f-email').closest('.field').classList.remove('invalid'));
 $('#btn-find').addEventListener('click',findBooking);
 $('#f-name').addEventListener('keydown',e=>{if(e.key==='Enter')findBooking();});
+$('#f-email').addEventListener('keydown',e=>{if(e.key==='Enter')findBooking();});
 
 async function findBooking(){
   const name=$('#f-name').value.trim();
-  if(!name){$('#f-name').closest('.field').classList.add('invalid');return;}
+  const email=$('#f-email').value.trim();
+  let valid=true;
+  if(!name){$('#f-name').closest('.field').classList.add('invalid');valid=false;}
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){$('#f-email').closest('.field').classList.add('invalid');valid=false;}
+  if(!valid)return;
   const btn=$('#btn-find');btn.classList.add('loading');btn.disabled=true;
   try{
     const r=await jsonpGet({action:'find_booking',name:name});
@@ -334,7 +345,7 @@ function renderTimes(){
   const dur=TREATMENT_MIN;
   let slots;
   if(state.publishedSlots){slots=state.publishedSlots.slice().sort();}
-  else{const hrs=HOURS[d.getDay()];if(!hrs){grid.innerHTML='<div class="no-slots">אין טיפולים ביום זה</div>';return;}const sm=hrs.open*60,em=hrs.close*60-dur;slots=[];for(let t=sm;t<=em;t+=30)slots.push(pad(Math.floor(t/60))+':'+pad(t%60));}
+  else{const hrs=HOURS[d.getDay()];if(!hrs){grid.innerHTML='<div class="no-slots">אין טיפולים ביום זה</div>';return;}const sm=hrs.open*60,em=hrs.close*60-dur;slots=[];for(let t=sm;t<=em;t+=75)slots.push(pad(Math.floor(t/60))+':'+pad(t%60));}
   if(!slots.length){grid.innerHTML='<div class="no-slots">אין שעות זמינות ליום זה</div>';return;}
   const buf=state.buffer;
   function blocked(s){const c=toMin(s),ce=c+dur;return state.busy.some(b=>{const t=toMin(b.time),te=t+(Number(b.dur)||dur);return !((ce+buf<=t)||(c>=te+buf));});}

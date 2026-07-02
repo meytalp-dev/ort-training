@@ -225,7 +225,8 @@ tbody tr:hover{background:var(--bg-cream)}
 .scal-grid .cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:12px;cursor:pointer;font-size:.92rem;color:var(--text);border:1.5px solid transparent;transition:all .2s;position:relative;font-weight:500}
 .scal-grid .cell.empty{cursor:default}
 .scal-grid .cell.past{color:#C7CFC9;cursor:pointer}
-.scal-grid .cell:not(.empty):hover{background:var(--bg-cream)}
+.scal-grid .cell:not(.empty):not(.no-hours):hover{background:var(--bg-cream)}
+.scal-grid .cell.no-hours{color:#C7CFC9;cursor:default;opacity:.55}
 .scal-grid .cell.selected{border-color:var(--accent);background:var(--accent-soft)}
 .scal-grid .cell.blocked{background:rgba(192,88,74,.10)}
 .scal-grid .cell.blocked > span:first-child{color:var(--status-no);text-decoration:line-through}
@@ -252,18 +253,24 @@ tbody tr:hover{background:var(--bg-cream)}
 .slot-manual input:focus{outline:none;border-color:var(--accent)}
 .slot-bulk{display:flex;gap:.6rem;justify-content:flex-end;margin-bottom:1rem;flex-wrap:wrap}
 .slot-quick-lbl{font-size:.85rem;color:var(--text-light);margin-bottom:.6rem;text-align:right}
-.slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.6rem}
-.slotchip{display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1.5px solid var(--bg-beige);border-radius:10px;padding:.45rem .45rem .45rem .7rem;font-family:var(--display);font-weight:600;font-size:.95rem;color:var(--text);transition:all .2s;cursor:pointer;user-select:none}
-.slotchip:not(.booked):hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:var(--shadow)}
+.slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.6rem}
+.slotchip{display:flex;align-items:center;justify-content:space-between;background:var(--white);border:1.5px solid var(--bg-beige);border-radius:10px;padding:.45rem .35rem;font-family:var(--display);font-weight:600;font-size:.95rem;color:var(--text);transition:all .2s;user-select:none}
 .slotchip.open{border-color:var(--status-ok);background:rgba(78,110,93,.08)}
 .slotchip.booked{opacity:.6;background:var(--bg-cream);cursor:default}
+.slotchip.blocked-manual{border-color:rgba(192,88,74,.35);background:rgba(192,88,74,.05)}
 .slotchip .t{flex:1;text-align:center}
-.slotchip .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--bg-cream);color:var(--text-mid);transition:all .15s;flex-shrink:0}
-.slotchip .ic svg{width:15px;height:15px}
-.slotchip:hover .ic.add{background:var(--status-ok);color:#fff}
+.slotchip .ic{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:var(--bg-cream);color:var(--text-mid);transition:all .15s;flex-shrink:0;cursor:pointer}
+.slotchip .ic svg{width:13px;height:13px}
+.slotchip .ic.add:hover{background:var(--status-ok);color:#fff}
 .slotchip .ic.rem{color:var(--status-no)}
-.slotchip:hover .ic.rem{background:var(--status-no);color:#fff}
+.slotchip .ic.rem:hover{background:var(--status-no);color:#fff}
+.slotchip .ic.blk{color:rgba(192,88,74,.5)}
+.slotchip .ic.blk:hover{background:rgba(192,88,74,.15);color:var(--error)}
+.slotchip .ic.blk.active{background:rgba(192,88,74,.2);color:var(--error)}
 .slotchip .bk{font-size:.72rem;color:var(--status-no);font-weight:600;padding:0 .3rem}
+.slotchip.buffer{border-color:rgba(191,141,55,.3);background:rgba(191,141,55,.05)}
+.slotchip.open.buffer{border-color:rgba(191,141,55,.7);background:rgba(191,141,55,.12)}
+.slotchip .buf-lbl{font-size:.6rem;color:rgba(150,100,20,.7);display:block;text-align:center;margin-top:1px;font-weight:500;line-height:1}
 
 /* Toast */
 .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:var(--footer);color:#fff;padding:.85rem 1.5rem;border-radius:12px;font-size:.9rem;z-index:9999;transition:transform .3s ease;box-shadow:var(--shadow-lg)}
@@ -906,7 +913,7 @@ function fmtTimestamp(iso){
 
 // ====== Hours / available slots ======
 const HE_MONTHS_FULL = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-const SLOT_TEMPLATE = (()=>{ const a=[]; for(let h=7;h<=20;h++) a.push(pad2(h)+':30'); return a; })();
+const SLOT_TEMPLATE = (()=>{ const a=[]; for(let h=7;h<=20;h++){ a.push(pad2(h)+':00'); a.push(pad2(h)+':30'); } return a; })();
 function pad2(n){ return String(n).padStart(2,'0'); }
 function fmtDateISO(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
 
@@ -940,8 +947,10 @@ async function renderMonth(){
     const isOff = monthOff.has(iso);
     if(isOff) cell.classList.add('blocked');
     const hasOpen = monthOpen.has(iso), hasBooked = monthBooked.has(iso);
+    const noHours = !hasOpen && !hasBooked && !isOff;
+    if(noHours) cell.classList.add('no-hours');
     cell.innerHTML = `${isOff?'<span class="lock">חסום</span>':''}<span>${d}</span><span class="dots">${hasBooked?'<span class="dot booked"></span>':''}${hasOpen?'<span class="dot open"></span>':''}</span>`;
-    cell.addEventListener('click', ()=>selectSlotDate(iso));
+    if(!noHours) cell.addEventListener('click', ()=>selectSlotDate(iso));
     grid.appendChild(cell);
   }
 }
@@ -964,40 +973,84 @@ async function selectSlotDate(iso){
 }
 async function loadDaySlots(iso){
   // באנר חסימת-יום + הסרה
-  const blocked = monthOff.has(iso);
-  $('#slot-block-banner').innerHTML = blocked
+  const isDayBlocked = monthOff.has(iso);
+  $('#slot-block-banner').innerHTML = isDayBlocked
     ? `<div class="block-banner"><span class="bb-text">⊘ היום מסומן כחסום — לא ניתן לקבוע בו תורים.</span><button id="unblock-day">הסר חסימה</button></div>`
     : '';
-  if (blocked) $('#unblock-day').addEventListener('click', async ()=>{
+  if (isDayBlocked) $('#unblock-day').addEventListener('click', async ()=>{
     try { await api({ action:'set_day_off', pin:PIN, date:iso, op:'remove' }); showToast('החסימה הוסרה ✓','success'); await renderMonth(); await loadDaySlots(iso); }
     catch(e){ showToast('שגיאת תקשורת','error'); }
   });
   $('#slotgrid').innerHTML = '<div class="loading">טוען</div>';
-  let open=[], booked=[];
+  let open=[], booked=[], blockedSlots=[];
   try {
     const r = await api({ action:'slots_admin', pin:PIN, date:iso });
-    if(r && r.result==='success'){ open=r.open||[]; booked=r.booked||[]; }
+    if(r && r.result==='success'){ open=r.open||[]; booked=r.booked||[]; blockedSlots=r.blocked||[]; }
   } catch(e){ $('#slotgrid').innerHTML='<div class="rec-empty">שגיאת תקשורת</div>'; return; }
-  // נרמול לכל השעות ל-HH:mm כדי ש-"7:30" ו-"07:30" ייחשבו זהים (מונע כפילויות + כפתורי + מיותרים)
-  open = open.map(fmtTime); booked = booked.map(fmtTime);
-  const openSet=new Set(open), bookedSet=new Set(booked);
-  const times = Array.from(new Set(SLOT_TEMPLATE.map(fmtTime).concat(open))).sort();
+
+  // נרמול ל-HH:mm כדי למנוע כפילויות
+  open = open.map(fmtTime); booked = booked.map(fmtTime); blockedSlots = blockedSlots.map(fmtTime);
+  const openSet=new Set(open), bookedSet=new Set(booked), blockedSet=new Set(blockedSlots);
+
+  // סימון שעות שנמצאות בחלון המרווח (75 דק') של תור/חסימה קיימת — לקוחות לא יכולות להזמין אותן
+  function _toMin(s){const[h,m]=s.split(':');return +h*60+ +m;}
+  const busyBase=[...booked,...blockedSlots];
+  const bufferSet=new Set(SLOT_TEMPLATE.map(fmtTime).filter(t=>{
+    if(bookedSet.has(t)||blockedSet.has(t)) return false;
+    const m=_toMin(t);
+    return busyBase.some(b=>{const bm=_toMin(b);return m>bm&&m<bm+75;});
+  }));
+
+  // כל השעות שמוצגות: תבנית + פתוחות + חסומות ידנית (שלא ייעלמו)
+  const times = Array.from(new Set(SLOT_TEMPLATE.map(fmtTime).concat(open).concat(blockedSlots))).sort();
+
+  const addSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
+  const remSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg>`;
+  const blkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>`;
+
   $('#slotgrid').innerHTML = times.map(t=>{
-    const isBooked=bookedSet.has(t), isOpen=openSet.has(t);
-    const cls = isBooked?'booked':(isOpen?'open':'');
-    let icon;
-    if(isBooked) icon=`<span class="bk">תפוס</span>`;
-    else if(isOpen) icon=`<span class="ic rem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M5 5l14 14"/></svg></span>`;
-    else icon=`<span class="ic add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>`;
-    return `<div class="slotchip ${cls}" data-time="${t}" data-state="${isBooked?'booked':(isOpen?'open':'closed')}"><span class="t">${t}</span>${icon}</div>`;
+    const isBooked=bookedSet.has(t), isOpen=openSet.has(t), isBlocked=blockedSet.has(t), isBuffer=bufferSet.has(t);
+    let cls='', state='closed';
+    if(isBooked){ cls='booked'; state='booked'; }
+    else if(isBlocked){ cls='blocked-manual'; state='blocked'; }
+    else if(isOpen){ cls='open'+(isBuffer?' buffer':''); state='open'; }
+    else if(isBuffer){ cls='buffer'; state='buffer'; }
+
+    if(isBooked){
+      return `<div class="slotchip ${cls}" data-time="${t}" data-state="${state}"><span class="t">${t}</span><span class="bk">תפוס</span></div>`;
+    }
+    const btn1 = isOpen
+      ? `<span class="ic rem" data-btn="remove">${remSvg}</span>`
+      : `<span class="ic add" data-btn="open">${addSvg}</span>`;
+    const btn2 = `<span class="ic blk${isBlocked?' active':''}" data-btn="block">${blkSvg}</span>`;
+    const bufLbl = isBuffer ? `<span class="buf-lbl">מרווח</span>` : '';
+    return `<div class="slotchip ${cls}" data-time="${t}" data-state="${state}">${btn1}<span class="t">${t}${bufLbl}</span>${btn2}</div>`;
   }).join('');
-  // לחיצה על כל הצ'יפ (לא רק על האייקון הקטן) מחליפה מצב: סגור→פתוח, פתוח→הסרה
+
   $('#slotgrid').querySelectorAll('.slotchip').forEach(chip=>{
-    if(chip.dataset.state==='booked') return;
-    chip.addEventListener('click',()=>{
-      const t=chip.dataset.time;
-      if(chip.dataset.state==='open') slotAction('remove_slot',{time:t});
-      else slotAction('add_slot',{time:t});
+    if(chip.dataset.state==='booked'||chip.dataset.state==='buffer') return;
+    chip.addEventListener('click', async e=>{
+      const btn = e.target.closest('[data-btn]');
+      if(!btn) return;
+      const t = chip.dataset.time, chipState = chip.dataset.state, btnType = btn.dataset.btn;
+
+      if(btnType==='open'){
+        if(chipState==='blocked'){
+          // בטל חסימה ופתח — שני קריאות, רענון אחד בסוף
+          try {
+            await api({ action:'unblock_slot', pin:PIN, date:selectedSlotDate, time:t });
+            await api({ action:'add_slot', pin:PIN, date:selectedSlotDate, time:t });
+            showToast('השעה נפתחה ✓','success');
+            await loadDaySlots(selectedSlotDate); renderMonth();
+          } catch(e){ showToast('שגיאת תקשורת','error'); }
+        } else {
+          slotAction('add_slot',{time:t});
+        }
+      } else if(btnType==='remove'){
+        slotAction('remove_slot',{time:t});
+      } else if(btnType==='block'){
+        slotAction(chipState==='blocked' ? 'unblock_slot' : 'block_slot', {time:t});
+      }
     });
   });
 }
@@ -1062,7 +1115,8 @@ $('#decl-search').addEventListener('input', e=>{ declSearch=e.target.value.trim(
 
 // ====== Share links ======
 (function initLinks(){
-  const base = location.href.replace(/admin\.html.*$/, '');
+  const PROD = 'https://meytalp-dev.github.io/ort-training/clients/hadar-massage/';
+  const base = /^file:/i.test(location.protocol) ? PROD : location.href.replace(/admin\.html.*$/, '');
   const bookUrl = base + 'booking.html', healthUrl = base + 'health.html';
   $('#url-book').textContent = bookUrl;
   $('#url-health').textContent = healthUrl;
