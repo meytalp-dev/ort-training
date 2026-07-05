@@ -72,7 +72,23 @@ header .back-btn.show{display:flex}
   background:#16a34a;display:none;align-items:center;justify-content:center}
 .tag-dot.seen .check{display:flex}
 .tag-dot .check svg{width:10px;height:10px}
+.tag-dot.info-dot span.glyph{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:900;font-size:19px;line-height:1}
 @keyframes pulse{0%{transform:scale(.6);opacity:.9}70%{transform:scale(1.25);opacity:0}100%{opacity:0}}
+
+/* threads (yarn network) */
+.thread-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4}
+
+/* fit / pan toggle */
+.fit-btn{
+  position:fixed;top:calc(var(--header-h) + 10px);inset-inline-end:12px;z-index:40;
+  width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(10,18,22,.78);color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 12px rgba(0,0,0,.4);
+}
+.fit-btn svg{width:19px;height:19px}
+.scene-wrap.fitted .tag-dot{width:30px;height:30px;font-size:12.5px}
+.scene-wrap.fitted .tag-dot.info-dot span.glyph{font-size:15px}
+.scene-wrap.fitted .hint-bar{display:none}
 
 /* ─── bottom sheet popup ─── */
 .sheet-veil{position:fixed;inset:0;background:rgba(8,14,17,.55);z-index:90;opacity:0;pointer-events:none;transition:opacity .22s}
@@ -186,9 +202,14 @@ header .back-btn.show{display:flex}
   <div class="scene-viewport" id="vp-choice">
     <div class="scene-wrap" id="wrap-choice">
       <img class="bg" id="bg-choice" alt="ילדים ומחנכת סנריו">
-      <div class="hint-bar"><b>הקישו על דמות</b> כדי להכיר אותה — ואז המשיכו למסלול הלמידה שלה</div>
+      <div class="hint-bar"><b>הקישו על דמות</b> כדי להכיר אותה — ואז המשיכו למסלול הלמידה שלה
+        <span style="opacity:.8;font-size:12px;display:block;margin-top:2px">לתמונה המלאה: כפתור ההתאמה למעלה, או סיבוב המכשיר לרוחב</span>
+      </div>
     </div>
   </div>
+  <button class="fit-btn" id="fitBtnChoice" aria-label="התאמת התמונה למסך">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+  </button>
   <button class="fab show" id="allPathsFab">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     כל המסלולים יחד
@@ -200,9 +221,14 @@ header .back-btn.show{display:flex}
   <div class="scene-viewport" id="vp-path">
     <div class="scene-wrap" id="wrap-path">
       <img class="bg" id="bg-path" alt="הכיתה">
-      <div class="hint-bar" id="pathHint"><b>הקישו על הנקודות</b> לפי הסדר כדי לעקוב אחרי המסלול</div>
+      <div class="hint-bar" id="pathHint"><b>הקישו על הנקודות לפי סדר המספרים</b> — החוט מחבר את המסלול
+        <span style="opacity:.8;font-size:12px;display:block;margin-top:2px">לתמונה המלאה: כפתור ההתאמה למעלה, או סיבוב המכשיר לרוחב</span>
+      </div>
     </div>
   </div>
+  <button class="fit-btn" id="fitBtnPath" aria-label="התאמת התמונה למסך">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+  </button>
   <button class="fab" id="doneFab">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
     <span id="doneFabLabel">סיימתי — להמשך</span>
@@ -1238,8 +1264,15 @@ const PATHS = [
 ];
 /* teacher: her tags live inside the combined scene */
 const TEACHER = {key:'noa', name:'נועה המחנכת', color:'#ffffff', introTag:'הכירו את נועה המחנכת'};
-const TEACHER_TAG_TITLES = [
-  'נועה המחנכת - נעים להכיר.',
+/* the "נעים להכיר" info tags inside the combined scene */
+const INTRO_IN_ALL = {
+  segev: 'שגב - נעים להכיר',
+  alice: 'אליס - נעים להכיר!',
+  noam:  'נועם - נעים להכיר!',
+  efrat: 'אפרת - נעים להכיר!',
+  noa:   'נועה המחנכת - נעים להכיר.',
+};
+const TEACHER_ACTION_TITLES = [
   'מטפלת באירוע שקרה בהפסקה',
   'מניעה לצאת למשימה ילדים שמתקשים בניהול עצמי',
   'מניעה לפעולה דרך משימה מותאמת אישית',
@@ -1248,6 +1281,42 @@ const TEACHER_TAG_TITLES = [
   'מניעה לחזרה לעבודה תלמידים שמקשים בניהול עצמי',
   'מכוונת למשימות הרלוונטיות תלמידים שזקוקים לכך',
 ];
+
+function findAllTag(title){ return DATA[ALL_SCENE].tags.find(t=>t.title===title); }
+
+/* bundle = tags (info dot first, then numbered steps) + threads (arrays of points) */
+function childBundle(p){
+  let steps = DATA[p.scene].tags.slice();
+  let info = null;
+  const idxIntro = steps.findIndex(t=>t.title===INTRO_IN_ALL[p.key]);
+  if(idxIntro >= 0) info = steps.splice(idxIntro,1)[0];
+  else { const t = findAllTag(INTRO_IN_ALL[p.key]); if(t) info = {...t}; }
+  const tags = [];
+  if(info) tags.push({...info, kind:'info', num:null, color:p.color, owner:p.name});
+  steps.forEach((t,i)=>tags.push({...t, kind:'step', num:i+1, of:steps.length, owner:p.name}));
+  return {tags, threads: tags.length>1 ? [tags] : []};
+}
+function teacherBundle(){
+  const intro = findAllTag(INTRO_IN_ALL.noa);
+  const steps = TEACHER_ACTION_TITLES.map(findAllTag).filter(Boolean);
+  const tags = [];
+  if(intro) tags.push({...intro, kind:'info', num:null, color:'#ffffff', owner:TEACHER.name});
+  steps.forEach(t=>tags.push({...t, kind:'step', num:null, owner:TEACHER.name}));
+  return {tags, threads: tags.length>1 ? [tags] : []};
+}
+function pathBundle(key){
+  if(key==='all'){
+    const bundles = [...PATHS.map(childBundle), teacherBundle()];
+    return {
+      title: DATA[ALL_SCENE].title, scene: DATA[ALL_SCENE],
+      tags: bundles.flatMap(b=>b.tags),
+      threads: bundles.flatMap(b=>b.threads),
+    };
+  }
+  if(key==='noa') return {...teacherBundle(), title:'המסלול של נועה המחנכת', scene:DATA[ALL_SCENE]};
+  const p = PATHS.find(p=>p.key===key);
+  return {...childBundle(p), title:DATA[p.scene].title, scene:DATA[p.scene]};
+}
 
 /* ── state ── */
 let score = 0;
@@ -1269,19 +1338,51 @@ function show(id){
 function addScore(n){ score+=n; $('scoreVal').textContent=score; $('finalScore').textContent=score; }
 
 /* ── build a scene into a wrap ── */
-function buildScene(wrapId, bgId, scene, tags, onTag, numbered){
+const SVG_NS='http://www.w3.org/2000/svg';
+function buildScene(wrapId, bgId, scene, tags, onTag, threads){
   const wrap=$(wrapId), bg=$(bgId);
   bg.src=scene.bg;
   wrap.querySelectorAll('.tag-dot').forEach(d=>d.remove());
+  wrap.querySelectorAll('.thread-svg').forEach(s=>s.remove());
+
+  /* threads — yarn network under the dots */
+  if(threads && threads.length){
+    const svg=document.createElementNS(SVG_NS,'svg');
+    svg.setAttribute('class','thread-svg');
+    svg.setAttribute('viewBox','0 0 100 100');
+    svg.setAttribute('preserveAspectRatio','none');
+    threads.forEach(arr=>{
+      const pts=arr.map(t=>t.x+','+t.y).join(' ');
+      const color=(arr.find(t=>t.kind==='step')||arr[0]).color;
+      [['rgba(0,0,0,.35)',3.5,.9],[color,2,.85]].forEach(([stroke,w,op])=>{
+        const pl=document.createElementNS(SVG_NS,'polyline');
+        pl.setAttribute('points',pts);
+        pl.setAttribute('fill','none');
+        pl.setAttribute('stroke',stroke);
+        pl.setAttribute('stroke-width',w);
+        pl.setAttribute('opacity',op);
+        pl.setAttribute('vector-effect','non-scaling-stroke');
+        pl.setAttribute('stroke-linejoin','round');
+        pl.setAttribute('stroke-linecap','round');
+        svg.appendChild(pl);
+      });
+    });
+    wrap.appendChild(svg);
+  }
+
   tags.forEach((t,i)=>{
     const d=document.createElement('button');
-    d.className='tag-dot';
+    d.className='tag-dot' + (t.kind==='info' ? ' info-dot' : '');
     d.style.left=t.x+'%'; d.style.top=t.y+'%';
-    d.style.background=t.color; d.style.color=t.color;
-    const light = t.color.toLowerCase()==='#ffffff';
+    d.style.background=t.color;
+    const light = (t.color||'').toLowerCase()==='#ffffff';
     d.style.setProperty('color', light ? '#7a8b93' : t.color);
-    d.innerHTML = `<span style="color:${light?'#222':'#fff'}">${numbered ? i+1 : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="'+(light?'#222':'#fff')+'" stroke-width="3" stroke-linecap="round"><path d="M12 5v9"/><circle cx="12" cy="18.4" r="0.6" fill="'+(light?'#222':'#fff')+'"/></svg>'}</span>
-      <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`;
+    const glyphColor = light ? '#222' : '#fff';
+    let glyph;
+    if(t.kind==='info') glyph = `<span class="glyph" style="color:${glyphColor}">i</span>`;
+    else if(t.num) glyph = `<span style="color:${glyphColor}">${t.num}</span>`;
+    else glyph = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${glyphColor}" stroke-width="3" stroke-linecap="round"><path d="M12 5v9"/><circle cx="12" cy="18.4" r="0.6" fill="${glyphColor}"/></svg>`;
+    d.innerHTML = `${glyph}<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`;
     d.setAttribute('aria-label', t.title);
     d.dataset.idx=i;
     d.addEventListener('click',()=>onTag(i));
@@ -1289,12 +1390,23 @@ function buildScene(wrapId, bgId, scene, tags, onTag, numbered){
   });
 }
 
-/* size a scene image: fill height on narrow screens (pan), fit on wide */
+/* size a scene image: pan mode fills height; fit mode shows the whole image */
+let fitMode=false;
 function sizeScene(vpId, bgId, scene){
   const vp=$(vpId), bg=$(bgId);
+  const wrap=bg.parentElement;
   const avail = vp.clientHeight;
-  const ratio = scene.w/scene.h;
   const fitW = vp.clientWidth;
+  const ratio = scene.w/scene.h;
+  wrap.classList.toggle('fitted', fitMode);
+  if(fitMode){
+    const scale=Math.min(fitW/scene.w, avail/scene.h);
+    bg.style.width=(scene.w*scale)+'px'; bg.style.height=(scene.h*scale)+'px'; bg.style.maxWidth='none';
+    wrap.style.marginTop=Math.max(0,(avail-scene.h*scale)/2)+'px';
+    vp.scrollLeft=0;
+    return;
+  }
+  wrap.style.marginTop='0';
   const hIfFitW = fitW/ratio;
   if(hIfFitW < avail*0.72){
     // panorama on narrow screen → fill height, allow horizontal pan
@@ -1351,29 +1463,19 @@ function openIntro(i){
   );
   $('goPathBtn').addEventListener('click',()=>{ closeSheet(); startPath(ch.key); });
 }
-buildScene('wrap-choice','bg-choice',childScene,childScene.tags,openIntro,false);
+buildScene('wrap-choice','bg-choice',childScene,childScene.tags,openIntro,null);
 
 /* ── path screen ── */
-function tagsForPath(key){
-  if(key==='all') return DATA[ALL_SCENE].tags;
-  if(key==='noa') return DATA[ALL_SCENE].tags.filter(t=>TEACHER_TAG_TITLES.includes(t.title));
-  const p=PATHS.find(p=>p.key===key);
-  return DATA[p.scene].tags;
-}
-function pathTitle(key){
-  if(key==='all') return DATA[ALL_SCENE].title;
-  if(key==='noa') return 'המסלול של נועה המחנכת';
-  const p=PATHS.find(p=>p.key===key);
-  return DATA[p.scene].title;
-}
+let currentScene=null;
 function startPath(key){
   currentPathKey=key;
-  currentTags=tagsForPath(key);
-  const scene = key==='all'||key==='noa' ? DATA[ALL_SCENE] : DATA[PATHS.find(p=>p.key===key).scene];
-  $('headerTitle').textContent=pathTitle(key);
-  buildScene('wrap-path','bg-path',{...scene,tags:currentTags},currentTags,openTag,true);
+  const b=pathBundle(key);
+  currentTags=b.tags;
+  currentScene=b.scene;
+  $('headerTitle').textContent=b.title;
+  buildScene('wrap-path','bg-path',b.scene,b.tags,openTag,b.threads);
   show('screen-path');
-  sizeScene('vp-path','bg-path',scene);
+  sizeScene('vp-path','bg-path',b.scene);
   refreshPathDots();
   updateDoneFab();
 }
@@ -1395,8 +1497,11 @@ function openTag(i){
   const key=currentPathKey+':'+i;
   if(!seen.has(key)){ seen.add(key); addScore(10); }
   refreshPathDots(); updateDoneFab();
+  const chipText = t.kind==='info'
+    ? `נעים להכיר — ${t.owner}`
+    : (t.num ? `${t.owner} — נקודה ${t.num} מתוך ${t.of}` : t.owner);
   openSheet(
-    `<div class="tag-chip"><span class="dotmini" style="background:${t.color}"></span>נקודה ${i+1} מתוך ${currentTags.length}</div>
+    `<div class="tag-chip"><span class="dotmini" style="background:${t.color}"></span>${chipText}</div>
      ${mediaHtml(t)}<h2>${t.title}</h2><p class="body">${t.text||''}</p>`,
     `<button class="nav-btn" id="prevTag" ${i===0?'disabled':''} aria-label="הנקודה הקודמת">
        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
@@ -1454,15 +1559,21 @@ $('restartBtn').addEventListener('click',()=>{
 
 /* ── sizing ── */
 function sizeChoice(){ sizeScene('vp-choice','bg-choice',childScene); }
-window.addEventListener('resize',()=>{
+function resizeAll(){
   sizeChoice();
-  if($('screen-path').classList.contains('active') && currentPathKey){
-    const scene = currentPathKey==='all'||currentPathKey==='noa' ? DATA[ALL_SCENE] : DATA[PATHS.find(p=>p.key===currentPathKey).scene];
-    sizeScene('vp-path','bg-path',scene);
+  if($('screen-path').classList.contains('active') && currentScene){
+    sizeScene('vp-path','bg-path',currentScene);
   }
-});
+}
+window.addEventListener('resize',resizeAll);
+window.addEventListener('orientationchange',()=>setTimeout(resizeAll,250));
 $('bg-choice').addEventListener('load',sizeChoice);
 sizeChoice();
+
+/* ── fit / pan toggle ── */
+function toggleFit(){ fitMode=!fitMode; resizeAll(); }
+$('fitBtnChoice').addEventListener('click',toggleFit);
+$('fitBtnPath').addEventListener('click',toggleFit);
 </script>
 </body>
 </html>
