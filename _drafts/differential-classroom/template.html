@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>הכיתה כמרחב לימוד דיפרנציאלי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a2b33; --bg:#0e1518; --panel:#ffffff; --muted:#5b7078;
+  --blue:#2cadf6; --teal:#1bbc9b; --orange:#f97c1c; --pink:#fb607f;
+  --header-h:56px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+
+/* ─── header ─── */
+header{
+  position:fixed;top:0;right:0;left:0;height:var(--header-h);z-index:50;
+  display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:rgba(10,18,22,.92);backdrop-filter:blur(8px);color:#fff;
+}
+header .htitle{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+header .score{
+  display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;
+  background:rgba(255,255,255,.12);border-radius:999px;padding:4px 12px;flex-shrink:0;
+}
+header .score svg{width:15px;height:15px}
+header .back-btn{
+  background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:999px;
+  width:34px;height:34px;display:none;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+}
+header .back-btn svg{width:17px;height:17px}
+header .back-btn.show{display:flex}
+
+/* ─── screens ─── */
+.screen{position:fixed;inset:0;padding-top:var(--header-h);display:none;flex-direction:column}
+.screen.active{display:flex}
+
+/* ─── scene (interactive image) ─── */
+.scene-viewport{flex:1;overflow:auto;position:relative;-webkit-overflow-scrolling:touch;background:#0e1518}
+.scene-wrap{position:relative;margin:0 auto;width:max-content}
+.scene-wrap img.bg{display:block;user-select:none;-webkit-user-drag:none}
+
+.hint-bar{
+  position:absolute;bottom:0;right:0;left:0;z-index:20;pointer-events:none;
+  padding:26px 16px 14px;text-align:center;color:#fff;font-size:13.5px;
+  background:linear-gradient(to top,rgba(10,18,22,.85),transparent);
+}
+.hint-bar b{font-weight:700}
+
+/* ─── tag dots ─── */
+.tag-dot{
+  position:absolute;transform:translate(-50%,-50%);z-index:10;
+  width:38px;height:38px;border-radius:50%;border:2.5px solid #fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-weight:700;font-size:15px;font-family:'Heebo',sans-serif;
+  box-shadow:0 2px 10px rgba(0,0,0,.45);
+  transition:transform .15s;
+}
+.tag-dot:active{transform:translate(-50%,-50%) scale(.9)}
+.tag-dot::after{
+  content:'';position:absolute;inset:-8px;border-radius:50%;
+  border:2px solid currentColor;opacity:0;animation:pulse 2.2s ease-out infinite;
+}
+.tag-dot.seen::after{animation:none}
+.tag-dot.seen{opacity:.82}
+.tag-dot .check{position:absolute;top:-4px;left:-4px;width:16px;height:16px;border-radius:50%;
+  background:#16a34a;display:none;align-items:center;justify-content:center}
+.tag-dot.seen .check{display:flex}
+.tag-dot .check svg{width:10px;height:10px}
+@keyframes pulse{0%{transform:scale(.6);opacity:.9}70%{transform:scale(1.25);opacity:0}100%{opacity:0}}
+
+/* ─── bottom sheet popup ─── */
+.sheet-veil{position:fixed;inset:0;background:rgba(8,14,17,.55);z-index:90;opacity:0;pointer-events:none;transition:opacity .22s}
+.sheet-veil.open{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;bottom:0;right:0;left:0;z-index:95;max-height:86dvh;
+  background:var(--panel);border-radius:22px 22px 0 0;
+  transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.72,.34,1);
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 -8px 40px rgba(0,0,0,.35);
+}
+.sheet.open{transform:translateY(0)}
+.sheet .grab{width:44px;height:5px;border-radius:99px;background:#d3dde1;margin:10px auto 2px;flex-shrink:0}
+.sheet .sheet-scroll{overflow-y:auto;padding:10px 20px 20px}
+.sheet .media{border-radius:14px;overflow:hidden;margin-bottom:14px;background:#eef3f5}
+.sheet .media img,.sheet .media video{display:block;width:100%;max-height:38dvh;object-fit:contain;background:#eef3f5}
+.sheet h2{font-size:20px;font-weight:700;line-height:1.3;margin-bottom:8px}
+.sheet .tag-chip{
+  display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--muted);
+  margin-bottom:10px;
+}
+.sheet .tag-chip .dotmini{width:11px;height:11px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.sheet p.body{font-size:16px;line-height:1.75;color:#2a3b43;white-space:pre-line}
+.sheet .sheet-actions{display:flex;gap:10px;padding:12px 20px calc(14px + env(safe-area-inset-bottom));border-top:1px solid #e8eef1;flex-shrink:0;align-items:center}
+.sheet .nav-btn{
+  border:1.5px solid #cfdbe0;background:#fff;border-radius:12px;min-width:46px;height:46px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);
+}
+.sheet .nav-btn:disabled{opacity:.35}
+.sheet .nav-btn svg{width:18px;height:18px}
+.sheet .counter{font-size:13px;color:var(--muted);font-weight:500;flex:1;text-align:center}
+.btn{
+  border:none;border-radius:14px;padding:14px 22px;font-family:'Heebo',sans-serif;
+  font-size:16px;font-weight:700;cursor:pointer;color:#fff;background:var(--blue);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  transition:filter .15s, transform .1s;
+}
+.btn:active{transform:scale(.97)}
+.btn.full{width:100%}
+.btn.ghost{background:#eef3f6;color:var(--ink)}
+.btn svg{width:17px;height:17px}
+
+/* ─── route-chooser sheet list ─── */
+.route-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.route-item{
+  display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;
+  border:1.5px solid #e2eaee;background:#fbfdfe;cursor:pointer;font-size:16px;font-weight:500;
+  font-family:'Heebo',sans-serif;text-align:right;width:100%;color:var(--ink);
+}
+.route-item:active{background:#eef5f8}
+.route-item .rdot{width:15px;height:15px;border-radius:50%;flex-shrink:0;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
+.route-item .arr{margin-inline-start:auto;color:var(--muted);display:flex}
+.route-item .arr svg{width:16px;height:16px}
+.route-item.done .rname::after{content:' ✓';color:#16a34a;font-weight:700}
+
+/* ─── floating done button on path screens ─── */
+.fab{
+  position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));inset-inline-start:16px;z-index:40;
+  border:none;border-radius:999px;padding:13px 20px;font-family:'Heebo',sans-serif;
+  font-size:15px;font-weight:700;color:#fff;background:var(--blue);cursor:pointer;
+  box-shadow:0 4px 18px rgba(0,0,0,.4);display:none;align-items:center;gap:8px;
+}
+.fab.show{display:flex}
+.fab svg{width:16px;height:16px}
+
+/* ─── summary + end screens ─── */
+.center-card{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px 22px calc(28px + env(safe-area-inset-bottom));text-align:center;gap:14px;overflow-y:auto;
+  background:linear-gradient(160deg,#10222b,#0e1518);color:#fff;
+}
+.center-card .icon-ring{
+  width:86px;height:86px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(44,173,246,.15);border:2px solid var(--blue);margin-bottom:6px;
+}
+.center-card .icon-ring svg{width:40px;height:40px}
+.center-card h1{font-size:26px;font-weight:900;line-height:1.3}
+.center-card p{font-size:16.5px;line-height:1.7;color:#c7d6dc;max-width:480px}
+.center-card .final-score{
+  display:flex;align-items:center;gap:8px;font-size:19px;font-weight:700;color:#ffd166;
+  background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35);border-radius:999px;padding:8px 20px;
+}
+.center-card .final-score svg{width:19px;height:19px}
+.center-card .stack{display:flex;flex-direction:column;gap:10px;width:100%;max-width:340px;margin-top:8px}
+
+.credit{font-size:12.5px;color:#8fa5ad;margin-top:10px}
+
+/* desktop tweaks */
+@media (min-width:760px){
+  .sheet{right:auto;left:50%;transform:translate(-50%,105%);width:560px;border-radius:22px;bottom:24px;max-height:82vh}
+  .sheet.open{transform:translate(-50%,0)}
+  header .htitle{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" id="backBtn" aria-label="חזרה">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6" transform="scale(-1,1) translate(-24,0)"/></svg>
+  </button>
+  <div class="htitle" id="headerTitle">הכיתה כמרחב לימוד דיפרנציאלי</div>
+  <div class="score" aria-label="הנקודות שלך">
+    <svg viewBox="0 0 24 24" fill="#ffd166" stroke="#ffd166" stroke-width="1"><path d="M12 2l2.9 6.26L21.5 9.27l-4.75 4.38L18 20.5 12 17.27 6 20.5l1.25-6.85L2.5 9.27l6.6-1.01z"/></svg>
+    <span id="scoreVal">0</span>
+  </div>
+</header>
+
+<!-- choice screen -->
+<div class="screen active" id="screen-choice">
+  <div class="scene-viewport" id="vp-choice">
+    <div class="scene-wrap" id="wrap-choice">
+      <img class="bg" id="bg-choice" alt="ילדים ומחנכת סנריו">
+      <div class="hint-bar"><b>הקישו על דמות</b> כדי להכיר אותה — ואז המשיכו למסלול הלמידה שלה</div>
+    </div>
+  </div>
+  <button class="fab show" id="allPathsFab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    כל המסלולים יחד
+  </button>
+</div>
+
+<!-- path screen -->
+<div class="screen" id="screen-path">
+  <div class="scene-viewport" id="vp-path">
+    <div class="scene-wrap" id="wrap-path">
+      <img class="bg" id="bg-path" alt="הכיתה">
+      <div class="hint-bar" id="pathHint"><b>הקישו על הנקודות</b> לפי הסדר כדי לעקוב אחרי המסלול</div>
+    </div>
+  </div>
+  <button class="fab" id="doneFab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    <span id="doneFabLabel">סיימתי — להמשך</span>
+  </button>
+</div>
+
+<!-- summary screen -->
+<div class="screen" id="screen-summary">
+  <div class="center-card">
+    <div class="icon-ring">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2cadf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <h1>סיכום למידה ושאלות</h1>
+    <p>על מנת לשפר את הסיור בכיתה, נשמח לשמוע אלו שאלות ואי בהירויות עלו במהלכו</p>
+    <div class="stack">
+      <button class="btn full" id="toEndBtn">
+        לסיום הסיור
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="btn full ghost" id="summaryBackBtn">חזרה לבחירת מסלול</button>
+    </div>
+  </div>
+</div>
+
+<!-- end screen -->
+<div class="screen" id="screen-end">
+  <div class="center-card">
+    <div class="icon-ring" style="background:rgba(22,163,74,.15);border-color:#16a34a">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    </div>
+    <h1>Congratulations</h1>
+    <p>סיימתם את הסנריו: <b>הכיתה כמרחב לימוד דיפרנציאלי</b></p>
+    <div class="final-score">
+      <svg viewBox="0 0 24 24" fill="#ffd166" stroke="#ffd166" stroke-width="1"><path d="M12 2l2.9 6.26L21.5 9.27l-4.75 4.38L18 20.5 12 17.27 6 20.5l1.25-6.85L2.5 9.27l6.6-1.01z"/></svg>
+      <span id="finalScore">0</span> נקודות
+    </div>
+    <div class="stack">
+      <button class="btn full ghost" id="restartBtn">להתחיל מחדש</button>
+    </div>
+    <div class="credit">יוצרת הסנריו: זהר דבש</div>
+  </div>
+</div>
+
+<!-- bottom sheet -->
+<div class="sheet-veil" id="veil"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="sheet-scroll" id="sheetBody"></div>
+  <div class="sheet-actions" id="sheetActions"></div>
+</div>
+
+<script>
+const DATA = __DATA__;
+
+/* ── scenario graph ── */
+const CHILDREN_SCENE = '2103158569779069796';
+const ALL_SCENE      = '2093401332298810021';
+const PATHS = [
+  {key:'segev', name:'שגב',  color:'#1bbc9b', scene:'2097994638257321637', introTag:'הכירו את שגב'},
+  {key:'alice', name:'אליס', color:'#fb607f', scene:'2098000771848107685', introTag:'הכירו את אליס'},
+  {key:'noam',  name:'נועם', color:'#f97c1c', scene:'2103161720729016164', introTag:'הכירו את נועם'},
+  {key:'efrat', name:'אפרת', color:'#2cadf6', scene:'2103164787239196516', introTag:'הכירו את אפרת'},
+];
+/* teacher: her tags live inside the combined scene */
+const TEACHER = {key:'noa', name:'נועה המחנכת', color:'#ffffff', introTag:'הכירו את נועה המחנכת'};
+const TEACHER_TAG_TITLES = [
+  'נועה המחנכת - נעים להכיר.',
+  'מטפלת באירוע שקרה בהפסקה',
+  'מניעה לצאת למשימה ילדים שמתקשים בניהול עצמי',
+  'מניעה לפעולה דרך משימה מותאמת אישית',
+  'הקניה בקבוצה קטנה',
+  'מסייעת לתלמידים לפי הצורך',
+  'מניעה לחזרה לעבודה תלמידים שמקשים בניהול עצמי',
+  'מכוונת למשימות הרלוונטיות תלמידים שזקוקים לכך',
+];
+
+/* ── state ── */
+let score = 0;
+const seen = new Set();          // "sceneKey:index" of viewed tags
+const donePaths = new Set();     // path keys completed
+let currentPathKey = null;       // key of path on the path screen
+let currentTags = [];            // tags rendered on path screen
+let currentSheetIdx = -1;
+let sheetContext = null;         // 'intro' | 'tag' | 'routes'
+
+const $ = id => document.getElementById(id);
+const screens = ['screen-choice','screen-path','screen-summary','screen-end'];
+
+function show(id){
+  screens.forEach(s => $(s).classList.toggle('active', s===id));
+  $('backBtn').classList.toggle('show', id!=='screen-choice');
+  window.scrollTo(0,0);
+}
+function addScore(n){ score+=n; $('scoreVal').textContent=score; $('finalScore').textContent=score; }
+
+/* ── build a scene into a wrap ── */
+function buildScene(wrapId, bgId, scene, tags, onTag, numbered){
+  const wrap=$(wrapId), bg=$(bgId);
+  bg.src=scene.bg;
+  wrap.querySelectorAll('.tag-dot').forEach(d=>d.remove());
+  tags.forEach((t,i)=>{
+    const d=document.createElement('button');
+    d.className='tag-dot';
+    d.style.left=t.x+'%'; d.style.top=t.y+'%';
+    d.style.background=t.color; d.style.color=t.color;
+    const light = t.color.toLowerCase()==='#ffffff';
+    d.style.setProperty('color', light ? '#7a8b93' : t.color);
+    d.innerHTML = `<span style="color:${light?'#222':'#fff'}">${numbered ? i+1 : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="'+(light?'#222':'#fff')+'" stroke-width="3" stroke-linecap="round"><path d="M12 5v9"/><circle cx="12" cy="18.4" r="0.6" fill="'+(light?'#222':'#fff')+'"/></svg>'}</span>
+      <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`;
+    d.setAttribute('aria-label', t.title);
+    d.dataset.idx=i;
+    d.addEventListener('click',()=>onTag(i));
+    wrap.appendChild(d);
+  });
+}
+
+/* size a scene image: fill height on narrow screens (pan), fit on wide */
+function sizeScene(vpId, bgId, scene){
+  const vp=$(vpId), bg=$(bgId);
+  const avail = vp.clientHeight;
+  const ratio = scene.w/scene.h;
+  const fitW = vp.clientWidth;
+  const hIfFitW = fitW/ratio;
+  if(hIfFitW < avail*0.72){
+    // panorama on narrow screen → fill height, allow horizontal pan
+    bg.style.height=avail+'px'; bg.style.width=(avail*ratio)+'px'; bg.style.maxWidth='none';
+    requestAnimationFrame(()=>{ vp.scrollLeft=(bg.offsetWidth-vp.clientWidth)/2 * (document.dir==='rtl'?-1:1); });
+  } else {
+    bg.style.width=fitW+'px'; bg.style.height=(hIfFitW)+'px';
+    if(hIfFitW>avail){ bg.style.height=avail+'px'; bg.style.width=(avail*ratio)+'px'; }
+  }
+}
+
+/* ── bottom sheet ── */
+function openSheet(html, actionsHtml){
+  $('sheetBody').innerHTML=html;
+  $('sheetActions').innerHTML=actionsHtml||'';
+  $('sheetActions').style.display=actionsHtml?'flex':'none';
+  $('veil').classList.add('open'); $('sheet').classList.add('open');
+  $('sheetBody').scrollTop=0;
+}
+function closeSheet(){ $('veil').classList.remove('open'); $('sheet').classList.remove('open'); sheetContext=null; }
+$('veil').addEventListener('click', closeSheet);
+
+function mediaHtml(t){
+  if(!t.media || !t.media.length) return '';
+  return t.media.map(m => m.type==='video'
+    ? `<div class="media"><video controls playsinline preload="metadata" ${t.media.find(x=>x.type==='image')?`poster="${t.media.find(x=>x.type==='image').src}"`:''} src="${m.src}"></video></div>`
+    : (t.media.some(x=>x.type==='video') ? '' : `<div class="media"><img src="${m.src}" alt=""></div>`)
+  ).join('');
+}
+
+/* ── choice screen ── */
+const childScene = DATA[CHILDREN_SCENE];
+function characterForTag(t){
+  const p = PATHS.find(p=>p.introTag===t.title);
+  if(p) return p;
+  if(t.title===TEACHER.introTag) return TEACHER;
+  return null;
+}
+function openIntro(i){
+  const t = childScene.tags[i];
+  const ch = characterForTag(t);
+  let text = t.text, media = mediaHtml(t);
+  if(ch && ch.key==='noa' && !text){
+    // teacher intro text lives in the combined scene
+    const full = DATA[ALL_SCENE].tags.find(x=>x.title==='נועה המחנכת - נעים להכיר.');
+    if(full){ text = full.text; media = mediaHtml(full); }
+  }
+  const btnLabel = ch.key==='noa' ? 'מה נועה עושה בזמן הלמידה?' : 'למסלול הלמידה של '+ch.name;
+  openSheet(
+    `<div class="tag-chip"><span class="dotmini" style="background:${ch.color}"></span>${childScene.title}</div>
+     ${media}<h2>${t.title}</h2><p class="body">${text||''}</p>`,
+    `<button class="btn full" id="goPathBtn">${btnLabel}
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`
+  );
+  $('goPathBtn').addEventListener('click',()=>{ closeSheet(); startPath(ch.key); });
+}
+buildScene('wrap-choice','bg-choice',childScene,childScene.tags,openIntro,false);
+
+/* ── path screen ── */
+function tagsForPath(key){
+  if(key==='all') return DATA[ALL_SCENE].tags;
+  if(key==='noa') return DATA[ALL_SCENE].tags.filter(t=>TEACHER_TAG_TITLES.includes(t.title));
+  const p=PATHS.find(p=>p.key===key);
+  return DATA[p.scene].tags;
+}
+function pathTitle(key){
+  if(key==='all') return DATA[ALL_SCENE].title;
+  if(key==='noa') return 'המסלול של נועה המחנכת';
+  const p=PATHS.find(p=>p.key===key);
+  return DATA[p.scene].title;
+}
+function startPath(key){
+  currentPathKey=key;
+  currentTags=tagsForPath(key);
+  const scene = key==='all'||key==='noa' ? DATA[ALL_SCENE] : DATA[PATHS.find(p=>p.key===key).scene];
+  $('headerTitle').textContent=pathTitle(key);
+  buildScene('wrap-path','bg-path',{...scene,tags:currentTags},currentTags,openTag,true);
+  show('screen-path');
+  sizeScene('vp-path','bg-path',scene);
+  refreshPathDots();
+  updateDoneFab();
+}
+function refreshPathDots(){
+  document.querySelectorAll('#wrap-path .tag-dot').forEach(d=>{
+    d.classList.toggle('seen', seen.has(currentPathKey+':'+d.dataset.idx));
+  });
+}
+function updateDoneFab(){
+  const total=currentTags.length;
+  const viewed=currentTags.filter((_,i)=>seen.has(currentPathKey+':'+i)).length;
+  const fab=$('doneFab');
+  fab.classList.add('show');
+  $('doneFabLabel').textContent = viewed>=total ? 'סיימתי — להמשך' : `נצפו ${viewed} מתוך ${total} — להמשך`;
+}
+function openTag(i){
+  currentSheetIdx=i; sheetContext='tag';
+  const t=currentTags[i];
+  const key=currentPathKey+':'+i;
+  if(!seen.has(key)){ seen.add(key); addScore(10); }
+  refreshPathDots(); updateDoneFab();
+  openSheet(
+    `<div class="tag-chip"><span class="dotmini" style="background:${t.color}"></span>נקודה ${i+1} מתוך ${currentTags.length}</div>
+     ${mediaHtml(t)}<h2>${t.title}</h2><p class="body">${t.text||''}</p>`,
+    `<button class="nav-btn" id="prevTag" ${i===0?'disabled':''} aria-label="הנקודה הקודמת">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+     <span class="counter">${i+1} מתוך ${currentTags.length}</span>
+     <button class="nav-btn" id="nextTag" ${i===currentTags.length-1?'disabled':''} aria-label="הנקודה הבאה">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`
+  );
+  if(i>0) $('prevTag').addEventListener('click',()=>openTag(i-1));
+  if(i<currentTags.length-1) $('nextTag').addEventListener('click',()=>openTag(i+1));
+}
+
+/* ── routes chooser ── */
+function openRoutes(){
+  sheetContext='routes';
+  if(currentPathKey) donePaths.add(currentPathKey);
+  const items = [
+    ...PATHS.map(p=>({key:p.key,name:'המסלול של '+p.name,color:p.color})),
+    {key:'noa',name:'המסלול של נועה המחנכת',color:'#ffffff'},
+    {key:'all',name:'כל המסלולים יחד',color:'#1a2b33'},
+  ].map(it=>`<button class="route-item ${donePaths.has(it.key)?'done':''}" data-key="${it.key}">
+      <span class="rdot" style="background:${it.color}"></span><span class="rname">${it.name}</span>
+      <span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+    </button>`).join('');
+  openSheet(
+    `<h2 style="margin-bottom:12px">צומת בחירה</h2>
+     <div class="route-list">${items}</div>`,
+    `<button class="btn full" id="toSummaryBtn">סיימתי את הסיור — לסיכום
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`
+  );
+  document.querySelectorAll('.route-item').forEach(b=>{
+    b.addEventListener('click',()=>{ closeSheet(); startPath(b.dataset.key); });
+  });
+  $('toSummaryBtn').addEventListener('click',()=>{ closeSheet(); $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי'; show('screen-summary'); });
+}
+$('doneFab').addEventListener('click',openRoutes);
+$('allPathsFab').addEventListener('click',()=>startPath('all'));
+
+/* ── nav buttons ── */
+$('backBtn').addEventListener('click',()=>{
+  closeSheet();
+  $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי';
+  if($('screen-path').classList.contains('active')) show('screen-choice');
+  else if($('screen-summary').classList.contains('active')) show('screen-choice');
+  else if($('screen-end').classList.contains('active')) show('screen-summary');
+  else show('screen-choice');
+  sizeChoice();
+});
+$('toEndBtn').addEventListener('click',()=>show('screen-end'));
+$('summaryBackBtn').addEventListener('click',()=>{ show('screen-choice'); sizeChoice(); });
+$('restartBtn').addEventListener('click',()=>{
+  score=0; $('scoreVal').textContent='0'; seen.clear(); donePaths.clear();
+  $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי';
+  show('screen-choice'); sizeChoice();
+});
+
+/* ── sizing ── */
+function sizeChoice(){ sizeScene('vp-choice','bg-choice',childScene); }
+window.addEventListener('resize',()=>{
+  sizeChoice();
+  if($('screen-path').classList.contains('active') && currentPathKey){
+    const scene = currentPathKey==='all'||currentPathKey==='noa' ? DATA[ALL_SCENE] : DATA[PATHS.find(p=>p.key===currentPathKey).scene];
+    sizeScene('vp-path','bg-path',scene);
+  }
+});
+$('bg-choice').addEventListener('load',sizeChoice);
+sizeChoice();
+</script>
+</body>
+</html>

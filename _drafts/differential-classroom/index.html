@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>הכיתה כמרחב לימוד דיפרנציאלי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1a2b33; --bg:#0e1518; --panel:#ffffff; --muted:#5b7078;
+  --blue:#2cadf6; --teal:#1bbc9b; --orange:#f97c1c; --pink:#fb607f;
+  --header-h:56px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+
+/* ─── header ─── */
+header{
+  position:fixed;top:0;right:0;left:0;height:var(--header-h);z-index:50;
+  display:flex;align-items:center;gap:10px;padding:0 14px;
+  background:rgba(10,18,22,.92);backdrop-filter:blur(8px);color:#fff;
+}
+header .htitle{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+header .score{
+  display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;
+  background:rgba(255,255,255,.12);border-radius:999px;padding:4px 12px;flex-shrink:0;
+}
+header .score svg{width:15px;height:15px}
+header .back-btn{
+  background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:999px;
+  width:34px;height:34px;display:none;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+}
+header .back-btn svg{width:17px;height:17px}
+header .back-btn.show{display:flex}
+
+/* ─── screens ─── */
+.screen{position:fixed;inset:0;padding-top:var(--header-h);display:none;flex-direction:column}
+.screen.active{display:flex}
+
+/* ─── scene (interactive image) ─── */
+.scene-viewport{flex:1;overflow:auto;position:relative;-webkit-overflow-scrolling:touch;background:#0e1518}
+.scene-wrap{position:relative;margin:0 auto;width:max-content}
+.scene-wrap img.bg{display:block;user-select:none;-webkit-user-drag:none}
+
+.hint-bar{
+  position:absolute;bottom:0;right:0;left:0;z-index:20;pointer-events:none;
+  padding:26px 16px 14px;text-align:center;color:#fff;font-size:13.5px;
+  background:linear-gradient(to top,rgba(10,18,22,.85),transparent);
+}
+.hint-bar b{font-weight:700}
+
+/* ─── tag dots ─── */
+.tag-dot{
+  position:absolute;transform:translate(-50%,-50%);z-index:10;
+  width:38px;height:38px;border-radius:50%;border:2.5px solid #fff;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-weight:700;font-size:15px;font-family:'Heebo',sans-serif;
+  box-shadow:0 2px 10px rgba(0,0,0,.45);
+  transition:transform .15s;
+}
+.tag-dot:active{transform:translate(-50%,-50%) scale(.9)}
+.tag-dot::after{
+  content:'';position:absolute;inset:-8px;border-radius:50%;
+  border:2px solid currentColor;opacity:0;animation:pulse 2.2s ease-out infinite;
+}
+.tag-dot.seen::after{animation:none}
+.tag-dot.seen{opacity:.82}
+.tag-dot .check{position:absolute;top:-4px;left:-4px;width:16px;height:16px;border-radius:50%;
+  background:#16a34a;display:none;align-items:center;justify-content:center}
+.tag-dot.seen .check{display:flex}
+.tag-dot .check svg{width:10px;height:10px}
+@keyframes pulse{0%{transform:scale(.6);opacity:.9}70%{transform:scale(1.25);opacity:0}100%{opacity:0}}
+
+/* ─── bottom sheet popup ─── */
+.sheet-veil{position:fixed;inset:0;background:rgba(8,14,17,.55);z-index:90;opacity:0;pointer-events:none;transition:opacity .22s}
+.sheet-veil.open{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;bottom:0;right:0;left:0;z-index:95;max-height:86dvh;
+  background:var(--panel);border-radius:22px 22px 0 0;
+  transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.72,.34,1);
+  display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 -8px 40px rgba(0,0,0,.35);
+}
+.sheet.open{transform:translateY(0)}
+.sheet .grab{width:44px;height:5px;border-radius:99px;background:#d3dde1;margin:10px auto 2px;flex-shrink:0}
+.sheet .sheet-scroll{overflow-y:auto;padding:10px 20px 20px}
+.sheet .media{border-radius:14px;overflow:hidden;margin-bottom:14px;background:#eef3f5}
+.sheet .media img,.sheet .media video{display:block;width:100%;max-height:38dvh;object-fit:contain;background:#eef3f5}
+.sheet h2{font-size:20px;font-weight:700;line-height:1.3;margin-bottom:8px}
+.sheet .tag-chip{
+  display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--muted);
+  margin-bottom:10px;
+}
+.sheet .tag-chip .dotmini{width:11px;height:11px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.sheet p.body{font-size:16px;line-height:1.75;color:#2a3b43;white-space:pre-line}
+.sheet .sheet-actions{display:flex;gap:10px;padding:12px 20px calc(14px + env(safe-area-inset-bottom));border-top:1px solid #e8eef1;flex-shrink:0;align-items:center}
+.sheet .nav-btn{
+  border:1.5px solid #cfdbe0;background:#fff;border-radius:12px;min-width:46px;height:46px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);
+}
+.sheet .nav-btn:disabled{opacity:.35}
+.sheet .nav-btn svg{width:18px;height:18px}
+.sheet .counter{font-size:13px;color:var(--muted);font-weight:500;flex:1;text-align:center}
+.btn{
+  border:none;border-radius:14px;padding:14px 22px;font-family:'Heebo',sans-serif;
+  font-size:16px;font-weight:700;cursor:pointer;color:#fff;background:var(--blue);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  transition:filter .15s, transform .1s;
+}
+.btn:active{transform:scale(.97)}
+.btn.full{width:100%}
+.btn.ghost{background:#eef3f6;color:var(--ink)}
+.btn svg{width:17px;height:17px}
+
+/* ─── route-chooser sheet list ─── */
+.route-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.route-item{
+  display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;
+  border:1.5px solid #e2eaee;background:#fbfdfe;cursor:pointer;font-size:16px;font-weight:500;
+  font-family:'Heebo',sans-serif;text-align:right;width:100%;color:var(--ink);
+}
+.route-item:active{background:#eef5f8}
+.route-item .rdot{width:15px;height:15px;border-radius:50%;flex-shrink:0;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
+.route-item .arr{margin-inline-start:auto;color:var(--muted);display:flex}
+.route-item .arr svg{width:16px;height:16px}
+.route-item.done .rname::after{content:' ✓';color:#16a34a;font-weight:700}
+
+/* ─── floating done button on path screens ─── */
+.fab{
+  position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));inset-inline-start:16px;z-index:40;
+  border:none;border-radius:999px;padding:13px 20px;font-family:'Heebo',sans-serif;
+  font-size:15px;font-weight:700;color:#fff;background:var(--blue);cursor:pointer;
+  box-shadow:0 4px 18px rgba(0,0,0,.4);display:none;align-items:center;gap:8px;
+}
+.fab.show{display:flex}
+.fab svg{width:16px;height:16px}
+
+/* ─── summary + end screens ─── */
+.center-card{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:28px 22px calc(28px + env(safe-area-inset-bottom));text-align:center;gap:14px;overflow-y:auto;
+  background:linear-gradient(160deg,#10222b,#0e1518);color:#fff;
+}
+.center-card .icon-ring{
+  width:86px;height:86px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(44,173,246,.15);border:2px solid var(--blue);margin-bottom:6px;
+}
+.center-card .icon-ring svg{width:40px;height:40px}
+.center-card h1{font-size:26px;font-weight:900;line-height:1.3}
+.center-card p{font-size:16.5px;line-height:1.7;color:#c7d6dc;max-width:480px}
+.center-card .final-score{
+  display:flex;align-items:center;gap:8px;font-size:19px;font-weight:700;color:#ffd166;
+  background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35);border-radius:999px;padding:8px 20px;
+}
+.center-card .final-score svg{width:19px;height:19px}
+.center-card .stack{display:flex;flex-direction:column;gap:10px;width:100%;max-width:340px;margin-top:8px}
+
+.credit{font-size:12.5px;color:#8fa5ad;margin-top:10px}
+
+/* desktop tweaks */
+@media (min-width:760px){
+  .sheet{right:auto;left:50%;transform:translate(-50%,105%);width:560px;border-radius:22px;bottom:24px;max-height:82vh}
+  .sheet.open{transform:translate(-50%,0)}
+  header .htitle{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" id="backBtn" aria-label="חזרה">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6" transform="scale(-1,1) translate(-24,0)"/></svg>
+  </button>
+  <div class="htitle" id="headerTitle">הכיתה כמרחב לימוד דיפרנציאלי</div>
+  <div class="score" aria-label="הנקודות שלך">
+    <svg viewBox="0 0 24 24" fill="#ffd166" stroke="#ffd166" stroke-width="1"><path d="M12 2l2.9 6.26L21.5 9.27l-4.75 4.38L18 20.5 12 17.27 6 20.5l1.25-6.85L2.5 9.27l6.6-1.01z"/></svg>
+    <span id="scoreVal">0</span>
+  </div>
+</header>
+
+<!-- choice screen -->
+<div class="screen active" id="screen-choice">
+  <div class="scene-viewport" id="vp-choice">
+    <div class="scene-wrap" id="wrap-choice">
+      <img class="bg" id="bg-choice" alt="ילדים ומחנכת סנריו">
+      <div class="hint-bar"><b>הקישו על דמות</b> כדי להכיר אותה — ואז המשיכו למסלול הלמידה שלה</div>
+    </div>
+  </div>
+  <button class="fab show" id="allPathsFab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    כל המסלולים יחד
+  </button>
+</div>
+
+<!-- path screen -->
+<div class="screen" id="screen-path">
+  <div class="scene-viewport" id="vp-path">
+    <div class="scene-wrap" id="wrap-path">
+      <img class="bg" id="bg-path" alt="הכיתה">
+      <div class="hint-bar" id="pathHint"><b>הקישו על הנקודות</b> לפי הסדר כדי לעקוב אחרי המסלול</div>
+    </div>
+  </div>
+  <button class="fab" id="doneFab">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    <span id="doneFabLabel">סיימתי — להמשך</span>
+  </button>
+</div>
+
+<!-- summary screen -->
+<div class="screen" id="screen-summary">
+  <div class="center-card">
+    <div class="icon-ring">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2cadf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <h1>סיכום למידה ושאלות</h1>
+    <p>על מנת לשפר את הסיור בכיתה, נשמח לשמוע אלו שאלות ואי בהירויות עלו במהלכו</p>
+    <div class="stack">
+      <button class="btn full" id="toEndBtn">
+        לסיום הסיור
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="btn full ghost" id="summaryBackBtn">חזרה לבחירת מסלול</button>
+    </div>
+  </div>
+</div>
+
+<!-- end screen -->
+<div class="screen" id="screen-end">
+  <div class="center-card">
+    <div class="icon-ring" style="background:rgba(22,163,74,.15);border-color:#16a34a">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+    </div>
+    <h1>Congratulations</h1>
+    <p>סיימתם את הסנריו: <b>הכיתה כמרחב לימוד דיפרנציאלי</b></p>
+    <div class="final-score">
+      <svg viewBox="0 0 24 24" fill="#ffd166" stroke="#ffd166" stroke-width="1"><path d="M12 2l2.9 6.26L21.5 9.27l-4.75 4.38L18 20.5 12 17.27 6 20.5l1.25-6.85L2.5 9.27l6.6-1.01z"/></svg>
+      <span id="finalScore">0</span> נקודות
+    </div>
+    <div class="stack">
+      <button class="btn full ghost" id="restartBtn">להתחיל מחדש</button>
+    </div>
+    <div class="credit">יוצרת הסנריו: זהר דבש</div>
+  </div>
+</div>
+
+<!-- bottom sheet -->
+<div class="sheet-veil" id="veil"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true">
+  <div class="grab"></div>
+  <div class="sheet-scroll" id="sheetBody"></div>
+  <div class="sheet-actions" id="sheetActions"></div>
+</div>
+
+<script>
+const DATA = {
+ "2093401332298810021": {
+  "title": "זמן למידה אחד - ארבעה מסלולי למידה שונים",
+  "bg": "images/747d872ae2c1.jpg",
+  "w": 1024,
+  "h": 446,
+  "tags": [
+   {
+    "x": 47.164,
+    "y": 78.218,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "אליס מציירת",
+    "text": "אליס לא שמה לב שנועה הוציאה את הילדים לזמן עבודה והיא ממשיכה לעבוד על הציור שלה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/8b3d658a4996.jpg"
+     }
+    ]
+   },
+   {
+    "x": 19.643,
+    "y": 29.261,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "גלריה כיתתית",
+    "text": "נועה ניגשת לאליס, מתפעלת מהציור שלה ושואלת אם תרצה לתלות אותו בגלריה הכיתתית.  אליס מסכימה בהתרגשות ונועה שואלת אם תסכים לכתוב כמה משפטים שמספרים על היצירה שלה  ושזה יהיה תלוי ליד התמונה  בגלריה. אליס מסכימה בשמחה!",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/7afccc9da991.jpg"
+     }
+    ]
+   },
+   {
+    "x": 18.382,
+    "y": 45.179,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "משחק הרחבת אוצר מילים דבור",
+    "text": "לאליס מעודדת מההצלחה האחרונה, ניגשת לראשונה לדף המעקב האישי באייפד -  שם מחכה לה משימה יחודית להרחבת אוצר המילים הדבור  בעברית. המשימה מצויינת באייפד אך היא נמצאת בכיתה באופן פיזי - זה אינו משחק דיגיטלי, אלא משחק   בזוגות. אליס יכולה לבחור למשימה הזאת פרטנרית מתוך רשימה מוסכמת מראש (שנועה בחרה מראש כדי לוודא שאליס משחקת עם מישהי שיש לה אוצר מילים מבוסס) המשימה היא לקחת קלפים עם ציורים יפים (ערימה של קלפי דיקסיט שמצאו מטרה חדשה) ולהסביר לחברה מה מצויר בקלף הזה. והחברה לוקחת קלף ומסבירה גם היא מה מצויר בקלף הזה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/a342b6e01f2e.jpg"
+     }
+    ]
+   },
+   {
+    "x": 47.269,
+    "y": 40.354,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "קריאה במשפטי פרמידה",
+    "text": "אליס נמצאת עדיין בראשית קריאה, הרחק מאחורי רמת הכיתה הנדרשת. לכן היא עדיין מתרגלת קריאה דרך משפטי פרמידה  שנמצאים בקלסר יעודי על אחד ממדפי הכיתה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/d6010b90888f.jpg"
+     }
+    ]
+   },
+   {
+    "x": 53.466,
+    "y": 78.701,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "משימה מותאמת אישית לעירור למוטיבציה",
+    "text": "לאחר משחק  אוצר המילים, אליס נדדה חזרה למושא תשוקתה - הציור,  ואיבדה מומנטום של  עבודה. נועה, לאחר שהבחינה בכך, ניגשה אליהושאלה אם תרצה לכתוב משפט פרמידה על הציור שלה. אליס קצת מתקשה לחשוב על משפט ונועה עוזרת לה לנתח את הציור כדי ליצור ממנו משפט פרמידה. לאחר שאליס תכתוב את משפט הפרמידה נועה תדפיס אותו ותכתוב בהדגשה שאליס היא המחברת של דף העבודה ותוסיף אותו לקלסר משפטי הפרמידה. אם אליס תרצה היא גם תוכל לתת את הדף כמתנה לתלמידי הכיתה מתחת.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/2155693c6079.jpg"
+     },
+     {
+      "type": "image",
+      "src": "images/c875b2951835.jpg"
+     }
+    ]
+   },
+   {
+    "x": 62.29,
+    "y": 46.625,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "דף המעקב של אליס",
+    "text": "אליס שמחה עם ההתקדמות שלה היום והיא ניגשת לנועה כדי לשאול מה לעשות. נועה לוקחת את האייפד ובודקת עם אליס את דף המעקב האישי שלה. היא מפנה את אליס לדפים בחוברת מתמטיקה שמותאמים לה, החוברת נמאצת בתא האישי של אליס. \nאליס נמצאת ברמת כיתה אך מתקשה להשלים מספר עמודים רב ולכן כדי להבטיח תחושת הצלחה המשימה השבועית שלה כוללת מספר עמודים מצומצם.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/f59dcacdf541.jpg"
+     }
+    ]
+   },
+   {
+    "x": 72.794,
+    "y": 47.589,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "בסיום זמן הלמידה העצמאי",
+    "text": "נועה ניגשת לאליס ומזכירה לה לעבור על המשימות שלה ולסמן מה היא הספיקה היום. אליס רואה שהיא שכחה לכתוב מילים חדשות שלמדה היום במילון האישי שלה. היא מוצאיה את מחברת המילון מהתא שלה וניגשת לאפרת שתזכיר לה את המילה שלמדה ממנה בזמן המשחק - ואז כותבת את המילה ומציירת ציור לצידה. היא מבקשת עזרה מאפשרת לכתוב משפט שבו מופיעה המילה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/9b89283e9506.jpg"
+     }
+    ]
+   },
+   {
+    "x": 46.429,
+    "y": 93.66,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "אליס - נעים להכיר!",
+    "text": "אליס ילדה חולמנית ושקטה מאוד. היא היא מתקשה להניע את עצמה לעבודה בכיתה, לא משתתפת כלל בדיונים, ומבלה את רוב הזמן בלצייר ציורים מדהימים. היא דוברת רוסית כשפת אם אך לא מוגדרת כעולה חדשה משום שנולדה בארץ והתחנכה במסגרות דוברות רוסית עד שהגיעה לכיתה א'. היא הרחק מאחור ביעדי האוריינות של הכיתה. במתמטיקה היא ברמת כיתה למעט בבעיות מילוליות שם השפה מהווה מכשול.\n\nיש לה חברות והיא נהנית לצאת להפסקה ולשחק איתן, אך כולן דוברות רוסית וזו השפה שהן מדברות בה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/bd8f068f71f4.jpg"
+     }
+    ]
+   },
+   {
+    "x": 40.546,
+    "y": 93.423,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "נועם - נעים להכיר!",
+    "text": "נועם הוא ילד מתוק וחכם מאוד, בעל כושר המצאה, יצירה וחקר. יש לו דמיון עשיר והוא יודע להמציא סיפורים נהדרים, אך מתקשה לכתוב אותם. \nהוא בעל תנועתיות רבה ומוסח בקלות.  קשה לו מאוד לשבת לאורך זמן במקום אחד או לעבוד לפרקי זמן ארוכים בחוברת. על אף היכולות הגבוהות שלו הוא נמצא מאחור במיומנויות הקריאה, כתיבה ומתמטיקה הנדרשות ברמת כיתה זו. לנועם יש לב ענק והוא תמיד הראשון לעזור בכל דבר שמבקשים. הוא ילד שיודע לקחת אחריות ואפשר לדבר איתו בגובה העיניים גם על דברים מאתגרים.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/bdc7708fa91b.jpg"
+     }
+    ]
+   },
+   {
+    "x": 52.941,
+    "y": 94.145,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "אפרת - נעים להכיר!",
+    "text": "אפרת היא מסוג התלמידות שגם אם נשים אותן בחדר לבד ונזרוק פנימה חוברת ועיפרון - היא תסתדר מצוין. היא אוהבת חוברות, היא אוהבת שנותנים לה עוד ועוד עמודים בחוברת והיא מעדיפה שיעזבו אותה בשקט להתקדם בקצב שלה. אפרת היא ילדה רצינית ומעט חמורת סבר, שקצת מתקשה ליצור חברויות. היא מתקדמת הרבה מעל הרמה הכיתתית, גם בשפה וגם במתמטיקה אבל בהפסקה הגדולה היא משוטטת לבד וכל כמה דקות ניגשת לשאול את המורה התורנית \"מתי ההפסקה נגמרת?\"",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/0e7a4416a352.jpg"
+     }
+    ]
+   },
+   {
+    "x": 33.718,
+    "y": 93.183,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "שגב - נעים להכיר",
+    "text": "שגב ילד שופע קסם וכריזמה. בעל חוש דרמטי מפותח ואוהב לרקוד ולהציג. הוא קורא ברמה הנדרשת לכיתה ועובד על עיצוב אותיות וכתיבה נאה. הוא ילד חברותי ואהוב על חבריו אך יש לו קושי בוויסות רגשי והוא נוטה להסלמה במצבים חברתיים קונפליקטואלים, לעיתים עד כדי פרצי אלימות.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/70dca9d77ad5.jpg"
+     }
+    ]
+   },
+   {
+    "x": 72.374,
+    "y": 34.326,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "אפרת - דף מעקב",
+    "text": "לאפרת יש כישורי ניהול עצמי מצויינים והיא מאוד ממוקדת. היא ניגשת ישר לדף המעקב האישי שלה בטאבלט כדי לבדוק אילו משימות יש לה השבוע.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/34f0973ac59b.jpg"
+     }
+    ]
+   },
+   {
+    "x": 50.84,
+    "y": 72.674,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "מספר עמודים מקסימלי בחוברת חשבון - מעל רמת הכיתה",
+    "text": "אפרת אוהבת לעבוד בחוברת. זאת המשימה הראשונה שהיא בוחרת. היא נמצאת מעל רמת הכיתה בממטיקה וגם בשפה ולכן היא עובדת בחוברת שבילים מתקדמת.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/fe9a122cb819.jpg"
+     }
+    ]
+   },
+   {
+    "x": 34.874,
+    "y": 47.832,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "ספר בקריאה עצמאית + משימה מתוך מאגר  משימות הקריאה",
+    "text": "אפרת נהנית לקרוא. היא  קוראת כבר שבוע ספר שהיא בחרה מהספריה הכיתתית. היא בחרה ספר שמעניין אותה ושמתאים לרמת הקריאה שלה. לאחר שתסיים היא תשלים משימת קריאה מתוך מאגר המשימות. במאגר המשימות ניתן למצוא משימות שמתאימות לכל ספר, למשל: כיתבו המלצה על הספר שקראתם. ציירו קומיקס שמתאים לעלילה של הספר/כיתבו סוף חלופי לספר/ צרו מצגת על הספר /  דף שאלות שמתאים לספרים מסוגים שונים (שאלות מידע על ספר מידעי / שאלות נראטיב על ספר סיפורי)",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/bf98baa6cb6a.jpg"
+     }
+    ]
+   },
+   {
+    "x": 20.063,
+    "y": 43.011,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "משחק הרחבת אוצר מילים",
+    "text": "אליס ניגת לאפרת ושואלת אם היא מסכימה לשחק איתה במשחק אוצר המילים. אפרת נמצאת ברשימת הילדים שמתאימים למשחק הזה עבור אליס מכיוון שהיא אוחזרת באוצר מילים מרשים. זו אינה משימה לימודית עבור אפרת, אך זו משימה חשובה לא פחות עבורה מכיוון שהיא מצריכה ממנה לשתף פעולה עם ילדה אחרת . ולעבוד ביחד, שזה משהו שאפרת מאותגרת בו. היא יודעת שמשחק משותף מקדם אותה באחת מהמטרות האישיות שלה.",
+    "media": []
+   },
+   {
+    "x": 33.193,
+    "y": 65.198,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "משחק עם חברה",
+    "text": "אחת מהמשימות של אפרת היא לשחק עם חברה. זאת משימה מאתגרת במיוחד עבורה מכיוון שהא צריכה ליזום אינטראקציה בעצמה ולהזמין מישהי לשחק איתה. היא אוזרת אומץ וניגשת לחברה!",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/26bd28bbed15.jpg"
+     }
+    ]
+   },
+   {
+    "x": 64.391,
+    "y": 71.467,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "פרויקט משותף: כתיבת סיפור לספריה הכיתתית",
+    "text": "אפרת מקבלת את ההזמנה של נועם להמשיך לעבוד על הפרויקט המשותף שלהם  - הם כותבים סיפור ביחד. לנועם יש המון רעיונות! חלק ממש טובים וחלק פחות. היא בוחרת איתו את הרעיונות הטובים ומקלידה במחשב. כשהסיפור יהיה מוכן הם ינסו לאייר אותו ביחד או יבקשו מחבר/ה מהכיתה שאוהבים לצייר (למשל אליס!)  כשהסיפור יהיה מוכן הם יעשו פרזנטציה לכיתה והסיפור יתווסף לספריה הכיתתית.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/f7de247d8968.jpg"
+     }
+    ]
+   },
+   {
+    "x": 39.391,
+    "y": 54.102,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "משחק חופשי",
+    "text": "אחת הפעילויות שנעם הכי נהנה מהן בכיתה היא לבנות בלגו. בכיתה יש תערוכה של מכונות מלגו שנועם בנה וליד כל מכונה יש הסבר קצר שהוא כתב על  מה המכונה עושה. נועם מתקשה מאוד בדחיית סיפוקים לכן כאשר חזר מההפסקה, לא הקשיב להוראה של נועה המחנכת לצאת לזמן עבודה עצמאי - ובמקום מיהר לחזור למבנה הלגו שהוא עובד עליו מהבוקר.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/905745569e6e.jpg"
+     }
+    ]
+   },
+   {
+    "x": 51.366,
+    "y": 53.14,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "משימת שטף קריאה",
+    "text": "נועה המחנכת יודעת שנועם זקוק לדחיפה אוהבת כדי להתחיל את העבודה ולכן היא ניגשת אליו ומזכירה לו את משימת שטף הקריאה שלו. היא כתובה בדף המעקב האישי של נועם בטבלט אבל הוא זקוק להנעה אישית. לאחר שהיא מזכירה לו הוא עוזב בחוסר חשק את הלגו וניגש לקחת סטופר ממדף האביזרים. מה שמסייע לו למצוא מוטיבציה למשימה הזו זה שעושים אותה עם חבר! הוא לוקח את הטקסט השבועי שעובדים עליו בכיתה וניגש לחבר. החבר פותח לו סטופר בזמן שנועם מקריא את הטקסט. החבר קורא יחד עם נועם את הטקסט בלב ומסמן ליד המילים אם נועם עשה טעות - אבל לא מפריע לו לקרוא. אחרי שנועם מסיים הם כותבים בדף המעקב של נועם מי היה החבר שהאזין להקראה, כמה זמן לקחה הקריאה וכמה טעויות היו לנועם.  נועם צריך לאסוף עוד 3 חתימות כדי לעמוד במשימה שבועית הזו.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/ccdee631baa4.jpg"
+     }
+    ]
+   },
+   {
+    "x": 90.651,
+    "y": 84.01,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "מסלול קינטי",
+    "text": "נועם סיים את המשימה והראה לנועה המחנכת בגאווה. היא שיבחה אותו בהתלהבות ושאלה אם הוא מוכן למשימה נוספת והוא אמר שאין לו כח. נועה כבר יודעת שבשפה של נועם זה פשוט אומר שהגוף שלו זקוק לתנועה ולכן היא מפנה אותו למסלול הקינטי בכיתה. המסלול מאפשר תנועה ומוטוריקה גסה דרך קפיצות ויחד עם זאת דורש תכנון קדימה מבחינת הנחת היד/רגל המתאימה.  היא מאתגרת אותו לנסות את המסלול שלוש פעמים עם סטופר ולראות מה הזמן הכי טוב שלו. נועם נרגש לקראת משימת התנועה אך לפני שהוא הולך, נועה ממתיקה לו ש\"אם, לאחר שתסיים את המסלול תצליח לגשת למשימה באופן עצמאי אסכים שתמשיך בלגו אחרי שתסיים - אתה חושב שתצליח? \" העיניים של נועם נוצצות מהתרגשות והבטחה!  העבודה עם הסטופר מסייעת לנועם לחזק את תחושת הזמן שלו.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/6c79afe78366.jpg"
+     }
+    ]
+   },
+   {
+    "x": 71.639,
+    "y": 39.876,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "דף המעקב של נועם",
+    "text": "נועם מסיים את המסלול והוא מרגיש שהתנועה המאומצת נתנה לו כח! הוא זוכר את ההבטחה של נועה. לראשונה היום הוא ניגש לדף המעקב האישי שלו באייפד כדי לראות איזו משימה הוא יעשה עכשיו.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/71dc2b99eeb8.jpg"
+     }
+    ]
+   },
+   {
+    "x": 65.861,
+    "y": 68.815,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "פרויקט אישי בזוגות -  כתיבת סיפור",
+    "text": "נועם סיים את המשימה והראה לנועה המחנכת שהיתה גאה בו מאוד! הוא כבר ניגש ללגו שלו שהמתין לו על המחצלת - שמהווה סימן לפרוייקט שנמצא בעבודה, אך אפרת, חברה מהכיתה, ניגשה אליו ושאלה אם הוא מסכים שיעבדו על הפרויקט המשותף שלהם - כתיבת סיפור לספריה הכיתתית. נועם  חשב קצת והרגיש שיש לו כח לעוד  משימה כי הצליח היום בהרבה דברים! והוא גם אוהב לעבוד עם אפרת - היא רגועה וזה נעים. בזמן העבודה המשותפת לנועם יש המון רעיונות מעולים ואפרת מקלידה ועוזרת לסדר אותם בסדר הגיוני .",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/c8f15732dd7d.jpg"
+     }
+    ]
+   },
+   {
+    "x": 40.651,
+    "y": 72.194,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "טיפול בארוע חברתי שהיה בהפסקה",
+    "text": "שגב חזר נסער מההפסקה. נועה המחנכת יודעת שזה הדבר הראשון שהיא צריכה לטפל בו, אחרת ההדים מהארוע ישבשו לא רק את זמן הלמידה של שגב, אלא של כל הכיתה. היא ניגשת לשגב ומבררת מה אירע בהפסקה ולאחר מכן מסייעת לו ולילד השני שהיה מעורב בארוע להתחיל בירור. לאחר הרגעה ראשונית היא שולחת אותם לפינת פיתרון הקונפליקטים. שם יש לילדים מגוון עזרים שהכיתה הכינה במהלך השנה כדי לפתור קונפליקטים. הפעם הם משתמשים במשחק קופסה שמבוסס על תקשורת מקרבת, שתוכנן במיוחד כדי לסייע לילדים להגיע לפתרון.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/e4a5d0d18c34.jpg"
+     }
+    ]
+   },
+   {
+    "x": 67.647,
+    "y": 34.566,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "דף המעקב של שגב - וארוע הערכה לשטף קריאה",
+    "text": "לאחר הבירור שגב רגוע ומוכן להתחיל בעבודה - הוא ניגש לטבלט ופותח את דף המעקב האישי שלו.  הוא מתחיל במבדק קריאה קולי. מבדק הקריאה נשלח לכל הילדים אחת לחודש, במהלכו הם מקריאים קטע קריאה והתוכנה מאזינה וממפה את רמת הקריאה של הילדים לפי הפרמטרים שנקבעו על ידי משרד החינוך, שטף ודיוק. בנוסף, התוכנה מאבחנת את סוגי הטעויות שהילדים עושים. נועה המחנכת מקבלת את חומרי הגלם של המבדקים , את ניתוח החומרים ומיפוי של הכיתה לפי תחומי קושי.  המערכת שולחת ארוע הערכה קטן פעם בחודש וממפה את התקדמות הילדים לא רק ביחס לסטנדט אלא ביחס לעצמם.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/f5a5c3fb3ee6.jpg"
+     }
+    ]
+   },
+   {
+    "x": 82.248,
+    "y": 46.143,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "מיני שיעור ממוקד במתמטיקה",
+    "text": "לאחר ששגב מסיים את ארוע ההערכה, נועה קוראת לו לזמן הקניה קצר במתמטיקה. מתוך נתוני ההערכה נועה יודעת ששגב, ועוד  כמה תלמידים, זקוקים לחיזוק בחיסור עם שבירה של עשרת. היא מעבירה מיני שיעור של 10 דקות: מראה הדגמה בעזרת עזרים, ונותנת לילדים לפתור כמה תרגילים בעזרת העזרים. כאשר ילד מרגיש בטוח ביכולת שלו היא שולחת אותו עם דף עבודה להמשך תרגול במרחב.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/38c9372f0a2d.jpg"
+     }
+    ]
+   },
+   {
+    "x": 27.836,
+    "y": 73.638,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "הפסקה קטנה",
+    "text": "לאחר ההקניה ודף העבודה, שגב מרגיש שהוא זקוק להפסקה - ומותר לו :). הוא לוקח סטופר, ובהתאם לכללי הכיתה  מכוון אותו לחמש דקות. הוא בוחר לבלות את הזמן במשחק קלפים עם חבר שגם לקח הפסקה קטנה מהמשימות.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/28fd98534e3a.jpg"
+     }
+    ]
+   },
+   {
+    "x": 11.975,
+    "y": 18.166,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "משחקים בהכתבה",
+    "text": "נועה המחנכת רואה ששגב והחבר שקועים במשחק ולא שמו לב שהסטופר צלצל. היא מפנה את תשומת ליבם לעניין ומכוונת אותם חזרה לדפי המעקב שלהם. לאחר עיון בדף המעקב האישי שלו, שגב בוחר להמשיך לאחת מהפעילויות האהובות עליו - \"משחקים בהכתבה\". בפינה זו ילדים מתרגלים כתיבה ללא שגיאות בדרך משחקית ולא מאיימת. בתחילת השבוע נועה חילצה רשימה של מילים מטקסט שהם עובדים עליו השבוע וכתבה כל מילה בגדול על שלט. את המילים היא סידרה כרשימה על אחד מהקירות בכיתה. הילדים ניגשים לפעילות זו בזוגות. הילד שעושה את \"ההכתבה\" עומד עם הגב לרשימת המילים והילד ש\"בוחן\" אותו עומד עם הפנים לרשימה ומקריא לילד ה\"נבחן\" את המילים. הילד ה\"נבחן\"  מאזין וכותב את המילים על לוח מחיק קטן. לאחר שהם מסיימים הם בודקים ביחד כמה מילים הילד \"הנבחן\" הצליח לכתוב נכון ומזינים את התוצאה לדף המעקב כדי לראות שיפור עתידי.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/975471a86be8.jpg"
+     }
+    ]
+   },
+   {
+    "x": 26.681,
+    "y": 52.413,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "לוח כפל בהאזנה",
+    "text": "לאחר שסיים את \"משחקים בהכתבה\" שגב בוחר משימה נוספת מתוך דף המעקב -  \"לוח כפל בהאזנה\". הוא ניגש למדפי המשחקים הלימודיים שם יש כפתורי לחיצה שכאשר לוחצים עליהם שומעים הקלטה שנועה הקליטה מבעוד מועד - ההקלטה של הכפתור האדום היא של שיר כפולות 7 ושל הירוק שיר כפולות 8. שגב לוקח את הכפתור האדום ויוצא לעבוד במסדרון ליד הכיתה כדי לא להפריע ליתר הילדים. המשימה שלו היא ללמוד את השיר בעל פה! לאחר שהוא מרגיש שהוא זוכר הוא בוחן את זכרונו ורושם את הכפולות בדף העבודה שמונח ליד כפתורי השמע.  הוא מרגיש שיש לו כח לעוד משימה ולכן לוקח דף עבודה נוסף שמונח ליד - של תרגילי כפל בכפולות שהוא תרגל.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/2562f2064623.jpg"
+     }
+    ]
+   },
+   {
+    "x": 40.651,
+    "y": 45.659,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "תרגול כפולות דרך תנועה",
+    "text": "נועם בוחר לעשות משימה במתמטיקה - הוא מתרגל את לוח הכפל בקפיצות דלגית! על המדף בארונית המשחקים הלימודיים מונחת  דלגית ,  ודפים לבדיקת הזיכרון. נועם כבר מכיר את המשחק. המשימה שלו היא לתרגל את כפולות 7.  הוא יוצא למסדרון ליד הכיתה שם תלוי לוח כפל גדול שהוא יכול לקפוץ מולו בבטחה.  הוא מתחיל לקפוץ ובכל קפיצה אומר את הכפולה הבאה. אחרי שני סבבים הוא  מרגיש שאולי הוא כבר זוכר הכל אז הוא מנסה לכתוב את הכפולות על הדף - ומגלה שהוא זוכר רק עד האמצע. לא נורא, הוא נהנה לקפוץ בדילגית! הוא חוזר לתרגל ואחרי עוד שני סבבים הוא מצליח לכתוב את כל הרצף של הכפולות!",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/3d4ea91e416e.jpg"
+     }
+    ]
+   },
+   {
+    "x": 28.466,
+    "y": 92.93,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "נועה המחנכת - נעים להכיר.",
+    "text": "נועה היא מחנכת הכיתה. היא אדם יצירתי וחושב, אכפת לה מהתלמידים באופן עמוק. היא חובבת צמחים ולכן יש בכיתה עציצים לרוב. בנוסף היא אוהבת לסרוג ולכן בראשית השנה היא עשתה סדנאות תפירה לתלמידים שהיו מעוניינים בכך והוסיפה למרחב הכיתתי, פינת סריגה קטנה. סריגה היא פעילות חזרתית ומווסתת שעוזרת  לפיתוח מוטוריקה עדינה וריכוז. זאת בחירה נהדרת שקיימת עבור הילדים בכיתה, כחלק משלל הפעילויות.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/32b1225b9124.jpg"
+     }
+    ]
+   },
+   {
+    "x": 38.025,
+    "y": 72.43,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "מטפלת באירוע שקרה בהפסקה",
+    "text": "",
+    "media": []
+   },
+   {
+    "x": 20.378,
+    "y": 56.271,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "מניעה לצאת למשימה ילדים שמתקשים בניהול עצמי",
+    "text": "",
+    "media": []
+   },
+   {
+    "x": 22.164,
+    "y": 29.742,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "מניעה לפעולה דרך משימה מותאמת אישית",
+    "text": "",
+    "media": []
+   },
+   {
+    "x": 84.769,
+    "y": 46.624,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "הקניה בקבוצה קטנה",
+    "text": "",
+    "media": []
+   },
+   {
+    "x": 54.202,
+    "y": 49.037,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "מסייעת לתלמידים לפי הצורך",
+    "text": "",
+    "media": []
+   },
+   {
+    "x": 24.895,
+    "y": 72.189,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "מניעה לחזרה לעבודה תלמידים שמקשים בניהול עצמי",
+    "text": "",
+    "media": []
+   },
+   {
+    "x": 73.95,
+    "y": 52.895,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "מכוונת למשימות הרלוונטיות תלמידים שזקוקים לכך",
+    "text": "",
+    "media": []
+   }
+  ]
+ },
+ "2097994638257321637": {
+  "title": "המסלול של שגב",
+  "bg": "images/747d872ae2c1.jpg",
+  "w": 1024,
+  "h": 446,
+  "tags": [
+   {
+    "x": 40.966,
+    "y": 71.953,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "טיפול בארוע חברתי שהיה בהפסקה",
+    "text": "שגב חזר נסער מההפסקה. נועה יודעת שזה הדבר הראשון שהיא צריכה לטפל בו, אחרת ההדים מהארוע ישבשו לא רק את זמן הלמידה של שגב, אלא של כל הכיתה. היא ניגשת לשגב ומברר מה אירע בהפסקה ולאחר מכן מסייעת לו ולילד השני שהיה מעורב בארוע להתחיל בירור. לאחר הרגעה ראשונית היא שולחת אותם לפינת פיתרון הקונפליקטים. שם יש לילדים מגוון עזרים שהכיתה הכינה במהלך השנה כדי לפתור קונפליקטים. הפעם הם משתמשים במשחק קופסה שמבוסס על תקשורת מקרבת, שתוכנן במיוחד כדי לסייע לילדים להגיע לפתרון.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/e4a5d0d18c34.jpg"
+     }
+    ]
+   },
+   {
+    "x": 82.248,
+    "y": 46.143,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "מיני שיעור ממוקד במתמטיקה",
+    "text": "לאחר ששגב מסיים את ארוע ההערכה, נועה קוראת לו לזמן הקניה קצר במתמטיקה. מתוך נתוני ההערכה נועה יודעת ששגב, ועוד  כמה תלמידים, זקוקים לחיזוק בחיסור עם שבירה של עשרת. היא מעבירה מיני שיעור של 10 דקות: מראה הדגמה בעזרת עזרים, ונותנת לילדים לפתור כמה תרגילים בעזרת העזרים. כאשר ילד מרגיש בטוח ביכולת שלו היא שולחת אותו עם דף עבודה להמשך תרגול במרחב.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/38c9372f0a2d.jpg"
+     }
+    ]
+   },
+   {
+    "x": 27.836,
+    "y": 73.638,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "הפסקה קטנה",
+    "text": "לאחר ההקניה והעבודה על דף העבודה שגב מרגיש שהוא זקוק להפסקה - ומותר לו :). הוא לוקח סטופר, ובהתאם בכללי הכיתה הוא מכוון אותו ל5 דקות. הוא מבלה את ההפסקה במשחק קלפים עם חבר שגם לקח הפסקה קטנה מהמשימות.",
+    "media": [
+     {
+      "type": "video",
+      "src": "images/a172f831c32a.mp4"
+     },
+     {
+      "type": "image",
+      "src": "images/28fd98534e3a.jpg"
+     }
+    ]
+   },
+   {
+    "x": 11.975,
+    "y": 18.166,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "משחקים בהכתבה",
+    "text": "נועה רואה ששגב והחבר שקועים במשחק ולא שמו לב שהסטופר צלצל..היא מפנה את תשומת ליבם לעניין ומכוונת אותם חזרה לדפי המעקב שלהם. שגב בוחר להמשיך לאחד מהפעילויו האהובות עליו- \"משחקים בהכתבה\". בפניה זו ילדים מתרגלים כתיבה ללא שגיאות בדרך משחקית ולא מאיימת. בתחילת השבוע נועה חילצה רשימה של מילים מטקסט שהם עובדים עליו השבוע וכתבה כל מילה בגדול על שלט. את המילים היא סידרה כרשימה על אחד מהקירות בכיתה. הילדים ניגשים לפעילות זו בזוגות. הילד שעושה את \"ההכתבה\" עומד עם הגב לרשימת המילים והילד ש\"בוחן\" אותו עומד עם הפנים לרשימה. הוא מקריא לילד ה\"נבחן\" את המילים והוא כותב את המילים על לוח מחיק קטן. לאחר שהם מסיימים הם בודקים ביחד כמה מילים הילד \"הנבחן\" הצליח לכתוב נכון. הם מזינים את התוצאות לדף המעקב של הילד ה\"נבחן\". ,",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/975471a86be8.jpg"
+     }
+    ]
+   },
+   {
+    "x": 26.681,
+    "y": 52.413,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "לוח כפל בהאזנה",
+    "text": "לאחר שסיים את \"משחקים בהכתבה\" שגב בוחר משימה נוספת מתוך דף המעקב -  \"לוח כפל בהאזנה\". הוא ניגש למדפי המשחקים הלימודיים ושם יש כפתורי לחיצה שכאשר לוחקים עליהם שומעים הקלטה שנועה הקליטה מבעוד מועד - ההקלטה של הכפתור האדום היא של שיר כפולות 7 ושל הירוק שיר כפולות 8. שגב לוקח את הכפתור האדום ויוצא לעבוד במסדרון ליד הכיתה כדי לא להפריע ליצר הילדים. המשימה שו היא ללמוד את השיר בעל פה! לאחר שהוא מרגיש שהוא זוכר  הוא בוחן את זכרונות ורושם את הכפולות בדף העבודה שמונח ליד כפתורי השמע.  הוא מרגיש שיש לו כח לעוד משימה ולכן לוקח דף עבודה נוסף שמונח ליד, של תרגילי כפל בכפולות שהוא תרגל.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/2562f2064623.jpg"
+     }
+    ]
+   },
+   {
+    "x": 68.592,
+    "y": 34.808,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "דף המעקב של שגב - וארוע הערכה לשטף קריאה",
+    "text": "לאחר הבירור שגב רגוע ומוכן להתחיל בעבודה - הוא ניגש לטבלט ופותח את דף המעקב האישי שלו.  הוא מתחיל במבדק קריאה קולי. מבדק הקריאה נשלח לכל הילדים אחת לחודש, במהלכו הם מקריאים קטע קריאה והתוכנה מאזינה וממפה את רמת הקריאה של הילדים לפי הפרמטרים שנקבעו על ידי משרד החינוך, שטף ודיוק. בנוסף, התוכנה מאבחנת את סוגי הטעויות שהילד/ה עושים. נועה המחנכת מקבלת את חומרי הגלם של המבדקים , את ניתוח החומרים ומיפוי של הכיתה לפי תחומי קושי.  המערכת שולחת ארוע הערכה קטן פעם בחודש וממפה את התקדמות הילדים לא רק ביחס לסטנדט אלא ביחס לעצמם",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/d035981e007e.jpg"
+     }
+    ]
+   }
+  ]
+ },
+ "2098000771848107685": {
+  "title": "המסלול של אליס",
+  "bg": "images/747d872ae2c1.jpg",
+  "w": 1024,
+  "h": 446,
+  "tags": [
+   {
+    "x": 48.109,
+    "y": 77.013,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "אליס מציירת",
+    "text": "אליס לא שמה לב שנועה הוציאה את הילדים לזמן עבודה והיא ממשיכה לעבוד על הציור שלה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/8b3d658a4996.jpg"
+     }
+    ]
+   },
+   {
+    "x": 19.643,
+    "y": 29.261,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "גלריה כיתתית",
+    "text": "נועה ניגשת לאליס, מתפעלת מהציור שלה ושואלת אם תרצה לתלות אותו בגלריה הכיתתית.  אליס מסכימה בהתרגשות ונועה שואלת אם תסכים לכתוב כמה משפטים שמספרים על היצירה שלה  ושזה יהיה תלוי ליד התמונה  בגלריה. אליס מסכימה בשמחה!",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/7afccc9da991.jpg"
+     }
+    ]
+   },
+   {
+    "x": 18.382,
+    "y": 45.179,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "משחק הרחבת אוצר מילים דבור",
+    "text": "לאליס מעודדת מההצלחה האחרונה, ניגשת לראשונה לדף המעקב האישי באייפד -  שם מחכה לה משימה יחודית להרחבת אוצר המילים הדבור  בעברית. המשימה מצויינת באייפד אך היא נמצאת בכיתה באופן פיזי - זה אינו משחק דיגיטלי, אלא משחק   בזוגות. אליס יכולה לבחור למשימה הזאת פרטנרית מתוך רשימה מוסכמת מראש (שנועה בחרה מראש כדי לוודא שאליס משחקת עם מישהי שיש לה אוצר מילים מבוסס) המשימה היא לקחת קלפים עם ציורים יפים (ערימה של קלפי דיקסיט שמצאו מטרה חדשה) ולהסביר לחברה מה מצויר בקלף הזה. והחברה לוקחת קלף ומסבירה גם היא מה מצויר בקלף הזה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/a342b6e01f2e.jpg"
+     }
+    ]
+   },
+   {
+    "x": 47.269,
+    "y": 40.354,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "קריאה במשפטי פרמידה",
+    "text": "אליס נמצאת עדיין בראשית קריאה, הרחק מאחורי רמת הכיתה הנדרשת. לכן היא עדיין מתרגלת קריאה דרך משפטי פרמידה  שנמצאים בקלסר יעודי על אחד ממדפי הכיתה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/d6010b90888f.jpg"
+     }
+    ]
+   },
+   {
+    "x": 53.466,
+    "y": 78.701,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "משימה מותאמת אישית לעירור למוטיבציה",
+    "text": "לאחר משחק  אוצר המילים, אליס נדדה חזרה למושא תשוקתה - הציור,  ואיבדה מומנטום של  עבודה. נועה, לאחר שהבחינה בכך, ניגשה אליהושאלה אם תרצה לכתוב משפט פרמידה על הציור שלה. אליס קצת מתקשה לחשוב על משפט ונועה עוזרת לה לנתח את הציור כדי ליצור ממנו משפט פרמידה. לאחר שאליס תכתוב את משפט הפרמידה נועה תדפיס אותו ותכתוב בהדגשה שאליס היא המחברת של דף העבודה ותוסיף אותו לקלסר משפטי הפרמידה. אם אליס תרצה היא גם תוכל לתת את הדף כמתנה לתלמידי הכיתה מתחת.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/2155693c6079.jpg"
+     },
+     {
+      "type": "image",
+      "src": "images/c875b2951835.jpg"
+     }
+    ]
+   },
+   {
+    "x": 60.399,
+    "y": 45.178,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "דף המעקב של אליס",
+    "text": "אליס שמחה עם ההתקדמות שלה היום והיא ניגשת לנועה כדי לשאול מה לעשות. נועה לוקחת את האייפד ובודקת עם אליס את דף המעקב האישי שלה. היא מפנה את אליס לדפים בחוברת מתמטיקה שמותאמים לה, החוברת נמאצת בתא האישי של אליס. \nאליס נמצאת ברמת כיתה אך מתקשה להשלים מספר עמודים רב ולכן כדי להבטיח תחושת הצלחה המשימה השבועית שלה כוללת מספר עמודים מצומצם.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/f59dcacdf541.jpg"
+     }
+    ]
+   },
+   {
+    "x": 72.794,
+    "y": 47.589,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "בסיום זמן הלמידה העצמאי",
+    "text": "נועה ניגשת לאליס ומזכירה לה לעבור על המשימות שלה ולסמן מה היא הספיקה היום. אליס רואה שהיא שכחה לכתוב מילים חדשות שלמדה היום במילון האישי שלה. היא מוצאיה את מחברת המילון מהתא שלה וניגשת לאפרת שתזכיר לה את המילה שלמדה ממנה בזמן המשחק - ואז כותבת את המילה ומציירת ציור לצידה. היא מבקשת עזרה מאפשרת לכתוב משפט שבו מופיעה המילה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/9b89283e9506.jpg"
+     }
+    ]
+   }
+  ]
+ },
+ "2103157326595752804": {
+  "title": "פתיחה סנריו",
+  "bg": "images/c2687dc7d860.jpg",
+  "w": 1920,
+  "h": 1080,
+  "tags": []
+ },
+ "2103158569779069796": {
+  "title": "ילדים ומחנכת סנריו",
+  "bg": "images/08b41bf8d4f1.jpg",
+  "w": 1920,
+  "h": 1080,
+  "tags": [
+   {
+    "x": 19.958,
+    "y": 48.506,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "הכירו את אפרת",
+    "text": "אפרת היא מסוג התלמידות שגם אם נשים אותן בחדר לבד ונזרוק פנימה חוברת ועיפרון - היא תסתדר מצוין. היא אוהבת חוברות, היא אוהבת שנותנים לה עוד ועוד עמודים בחוברת והיא מעדיפה שיעזבו אותה בשקט להתקדם בקצב שלה. אפרת היא ילדה רצינית ומעט חמורת סבר, שקצת מתקשה ליצור חברויות. היא מתקדמת הרבה מעל הרמה הכיתתית, גם בשפה וגם במתמטיקה אבל בהפסקה הגדולה היא משוטטת לבד וכל כמה דקות ניגשת לשאול את המורה התורנית \"מתי ההפסקה נגמרת?\"",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/9034628d3357.jpg"
+     }
+    ]
+   },
+   {
+    "x": 36.66,
+    "y": 77.824,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "הכירו את נועם",
+    "text": "נועם הוא ילד מתוק וחכם מאוד, בעל כושר המצאה, יצירה וחקר. יש לו דמיון עשיר והוא יודע להמציא סיפורים נהדרים, אך מתקשה לכתוב אותם. \nהוא בעל תנועתיות רבה ומוסח בקלות.  קשה לו מאוד לשבת לאורך זמן במקום אחד או לעבוד לפרקי זמן ארוכים בחוברת. על אף היכולות הגבוהות שלו הוא נמצא מאחור במיומנויות הקריאה, כתיבה ומתמטיקה הנדרשות ברמת כיתה זו. לנועם יש לב ענק והוא תמיד הראשון לעזור בכל דבר שמבקשים. הוא ילד שיודע לקחת אחריות ואפשר לדבר איתו בגובה העיניים גם על דברים מאתגרים.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/b2478d8475ec.jpg"
+     }
+    ]
+   },
+   {
+    "x": 93.172,
+    "y": 48.693,
+    "color": "#1bbc9b",
+    "iconColor": "#ffffff",
+    "title": "הכירו את שגב",
+    "text": "שגב ילד שופע קסם וכריזמה. בעל חוש דרמטי מפותח ואוהב לרקוד ולהציג. הוא קורא ברמה הנדרשת לכיתה ועובד על עיצוב אותיות וכתיבה נאה. הוא ילד חברותי ואהוב על חבריו אך יש לו קושי בוויסות רגשי והוא נוטה להסלמה במצבים חברתיים קונפליקטואלים, לעיתים עד כדי פרצי אלימות.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/12816a175c7f.jpg"
+     }
+    ]
+   },
+   {
+    "x": 76.261,
+    "y": 76.704,
+    "color": "#fb607f",
+    "iconColor": "#ffffff",
+    "title": "הכירו את אליס",
+    "text": "אליס ילדה חולמנית ושקטה מאוד. היא היא מתקשה להניע את עצמה לעבודה בכיתה, לא משתתפת כלל בדיונים, ומבלה את רוב הזמן בלצייר ציורים מדהימים. היא דוברת רוסית כשפת אם אך לא מוגדרת כעולה חדשה משום שנולדה בארץ והתחנכה במסגרות דוברות רוסית עד שהגיעה לכיתה א'. היא הרחק מאחור ביעדי האוריינות של הכיתה. במתמטיקה היא ברמת כיתה למעט בבעיות מילוליות שם השפה מהווה מכשול.\n\nיש לה חברות והיא נהנית לצאת להפסקה ולשחק איתן, אך כולן דוברות רוסית וזו השפה שהן מדברות בה.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/60e61e58bb62.jpg"
+     }
+    ]
+   },
+   {
+    "x": 57.143,
+    "y": 52.988,
+    "color": "#ffffff",
+    "iconColor": "#222222",
+    "title": "הכירו את נועה המחנכת",
+    "text": "",
+    "media": []
+   }
+  ]
+ },
+ "2103161720729016164": {
+  "title": "המסלול של נועם",
+  "bg": "images/747d872ae2c1.jpg",
+  "w": 1024,
+  "h": 446,
+  "tags": [
+   {
+    "x": 56.092,
+    "y": 54.347,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "משימת שטף קריאה",
+    "text": "נועה המחנכת יודעת שנועם זקוק לדחיפה אוהבת כדי להתחיל את העבודה ולכן היא ניגשת אליו ומזכירה לו את משימת שטף הקריאה שלו. היא כתובה בדף המעקב האישי של נועם בטבלט אבל הוא זקוק להנעה אישית. לאחר שהיא מזכירה לו הוא עוזב בחוסר חשק את הלגו וניגש לקחת סטופר ממדף האביזרים. מה שמסייע לו למצוא מוטיבציה למשימה הזו זה שעושים אותה עם חבר! הוא לוקח את הטקסט השבועי שעובדים עליו בכיתה וניגש לחבר. החבר פותח לו סטופר בזמן שנועם מקריא את הטקסט. החבר קורא יחד עם נועם את הטקסט בלב ומסמן ליד המילים אם נועם עשה טעות - אבל לא מפריע לו לקרוא. אחרי שנועם מסיים הם כותבים בדף המעקב של נועם מי היה החבר שהאזין להקראה, כמה זמן לקחה הקריאה וכמה טעויות היו לנועם.  נועם צריך לאסוף עוד 3 חתימות כדי לעמוד במשימה שבועית הזו.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/ccdee631baa4.jpg"
+     }
+    ]
+   },
+   {
+    "x": 90.651,
+    "y": 84.01,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "מסלול קינטי",
+    "text": "נועם סיים את המשימה והראה לנועה המחנכת בגאווה. היא שיבחה אותו בהתלהבות ושאלה אם הוא מוכן למשימה נוספת והוא אמר שאין לו כח. נועה כבר יודעת שבשפה של נועם זה פשוט אומר שהגוף שלו זקוק לתנועה ולכן היא מפנה אותו למסלול הקינטי בכיתה. המסלול מאפשר תנועה ומוטוריקה גסה דרך קפיצות ויחד עם זאת דורש תכנון קדימה מבחינת הנחת היד/רגל המתאימה.  היא מאתגרת אותו לנסות את המסלול שלוש פעמים עם סטופר ולראות מה הזמן הכי טוב שלו. נועם נרגש לקראת משימת התנועה אך לפני שהוא הולך, נועה ממתיקה לו ש\"אם, לאחר שתסיים את המסלול תצליח לגשת למשימה באופן עצמאי אסכים שתמשיך בלגו אחרי שתסיים - אתה חושב שתצליח? \" העיניים של נועם נוצצות מהתרגשות והבטחה!  העבודה עם הסטופר מסייעת לנועם לחזק את תחושת הזמן שלו.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/6c79afe78366.jpg"
+     }
+    ]
+   },
+   {
+    "x": 71.639,
+    "y": 39.876,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "דף המעקב של נועם",
+    "text": "נועם מסיים את המסלול והוא מרגיש שהתנועה המאומצת נתנה לו כח! הוא זוכר את ההבטחה של נועה. לראשונה היום הוא ניגש לדף המעקב האישי שלו באייפד כדי לראות איזו משימה הוא יעשה עכשיו.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/71dc2b99eeb8.jpg"
+     }
+    ]
+   },
+   {
+    "x": 65.861,
+    "y": 68.815,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "פרויקט אישי בזוגות -  כתיבת סיפור",
+    "text": "נועם סיים את המשימה והראה לנועה המחנכת שהיתה גאה בו מאוד! הוא כבר ניגש ללגו שלו שהמתין לו על המחצלת - שמהווה סימן לפרוייקט שנמצא בעבודה, אך אפרת, חברה מהכיתה, ניגשה אליו ושאלה אם הוא מסכים שיעבדו על הפרויקט המשותף שלהם - כתיבת סיפור לספריה הכיתתית. נועם  חשב קצת והרגיש שיש לו כח לעוד  משימה כי הצליח היום בהרבה דברים! והוא גם אוהב לעבוד עם אפרת - היא רגועה וזה נעים. בזמן העבודה המשותפת לנועם יש המון רעיונות מעולים ואפרת מקלידה ועוזרת לסדר אותם בסדר הגיוני .",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/c8f15732dd7d.jpg"
+     }
+    ]
+   },
+   {
+    "x": 40.651,
+    "y": 45.659,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "תרגול כפולות דרך תנועה",
+    "text": "נועם בוחר לעשות משימה במתמטיקה - הוא מתרגל את לוח הכפל בקפיצות דלגית! על המדף בארונית המשחקים הלימודיים מונחת  דלגית ,  ודפים לבדיקת הזיכרון. נועם כבר מכיר את המשחק. המשימה שלו היא לתרגל את כפולות 7.  הוא יוצא למסדרון ליד הכיתה שם תלוי לוח כפל גדול שהוא יכול לקפוץ מולו בבטחה.  הוא מתחיל לקפוץ ובכל קפיצה אומר את הכפולה הבאה. אחרי שני סבבים הוא  מרגיש שאולי הוא כבר זוכר הכל אז הוא מנסה לכתוב את הכפולות על הדף - ומגלה שהוא זוכר רק עד האמצע. לא נורא, הוא נהנה לקפוץ בדילגית! הוא חוזר לתרגל ואחרי עוד שני סבבים הוא מצליח לכתוב את כל הרצף של הכפולות!",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/3d4ea91e416e.jpg"
+     }
+    ]
+   },
+   {
+    "x": 39.706,
+    "y": 56.513,
+    "color": "#f97c1c",
+    "iconColor": "#ffffff",
+    "title": "משחק חופשי",
+    "text": "אחת הפעילויות שנעם הכי נהנה מהן בכיתה היא לבנות בלגו. בכיתה יש תערוכה של מכונות מלגו שנועם בנה וליד כל מכונה יש הסבר קצר שהוא כתב על  מה המכונה עושה. נועם מתקשה מאוד בדחיית סיפוקים לכן כאשר חזר מההפסקה, לא הקשיב להוראה של נועה המחנכת לצאת לזמן עבודה עצמאי - ובמקום מיהר לחזור למבנה הלגו שהוא עובד עליו מהבוקר.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/e0b1a4472324.jpg"
+     }
+    ]
+   }
+  ]
+ },
+ "2103164787239196516": {
+  "title": "מסלול הלמידה של אפרת",
+  "bg": "images/747d872ae2c1.jpg",
+  "w": 1024,
+  "h": 446,
+  "tags": [
+   {
+    "x": 52.941,
+    "y": 93.179,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "אפרת - נעים להכיר!",
+    "text": "אפרת היא מסוג התלמידות שגם אם נשים אותן בחדר לבד ונזרוק פנימה חוברת ועיפרון - היא תסתדר מצוין. היא אוהבת חוברות, היא אוהבת שנותנים לה עוד ועוד עמודים בחוברת והיא מעדיפה שיעזבו אותה בשקט להתקדם בקצב שלה. אפרת היא ילדה רצינית ומעט חמורת סבר, שקצת מתקשה ליצור חברויות. היא מתקדמת הרבה מעל הרמה הכיתתית, גם בשפה וגם במתמטיקה אבל בהפסקה הגדולה היא משוטטת לבד וכל כמה דקות ניגשת לשאול את המורה התורנית \"מתי ההפסקה נגמרת?\"",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/0e7a4416a352.jpg"
+     }
+    ]
+   },
+   {
+    "x": 72.374,
+    "y": 34.326,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "אפרת - דף מעקב",
+    "text": "לאפרת יש כישורי ניהול עצמי מצויינים והיא מאוד ממוקדת. היא ניגשת ישר לדף המעקב האישי שלה בטאבלט כדי לבדוק אילו משימות יש לה השבוע.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/34f0973ac59b.jpg"
+     }
+    ]
+   },
+   {
+    "x": 50.84,
+    "y": 72.674,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "מספר עמודים מקסימלי בחוברת חשבון - מעל רמת הכיתה",
+    "text": "אפרת אוהבת לעבוד בחוברת. זאת המשימה הראשונה שהיא בוחרת. היא נמצאת מעל רמת הכיתה בממטיקה וגם בשפה ולכן היא עובדת בחוברת שבילים מתקדמת.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/fe9a122cb819.jpg"
+     }
+    ]
+   },
+   {
+    "x": 34.874,
+    "y": 47.832,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "ספר בקריאה עצמאית + משימה מתוך מאגר  משימות הקריאה",
+    "text": "אפרת נהנית לקרוא. היא  קוראת כבר שבוע ספר שהיא בחרה מהספריה הכיתתית. היא בחרה ספר שמעניין אותה ושמתאים לרמת הקריאה שלה. לאחר שתסיים היא תשלים משימת קריאה מתוך מאגר המשימות. במאגר המשימות ניתן למצוא משימות שמתאימות לכל ספר, למשל: כיתבו המלצה על הספר שקראתם. ציירו קומיקס שמתאים לעלילה של הספר/כיתבו סוף חלופי לספר/ צרו מצגת על הספר /  דף שאלות שמתאים לספרים מסוגים שונים (שאלות מידע על ספר מידעי / שאלות נראטיב על ספר סיפורי)",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/bf98baa6cb6a.jpg"
+     }
+    ]
+   },
+   {
+    "x": 20.063,
+    "y": 43.011,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "משחק הרחבת אוצר מילים",
+    "text": "אליס ניגת לאפרת ושואלת אם היא מסכימה לשחק איתה במשחק אוצר המילים. אפרת נמצאת ברשימת הילדים שמתאימים למשחק הזה עבור אליס מכיוון שהיא אוחזרת באוצר מילים מרשים. זו אינה משימה לימודית עבור אפרת, אך זו משימה חשובה לא פחות עבורה מכיוון שהיא מצריכה ממנה לשתף פעולה עם ילדה אחרת . ולעבוד ביחד, שזה משהו שאפרת מאותגרת בו. היא יודעת שמשחק משותף מקדם אותה באחת מהמטרות האישיות שלה.",
+    "media": []
+   },
+   {
+    "x": 33.193,
+    "y": 65.198,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "משחק עם חברה",
+    "text": "אחת מהמשימות של אפרת היא לשחק עם חברה. זאת משימה מאתגרת במיוחד עבורה מכיוון שהא צריכה ליזום אינטראקציה בעצמה ולהזמין מישהי לשחק איתה. היא אוזרת אומץ וניגשת לחברה!",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/26bd28bbed15.jpg"
+     }
+    ]
+   },
+   {
+    "x": 64.391,
+    "y": 71.467,
+    "color": "#2cadf6",
+    "iconColor": "#ffffff",
+    "title": "פרויקט משותף: כתיבת סיפור לספריה הכיתתית",
+    "text": "אפרת מקבלת את ההזמנה של נועם להמשיך לעבוד על הפרויקט המשותף שלהם  - הם כותבים סיפור ביחד. לנועם יש המון רעיונות! חלק ממש טובים וחלק פחות. היא בוחרת איתו את הרעיונות הטובים ומקלידה במחשב. כשהסיפור יהיה מוכן הם ינסו לאייר אותו ביחד או יבקשו מחבר/ה מהכיתה שאוהבים לצייר (למשל אליס!)  כשהסיפור יהיה מוכן הם יעשו פרזנטציה לכיתה והסיפור יתווסף לספריה הכיתתית.",
+    "media": [
+     {
+      "type": "image",
+      "src": "images/f7de247d8968.jpg"
+     }
+    ]
+   }
+  ]
+ }
+};
+
+/* ── scenario graph ── */
+const CHILDREN_SCENE = '2103158569779069796';
+const ALL_SCENE      = '2093401332298810021';
+const PATHS = [
+  {key:'segev', name:'שגב',  color:'#1bbc9b', scene:'2097994638257321637', introTag:'הכירו את שגב'},
+  {key:'alice', name:'אליס', color:'#fb607f', scene:'2098000771848107685', introTag:'הכירו את אליס'},
+  {key:'noam',  name:'נועם', color:'#f97c1c', scene:'2103161720729016164', introTag:'הכירו את נועם'},
+  {key:'efrat', name:'אפרת', color:'#2cadf6', scene:'2103164787239196516', introTag:'הכירו את אפרת'},
+];
+/* teacher: her tags live inside the combined scene */
+const TEACHER = {key:'noa', name:'נועה המחנכת', color:'#ffffff', introTag:'הכירו את נועה המחנכת'};
+const TEACHER_TAG_TITLES = [
+  'נועה המחנכת - נעים להכיר.',
+  'מטפלת באירוע שקרה בהפסקה',
+  'מניעה לצאת למשימה ילדים שמתקשים בניהול עצמי',
+  'מניעה לפעולה דרך משימה מותאמת אישית',
+  'הקניה בקבוצה קטנה',
+  'מסייעת לתלמידים לפי הצורך',
+  'מניעה לחזרה לעבודה תלמידים שמקשים בניהול עצמי',
+  'מכוונת למשימות הרלוונטיות תלמידים שזקוקים לכך',
+];
+
+/* ── state ── */
+let score = 0;
+const seen = new Set();          // "sceneKey:index" of viewed tags
+const donePaths = new Set();     // path keys completed
+let currentPathKey = null;       // key of path on the path screen
+let currentTags = [];            // tags rendered on path screen
+let currentSheetIdx = -1;
+let sheetContext = null;         // 'intro' | 'tag' | 'routes'
+
+const $ = id => document.getElementById(id);
+const screens = ['screen-choice','screen-path','screen-summary','screen-end'];
+
+function show(id){
+  screens.forEach(s => $(s).classList.toggle('active', s===id));
+  $('backBtn').classList.toggle('show', id!=='screen-choice');
+  window.scrollTo(0,0);
+}
+function addScore(n){ score+=n; $('scoreVal').textContent=score; $('finalScore').textContent=score; }
+
+/* ── build a scene into a wrap ── */
+function buildScene(wrapId, bgId, scene, tags, onTag, numbered){
+  const wrap=$(wrapId), bg=$(bgId);
+  bg.src=scene.bg;
+  wrap.querySelectorAll('.tag-dot').forEach(d=>d.remove());
+  tags.forEach((t,i)=>{
+    const d=document.createElement('button');
+    d.className='tag-dot';
+    d.style.left=t.x+'%'; d.style.top=t.y+'%';
+    d.style.background=t.color; d.style.color=t.color;
+    const light = t.color.toLowerCase()==='#ffffff';
+    d.style.setProperty('color', light ? '#7a8b93' : t.color);
+    d.innerHTML = `<span style="color:${light?'#222':'#fff'}">${numbered ? i+1 : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="'+(light?'#222':'#fff')+'" stroke-width="3" stroke-linecap="round"><path d="M12 5v9"/><circle cx="12" cy="18.4" r="0.6" fill="'+(light?'#222':'#fff')+'"/></svg>'}</span>
+      <span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`;
+    d.setAttribute('aria-label', t.title);
+    d.dataset.idx=i;
+    d.addEventListener('click',()=>onTag(i));
+    wrap.appendChild(d);
+  });
+}
+
+/* size a scene image: fill height on narrow screens (pan), fit on wide */
+function sizeScene(vpId, bgId, scene){
+  const vp=$(vpId), bg=$(bgId);
+  const avail = vp.clientHeight;
+  const ratio = scene.w/scene.h;
+  const fitW = vp.clientWidth;
+  const hIfFitW = fitW/ratio;
+  if(hIfFitW < avail*0.72){
+    // panorama on narrow screen → fill height, allow horizontal pan
+    bg.style.height=avail+'px'; bg.style.width=(avail*ratio)+'px'; bg.style.maxWidth='none';
+    requestAnimationFrame(()=>{ vp.scrollLeft=(bg.offsetWidth-vp.clientWidth)/2 * (document.dir==='rtl'?-1:1); });
+  } else {
+    bg.style.width=fitW+'px'; bg.style.height=(hIfFitW)+'px';
+    if(hIfFitW>avail){ bg.style.height=avail+'px'; bg.style.width=(avail*ratio)+'px'; }
+  }
+}
+
+/* ── bottom sheet ── */
+function openSheet(html, actionsHtml){
+  $('sheetBody').innerHTML=html;
+  $('sheetActions').innerHTML=actionsHtml||'';
+  $('sheetActions').style.display=actionsHtml?'flex':'none';
+  $('veil').classList.add('open'); $('sheet').classList.add('open');
+  $('sheetBody').scrollTop=0;
+}
+function closeSheet(){ $('veil').classList.remove('open'); $('sheet').classList.remove('open'); sheetContext=null; }
+$('veil').addEventListener('click', closeSheet);
+
+function mediaHtml(t){
+  if(!t.media || !t.media.length) return '';
+  return t.media.map(m => m.type==='video'
+    ? `<div class="media"><video controls playsinline preload="metadata" ${t.media.find(x=>x.type==='image')?`poster="${t.media.find(x=>x.type==='image').src}"`:''} src="${m.src}"></video></div>`
+    : (t.media.some(x=>x.type==='video') ? '' : `<div class="media"><img src="${m.src}" alt=""></div>`)
+  ).join('');
+}
+
+/* ── choice screen ── */
+const childScene = DATA[CHILDREN_SCENE];
+function characterForTag(t){
+  const p = PATHS.find(p=>p.introTag===t.title);
+  if(p) return p;
+  if(t.title===TEACHER.introTag) return TEACHER;
+  return null;
+}
+function openIntro(i){
+  const t = childScene.tags[i];
+  const ch = characterForTag(t);
+  let text = t.text, media = mediaHtml(t);
+  if(ch && ch.key==='noa' && !text){
+    // teacher intro text lives in the combined scene
+    const full = DATA[ALL_SCENE].tags.find(x=>x.title==='נועה המחנכת - נעים להכיר.');
+    if(full){ text = full.text; media = mediaHtml(full); }
+  }
+  const btnLabel = ch.key==='noa' ? 'מה נועה עושה בזמן הלמידה?' : 'למסלול הלמידה של '+ch.name;
+  openSheet(
+    `<div class="tag-chip"><span class="dotmini" style="background:${ch.color}"></span>${childScene.title}</div>
+     ${media}<h2>${t.title}</h2><p class="body">${text||''}</p>`,
+    `<button class="btn full" id="goPathBtn">${btnLabel}
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`
+  );
+  $('goPathBtn').addEventListener('click',()=>{ closeSheet(); startPath(ch.key); });
+}
+buildScene('wrap-choice','bg-choice',childScene,childScene.tags,openIntro,false);
+
+/* ── path screen ── */
+function tagsForPath(key){
+  if(key==='all') return DATA[ALL_SCENE].tags;
+  if(key==='noa') return DATA[ALL_SCENE].tags.filter(t=>TEACHER_TAG_TITLES.includes(t.title));
+  const p=PATHS.find(p=>p.key===key);
+  return DATA[p.scene].tags;
+}
+function pathTitle(key){
+  if(key==='all') return DATA[ALL_SCENE].title;
+  if(key==='noa') return 'המסלול של נועה המחנכת';
+  const p=PATHS.find(p=>p.key===key);
+  return DATA[p.scene].title;
+}
+function startPath(key){
+  currentPathKey=key;
+  currentTags=tagsForPath(key);
+  const scene = key==='all'||key==='noa' ? DATA[ALL_SCENE] : DATA[PATHS.find(p=>p.key===key).scene];
+  $('headerTitle').textContent=pathTitle(key);
+  buildScene('wrap-path','bg-path',{...scene,tags:currentTags},currentTags,openTag,true);
+  show('screen-path');
+  sizeScene('vp-path','bg-path',scene);
+  refreshPathDots();
+  updateDoneFab();
+}
+function refreshPathDots(){
+  document.querySelectorAll('#wrap-path .tag-dot').forEach(d=>{
+    d.classList.toggle('seen', seen.has(currentPathKey+':'+d.dataset.idx));
+  });
+}
+function updateDoneFab(){
+  const total=currentTags.length;
+  const viewed=currentTags.filter((_,i)=>seen.has(currentPathKey+':'+i)).length;
+  const fab=$('doneFab');
+  fab.classList.add('show');
+  $('doneFabLabel').textContent = viewed>=total ? 'סיימתי — להמשך' : `נצפו ${viewed} מתוך ${total} — להמשך`;
+}
+function openTag(i){
+  currentSheetIdx=i; sheetContext='tag';
+  const t=currentTags[i];
+  const key=currentPathKey+':'+i;
+  if(!seen.has(key)){ seen.add(key); addScore(10); }
+  refreshPathDots(); updateDoneFab();
+  openSheet(
+    `<div class="tag-chip"><span class="dotmini" style="background:${t.color}"></span>נקודה ${i+1} מתוך ${currentTags.length}</div>
+     ${mediaHtml(t)}<h2>${t.title}</h2><p class="body">${t.text||''}</p>`,
+    `<button class="nav-btn" id="prevTag" ${i===0?'disabled':''} aria-label="הנקודה הקודמת">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+     <span class="counter">${i+1} מתוך ${currentTags.length}</span>
+     <button class="nav-btn" id="nextTag" ${i===currentTags.length-1?'disabled':''} aria-label="הנקודה הבאה">
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`
+  );
+  if(i>0) $('prevTag').addEventListener('click',()=>openTag(i-1));
+  if(i<currentTags.length-1) $('nextTag').addEventListener('click',()=>openTag(i+1));
+}
+
+/* ── routes chooser ── */
+function openRoutes(){
+  sheetContext='routes';
+  if(currentPathKey) donePaths.add(currentPathKey);
+  const items = [
+    ...PATHS.map(p=>({key:p.key,name:'המסלול של '+p.name,color:p.color})),
+    {key:'noa',name:'המסלול של נועה המחנכת',color:'#ffffff'},
+    {key:'all',name:'כל המסלולים יחד',color:'#1a2b33'},
+  ].map(it=>`<button class="route-item ${donePaths.has(it.key)?'done':''}" data-key="${it.key}">
+      <span class="rdot" style="background:${it.color}"></span><span class="rname">${it.name}</span>
+      <span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+    </button>`).join('');
+  openSheet(
+    `<h2 style="margin-bottom:12px">צומת בחירה</h2>
+     <div class="route-list">${items}</div>`,
+    `<button class="btn full" id="toSummaryBtn">סיימתי את הסיור — לסיכום
+       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`
+  );
+  document.querySelectorAll('.route-item').forEach(b=>{
+    b.addEventListener('click',()=>{ closeSheet(); startPath(b.dataset.key); });
+  });
+  $('toSummaryBtn').addEventListener('click',()=>{ closeSheet(); $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי'; show('screen-summary'); });
+}
+$('doneFab').addEventListener('click',openRoutes);
+$('allPathsFab').addEventListener('click',()=>startPath('all'));
+
+/* ── nav buttons ── */
+$('backBtn').addEventListener('click',()=>{
+  closeSheet();
+  $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי';
+  if($('screen-path').classList.contains('active')) show('screen-choice');
+  else if($('screen-summary').classList.contains('active')) show('screen-choice');
+  else if($('screen-end').classList.contains('active')) show('screen-summary');
+  else show('screen-choice');
+  sizeChoice();
+});
+$('toEndBtn').addEventListener('click',()=>show('screen-end'));
+$('summaryBackBtn').addEventListener('click',()=>{ show('screen-choice'); sizeChoice(); });
+$('restartBtn').addEventListener('click',()=>{
+  score=0; $('scoreVal').textContent='0'; seen.clear(); donePaths.clear();
+  $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי';
+  show('screen-choice'); sizeChoice();
+});
+
+/* ── sizing ── */
+function sizeChoice(){ sizeScene('vp-choice','bg-choice',childScene); }
+window.addEventListener('resize',()=>{
+  sizeChoice();
+  if($('screen-path').classList.contains('active') && currentPathKey){
+    const scene = currentPathKey==='all'||currentPathKey==='noa' ? DATA[ALL_SCENE] : DATA[PATHS.find(p=>p.key===currentPathKey).scene];
+    sizeScene('vp-path','bg-path',scene);
+  }
+});
+$('bg-choice').addEventListener('load',sizeChoice);
+sizeChoice();
+</script>
+</body>
+</html>
