@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת רציפות למידה — דף ניהול הפרויקט</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@500;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1d3557; --ink-soft:#4a6a8a; --bg:#f7fbfc;
+    --turq:#0e7c86; --cyan:#22b8cf; --cyan-soft:#e3fafc;
+    --pink:#f06595; --pink-soft:#fff0f6;
+    --green:#2f9e44; --green-soft:#ebfbee;
+    --amber:#e8590c; --amber-soft:#fff4e6;
+    --red:#e03131; --red-soft:#fff5f5;
+    --card:#ffffff; --line:#dceef2;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Assistant',sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;padding-bottom:80px}
+  h1,h2,h3{font-family:'Playpen Sans Hebrew','Assistant',sans-serif}
+
+  /* floating shapes */
+  .blob{position:fixed;border-radius:50%;filter:blur(60px);opacity:.35;z-index:0;pointer-events:none}
+  .blob.b1{width:340px;height:340px;background:#c5f6fa;top:-80px;left:-80px}
+  .blob.b2{width:280px;height:280px;background:#ffdeeb;bottom:10%;right:-90px}
+  .blob.b3{width:240px;height:240px;background:#d3f9d8;top:45%;left:-70px}
+
+  .wrap{max-width:1060px;margin:0 auto;padding:28px 20px;position:relative;z-index:1}
+
+  header.page{padding:34px 0 10px}
+  header.page h1{font-size:clamp(26px,4.5vw,40px);color:var(--turq)}
+  header.page .sub{color:var(--ink-soft);font-size:17px;max-width:720px;margin-top:8px}
+  .modes{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .mode-chip{font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px;border:1.5px solid var(--line);background:#fff}
+  .mode-chip.routine{color:var(--green);border-color:#b2f2bb}
+  .mode-chip.remote{color:var(--cyan);border-color:#99e9f2}
+  .mode-chip.emergency{color:var(--red);border-color:#ffc9c9}
+
+  /* ===== conductor ===== */
+  .conductor{background:linear-gradient(135deg,#e3fafc 0%,#fff 55%,#fff0f6 100%);border:2px solid var(--cyan);border-radius:22px;padding:22px;margin:20px 0 34px;box-shadow:0 10px 30px rgba(34,184,207,.12)}
+  .conductor h2{display:flex;align-items:center;gap:10px;color:var(--turq);font-size:22px;margin-bottom:4px}
+  .conductor .hint{color:var(--ink-soft);font-size:14px;margin-bottom:16px}
+  .cond-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.cond-grid{grid-template-columns:1fr}}
+  .cond-box{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .cond-box h3{font-size:15px;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+
+  .progress-outer{height:14px;background:#eef7f9;border-radius:999px;overflow:hidden;margin:6px 0 10px}
+  .progress-inner{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:0%;transition:width .4s;border-radius:999px}
+  .counts{display:flex;gap:8px;flex-wrap:wrap}
+  .count-pill{font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .count-pill.todo{background:#f1f3f5;color:#495057}
+  .count-pill.doing{background:var(--amber-soft);color:var(--amber)}
+  .count-pill.done{background:var(--green-soft);color:var(--green)}
+  .count-pill.stuck{background:var(--red-soft);color:var(--red)}
+
+  .world-bars{display:flex;flex-direction:column;gap:6px}
+  .wbar{display:grid;grid-template-columns:150px 1fr 36px;align-items:center;gap:8px;font-size:13px}
+  .wbar .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-soft);font-weight:600}
+  .wbar .tr{height:8px;background:#eef7f9;border-radius:999px;overflow:hidden}
+  .wbar .fl{height:100%;background:var(--cyan);border-radius:999px}
+  .wbar .pc{text-align:left;color:var(--ink-soft);font-weight:700;font-size:12px}
+
+  ul.run-list{list-style:none;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
+  ul.run-list li a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);font-size:14px;background:var(--cyan-soft);border:1px solid #c5f6fa;border-radius:10px;padding:6px 10px;transition:.15s}
+  ul.run-list li a:hover{transform:translateX(-3px);border-color:var(--cyan)}
+  ul.run-list li a .tid{font-weight:700;color:var(--turq);font-size:12px;background:#fff;border-radius:6px;padding:1px 7px;flex-shrink:0}
+  .empty-note{color:var(--ink-soft);font-size:13px;font-style:italic}
+
+  .cond-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .btn{font-family:'Assistant';font-size:14.5px;font-weight:700;border:none;border-radius:12px;padding:10px 18px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:var(--turq);color:#fff}
+  .btn.primary:hover{background:#0b6570}
+  .btn.ghost{background:#fff;color:var(--turq);border:1.5px solid var(--turq)}
+  .btn.ghost:hover{background:var(--cyan-soft)}
+  .btn.danger{background:#fff;color:var(--red);border:1.5px solid #ffc9c9}
+  .btn.danger:hover{background:var(--red-soft)}
+
+  /* ===== worlds ===== */
+  section.world{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;margin-bottom:26px;box-shadow:0 6px 22px rgba(29,53,87,.05)}
+  .world-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:6px}
+  .world-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .world-head h2{font-size:21px}
+  .world-head .goal{color:var(--ink-soft);font-size:15px}
+  .phase-tag{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;margin-inline-start:8px;vertical-align:middle;white-space:nowrap}
+  .world-prog{font-size:13px;font-weight:700;color:var(--ink-soft);margin-inline-start:auto;flex-shrink:0;background:#f1f8fa;border-radius:999px;padding:4px 12px;align-self:center}
+
+  .subtopic{border-top:1.5px dashed var(--line);margin-top:18px;padding-top:16px}
+  .subtopic>h3{font-size:17px;color:var(--turq);display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .subtopic .st-desc{font-size:14.5px;color:var(--ink-soft);margin-bottom:10px}
+  .needs-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  @media(max-width:700px){.needs-grid{grid-template-columns:1fr}}
+  .mini-box{background:#fafdfe;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+  .mini-box h4{font-size:13.5px;color:var(--pink);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+  .mini-box.needs h4{color:var(--turq)}
+  .mini-box ul{padding-inline-start:18px;font-size:13.5px;color:var(--ink)}
+  .mini-box li{margin-bottom:2px}
+
+  /* task card */
+  .task{background:#fff;border:1.5px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-top:10px;transition:border-color .2s}
+  .task[data-status="done"]{border-color:#b2f2bb;background:var(--green-soft)}
+  .task[data-status="doing"]{border-color:#ffd8a8}
+  .task[data-status="stuck"]{border-color:#ffc9c9}
+  .task-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .task-check{width:22px;height:22px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+  .task-id{font-size:12px;font-weight:700;color:var(--turq);background:var(--cyan-soft);border-radius:6px;padding:2px 8px;flex-shrink:0}
+  .task-title{font-weight:700;font-size:15.5px;flex:1;min-width:180px}
+  .task[data-status="done"] .task-title{text-decoration:line-through;color:var(--ink-soft)}
+  select.status{font-family:'Assistant';font-size:13px;font-weight:700;border-radius:9px;border:1.5px solid var(--line);padding:4px 8px;background:#fff;cursor:pointer;color:var(--ink)}
+  .task-desc{font-size:14px;color:var(--ink-soft);margin:6px 0 8px}
+  .deps{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px}
+  .deps .dep{display:inline-block;background:#f1f3f5;border-radius:6px;padding:0 7px;margin-inline-start:4px;font-weight:700}
+  .deps .dep.ok{background:var(--green-soft);color:var(--green)}
+  .task-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .btn.small{font-size:13px;padding:6px 13px;border-radius:9px}
+  pre.prompt{display:none;background:#0f2733;color:#d8f3f7;font-family:Consolas,monospace;direction:rtl;text-align:right;font-size:13px;line-height:1.55;border-radius:12px;padding:14px 16px;white-space:pre-wrap;margin:8px 0;max-height:340px;overflow:auto}
+  pre.prompt.open{display:block}
+  textarea.note{width:100%;min-height:44px;font-family:'Assistant';font-size:13.5px;border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;resize:vertical;background:#fcfeff;color:var(--ink)}
+  textarea.note:focus{outline:none;border-color:var(--cyan)}
+  textarea.note::placeholder{color:#9db8c4}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;font-weight:700;font-size:14px;padding:10px 22px;border-radius:999px;transition:.3s;z-index:10000;opacity:0}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+  footer{color:var(--ink-soft);font-size:13px;text-align:center;margin-top:40px}
+  @media(max-width:600px){
+    .lerani-logo{width:84px !important}
+    .wbar{grid-template-columns:110px 1fr 34px}
+  }
+</style>
+</head>
+<body>
+
+<!-- Lerani Logo — top right -->
+<div class="lerani-logo" style="position: fixed; top: 16px; right: 16px; z-index: 9999; width: 120px; pointer-events: none;">
+  <svg viewBox="0 0 360 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="ll-lg" cx="40%" cy="40%" r="60%"><stop offset="0%" stop-color="#a8c8f0"/><stop offset="50%" stop-color="#7babd4"/><stop offset="100%" stop-color="#5a93c0"/></radialGradient>
+      <radialGradient id="ll-rg" cx="60%" cy="40%" r="60%"><stop offset="0%" stop-color="#a8e6cf"/><stop offset="50%" stop-color="#7dd4ac"/><stop offset="100%" stop-color="#5abf92"/></radialGradient>
+      <linearGradient id="ll-og" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7babd4" stop-opacity="0.6"/><stop offset="100%" stop-color="#7dd4ac" stop-opacity="0.6"/></linearGradient>
+      <filter id="ll-sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#1e3a5f40"/></filter>
+      <filter id="ll-tg"><feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="blur"/><feFlood flood-color="#ffffff" flood-opacity="0.5" result="color"/><feComposite in="color" in2="blur" operator="in" result="glow"/><feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <clipPath id="ll-cr"><circle cx="218" cy="78" r="72"/></clipPath>
+    </defs>
+    <circle cx="142" cy="78" r="72" fill="url(#ll-lg)" opacity="0.8" filter="url(#ll-sh)"/>
+    <circle cx="218" cy="78" r="72" fill="url(#ll-rg)" opacity="0.8" filter="url(#ll-sh)"/>
+    <circle cx="142" cy="78" r="72" fill="url(#ll-og)" clip-path="url(#ll-cr)" opacity="0.5"/>
+    <circle cx="142" cy="78" r="72" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.35"/>
+    <circle cx="218" cy="78" r="72" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.35"/>
+    <g opacity="0.5"><path d="M180 6 L181.5 11 L186.5 12.5 L181.5 14 L180 19 L178.5 14 L173.5 12.5 L178.5 11 Z" fill="#7babd4"/><path d="M82 62 L83.5 65 L86.5 66.5 L83.5 68 L82 71 L80.5 68 L77.5 66.5 L80.5 65 Z" fill="#a8c8f0"/><path d="M278 55 L279.5 58 L282.5 59.5 L279.5 61 L278 64 L276.5 61 L273.5 59.5 L276.5 58 Z" fill="#a8e6cf"/></g>
+    <text x="180" y="90" text-anchor="middle" font-family="'Poppins', 'Segoe UI', sans-serif" font-size="44" font-weight="700" fill="#1e3a5f" letter-spacing="2" filter="url(#ll-tg)">Lerani</text>
+    <text x="180" y="172" text-anchor="middle" font-family="'Heebo', 'Segoe UI', sans-serif" font-size="15" font-weight="400" fill="#4a6a8a" letter-spacing="1.5" opacity="0.9" direction="rtl">חינוך · בינה מלאכותית · הגשמת חלומות</text>
+    <line x1="100" y1="184" x2="260" y2="184" stroke="url(#ll-og)" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  </svg>
+</div>
+
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+<div class="wrap">
+
+<header class="page">
+  <h1>מערכת רציפות למידה — דף ניהול</h1>
+  <p class="sub">כל העולמות, תתי-הנושאים והמשימות במקום אחד. לכל משימה פרומפט מוכן להעתקה לסוכן. מנהל התזמורת למעלה עוקב אחרי ההתקדמות, מזהה מה אפשר להריץ במקביל ומייצר דוח תכלול.</p>
+  <div class="modes">
+    <span class="mode-chip routine">מצב שגרה — למידה עצמאית</span>
+    <span class="mode-chip remote">מצב למידה מרחוק</span>
+    <span class="mode-chip emergency">מצב חירום</span>
+  </div>
+</header>
+
+<!-- ===================== CONDUCTOR ===================== -->
+<div class="conductor" id="conductor">
+  <h2>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0e7c86" stroke-width="2" stroke-linecap="round"><path d="M12 3v10"/><path d="M12 3l4 3"/><path d="M12 3L8 6"/><path d="M5 21c2-4 4-6 7-6s5 2 7 6"/></svg>
+    מנהל התזמורת
+  </h2>
+  <p class="hint">מסמנים סטטוס לכל משימה ומדביקים בהערות מה חזר מהסוכן — והלוח מתעדכן. בסוף כל סבב: "צור דוח תכלול" מעתיק פרומפט מסכם עם כל המצב, להדבקה אצל Claude.</p>
+
+  <div class="cond-grid">
+    <div class="cond-box">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e7c86" stroke-width="2.4" stroke-linecap="round"><path d="M4 12h16M4 6h16M4 18h10"/></svg> התקדמות כללית</h3>
+      <div class="progress-outer"><div class="progress-inner" id="progAll"></div></div>
+      <div class="counts" id="countsBar"></div>
+    </div>
+
+    <div class="cond-box">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e7c86" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg> התקדמות לפי עולם</h3>
+      <div class="world-bars" id="worldBars"></div>
+    </div>
+
+    <div class="cond-box">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2f9e44" stroke-width="2.4" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg> אפשר להריץ עכשיו במקביל</h3>
+      <ul class="run-list" id="runnableList"></ul>
+    </div>
+
+    <div class="cond-box">
+      <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f06595" stroke-width="2.4" stroke-linecap="round"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.5-6.3 4.5L8 13.8 2 9.2h7.6z"/></svg> ההמלצה הבאה</h3>
+      <ul class="run-list" id="recoList"></ul>
+    </div>
+  </div>
+
+  <div class="cond-actions">
+    <button class="btn primary" onclick="copyConductorReport()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+      צור דוח תכלול — העתק פרומפט למתכלל
+    </button>
+    <button class="btn ghost" onclick="exportState()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e7c86" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+      גיבוי סטטוס (JSON)
+    </button>
+    <button class="btn danger" onclick="resetState()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e03131" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+      איפוס הכל
+    </button>
+  </div>
+</div>
+
+<div id="worldsRoot"></div>
+
+<footer>מערכת רציפות למידה · דף ניהול פרויקט · נשמר אוטומטית בדפדפן (localStorage)</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ shared context prepended to every prompt ============ */
+const CTX = `רקע: אתה סוכן בפרויקט "מערכת רציפות למידה" — מערכת לאומית לבתי ספר שפועלת בשלושה מצבים: שגרה (למידה עצמאית בכיתה ובבית), למידה מרחוק (יום מקוון מתוכנן), וחירום (מלחמה/השבתה). עקרון-העל: קשר לפני תוכן — המדד הראשון הוא "כמה תלמידים ראינו היום", לא "כמה למדו".
+עקרונות מחייבים לכל תוצר:
+1. Mobile Only — מסך טלפון צר הוא ברירת המחדל, מחשב הוא בונוס.
+2. יחידת הזמן = 10 דקות לכל משימה או מסך.
+3. אפס חיכוך — אין סיסמאות, הכניסה בקישור אישי (וואטסאפ).
+4. עברית פשוטה, משפטים קצרים, RTL מלא (dir="rtl" lang="he"). בלי row-reverse ב-flex.
+5. עובד ברשת חלשה — קובץ HTML אחד קל, בלי ספריות כבדות.
+6. פרטיות קטינים — מזעור נתונים, בהתאם לתיקון 13 לחוק הגנת הפרטיות.
+7. עיצוב בהיר ונקי, בלי אימוג'ים — אייקוני SVG בלבד. פונטים: Playpen Sans Hebrew לכותרות + Assistant לטקסט.
+קהל היעד: תלמידי תיכון (ט-יב), כולל נוער בסיכון ותלמידים עם לקויות למידה וקשיי קשב וריכוז.
+מיקום קבצים: _drafts/emergency-learning/
+
+`;
+
+/* ============ data: worlds → subtopics → tasks ============ */
+const WORLDS = [
+
+/* ---------- S0 foundations ---------- */
+{ id:"s0", name:"יסודות המערכת", phase:"לפני הכל", color:"#0e7c86", soft:"#e3fafc",
+  goal:"המסמכים שכל שאר המשימות נשענות עליהם. בלעדיהם — כל סוכן ימציא מערכת אחרת.",
+  subtopics:[
+    { title:"מסמך אפיון מלא",
+      desc:"מסמך-האם של המערכת: חזון, שלושת המצבים, חוקת העולמות, הפאזות.",
+      needs:["חזון ועקרונות-על (8 העקרונות)","הגדרת 3 מצבי המערכת ומה משתנה בכל מצב","פירוט 8 העולמות: מטרה, מה יש, מה אין, מדד הצלחה","4 פאזות הפעלה"],
+      contents:["המלל המלא מהשיחה עם מיטל (העולמות + התוספת של השגרה)","טבלת השוואה מול האפיון של GPT"],
+      tasks:[
+        { id:"T0.1", title:"כתיבת מסמך אפיון מלא", deps:[],
+          desc:"סוכן כתיבה — מסמך אפיון מסודר בעברית, Markdown + גרסת HTML מעוצבת.",
+          prompt:`המשימה: כתוב מסמך אפיון מלא למערכת רציפות למידה.
+מבנה חובה: 1) תקציר מנהלים (עמוד אחד) 2) הבעיה והחזון 3) עקרונות-העל (8 העקרונות מהרקע למעלה) 4) שלושת מצבי המערכת — שגרה / למידה מרחוק / חירום — ומה משתנה בכל מצב 5) חוקת העולמות: 8 עולמות, לכל עולם — מטרה, מה יש בו, מה אין בו (חשוב לא פחות!), מדד הצלחה 6) ציר זמן — 4 פאזות הפעלה 7) סיכונים והתמודדות (זחילת סקופ, פרטיות, אימוץ).
+העולמות: התלמיד ("היום שלי" — check-in יומי, משימת 10 דקות, "המורה ראה", רצף אישי) · המחנך ("הכיתה שלי חיה" — לוח דופק ירוק/צהוב/אדום, פנייה בלחיצה, דגלים רגשיים, יומן קשר) · המורה המקצועי ("שלח משימה" — בחירה מספרייה ב-3 לחיצות, התאמה עם AI, לוח הגשות) · המנהל ("דופק בית הספר" — 3 מספרים, דופק צוות, רשימת אדומים, דוח יומי לוואטסאפ) · ספריית התוכן ("מדף הרציפות" — תקן יחידה, אוצרות) · הפיקוח (מקצועי + ארצי, נתונים לתמיכה לא לשיפוט) · ההורים (ערוץ הודעה שבועית, לא אפליקציה) · שכבת AI (כפתור בכל עולם, לא עולם נפרד; בלי צ'אט חופשי לקטינים).
+תוצרים: spec.md + spec.html (מעוצב, RTL, בהיר).
+הגדרת סיום: אדם שלא היה בשיחה מבין את המערכת כולה מקריאת המסמך בלבד.`}
+      ]},
+    { title:"מודל נתונים",
+      desc:"הישויות המשותפות שכל העולמות יושבים עליהן — ההערה הטובה של GPT.",
+      needs:["ישויות: תלמיד, כיתה, צוות, יחידת תוכן, משימה, הגשה, check-in, מצב-מערכת","זרימה: מפקחת יוצרת ← ספרייה ← מורה משבץ ← תלמיד לומד ← נתונים למנהל","שדה mode בכל אירוע (שגרה/מרחוק/חירום)","מדיניות מחיקה לנתוני check-in רגשיים"],
+      contents:["דיאגרמת ישויות (Mermaid)","טבלת שדות לכל ישות"],
+      tasks:[
+        { id:"T0.2", title:"אפיון מודל הנתונים המשותף", deps:["T0.1"],
+          desc:"סוכן ארכיטקטורה — מסמך data-model.md עם דיאגרמה.",
+          prompt:`המשימה: אפיין את מודל הנתונים המשותף של מערכת רציפות למידה.
+קרא קודם את _drafts/emergency-learning/spec.md.
+הגדר ישויות: Student, Class, StaffMember, ContentUnit, Assignment, Submission, CheckIn, SystemMode, ContactLog (יומן קשר של מחנך), Notification.
+דרישות: 1) כל אירוע נושא שדה mode (routine/remote/emergency) — זה ציר הניתוח המרכזי 2) הזרימה מפקחת←ספרייה←מורה←תלמיד←דשבורדים חייבת לעבוד בלי שכפול נתונים 3) CheckIn רגשי (מצב חירום) מסומן כמידע רגיש עם מדיניות מחיקה אוטומטית אחרי 30 יום 4) אין ציונים במודל — יש completed/feedback בלבד.
+תוצר: data-model.md עם דיאגרמת Mermaid (erDiagram) + טבלת שדות לכל ישות + 5 שאילתות לדוגמה במלל ("מי לא נראה יומיים בכיתה X").
+הגדרת סיום: כל מסך מהאפיון יכול להצביע על הישויות שהוא קורא וכותב.`}
+      ]},
+    { title:"Design System",
+      desc:"שפה עיצובית אחת לכל העולמות — כולל שינוי האווירה בין המצבים.",
+      needs:["פלטת צבעים בהירה + צבע מצב (שגרה ירוק / מרחוק תכלת / חירום כתום-רך, לא אדום מפחיד)","טיפוגרפיה וגדלים למובייל","קומפוננטות: כרטיס משימה, לוח דופק, check-in, כפתור ראשי, chip סטטוס","נגישות: ניגודיות AA, אזורי מגע 44px"],
+      contents:["דף design-system.html חי עם כל הקומפוננטות","משתני CSS מוכנים להעתקה"],
+      tasks:[
+        { id:"T0.3", title:"בניית Design System חי", deps:["T0.1"],
+          desc:"סוכן עיצוב — דף HTML אחד שמציג את כל הקומפוננטות בשלושת המצבים.",
+          prompt:`המשימה: בנה design-system.html — שפה עיצובית חיה למערכת רציפות למידה.
+כלול: 1) פלטה — רקע לבן/בהיר, טורקיז-ציאן כצבע ראשי, וצבע-מצב שמשתנה: שגרה=ירוק רך, מרחוק=תכלת, חירום=כתום-חם רגוע (לא אדום מלחיץ — ילדים בחרדה) 2) טיפוגרפיה: Playpen Sans Hebrew לכותרות, Assistant לגוף, מינימום 16px בגוף 3) קומפוננטות חיות: כרטיס משימת 10 דקות, שורת תלמיד בלוח דופק (ירוק/צהוב/אדום), מסך check-in עם 4 מצבים, כפתור ראשי, chip מצב-מערכת, progress רצף אישי 4) מתג מצב בראש הדף שמחליף את כל הדף בין 3 המצבים (CSS variables) 5) כללי נגישות: ניגודיות AA, מגע 44px, בלי הבהובים.
+אסור: אימוג'ים (רק SVG), רקע כהה, particles.
+הגדרת סיום: מפתח שמקבל רק את הדף הזה יכול לבנות כל מסך במערכת בלי לשאול שאלה עיצובית אחת.`}
+      ]},
+    { title:"מחקר קיים",
+      desc:"מה כבר קיים בארץ — כדי שנשלים ולא נשכפל.",
+      needs:["מיפוי: מרחבי למידה בחירום של משה\"ח, קמפוס IL, אופק/מטח, Classroom","מה עבד ומה נכשל בלמידה מרחוק במלחמת חרבות ברזל","נקודות אינטגרציה אפשריות"],
+      contents:["דוח מחקר עם מקורות מאומתים (פרפלקסיטי — לא מהזיכרון!)"],
+      tasks:[
+        { id:"T0.4", title:"מחקר מערכות קיימות ולקחי חירום", deps:[],
+          desc:"סוכן מחקר עם פרפלקסיטי — חובה מקורות, אסור נתונים מהזיכרון.",
+          prompt:`המשימה: מחקר רקע למערכת רציפות למידה. השתמש בפרפלקסיטי/חיפוש רשת — כל נתון חייב מקור ותאריך, אסור נתונים מהזיכרון.
+שאלות: 1) אילו פלטפורמות למידה בחירום קיימות היום בישראל (משרד החינוך, מטח, קמפוס IL, אחרות) ומה הן כוללות? 2) מה ידוע ממחקרים ודוחות על למידה מרחוק בישראל במלחמת חרבות ברזל — שיעורי השתתפות, פערים, מה נשבר? 3) האם קיימות בעולם מערכות "רציפות חינוכית" (education continuity) עם דגש קשר ולא תוכן? 4) מה המדיניות הנוכחית של משרד החינוך לימי למידה מקוונים בשגרה?
+תוצר: research.md — לכל ממצא: העובדה, המקור (קישור), התאריך, ומה המשמעות למערכת שלנו. סיים בטבלה: "קיים כבר / חסר / ההזדמנות שלנו".
+הגדרת סיום: אפשר לענות בביטחון על השאלה "למה לא להשתמש במה שקיים?".`}
+      ]}
+  ]},
+
+/* ---------- S1 student ---------- */
+{ id:"s1", name:"עולם התלמיד — \"היום שלי\"", phase:"פאזה 0", color:"#22b8cf", soft:"#e3fafc",
+  goal:"שהתלמיד ידע כל בוקר: רואים אותי, יש לי מה לעשות, אני מסוגל.",
+  subtopics:[
+    { title:"מסך הבית + Check-in",
+      desc:"דלת אחת: שאלת פתיחה בלחיצה אחת, ואז המשימות של היום.",
+      needs:["check-in בלחיצה אחת — בשגרה: 'מוכן ללמוד?', בחירום: 'איך אתה היום?' (4 מצבים)","חיווי 'המורה ראה' דו-כיווני","רצף אישי (יום X ברציפות) — שגרה, לא תחרות","עד 3 משימות ביום, בלי ניווט מיותר"],
+      contents:["מסך דמו HTML","מיקרו-קופי לכל המצבים"],
+      tasks:[
+        { id:"T1.1", title:"דמו מסך הבית של התלמיד", deps:["T0.3"],
+          desc:"סוכן פיתוח — דמו אינטראקטיבי של מסך הבית בשלושת המצבים.",
+          prompt:`המשימה: בנה student-home.html — דמו חי של מסך הבית של התלמיד.
+קרא קודם: _drafts/emergency-learning/design-system.html והשתמש בדיוק באותה שפה עיצובית.
+המסך: 1) שורת פתיחה אישית ("בוקר טוב, יובל") 2) check-in — במצב שגרה כפתור אחד "מתחיל ללמוד", במצב חירום 4 כפתורי מצב-רוח (SVG פנים פשוטות: טוב / בסדר / קשה לי / רוצה לדבר) 3) אחרי check-in: חיווי "דנה המחנכת ראתה" (מופיע אחרי 2 שניות בדמו) 4) רצף אישי — "יום 4 ברציפות" עם 7 עיגולים של השבוע 5) עד 3 כרטיסי משימה: מקצוע, כותרת, "10 דקות", כפתור התחל 6) פס הודעה אחת מהמחנך.
+הוסף מתג דמו בראש הדף: שגרה / מרחוק / חירום — שמחליף את התוכן והצבעים.
+הגדרת סיום: כל המסך נטען מהר, עובד מושלם ברוחב 390px, ואפס גלילה מיותרת — הכל בגובה מסך וחצי לכל היותר.`}
+      ]},
+    { title:"מסך משימה — יחידת 10 הדקות",
+      desc:"חוויית הלמידה עצמה: קצר, ברור, נגמר בהצלחה.",
+      needs:["מבנה: הסבר קצר ← דוגמה ← 2-3 שאלות ← משוב מיידי","פס התקדמות בתוך המשימה","סיום חגיגי מאופק (בלי particles כבדים)","כפתור 'לא הבנתי — הסבר אחרת' (חיבור ל-AI)"],
+      contents:["תבנית משימה גנרית","משימת דמו אחת אמיתית (אזרחות או עברית)"],
+      tasks:[
+        { id:"T1.2", title:"דמו מסך משימה + תבנית", deps:["T0.3"],
+          desc:"סוכן פיתוח — mission-demo.html עם משימת אזרחות אמיתית של 10 דקות.",
+          prompt:`המשימה: בנה mission-demo.html — דמו מלא של יחידת 10 דקות לתלמיד.
+קרא קודם: _drafts/emergency-learning/design-system.html.
+נושא הדמו: אזרחות — "מהי רשות מחוקקת?" (כיתה י'). מבנה: 1) פתיח: משפט אחד למה זה נוגע לחיים שלי 2) הסבר ב-3 מסכים קצרים (לא עמוד גולש!), כל מסך: רעיון אחד + דוגמה מחיי היום-יום 3) 3 שאלות הבנה אמריקאיות עם משוב מיידי — תשובה שגויה מקבלת רמז, לא X אדום 4) מסך סיום: "סיימת! נראה מחר" + עדכון הרצף.
+דרישות: פס התקדמות עליון (מסך 2 מתוך 6), כפתור "לא הבנתי — הסבר אחרת" בכל מסך הסבר (בדמו: מציג טקסט חלופי פשוט יותר, מדמה AI), ניווט הבא/הקודם בלבד.
+שפה: עברית פשוטה מאוד, משפטים קצרים — הקהל כולל לקויות למידה.
+הגדרת סיום: מבוגר עובר את כל היחידה בפחות מ-5 דקות, הכל עובד ב-390px.`}
+      ]},
+    { title:"מיקרו-קופי עולם התלמיד",
+      desc:"הקול של המערכת מול התלמיד — חם, לא ילדותי, לא מוסדי.",
+      needs:["נוסחים לכל מצב מערכת ולכל מצב check-in","נוסחי עידוד לרצף ולסיום משימה","נוסחים רגישים לילד שסימן 'קשה לי'","הכל בשני מגדרים (m/f)"],
+      contents:["copy-student.md — בנק קופי מסודר לפי מסך"],
+      tasks:[
+        { id:"T1.3", title:"בנק מיקרו-קופי לתלמיד", deps:["T0.1"],
+          desc:"סוכן כתיבה — כל הטקסטים של עולם התלמיד, בשני מגדרים.",
+          prompt:`המשימה: כתוב copy-student.md — בנק המיקרו-קופי המלא של עולם התלמיד.
+הקול: חם וישיר, בגובה העיניים של בן 16. לא ילדותי ("כל הכבוד אלוף!"), לא מוסדי ("עליך להשלים את המטלה"). בלי קיצורים באנגלית, בלי סלנג מאולץ.
+כתוב נוסחים ל: 1) ברכות פתיחה לפי שעה ומצב מערכת (שגרה/מרחוק/חירום — בחירום הטון רך יותר, בלי "בוקר מעולה!") 2) 4 מצבי check-in רגשי + תגובת המערכת לכל בחירה — קריטי: התגובה ל"קשה לי" ו"רוצה לדבר" חייבת להיות מכילה ולומר מה יקרה עכשיו ("דנה תראה את זה ותחזור אליך") 3) חיווי "המורה ראה" 4) עידוד רצף — 3 גרסאות, שגרה לא תחרות 5) סיום משימה — 5 גרסאות מתחלפות 6) תלמיד שחוזר אחרי היעדרות — בלי אשמה ("טוב לראות אותך" ולא "איפה היית") 7) הודעת שגיאה/אין רשת.
+הכל בשני מגדרים במבנה {m: "", f: ""}.
+הגדרת סיום: אפס משפטים שהיו נשמעים רע אם מחנכת אמיתית הייתה אומרת אותם לילד בזמן מלחמה.`}
+      ]}
+  ]},
+
+/* ---------- S2 educator ---------- */
+{ id:"s2", name:"עולם המחנך — \"הכיתה שלי חיה\"", phase:"פאזה 0 — הלב", color:"#f06595", soft:"#fff0f6",
+  goal:"שאף ילד לא ייעלם בשקט. המחנך הוא קצין הקשר, לא מנהל פדגוגי.",
+  subtopics:[
+    { title:"לוח דופק כיתתי",
+      desc:"כל הכיתה במסך אחד: ירוק נראה היום, צהוב יום שקט, אדום יומיים+.",
+      needs:["מיון אוטומטי — אדומים למעלה","דגל רגשי: 'קשה לי' 3 ימים ברצף קופץ למעלה","כפתור פנייה ליד כל ילד","סיכום עליון: X מתוך Y נראו היום"],
+      contents:["דמו HTML עם 30 תלמידים פיקטיביים במצבים שונים"],
+      tasks:[
+        { id:"T2.1", title:"דמו לוח הדופק של המחנך", deps:["T0.3"],
+          desc:"סוכן פיתוח — educator-pulse.html, המסך החשוב במערכת.",
+          prompt:`המשימה: בנה educator-pulse.html — לוח הדופק הכיתתי של המחנך. זה המסך החשוב ביותר במערכת.
+קרא קודם: _drafts/emergency-learning/design-system.html.
+המסך: 1) כותרת: "י'2 — נראו היום 21 מתוך 28" 2) רשימת 28 תלמידים פיקטיביים (שמות ישראליים מגוונים): עיגול סטטוס ירוק/צהוב/אדום, שם, מתי נראה לאחרונה ("לפני שעה" / "אתמול" / "לפני 3 ימים"), אייקון check-in רגשי אם קיים 3) מיון: אדומים למעלה, אחריהם דגלים רגשיים, אחריהם צהובים 4) ליד כל צהוב/אדום: כפתור וואטסאפ שפותח (בדמו: מציג) הודעת פנייה מוכנה עם שם הילד 5) ילד עם "קשה לי" 3 ימים — מסגרת ורודה + כפתור "העבר ליועצת" 6) שורת סינון: הכל / לא נראו / דגלים.
+במצב שגרה אותו לוח מציג השלמת משימות במקום check-in רגשי — הוסף מתג דמו.
+הגדרת סיום: מחנכת מבינה תוך 5 שניות מי צריך אותה היום, בלי הדרכה, ב-390px.`}
+      ]},
+    { title:"בנק תבניות פנייה",
+      desc:"הודעות וואטסאפ מוכנות — להושיט יד בלחיצה, לא לנסח מאפס.",
+      needs:["תבניות לפי הקשר: יום שקט, יומיים, דגל רגשי, חזרה אחרי היעדרות","טון אישי ולא מוסדי, עם מקום לשם","גם תבניות להורה","שני מגדרים"],
+      contents:["templates-outreach.md"],
+      tasks:[
+        { id:"T2.2", title:"כתיבת בנק תבניות פנייה", deps:[],
+          desc:"סוכן כתיבה — 12+ תבניות וואטסאפ לפנייה לתלמיד ולהורה.",
+          prompt:`המשימה: כתוב templates-outreach.md — בנק תבניות פנייה בוואטסאפ למחנך.
+ההקשר: מחנך רואה בלוח הדופק ילד שלא נראה, ולוחץ על כפתור שפותח וואטסאפ עם הודעה מוכנה. ההודעה חייבת להרגיש אישית — לא כמו בוט ולא כמו התראה מוסדית.
+כתוב: 1) יום אחד שקט — 3 גרסאות קלילות ("סתם רציתי לראות מה איתך") 2) יומיים-שלושה — 3 גרסאות דואגות אבל לא מלחיצות 3) אחרי דגל "קשה לי" — 2 גרסאות רגישות, בלי לחשוף שהמערכת "הלשינה" 4) חזרה אחרי היעדרות — 2 גרסאות "טוב שחזרת" בלי אשמה 5) להורה — 2 גרסאות עדכון-שותפות (לא תלונה) 6) הודעה כיתתית יומית — 2 גרסאות.
+כל תבנית: משתנה [שם], שני מגדרים {m, f}, עד 2 משפטים — הודעת וואטסאפ, לא מכתב.
+בדיקה עצמית: כל הודעה — האם בן 16 במלחמה היה עונה לה או מתעלם? מחק כל מה שנשמע כמו מערכת.
+הגדרת סיום: 14+ תבניות שמחנכת אמיתית הייתה שולחת כמו-שהן.`}
+      ]},
+    { title:"דגלים רגשיים ויומן קשר",
+      desc:"החוקים הפדגוגיים: מתי ילד הופך דגל, מה עושים, ואיך מתעדים.",
+      needs:["כללי אסקלציה: מתי מחנך, מתי יועצת, מתי מנהל","הגנות פרטיות — מי רואה מה","יומן קשר: תיעוד קצר שנשאר גם כשמחנך מתחלף"],
+      contents:["מסמך flags-protocol.md — פרוטוקול פדגוגי, לא קוד"],
+      tasks:[
+        { id:"T2.3", title:"פרוטוקול דגלים רגשיים ואסקלציה", deps:["T0.1"],
+          desc:"סוכן פדגוגי — מסמך כללים. רגיש: מדובר בקטינים במצוקה.",
+          prompt:`המשימה: כתוב flags-protocol.md — הפרוטוקול הפדגוגי של הדגלים הרגשיים.
+זהו מסמך כללים לבני אדם (מחנכים, יועצות, הנהלה) — לא קוד.
+הגדר: 1) מתי נדלק דגל — "קשה לי" 3 ימים ברצף / "רוצה לדבר" פעם אחת / היעדרות 48 שעות. נמק כל סף 2) שרשרת טיפול: דגל ← מחנך פונה תוך X שעות ← אין מענה ← יועצת ← מקרה חריג ← מנהל. הגדר זמנים 3) מה המחנך רואה ומה לא — המחנך רואה מצב נוכחי, לא היסטוריה רגשית של חודשים; היועצת רואה יותר; המורה המקצועי לא רואה כלום מהרגשי 4) יומן קשר — מה מתעדים (עובדה: "דיברתי עם אמא, הם בצימר בטבריה") ומה אסור לתעד (אבחנות, פרשנות רפואית) 5) קו אדום: המערכת לעולם לא שולחת לילד הודעה אוטומטית על מצבו הרגשי — רק בן אדם.
+חשוב: בכל סעיף ציין "למה" — המסמך ישמש להדרכת מחנכים.
+בסוף: צור גם checklist של עמוד אחד למחנך — "נדלק דגל, מה עכשיו".
+הגדרת סיום: יועצת חינוכית קוראת ולא מוצאת פרצה שבה ילד במצוקה נופל בין הכיסאות.`}
+      ]}
+  ]},
+
+/* ---------- S3 teacher ---------- */
+{ id:"s3", name:"עולם המורה המקצועי — \"שלח משימה\"", phase:"פאזה 1", color:"#7048e8", soft:"#f3f0ff",
+  goal:"שמורה — שגם הוא אולי מפונה ולחוץ — יפעיל את הכיתה שלו ב-5 דקות ביום.",
+  subtopics:[
+    { title:"זרימת שליחת משימה",
+      desc:"ברירת המחדל היא בחירה מהספרייה, לא יצירה. שלוש לחיצות: בחר, התאם, שלח.",
+      needs:["מסך בחירה: יחידות מסוננות אוטומטית לפי המקצוע והשכבה של המורה","תצוגה מקדימה כמו-תלמיד לפני שליחה","בחירת כיתות ותזמון","אישור: 'נשלח ל-28 תלמידים'"],
+      contents:["דמו HTML של הזרימה המלאה"],
+      tasks:[
+        { id:"T3.1", title:"דמו זרימת \"שלח משימה\" ב-3 לחיצות", deps:["T0.3","T5.1"],
+          desc:"סוכן פיתוח — teacher-flow.html: בחירה ← התאמה ← שליחה.",
+          prompt:`המשימה: בנה teacher-flow.html — דמו של זרימת שליחת משימה של המורה המקצועי.
+קרא קודם: design-system.html + content-standard.md (תקן היחידות).
+הזרימה (3 מסכים): 1) בחירה — רשימת 8 יחידות דמו במקצוע של המורה (למשל עברית י'), כל כרטיס: כותרת, 10 דקות, רמה, כמה מורים כבר השתמשו. כפתור "תצוגה כמו תלמיד" 2) התאמה — בחירת כיתה (י'1/י'2), תזמון (עכשיו / מחר בבוקר), ושלושה כפתורי AI אופציונליים: "פשט שפה" / "גרסה קלה יותר" / "הוסף דוגמה" (בדמו: מציגים טקסט לפני/אחרי) 3) אישור — "המשימה נשלחה ל-28 תלמידים, נעדכן אותך כשיתחילו".
+למעלה: מונה לחיצות קטן שמראה שאפשר לסיים ב-3 לחיצות בלי AI.
+בנוסף בדף: מצב "לוח הגשות" — מי סיים, מי באמצע, מי לא התחיל (בלי ציונים!), עם כפתור משוב מהיר (3 תבניות + חופשי).
+הגדרת סיום: מורה בת 55 בלי רקע טכנולוגי מסיימת שליחה תוך דקה, ב-390px.`}
+      ]},
+    { title:"פרומפטי AI להתאמת יחידות",
+      desc:"שלושת כפתורי הקסם של המורה — מנוסחים כ-system prompts אמיתיים.",
+      needs:["פרומפט 'פשט שפה' — שומר על הדיוק הפדגוגי","פרומפט 'גרסה קלה' — מוריד עומס, לא מוריד כבוד","פרומפט 'הוסף דוגמה מחיי היום-יום'","כללי בטיחות: ה-AI לא ממציא עובדות, מסמן מה שינה"],
+      contents:["ai-teacher-prompts.md"],
+      tasks:[
+        { id:"T3.2", title:"כתיבת פרומפטי התאמת יחידות", deps:["T5.1"],
+          desc:"סוכן פרומפטים — 3 system prompts + כללי בטיחות פדגוגית.",
+          prompt:`המשימה: כתוב ai-teacher-prompts.md — שלושת ה-system prompts שמאחורי כפתורי ההתאמה של המורה.
+קרא קודם: content-standard.md.
+כתוב 3 פרומפטים מלאים ומוכנים לשימוש: 1) "פשט שפה" — מקבל יחידה, מחזיר אותה בעברית פשוטה יותר: משפטים קצרים, בלי שפה אקדמית, אותו תוכן פדגוגי בדיוק. אסור לוותר על מושג חובה — במקום זה להסביר אותו 2) "גרסה קלה יותר" — מפחית עומס קוגניטיבי: פחות שאלות, יותר דוגמאות, פירוק לצעדים קטנים. הטון נשאר מכבד — גרסה קלה היא לא גרסה ילדותית 3) "הוסף דוגמה" — מוסיף דוגמה מחיי נוער ישראלי היום (בלי סלנג מאולץ, בלי אזכורי מלחמה אלא אם היחידה עוסקת בזה).
+לכל פרומפט: כללי בטיחות מובנים — אסור להמציא עובדות/מספרים/ציטוטים שלא היו ביחידה; חובה להחזיר רשימת "מה שיניתי" שהמורה מאשר; שמירת מבנה היחידה (הסבר-דוגמה-שאלות).
+בסוף: 2 דוגמאות לפני/אחרי לכל פרומפט, על קטע יחידה אמיתי שתכתוב.
+הגדרת סיום: אפשר להדביק כל פרומפט כמו-שהוא ב-API ולקבל תוצאה שמורה מאשרת.`}
+      ]}
+  ]},
+
+/* ---------- S4 principal ---------- */
+{ id:"s4", name:"עולם המנהל — \"דופק בית הספר\"", phase:"פאזה 1", color:"#e8590c", soft:"#fff4e6",
+  goal:"תמונת מצב אחת שעונה על \"מי צריך אותי היום\" — תלמידים וגם מורים.",
+  subtopics:[
+    { title:"דשבורד המנהל",
+      desc:"שלושה מספרים למעלה, דופק צוות, ורשימת אדומים בית-ספרית עם סטטוס טיפול.",
+      needs:["3 מספרים: % נראו היום · % כיתות עם משימה · תלמידים באדום","דופק צוות — מי מהמורים פעיל, מי שקט יומיים (מורים הם גם נפגעי חירום)","רשימת אדומים חוצת-כיתות עם סטטוס: מי פנה, מתי","ערוץ הודעה קהילתית"],
+      contents:["דמו HTML עם נתוני בית ספר פיקטיבי"],
+      tasks:[
+        { id:"T4.1", title:"דמו דשבורד המנהל", deps:["T0.3"],
+          desc:"סוכן פיתוח — principal-pulse.html כולל דופק הצוות.",
+          prompt:`המשימה: בנה principal-pulse.html — דשבורד המנהל של מערכת רציפות למידה.
+קרא קודם: design-system.html.
+המסך: 1) שלושה מספרים גדולים למעלה: "נראו היום 71%" / "כיתות עם משימה 12 מתוך 14" / "באדום: 9 תלמידים" — כל אחד לחיץ ופותח פירוט 2) דופק צוות — החידוש: רשימת 20 מורים פיקטיביים עם אותו קוד צבעים ירוק/צהוב/אדום לפי פעילות. מורה אדום = לא שלח משימה ולא נכנס יומיים ← כפתור "בדוק מה שלומו" (וואטסאפ). זה מסך דאגה לצוות, לא מסך פיקוח — הקפד על הניסוח 3) רשימת אדומים בית-ספרית: ילד, כיתה, כמה זמן, מי מטפל ("דנה פנתה אתמול" / "ממתין"), כפתור תזכורת למחנך 4) הודעה קהילתית — שדה + "שלח להורים ולצוות" 5) תצוגת הדוח היומי — ראה משימה T4.2.
+מתג מצב שגרה/חירום: בשגרה המספרים הם השלמת משימות ושימוש, לא "אדומים".
+הגדרת סיום: מנהל סורק את המסך ב-30 שניות ויודע בדיוק 3 דברים שעליו לעשות היום.`}
+      ]},
+    { title:"הדוח היומי האוטומטי",
+      desc:"המערכת באה למנהל, לא להפך: הודעת וואטסאפ אחת ב-19:00.",
+      needs:["פורמט קצר — נקרא ב-20 שניות בטלפון","3 מספרים + 3 שמות שדורשים טיפול + דבר טוב אחד","נוסח שונה לשגרה ולחירום"],
+      contents:["daily-report-format.md — הפורמט + 6 דוגמאות מלאות"],
+      tasks:[
+        { id:"T4.2", title:"עיצוב הדוח היומי לוואטסאפ", deps:[],
+          desc:"סוכן כתיבה — פורמט הדוח + דוגמאות אמיתיות.",
+          prompt:`המשימה: כתוב daily-report-format.md — פורמט הדוח היומי האוטומטי שנשלח למנהל בוואטסאפ ב-19:00.
+עקרונות: נקרא ב-20 שניות בטלפון; מוביל לפעולה, לא לנתונים; טקסט וואטסאפ נקי (בלי טבלאות, מותר מודגש בכוכביות); תמיד נגמר בדבר טוב אחד.
+מבנה: שורת פתיחה עם תאריך ומצב ← 3 מספרי הליבה עם חץ מגמה מול אתמול ← "דורש אותך מחר": עד 3 שורות (ילד/מורה/כיתה + למה) ← "נקודת אור": הישג יומי אחד אמיתי ← קישור לדשבורד.
+כתוב 6 דוגמאות מלאות: יום רגיל בשגרה / יום מקוון / יום ראשון של חירום / שבוע שני של חירום עם שחיקה / יום עם אירוע חריג (ילד במצוקה) / יום מצוין שכולו נקודות אור.
+כלל ניסוח: הדוח מדבר כמו עוזר אישי חכם, לא כמו מערכת BI. "שווה שתתקשר מחר לרכזת שכבה י'" ולא "זוהתה ירידה של 12% במדד".
+הגדרת סיום: מנהל אמיתי היה קורא את זה כל ערב ולא משתיק את ההתראה.`}
+      ]}
+  ]},
+
+/* ---------- S5 library ---------- */
+{ id:"s5", name:"ספריית התוכן — \"מדף הרציפות\"", phase:"פאזה 1-2", color:"#2f9e44", soft:"#ebfbee",
+  goal:"מדף אחד של יחידות שנבנו לתקן — לא מחסן של כל מה שקיים. עדיף 200 מצוינות מ-20,000 בינוניות.",
+  subtopics:[
+    { title:"תקן יחידת רציפות",
+      desc:"המסמך שמגדיר מה נכנס לספרייה — הנכס הפדגוגי המרכזי של המערכת.",
+      needs:["מבנה חובה: פתיח-רלוונטיות ← הסבר במנות ← דוגמה ← שאלות עם משוב ← סיום","10 דקות, מובייל, עברית פשוטה, עובד offline","מטא-דאטה: מקצוע, שכבה, רמה, מצב מתאים (שגרה/חירום)","checklist קבלה למפקח המאשר"],
+      contents:["content-standard.md"],
+      tasks:[
+        { id:"T5.1", title:"כתיבת תקן יחידת הרציפות", deps:["T0.1"],
+          desc:"סוכן פדגוגי — המסמך שכל יוצר תוכן במערכת יעבוד לפיו.",
+          prompt:`המשימה: כתוב content-standard.md — התקן המחייב לכל יחידת תוכן בספריית מערכת רציפות למידה.
+התקן חייב לכלול: 1) מבנה חובה: פתיח רלוונטיות (משפט אחד — למה זה נוגע לחיים שלי) ← הסבר מחולק למסכים של רעיון אחד ← דוגמה מחיי היום-יום ← 2-3 שאלות הבנה עם משוב מיידי ורמזים ← מסך סיום 2) מגבלות קשיחות: 10 דקות סה"כ, עד 6 מסכים, עד 40 מילים במסך הסבר, פועל ב-390px, נטען ברשת חלשה, בלי תלות ברשת אחרי טעינה 3) שפה: עברית פשוטה, משפטים עד 12 מילים, בלי שפה אקדמית — מותאם ללקויות למידה וקשיי קשב 4) מטא-דאטה חובה: מקצוע, שכבה, רמה (בסיס/מתקדם), משך, מצב מומלץ, תאריך אימות פדגוגי 5) כללי תוכן בזמן חירום: בלי תכנים מעוררי חרדה, רגישות למפונים 6) checklist קבלה — 15 סעיפי כן/לא שמפקח עובר לפני אישור 7) נספח: מבנה JSON של יחידה לצורך המערכת.
+הגדרת סיום: שני כותבי תוכן שונים שמקבלים את התקן מייצרים יחידות שמרגישות מאותה מערכת.`},
+        { id:"T5.2", title:"בניית יחידת דמו לפי התקן", deps:["T5.1"],
+          desc:"סוכן תוכן — יחידה אמיתית מלאה שמדגימה את התקן (עברית, כיתה י').",
+          prompt:`המשימה: בנה יחידת דמו מלאה לפי התקן — demo-unit-hebrew.html.
+קרא קודם: content-standard.md + design-system.html ועקוב אחריהם באדיקות.
+הנושא: עברית, כיתה י' — "משפט פשוט ומשפט מורכב" (נושא בגרות אמיתי, לא נושא צעצוע).
+חשוב — אימות פדגוגי: אל תסתמך על הזיכרון שלך בהגדרות לשוניות. נסח הגדרות פשוטות אך ודא שהן תואמות את תוכנית הלימודים של משרד החינוך; אם יש לך גישה לפרפלקסיטי — אמת את ההגדרה של משפט מורכב מול מקור סמכותי (האקדמיה ללשון / אתרי הוראת לשון) וציין בתגובה שלך מה אימתת ומול מה.
+בנה את היחידה כקובץ HTML אחד עצמאי לפי מבנה התקן, כולל השאלות, הרמזים והמשוב.
+בסוף החזר גם: קובץ demo-unit-hebrew.json — אותה יחידה במבנה ה-JSON מהתקן.
+הגדרת סיום: היחידה עוברת את כל 15 סעיפי ה-checklist מהתקן, והצהרת אימות פדגוגי מצורפת.`}
+      ]},
+    { title:"טקסונומיה ומיפוי תוכן קיים",
+      desc:"עץ המקצועות והשכבות + איפה משתלב תוכן שכבר קיים בחוץ.",
+      needs:["עץ: מקצוע ← שכבה ← נושא — תואם תוכניות לימודים","מנגנון 'פריט הפניה' — עטיפת תוכן חיצוני (קמפוס IL, מטח) בפורמט משימה","כללי אוצרות: מי מאשר, מה נפסל"],
+      contents:["taxonomy.md + מיפוי מבוסס המחקר מ-T0.4"],
+      tasks:[
+        { id:"T5.3", title:"טקסונומיה + מיפוי תוכן חיצוני", deps:["T0.4"],
+          desc:"סוכן תוכן — עץ הנושאים ומפת האינטגרציה.",
+          prompt:`המשימה: כתוב taxonomy.md — עץ התוכן של הספרייה + מיפוי תוכן חיצוני.
+קרא קודם: research.md (ממצאי המחקר על מה שקיים).
+חלק א — טקסונומיה: עץ מקצוע←שכבה←נושא עבור 8 מקצועות ליבה בתיכון (עברית, מתמטיקה, אנגלית, אזרחות, היסטוריה, תנ"ך, מדעים, מקצוע טכנולוגי לדוגמה). לכל מקצוע: 5-10 נושאי-על לפי תוכנית הלימודים. אל תמציא נושאים — אם אינך בטוח שנושא נמצא בתוכנית הלימודים, סמן [לאימות].
+חלק ב — פריטי הפניה: הגדר את מנגנון עטיפת התוכן החיצוני: פריט בספרייה שמפנה לסרטון/יחידה קיימים (קמפוס IL, מטח), עטוף בפתיח ושאלות שלנו. הגדר את המבנה + 3 דוגמאות מלאות מבוססות על מה שנמצא במחקר.
+חלק ג — כללי אוצרות: מי מאשר (מפקח מקצועי), SLA לאישור, 5 סיבות פסילה נפוצות, תהליך עדכון יחידה שהתיישנה.
+הגדרת סיום: אפשר לשבץ כל יחידה עתידית במקום אחד ויחיד בעץ, ולכל מקצוע יש נקודת פתיחה של תוכן קיים.`}
+      ]}
+  ]},
+
+/* ---------- S6 supervision ---------- */
+{ id:"s6", name:"עולם הפיקוח — מקצועי וארצי", phase:"פאזה 2-3", color:"#1971c2", soft:"#e7f5ff",
+  goal:"אחריות על איכות התוכן ועל תמונת המצב — בשני היקפים. נתונים לתמיכה, לא לשיפוט.",
+  subtopics:[
+    { title:"מפת החום הארצית",
+      desc:"תמונת מצב ארצית לפי מדד הקשר — לא לפי ציונים.",
+      needs:["מפה/רשימת בתי ספר עם מדד רציפות (% נראו)","זיהוי בתי ספר שנופלים — לתמיכה ותגבור","פילוח לפי רשת, מחוז, מגזר","דוח יומי ארצי אוטומטי — אותו עיקרון כמו אצל המנהל"],
+      contents:["דמו HTML"],
+      tasks:[
+        { id:"T6.1", title:"דמו מפת החום הארצית", deps:["T0.3"],
+          desc:"סוכן פיתוח — national-map.html לפיקוח הארצי.",
+          prompt:`המשימה: בנה national-map.html — דשבורד הפיקוח הארצי.
+קרא קודם: design-system.html.
+המסך: 1) מספרי-על: בתי ספר פעילים / % תלמידים שנראו היום ארצית / בתי ספר הדורשים תמיכה 2) רשימת 25 בתי ספר פיקטיביים (שמות וערים מגוונים, כולל פריפריה): מדד רציפות באחוזים, מגמה שבועית (חץ), רשת/מחוז, סטטוס תמיכה 3) מיון וסינון: לפי מדד, מחוז, רשת 4) כרטיס בית ספר בלחיצה: המדדים שלו + כפתור "הצע תמיכה" (לא "דרוש דוח"!) 5) פילוח מקצועות ארצי: אילו מקצועות פעילים ואילו שותקים — לטיפול המפקח המקצועי.
+חשוב — הטון: זהו מסך תמיכה, לא מסך דירוג. אין טבלת ליגה, אין השוואה פומבית, הצבעים מסמנים "צריך עזרה" ולא "נכשל". כתוב זאת גם במיקרו-קופי.
+הגדרת סיום: מפקחת ארצית מזהה תוך דקה את 3 בתי הספר שצריכים אותה השבוע.`}
+      ]},
+    { title:"מסמך Governance",
+      desc:"החוקה של השימוש בנתונים — התנאי לאמון של בתי הספר במערכת.",
+      needs:["עקרון: נתונים לתמיכה, לא לשיפוט — מה מותר ואסור לכל דרג","איסור דירוג פומבי של בתי ספר ומורים","מניעת 'משחק במדדים' (זיוף check-in)","מי רואה מה — מטריצת הרשאות מלאה"],
+      contents:["governance.md"],
+      tasks:[
+        { id:"T6.2", title:"כתיבת מסמך Governance לנתונים", deps:["T0.1"],
+          desc:"סוכן מדיניות — החוקה שמונעת מהמערכת להפוך לכלי פיקוח עונשי.",
+          prompt:`המשימה: כתוב governance.md — חוקת השימוש בנתונים של מערכת רציפות למידה.
+הרציונל: אם בתי ספר יחששו שהנתונים ישמשו נגדם — הם ילמדו לזייף את המדדים, והמערכת תמות. המסמך הזה הוא תנאי האמון.
+כתוב: 1) עקרון היסוד: הנתונים משרתים תמיכה והקצאת משאבים — לעולם לא שיפוט, דירוג או תגמול. פרט מה זה אומר בפועל 2) מטריצת הרשאות מלאה: מחנך / מורה מקצועי / יועצת / מנהל / מפקח מקצועי / פיקוח ארצי / הורה — מול סוגי הנתונים: check-in רגשי, נוכחות, הגשות, נתוני צוות. מי רואה מה, ברמת פרט או רק מצרפי 3) איסורים מפורשים: דירוג פומבי של בתי ספר/מורים, שימוש בנתוני חירום בהערכת עובדים, העברת נתוני קטינים לגורם שלישי 4) מניעת משחק במדדים: 3 דרכים שבהן בית ספר יכול "לנפח" מדדים, וכיצד המערכת מתמודדת (מדדי איכות משלימים, לא ענישה) 5) שקיפות כלפי תלמידים והורים: מה נאסף ולמה, בשפה פשוטה 6) ועדת אתיקה: הרכב ותהליך החלטה על שימושים חדשים בנתונים.
+הגדרת סיום: מנהל בית ספר חשדן קורא את המסמך ומסכים לחבר את בית ספרו.`}
+      ]}
+  ]},
+
+/* ---------- S7 parents ---------- */
+{ id:"s7", name:"עולם ההורים — ערוץ, לא אפליקציה", phase:"פאזה 2", color:"#c2255c", soft:"#fff0f6",
+  goal:"הודעה שבועית אחת שהופכת את ההורה לשותף — בנוער בסיכון ההורה הוא לפעמים ערוץ הקשר האחרון.",
+  subtopics:[
+    { title:"ההודעה השבועית להורה",
+      desc:"וואטסאפ אחד בשבוע: מה ראינו, מה הילד השלים, דבר טוב אחד.",
+      needs:["פורמט קבוע וקצר — בלי גרפים ובלי קישורי התחברות","טון שותפות, לא דיווח על התנהגות","גרסת חירום רגישה יותר","כללי פרטיות: מה לא מספרים להורה (check-in רגשי — רק דרך המחנך)"],
+      contents:["parent-weekly.md — פורמט + דוגמאות + כללים"],
+      tasks:[
+        { id:"T7.1", title:"עיצוב ההודעה השבועית להורה", deps:[],
+          desc:"סוכן כתיבה — הפורמט, הדוגמאות והקווים האדומים.",
+          prompt:`המשימה: כתוב parent-weekly.md — ההודעה השבועית האוטומטית להורה בוואטסאפ.
+עקרונות: הודעה אחת בשבוע, לא יותר; טון שותפות ("ראינו את יובל 4 ימים השבוע") ולא דיווח משמעתי; ההורה לא צריך להתקין או להתחבר לכלום; תמיד נגמרת בדבר חיובי אמיתי.
+כתוב: 1) הפורמט הקבוע: פתיח אישי ← מה ראינו השבוע (ימים, משימות) ← נקודת אור ספציפית ("סיים יחידה קשה באזרחות") ← מתי לפנות למחנך 2) 4 דוגמאות: שבוע טוב / שבוע חלקי / ילד שלא נראה כמעט (רגיש! ההודעה מזמינה שיחה, לא מאשימה) / שבוע חירום ראשון 3) קווים אדומים: לעולם לא לחשוף check-in רגשי בהודעה אוטומטית (זה עובר רק דרך שיחה אנושית של המחנך); לא להשוות לכיתה; לא מספרים שליליים יבשים בזמן מלחמה 4) שני מגדרים להורה ולילד 5) הודעת הצטרפות ראשונה — מה ההורה יקבל ולמה, כולל אפשרות ביטול (חובה חוקית).
+הגדרת סיום: הורה עסוק קורא ב-15 שניות ומרגיש שותף, לא נבדק.`}
+      ]}
+  ]},
+
+/* ---------- S8 AI ---------- */
+{ id:"s8", name:"שכבת ה-AI — כפתור בכל עולם", phase:"פאזה 2", color:"#0e7c86", soft:"#e3fafc",
+  goal:"AI במקום שבו הוא חוסך עבודה — לא עולם נפרד. קו אדום: אין צ'אט חופשי לקטינים.",
+  subtopics:[
+    { title:"ארבעת ה-System Prompts",
+      desc:"תלמיד (הסבר אחרת), מחנך (ניסוח פנייה), מורה (התאמה — כבר ב-T3.2), מנהל (תקציר יומי).",
+      needs:["פרומפט תלמיד: הסבר חלופי בתוך משימה, מוגבל לנושא, בלי שיחה פתוחה","פרומפט מחנך: ניסוח הודעה אישית על בסיס ההקשר","פרומפט מנהל/פיקוח: '3 דברים שדורשים אותך היום' מתוך הנתונים","כללי עצירה: מתי ה-AI מפנה לבן אדם"],
+      contents:["ai-layer-prompts.md"],
+      tasks:[
+        { id:"T8.1", title:"כתיבת פרומפטי שכבת ה-AI", deps:["T0.1"],
+          desc:"סוכן פרומפטים — שלושת הפרומפטים הנותרים (המורה כבר ב-T3.2).",
+          prompt:`המשימה: כתוב ai-layer-prompts.md — פרומפטי שכבת ה-AI של מערכת רציפות למידה (מלבד פרומפטי המורה שנכתבים בנפרד).
+כתוב 3 system prompts מלאים: 1) "הסבר אחרת" לתלמיד — מקבל את תוכן המסך הנוכחי ואת שאלת התלמיד, מחזיר הסבר חלופי בעברית פשוטה עם דוגמה חדשה. מגבלות קשיחות: עונה רק על נושא היחידה הנוכחית; לא מנהל שיחה (עד 2 חילופים); אם התלמיד כותב משהו רגשי או מדאיג — עוצר ומחזיר "זה נשמע חשוב, דנה המחנכת תשמח לשמוע — לפנות אליה?" ומסמן דגל למחנך; לעולם לא נותן את התשובה לשאלת ההבנה — מוביל אליה 2) ניסוח פנייה למחנך — מקבל: שם, כמה ימים שקט, היסטוריית קשר קצרה; מחזיר 3 נוסחים אישיים שהמחנך בוחר ועורך. לא שולח לבד לעולם 3) תקציר "3 דברים שדורשים אותך היום" למנהל — מקבל נתוני יום, מחזיר 3 שורות פעולה בשפת אדם ("שווה לדבר עם רכזת י'"), לא סטטיסטיקה.
+לכל פרומפט: כללי עצירה מפורשים (מתי מפנים לבן אדם), ופורמט קלט/פלט מוגדר.
+הגדרת סיום: הפרומפטים ניתנים להדבקה ישירה ב-API, וכללי הבטיחות לקטינים מובנים בתוכם — לא נספח.`}
+      ]},
+    { title:"קווים אדומים ל-AI עם קטינים",
+      desc:"מסמך הבטיחות: מה ה-AI במערכת לעולם לא יעשה.",
+      needs:["איסור צ'אט פתוח לקטינים, במיוחד בזמן מצוקה","פרוטוקול זיהוי מצוקה בטקסט חופשי ← אדם בלולאה","שקיפות: התלמיד יודע שהוא מדבר עם AI","עמידה בתיקון 13 — עיבוד מידע קטינים"],
+      contents:["ai-redlines.md"],
+      tasks:[
+        { id:"T8.2", title:"מסמך קווים אדומים ל-AI", deps:[],
+          desc:"סוכן מדיניות — מסמך הבטיחות שמלווה כל פיתוח AI במערכת.",
+          prompt:`המשימה: כתוב ai-redlines.md — הקווים האדומים לשימוש ב-AI במערכת רציפות למידה.
+ההקשר: המשתמשים הם קטינים, חלקם נוער בסיכון, לעיתים בזמן מלחמה. זהו התרחיש הרגיש ביותר שקיים לשילוב AI.
+כתוב: 1) איסורים מוחלטים: צ'אט פתוח ללא הגבלת נושא לקטינים; AI שמגיב למצוקה רגשית בעצמו במקום להפנות לאדם; החלטות אוטומטיות על ילד (סימון "בסיכון") ללא אדם מאשר; שימוש בשיחות תלמידים לאימון מודלים 2) פרוטוקול מצוקה: רשימת סימנים בטקסט חופשי (מילות מפתח + הקשר), תגובת המערכת המילולית המדויקת, ומי מקבל התראה תוך כמה זמן. כלול נוסח מדויק למקרה אזכור פגיעה עצמית — התייעץ עם קווי הנחיה מקצועיים קיימים (למשל של משרד החינוך) ואם אינך בטוח סמן [דורש אישור יועצת] 3) שקיפות: התלמיד תמיד יודע שזה AI; ההורה יודע שיש AI במערכת ומה הוא עושה 4) תיקון 13: מזעור — ה-AI מקבל רק את ההקשר המינימלי הנדרש (לא תיק תלמיד מלא); אי-שמירת שיחות מעבר לנדרש 5) בדיקות קבלה: 10 תרחישי קצה שכל פיצ'ר AI חייב לעבור לפני עלייה (ילד כותב "לא רוצה לחיות" באמצע שאלה על דקדוק — מה קורה?).
+הגדרת סיום: יועצת חינוכית + יועץ פרטיות היו חותמים על המסמך בלי הסתייגות מהותית.`}
+      ]}
+  ]},
+
+/* ---------- S9 infra ---------- */
+{ id:"s9", name:"תשתית וניהול — הרקע שהכל עומד עליו", phase:"רוחבי", color:"#495057", soft:"#f1f3f5",
+  goal:"מנגנון המצבים, כניסה בלי סיסמה, פרטיות by design — מהיום הראשון, לא 'בהמשך'.",
+  subtopics:[
+    { title:"ארכיטקטורת המצבים והכניסה",
+      desc:"המתג שגרה/מרחוק/חירום + כניסה בקישור אישי בלי סיסמה.",
+      needs:["מי מחליף מצב: בית ספר מקומית, פיקוח ארצית — ומה קורה בכל החלפה","magic link דרך וואטסאפ/SMS — זרימה מלאה כולל אובדן טלפון","מצב תרגולת: תרגיל ארצי בשגרה","התנהגות offline והרשת החלשה"],
+      contents:["architecture.md"],
+      tasks:[
+        { id:"T9.1", title:"אפיון ארכיטקטורת מצבים וכניסה", deps:["T0.2"],
+          desc:"סוכן ארכיטקטורה — המסמך הטכני של המתג והכניסה.",
+          prompt:`המשימה: כתוב architecture.md — ארכיטקטורת המצבים ומנגנון הכניסה של מערכת רציפות למידה.
+קרא קודם: data-model.md.
+חלק א — מנגנון המצבים: 1) שלושה מצבים: routine / remote / emergency. הגדר מה משתנה בכל מצב בכל עולם (טבלה: עולם × מצב) 2) מי מחליף: מנהל ברמת בית ספר, פיקוח ברמה ארצית (גובר). החלפה = אירוע מתועד עם שולח וסיבה 3) מה קורה טכנית ברגע ההחלפה: מסכי בית מתחלפים, check-in רגשי נדלק/כבה, תדירויות דוחות משתנות 4) מצב תרגולת: תרגיל ארצי — כמו חירום אבל מסומן, לא נשמר בנתונים הרגשיים.
+חלק ב — כניסה בלי סיסמה: 1) זרימת magic link בוואטסאפ/SMS: הנפקה, תוקף, חידוש שקוף 2) תרחישי קצה: החלפת מספר, אובדן טלפון, אח קטן עם הטלפון, מכשיר משותף במשפחה (נפוץ!) 3) מה כן מוגן בשכבה נוספת (מסכי מחנך/מנהל — נתונים רגישים).
+חלק ג — רשת חלשה: אסטרטגיית טעינה, מה נשמר מקומית (משימת היום), מה קורה כש-check-in נשלח בלי רשת (תור מקומי).
+הגדרת סיום: מפתח יכול לממש את המתג והכניסה מהמסמך בלבד, וכל תרחישי הקצה סגורים.`}
+      ]},
+    { title:"פרטיות by design — תיקון 13",
+      desc:"קטינים + נוער בסיכון + נתונים רגשיים = רמת הרגישות הגבוהה ביותר בחוק.",
+      needs:["מיפוי כל פריט מידע: למה נאסף, כמה זמן נשמר, מי רואה","מחיקה אוטומטית של check-in רגשי אחרי 30 יום","מסמכי שקיפות להורים ותלמידים בשפה פשוטה","אימות מול נוסח החוק בפועל — פרפלקסיטי, לא זיכרון"],
+      contents:["privacy.md — כולל הצהרת מקורות"],
+      tasks:[
+        { id:"T9.2", title:"מסמך פרטיות מלא (מאומת)", deps:[],
+          desc:"סוכן מדיניות + פרפלקסיטי — חובה לאמת כל קביעה משפטית מול מקור.",
+          prompt:`המשימה: כתוב privacy.md — מסמך הפרטיות של מערכת רציפות למידה.
+חובה: כל קביעה משפטית על תיקון 13 לחוק הגנת הפרטיות חייבת אימות מול מקור עדכני (פרפלקסיטי / אתר הרשות להגנת הפרטיות) — אסור להסתמך על זיכרון. צרף לכל קביעה את המקור. מה שלא הצלחת לאמת — סמן [לאימות משפטי].
+כתוב: 1) מיפוי מידע: טבלה של כל פריט מידע במערכת (נוכחות, check-in רגשי, הגשות, יומן קשר, נתוני צוות) — מטרת האיסוף, בסיס חוקי, תקופת שמירה, מי ניגש 2) קטינים ומידע רגיש: מה תיקון 13 קובע לגבי מידע על קטינים ולגבי לקויות למידה/מצב רגשי, ומה זה מחייב אותנו (למשל: האם נדרשת הסכמת הורים? ממתי?) 3) עקרונות by design: מזעור (לא אוספים מה שלא משרת קשר/למידה), מחיקת check-in רגשי אחרי 30 יום, אנונימיזציה בדוחות מצרפיים, אין ציונים במערכת בכלל 4) זכויות: עיון, תיקון, מחיקה — איך הורה/תלמיד מממש אותן בפועל 5) מסמך שקיפות להורים בשפה פשוטה (עמוד אחד): מה נאסף, למה, מה לא נאסף 6) אירוע אבטחה: מי מודיע למי תוך כמה זמן.
+הגדרת סיום: כל קביעה משפטית עם מקור, ורשימת [לאימות משפטי] מרוכזת בסוף למשפטן אנושי.`}
+      ]}
+  ]}
+];
+
+/* ============ state ============ */
+const LS_KEY = "retzifut-mgmt-v1";
+const STATUSES = { todo:"ממתין", doing:"בביצוע", done:"הושלם", stuck:"תקוע" };
+let state = {};
+try { state = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch(e){ state = {}; }
+
+function taskState(id){ return state[id] || { status:"todo", note:"" }; }
+function setTask(id, patch){
+  state[id] = Object.assign({ status:"todo", note:"" }, state[id], patch);
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
+  refreshConductor();
+}
+
+const ALL_TASKS = [];
+WORLDS.forEach(w => w.subtopics.forEach(st => st.tasks.forEach(t => ALL_TASKS.push(Object.assign({world:w}, t)))));
+const TASK_BY_ID = Object.fromEntries(ALL_TASKS.map(t=>[t.id,t]));
+
+/* ============ render worlds ============ */
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function render(){
+  const root = document.getElementById("worldsRoot");
+  root.innerHTML = WORLDS.map(w => `
+  <section class="world" id="${w.id}">
+    <div class="world-head">
+      <div class="world-icon" style="background:${w.soft}">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${w.color}" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+      </div>
+      <div style="flex:1">
+        <h2 style="color:${w.color}">${w.name} <span class="phase-tag" style="background:${w.soft};color:${w.color}">${w.phase}</span></h2>
+        <p class="goal">${w.goal}</p>
+      </div>
+      <span class="world-prog" id="wp-${w.id}"></span>
+    </div>
+    ${w.subtopics.map(st => `
+      <div class="subtopic">
+        <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${w.color}" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>${st.title}</h3>
+        <p class="st-desc">${st.desc}</p>
+        <div class="needs-grid">
+          <div class="mini-box needs"><h4>מה צריך</h4><ul>${st.needs.map(n=>`<li>${n}</li>`).join("")}</ul></div>
+          <div class="mini-box"><h4>תכנים</h4><ul>${st.contents.map(c=>`<li>${c}</li>`).join("")}</ul></div>
+        </div>
+        ${st.tasks.map(t => taskCard(t)).join("")}
+      </div>`).join("")}
+  </section>`).join("");
+  // bind
+  ALL_TASKS.forEach(t => {
+    const el = document.getElementById("task-"+cssId(t.id));
+    const ts = taskState(t.id);
+    el.querySelector(".task-check").checked = ts.status==="done";
+    el.querySelector("select.status").value = ts.status;
+    el.querySelector("textarea.note").value = ts.note || "";
+    el.dataset.status = ts.status;
+  });
+  refreshConductor();
+}
+
+function cssId(id){ return id.replace(/\./g,"-"); }
+
+function taskCard(t){
+  const depsHtml = t.deps.length
+    ? `<div class="deps">תלוי ב: ${t.deps.map(d=>`<span class="dep" data-dep="${d}">${d}</span>`).join("")}</div>`
+    : `<div class="deps" style="color:#2f9e44;font-weight:700">ללא תלויות — אפשר להריץ מיד</div>`;
+  return `
+  <div class="task" id="task-${cssId(t.id)}" data-status="todo">
+    <div class="task-top">
+      <input type="checkbox" class="task-check" onchange="onCheck('${t.id}', this.checked)" title="סמן הושלם">
+      <span class="task-id">${t.id}</span>
+      <span class="task-title">${t.title}</span>
+      <select class="status" onchange="onStatus('${t.id}', this.value)">
+        ${Object.entries(STATUSES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}
+      </select>
+    </div>
+    <p class="task-desc">${t.desc}</p>
+    ${depsHtml}
+    <div class="task-actions">
+      <button class="btn primary small" onclick="copyPrompt('${t.id}')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        העתק פרומפט לסוכן
+      </button>
+      <button class="btn ghost small" onclick="togglePrompt('${t.id}')">הצג / הסתר פרומפט</button>
+    </div>
+    <pre class="prompt" id="prompt-${cssId(t.id)}">${esc(CTX + t.prompt)}</pre>
+    <textarea class="note" placeholder="מה חזר מהסוכן / הערות / קישור לתוצר..." onchange="onNote('${t.id}', this.value)"></textarea>
+  </div>`;
+}
+
+/* ============ interactions ============ */
+function onCheck(id, checked){
+  setTask(id, { status: checked ? "done" : "todo" });
+  syncCard(id);
+}
+function onStatus(id, status){
+  setTask(id, { status });
+  syncCard(id);
+}
+function onNote(id, note){ setTask(id, { note }); }
+function syncCard(id){
+  const el = document.getElementById("task-"+cssId(id));
+  const ts = taskState(id);
+  el.dataset.status = ts.status;
+  el.querySelector(".task-check").checked = ts.status==="done";
+  el.querySelector("select.status").value = ts.status;
+}
+function togglePrompt(id){
+  document.getElementById("prompt-"+cssId(id)).classList.toggle("open");
+}
+function copyPrompt(id){
+  const t = TASK_BY_ID[id];
+  copyText(CTX + t.prompt, "הפרומפט של " + id + " הועתק — הדבק אצל הסוכן");
+}
+function copyText(text, msg){
+  navigator.clipboard.writeText(text).then(()=>toast(msg)).catch(()=>{
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); ta.remove(); toast(msg);
+  });
+}
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove("show"), 2600);
+}
+
+/* ============ conductor ============ */
+function depsDone(t){ return t.deps.every(d => taskState(d).status==="done"); }
+
+function refreshConductor(){
+  const counts = { todo:0, doing:0, done:0, stuck:0 };
+  ALL_TASKS.forEach(t => counts[taskState(t.id).status]++);
+  const total = ALL_TASKS.length;
+  const pct = Math.round(counts.done/total*100);
+  document.getElementById("progAll").style.width = pct+"%";
+  document.getElementById("countsBar").innerHTML =
+    `<span class="count-pill done">${counts.done} הושלמו</span>
+     <span class="count-pill doing">${counts.doing} בביצוע</span>
+     <span class="count-pill todo">${counts.todo} ממתינות</span>
+     <span class="count-pill stuck">${counts.stuck} תקועות</span>
+     <span class="count-pill" style="background:#e3fafc;color:#0e7c86">${pct}% מהדרך</span>`;
+
+  document.getElementById("worldBars").innerHTML = WORLDS.map(w=>{
+    const tasks = []; w.subtopics.forEach(st=>st.tasks.forEach(t=>tasks.push(t)));
+    const done = tasks.filter(t=>taskState(t.id).status==="done").length;
+    const p = tasks.length ? Math.round(done/tasks.length*100) : 0;
+    const wp = document.getElementById("wp-"+w.id);
+    if (wp) wp.textContent = done + " / " + tasks.length;
+    return `<div class="wbar"><span class="nm">${w.name.split(" — ")[0]}</span><span class="tr"><span class="fl" style="width:${p}%;background:${w.color}"></span></span><span class="pc">${p}%</span></div>`;
+  }).join("");
+
+  const runnable = ALL_TASKS.filter(t => taskState(t.id).status==="todo" && depsDone(t));
+  document.getElementById("runnableList").innerHTML = runnable.length
+    ? runnable.map(t=>`<li><a href="#task-${cssId(t.id)}"><span class="tid">${t.id}</span>${t.title}</a></li>`).join("")
+    : `<li class="empty-note">אין משימות פנויות — או שהכל בביצוע, או שצריך לסיים תלויות</li>`;
+
+  const doing = ALL_TASKS.filter(t=>taskState(t.id).status==="doing");
+  const stuck = ALL_TASKS.filter(t=>taskState(t.id).status==="stuck");
+  const recos = [];
+  if (stuck.length) recos.push({t:stuck[0], why:"תקועה — שחרר אותה קודם, אחרות תלויות בה"});
+  runnable.slice(0,3).forEach(t=>{
+    const why = t.deps.length ? "כל התלויות שלה הושלמו" : "ללא תלויות — רצה במקביל לכל דבר אחר";
+    recos.push({t, why});
+  });
+  if (!recos.length && doing.length) recos.push({t:doing[0], why:"בביצוע — בדוק אם הסוכן סיים ועדכן סטטוס"});
+  document.getElementById("recoList").innerHTML = recos.length
+    ? recos.slice(0,4).map(r=>`<li><a href="#task-${cssId(r.t.id)}"><span class="tid">${r.t.id}</span><span>${r.t.title}<br><small style="color:#4a6a8a">${r.why}</small></span></a></li>`).join("")
+    : `<li class="empty-note">הכל הושלם — הרץ דוח תכלול לסיכום</li>`;
+
+  // dep chips coloring
+  document.querySelectorAll(".dep").forEach(chip=>{
+    chip.classList.toggle("ok", taskState(chip.dataset.dep).status==="done");
+  });
+}
+
+function copyConductorReport(){
+  const lines = [];
+  WORLDS.forEach(w=>{
+    w.subtopics.forEach(st=>st.tasks.forEach(t=>{
+      const ts = taskState(t.id);
+      lines.push(`- ${t.id} | ${w.name.split(" — ")[0]} | ${t.title} | סטטוס: ${STATUSES[ts.status]}${t.deps.length? " | תלוי ב: "+t.deps.join(", "):""}${ts.note? " | הערות/פלט: "+ts.note.replace(/\n/g," ") : ""}`);
+    }));
+  });
+  const report = `אתה מנהל התזמורת של פרויקט "מערכת רציפות למידה" — מערכת לאומית לרציפות חינוכית שפועלת בשלושה מצבים (שגרה / למידה מרחוק / חירום), בנויה מ-8 עולמות (תלמיד, מחנך, מורה, מנהל, ספרייה, פיקוח, הורים, AI) + תשתית. עקרון-העל: קשר לפני תוכן.
+
+להלן סטטוס כל משימות הפרויקט נכון לעכשיו (מזהה | עולם | כותרת | סטטוס | תלויות | מה חזר מהסוכן):
+
+${lines.join("\n")}
+
+תפקידך כמתכלל:
+1. סכם בקצרה מה הושלם ומה המצב הכולל של הפרויקט.
+2. עבור על ההערות/פלטי הסוכנים — זהה סתירות, כפילויות או פערים בין תוצרים (למשל: הדמו לא תואם את התקן, הקופי לא תואם את הפרוטוקול).
+3. ציין אילו משימות אפשר להריץ עכשיו במקביל (ממתינות שכל התלויות שלהן הושלמו).
+4. אם יש משימות תקועות — הצע דרך לשחרר אותן.
+5. סיים בדוח קצר: 3 המלצות מסודרות לפי עדיפות לצעדים הבאים, ומשפט אחד על הסיכון המרכזי כרגע.
+
+ענה בעברית, קצר וממוקד — מיטל קוראת את זה בטלפון.`;
+  copyText(report, "דוח התכלול הועתק — הדבק אצל Claude");
+}
+
+function exportState(){
+  copyText(JSON.stringify(state, null, 2), "גיבוי הסטטוס הועתק כ-JSON");
+}
+function resetState(){
+  if (!confirm("לאפס את כל הסטטוסים וההערות? אי אפשר לבטל.")) return;
+  state = {};
+  localStorage.removeItem(LS_KEY);
+  render();
+  toast("הכל אופס");
+}
+
+render();
+</script>
+</body>
+</html>
