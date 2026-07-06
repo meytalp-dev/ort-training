@@ -638,6 +638,16 @@ const ALL_TASKS = [];
 WORLDS.forEach(w => w.subtopics.forEach(st => st.tasks.forEach(t => ALL_TASKS.push(Object.assign({world:w}, t)))));
 const TASK_BY_ID = Object.fromEntries(ALL_TASKS.map(t=>[t.id,t]));
 
+/* הוראת סיום שמצורפת לכל פרומפט — הסוכן מעדכן את דף הניהול בעצמו */
+const DONE_INSTR = `בסיום המשימה — עדכון דף הניהול (חובה, אל תדלג):
+פתח את הקובץ _drafts/emergency-learning/state.js והוסף או עדכן בתוך window.SAVED_STATE את הרשומה של מזהה המשימה שלך (המזהה מופיע בראש הפרומפט), במבנה הזה בדיוק:
+"T0.X": { status: "done", note: "הושלם [תאריך]: [אילו קבצים נוצרו + משפט אחד על שאלות פתוחות או החלטות שדורשות את מיטל]" }
+כללים: אם לא סיימת הכל — כתוב status: "doing", ואם נתקעת — status: "stuck", עם הסבר קצר ב-note. אל תיגע ברשומות של משימות אחרות. שמור על תחביר JavaScript תקין (פסיקים בין רשומות). אם יש לך גישה ל-git — עשה commit ו-push לשינויים שלך בסוף.`;
+
+function fullPrompt(t){
+  return CTX + "מזהה המשימה שלך: " + t.id + "\n\n" + t.prompt + "\n\n" + DONE_INSTR;
+}
+
 /* ============ render worlds ============ */
 function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
@@ -703,7 +713,7 @@ function taskCard(t){
       </button>
       <button class="btn ghost small" onclick="togglePrompt('${t.id}')">הצג / הסתר פרומפט</button>
     </div>
-    <pre class="prompt" id="prompt-${cssId(t.id)}">${esc(CTX + t.prompt)}</pre>
+    <pre class="prompt" id="prompt-${cssId(t.id)}">${esc(fullPrompt(t))}</pre>
     <textarea class="note" placeholder="מה חזר מהסוכן / הערות / קישור לתוצר..." onchange="onNote('${t.id}', this.value)"></textarea>
   </div>`;
 }
@@ -730,7 +740,7 @@ function togglePrompt(id){
 }
 function copyPrompt(id){
   const t = TASK_BY_ID[id];
-  copyText(CTX + t.prompt, "הפרומפט של " + id + " הועתק — הדבק אצל הסוכן");
+  copyText(fullPrompt(t), "הפרומפט של " + id + " הועתק — הדבק אצל הסוכן");
 }
 function copyText(text, msg){
   navigator.clipboard.writeText(text).then(()=>toast(msg)).catch(()=>{
