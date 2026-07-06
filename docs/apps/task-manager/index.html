@@ -690,12 +690,15 @@ const Icons = {
 };
 
 // ── Data ───────────────────────────────────────────────────────
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id: "teach",  label: "\u05D4\u05D5\u05E8\u05D0\u05D4",     tint: "#7babd4" },
   { id: "plan",   label: "\u05EA\u05DB\u05E0\u05D5\u05DF",     tint: "#7dd4ac" },
   { id: "admin",  label: "\u05DE\u05E0\u05D4\u05DC\u05D4",     tint: "#b8a9d4" },
   { id: "life",   label: "\u05D0\u05D9\u05E9\u05D9",      tint: "#e9a319" },
 ];
+// \u05DE\u05D5\u05E7\u05E6\u05D4 \u05DE\u05D7\u05D3\u05E9 \u05D1\u05DB\u05DC \u05E8\u05E0\u05D3\u05D5\u05E8 \u05E9\u05DC App \u05DE\u05EA\u05D5\u05DA \u05D4-state, \u05DB\u05D3\u05D9 \u05E9\u05DB\u05DC \u05D4\u05DE\u05E1\u05DB\u05D9\u05DD \u05D9\u05E9\u05E7\u05E4\u05D5 \u05E2\u05E8\u05D9\u05DB\u05D5\u05EA \u05E9\u05DC \u05EA\u05D7\u05D5\u05DE\u05D9 \u05D4\u05D0\u05D7\u05E8\u05D9\u05D5\u05EA
+let CATEGORIES = DEFAULT_CATEGORIES;
+const CATEGORY_TINTS = ["#7babd4", "#7dd4ac", "#b8a9d4", "#e9a319", "#e76f7a", "#5a93c0"];
 
 const initialTasks = [
   { id: 1, title: "\u05DC\u05D4\u05DB\u05D9\u05DF \u05DE\u05E6\u05D2\u05EA \u05DC\u05E9\u05D9\u05E2\u05D5\u05E8 \u05E4\u05EA\u05D9\u05D7\u05D4 \u2014 \u05DB\u05D9\u05EA\u05D4 \u05D7\u05F32", note: "\u05DC\u05E9\u05DC\u05D1 \u05D0\u05EA \u05D4\u05E1\u05E8\u05D8\u05D5\u05DF \u05E2\u05DC \u05D4\u05D0\u05E7\u05DC\u05D9\u05DD + \u05E9\u05DC\u05D5\u05E9 \u05E9\u05D0\u05DC\u05D5\u05EA \u05E4\u05EA\u05D9\u05D7\u05D4", due: "\u05D4\u05D9\u05D5\u05DD", time: "08:15", priority: "high", category: "teach", done: false },
@@ -845,7 +848,7 @@ function ScreenDashboard({ tasks, onToggle, goto, userName }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
           <div>
             <div style={{ fontSize: 13, color: "var(--fg-3)", fontWeight: 600 }}>
-              יום שני · 19 באפריל
+              {new Intl.DateTimeFormat("he-IL", { weekday: "long", day: "numeric", month: "long" }).format(new Date()).replace(",", " ·")}
             </div>
             <h1 className="app-display" style={{ margin: "4px 0 0", fontSize: 30, fontWeight: 800, color: "var(--brand-ink)", lineHeight: 1.1 }}>
               בוקר טוב, {userName} <span style={{ display: "inline-block", animation: "float 4s ease-in-out infinite" }}>&#9788;</span>
@@ -1196,7 +1199,7 @@ function ScreenAdd({ onAdd, onUpdate, editTask, goto }) {
   const [due, setDue] = useState(isEdit ? editTask.due : "היום");
   const [time, setTime] = useState(isEdit ? (editTask.time || "09:00") : "09:00");
   const [priority, setPriority] = useState(isEdit ? editTask.priority : "med");
-  const [category, setCategory] = useState(isEdit ? editTask.category : "teach");
+  const [category, setCategory] = useState(isEdit ? editTask.category : (CATEGORIES[0] && CATEGORIES[0].id));
   const [reminder, setReminder] = useState(true);
 
   const canSubmit = title.trim().length > 0;
@@ -1245,8 +1248,8 @@ function ScreenAdd({ onAdd, onUpdate, editTask, goto }) {
         </div>
 
         <div className="fade-up">
-          <label className="label">קטגוריה</label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+          <label className="label">תחום אחריות</label>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(CATEGORIES.length, 4)}, 1fr)`, gap: 8 }}>
             {CATEGORIES.map(c => {
               const on = category === c.id;
               return (
@@ -1371,7 +1374,7 @@ function ScreenAdd({ onAdd, onUpdate, editTask, goto }) {
 }
 
 // ── ScreenProfile ──────────────────────────────────────────────
-function ScreenProfile({ tasks, goto, userName, setUserName, userRole, setUserRole }) {
+function ScreenProfile({ tasks, goto, userName, setUserName, userRole, setUserRole, categories, onRenameCategory, onRecolorCategory, onAddCategory, onDeleteCategory }) {
   const [editing, setEditing] = useState(false);
   const [tempName, setTempName] = useState(userName);
   const [tempRole, setTempRole] = useState(userRole);
@@ -1476,6 +1479,49 @@ function ScreenProfile({ tasks, goto, userName, setUserName, userRole, setUserRo
               <div style={{ fontSize: 11, color: "var(--fg-3)", fontWeight: 700, marginTop: 6 }}>{s.label}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div style={{ padding: "18px 20px 0" }} className="fade-up">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <h3 className="app-display" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--brand-ink)" }}>
+            תחומי האחריות שלי
+          </h3>
+          <button className="btn-ghost" onClick={onAddCategory} style={{ fontSize: 12, padding: "4px 10px" }}>
+            <Icons.Plus size={14} /> תחום חדש
+          </button>
+        </div>
+        <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+          {categories.map((c, i) => (
+            <div key={c.id} style={{
+              padding: "10px 14px",
+              display: "flex", alignItems: "center", gap: 10,
+              borderBottom: i < categories.length - 1 ? "1px solid var(--line)" : "none",
+            }}>
+              <button onClick={() => onRecolorCategory(c.id)} title="החלפת צבע"
+                      style={{
+                        width: 24, height: 24, borderRadius: 8, background: c.tint,
+                        border: 0, cursor: "pointer", flexShrink: 0,
+                        boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.5), 0 2px 6px rgba(30,58,95,0.15)",
+                      }} />
+              <input className="input" value={c.label}
+                     onChange={e => onRenameCategory(c.id, e.target.value)}
+                     placeholder="שם התחום"
+                     style={{ padding: "8px 12px", fontSize: 13, fontWeight: 600, flex: 1, borderRadius: 12 }} />
+              <button onClick={() => onDeleteCategory(c.id)} title="מחיקת תחום"
+                      disabled={categories.length <= 1}
+                      style={{
+                        border: 0, background: "transparent", padding: 4, flexShrink: 0,
+                        cursor: categories.length <= 1 ? "default" : "pointer",
+                        color: "var(--danger)", opacity: categories.length <= 1 ? 0.25 : 1,
+                      }}>
+                <Icons.Trash size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "var(--fg-3)", marginTop: 6, paddingInlineStart: 4 }}>
+          לחיצה על הריבוע הצבעוני מחליפה צבע · השינויים נשמרים אוטומטית
         </div>
       </div>
 
@@ -1631,6 +1677,14 @@ function App() {
   });
   const [userName, setUserName] = useState(() => localStorage.getItem("lerani_name") || "מיטל");
   const [userRole, setUserRole] = useState(() => localStorage.getItem("lerani_role") || "מורה למדעים · חטיבת ביניים");
+  const [categories, setCategories] = useState(() => {
+    try {
+      const s = localStorage.getItem("lerani_categories");
+      const parsed = s ? JSON.parse(s) : null;
+      return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_CATEGORIES;
+    } catch(e) { return DEFAULT_CATEGORIES; }
+  });
+  CATEGORIES = categories;
   const [tweaks, setTweaks] = useState({ navStyle: "dots", titleFont: "liron" });
   const [editTask, setEditTask] = useState(null); // task to edit
 
@@ -1638,6 +1692,7 @@ function App() {
   useEffect(() => { localStorage.setItem("lerani_tasks", JSON.stringify(tasks)); }, [tasks]);
   useEffect(() => { localStorage.setItem("lerani_name", userName); }, [userName]);
   useEffect(() => { localStorage.setItem("lerani_role", userRole); }, [userRole]);
+  useEffect(() => { localStorage.setItem("lerani_categories", JSON.stringify(categories)); }, [categories]);
 
   const onToggle = (id) => {
     setTasks(ts => ts.map(t => t.id === id ? { ...t, done: !t.done } : t));
@@ -1657,11 +1712,35 @@ function App() {
     setEditTask(null);
   };
 
+  const onRenameCategory = (id, label) => {
+    setCategories(cs => cs.map(c => c.id === id ? { ...c, label } : c));
+  };
+  const onRecolorCategory = (id) => {
+    setCategories(cs => cs.map(c => {
+      if (c.id !== id) return c;
+      const next = CATEGORY_TINTS[(CATEGORY_TINTS.indexOf(c.tint) + 1) % CATEGORY_TINTS.length];
+      return { ...c, tint: next };
+    }));
+  };
+  const onAddCategory = () => {
+    setCategories(cs => {
+      const tint = CATEGORY_TINTS[cs.length % CATEGORY_TINTS.length];
+      return [...cs, { id: "c" + Date.now(), label: "תחום חדש", tint }];
+    });
+  };
+  const onDeleteCategory = (id) => {
+    if (categories.length <= 1) return;
+    const fallback = categories.find(c => c.id !== id).id;
+    setCategories(cs => cs.filter(c => c.id !== id));
+    setTasks(ts => ts.map(t => t.category === id ? { ...t, category: fallback } : t));
+  };
+
   let content = null;
   if (screen === "dashboard") content = <ScreenDashboard tasks={tasks} onToggle={onToggle} goto={setScreen} userName={userName} />;
   else if (screen === "list") content = <ScreenList tasks={tasks} onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} goto={setScreen} />;
   else if (screen === "add") content = <ScreenAdd onAdd={onAdd} onUpdate={onUpdate} editTask={editTask} goto={(s) => { setEditTask(null); setScreen(s); }} />;
-  else if (screen === "profile") content = <ScreenProfile tasks={tasks} goto={setScreen} userName={userName} setUserName={setUserName} userRole={userRole} setUserRole={setUserRole} />;
+  else if (screen === "profile") content = <ScreenProfile tasks={tasks} goto={setScreen} userName={userName} setUserName={setUserName} userRole={userRole} setUserRole={setUserRole}
+    categories={categories} onRenameCategory={onRenameCategory} onRecolorCategory={onRecolorCategory} onAddCategory={onAddCategory} onDeleteCategory={onDeleteCategory} />;
 
   return (
     <div className="stage">
