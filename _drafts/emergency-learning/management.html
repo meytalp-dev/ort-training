@@ -177,7 +177,7 @@
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0e7c86" stroke-width="2" stroke-linecap="round"><path d="M12 3v10"/><path d="M12 3l4 3"/><path d="M12 3L8 6"/><path d="M5 21c2-4 4-6 7-6s5 2 7 6"/></svg>
     מנהל התזמורת
   </h2>
-  <p class="hint">מסמנים סטטוס לכל משימה ומדביקים בהערות מה חזר מהסוכן — והלוח מתעדכן. בסוף כל סבב: "צור דוח תכלול" מעתיק פרומפט מסכם עם כל המצב, להדבקה אצל Claude.</p>
+  <p class="hint">שתי דרכים לעדכן: (1) אומרים ל-Claude "סוכן X סיים" — הוא בודק את התוצר, מעדכן את הלוח, ואז מרעננים את הדף (F5). (2) ידנית — מסמנים וי ליד המשימה וכותבים בשורת ההערות שמתחתיה משפט על מה שחזר. בסוף כל סבב: "צור דוח תכלול" מעתיק פרומפט מסכם להדבקה אצל Claude.</p>
 
   <div class="cond-grid">
     <div class="cond-box">
@@ -225,6 +225,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="state.js"></script>
 <script>
 /* ============ shared context prepended to every prompt ============ */
 const CTX = `רקע: אתה סוכן בפרויקט "מערכת רציפות למידה" — מערכת לאומית לבתי ספר שפועלת בשלושה מצבים: שגרה (למידה עצמאית בכיתה ובבית), למידה מרחוק (יום מקוון מתוכנן), וחירום (מלחמה/השבתה). עקרון-העל: קשר לפני תוכן — המדד הראשון הוא "כמה תלמידים ראינו היום", לא "כמה למדו".
@@ -616,8 +617,15 @@ const WORLDS = [
 /* ============ state ============ */
 const LS_KEY = "retzifut-mgmt-v1";
 const STATUSES = { todo:"ממתין", doing:"בביצוע", done:"הושלם", stuck:"תקוע" };
+/* מיזוג: state.js (עדכוני Claude) הוא הבסיס, שינויים ידניים בדפדפן גוברים עליו לכל משימה */
+const fileState = (typeof window.SAVED_STATE === "object" && window.SAVED_STATE) || {};
+let localState = {};
+try { localState = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch(e){ localState = {}; }
 let state = {};
-try { state = JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch(e){ state = {}; }
+new Set([...Object.keys(fileState), ...Object.keys(localState)]).forEach(id => {
+  const f = fileState[id] || {}, l = localState[id] || {};
+  state[id] = { status: l.status || f.status || "todo", note: l.note || f.note || "" };
+});
 
 function taskState(id){ return state[id] || { status:"todo", note:"" }; }
 function setTask(id, patch){
