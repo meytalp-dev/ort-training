@@ -1,7 +1,8 @@
 # מערכת רציפות למידה — מודל הנתונים המשותף
 
-**גרסה:** 1.0 · **תאריך:** 8.7.2026 · **סטטוס:** טיוטה לאישור
+**גרסה:** 1.1 · **תאריך:** 8.7.2026 · **סטטוס:** טיוטה לאישור
 **מזהה משימה:** T0.2 · **מסמך-אב:** `spec.md`
+**עדכון 1.1:** יושר לאפיון המעודכן — נוספו ציונים (`Submission.grade` על `unit_type=assessment`), הרשמה (`Student.registered`), קבצים (`Attachment`), מסלולי העשרה (`EnrichmentTrack`), פריטי הפניה חיצוניים, והערת מחנך (`StudentNote`).
 **מיקום:** `_drafts/emergency-learning/`
 
 ---
@@ -13,7 +14,7 @@
 1. **`mode` על כל אירוע.** כל רשומה שמתעדת *התרחשות* (check-in, שליחת משימה, הגשה, פנייה, הודעה, מעבר מצב) נושאת שדה `mode` בערך `routine` / `remote` / `emergency`. זהו **ציר הניתוח המרכזי** של המערכת — כל דוח, כל מגמה וכל השוואה נחתכים לפיו. ישויות *סטטיות* (תלמיד, כיתה, איש צוות, בית ספר) אינן אירועים ולכן אין להן `mode`.
 2. **מקור אמת יחיד — אפס שכפול.** התוכן נכתב פעם אחת ב-`ContentUnit`. משימה שנשלחת (`Assignment`) *מפנה* אליו ב-FK, לא מעתיקה אותו. הסטטוס האישי (`Submission`) מפנה ל-`Assignment`. הדשבורדים (מחנך / מנהל / פיקוח) הם **שאילתות מסננות על אותן שורות** — לא טבלאות סיכום נפרדות. הזרימה פיקוח←ספרייה←מורה←תלמיד←דשבורדים כולה קוראת מאותו גרף נתונים.
 3. **מזעור ומחיקה מובנים (תיקון 13).** אוספים מינימום שדות (§7.2). ה-check-in הרגשי במצב חירום מסומן `is_sensitive` ותוכנו הרגשי נמחק אוטומטית **30 יום** מיצירתו. הפרדת הגישה נאכפת במבנה, לא בהצהרה: פיקוח שואב אגרגטים בלבד — אין נתיב שאילתה שמחזיר שם תלמיד לרמת הפיקוח.
-4. **אין ציונים.** אין שדה ציון, ממוצע או ציון מספרי בשום ישות. סטטוס למידה הוא `completed` (הושלם/לא) + `feedback` טקסטואלי-רשות בלבד.
+4. **שתי שכבות — קשר ולמידה.** שכבת הקשר (`CheckIn`, "המורה ראה") היא הליבה ונכנסת **בלי הרשמה**. שכבת הלמידה (`Assignment`/`Submission`, מופעי הערכה) דורשת תלמיד רשום (`Student.registered`). **ציון קיים רק על מופע הערכה** (`ContentUnit.unit_type='assessment'`) ונשמר ב-`Submission.grade` — אישי, בלי ממוצע פומבי ובלי השוואה. בחירום ההערכה זמינה אך רשות; הקשר תמיד קודם וההרשמה לעולם לא חוסמת check-in.
 
 ---
 
@@ -36,11 +37,18 @@ erDiagram
     ASSIGNMENT ||--o{ SUBMISSION : "מייצר סטטוס"
     STUDENT ||--o{ SUBMISSION : "מגיש"
 
+    ENRICHMENT_TRACK ||--o{ CONTENT_UNIT : "מסלול העשרה (5-6 יחידות)"
+    ASSIGNMENT ||--o{ ATTACHMENT : "חומר שהמורה צירף"
+    STAFF_MEMBER ||--o{ ATTACHMENT : "העלה"
+
     STUDENT ||--o{ CHECKIN : "עושה"
     STAFF_MEMBER ||--o{ CHECKIN : "ראה (nullable)"
 
     STUDENT ||--o{ CONTACT_LOG : "נושא הפנייה"
     STAFF_MEMBER ||--o{ CONTACT_LOG : "מתעד"
+
+    STUDENT ||--o{ STUDENT_NOTE : "נושא ההערה"
+    STAFF_MEMBER ||--o{ STUDENT_NOTE : "כותב (מחנך)"
 
     STUDENT ||--o{ NOTIFICATION : "נמען (או הורה)"
     STAFF_MEMBER ||--o{ NOTIFICATION : "נמען"
@@ -65,6 +73,7 @@ erDiagram
         string phone "לקישור אישי"
         string guardian_phone "רשות — להודעת הורים"
         string access_token "כניסה בלי סיסמה"
+        bool registered "נרשם לשכבת הלמידה (ציונים)"
         bool active "מצבת פעילה"
     }
     STAFF_MEMBER {
@@ -81,13 +90,40 @@ erDiagram
         string title
         string subject "מקצוע"
         string grade "שכבה"
-        string body "פתיח + מטלה"
-        int est_minutes "=10"
+        string body "פתיח + מטלה (צעד 10 דק')"
+        string unit_type "task/assessment/reference"
+        string track_id FK "מסלול העשרה (nullable)"
+        string content_source "internal/external"
+        string external_ref "קמפוס IL/מטח — לפריט הפניה"
+        int est_minutes "צעד=10; משימה=שרשרת צעדים"
         string modes_allowed "מערך: routine/remote/emergency"
         bool accessibility "מותאם ללקויות למידה"
         string parent_unit_id FK "גרסה נגישה — מפנה למקור"
         string curated_by FK "אוצרות אנושית"
         bool active
+    }
+    ENRICHMENT_TRACK {
+        string id PK
+        string title "מסלול צילום / פיננסי / יזמות"
+        string theme
+        string description
+    }
+    ATTACHMENT {
+        string id PK
+        string assignment_id FK "חומר המורה למשלוח זה"
+        string uploaded_by FK "מורה"
+        string filename
+        string storage_ref
+        int size_kb "נשמר קליל — עובד ברשת חלשה"
+        datetime created_at
+    }
+    STUDENT_NOTE {
+        string id PK
+        string student_id FK
+        string staff_id FK "מחנך בלבד"
+        string note "קצר, פרטי — לא קליני"
+        date delete_after "תום שנה"
+        datetime created_at
     }
     ASSIGNMENT {
         string id PK
@@ -104,7 +140,8 @@ erDiagram
         string assignment_id FK
         string student_id FK
         string status "not_started/started/completed"
-        string feedback "טקסט רשות — אין ציון"
+        string feedback "משוב מילולי רשות"
+        string grade "ציון — רק על unit_type=assessment (nullable)"
         bool seen_by_teacher "ראיתי → מפעיל המורה ראה"
         string mode "מוטבע לניתוח"
         datetime completed_at
@@ -170,10 +207,11 @@ erDiagram
 | phone | string | לשליחת הקישור האישי | נחוץ לקשר |
 | guardian_phone | string? | טלפון הורה — להודעה השבועית בלבד | **השדה היחיד על הורה במערכת** — אין פרופיל הורה |
 | access_token | string | כניסה בקישור בלי סיסמה | סוד — לא נחשף בדשבורדים |
+| registered | bool | נרשם לשכבת הלמידה (תיעוד תרגולים+ציונים). `false` = יכול עדיין לעשות check-in | הרשמה קלה, מינימום מזהה |
 | active | bool | במצבת הפעילה (כולל נשירה סמויה) | — |
 | created_at | datetime | | |
 
-**אין:** ציון, ממוצע, ת"ז, כתובת, טקסט רגשי חופשי.
+**אין:** ממוצע פומבי, ת"ז, כתובת. (ציון תרגול — כן, אישי; ראו Submission.)
 
 ### 2.2 Class — כיתה
 | שדה | טיפוס | תיאור |
@@ -205,14 +243,18 @@ erDiagram
 | subject | string | מקצוע |
 | grade | enum | שכבה |
 | body | text | פתיח שורה + מטלה ברורה |
-| est_minutes | int | תקן = 10 |
+| **unit_type** | enum | `task` (משימת קשר/תרגול) / `assessment` (מופע הערכה — נושא ציון) / `reference` (פריט הפניה לתוכן חיצוני) |
+| **track_id** | FK→EnrichmentTrack? | שייכות למסלול העשרה (צילום/פיננסי/יזמות). `null` = תוכן ליבה |
+| **content_source** | enum | `internal` (נכתב אצלנו) / `external` (עטיפת תוכן חיצוני) |
+| **external_ref** | string? | קישור לקמפוס IL/מטח/משה"ח — כשזה `reference`. המערכת מפנה, לא מחזיקה |
+| est_minutes | int | תקן ה**צעד** = 10. משימה משמעותית = כמה צעדים; מספר הצעדים לפי מצב |
 | modes_allowed | array | אילו מצבים מתאימים — כולל תיוג **"מתאים לחירום"** |
 | accessibility | bool | מותאם ללקויות למידה |
 | parent_unit_id | FK→ContentUnit? | אם זו גרסה נגישה — מפנה למקור, **לא מעתיקה** |
 | curated_by | FK→StaffMember | אוצרות אנושית — אין תוכן גולמי |
 | active | bool | |
 
-**אין:** ציון, קובץ כבד, תלות בספק חיצוני יחיד.
+**אין:** מחסן גולמי (המערכת מפנה למאגרים חיצוניים דרך `reference`, לא מחליפה אותם); תלות בספק חיצוני יחיד. **קבצים של המורה** נשמרים ב-`Attachment` (§2.11), לא בגוף היחידה.
 
 ### 2.5 Assignment — שליחת משימה לכיתה
 | שדה | טיפוס | תיאור |
@@ -235,7 +277,8 @@ erDiagram
 | assignment_id | FK→Assignment | |
 | student_id | FK→Student | |
 | status | enum | `not_started` / `started` / `completed` |
-| feedback | text? | משוב מילולי-רשות מהמורה — **אין ציון** |
+| feedback | text? | משוב מילולי-רשות מהמורה |
+| **grade** | string? | ציון — **רק** כאשר `ContentUnit.unit_type='assessment'`. אישי (תלמיד+מורה), בלי ממוצע פומבי. `null` על משימת קשר רגילה |
 | seen_by_teacher | bool | לחיצת "ראיתי" → מפעילה "המורה ראה" אצל התלמיד |
 | mode | enum | מוטבע מה-Assignment לניתוח לפי מצב |
 | completed_at | datetime? | |
@@ -298,6 +341,39 @@ erDiagram
 | status | enum | `queued` / `sent` / `delivered` / `read` |
 | created_at | datetime | |
 
+### 2.11 Attachment — חומר שהמורה צירף
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id | PK | |
+| assignment_id | FK→Assignment | המשלוח שאליו צורף הקובץ (דף עבודה/מצגת) |
+| uploaded_by | FK→StaffMember | המורה שהעלה |
+| filename | string | |
+| storage_ref | string | הפניה לאחסון — לא בגוף הרשומה |
+| size_kb | int | נשמר קליל; גרסת התלמיד חייבת לעבוד בטלפון וברשת חלשה |
+| created_at | datetime | |
+
+> העלאת קבצים ומצגות **מותרת** (spec §5.3). המגבלה היחידה: מה שמגיע לתלמיד חייב לעמוד בעקרון "עובד ברשת חלשה" — קבצים כבדים מוקלים/מומרים, לא נחסמים.
+
+### 2.12 EnrichmentTrack — מסלול העשרה
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id | PK | |
+| title | string | "מסלול צילום" / "חינוך פיננסי" / "יזמות" |
+| theme | string | קטגוריה |
+| description | string | |
+
+> מסלול = אוסף של 5-6 `ContentUnit` (עם `track_id` זהה) שאפשר לעשות בכל סדר. **לא קורס רב-מפגשים ולא עץ תוכן** — אין נעילה בין יחידות.
+
+### 2.13 StudentNote — הערת מחנך
+| שדה | טיפוס | תיאור | פרטיות |
+|------|-------|--------|---------|
+| id | PK | | |
+| student_id | FK→Student | על מי ההערה | |
+| staff_id | FK→StaffMember | **מחנך בלבד** | ההערה פרטית לכותב; אין נתיב שאילתה שחושף אותה למנהל/פיקוח |
+| note | string | הערה קצרה ("דיברתי, אבא איבד עבודה") — לא תיאור קליני | מוגבלת באורך |
+| delete_after | date | תום שנת הלימודים | תיקון 13 — נמחקת אוטומטית |
+| created_at | datetime | | |
+
 ---
 
 ## 3. איך הזרימה עובדת בלי שכפול נתונים (דרישה 2)
@@ -342,22 +418,28 @@ ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנ�
 | עולם / מסך (spec §5) | קורא | כותב |
 |----------------------|------|------|
 | **תלמיד — check-in** | CheckIn (רצף), SystemMode (מצב→סוג) | CheckIn |
-| **תלמיד — משימת 10 דק'** | Assignment, ContentUnit, Submission | Submission (status/completed) |
+| **תלמיד — משימת 10 דק'** | Assignment, ContentUnit, Attachment, Submission | Submission (status/completed) |
+| **תלמיד — מופע הערכה** | Assignment→ContentUnit(`unit_type=assessment`) | Submission (grade — אישי) |
+| **תלמיד — הרשמה (שכבת למידה)** | Student | Student.registered |
 | **תלמיד — "המורה ראה"** | CheckIn.seen_by, Submission.seen_by_teacher | — |
 | **תלמיד — "תסביר אחרת" (AI)** | ContentUnit/Assignment (תוכן המשימה בלבד) | — (בלי זיכרון שיחה) |
 | **מחנך — לוח דופק** | CheckIn, Student, Class, ContactLog | — |
 | **מחנך — פנייה בלחיצה** | Student.phone, Class | Notification, ContactLog |
 | **מחנך — דגלים רגשיים** | CheckIn.distress_flag (כיתתו בלבד) | CheckIn.seen_by |
 | **מחנך — יומן קשר** | ContactLog | ContactLog |
+| **מחנך — שדה הערה** | StudentNote (כיתתו, שלו בלבד) | StudentNote |
 | **מורה מקצועי — שלח משימה** | ContentUnit, Class | Assignment |
+| **מורה — צירוף חומרים** | Assignment | Attachment |
 | **מורה — התאמת AI** | ContentUnit | Assignment.override_body |
-| **מורה — לוח הגשות** | Submission, Student | Submission.seen_by_teacher, Notification (teacher_saw) |
+| **מורה — לוח הגשות + הערכה** | Submission, Student | Submission.seen_by_teacher, Submission.grade, Notification (teacher_saw) |
 | **מנהל — 3 מספרים** | CheckIn, Submission, StaffMember (אגרגט בית ספרו) | — |
 | **מנהל — דופק צוות** | StaffMember.active, ContactLog, Assignment | — |
 | **מנהל — רשימת אדומים** | Student, CheckIn, Class, ContactLog | — |
 | **מנהל — דוח יומי לוואטסאפ** | CheckIn, Submission, StaffMember | Notification (daily_report) |
 | **מנהל — כפתור מעבר מצב** | SystemMode (נוכחי) | SystemMode (רשומה חדשה), Notification (mode_change) |
-| **ספרייה — מדף הרציפות** | ContentUnit | ContentUnit (אוצרות) |
+| **ספרייה — מדף הרציפות** | ContentUnit (task/assessment/reference) | ContentUnit (אוצרות) |
+| **ספרייה — מסלולי העשרה** | EnrichmentTrack, ContentUnit.track_id | EnrichmentTrack, ContentUnit |
+| **ספרייה — פריט הפניה חיצוני** | ContentUnit(`source=external`, external_ref) | ContentUnit |
 | **ספרייה — גרסה נגישה** | ContentUnit.parent_unit_id | ContentUnit (variant) |
 | **פיקוח — תמונה מצרפית** | School, Class, Student, CheckIn (COUNT/% בלבד) | — |
 | **פיקוח — דגל תמיכה** | School + מגמת CheckIn | — (הצעת עזרה, מחוץ למודל הנתונים) |
