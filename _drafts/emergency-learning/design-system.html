@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת רציפות למידה — שפה עיצובית</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   מערכת רציפות למידה — Design System
+   מקור אמת יחיד. מפתח שקורא רק את הדף הזה בונה כל מסך במערכת.
+   ============================================================ */
+
+:root{
+  /* --- קבועים (לא משתנים בין מצבים) --- */
+  --ink:#173a4a;          /* טקסט ראשי כהה */
+  --ink-soft:#5a7382;     /* טקסט משני */
+  --ink-faint:#8ba3ae;    /* טקסט עמום, תוויות */
+  --bg:#f5fafb;           /* רקע הדף */
+  --card:#ffffff;         /* רקע כרטיס */
+  --line:#e2eef1;         /* קו הפרדה */
+  --line-strong:#cfe3e8;
+
+  /* צבע ראשי — טורקיז/ציאן. קבוע בכל המצבים */
+  --brand:#0e7c86;
+  --brand-bright:#22b8cf;
+  --brand-soft:#e3fafc;
+  --brand-line:#a5e8ef;
+
+  /* מדד דופק — קבוע (ירוק/צהוב/אדום) */
+  --pulse-green:#2f9e44;   --pulse-green-soft:#ebfbee;   --pulse-green-line:#b2f2bb;
+  --pulse-yellow:#c98a00;  --pulse-yellow-soft:#fff7e0;  --pulse-yellow-line:#ffe08a;
+  --pulse-red:#d84a3f;     --pulse-red-soft:#fff0ee;     --pulse-red-line:#ffcabf;
+
+  /* מידות */
+  --radius:16px;
+  --radius-lg:22px;
+  --radius-sm:11px;
+  --tap:44px;              /* יעד מגע מינימלי */
+  --shadow:0 6px 22px rgba(23,58,74,.06);
+  --shadow-lg:0 12px 34px rgba(23,58,74,.10);
+
+  /* --- צבע-מצב (משתנה לפי data-mode) — ברירת מחדל: שגרה --- */
+  --mode:#2f9e44;
+  --mode-deep:#1f7a30;
+  --mode-soft:#ebfbee;
+  --mode-line:#b2f2bb;
+  --mode-name:"שגרה";
+}
+
+/* מצב שגרה — ירוק רך */
+:root[data-mode="routine"]{
+  --mode:#2f9e44; --mode-deep:#1f7a30;
+  --mode-soft:#ebfbee; --mode-line:#b2f2bb; --mode-name:"שגרה";
+}
+/* מצב למידה מרחוק — תכלת */
+:root[data-mode="remote"]{
+  --mode:#1c7ed6; --mode-deep:#1668b8;
+  --mode-soft:#e7f2fd; --mode-line:#a5cdf5; --mode-name:"למידה מרחוק";
+}
+/* מצב חירום — כתום חם רגוע (לא אדום מלחיץ) */
+:root[data-mode="emergency"]{
+  --mode:#e8722c; --mode-deep:#c85d1c;
+  --mode-soft:#fff2e8; --mode-line:#ffd3ac; --mode-name:"חירום";
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  font-family:'Assistant',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.6;
+  font-size:16px;               /* מינימום גוף */
+  padding-bottom:64px;
+}
+h1,h2,h3,h4{font-family:'Playpen Sans Hebrew','Assistant',sans-serif;line-height:1.35;font-weight:700}
+a{color:var(--brand)}
+svg{display:block}
+
+/* ---------- מעטפת (mobile-only: רוחב טלפון) ---------- */
+.phone{
+  max-width:430px;
+  margin:0 auto;
+  padding:0 16px;
+}
+
+/* ---------- מתג מצב עליון (sticky) ---------- */
+.mode-switch{
+  position:sticky;top:0;z-index:50;
+  background:rgba(245,250,251,.92);
+  backdrop-filter:saturate(1.2) blur(8px);
+  -webkit-backdrop-filter:saturate(1.2) blur(8px);
+  border-bottom:1px solid var(--line);
+  padding:10px 0 12px;
+}
+.mode-switch .phone{display:flex;flex-direction:column;gap:9px}
+.mode-switch .ttl{font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.02em}
+.seg{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:5px;
+}
+.seg button{
+  font-family:'Assistant',sans-serif;font-weight:700;font-size:14px;
+  border:0;border-radius:10px;padding:0 4px;height:var(--tap);cursor:pointer;
+  color:var(--ink-soft);background:transparent;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:background .18s ease,color .18s ease;
+}
+.seg button .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.seg button[data-m="routine"] .dot{background:#2f9e44}
+.seg button[data-m="remote"] .dot{background:#1c7ed6}
+.seg button[data-m="emergency"] .dot{background:#e8722c}
+.seg button[aria-pressed="true"]{color:#fff;background:var(--mode)}
+.seg button[aria-pressed="true"] .dot{background:#fff}
+.seg button:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+
+/* ---------- כותרת הדף ---------- */
+header.hero{padding:26px 0 6px}
+header.hero .eyebrow{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:12.5px;font-weight:700;color:var(--brand);
+  background:var(--brand-soft);border:1px solid var(--brand-line);
+  padding:4px 12px;border-radius:999px;margin-bottom:12px;
+}
+header.hero h1{font-size:28px;color:var(--brand);line-height:1.25}
+header.hero p{color:var(--ink-soft);font-size:16px;margin-top:8px}
+
+/* ---------- section ---------- */
+section{margin:30px 0}
+.sec-label{
+  display:flex;align-items:center;gap:9px;margin-bottom:14px;
+}
+.sec-label .n{
+  font-family:'Playpen Sans Hebrew';font-size:13px;font-weight:700;color:#fff;
+  background:var(--brand);width:26px;height:26px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.sec-label h2{font-size:19px;color:var(--ink)}
+.sec-note{font-size:14px;color:var(--ink-soft);margin-bottom:14px}
+
+/* תיבת "כלל" קטנה מתחת לכל דוגמה */
+.rule{
+  font-size:13px;color:var(--ink-soft);background:#fff;border:1px solid var(--line);
+  border-radius:10px;padding:9px 12px;margin-top:10px;display:flex;gap:8px;align-items:flex-start;
+}
+.rule svg{flex-shrink:0;margin-top:1px;color:var(--brand)}
+.rule b{color:var(--ink)}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+/* ============================================================
+   1 · פלטה
+   ============================================================ */
+.swatches{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sw{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+.sw .chip{height:56px}
+.sw .meta{padding:8px 11px}
+.sw .meta .nm{font-size:13.5px;font-weight:700}
+.sw .meta .hx{font-size:12px;color:var(--ink-faint);font-family:ui-monospace,monospace;direction:ltr;text-align:right}
+
+.mode-palette{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:6px;
+}
+.mp{border-radius:14px;padding:12px;border:1.5px solid;text-align:center}
+.mp .d{width:20px;height:20px;border-radius:50%;margin:0 auto 7px}
+.mp .t{font-size:13px;font-weight:700}
+.mp .s{font-size:11px;margin-top:2px;opacity:.8}
+.mp.r{background:#ebfbee;border-color:#b2f2bb;color:#1f7a30}
+.mp.r .d{background:#2f9e44}
+.mp.m{background:#e7f2fd;border-color:#a5cdf5;color:#1668b8}
+.mp.m .d{background:#1c7ed6}
+.mp.e{background:#fff2e8;border-color:#ffd3ac;color:#c85d1c}
+.mp.e .d{background:#e8722c}
+
+/* ============================================================
+   2 · טיפוגרפיה
+   ============================================================ */
+.type-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+.type-row{padding:12px 0;border-top:1px solid var(--line)}
+.type-row:first-child{border-top:0;padding-top:0}
+.type-row .tag{font-size:11.5px;color:var(--ink-faint);font-family:ui-monospace,monospace;direction:ltr;text-align:right;margin-bottom:3px}
+.t-h1{font-family:'Playpen Sans Hebrew';font-weight:800;font-size:28px;color:var(--brand);line-height:1.25}
+.t-h2{font-family:'Playpen Sans Hebrew';font-weight:700;font-size:22px;color:var(--ink)}
+.t-h3{font-family:'Playpen Sans Hebrew';font-weight:700;font-size:18px;color:var(--ink)}
+.t-body{font-size:16px;color:var(--ink)}
+.t-small{font-size:14px;color:var(--ink-soft)}
+.t-tiny{font-size:12.5px;color:var(--ink-faint)}
+
+/* ============================================================
+   קומפוננטות חיות
+   ============================================================ */
+
+/* --- כרטיס משימת 10 דקות --- */
+.task{
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+  padding:16px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.task::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:5px;background:var(--mode)}
+.task .top{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.task .subj{
+  font-size:12.5px;font-weight:700;color:var(--brand);
+  background:var(--brand-soft);border-radius:999px;padding:3px 11px;
+}
+.task .time{
+  margin-inline-start:auto;display:inline-flex;align-items:center;gap:5px;
+  font-size:13px;font-weight:700;color:var(--mode-deep);background:var(--mode-soft);
+  border:1px solid var(--mode-line);border-radius:999px;padding:3px 10px;
+}
+.task h3{font-size:18px;margin-bottom:5px}
+.task p{font-size:14.5px;color:var(--ink-soft);margin-bottom:14px}
+.task .foot{display:flex;align-items:center;gap:10px}
+
+/* --- כפתור ראשי --- */
+.btn{
+  font-family:'Assistant',sans-serif;font-weight:700;font-size:16px;
+  border:0;border-radius:13px;min-height:var(--tap);padding:0 20px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--brand);color:#fff;box-shadow:0 6px 16px rgba(14,124,134,.22);
+  transition:transform .12s ease,box-shadow .18s ease,background .18s ease;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:0 9px 20px rgba(14,124,134,.28)}
+.btn:active{transform:translateY(0)}
+.btn:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.btn.full{width:100%}
+.btn.mode{background:var(--mode);box-shadow:0 6px 16px rgba(0,0,0,.14)}
+.btn.ghost{background:#fff;color:var(--brand);border:1.5px solid var(--brand-line);box-shadow:none}
+.btn.ghost:hover{background:var(--brand-soft)}
+.btn .ic{width:20px;height:20px}
+
+/* --- chip מצב-מערכת --- */
+.mode-chip{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:13.5px;font-weight:700;color:var(--mode-deep);
+  background:var(--mode-soft);border:1.5px solid var(--mode-line);
+  border-radius:999px;padding:5px 13px;
+}
+.mode-chip .d{width:9px;height:9px;border-radius:50%;background:var(--mode)}
+.mode-chip::after{content:var(--mode-name)}
+
+/* --- progress רצף אישי --- */
+.streak{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.streak .hd{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.streak .hd h3{font-size:16px}
+.streak .hd .count{
+  margin-inline-start:auto;font-family:'Playpen Sans Hebrew';font-weight:800;
+  font-size:17px;color:var(--brand);
+}
+.streak-dots{display:flex;gap:8px}
+.streak-dots .day{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.streak-dots .ring{
+  width:34px;height:34px;border-radius:50%;border:2px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:center;background:#fff;color:var(--ink-faint);
+}
+.streak-dots .day.on .ring{background:var(--brand);border-color:var(--brand);color:#fff}
+.streak-dots .day.today .ring{border-color:var(--brand);border-style:dashed;color:var(--brand)}
+.streak-dots .lbl{font-size:11px;color:var(--ink-faint);font-weight:600}
+.streak .bar{height:9px;border-radius:999px;background:var(--line);margin-top:14px;overflow:hidden}
+.streak .bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--brand-bright),var(--brand))}
+.streak .cap{font-size:13px;color:var(--ink-soft);margin-top:9px}
+.streak .cap b{color:var(--ink)}
+
+/* --- שורת תלמיד בלוח דופק --- */
+.pulse-list{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.p-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
+.p-row:first-child{border-top:0}
+.p-row .avatar{
+  width:38px;height:38px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playpen Sans Hebrew';font-weight:700;font-size:15px;color:#fff;
+}
+.p-row .who{min-width:0}
+.p-row .who .nm{font-size:15px;font-weight:700}
+.p-row .who .sub{font-size:12.5px;color:var(--ink-faint)}
+.p-row .status{
+  margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;
+  font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;white-space:nowrap;
+}
+.p-row .status .d{width:9px;height:9px;border-radius:50%}
+.st-green{color:var(--pulse-green);background:var(--pulse-green-soft);border:1px solid var(--pulse-green-line)}
+.st-green .d{background:var(--pulse-green)}
+.st-yellow{color:var(--pulse-yellow);background:var(--pulse-yellow-soft);border:1px solid var(--pulse-yellow-line)}
+.st-yellow .d{background:var(--pulse-yellow)}
+.st-red{color:var(--pulse-red);background:var(--pulse-red-soft);border:1px solid var(--pulse-red-line)}
+.st-red .d{background:var(--pulse-red)}
+.avatar.a-green{background:#40c057}.avatar.a-yellow{background:#f0a500}.avatar.a-red{background:#e8705f}
+
+/* --- מסך check-in (4 מצבים) --- */
+.checkin{
+  background:linear-gradient(160deg,var(--brand-soft) 0%,#fff 55%);
+  border:1px solid var(--brand-line);border-radius:var(--radius-lg);
+  padding:22px 18px;box-shadow:var(--shadow-lg);text-align:center;
+}
+.checkin .q{font-family:'Playpen Sans Hebrew';font-weight:700;font-size:20px;color:var(--brand);margin-bottom:4px}
+.checkin .sub{font-size:14px;color:var(--ink-soft);margin-bottom:18px}
+.mood-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mood{
+  border:1.5px solid var(--line);background:#fff;border-radius:14px;
+  padding:14px 8px 11px;cursor:pointer;min-height:var(--tap);
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  transition:border-color .16s ease,transform .12s ease,box-shadow .16s ease;
+}
+.mood:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.mood:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.mood[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 0 0 3px rgba(34,184,207,.15)}
+.mood .face{width:40px;height:40px}
+.mood .lbl{font-size:13.5px;font-weight:700;color:var(--ink)}
+.m-great .face{color:#2f9e44}
+.m-ok .face{color:#1c7ed6}
+.m-meh .face{color:#c98a00}
+.m-hard .face{color:#e8722c}
+
+/* ============================================================
+   נגישות — כרטיס כללים
+   ============================================================ */
+.a11y{background:#fff;border:1px solid var(--line);border-radius:16px;padding:6px 18px;box-shadow:var(--shadow)}
+.a11y .item{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-top:1px solid var(--line)}
+.a11y .item:first-child{border-top:0}
+.a11y .item .ic{
+  width:34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.a11y .item h3{font-size:15.5px;margin-bottom:2px}
+.a11y .item p{font-size:13.5px;color:var(--ink-soft)}
+
+/* פוטר */
+.foot-note{
+  margin:36px 0 0;padding:16px;text-align:center;
+  font-size:13px;color:var(--ink-faint);border-top:1px solid var(--line);
+}
+.foot-note b{color:var(--brand)}
+
+@media (max-width:360px){
+  .swatches,.mood-grid{grid-template-columns:1fr}
+  header.hero h1{font-size:25px}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== מתג מצב עליון ========== -->
+<div class="mode-switch">
+  <div class="phone">
+    <span class="ttl">מצב המערכת · משנה את כל הדף</span>
+    <div class="seg" role="group" aria-label="בחירת מצב מערכת">
+      <button data-m="routine"   aria-pressed="true"><span class="dot"></span>שגרה</button>
+      <button data-m="remote"    aria-pressed="false"><span class="dot"></span>מרחוק</button>
+      <button data-m="emergency" aria-pressed="false"><span class="dot"></span>חירום</button>
+    </div>
+  </div>
+</div>
+
+<div class="phone">
+
+  <!-- ========== כותרת ========== -->
+  <header class="hero">
+    <span class="eyebrow">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="3.4"/></svg>
+      שפה עיצובית · Design System
+    </span>
+    <h1>מערכת רציפות למידה</h1>
+    <p>מקור אמת אחד. מי שקורא רק את הדף הזה בונה כל מסך במערכת — בלי לשאול שאלת עיצוב אחת.</p>
+  </header>
+
+  <!-- ========== 1 · פלטה ========== -->
+  <section>
+    <div class="sec-label"><span class="n">1</span><h2>פלטה</h2></div>
+    <p class="sec-note">רקע בהיר תמיד. הצבע הראשי — טורקיז — קבוע בכל המצבים. הצבע היחיד שמתחלף הוא <b>צבע-המצב</b>.</p>
+
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#f5fafb"></div><div class="meta"><div class="nm">רקע דף</div><div class="hx">#F5FAFB</div></div></div>
+      <div class="sw"><div class="chip" style="background:#ffffff;border-bottom:1px solid #e2eef1"></div><div class="meta"><div class="nm">כרטיס</div><div class="hx">#FFFFFF</div></div></div>
+      <div class="sw"><div class="chip" style="background:#0e7c86"></div><div class="meta"><div class="nm">ראשי · טורקיז</div><div class="hx">#0E7C86</div></div></div>
+      <div class="sw"><div class="chip" style="background:#22b8cf"></div><div class="meta"><div class="nm">ראשי בהיר</div><div class="hx">#22B8CF</div></div></div>
+      <div class="sw"><div class="chip" style="background:#e3fafc"></div><div class="meta"><div class="nm">ראשי רך</div><div class="hx">#E3FAFC</div></div></div>
+      <div class="sw"><div class="chip" style="background:#173a4a"></div><div class="meta"><div class="nm">טקסט כהה</div><div class="hx">#173A4A</div></div></div>
+    </div>
+
+    <p class="sec-note" style="margin-top:18px;margin-bottom:8px"><b>צבע-מצב</b> — משתנה לפי מצב המערכת. חירום הוא כתום חם ורגוע, לא אדום מלחיץ (ילדים בחרדה):</p>
+    <div class="mode-palette">
+      <div class="mp r"><div class="d"></div><div class="t">שגרה</div><div class="s">ירוק רך · #2F9E44</div></div>
+      <div class="mp m"><div class="d"></div><div class="t">מרחוק</div><div class="s">תכלת · #1C7ED6</div></div>
+      <div class="mp e"><div class="d"></div><div class="t">חירום</div><div class="s">כתום חם · #E8722C</div></div>
+    </div>
+    <div class="rule">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <span><b>כלל:</b> אל תשתמש באדום (#E03131) לצבע-מצב. אדום שמור אך ורק לסטטוס "אדום" בלוח הדופק (תלמיד שלא ראינו).</span>
+    </div>
+  </section>
+
+  <!-- ========== 2 · טיפוגרפיה ========== -->
+  <section>
+    <div class="sec-label"><span class="n">2</span><h2>טיפוגרפיה</h2></div>
+    <p class="sec-note"><b>Playpen Sans Hebrew</b> לכותרות · <b>Assistant</b> לגוף. גוף אף פעם לא מתחת ל-16px.</p>
+    <div class="type-card">
+      <div class="type-row"><div class="tag">H1 · Playpen 28/800</div><div class="t-h1">כותרת ראשית</div></div>
+      <div class="type-row"><div class="tag">H2 · Playpen 22/700</div><div class="t-h2">כותרת מסך</div></div>
+      <div class="type-row"><div class="tag">H3 · Playpen 18/700</div><div class="t-h3">כותרת כרטיס</div></div>
+      <div class="type-row"><div class="tag">Body · Assistant 16/400</div><div class="t-body">טקסט רגיל. משפטים קצרים. שורה לא ארוכה מדי. זו רמת הבסיס — 16px, לא פחות.</div></div>
+      <div class="type-row"><div class="tag">Small · Assistant 14/600</div><div class="t-small">טקסט משני — הסבר, תווית, זמן.</div></div>
+      <div class="type-row"><div class="tag">Tiny · Assistant 12.5/600</div><div class="t-tiny">תווית זעירה בלבד (תאריך, מטא). לא לתוכן.</div></div>
+    </div>
+    <div class="rule">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 20h6M12 5v15"/></svg>
+      <span><b>כלל:</b> כל טקסט שתלמיד קורא — 16px ומעלה. Playpen רק לכותרות, לא לפסקאות.</span>
+    </div>
+  </section>
+
+  <!-- ========== 3 · כרטיס משימת 10 דקות ========== -->
+  <section>
+    <div class="sec-label"><span class="n">3</span><h2>כרטיס משימת 10 דקות</h2></div>
+    <p class="sec-note">יחידת הזמן של המערכת. פס-הצד ותגית-הזמן צבועים בצבע-המצב.</p>
+    <div class="task">
+      <div class="top">
+        <span class="subj">לשון</span>
+        <span class="time">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          10 דקות
+        </span>
+      </div>
+      <h3>מוצא ומובא</h3>
+      <p>קראו את הפסקה הקצרה, ומצאו מהו הנושא ומהו הנשוא.</p>
+      <div class="foot">
+        <button class="btn mode full">
+          יאללה, מתחילים
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="rule">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span><b>כלל:</b> משימה אחת = מסך אחד = 10 דקות. אם לא נכנס ב-10 דקות — פצל לשתי משימות.</span>
+    </div>
+  </section>
+
+  <!-- ========== 4 · מסך check-in ========== -->
+  <section>
+    <div class="sec-label"><span class="n">4</span><h2>מסך Check-in</h2></div>
+    <p class="sec-note">קשר לפני תוכן. זה המסך הראשון בכל יום — 4 מצבים, בחירה אחת, בלי מילים.</p>
+    <div class="checkin">
+      <div class="q">מה שלומך היום?</div>
+      <div class="sub">בחרו מה שהכי מתאים · אין תשובה נכונה</div>
+      <div class="mood-grid">
+        <button class="mood m-great" aria-pressed="true">
+          <svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg>
+          <span class="lbl">מעולה</span>
+        </button>
+        <button class="mood m-ok" aria-pressed="false">
+          <svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 13.5s1.5 1.5 4 1.5 4-1.5 4-1.5"/><path d="M9 9h.01M15 9h.01"/></svg>
+          <span class="lbl">בסדר</span>
+        </button>
+        <button class="mood m-meh" aria-pressed="false">
+          <svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 15h8"/><path d="M9 9h.01M15 9h.01"/></svg>
+          <span class="lbl">ככה־ככה</span>
+        </button>
+        <button class="mood m-hard" aria-pressed="false">
+          <svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 16s1.5-2 4-2 4 2 4 2"/><path d="M9 9h.01M15 9h.01"/></svg>
+          <span class="lbl">קשה לי</span>
+        </button>
+      </div>
+      <div style="margin-top:16px"><button class="btn mode full">שולחים למורה</button></div>
+    </div>
+    <div class="rule">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      <span><b>כלל:</b> "קשה לי" הוא מצב לגיטימי, לא כישלון. בחירה בו פותחת ערוץ למורה — לא נועלת תוכן.</span>
+    </div>
+  </section>
+
+  <!-- ========== 5 · שורת תלמיד בלוח דופק ========== -->
+  <section>
+    <div class="sec-label"><span class="n">5</span><h2>שורת תלמיד · לוח דופק</h2></div>
+    <p class="sec-note">מסך המורה. הסטטוס עונה על שאלה אחת: <b>את מי ראינו היום?</b> — ירוק / צהוב / אדום.</p>
+    <div class="pulse-list">
+      <div class="p-row">
+        <div class="avatar a-green">נ</div>
+        <div class="who"><div class="nm">נועה ב.</div><div class="sub">check-in · השלימה משימה</div></div>
+        <span class="status st-green"><span class="d"></span>נראתה</span>
+      </div>
+      <div class="p-row">
+        <div class="avatar a-yellow">י</div>
+        <div class="who"><div class="nm">יונתן ל.</div><div class="sub">נכנס · בלי משימה</div></div>
+        <span class="status st-yellow"><span class="d"></span>חלקי</span>
+      </div>
+      <div class="p-row">
+        <div class="avatar a-red">ר</div>
+        <div class="who"><div class="nm">רון מ.</div><div class="sub">לא נכנס היום</div></div>
+        <span class="status st-red"><span class="d"></span>לא נראה</span>
+      </div>
+    </div>
+    <div class="rule">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg>
+      <span><b>כלל:</b> צבע הדופק (ירוק/צהוב/אדום) קבוע ואינו תלוי במצב-המערכת. אדום = "לא ראינו", דורש פנייה — לא ציון.</span>
+    </div>
+  </section>
+
+  <!-- ========== 6 · progress רצף אישי ========== -->
+  <section>
+    <div class="sec-label"><span class="n">6</span><h2>רצף אישי · Progress</h2></div>
+    <p class="sec-note">מד ההתמדה של התלמיד. חוגג נוכחות, לא ציונים.</p>
+    <div class="streak">
+      <div class="hd">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 12.5a1 1 0 0 0 .8 1.6H11l-1 7.9 8.5-10.5a1 1 0 0 0-.8-1.6H12l1-7.9z"/></svg>
+        <h3>הרצף שלך</h3>
+        <span class="count">4 ימים</span>
+      </div>
+      <div class="streak-dots">
+        <div class="day on"><span class="ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span><span class="lbl">א׳</span></div>
+        <div class="day on"><span class="ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span><span class="lbl">ב׳</span></div>
+        <div class="day on"><span class="ring"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span><span class="lbl">ג׳</span></div>
+        <div class="day today"><span class="ring">היום</span><span class="lbl">ד׳</span></div>
+        <div class="day"><span class="ring"></span><span class="lbl">ה׳</span></div>
+      </div>
+      <div class="bar"><span style="width:70%"></span></div>
+      <div class="cap">עוד משימה אחת והשלמת את <b>היום הרביעי</b> ברצף. יפה!</div>
+    </div>
+    <div class="rule">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>
+      <span><b>כלל:</b> הרצף סופר <b>נוכחות</b> (check-in + משימה), לא נכונות. פספוס יום לא מאפס — מזמין לחזור.</span>
+    </div>
+  </section>
+
+  <!-- ========== 7 · כפתורים ו-chip מצב ========== -->
+  <section>
+    <div class="sec-label"><span class="n">7</span><h2>כפתורים · Chip מצב</h2></div>
+    <p class="sec-note">כפתור ראשי אחד בכל מסך. גובה מגע 44px תמיד.</p>
+    <div class="stack">
+      <button class="btn full">כפתור ראשי · טורקיז</button>
+      <button class="btn mode full">כפתור מצב · צבוע לפי המצב</button>
+      <button class="btn ghost full">כפתור משני · Ghost</button>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span class="mode-chip"><span class="d"></span></span>
+        <span class="t-small">← chip מצב-מערכת. הטקסט מתחלף אוטומטית לפי המצב.</span>
+      </div>
+    </div>
+    <div class="rule">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="4"/></svg>
+      <span><b>כלל:</b> פעולה ראשית = <b>btn</b> טורקיז או <b>btn mode</b>. משני = <b>ghost</b>. לא יותר מכפתור מלא אחד למסך.</span>
+    </div>
+  </section>
+
+  <!-- ========== 8 · נגישות ========== -->
+  <section>
+    <div class="sec-label"><span class="n">8</span><h2>נגישות · חובה</h2></div>
+    <div class="a11y">
+      <div class="item">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" stroke="none"/></svg></span>
+        <div><h3>ניגודיות AA</h3><p>טקסט על רקע ≥ 4.5:1. תווית גדולה ≥ 3:1. לבדוק כל צבע-מצב מול לבן.</p></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11.5a2.5 2.5 0 1 1 5 0v3.5M6.5 14V9a2.5 2.5 0 1 1 5 0M11.5 14V7.5a2.5 2.5 0 1 1 5 0V16a5 5 0 0 1-5 5H10a5 5 0 0 1-4-2l-2.5-3.5a1.8 1.8 0 0 1 3-2z"/></svg></span>
+        <div><h3>יעד מגע 44px</h3><p>כל כפתור, קישור, בחירה — גובה ורוחב ≥ 44×44px. מרווח בין יעדים ≥ 8px.</p></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64M12 2v8"/></svg></span>
+        <div><h3>בלי הבהובים</h3><p>אין ריצוד, פליקר או אנימציה מהירה. מעברים רכים ≤ 200ms בלבד. לכבד prefers-reduced-motion.</p></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M4 4l16 16"/></svg></span>
+        <div><h3>לא רק צבע</h3><p>סטטוס דופק = צבע + מילה ("נראתה"/"לא נראה"). לעולם לא להסתמך על צבע לבד.</p></div>
+      </div>
+      <div class="item">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4M18 12h4M12 2v4M12 18v4"/><rect x="8" y="8" width="8" height="8" rx="2"/></svg></span>
+        <div><h3>פוקוס נראה</h3><p>focus-visible עם מסגרת ברורה (3px). ניווט מקלדת מלא. RTL אמיתי, בלי row-reverse ב-flex.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot-note">
+    <b>מערכת רציפות למידה</b> · שפה עיצובית v1.0<br>
+    קשר לפני תוכן · 10 דקות · Mobile Only · RTL
+  </div>
+
+</div>
+
+<script>
+  // מתג מצב — מחליף את כל הדף דרך data-mode על :root
+  (function(){
+    var root = document.documentElement;
+    var btns = document.querySelectorAll('.seg button');
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        var m = b.getAttribute('data-m');
+        root.setAttribute('data-mode', m);
+        btns.forEach(function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      });
+    });
+
+    // הדגמת בחירה במסך check-in (בחירה יחידה)
+    var moods = document.querySelectorAll('.mood');
+    moods.forEach(function(m){
+      m.addEventListener('click', function(){
+        moods.forEach(function(x){ x.setAttribute('aria-pressed', x === m ? 'true' : 'false'); });
+      });
+    });
+  })();
+</script>
+</body>
+</html>
