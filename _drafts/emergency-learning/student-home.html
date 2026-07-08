@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מערכת רציפות למידה — מסך הבית של התלמיד</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Hebrew:wght@500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   מסך הבית של התלמיד — "היום שלי"
+   נבנה בדיוק לפי design-system.html. Mobile First · 390px · RTL.
+   ============================================================ */
+
+:root{
+  --ink:#173a4a; --ink-soft:#5a7382; --ink-faint:#8ba3ae;
+  --bg:#f5fafb; --card:#ffffff; --line:#e2eef1; --line-strong:#cfe3e8;
+  --brand:#0e7c86; --brand-bright:#22b8cf; --brand-soft:#e3fafc; --brand-line:#a5e8ef;
+  --pulse-green:#2f9e44;
+  --radius:16px; --radius-lg:22px; --radius-sm:11px; --tap:44px;
+  --shadow:0 6px 22px rgba(23,58,74,.06);
+  --shadow-lg:0 12px 34px rgba(23,58,74,.10);
+  /* צבע-מצב — ברירת מחדל שגרה */
+  --mode:#2f9e44; --mode-deep:#1f7a30; --mode-soft:#ebfbee; --mode-line:#b2f2bb; --mode-name:"שגרה";
+}
+:root[data-mode="routine"]{--mode:#2f9e44;--mode-deep:#1f7a30;--mode-soft:#ebfbee;--mode-line:#b2f2bb;--mode-name:"שגרה"}
+:root[data-mode="remote"]{--mode:#1c7ed6;--mode-deep:#1668b8;--mode-soft:#e7f2fd;--mode-line:#a5cdf5;--mode-name:"למידה מרחוק"}
+:root[data-mode="emergency"]{--mode:#e8722c;--mode-deep:#c85d1c;--mode-soft:#fff2e8;--mode-line:#ffd3ac;--mode-name:"חירום"}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:'Assistant',sans-serif;background:var(--bg);color:var(--ink);
+  line-height:1.55;font-size:16px;padding-bottom:26px;
+}
+h1,h2,h3,h4{font-family:'Playpen Sans Hebrew','Assistant',sans-serif;line-height:1.3;font-weight:700}
+svg{display:block}
+
+.phone{max-width:430px;margin:0 auto;padding:0 16px}
+
+/* ---------- מתג מצב עליון (דמו) ---------- */
+.mode-switch{
+  position:sticky;top:0;z-index:50;
+  background:rgba(245,250,251,.92);
+  backdrop-filter:saturate(1.2) blur(8px);-webkit-backdrop-filter:saturate(1.2) blur(8px);
+  border-bottom:1px solid var(--line);padding:9px 0 10px;
+}
+.mode-switch .phone{display:flex;flex-direction:column;gap:7px}
+.mode-switch .ttl{font-size:11.5px;font-weight:700;color:var(--ink-faint);letter-spacing:.02em}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:5px}
+.seg button{
+  font-family:'Assistant',sans-serif;font-weight:700;font-size:14px;
+  border:0;border-radius:10px;padding:0 4px;height:var(--tap);cursor:pointer;
+  color:var(--ink-soft);background:transparent;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:background .18s ease,color .18s ease;
+}
+.seg button .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.seg button[data-m="routine"] .dot{background:#2f9e44}
+.seg button[data-m="remote"] .dot{background:#1c7ed6}
+.seg button[data-m="emergency"] .dot{background:#e8722c}
+.seg button[aria-pressed="true"]{color:#fff;background:var(--mode)}
+.seg button[aria-pressed="true"] .dot{background:#fff}
+.seg button:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+
+/* ---------- שורת פתיחה אישית ---------- */
+.greet{display:flex;align-items:center;gap:12px;padding:16px 0 4px}
+.greet .ava{
+  width:46px;height:46px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(150deg,var(--brand-bright),var(--brand));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Playpen Sans Hebrew';font-weight:800;font-size:19px;color:#fff;
+}
+.greet .txt{min-width:0}
+.greet .hi{font-family:'Playpen Sans Hebrew';font-weight:800;font-size:22px;color:var(--ink);line-height:1.15}
+.greet .sub{font-size:13px;color:var(--ink-soft);margin-top:2px}
+.mode-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12.5px;font-weight:700;color:var(--mode-deep);
+  background:var(--mode-soft);border:1.5px solid var(--mode-line);
+  border-radius:999px;padding:3px 10px;margin-inline-start:auto;flex-shrink:0;
+}
+.mode-chip .d{width:8px;height:8px;border-radius:50%;background:var(--mode)}
+.mode-chip::after{content:var(--mode-name)}
+
+/* ---------- כרטיס check-in ---------- */
+.checkin{
+  background:linear-gradient(160deg,var(--mode-soft) 0%,#fff 60%);
+  border:1px solid var(--mode-line);border-radius:var(--radius-lg);
+  padding:18px 16px;box-shadow:var(--shadow-lg);text-align:center;margin-top:14px;
+}
+.checkin .q{font-family:'Playpen Sans Hebrew';font-weight:700;font-size:19px;color:var(--mode-deep);margin-bottom:3px}
+.checkin .csub{font-size:13.5px;color:var(--ink-soft);margin-bottom:15px}
+
+/* מצב שגרה/מרחוק — כפתור אחד */
+.btn{
+  font-family:'Assistant',sans-serif;font-weight:700;font-size:16px;
+  border:0;border-radius:13px;min-height:var(--tap);padding:0 20px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  background:var(--mode);color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.13);
+  transition:transform .12s ease,box-shadow .18s ease;
+}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.btn .ic{width:20px;height:20px}
+
+/* מצב חירום — 4 מצבי רוח */
+.mood-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.mood{
+  border:1.5px solid var(--line);background:#fff;border-radius:14px;
+  padding:11px 6px 9px;cursor:pointer;min-height:var(--tap);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  transition:border-color .16s ease,transform .12s ease,box-shadow .16s ease;
+}
+.mood:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.mood:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.mood[aria-pressed="true"]{border-color:var(--mode);background:var(--mode-soft);box-shadow:0 0 0 3px rgba(232,114,44,.14)}
+.mood .face{width:34px;height:34px}
+.mood .lbl{font-size:13px;font-weight:700;color:var(--ink)}
+.m-great .face{color:#2f9e44}.m-ok .face{color:#1c7ed6}
+.m-hard .face{color:#e8722c}.m-talk .face{color:#0e7c86}
+
+/* חיווי "המחנכת ראתה" */
+.seen{
+  display:none;align-items:center;gap:10px;justify-content:center;
+  background:var(--pulse-green,#2f9e44);background:#ebfbee;border:1.5px solid #b2f2bb;
+  color:#1f7a30;border-radius:14px;padding:12px 14px;font-weight:700;font-size:15px;
+}
+.seen.show{display:flex;animation:pop .3s ease}
+.seen .badge{
+  width:28px;height:28px;border-radius:50%;background:#2f9e44;color:#fff;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.pending{display:none;align-items:center;gap:9px;justify-content:center;color:var(--ink-soft);font-size:14px;font-weight:600;min-height:44px}
+.pending.show{display:flex}
+.spin{width:18px;height:18px;border:2.5px solid var(--mode-line);border-top-color:var(--mode);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{from{transform:scale(.94);opacity:.4}to{transform:scale(1);opacity:1}}
+
+/* ---------- רצף אישי ---------- */
+.streak{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);margin-top:16px}
+.streak .hd{display:flex;align-items:center;gap:8px;margin-bottom:11px}
+.streak .hd h3{font-size:15.5px}
+.streak .hd .count{margin-inline-start:auto;font-family:'Playpen Sans Hebrew';font-weight:800;font-size:15px;color:var(--brand)}
+.streak-dots{display:flex;gap:5px}
+.streak-dots .day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.streak-dots .ring{
+  width:30px;height:30px;border-radius:50%;border:2px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:center;background:#fff;color:var(--ink-faint);
+}
+.streak-dots .day.on .ring{background:var(--brand);border-color:var(--brand);color:#fff}
+.streak-dots .day.today .ring{border-color:var(--brand);border-style:dashed;color:var(--brand);font-size:10px;font-weight:800}
+.streak-dots .lbl{font-size:10.5px;color:var(--ink-faint);font-weight:600}
+.streak .cap{font-size:13px;color:var(--ink-soft);margin-top:11px}
+.streak .cap b{color:var(--ink)}
+
+/* ---------- כותרת קטע משימות ---------- */
+.tasks-hd{display:flex;align-items:center;gap:8px;margin:18px 0 10px}
+.tasks-hd h2{font-size:16.5px;color:var(--ink)}
+.tasks-hd .pill{margin-inline-start:auto;font-size:12px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:999px;padding:3px 10px}
+
+/* ---------- כרטיס משימה ---------- */
+.tasks{display:flex;flex-direction:column;gap:11px}
+.task{
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.task::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:5px;background:var(--mode)}
+.task .top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.task .subj{font-size:12px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:999px;padding:3px 10px}
+.task .time{
+  margin-inline-start:auto;display:inline-flex;align-items:center;gap:5px;
+  font-size:12.5px;font-weight:700;color:var(--mode-deep);background:var(--mode-soft);
+  border:1px solid var(--mode-line);border-radius:999px;padding:3px 9px;
+}
+.task h3{font-size:16.5px;margin-bottom:3px}
+.task p{font-size:13.5px;color:var(--ink-soft);margin-bottom:12px}
+.task .go{
+  font-family:'Assistant',sans-serif;font-weight:700;font-size:15px;
+  border:0;border-radius:11px;min-height:var(--tap);padding:0 18px;cursor:pointer;width:100%;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  background:var(--mode);color:#fff;box-shadow:0 5px 14px rgba(0,0,0,.12);
+  transition:transform .12s ease;
+}
+.task .go:hover{transform:translateY(-1px)}
+.task .go:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.task .go .ic{width:18px;height:18px}
+
+/* ---------- פס הודעה מהמחנכת ---------- */
+.msg{
+  display:flex;gap:11px;align-items:flex-start;margin-top:16px;
+  background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:14px;padding:13px 14px;
+}
+.msg .ic{
+  width:34px;height:34px;border-radius:50%;background:#fff;border:1px solid var(--brand-line);
+  color:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.msg .body{min-width:0}
+.msg .from{font-size:12px;font-weight:700;color:var(--brand);margin-bottom:2px}
+.msg .txt{font-size:14px;color:var(--ink);line-height:1.5}
+
+@media (max-width:360px){
+  .mood-grid{grid-template-columns:1fr}
+  .greet .hi{font-size:20px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== מתג מצב עליון (דמו בלבד) ========== -->
+<div class="mode-switch">
+  <div class="phone">
+    <span class="ttl">דמו · מצב המערכת — משנה תוכן וצבע</span>
+    <div class="seg" role="group" aria-label="בחירת מצב מערכת">
+      <button data-m="routine"   aria-pressed="true"><span class="dot"></span>שגרה</button>
+      <button data-m="remote"    aria-pressed="false"><span class="dot"></span>מרחוק</button>
+      <button data-m="emergency" aria-pressed="false"><span class="dot"></span>חירום</button>
+    </div>
+  </div>
+</div>
+
+<div class="phone">
+
+  <!-- ========== 1 · שורת פתיחה אישית ========== -->
+  <div class="greet">
+    <div class="ava">י</div>
+    <div class="txt">
+      <div class="hi" id="greet-hi">בוקר טוב, יובל</div>
+      <div class="sub" id="greet-sub">כיתה י׳2 · יום רביעי</div>
+    </div>
+    <span class="mode-chip"><span class="d"></span></span>
+  </div>
+
+  <!-- ========== 2 · check-in ========== -->
+  <div class="checkin">
+    <div class="q" id="ci-q">מוכן להתחיל את היום?</div>
+    <div class="csub" id="ci-sub">לחיצה אחת — והמחנכת יודעת שאתה כאן</div>
+
+    <!-- שגרה / מרחוק: כפתור אחד -->
+    <div id="ci-single">
+      <button class="btn" id="ci-btn">
+        <span id="ci-btn-txt">מתחיל ללמוד</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+
+    <!-- חירום: 4 מצבי רוח -->
+    <div id="ci-moods" class="mood-grid" style="display:none">
+      <button class="mood m-great" data-mood="טוב">
+        <svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg>
+        <span class="lbl">טוב</span>
+      </button>
+      <button class="mood m-ok" data-mood="בסדר">
+        <svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 15h8"/><path d="M9 9h.01M15 9h.01"/></svg>
+        <span class="lbl">בסדר</span>
+      </button>
+      <button class="mood m-hard" data-mood="קשה לי">
+        <svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 16s1.5-2 4-2 4 2 4 2"/><path d="M9 9h.01M15 9h.01"/></svg>
+        <span class="lbl">קשה לי</span>
+      </button>
+      <button class="mood m-talk" data-mood="רוצה לדבר">
+        <svg class="face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4L3 21l1.1-4.6A8.4 8.4 0 1 1 21 11.5z"/></svg>
+        <span class="lbl">רוצה לדבר</span>
+      </button>
+    </div>
+
+    <!-- מצב המתנה + חיווי "המחנכת ראתה" -->
+    <div class="pending" id="ci-pending"><span class="spin"></span> שולח למחנכת…</div>
+    <div class="seen" id="ci-seen">
+      <span class="badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span>
+      <span>דנה המחנכת ראתה אותך</span>
+    </div>
+  </div>
+
+  <!-- ========== 3 · רצף אישי ========== -->
+  <div class="streak">
+    <div class="hd">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 12.5a1 1 0 0 0 .8 1.6H11l-1 7.9 8.5-10.5a1 1 0 0 0-.8-1.6H12l1-7.9z"/></svg>
+      <h3>הרצף שלך</h3>
+      <span class="count">יום 4 ברציפות</span>
+    </div>
+    <div class="streak-dots">
+      <div class="day on"><span class="ring"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span><span class="lbl">א׳</span></div>
+      <div class="day on"><span class="ring"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span><span class="lbl">ב׳</span></div>
+      <div class="day on"><span class="ring"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span><span class="lbl">ג׳</span></div>
+      <div class="day today"><span class="ring">היום</span><span class="lbl">ד׳</span></div>
+      <div class="day"><span class="ring"></span><span class="lbl">ה׳</span></div>
+      <div class="day"><span class="ring"></span><span class="lbl">ו׳</span></div>
+      <div class="day"><span class="ring"></span><span class="lbl">ש׳</span></div>
+    </div>
+    <div class="cap" id="streak-cap">עשית check-in <b>4 ימים ברצף</b>. יפה — ממשיכים!</div>
+  </div>
+
+  <!-- ========== 4 · משימות ========== -->
+  <div class="tasks-hd">
+    <h2 id="tasks-title">המשימות שלך להיום</h2>
+    <span class="pill" id="tasks-pill">2 משימות</span>
+  </div>
+  <div class="tasks" id="tasks"></div>
+
+  <!-- ========== 5 · הודעה מהמחנכת ========== -->
+  <div class="msg">
+    <div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+    <div class="body">
+      <div class="from">דנה, המחנכת</div>
+      <div class="txt" id="msg-txt">כל הכבוד על הרצף! היום שתי משימות קצרות, קחו בקצב שלכם.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var root = document.documentElement;
+
+  // --- תוכן לכל מצב ---
+  var CONTENT = {
+    routine: {
+      q:"מוכן להתחיל את היום?",
+      sub:"לחיצה אחת — והמחנכת יודעת שאתה כאן",
+      btn:"מתחיל ללמוד",
+      moods:false,
+      tasksTitle:"המשימות שלך להיום",
+      tasks:[
+        {subj:"לשון",       h:"מוצא ומובא",        p:"קראו פסקה קצרה ומצאו את הנושא והנשוא."},
+        {subj:"מתמטיקה",    h:"חזרה על שברים",     p:"5 תרגילים קצרים — נחמם את מה שכבר יודעים."}
+      ],
+      msg:"כל הכבוד על הרצף! היום שתי משימות קצרות, קחו בקצב שלכם."
+    },
+    remote: {
+      q:"מתחילים יום למידה מהבית",
+      sub:"עשה check-in — וזה פותח לך את היום",
+      btn:"מתחילים את היום",
+      moods:false,
+      tasksTitle:"מערכת היום שלך",
+      tasks:[
+        {subj:"לשון",   h:"הבנת הנקרא",     p:"פסקה קצרה ו-3 שאלות. בקצב שלך, לא בזום."},
+        {subj:"אנגלית", h:"Reading — 5 Q",  p:"טקסט קצר וחמש שאלות אמריקאיות."},
+        {subj:"מדעים",  h:"מחזור המים",     p:"סרטון קצר והסבר במנות קטנות."}
+      ],
+      msg:"בוקר טוב כיתה! היום יום למידה מהבית. תתחילו מתי שנוח — אני כאן."
+    },
+    emergency: {
+      q:"מה שלומך היום?",
+      sub:"בחר מה שהכי מתאים · אין תשובה נכונה",
+      btn:null,
+      moods:true,
+      tasksTitle:"משהו קטן להיום · רשות",
+      tasks:[
+        {subj:"מסלול צילום", h:"צלם משהו שמרגיע", p:"תמונה אחת של פינה שנעים לך בה. 10 דקות, בלי לחץ."}
+      ],
+      msg:"אנחנו כאן איתך. אין חובות היום — רק תסמן לי איך אתה, וזה מספיק."
+    }
+  };
+
+  var elQ=document.getElementById('ci-q'), elSub=document.getElementById('ci-sub'),
+      elSingle=document.getElementById('ci-single'), elBtnTxt=document.getElementById('ci-btn-txt'),
+      elMoods=document.getElementById('ci-moods'), elPending=document.getElementById('ci-pending'),
+      elSeen=document.getElementById('ci-seen'), elTasks=document.getElementById('tasks'),
+      elTitle=document.getElementById('tasks-title'), elPill=document.getElementById('tasks-pill'),
+      elMsg=document.getElementById('msg-txt');
+
+  var seenTimer=null;
+
+  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+  function renderTasks(list){
+    elTasks.innerHTML = list.map(function(t){
+      return '<div class="task">'+
+        '<div class="top"><span class="subj">'+esc(t.subj)+'</span>'+
+          '<span class="time"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>10 דקות</span></div>'+
+        '<h3>'+esc(t.h)+'</h3><p>'+esc(t.p)+'</p>'+
+        '<button class="go">התחל<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>'+
+      '</div>';
+    }).join('');
+  }
+
+  function resetCheckin(){
+    if(seenTimer){clearTimeout(seenTimer);seenTimer=null;}
+    elPending.classList.remove('show');
+    elSeen.classList.remove('show');
+    document.querySelectorAll('.mood').forEach(function(m){m.setAttribute('aria-pressed','false');});
+  }
+
+  function confirmSeen(){
+    // מצב המתנה → אחרי 2 שניות: "דנה המחנכת ראתה"
+    elSingle.style.display='none';
+    elMoods.style.display='none';
+    elPending.classList.add('show');
+    seenTimer=setTimeout(function(){
+      elPending.classList.remove('show');
+      elSeen.classList.add('show');
+    },2000);
+  }
+
+  function applyMode(m){
+    var c=CONTENT[m];
+    root.setAttribute('data-mode',m);
+    elQ.textContent=c.q; elSub.textContent=c.sub;
+    elTitle.textContent=c.tasksTitle; elMsg.textContent=c.msg;
+    elPill.textContent = c.tasks.length===1 ? 'משימה אחת' : c.tasks.length+' משימות';
+    renderTasks(c.tasks);
+    resetCheckin();
+    if(c.moods){
+      elSingle.style.display='none';
+      elMoods.style.display='grid';
+    }else{
+      elMoods.style.display='none';
+      elSingle.style.display='block';
+      elBtnTxt.textContent=c.btn;
+    }
+  }
+
+  // מתג מצב
+  var segBtns=document.querySelectorAll('.seg button');
+  segBtns.forEach(function(b){
+    b.addEventListener('click',function(){
+      var m=b.getAttribute('data-m');
+      segBtns.forEach(function(x){x.setAttribute('aria-pressed', x===b?'true':'false');});
+      applyMode(m);
+    });
+  });
+
+  // check-in — כפתור יחיד
+  document.getElementById('ci-btn').addEventListener('click',confirmSeen);
+
+  // check-in — מצבי רוח
+  document.querySelectorAll('.mood').forEach(function(mb){
+    mb.addEventListener('click',function(){
+      document.querySelectorAll('.mood').forEach(function(x){x.setAttribute('aria-pressed', x===mb?'true':'false');});
+      confirmSeen();
+    });
+  });
+
+  // אתחול
+  applyMode('routine');
+})();
+</script>
+</body>
+</html>
