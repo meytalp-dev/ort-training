@@ -105,6 +105,7 @@ erDiagram
         date lit_on "תאריך הדלקה — מטא בלבד"
         string handled_by FK "מי טיפל (staff)"
         string resolution "contacted/referred/escalated/closed"
+        string shared_note "מה שהמחנך בחר להעביר ליועצת (nullable)"
         date delete_after "lit_on + שנה — עובדה, בלי תוכן רגשי"
         datetime created_at
     }
@@ -277,6 +278,7 @@ erDiagram
 | lit_on | date | תאריך ההדלקה — **עובדה, לא תוכן רגשי** | נשמר לשנה |
 | handled_by | FK→StaffMember? | מי טיפל (מחנך/יועצת) | — |
 | resolution | enum | `contacted` / `referred` (הועבר ליועצת) / `escalated` / `closed` | — |
+| shared_note | string? | בהעברה ליועצת — **מה שהמחנך בחר לשתף** (לא כל ה-`StudentNote`). ריק אם לא הועבר | המחנך בוחר אקטיבית; אין מסירה אוטומטית |
 | delete_after | date | `lit_on` + שנה | מחיקה מדורגת |
 | created_at | datetime | | |
 
@@ -479,9 +481,9 @@ ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנ�
 | **מחנך — דגלים רגשיים** | CheckIn.distress_flag (כיתתו, הווה בלבד) | CheckIn.seen_by, FlagEvent (הדלקה) |
 | **מחנך — יומן קשר** | ContactLog | ContactLog |
 | **מחנך — שדה הערה** | StudentNote (כיתתו, שלו בלבד) | StudentNote |
-| **מחנך — "העבר ליועצת"** | FlagEvent (הנוכחי) | FlagEvent.resolution=`referred`, Notification (ליועצת) |
+| **מחנך — "העבר ליועצת"** | FlagEvent (הנוכחי), StudentNote (שלו — לבחירת מה לשתף) | FlagEvent.resolution=`referred` + `shared_note` (מה שהמחנך בחר), Notification (ליועצת) |
 | **יועצת — רשימת דפוסים** | FlagEvent (חוצה-כיתות, 90 יום — מטא בלבד), Student, Class | — |
-| **יועצת — טיפול בהפניה** | FlagEvent, StudentNote (בהעברה), ContactLog | FlagEvent.handled_by/resolution, ContactLog |
+| **יועצת — טיפול בהפניה** | FlagEvent (כולל `shared_note` שהמחנך העביר), ContactLog | FlagEvent.handled_by/resolution, ContactLog |
 | **מורה מקצועי — שלח משימה** | ContentUnit, Class | Assignment |
 | **מורה — צירוף חומרים** | Assignment | Attachment |
 | **מורה — התאמת AI** | ContentUnit | Assignment.override_body |
@@ -512,4 +514,5 @@ ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנ�
 2. **`guardian_phone`:** האם לאסוף טלפון הורה נפרד (עמידה מלאה במזעור אך שדה נוסף), או להשתמש בטלפון התלמיד גם להודעות הורים? נדרשת החלטה לפני ייעוץ משפטי (§7.2).
 3. ~~**ריבוי תפקידים לאיש צוות.**~~ **✅ הוכרע 9.7.2026:** נוספה טבלת `StaffRole` — אדם אחד מחזיק כמה תפקידים (יועצת+מחנכת). נוסף `role=counselor`. הגישה = איחוד הרשאות התפקידים הפעילים.
 
-4. **✅ הוכרע 9.7.2026 — יועצת ודפוס ארוך:** התוכן הרגשי (`CheckIn.mood`) נמחק ב-30 יום, אבל `FlagEvent` (עובדת ההדלקה — מתי + איזה טריגר) נשמר לשנה. היועצת רואה דפוס מ-`FlagEvent` בלי התוכן הרגיש. **נותר לאישור:** (א) חלון 90 יום לסף "דפוס" — נכון או ארוך/קצר מדי? (ב) מנגנון מסירת `StudentNote` של המחנך ליועצת בהעברה (`referred`) — האם ההערה עוברת אוטומטית או שהמחנך בוחר מה לשתף?
+4. **✅ הוכרע 9.7.2026 — יועצת ודפוס ארוך:** התוכן הרגשי (`CheckIn.mood`) נמחק ב-30 יום, אבל `FlagEvent` (עובדת ההדלקה — מתי + איזה טריגר) נשמר לשנה. היועצת רואה דפוס מ-`FlagEvent` בלי התוכן הרגיש. **סף הדפוס = 90 יום** (שאילתה §4.6).
+5. **✅ הוכרע 9.7.2026 — מסירת הערת מחנך:** בהעברה ליועצת (`FlagEvent.resolution=referred`), **המחנך בוחר מה לשתף** — לא מסירה אוטומטית של `StudentNote`. ההערה נשארת פרטית לכותב; מה שעובר ליועצת הוא רק מה שהמחנך בחר להעביר אקטיבית. (ראו מיפוי המסך "מחנך — העבר ליועצת".)
