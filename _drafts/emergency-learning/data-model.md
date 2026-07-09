@@ -1,8 +1,9 @@
 # מערכת רציפות למידה — מודל הנתונים המשותף
 
-**גרסה:** 1.1 · **תאריך:** 8.7.2026 · **סטטוס:** טיוטה לאישור
+**גרסה:** 1.2 · **תאריך:** 9.7.2026 · **סטטוס:** טיוטה לאישור
 **מזהה משימה:** T0.2 · **מסמך-אב:** `spec.md`
 **עדכון 1.1:** יושר לאפיון המעודכן — נוספו ציונים (`Submission.grade` על `unit_type=assessment`), הרשמה (`Student.registered`), קבצים (`Attachment`), מסלולי העשרה (`EnrichmentTrack`), פריטי הפניה חיצוניים, והערת מחנך (`StudentNote`).
+**עדכון 1.2 (9.7):** נוסף תפקיד **יועצת** — `role` פוצל מ-`StaffMember` לטבלת `StaffRole` (כמה תפקידים לאדם), נוסף `role=counselor`, ונוספה ישות `FlagEvent` (מטא-דאטה של דגלים, נשמרת לשנה) שמאפשרת ליועצת לראות דפוס ארוך בלי התוכן הרגשי שנמחק ב-30 יום.
 **מיקום:** `_drafts/emergency-learning/`
 
 ---
@@ -26,6 +27,9 @@ erDiagram
     SCHOOL ||--o{ SYSTEM_MODE : "יומן מצבים"
     STAFF_MEMBER ||--o{ SYSTEM_MODE : "מפעיל מצב"
 
+    STAFF_MEMBER ||--o{ STAFF_ROLE : "מחזיק תפקידים (כמה)"
+    SCHOOL ||--o{ STAFF_ROLE : "היקף בית ספר (nullable לפיקוח)"
+
     CLASS ||--o{ STUDENT : "משבץ תלמידים"
     CLASS }o--|| STAFF_MEMBER : "מחנך"
 
@@ -43,6 +47,9 @@ erDiagram
 
     STUDENT ||--o{ CHECKIN : "עושה"
     STAFF_MEMBER ||--o{ CHECKIN : "ראה (nullable)"
+
+    STUDENT ||--o{ FLAG_EVENT : "היסטוריית דגלים (מטא בלבד)"
+    CHECKIN |o--o| FLAG_EVENT : "מקור הדגל (nullable)"
 
     STUDENT ||--o{ CONTACT_LOG : "נושא הפנייה"
     STAFF_MEMBER ||--o{ CONTACT_LOG : "מתעד"
@@ -79,11 +86,27 @@ erDiagram
     STAFF_MEMBER {
         string id PK
         string first_name
-        string role "homeroom/subject/principal/supervisor"
-        string school_id FK "null לפיקוח"
         string phone
         string access_token
         bool active
+    }
+    STAFF_ROLE {
+        string id PK
+        string staff_id FK "אותו אדם — כמה שורות"
+        string role "homeroom/subject/counselor/principal/supervisor"
+        string school_id FK "היקף (null לפיקוח)"
+        bool active
+    }
+    FLAG_EVENT {
+        string id PK
+        string student_id FK
+        string checkin_id FK "מקור — nullable (גם היעדרות מדליקה)"
+        string trigger "hard_day_3d/wants_to_talk/absence_48h"
+        date lit_on "תאריך הדלקה — מטא בלבד"
+        string handled_by FK "מי טיפל (staff)"
+        string resolution "contacted/referred/escalated/closed"
+        date delete_after "lit_on + שנה — עובדה, בלי תוכן רגשי"
+        datetime created_at
     }
     CONTENT_UNIT {
         string id PK
@@ -222,18 +245,42 @@ erDiagram
 | grade | enum | ט / י / יא / יב |
 | homeroom_teacher_id | FK→StaffMember | המחנך של הכיתה |
 
-### 2.3 StaffMember — בעל תפקיד
+### 2.3 StaffMember — בעל תפקיד (זהות האדם)
 | שדה | טיפוס | תיאור |
 |------|-------|--------|
 | id | PK | |
 | first_name | string | |
-| role | enum | `homeroom` (מחנך) / `subject` (מורה מקצועי) / `principal` (מנהל) / `supervisor` (פיקוח) |
-| school_id | FK→School? | `null` לפיקוח — פועל מעבר לבית ספר בודד |
 | phone | string | |
 | access_token | string | כניסה בלי סיסמה |
 | active | bool | לדופק צוות — מי לא נכנס יומיים |
 
-> מחנך הוא `StaffMember` שכיתה כלשהי מפנה אליו ב-`homeroom_teacher_id`; אותו אדם יכול גם לשלוח משימות כ-`subject`. אין שכפול רשומת אדם.
+> **פוצל מ-`role` יחיד לטבלת תפקידים.** `StaffMember` מחזיק את זהות האדם בלבד; התפקידים יושבים ב-`StaffRole` (שורה לכל תפקיד). כך אדם אחד יכול להיות **גם יועצת וגם מחנכת** בלי שכפול רשומה, וגם מורה מקצועי במקביל.
+
+### 2.3א StaffRole — תפקיד (כמה לאדם)
+| שדה | טיפוס | תיאור | פרטיות |
+|------|-------|--------|---------|
+| id | PK | | — |
+| staff_id | FK→StaffMember | אותו אדם — כמה שורות | — |
+| role | enum | `homeroom` (מחנך) / `subject` (מורה מקצועי) / **`counselor` (יועצת)** / `principal` (מנהל) / `supervisor` (פיקוח) | קובע היקף גישה — ראו §3 |
+| school_id | FK→School? | היקף התפקיד; `null` לפיקוח (מעבר לבית ספר בודד) | — |
+| active | bool | תפקיד פעיל (יועצת שסיימה תפקיד — `false`) | — |
+
+> **מחנך** מזוהה דרך `Class.homeroom_teacher_id` (שיוך לכיתה), **בנוסף** לשורת `StaffRole` עם `role=homeroom`. **יועצת** = שורת `StaffRole` עם `role=counselor` בהיקף בית ספר — היא לא משויכת לכיתה בודדת אלא רואה חוצה-כיתות (ראו §3).
+
+### 2.3ב FlagEvent — אירוע דגל רגשי (מטא בלבד, נשמר לשנה)
+| שדה | טיפוס | תיאור | פרטיות |
+|------|-------|--------|---------|
+| id | PK | | — |
+| student_id | FK→Student | | |
+| checkin_id | FK→CheckIn? | ה-check-in שהדליק (nullable — היעדרות 48ש' מדליקה בלי check-in) | — |
+| trigger | enum | `hard_day_3d` ("קשה לי" 3 ימים) / `wants_to_talk` / `absence_48h` | — |
+| lit_on | date | תאריך ההדלקה — **עובדה, לא תוכן רגשי** | נשמר לשנה |
+| handled_by | FK→StaffMember? | מי טיפל (מחנך/יועצת) | — |
+| resolution | enum | `contacted` / `referred` (הועבר ליועצת) / `escalated` / `closed` | — |
+| delete_after | date | `lit_on` + שנה | מחיקה מדורגת |
+| created_at | datetime | | |
+
+> **זה הפתרון למתח 30-יום מול "דפוס ארוך".** ה-`CheckIn` הרגשי (עם ה-`mood` והתוכן הרגיש) נמחק ב-30 יום כמתוכנן. אבל **עובדת** ההדלקה — "נדלק דגל `hard_day_3d` ב-12.11" — נשמרת ב-`FlagEvent` לשנה, בלי שום תוכן רגשי. **היועצת רואה דפוס** ("4 דגלים ב-3 חודשים") מ-`FlagEvent`, ולא נחשפת לתוכן שנמחק. מזעור נתונים לפי תיקון 13: שומרים את המינימום שמשרת את הצורך המקצועי (דפוס), לא יותר.
 
 ### 2.4 ContentUnit — משימת ספרייה ("מדף הרציפות")
 | שדה | טיפוס | תיאור |
@@ -387,7 +434,8 @@ ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנ�
 ```
 
 - **התוכן חי במקום אחד** (`ContentUnit`). כל שאר השרשרת מפנה אליו ב-FK. שינוי ניסוח משנה שורה אחת.
-- **הדשבורדים הם עדשות, לא עותקים.** אותן שורות `CheckIn`/`Submission`/`ContactLog` נקראות בשלוש רזולוציות: מחנך (פרטני, כיתתו) → מנהל (סטטוסים מצרפיים, בית ספרו) → פיקוח (מצרף מלא לפי רשת/מחוז). ההפרדה נאכפת בהיקף השאילתה לפי `role`, לא בהעתקת נתונים.
+- **הדשבורדים הם עדשות, לא עותקים.** אותן שורות `CheckIn`/`Submission`/`ContactLog`/`FlagEvent` נקראות בכמה רזולוציות: מחנך (פרטני, כיתתו, **הווה בלבד**) → יועצת (דפוס וחוצה-כיתות מ-`FlagEvent`, **בלי התוכן הרגשי שנמחק**) → מנהל (סטטוסים מצרפיים + עובדת קיום, לא תוכן) → פיקוח (מצרף מלא לפי רשת/מחוז). ההפרדה נאכפת בהיקף השאילתה לפי `StaffRole.role`, לא בהעתקת נתונים.
+- **התפקיד מגיע מ-`StaffRole`, לא מ-`StaffMember`.** אדם יכול להחזיק כמה שורות `StaffRole` (יועצת שהיא גם מחנכת) — הגישה בפועל היא **איחוד** ההרשאות של תפקידיו הפעילים.
 - **`mode` אחיד** מוטבע על כל אירוע מ-`SystemMode` הנוכחי — ולכן כל דוח נחתך לפי מצב בלי טבלה נפרדת למצב.
 
 ---
@@ -409,6 +457,9 @@ ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנ�
 5. **"כמה תלמידים נראו היום ברמת המדינה, בבתי ספר שנמצאים במצב חירום?"** (תמונת חירום ארצית)
    כל `School` שרשומת ה-`SystemMode` האחרונה שלו = `emergency`; לכל אלה, ספירת ה-`Student` הנבדלים עם `CheckIn` שבו `day`=היום ו-`mode='emergency'`. מוחזר כמספר/אחוז ארצי, מקובץ אופציונלית לפי `district` — בלי שמות.
 
+6. **"אילו תלמידים הראו דפוס של 3+ דגלים ב-3 החודשים האחרונים?"** (עולם היועצת — זיהוי דפוס ארוך)
+   לכל `Student` בבית הספר, ספירת `FlagEvent` שבהם `lit_on` בתוך 90 הימים האחרונים. תלמידים עם 3 ומעלה עולים לראש רשימת היועצת. **קריטי:** השאילתה קוראת רק את `FlagEvent` (עובדה: מתי + איזה טריגר), **לא** את `CheckIn.mood` — התוכן הרגשי כבר נמחק אחרי 30 יום. היועצת רואה "כמה ומתי", לא "מה הילד כתב". גישה זו פתוחה רק ל-`StaffRole.role=counselor`.
+
 > שאילתה נוספת שימושית (לוח המחנך): **"אילו check-ins היום עוד לא אושרו על ידי המורה?"** — כל `CheckIn` של כיתתי מהיום שבו `seen_by IS NULL`. אישור מפעיל את "המורה ראה" אצל התלמיד.
 
 ---
@@ -425,9 +476,12 @@ ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנ�
 | **תלמיד — "תסביר אחרת" (AI)** | ContentUnit/Assignment (תוכן המשימה בלבד) | — (בלי זיכרון שיחה) |
 | **מחנך — לוח דופק** | CheckIn, Student, Class, ContactLog | — |
 | **מחנך — פנייה בלחיצה** | Student.phone, Class | Notification, ContactLog |
-| **מחנך — דגלים רגשיים** | CheckIn.distress_flag (כיתתו בלבד) | CheckIn.seen_by |
+| **מחנך — דגלים רגשיים** | CheckIn.distress_flag (כיתתו, הווה בלבד) | CheckIn.seen_by, FlagEvent (הדלקה) |
 | **מחנך — יומן קשר** | ContactLog | ContactLog |
 | **מחנך — שדה הערה** | StudentNote (כיתתו, שלו בלבד) | StudentNote |
+| **מחנך — "העבר ליועצת"** | FlagEvent (הנוכחי) | FlagEvent.resolution=`referred`, Notification (ליועצת) |
+| **יועצת — רשימת דפוסים** | FlagEvent (חוצה-כיתות, 90 יום — מטא בלבד), Student, Class | — |
+| **יועצת — טיפול בהפניה** | FlagEvent, StudentNote (בהעברה), ContactLog | FlagEvent.handled_by/resolution, ContactLog |
 | **מורה מקצועי — שלח משימה** | ContentUnit, Class | Assignment |
 | **מורה — צירוף חומרים** | Assignment | Attachment |
 | **מורה — התאמת AI** | ContentUnit | Assignment.override_body |
@@ -456,4 +510,6 @@ ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנ�
 
 1. **מחיקה כפולה של check-in רגשי:** הגדרתי ש-`mood`/`distress_flag` נמחקים אחרי 30 יום, בעוד עובדת הנוכחות נשמרת עד תום שנה"ל (§7.2). לאשר שההפרדה הזאת מקובלת — או שכל רשומת check-in רגשי נמחקת במלואה אחרי 30 יום.
 2. **`guardian_phone`:** האם לאסוף טלפון הורה נפרד (עמידה מלאה במזעור אך שדה נוסף), או להשתמש בטלפון התלמיד גם להודעות הורים? נדרשת החלטה לפני ייעוץ משפטי (§7.2).
-3. **ריבוי תפקידים לאיש צוות:** מידלתי `role` יחיד + זיהוי מחנך דרך `Class.homeroom_teacher_id`. אם מורה מכהן בכמה תפקידים חופפים (יועצת שהיא גם מחנכת) — לאשר שהמבנה הזה מספיק או שצריך טבלת תפקידים נפרדת.
+3. ~~**ריבוי תפקידים לאיש צוות.**~~ **✅ הוכרע 9.7.2026:** נוספה טבלת `StaffRole` — אדם אחד מחזיק כמה תפקידים (יועצת+מחנכת). נוסף `role=counselor`. הגישה = איחוד הרשאות התפקידים הפעילים.
+
+4. **✅ הוכרע 9.7.2026 — יועצת ודפוס ארוך:** התוכן הרגשי (`CheckIn.mood`) נמחק ב-30 יום, אבל `FlagEvent` (עובדת ההדלקה — מתי + איזה טריגר) נשמר לשנה. היועצת רואה דפוס מ-`FlagEvent` בלי התוכן הרגיש. **נותר לאישור:** (א) חלון 90 יום לסף "דפוס" — נכון או ארוך/קצר מדי? (ב) מנגנון מסירת `StudentNote` של המחנך ליועצת בהעברה (`referred`) — האם ההערה עוברת אוטומטית או שהמחנך בוחר מה לשתף?
