@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · המועדפים שלי</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     המועדפים שלי (favorites.html) — תוכן ספציפי לתצוגה בלבד.
+     כל השלד (app-shell/sidebar/topbar) + card/btn/chip/scrim/toast
+     מגיעים מ-components.css. השירות: favorites.js (Resef.Favorites).
+     כאן: פריסת הגלריה + כרטיס-מועדף. טוקנים בלבד + פלטת-סוגים.
+     ============================================================ */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; font-family: var(--font-body); background: var(--bg);
+    color: var(--ink); font-size: var(--text-body); -webkit-text-size-adjust: 100%;
+  }
+
+  /* ---- פלטת-סוגים מרוכזת (זהה ל-library) ---- */
+  :root {
+    --t-unit:  #0B8F98; --t-unit-bg:  #E8F8F9;
+    --t-deck:  #2D8CFF; --t-deck-bg:  #EDF5FF;
+    --t-video: #E5533B; --t-video-bg: #FDEEEA;
+    --t-quiz:  #7A5AF8; --t-quiz-bg:  #F0ECFE;
+    --t-work:  #C88A16; --t-work-bg:  #FBF3E0;
+    --t-sim:   #12A594; --t-sim-bg:   #E1F5F1;
+    --t-link:  #5B7280; --t-link-bg:  #EEF3F5;
+  }
+
+  /* ---- כותרת העמוד ---- */
+  .fav-head { display: flex; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap; }
+  .fav-head__main { min-width: 0; flex: 1 1 300px; }
+  .fav-head__title {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800;
+    color: var(--ink-strong); margin: 0 0 var(--space-1); line-height: 1.15;
+  }
+  .fav-head__title svg { width: 26px; height: 26px; color: #E6A817; flex: none; }
+  .fav-head__sub { color: var(--ink-soft); margin: 0; font-size: var(--text-small); }
+  .fav-head__count {
+    flex: none; display: inline-flex; align-items: center; gap: 7px;
+    font-size: var(--text-small); font-weight: 700; color: var(--brand-deep);
+    background: var(--brand-soft); border: 1px solid var(--brand-line);
+    border-radius: var(--radius-pill); padding: 7px 14px;
+  }
+  .fav-head__count b { font-variant-numeric: tabular-nums; }
+
+  /* ---- פאנל-דמו (למילוי/איפוס האוסף + החלפת משתמש/ת) ---- */
+  .fav-demo {
+    display: flex; align-items: center; gap: var(--space-3) var(--space-4); flex-wrap: wrap;
+    background: var(--brand-soft); border: 1px dashed var(--brand-line);
+    border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .fav-demo__label {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--text-label); font-weight: 700; color: var(--brand-deep);
+  }
+  .fav-demo__label svg { width: 15px; height: 15px; }
+  .fav-demo__group { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .fav-demo__sep { width: 1px; align-self: stretch; background: var(--brand-line); margin: 2px 4px; }
+  .fav-demo__user {
+    font-family: var(--font-body); font-size: var(--text-label); font-weight: 600;
+    color: var(--ink-soft); background: var(--card); border: 1px solid var(--brand-line);
+    border-radius: var(--radius-pill); padding: 5px 12px; min-height: 32px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .fav-demo__user[aria-pressed="true"] { color: #fff; background: var(--brand); border-color: var(--brand); }
+  .fav-demo__user:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  /* ---- גלריית המועדפים ---- */
+  .fav-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-4);
+  }
+
+  /* ---- כרטיס-מועדף (בנוי על .card) ---- */
+  .fav-card {
+    display: flex; flex-direction: column; gap: var(--space-3);
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+    padding: var(--space-5);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+  .fav-card:hover { border-color: var(--brand-line); box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+  .fav-card__top { display: flex; align-items: center; gap: var(--space-2); }
+
+  .fav-type {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px;
+    font-size: var(--text-label); font-weight: 700; line-height: 1;
+    color: var(--_t, var(--ink)); background: var(--_tb, var(--surface-muted));
+    border-radius: var(--radius-pill);
+  }
+  .fav-type__dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex: none; }
+
+  .fav-remove {
+    margin-inline-start: auto; width: 34px; height: 34px; flex: none;
+    display: grid; place-items: center; border-radius: 50%;
+    color: #E6A817; background: #FDF6E3; border: 1px solid #F2E2B6; cursor: pointer;
+    transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+  }
+  .fav-remove svg { width: 18px; height: 18px; }
+  .fav-remove:hover { background: #FCECEB; color: var(--status-alert); border-color: #F1C7C4; }
+  .fav-remove:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .fav-card__title {
+    font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700;
+    color: var(--ink-strong); margin: 0; line-height: 1.25;
+  }
+  .fav-card__desc {
+    font-size: var(--text-small); color: var(--ink-soft); margin: 0; line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .fav-card__meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+  .fav-chip {
+    display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 0 9px;
+    font-size: var(--text-label); font-weight: 600; line-height: 1;
+    color: var(--ink); background: var(--surface-muted);
+    border: 1px solid var(--line); border-radius: var(--radius-pill); white-space: nowrap;
+  }
+  .fav-chip svg { width: 13px; height: 13px; flex: none; color: var(--ink-faint); }
+  .fav-chip--grade { color: var(--brand-deep); background: var(--brand-soft); border-color: var(--brand-line); }
+  .fav-chip--grade svg { color: var(--brand); }
+
+  .fav-card__foot {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding-top: var(--space-3); border-top: 1px solid var(--line);
+  }
+  .fav-card__stat { font-size: var(--text-label); color: var(--ink-faint); display: inline-flex; align-items: center; gap: 5px; }
+  .fav-card__stat svg { width: 14px; height: 14px; }
+  .fav-card__actions { margin-inline-start: auto; display: flex; gap: var(--space-2); }
+
+  /* ---- מצב-ריק ---- */
+  .fav-empty { display: none; }
+  .fav-empty.is-on { display: block; }
+  .fav-empty__badge {
+    width: 64px; height: 64px; border-radius: 50%; margin: 0 auto;
+    display: grid; place-items: center; background: #FDF6E3; color: #E6A817;
+  }
+  .fav-empty__badge svg { width: 32px; height: 32px; }
+
+  @media (max-width: 760px) {
+    .fav-grid { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fav-card { transition: none; }
+    .fav-card:hover { transform: none; }
+  }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-plus-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="ic-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.5 3 6 3s6-2 6-3v-5"/></symbol>
+  <symbol id="ic-slider" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h11M18 6h2M4 12h4M11 12h9M4 18h8M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="ic-star" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21.9l1.1-6.5L2.6 10.8l6.5-.9z"/></symbol>
+  <symbol id="ic-star-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21.9l1.1-6.5L2.6 10.8l6.5-.9z"/></symbol>
+  <symbol id="ic-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+  <symbol id="ic-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M21 3l-9 9M10 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+</svg>
+
+<!-- ============================================================
+     TeacherShell — Sidebar + Topbar + Main
+     ============================================================ -->
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="teacher-dashboard.html" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="teacher-class-board.html" aria-label="הכיתה שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+        <span class="sidebar__label">הכיתה שלי</span>
+      </a>
+      <a class="sidebar__item" href="educator-pulse.html" aria-label="דופק כיתתי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-activity"/></svg></span>
+        <span class="sidebar__label">דופק כיתתי</span>
+      </a>
+      <a class="sidebar__item" href="teacher-flow.html" aria-label="שליחת משימה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">שליחת משימה</span>
+      </a>
+
+      <div class="sidebar__section">תוכן</div>
+      <a class="sidebar__item" href="library.html" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="favorites.html" aria-current="page" aria-label="המועדפים שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-star"/></svg></span>
+        <span class="sidebar__label">המועדפים שלי</span>
+      </a>
+      <a class="sidebar__item" href="lesson-create.html" aria-label="יצירת שיעור">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-plus-c"/></svg></span>
+        <span class="sidebar__label">יצירת שיעור</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רותם לוי</div>
+          <div class="sidebar__foot-role">מורה · מחנכת ט'2</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">המועדפים שלי</div>
+        <div class="topbar__subtitle">רֶצֶף · האוסף האישי שלך</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (3 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">3</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+
+        <div class="fav-head">
+          <div class="fav-head__main">
+            <h1 class="fav-head__title"><svg aria-hidden="true"><use href="#ic-star"/></svg>המועדפים שלי</h1>
+            <p class="fav-head__sub">כל משאב שסימנתם בכוכב מרוכז כאן — פתחו, שתפו או שבצו לכיתה בלחיצה. האוסף פרטי לכם ונשמר בין רענונים.</p>
+          </div>
+          <span class="fav-head__count"><svg width="15" height="15" aria-hidden="true"><use href="#ic-star"/></svg><b id="favCount">0</b> משאבים שמורים</span>
+        </div>
+
+        <!-- ===== פאנל-דמו: מילוי/איפוס + החלפת משתמש/ת (להדגמת "לכל משתמש") ===== -->
+        <div class="fav-demo" role="group" aria-label="הדגמה">
+          <span class="fav-demo__label"><svg aria-hidden="true"><use href="#ic-activity"/></svg>הדגמה:</span>
+          <div class="fav-demo__group">
+            <button class="btn btn--secondary btn--sm" type="button" id="seedBtn">
+              <svg viewBox="0 0 24 24"><use href="#ic-star"/></svg>מלא באוסף לדוגמה
+            </button>
+            <button class="btn btn--ghost btn--sm" type="button" id="clearBtn">
+              <svg viewBox="0 0 24 24"><use href="#ic-trash"/></svg>נקה הכל
+            </button>
+          </div>
+          <div class="fav-demo__sep" aria-hidden="true"></div>
+          <div class="fav-demo__group" role="group" aria-label="החלפת משתמש/ת (הדגמת מדף פרטי)">
+            <span class="fav-demo__label"><svg aria-hidden="true"><use href="#ic-user"/></svg>משתמש/ת:</span>
+            <button class="fav-demo__user" type="button" data-user="t_rotem" data-name="רותם לוי" aria-pressed="true">רותם</button>
+            <button class="fav-demo__user" type="button" data-user="t_shira" data-name="שירה כהן" aria-pressed="false">שירה</button>
+          </div>
+        </div>
+
+        <!-- ===== גלריית מועדפים ===== -->
+        <div class="fav-grid" id="grid" aria-label="גלריית המועדפים"></div>
+
+        <!-- ===== מצב-ריק ===== -->
+        <div class="fav-empty card" id="empty">
+          <div class="empty-state empty-state--compact">
+            <div class="fav-empty__badge" aria-hidden="true"><svg><use href="#ic-star-off"/></svg></div>
+            <h2 class="empty-state__title">עדיין אין מועדפים</h2>
+            <p class="empty-state__text">כשתמצאו משאב שאהבתם בספרייה — לחצו על הכוכב, והוא יופיע כאן. כך תבנו מדף אישי שנשאר איתכם.</p>
+            <a class="btn btn--primary empty-state__action" href="library.html">
+              <svg viewBox="0 0 24 24"><use href="#ic-book"/></svg>לספריית התוכן
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
+
+<script src="favorites.js"></script>
+<script>
+(function () {
+  'use strict';
+  var F = window.Resef.Favorites;
+
+  /* ---- פלטת-סוגים: מפתח → טוקני-צבע (זהה ל-library) ---- */
+  var TYPE_TOKEN = {
+    unit:  { c:'--t-unit',  bg:'--t-unit-bg'  },
+    deck:  { c:'--t-deck',  bg:'--t-deck-bg'  },
+    video: { c:'--t-video', bg:'--t-video-bg' },
+    quiz:  { c:'--t-quiz',  bg:'--t-quiz-bg'  },
+    work:  { c:'--t-work',  bg:'--t-work-bg'  },
+    sim:   { c:'--t-sim',   bg:'--t-sim-bg'   },
+    link:  { c:'--t-link',  bg:'--t-link-bg'  }
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function useSvg(id) { return '<svg aria-hidden="true"><use href="#' + id + '"/></svg>'; }
+
+  var grid = $('grid');
+  var emptyEl = $('empty');
+  var countEl = $('favCount');
+
+  /* ---------- רינדור כרטיס-מועדף ---------- */
+  function cardHTML(r) {
+    var tok = TYPE_TOKEN[F.normalizeType(r.typeKey)] || TYPE_TOKEN.unit;
+    var meta = '';
+    if (r.subject) meta += '<span class="fav-chip">' + useSvg('ic-book') + esc(r.subject) + '</span>';
+    if (r.grade)   meta += '<span class="fav-chip fav-chip--grade">' + useSvg('ic-cap') + 'שכבה ' + esc(r.grade) + '</span>';
+    if (r.level)   meta += '<span class="fav-chip">' + useSvg('ic-slider') + esc(r.level) + '</span>';
+
+    var stat = '';
+    if (r.uses != null || r.min != null) {
+      stat = '<span class="fav-card__stat">' + useSvg('ic-repeat') +
+        (r.uses != null ? r.uses + ' שיבוצים' : '') +
+        (r.uses != null && r.min != null ? ' · ' : '') +
+        (r.min != null ? r.min + ' דק\'' : '') + '</span>';
+    }
+
+    return '' +
+      '<article class="fav-card" data-id="' + esc(r.id) + '">' +
+        '<div class="fav-card__top">' +
+          '<span class="fav-type" style="--_t:var(' + tok.c + ');--_tb:var(' + tok.bg + ')">' +
+            '<span class="fav-type__dot" aria-hidden="true"></span>' + esc(r.typeLabel) +
+          '</span>' +
+          '<button class="fav-remove" type="button" data-remove aria-label="הסרה מהמועדפים — ' + esc(r.title) + '">' + useSvg('ic-star') + '</button>' +
+        '</div>' +
+        '<h3 class="fav-card__title">' + esc(r.title) + '</h3>' +
+        (r.desc ? '<p class="fav-card__desc">' + esc(r.desc) + '</p>' : '') +
+        '<div class="fav-card__meta">' + meta + '</div>' +
+        '<div class="fav-card__foot">' + stat +
+          '<div class="fav-card__actions">' +
+            '<button class="btn btn--ghost btn--sm" type="button" data-share aria-label="שיתוף — ' + esc(r.title) + '">' + useSvg('ic-share') + 'שיתוף</button>' +
+            '<button class="btn btn--secondary btn--sm" type="button" data-open aria-label="פתיחה — ' + esc(r.title) + '">' + useSvg('ic-external') + 'פתיחה</button>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+  }
+
+  function render() {
+    var items = F.list();
+    countEl.textContent = items.length;
+    grid.innerHTML = items.map(cardHTML).join('');
+    var isEmpty = items.length === 0;
+    emptyEl.classList.toggle('is-on', isEmpty);
+    grid.style.display = isEmpty ? 'none' : '';
+  }
+
+  /* ---------- אירועי כרטיס ---------- */
+  grid.addEventListener('click', function (e) {
+    var card = e.target.closest('.fav-card');
+    if (!card) return;
+    var id = card.getAttribute('data-id');
+    var rec = F.get(id);
+    if (!rec) return;
+
+    if (e.target.closest('[data-remove]')) {
+      F.remove(id);                       // onChange → render
+      showToast('"' + rec.title + '" הוסר מהמועדפים');
+      return;
+    }
+    if (e.target.closest('[data-share]')) { F.openShare(rec); return; }
+    if (e.target.closest('[data-open]'))  { window.location.href = F.buildShareUrl(rec); return; }
+  });
+
+  /* ---------- פאנל-דמו ---------- */
+  var SAMPLE = [
+    { id:'r05', typeKey:'work', typeLabel:'דף עבודה', title:'שם הפועל והשורש — דף עבודה', desc:'זיהוי שורש וגזירת פועל, עם פתרון מלא בסוף.', subject:'עברית — לשון', grade:"ט'", level:'רגיל', min:10, uses:131, source:'library' },
+    { id:'r03', typeKey:'video', typeLabel:'סרטון', title:'מבנה התא — סרטון קצר', desc:'אברוני התא בצמח ובבעל-חיים, עד 6 דקות + שאלת צפייה.', subject:'מדעים', grade:"ט'", level:'בסיסי', min:6, uses:158, source:'library' },
+    { id:'r06', typeKey:'unit', typeLabel:'יחידה', title:'משוואות ממעלה ראשונה', desc:'בידוד נעלם ופתרון צעד-אחר-צעד.', subject:'מתמטיקה', grade:"י'", level:'רגיל', min:10, uses:187, source:'library' },
+    { id:'r10', typeKey:'video', typeLabel:'סרטון', title:'איך עובדת הכנסת?', desc:'סרטון קצר על הליך החקיקה + שאלת ודא-צפייה.', subject:'אזרחות', grade:"י\"א", level:'רגיל', min:8, uses:141, source:'library' }
+  ];
+
+  $('seedBtn').addEventListener('click', function () {
+    SAMPLE.forEach(function (it) { F.add(it); });   // כל add משדר onChange
+    showToast('נוספו ' + SAMPLE.length + ' משאבים לאוסף לדוגמה');
+  });
+  $('clearBtn').addEventListener('click', function () {
+    if (F.count() === 0) { showToast('האוסף כבר ריק'); return; }
+    F.clearAll();
+    showToast('האוסף נוקה');
+  });
+
+  /* ---------- החלפת משתמש/ת (הדגמת מדף פרטי) ---------- */
+  var userBtns = Array.prototype.slice.call(document.querySelectorAll('.fav-demo__user'));
+  function syncUserBtns() {
+    var uid = F.getUser().id;
+    userBtns.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-user') === uid ? 'true' : 'false'); });
+  }
+  userBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      F.setUser(b.getAttribute('data-user'), b.getAttribute('data-name'));  // onChange → render
+      syncUserBtns();
+      showToast('עברת לאוסף של ' + b.getAttribute('data-name'));
+    });
+  });
+  // ברירת-מחדל להדגמה: מתחילים כרותם (אם לא נבחר משתמש/ת אחר קודם)
+  if (F.getUser().id === 'me') F.setUser('t_rotem', 'רותם לוי');
+  syncUserBtns();
+
+  /* ---------- מנוי לשינויים (כולל בין-טאבי) ---------- */
+  F.onChange(function () { render(); syncUserBtns(); });
+  render();
+
+  /* ============================================================
+     Toast + מגירת-ניווט
+     ============================================================ */
+  function showToast(msg) {
+    var region = $('toast-region');
+    var el = document.createElement('div');
+    el.className = 'toast toast--success';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="toast__icon">' + useSvg('ic-check-c') + '</span><span class="toast__msg">' + esc(msg) + '</span>' +
+                   '<button class="icon-btn toast__close" type="button" aria-label="סגירה">' + useSvg('ic-x') + '</button>';
+    region.appendChild(el);
+    var t = setTimeout(remove, 3600);
+    el.querySelector('.toast__close').addEventListener('click', function () { clearTimeout(t); remove(); });
+    function remove() { el.setAttribute('data-leaving', 'true'); setTimeout(function () { el.remove(); }, 200); }
+  }
+
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+})();
+</script>
+</body>
+</html>

@@ -142,6 +142,24 @@
   }
   .res-safe svg { width: 15px; height: 15px; }
 
+  /* כפתור מועדף (כוכב) — פינת הכרטיס. פעיל = מלא זהב */
+  .res-fav {
+    margin-inline-start: auto; width: 34px; height: 34px; flex: none;
+    display: grid; place-items: center; border-radius: 50%;
+    color: var(--ink-faint); background: var(--surface-muted); border: 1px solid var(--line);
+    cursor: pointer; transition: background 140ms ease, color 140ms ease, border-color 140ms ease, transform 140ms ease;
+  }
+  .res-fav svg { width: 18px; height: 18px; }
+  .res-fav:hover { color: #E6A817; border-color: #F2E2B6; background: #FDF6E3; }
+  .res-fav:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .res-fav[aria-pressed="true"] { color: #E6A817; background: #FDF6E3; border-color: #F2E2B6; }
+  .res-fav[aria-pressed="true"]:active { transform: scale(0.9); }
+  /* כשיש גם תג-בטיחות — הוא כבר תופס margin-auto; הכוכב נצמד אחריו */
+  .res-safe + .res-fav { margin-inline-start: var(--space-2); }
+
+  /* מונה מועדפים ב-sidebar */
+  .sidebar__item .badge--soft { margin-inline-start: auto; }
+
   .res-card__title {
     font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700;
     color: var(--ink-strong); margin: 0; line-height: 1.25;
@@ -231,6 +249,9 @@
   <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
   <symbol id="ic-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.5 3 6 3s6-2 6-3v-5"/></symbol>
   <symbol id="ic-slider" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h11M18 6h2M4 12h4M11 12h9M4 18h8M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></symbol>
+  <symbol id="ic-star" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21.9l1.1-6.5L2.6 10.8l6.5-.9z"/></symbol>
+  <symbol id="ic-star-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21.9l1.1-6.5L2.6 10.8l6.5-.9z"/></symbol>
+  <symbol id="ic-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
   <!-- אייקוני סוגי-תוכן -->
   <symbol id="ic-t-unit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4.5-9 4.5-9-4.5L12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></symbol>
   <symbol id="ic-t-deck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8"/></symbol>
@@ -289,6 +310,11 @@
       <a class="sidebar__item" href="library.html" aria-current="page" aria-label="ספריית התוכן">
         <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
         <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="favorites.html" aria-label="המועדפים שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-star"/></svg></span>
+        <span class="sidebar__label">המועדפים שלי</span>
+        <span class="badge badge--soft" id="navFavCount" hidden aria-hidden="true">0</span>
       </a>
       <a class="sidebar__item" href="lesson-create.html" aria-label="יצירת שיעור">
         <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-plus-c"/></svg></span>
@@ -391,9 +417,13 @@
 </div>
 
 <script src="search-service.js"></script>
+<script src="favorites.js"></script>
 <script>
 (function () {
   'use strict';
+  var F = window.Resef.Favorites;
+  // האוסף פרטי למשתמש/ת — במסך אמיתי הזהות מגיעה מהשרת; כאן לצורך הדגמה:
+  if (F.getUser().id === 'me') F.setUser('t_rotem', 'רותם לוי');
 
   /* ============================================================
      סכימת סוגי-תוכן אחידה (W6-02) — מקור אחד לסוג → תווית/אייקון/צבע
@@ -530,17 +560,32 @@
     return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
   }); }
 
+  /* המרת פריט-ספרייה ל-snapshot של מועדף (תוויות מוכנות-תצוגה) */
+  function toFav(r) {
+    return {
+      id: r.id, typeKey: r.type, typeLabel: TYPES[r.type].label,
+      title: r.title, desc: r.desc,
+      subject: SUBJECTS[r.subject], grade: GRADES[r.grade], level: LEVELS[r.level],
+      min: r.min, uses: r.uses, source: 'library'
+    };
+  }
+
   function cardHTML(r) {
     var t = TYPES[r.type];
     var safe = r.safe
       ? '<span class="res-safe"><svg aria-hidden="true"><use href="#ic-shield"/></svg>בטוח לחירום</span>'
       : '';
+    var fav = F.isFavorite(r.id);
+    var favBtn = '<button class="res-fav" type="button" data-fav="' + esc(r.id) + '" ' +
+      'aria-pressed="' + (fav ? 'true' : 'false') + '" ' +
+      'aria-label="' + (fav ? 'הסרה מהמועדפים' : 'הוספה למועדפים') + ' — ' + esc(r.title) + '">' +
+      '<svg aria-hidden="true"><use href="#' + (fav ? 'ic-star' : 'ic-star-off') + '"/></svg></button>';
     return '' +
       '<article class="res-card">' +
         '<div class="res-card__top">' +
           '<span class="res-type" style="--_t:var(' + t.c + ');--_tb:var(' + t.bg + ')">' +
             '<svg aria-hidden="true"><use href="#' + t.icon + '"/></svg>' + esc(t.label) +
-          '</span>' + safe +
+          '</span>' + safe + favBtn +
         '</div>' +
         '<h3 class="res-card__title">' + esc(r.title) + '</h3>' +
         '<p class="res-card__desc">' + esc(r.desc) + '</p>' +
@@ -552,8 +597,8 @@
         '<div class="res-card__foot">' +
           '<span class="res-card__stat"><svg aria-hidden="true"><use href="#ic-repeat"/></svg>' + r.uses + ' שיבוצים · ' + r.min + ' דק\'</span>' +
           '<div class="res-card__actions">' +
-            '<button class="btn btn--ghost btn--sm" type="button" data-preview="' + esc(r.title) + '" aria-label="תצוגה מקדימה — ' + esc(r.title) + '">' +
-              '<svg viewBox="0 0 24 24"><use href="#ic-eye"/></svg>תצוגה</button>' +
+            '<button class="btn btn--ghost btn--sm" type="button" data-share="' + esc(r.id) + '" aria-label="שיתוף — ' + esc(r.title) + '">' +
+              '<svg viewBox="0 0 24 24"><use href="#ic-share"/></svg>שיתוף</button>' +
             '<button class="btn btn--secondary btn--sm" type="button" data-assign="' + esc(r.title) + '">' +
               '<svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>שבץ לכיתה</button>' +
           '</div>' +
@@ -586,15 +631,53 @@
 
     var hasFilter = anyFacetActive() || (searchCtl && searchCtl.value());
     clearBtn.classList.toggle('is-on', !!hasFilter);
+
+    if (typeof updateNavFavCount === 'function') updateNavFavCount();
   }
 
-  /* ---------- אירועי כרטיס (הדגמה) ---------- */
+  /* ---------- אירועי כרטיס ---------- */
+  var BY_ID = {};
+  RESOURCES.forEach(function (r) { BY_ID[r.id] = r; });
+
   grid.addEventListener('click', function (e) {
+    var favBtn = e.target.closest('[data-fav]');
+    if (favBtn) {
+      var r = BY_ID[favBtn.getAttribute('data-fav')];
+      if (!r) return;
+      var added = F.toggle(toFav(r));   // onChange → refreshFavStates מסנכרן את הכפתור
+      showToast(added ? '"' + r.title + '" נוסף למועדפים' : '"' + r.title + '" הוסר מהמועדפים');
+      return;
+    }
+    var shareBtn = e.target.closest('[data-share]');
+    if (shareBtn) {
+      var rs = BY_ID[shareBtn.getAttribute('data-share')];
+      if (rs) F.openShare(toFav(rs));
+      return;
+    }
     var assign = e.target.closest('[data-assign]');
     if (assign) { showToast('נפתח שיבוץ: ' + assign.dataset.assign); return; }
-    var prev = e.target.closest('[data-preview]');
-    if (prev) { showToast('תצוגה מקדימה: ' + prev.dataset.preview); }
   });
+
+  /* ---------- סנכרון מצב-מועדף על הכרטיסים + מונה ה-sidebar ---------- */
+  var navFavCount = document.getElementById('navFavCount');
+  function updateNavFavCount() {
+    var n = F.count();
+    if (n > 0) { navFavCount.textContent = n; navFavCount.hidden = false; }
+    else { navFavCount.hidden = true; }
+  }
+  function refreshFavStates() {
+    grid.querySelectorAll('.res-fav').forEach(function (btn) {
+      var on = F.isFavorite(btn.getAttribute('data-fav'));
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var r = BY_ID[btn.getAttribute('data-fav')];
+      btn.setAttribute('aria-label', (on ? 'הסרה מהמועדפים' : 'הוספה למועדפים') + (r ? ' — ' + r.title : ''));
+      var use = btn.querySelector('use');
+      if (use) use.setAttribute('href', on ? '#ic-star' : '#ic-star-off');
+    });
+    updateNavFavCount();
+  }
+  // כל שינוי (כולל מטאב אחר) → סנכרון מצב הכוכבים + המונה
+  F.onChange(refreshFavStates);
 
   /* ============================================================
      חיפוש משותף (W0-08) — מצב filter: מסנן את המאגר במקום

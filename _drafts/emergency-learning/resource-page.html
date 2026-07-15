@@ -308,6 +308,7 @@
   <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="ic-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21.9l1.1-6.5L2.6 10.8l6.5-.9z"/></symbol>
+  <symbol id="ic-star-fill" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21.9l1.1-6.5L2.6 10.8l6.5-.9z"/></symbol>
   <symbol id="ic-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
   <symbol id="ic-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></symbol>
   <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
@@ -474,10 +475,10 @@
                 שיבוץ שולח את המשאב כמשימה — בלי לשנות את המקור
               </div>
               <div style="display:flex; gap:var(--space-2); margin-top:var(--space-2)">
-                <button class="btn btn--secondary btn--sm btn--block" type="button" data-toast="נשמר במועדפים שלך">
-                  <svg viewBox="0 0 24 24"><use href="#ic-star"/></svg>מועדף
+                <button class="btn btn--secondary btn--sm btn--block" type="button" id="btn-fav" aria-pressed="false">
+                  <svg viewBox="0 0 24 24"><use href="#ic-star" id="fav-icon-use"/></svg><span id="fav-label">מועדף</span>
                 </button>
-                <button class="btn btn--secondary btn--sm btn--block" type="button" data-toast="קישור שיתוף הועתק">
+                <button class="btn btn--secondary btn--sm btn--block" type="button" id="btn-share">
                   <svg viewBox="0 0 24 24"><use href="#ic-share"/></svg>שיתוף
                 </button>
               </div>
@@ -609,9 +610,13 @@
 <!-- Toast -->
 <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
 
+<script src="favorites.js"></script>
 <script>
 (function () {
   'use strict';
+  var F = window.Resef.Favorites;
+  // האוסף פרטי למשתמש/ת — לצורך הדגמה מזהים את המורה המחוברת:
+  if (F.getUser().id === 'me') F.setUser('t_rotem', 'רותם לוי');
 
   /* ============================================================
      נתוני משאבים — משאב לדוגמה לכל סוג (תצוגה מקדימה לפי סוג)
@@ -718,6 +723,8 @@
   };
 
   var TYPE_ORDER = ['presentation', 'video', 'quiz', 'worksheet', 'simulation', 'unit', 'link'];
+  // מזהה יציב לכל משאב (לשיתוף ולמועדפים)
+  Object.keys(RESOURCES).forEach(function (k) { RESOURCES[k].id = RESOURCES[k].id || 'rp-' + k; });
   var SUPPORT = {
     support:   { label: 'רמת תמיכה', cls: 'support-chip--support' },
     core:      { label: 'רמת ליבה',  cls: 'support-chip--core' },
@@ -783,7 +790,41 @@
     var fn = PREVIEWS[r.type];
     pv.innerHTML = fn ? fn(r) : '<p>אין תצוגה מקדימה זמינה.</p>';
     if (r.type === 'presentation') wireSlides();
+
+    updateFavBtn();
   }
+
+  /* ============================================================
+     מועדפים + שיתוף (Resef.Favorites)
+     ============================================================ */
+  function toFav(r) {
+    return {
+      id: r.id, typeKey: F.normalizeType(r.type), typeLabel: r.typeLabel,
+      title: r.title, desc: r.desc,
+      subject: r.subject, grade: r.grade,
+      level: (SUPPORT[r.support] || {}).label || '',
+      min: parseInt(r.time, 10) || null, uses: r.usesClasses != null ? r.usesClasses : null,
+      source: 'resource-page'
+    };
+  }
+
+  function updateFavBtn() {
+    if (!current) return;
+    var on = F.isFavorite(current.id);
+    var btn = $('btn-fav');
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.querySelector('use').setAttribute('href', on ? '#ic-star-fill' : '#ic-star');
+    $('fav-label').textContent = on ? 'במועדפים' : 'מועדף';
+  }
+
+  $('btn-fav').addEventListener('click', function () {
+    var added = F.toggle(toFav(current));   // onChange → updateFavBtn
+    showToast(added ? '"' + current.title + '" נוסף למועדפים' : '"' + current.title + '" הוסר מהמועדפים');
+  });
+  $('btn-share').addEventListener('click', function () { F.openShare(toFav(current)); });
+
+  // סנכרון גם לשינוי מטאב אחר / מסך המועדפים
+  F.onChange(updateFavBtn);
 
   /* ============================================================
      מרנדרי תצוגה-מקדימה לפי סוג
