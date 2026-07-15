@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>יידוע הורים — רֶצֶף · W3-03</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     W3-03 · יידוע הורים (פונקציה) — תוכן ה-Main בלבד.
+     השלד (Sidebar/Topbar), כפתורים, chips ו-cards מגיעים מ-components.css.
+     כאן רק פריסת התוכן הייחודית. אין צבעים/מידות קשיחים — הכל דרך tokens.css.
+     המסך יוצר את "ההודעה השבועית להורה" (parent-weekly.md) — הודעה אחת
+     בשבוע, יוצאת מהמחנך/ת. בלי לוגין הורה, בלי גישה ל-check-in/יומן קשר.
+     ============================================================ */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+
+  /* --- כותרת המסך --- */
+  .screen-head { margin-bottom: var(--space-5); }
+  .screen-head__row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+  .screen-title { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700; color: var(--ink-strong); margin: 0; }
+  .screen-sub { color: var(--ink-soft); font-size: var(--text-small); margin: var(--space-1) 0 0; max-width: 80ch; }
+
+  /* --- בורר מצב מערכת (דמו) --- */
+  .demo-modes { display: flex; align-items: center; gap: var(--space-2); margin-inline-start: auto; }
+  .demo-modes .lbl { font-size: var(--text-label); color: var(--ink-faint); font-weight: 600; }
+  .seg { display: inline-flex; gap: 4px; background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 4px; }
+  .seg button {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 var(--space-3);
+    border: 0; background: transparent; border-radius: var(--radius-pill); cursor: pointer;
+    font-weight: 600; font-size: var(--text-label); color: var(--ink-soft); font-family: var(--font-body);
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .seg button .d { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .seg button[data-m="routine"] .d { background: var(--routine); }
+  .seg button[data-m="remote"] .d { background: var(--remote); }
+  .seg button[data-m="emergency"] .d { background: var(--emergency); }
+  .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink-strong); box-shadow: var(--shadow-card); }
+  .seg button:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+  /* --- מוטיב קו-הרצף: מסלול הערוץ להורה --- */
+  .flow { display: flex; align-items: center; gap: 0; margin: var(--space-4) 0 0; max-width: 560px; }
+  .flow__node { width: 12px; height: 12px; border-radius: 50%; background: var(--card); border: 2.5px solid var(--brand); flex: none; }
+  .flow__line { height: 2px; background: var(--brand-line); border-radius: var(--radius-pill); flex: 1; }
+  .flow__labels { display: flex; justify-content: space-between; color: var(--ink-soft); font-size: var(--text-label); margin-top: 6px; max-width: 560px; }
+
+  /* --- באנר "המודול כבוי" (parentMessaging off) --- */
+  .gate {
+    display: flex; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-5);
+    background: var(--surface-muted); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-5);
+  }
+  .gate__ic { color: var(--ink-soft); flex: none; margin-top: 2px; }
+  .gate__body { flex: 1; min-width: 0; }
+  .gate__t { font-family: var(--font-head); font-weight: 700; color: var(--ink-strong); font-size: var(--text-h3); }
+  .gate__d { font-size: var(--text-small); color: var(--ink-soft); margin: var(--space-1) 0 var(--space-3); max-width: 68ch; }
+  .gate[hidden] { display: none; }
+
+  /* --- פריסה: טופס + תצוגה מקדימה --- */
+  .pw-grid { display: grid; grid-template-columns: 1fr 400px; gap: var(--space-4); align-items: start; }
+  @container shell (max-width: 960px) { .pw-grid { grid-template-columns: 1fr; } }
+  .pw-grid[data-off="true"] { opacity: .5; pointer-events: none; filter: grayscale(.3); }
+
+  /* --- שדות טופס --- */
+  .field { display: flex; flex-direction: column; margin-bottom: var(--space-4); }
+  .field:last-child { margin-bottom: 0; }
+  .field > label, .fieldset__legend { font-family: var(--font-head); font-weight: 600; font-size: var(--text-small); color: var(--ink-strong); margin-bottom: var(--space-2); }
+  .field__hint { font-size: var(--text-label); color: var(--ink-soft); margin: 0 0 var(--space-2); }
+  select, input[type="text"] {
+    width: 100%; min-height: var(--tap); padding: 0 var(--space-3);
+    border: 1px solid var(--line-strong); border-radius: var(--radius-btn); background: var(--card);
+    color: var(--ink-strong); font-family: var(--font-body); font-size: var(--text-body);
+  }
+  select { cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23607984' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat: no-repeat; background-position: left var(--space-3) center;
+  }
+  select:focus-visible, input[type="text"]:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; border-color: var(--brand); }
+
+  /* --- מטא-נתוני התלמיד הנבחר --- */
+  .stu-meta { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+  .meta-chip {
+    display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+    border-radius: var(--radius-pill); font-size: var(--text-label); font-weight: 600;
+    border: 1px solid var(--line-strong); background: var(--bg-soft); color: var(--ink);
+  }
+  .meta-chip svg { width: 13px; height: 13px; flex: none; }
+  .meta-chip code { direction: ltr; unicode-bidi: embed; letter-spacing: .5px; }
+  .meta-chip--in { background: var(--routine-soft); border-color: var(--routine-line); color: var(--brand-dark); }
+  .meta-chip--out { background: var(--emergency-soft); border-color: var(--emergency-line); color: var(--ink-strong); }
+
+  /* --- מקטע רדיו (מצב השבוע / נקודת אור / סוג הודעה) --- */
+  .fieldset { border: 0; padding: 0; margin: 0 0 var(--space-4); }
+  .opts { display: grid; gap: var(--space-2); }
+  .opts--2 { grid-template-columns: 1fr 1fr; }
+  .opt {
+    display: flex; align-items: flex-start; gap: var(--space-3);
+    border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3);
+    background: var(--card); cursor: pointer; transition: border-color 160ms ease, background 160ms ease;
+  }
+  .opt:hover { border-color: var(--brand-line); background: var(--brand-soft); }
+  .opt:focus-within { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+  .opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .opt__mark { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line-strong); flex: none; margin-top: 1px; display: grid; place-items: center; transition: border-color 160ms ease; }
+  .opt__mark::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--brand); transform: scale(0); transition: transform 160ms ease; }
+  .opt input:checked + .opt__mark { border-color: var(--brand); }
+  .opt input:checked + .opt__mark::after { transform: scale(1); }
+  .opt__body { min-width: 0; }
+  .opt__t { font-family: var(--font-head); font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+  .opt__d { font-size: var(--text-label); color: var(--ink-soft); margin-top: 2px; }
+  .opt[data-checked="true"] { border-color: var(--brand); background: var(--brand-soft); }
+  .sub-field { margin-top: var(--space-2); }
+  .sub-field[hidden] { display: none; }
+
+  /* --- כרטיס תצוגה מקדימה (WhatsApp) --- */
+  .preview-card { position: sticky; top: var(--space-4); }
+  .wa-frame {
+    background: #E7E0D8; border: 1px solid var(--line-strong); border-radius: var(--radius-md);
+    padding: var(--space-4); min-height: 180px;
+    background-image: radial-gradient(rgba(11,143,152,.05) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+  @media (prefers-color-scheme: no-preference) { }
+  .wa-bubble {
+    background: var(--card); border-radius: 4px 14px 14px 14px; padding: var(--space-3) var(--space-4);
+    box-shadow: 0 1px 2px rgba(23,58,74,.14); max-width: 100%;
+    font-size: var(--text-small); color: var(--ink-strong); line-height: 1.6;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .wa-bubble b { font-weight: 700; color: var(--ink-strong); }
+  .wa-bubble .wa-time { display: block; text-align: start; color: var(--ink-faint); font-size: 11px; margin-top: var(--space-2); }
+  .preview-actions { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
+  .char-note { font-size: var(--text-label); color: var(--ink-faint); text-align: center; margin: var(--space-2) 0 0; }
+
+  /* --- קאלאאוט קווים אדומים --- */
+  .redlines { margin-top: var(--space-5); }
+  .redlines__t { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-head); font-weight: 700; font-size: var(--text-h3); color: var(--ink-strong); margin: 0 0 var(--space-3); }
+  .redlines__t svg { color: var(--emergency); }
+  .rl-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+  @container shell (max-width: 900px) { .rl-list { grid-template-columns: 1fr; } }
+  .rl {
+    display: flex; flex-direction: column; gap: var(--space-2);
+    border: 1px solid var(--line); border-inline-start: 3px solid var(--emergency); border-radius: var(--radius-sm);
+    padding: var(--space-3) var(--space-4); background: var(--bg-soft);
+  }
+  .rl__t { font-family: var(--font-head); font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+  .rl__d { font-size: var(--text-label); color: var(--ink-soft); }
+  .rl__ex { font-size: var(--text-label); color: var(--status-alert); }
+  .rl__ex::before { content: "✗ "; font-weight: 700; }
+
+  /* --- הערת מזעור/אכיפה --- */
+  .enforce-note {
+    display: flex; gap: var(--space-3); margin-top: var(--space-5);
+    background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+  }
+  .enforce-note svg { color: var(--ink-soft); flex: none; margin-top: 2px; }
+  .enforce-note p { font-size: var(--text-label); color: var(--ink-soft); margin: 0; line-height: 1.6; }
+  .enforce-note code { direction: ltr; unicode-bidi: embed; }
+  .enforce-note strong { color: var(--ink-strong); }
+
+  /* --- toast --- */
+  .toast {
+    position: fixed; inset-block-end: 20px; inset-inline-start: 50%;
+    transform: translateX(50%) translateY(160%);
+    background: var(--ink-strong); color: var(--card); padding: var(--space-3) var(--space-5);
+    border-radius: var(--radius-btn); font-size: var(--text-small); box-shadow: var(--shadow-lg);
+    transition: transform 220ms ease; z-index: 80; max-width: 90vw;
+    display: inline-flex; align-items: center; gap: var(--space-2);
+  }
+  .toast.show { transform: translateX(50%) translateY(0); }
+  .toast svg { color: var(--brand-bright); flex: none; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (מתוך ספריית הרֶצֶף) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-mode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3.2"/></symbol>
+  <symbol id="ic-parents" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M2.5 20a5.5 5.5 0 0 1 11 0M14.5 20a4.5 4.5 0 0 1 7 0"/></symbol>
+  <symbol id="ic-report" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="ic-wa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.2-5.5A8.5 8.5 0 1 1 21 11.5z"/><path d="M8.5 8.8c0-.4.3-.7.7-.7h.8c.3 0 .5.2.6.4l.6 1.5c.1.2 0 .5-.1.6l-.5.6c.5 1 1.3 1.8 2.3 2.3l.6-.5c.2-.2.4-.2.6-.1l1.5.6c.2.1.4.3.4.6v.8c0 .4-.3.7-.7.7A6.4 6.4 0 0 1 8.5 8.8z"/></symbol>
+  <symbol id="ic-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="ic-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1 7.8 7.7 7.8-7.7 1-1a5.5 5.5 0 0 0 0-7.8z"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.6 2z"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</svg>
+
+<!-- ============================================================
+     PrincipalShell — מסגרת מנהל/מחנך (Sidebar 248 + Topbar 68 + Main)
+     ============================================================ -->
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="principal-pulse.html" aria-label="דופק בית הספר">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">דופק בית הספר</span>
+      </a>
+      <a class="sidebar__item" href="mode-switch.html" aria-label="מצב מערכת">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-mode"/></svg></span>
+        <span class="sidebar__label">מצב מערכת</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="יידוע הורים">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-parents"/></svg></span>
+        <span class="sidebar__label">יידוע הורים</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="דוחות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-report"/></svg></span>
+        <span class="sidebar__label">דוחות</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">דנ</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">דנה שרון</div>
+          <div class="sidebar__foot-role">מחנכת ט'2</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">יידוע הורים · כיתה ט'2</div>
+        <div class="topbar__subtitle">בית ספר בית הערבה</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" placeholder="חיפוש תלמיד…" aria-label="חיפוש תלמיד">
+      </label>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">דנ</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="יידוע הורים">
+      <div class="app-main__inner">
+
+        <div class="screen-head">
+          <div class="screen-head__row">
+            <h1 class="screen-title">יידוע הורים</h1>
+            <span class="mode-chip mode-chip--sm" id="modeChip" data-mode="routine">
+              <span class="mode-chip__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+              <span id="modeChipTxt">שגרה</span>
+            </span>
+
+            <div class="demo-modes">
+              <span class="lbl">מצב מערכת (דמו):</span>
+              <div class="seg" role="group" aria-label="בחירת מצב מערכת להדגמה">
+                <button type="button" data-m="routine" aria-pressed="true"><span class="d"></span>שגרה</button>
+                <button type="button" data-m="remote" aria-pressed="false"><span class="d"></span>מרחוק</button>
+                <button type="button" data-m="emergency" aria-pressed="false"><span class="d"></span>חירום</button>
+              </div>
+            </div>
+          </div>
+          <p class="screen-sub"><strong>הודעה אחת בשבוע</strong> — רגועה, יוצאת ממך, על פעילות הילד/ה. ההורה לא מתקין כלום ולא נכנס לכלום; ההודעה מגיעה לוואטסאפ שבו הוא כבר נמצא. <strong>יודעים, רגועים.</strong> בלי גישה ל-check-in הרגשי ובלי יומן הקשר.</p>
+
+          <div class="flow" aria-hidden="true">
+            <span class="flow__node"></span><span class="flow__line"></span>
+            <span class="flow__node"></span><span class="flow__line"></span>
+            <span class="flow__node"></span><span class="flow__line"></span>
+            <span class="flow__node"></span>
+          </div>
+          <div class="flow__labels" aria-hidden="true">
+            <span>הצטרפות (חד-פעמי)</span><span>הודעה שבועית</span><span>ההורה קורא ב-15 שנ׳</span><span>דלת פתוחה למחנך/ת</span>
+          </div>
+        </div>
+
+        <!-- באנר: המודול כבוי (parentMessaging off) -->
+        <div class="gate" id="gate" hidden>
+          <span class="gate__ic" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24"><use href="#ic-lock"/></svg></span>
+          <div class="gate__body">
+            <div class="gate__t">מודול "יידוע הורים" כבוי</div>
+            <p class="gate__d">הדגל <code>parentMessaging</code> כבוי כברירת מחדל (מזעור נתונים — הרחבת היקף PII). ההפעלה מתבצעת ברמת בית הספר בידי המנהל/ת, לאחר הסכמת ההורים. כאן אפשר להדליק לצורך הדגמה בלבד.</p>
+            <button class="btn btn--secondary btn--sm" type="button" id="enableDemo">
+              <svg aria-hidden="true"><use href="#ic-check"/></svg> הדלקה לצורך הדגמה
+            </button>
+          </div>
+        </div>
+
+        <div class="pw-grid" id="pwGrid">
+          <!-- עמודה: הרכבת ההודעה -->
+          <section class="card" aria-labelledby="composer-h">
+            <h2 class="card__title" id="composer-h" style="margin:0 0 var(--space-4)">הרכבת ההודעה</h2>
+
+            <!-- בחירת תלמיד -->
+            <div class="field">
+              <label for="stuSel">התלמיד/ה</label>
+              <select id="stuSel"></select>
+              <div class="stu-meta" id="stuMeta" aria-live="polite"></div>
+            </div>
+
+            <!-- סוג הודעה -->
+            <fieldset class="fieldset">
+              <legend class="fieldset__legend">סוג ההודעה</legend>
+              <div class="opts opts--2" role="radiogroup" id="kindOpts">
+                <label class="opt" data-checked="true">
+                  <input type="radio" name="kind" value="weekly" checked>
+                  <span class="opt__mark" aria-hidden="true"></span>
+                  <span class="opt__body"><span class="opt__t">עדכון שבועי</span><span class="opt__d">ההודעה הקבועה</span></span>
+                </label>
+                <label class="opt">
+                  <input type="radio" name="kind" value="optin">
+                  <span class="opt__mark" aria-hidden="true"></span>
+                  <span class="opt__body"><span class="opt__t">הודעת הצטרפות</span><span class="opt__d">חד-פעמית, עם הסרה</span></span>
+                </label>
+              </div>
+            </fieldset>
+
+            <!-- מצב השבוע -->
+            <fieldset class="fieldset" id="weekBlock">
+              <legend class="fieldset__legend">איך היה השבוע?</legend>
+              <p class="field__hint">קובע את המסגור. גם בשבוע חלש — <strong>לעולם לא מספר שלילי יבש</strong>.</p>
+              <div class="opts" role="radiogroup" id="weekOpts">
+                <label class="opt" data-checked="true">
+                  <input type="radio" name="week" value="good" checked>
+                  <span class="opt__mark" aria-hidden="true"></span>
+                  <span class="opt__body"><span class="opt__t">שבוע מלא</span><span class="opt__d">היה איתנו כמעט כל יום, התקדם/ה יפה</span></span>
+                </label>
+                <label class="opt">
+                  <input type="radio" name="week" value="partial">
+                  <span class="opt__mark" aria-hidden="true"></span>
+                  <span class="opt__body"><span class="opt__t">שבוע חלקי</span><span class="opt__d">ראינו בחלק מהימים — "קורה, וזה בסדר"</span></span>
+                </label>
+                <label class="opt">
+                  <input type="radio" name="week" value="barely">
+                  <span class="opt__mark" aria-hidden="true"></span>
+                  <span class="opt__body"><span class="opt__t">כמעט לא נראה</span><span class="opt__d">פנייה רכה לבדוק מה שלומו/ה — בלי ביקורת</span></span>
+                </label>
+              </div>
+            </fieldset>
+
+            <!-- נקודת אור -->
+            <fieldset class="fieldset" id="brightBlock">
+              <legend class="fieldset__legend">נקודת אור <span style="font-weight:400;color:var(--ink-soft)">— דבר אמיתי אחד שקרה</span></legend>
+              <p class="field__hint">אסור להמציא. ספציפי מנצח כללי.</p>
+              <div class="opts" role="radiogroup" id="brightOpts">
+                <label class="opt" data-checked="true">
+                  <input type="radio" name="bright" value="finishedUnit" checked>
+                  <span class="opt__mark" aria-hidden="true"></span>
+                  <span class="opt__body"><span class="opt__t">סיים/ה יחידה קשה</span><span class="opt__d">בחרו נושא למטה</span></span>
+                </label>
+                <label class="opt">
+                  <input type="radio" name="bright" value="returned">
+                  <span class="opt__mark" aria-hidden="true"></span>
+                  <span class="opt__body"><span class="opt__t">חזר/ה להיכנס אחרי כמה ימים</span><span class="opt__d">"טוב לנו שהוא/היא כאן"</span></span>
+                </label>
+                <label class="opt">
+                  <input type="radio" name="bright" value="connectionOnly">
+                  <span class="opt__mark" aria-hidden="true"></span>
+                  <span class="opt__body"><span class="opt__t">הקשר עצמו</span><span class="opt__d">כשאין הישג לימודי — הקשר הוא נקודת האור</span></span>
+                </label>
+              </div>
+              <div class="sub-field field" id="topicField">
+                <label for="topicInput">נושא היחידה</label>
+                <input type="text" id="topicInput" value="אזרחות" maxlength="40" placeholder="למשל: אזרחות, לשון, מתמטיקה">
+              </div>
+            </fieldset>
+
+            <!-- שם המחנך/ת -->
+            <div class="field">
+              <label for="teacherInput">חתימת המחנך/ת</label>
+              <input type="text" id="teacherInput" value="דנה" maxlength="30" placeholder="שם פרטי">
+            </div>
+          </section>
+
+          <!-- עמודה: תצוגה מקדימה + שליחה -->
+          <section class="card preview-card" aria-labelledby="preview-h">
+            <h2 class="card__title" id="preview-h" style="margin:0 0 var(--space-3)">כך זה יגיע לוואטסאפ</h2>
+            <div class="wa-frame">
+              <div class="wa-bubble" id="waBubble" role="document" aria-label="תצוגה מקדימה של ההודעה"></div>
+            </div>
+            <p class="char-note" id="charNote"></p>
+
+            <div class="preview-actions">
+              <a class="btn btn--primary btn--block" id="waLink" href="#" target="_blank" rel="noopener">
+                <svg aria-hidden="true"><use href="#ic-wa"/></svg> פתיחה בוואטסאפ
+              </a>
+              <button class="btn btn--secondary btn--block" type="button" id="copyBtn">
+                <svg aria-hidden="true"><use href="#ic-copy"/></svg> העתקת הטקסט
+              </button>
+            </div>
+
+            <div class="enforce-note" style="margin-top:var(--space-4)">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-shield"/></svg>
+              <p>ההודעה נשמרת כ-<code>Notification</code> (<code>kind=weekly_parent</code>) — הפניה בלבד, בלי העתקת תוכן. השליחה בפועל דרך <code>api.whatsapp.com</code> — המחנך/ת שולח/ת, אין דיוור אוטומטי סמוי.</p>
+            </div>
+          </section>
+        </div>
+
+        <!-- קווים אדומים -->
+        <section class="redlines" aria-labelledby="rl-h">
+          <h2 class="redlines__t" id="rl-h"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#ic-alert"/></svg>שלושה קווים אדומים — מוחלטים</h2>
+          <div class="rl-list">
+            <div class="rl">
+              <div class="rl__t">לא לחשוף check-in רגשי</div>
+              <div class="rl__d">מצב-רוח, "קשה לי", דגל מצוקה — לעולם לא בהודעה אוטומטית. רק אדם, בשיחה.</div>
+              <div class="rl__ex">"יובל סימן שקשה לו השבוע"</div>
+            </div>
+            <div class="rl">
+              <div class="rl__t">לא להשוות לכיתה</div>
+              <div class="rl__d">ההודעה על הילד/ה מול עצמו/ה בלבד. אין ממוצע, אין דירוג, אין "רוב הכיתה".</div>
+              <div class="rl__ex">"מתחת לממוצע הכיתה"</div>
+            </div>
+            <div class="rl">
+              <div class="rl__t">בחירום — בלי מספרים שליליים יבשים</div>
+              <div class="rl__d">מסגור מרגיע ומזמין, לא מודד. ההודעה מזמינה — לא מטילה אשמה.</div>
+              <div class="rl__ex">"ראינו אותו רק יום אחד"</div>
+            </div>
+          </div>
+        </section>
+
+        <div class="enforce-note">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-lock"/></svg>
+          <p><strong>מזעור נתונים (תיקון 13):</strong> <code>guardian_phone</code> הוא השדה היחיד על ההורה — אין פרופיל הורה ואין מגדר הורה נאסף, ולכן הפנייה ב<strong>לשון רבים</strong> ("שלום לכם"). המסך <strong>אינו ניגש</strong> ל-check-in הרגשי או ליומן הקשר. הסרה (<em>opt-out</em>) בהודעת "הסר" אחת — מיידית. הדגל <code>parentMessaging</code> כבוי כברירת מחדל.</p>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="assertive"></div>
+
+<script src="feature-flags.js"></script>
+<script>
+/* ============================================================
+   בקר המסך — יידוע הורים (W3-03) · לפי parent-weekly.md
+   בונה את ההודעה השבועית להורה מארבעה חלקים קבועים, מסגור חיובי
+   בלבד, ומכבד את שלושת הקווים האדומים. אין כאן שום גישה ל-check-in
+   הרגשי או ליומן הקשר — רק שדות שהמחנך/ת בוחר/ת ידנית.
+   ============================================================ */
+(function () {
+  'use strict';
+
+  /* ---------- בנק התבניות (parent-weekly.md §7) ---------- */
+  var PW = {
+    opener: {
+      good:      { m: "שלום לכם, הנה עדכון קטן על [שם] מהשבוע 🙂",
+                   f: "שלום לכם, הנה עדכון קטן על [שם] מהשבוע 🙂" },
+      partial:   { m: "שלום לכם, עדכון קצר על [שם] מהשבוע",
+                   f: "שלום לכם, עדכון קצר על [שם] מהשבוע" },
+      barely:    { m: "שלום לכם, רצינו ליצור קשר בקשר ל[שם]",
+                   f: "שלום לכם, רצינו ליצור קשר בקשר ל[שם]" },
+      emergency: { m: "שלום לכם. בתקופה הזאת רצינו רק לומר — אנחנו בקשר עם [שם].",
+                   f: "שלום לכם. בתקופה הזאת רצינו רק לומר — אנחנו בקשר עם [שם]." }
+    },
+    week: {
+      good:      { m: "[שם] היה איתנו כל יום השבוע, והתקדם יפה. סיים משימות והשקיע בהן.",
+                   f: "[שם] הייתה איתנו כל יום השבוע, והתקדמה יפה. סיימה משימות והשקיעה בהן." },
+      partial:   { m: "ראינו את [שם] בחלק מהימים. שבוע קצת יותר שקט מהרגיל — קורה, וזה בסדר.",
+                   f: "ראינו את [שם] בחלק מהימים. שבוע קצת יותר שקט מהרגיל — קורה, וזה בסדר." },
+      barely:    { m: "השבוע כמעט ולא ראינו את [שם] אצלנו, ורצינו לבדוק אתכם שהכול בסדר. אין כאן שום ביקורת — פשוט אכפת לנו, ורצינו לשמוע מה שלומו.",
+                   f: "השבוע כמעט ולא ראינו את [שם] אצלנו, ורצינו לבדוק אתכם שהכול בסדר. אין כאן שום ביקורת — פשוט אכפת לנו, ורצינו לשמוע מה שלומה." },
+      emergency: { m: "עברנו למצב חירום, וכל מה שחשוב לנו עכשיו זה שהילדים שלנו בסדר. ראינו את [שם] השבוע, וטוב לנו לדעת שהוא איתנו.",
+                   f: "עברנו למצב חירום, וכל מה שחשוב לנו עכשיו זה שהילדים שלנו בסדר. ראינו את [שם] השבוע, וטוב לנו לדעת שהיא איתנו." }
+    },
+    /* נקודת אור — מהישג אמיתי. [נושא] מוזרם משדה הנושא. */
+    bright: {
+      finishedUnit:  { m: "סיים יחידה קשה ב[נושא] — כזו שהרבה מתקשים בה. הגיע לו.",
+                       f: "סיימה יחידה קשה ב[נושא] — כזו שהרבה מתקשים בה. הגיע לה." },
+      returned:      { m: "חזר להיכנס אחרי כמה ימים — טוב לנו שהוא כאן.",
+                       f: "חזרה להיכנס אחרי כמה ימים — טוב לנו שהיא כאן." },
+      connectionOnly:{ m: "הכי חשוב — [שם] בקשר איתנו, וזה מה שהכי חשוב עכשיו.",
+                       f: "הכי חשוב — [שם] בקשר איתנו, וזה מה שהכי חשוב עכשיו." },
+      emergency:     { m: "אפילו נכנס לרגע למשימה קצרה — אין שום חובה בתקופה כזאת, אז זה ממש חימם לנו את הלב.",
+                       f: "אפילו נכנסה לרגע למשימה קצרה — אין שום חובה בתקופה כזאת, אז זה ממש חימם לנו את הלב." }
+    },
+    /* "מה תמיד נשאר" — מחליף את נקודת האור בשבוע "כמעט לא נראה" (אין הישג להמציא). */
+    stays: {
+      m: "הדלת פתוחה. ברגע ש[שם] ירצה לחזור — נמשיך מאיפה שנוח לו, בלי שיצטרך להשלים כלום.",
+      f: "הדלת פתוחה. ברגע ש[שם] תרצה לחזור — נמשיך מאיפה שנוח לה, בלי שתצטרך להשלים כלום."
+    },
+    door: {
+      good:      "אתם תמיד מוזמנים לכתוב ל[מחנך] אם יש משהו שכדאי שנדע.",
+      partial:   "אם יש משהו שמעסיק אתכם, או שנוכל לעזור במשהו — אתם מוזמנים לכתוב ל[מחנך]. אנחנו כאן.",
+      barely:    "הכי נשמח לדבר איתכם. [מחנך] זמינה לכם מתי שנוח — רק כתבו.",
+      emergency: "אין ממה לדאוג ואין מה לעשות — רק שתדעו שאנחנו כאן. אם משהו מטריד אתכם, [מחנך] זמינה בשבילכם בכל רגע."
+    },
+    close: { good: "שבוע טוב 🌿", partial: "שבוע טוב 🌿", barely: "", emergency: "שמרו על עצמכם 🤍" }
+  };
+
+  var BRAND_LINE = "*רציפות למידה · בית ספר בית הערבה*";
+
+  /* הודעת ההצטרפות החד-פעמית (parent-weekly.md §6) */
+  function buildOptIn(name, teacher, g) {
+    var howAre = g === 'f' ? "מה שלומה אצלנו" : "מה שלומו אצלנו";
+    return [
+      BRAND_LINE,
+      "שלום לכם 🙂",
+      "",
+      "מהשבוע נתחיל לשלוח לכם *הודעה קצרה אחת בשבוע* על [שם] — " + howAre + ", ורגע טוב אחד מהשבוע. זהו. בלי אפליקציה, בלי סיסמאות, בלי טפסים.",
+      "",
+      "המטרה פשוטה: שתדעו מה קורה ותרגישו חלק — בלי להעמיס עליכם.",
+      "",
+      "לא רוצים לקבל? השיבו *הסר* ונפסיק מיד. תמיד אפשר לחזור.",
+      "",
+      "נשמח ללוות את [שם] יחד אתכם.",
+      "[מחנך], המחנכת של [שם]"
+    ].join("\n").replace(/\[שם\]/g, name).replace(/\[מחנך\]/g, teacher);
+  }
+
+  /* בניית ההודעה השבועית: פתיח → מה היה → נקודת אור/מה נשאר → דלת → סגירה */
+  function buildWeekly(o) {
+    var g = o.gender === 'f' ? 'f' : 'm';
+    var state = o.emergency ? 'emergency' : o.week;   // חירום גובר על מצב השבוע
+    var fill = function (t) {
+      return String(t).replace(/\[שם\]/g, o.name).replace(/\[מחנך\]/g, o.teacher).replace(/\[נושא\]/g, o.topic || 'החומר');
+    };
+
+    var lines = [BRAND_LINE, fill(PW.opener[state][g]), "", "*מה היה השבוע:*\n" + fill(PW.week[state][g]), ""];
+
+    if (o.week === 'barely' && !o.emergency) {
+      // אין נקודת אור להמציא — "מה תמיד נשאר"
+      lines.push("*מה תמיד נשאר:*\n" + fill(PW.stays[g]), "");
+    } else {
+      var brightSrc = o.emergency ? PW.bright.emergency[g] : PW.bright[o.bright][g];
+      lines.push("*נקודת אור:*\n" + fill(brightSrc), "");
+    }
+
+    lines.push(fill(PW.door[state]));
+    var close = PW.close[state];
+    if (close) lines.push(close);
+    return lines.join("\n");
+  }
+
+  /* ---------- מצבת דמו (מגדר ילד + guardian_phone + הצטרפות) ---------- */
+  var STUDENTS = [
+    { id: 'std_yuval',  name: 'יובל',  gender: 'm', phone: '972541230011', opted_in: true,  opted_out: false },
+    { id: 'std_maya',   name: 'מאיה',  gender: 'f', phone: '972541230022', opted_in: true,  opted_out: false },
+    { id: 'std_daniel', name: 'דניאל', gender: 'm', phone: '972541230033', opted_in: false, opted_out: false },
+    { id: 'std_yael',   name: 'יעל',   gender: 'f', phone: '972541230044', opted_in: true,  opted_out: true  }
+  ];
+
+  /* ---------- אלמנטים ---------- */
+  var $ = function (id) { return document.getElementById(id); };
+  var stuSel = $('stuSel'), stuMeta = $('stuMeta'), waBubble = $('waBubble'),
+      waLink = $('waLink'), copyBtn = $('copyBtn'), charNote = $('charNote'),
+      topicField = $('topicField'), topicInput = $('topicInput'), teacherInput = $('teacherInput'),
+      weekBlock = $('weekBlock'), brightBlock = $('brightBlock'),
+      gate = $('gate'), pwGrid = $('pwGrid'), modeChip = $('modeChip'), modeChipTxt = $('modeChipTxt');
+
+  var MODE_LABEL = { routine: 'שגרה', remote: 'מרחוק', emergency: 'חירום' };
+
+  /* ---------- מצב הדגל parentMessaging ---------- */
+  function resolveFlag() {
+    // בדמו: ברירת מחדל כבוי (מינימיזציה). כפתור "הדלקה להדגמה" מפעיל ברמת בית ספר.
+    var ctx = { school: { parentMessaging: window.__pmDemoOn === true } };
+    return window.RETZEF_FLAGS ? window.RETZEF_FLAGS.isEnabled('parentMessaging', ctx) : window.__pmDemoOn === true;
+  }
+  function applyFlagState() {
+    var on = resolveFlag();
+    gate.hidden = on;
+    pwGrid.setAttribute('data-off', on ? 'false' : 'true');
+    pwGrid.setAttribute('aria-hidden', on ? 'false' : 'true');
+  }
+  $('enableDemo').addEventListener('click', function () {
+    window.__pmDemoOn = true;
+    applyFlagState();
+    toast('המודול הודלק להדגמה', 'ok');
+  });
+
+  /* ---------- קריאת בחירות הטופס ---------- */
+  function checked(name) {
+    var el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? el.value : null;
+  }
+  function currentMode() { return document.documentElement.getAttribute('data-mode') || 'routine'; }
+
+  function currentStudent() {
+    return STUDENTS.filter(function (s) { return s.id === stuSel.value; })[0] || STUDENTS[0];
+  }
+
+  /* ---------- עדכון מטא של התלמיד ---------- */
+  function renderMeta(s) {
+    var maskedPhone = '••• ••• ' + s.phone.slice(-4);
+    var genderTxt = s.gender === 'f' ? 'בת' : 'בן';
+    var optChip = s.opted_out
+      ? '<span class="meta-chip meta-chip--out"><svg><use href="#ic-x"/></svg>ההורה ביקש הסרה</span>'
+      : (s.opted_in
+          ? '<span class="meta-chip meta-chip--in"><svg><use href="#ic-check"/></svg>מצורף לעדכון השבועי</span>'
+          : '<span class="meta-chip"><svg><use href="#ic-bell"/></svg>טרם נשלחה הצטרפות</span>');
+    stuMeta.innerHTML =
+      '<span class="meta-chip"><svg><use href="#ic-user"/></svg>' + genderTxt + '</span>' +
+      '<span class="meta-chip"><svg><use href="#ic-phone"/></svg><code>' + maskedPhone + '</code></span>' +
+      optChip;
+  }
+
+  /* ---------- WhatsApp: המרת *מודגש* ל-<b> לתצוגה ---------- */
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]; }); }
+  function toHtml(text) {
+    return esc(text).replace(/\*(.+?)\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  }
+  function waHref(phone, text) {
+    return 'https://api.whatsapp.com/send?phone=' + phone + '&text=' + encodeURIComponent(text);
+  }
+
+  var lastText = '';
+
+  /* ---------- רינדור מלא ---------- */
+  function render() {
+    var s = currentStudent();
+    renderMeta(s);
+
+    var kind = checked('kind');
+    var em = currentMode() === 'emergency';
+    var teacher = (teacherInput.value || 'המחנכת').trim();
+
+    // בהודעת הצטרפות — אין מצב שבוע/נקודת אור
+    var isOptIn = kind === 'optin';
+    weekBlock.style.display = isOptIn ? 'none' : '';
+    brightBlock.style.display = isOptIn ? 'none' : '';
+
+    var text;
+    if (isOptIn) {
+      text = buildOptIn(s.name, teacher, s.gender);
+    } else {
+      var week = checked('week');
+      var bright = checked('bright');
+      // שדה הנושא רלוונטי רק ל"סיים יחידה" ולא בחירום ולא ב"כמעט לא נראה"
+      var showTopic = bright === 'finishedUnit' && !em && week !== 'barely';
+      topicField.hidden = !showTopic;
+      text = buildWeekly({
+        name: s.name, gender: s.gender, teacher: teacher,
+        week: week, bright: bright, topic: topicInput.value.trim(), emergency: em
+      });
+    }
+
+    lastText = text;
+    waBubble.innerHTML = toHtml(text) + '<span class="wa-time" aria-hidden="true">יום ה׳ · 15:00 ✓✓</span>';
+
+    // קישור וואטסאפ — חסום אם ההורה ביקש הסרה
+    if (s.opted_out) {
+      waLink.setAttribute('aria-disabled', 'true');
+      waLink.setAttribute('tabindex', '-1');
+      waLink.removeAttribute('href');
+      charNote.textContent = 'ההורה ביקש הסרה — לא נשלחות הודעות אוטומטיות (פנייה אנושית עדיין אפשרית).';
+    } else {
+      waLink.removeAttribute('aria-disabled');
+      waLink.removeAttribute('tabindex');
+      waLink.setAttribute('href', waHref(s.phone, text));
+      charNote.textContent = text.length + ' תווים · נקרא בקריאה אחת';
+    }
+  }
+
+  /* ---------- עדכון סימון ה-opt הנבחר (data-checked) ---------- */
+  function syncOptStyles() {
+    Array.prototype.forEach.call(document.querySelectorAll('.opt'), function (lbl) {
+      var inp = lbl.querySelector('input');
+      lbl.setAttribute('data-checked', inp && inp.checked ? 'true' : 'false');
+    });
+  }
+
+  /* ---------- מילוי בורר תלמידים ---------- */
+  STUDENTS.forEach(function (s) {
+    var o = document.createElement('option');
+    o.value = s.id; o.textContent = s.name;
+    stuSel.appendChild(o);
+  });
+
+  /* ---------- מאזינים ---------- */
+  stuSel.addEventListener('change', render);
+  topicInput.addEventListener('input', render);
+  teacherInput.addEventListener('input', render);
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="kind"],input[name="week"],input[name="bright"]'), function (r) {
+    r.addEventListener('change', function () { syncOptStyles(); render(); });
+  });
+
+  /* ---------- העתקה ---------- */
+  copyBtn.addEventListener('click', function () {
+    var done = function () { toast('הטקסט הועתק', 'ok'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(lastText).then(done, function () { fallbackCopy(lastText); done(); });
+    } else { fallbackCopy(lastText); done(); }
+  });
+  function fallbackCopy(t) {
+    var ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', '');
+    ta.style.position = 'absolute'; ta.style.right = '-9999px'; document.body.appendChild(ta);
+    ta.select(); try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta);
+  }
+  waLink.addEventListener('click', function (e) {
+    if (waLink.getAttribute('aria-disabled') === 'true') { e.preventDefault(); toast('ההורה ביקש הסרה — לא שולחים', 'err'); }
+  });
+
+  /* ---------- בורר מצב מערכת (דמו) ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.demo-modes .seg button'), function (b) {
+    b.addEventListener('click', function () {
+      var mode = b.getAttribute('data-m');
+      document.documentElement.setAttribute('data-mode', mode);
+      modeChip.setAttribute('data-mode', mode);
+      modeChipTxt.textContent = MODE_LABEL[mode];
+      Array.prototype.forEach.call(document.querySelectorAll('.demo-modes .seg button'), function (x) {
+        x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+      });
+      render();
+    });
+  });
+
+  /* ---------- toast ---------- */
+  var toastEl = $('toast'), toastTimer;
+  function toast(msg, kind) {
+    toastEl.innerHTML = (kind === 'err'
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-alert"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check"/></svg>') +
+      '<span></span>';
+    toastEl.querySelector('span').textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
+  }
+
+  /* ---------- אתחול ---------- */
+  applyFlagState();
+  syncOptStyles();
+  render();
+})();
+</script>
+</body>
+</html>
