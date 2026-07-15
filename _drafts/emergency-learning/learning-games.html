@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>תרגול לחיזוק — רֶצֶף · W6</title>
+<meta name="theme-color" content="#0B8F98">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- שפת העיצוב המשותפת של רֶצֶף (מקור אמת יחיד) -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+/* ============================================================
+   משחקון מגע קצר לחיזוק — "מיון מהיר" · תלמיד · Mobile First
+   קלף מציג מונח → נוגעים בסל הנכון. משוב מיידי, בלי לחץ זמן.
+   בוגר, לא ילדותי: בלי כוכבים/גביעים/מדליות/קונפטי/ניקוד־משחקי
+   (design-system-brief.md §10). כל הצבעים/מידות מ-tokens.css;
+   הרכיבים (card/btn/chip/badge/sequence-node) מ-components.css.
+   ============================================================ */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--surface-muted);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:var(--text-body);
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  display:flex; align-items:stretch; justify-content:center;
+}
+
+/* מסגרת-מכשיר: במובייל = מסך מלא; בדסקטופ = טלפון ממורכז */
+.phone{
+  width:100%; max-width:460px;
+  height:100vh; height:100dvh;
+  background:var(--bg);
+  display:flex; flex-direction:column;
+  position:relative; overflow:hidden;
+}
+@media (min-width:600px){
+  body{padding:var(--space-6) 0}
+  .phone{
+    height:min(880px, calc(100vh - 2 * var(--space-6)));
+    border-radius:28px;
+    box-shadow:var(--shadow-lg);
+    border:1px solid var(--line);
+  }
+}
+
+/* ---------- TopBar ---------- */
+.topbar-m{
+  flex:none;
+  display:flex; align-items:center; gap:var(--space-2);
+  padding:var(--space-3) var(--space-4);
+  border-bottom:1px solid var(--line);
+  background:var(--card);
+}
+.topbar-m__title{
+  flex:1; min-width:0;
+  font-family:var(--font-head); font-weight:700;
+  font-size:var(--text-h3); color:var(--ink-strong);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.topbar-m__sub{display:block; font-family:var(--font-body); font-weight:500; font-size:var(--text-label); color:var(--ink-soft)}
+.icon-btn.back svg{transform:scaleX(1)} /* חץ מצביע ימינה = חזרה ב-RTL */
+
+/* ---------- Stage: אזור בין ה-TopBar ל-BottomNav ---------- */
+.stage{flex:1; min-height:0; position:relative}
+.view{position:absolute; inset:0; display:none; flex-direction:column}
+.view[data-active="true"]{display:flex}
+.view--scroll{overflow-y:auto; -webkit-overflow-scrolling:touch}
+.view--scroll .view__inner{padding:var(--space-4) var(--space-4) var(--space-8)}
+
+/* ============================================================
+   1 · מסך בחירה (Picker)
+   ============================================================ */
+.intro{margin:var(--space-1) 0 var(--space-4)}
+.intro__eyebrow{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:var(--text-label); font-weight:600; color:var(--brand-deep);
+  background:var(--brand-soft); border:1px solid var(--brand-line);
+  padding:3px var(--space-3); border-radius:var(--radius-pill);
+  margin-bottom:var(--space-3);
+}
+.intro__eyebrow svg{width:15px; height:15px; stroke:var(--brand-deep)}
+.intro__title{font-family:var(--font-head); font-weight:700; font-size:var(--text-h2); color:var(--ink-strong); line-height:1.2}
+.intro__sub{color:var(--ink-soft); font-size:var(--text-small); margin-top:var(--space-1)}
+
+/* קו־רצף עדין מתחת לפתיח (הֶדֵי המוטיב) */
+.thread{height:2px; background:var(--brand-line); border-radius:var(--radius-pill); margin:var(--space-4) 0; opacity:.7}
+
+.deck{margin-bottom:var(--space-3); padding:var(--space-4)}
+.deck__top{display:flex; align-items:center; gap:var(--space-3)}
+.deck__ic{
+  width:42px; height:42px; flex:none;
+  border-radius:var(--radius-sm);
+  background:var(--brand-soft); color:var(--brand-deep);
+  display:flex; align-items:center; justify-content:center;
+}
+.deck__ic svg{width:22px; height:22px}
+.deck__head{flex:1; min-width:0}
+.deck__subject{font-size:var(--text-label); font-weight:600; color:var(--ink-soft); margin-bottom:1px}
+.deck__title{font-family:var(--font-head); font-weight:700; font-size:var(--text-h3); color:var(--ink-strong); line-height:1.25}
+.deck__meta{display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; margin:var(--space-3) 0 var(--space-4)}
+.deck__metaitem{display:inline-flex; align-items:center; gap:6px; font-size:var(--text-small); color:var(--ink-soft); font-weight:500}
+.deck__metaitem svg{width:15px; height:15px; stroke:var(--ink-faint); flex:none}
+
+/* פס־מצב אחרון (אם תורגל) — סטטוס מילולי, לא ניקוד־משחקי */
+.deck__last{
+  display:none; align-items:center; gap:6px;
+  margin-top:calc(-1 * var(--space-1)); margin-bottom:var(--space-3);
+  font-size:var(--text-label); color:var(--ink-soft);
+}
+.deck__last[data-show="true"]{display:inline-flex}
+.deck__last svg{width:14px; height:14px; stroke:var(--brand); flex:none}
+.deck__last b{color:var(--ink); font-weight:600}
+
+/* ============================================================
+   2 · מסך משחק (Play)
+   ============================================================ */
+.play{padding:var(--space-4)}
+.play__head{flex:none}
+.play__row{display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); margin-bottom:var(--space-3)}
+.play__subject{display:inline-flex; align-items:center; gap:6px; font-size:var(--text-small); font-weight:600; color:var(--ink)}
+.play__subject svg{width:16px; height:16px; stroke:var(--brand-deep); flex:none}
+.play__count{font-size:var(--text-small); font-weight:600; color:var(--ink-soft)}
+.play__count b{color:var(--ink-strong)}
+
+/* נקודות התקדמות בחפיסה — נשען על tokens של קו־הרצף */
+.dots{display:flex; align-items:center; gap:6px; margin-bottom:var(--space-4)}
+.dots__seg{flex:1 1 0; height:4px; border-radius:var(--radius-pill); background:var(--brand-line); transition:background 200ms ease}
+.dots__seg[data-state="done"]{background:var(--brand)}
+.dots__seg[data-state="miss"]{background:var(--status-alert); opacity:.55}
+.dots__seg[data-state="current"]{background:var(--brand); box-shadow:0 0 0 3px var(--brand-soft)}
+
+.play__prompt{font-size:var(--text-small); color:var(--ink-soft); text-align:center; margin-bottom:var(--space-3)}
+
+/* אזור הקלף — גדל וממרכז את הקלף */
+.play__stage{flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:var(--space-2) 0}
+.term{
+  width:100%; max-width:340px;
+  min-height:150px;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  padding:var(--space-6) var(--space-5);
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);
+  font-family:var(--font-head); font-weight:700;
+  font-size:34px; color:var(--ink-strong); line-height:1.2;
+  will-change:transform, opacity;
+  transition:transform 220ms ease, opacity 220ms ease, border-color 160ms ease;
+}
+.term small{display:block; font-family:var(--font-body); font-size:var(--text-small); font-weight:500; color:var(--ink-soft); margin-top:var(--space-2)}
+.term[data-anim="in"]{animation:term-in 240ms ease}
+.term.is-correct{border-color:var(--brand); transform:translateY(-14px) scale(.98); opacity:0}
+.term.is-wrong{animation:term-shake 360ms ease}
+@keyframes term-in{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+@keyframes term-shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-7px)} 40%{transform:translateX(6px)}
+  60%{transform:translateX(-4px)} 80%{transform:translateX(3px)}
+}
+
+/* משוב מילולי (aria-live) */
+.play__fb{
+  flex:none; min-height:24px;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  font-size:var(--text-small); font-weight:600; color:transparent;
+  margin:var(--space-2) 0;
+  transition:color 160ms ease;
+}
+.play__fb svg{width:16px; height:16px; flex:none}
+.play__fb[data-kind="ok"]{color:var(--brand-deep)}
+.play__fb[data-kind="ok"] svg{stroke:var(--brand-deep)}
+.play__fb[data-kind="no"]{color:var(--status-alert)}
+.play__fb[data-kind="no"] svg{stroke:var(--status-alert)}
+
+/* סלים — יעדי המגע */
+.bins{flex:none; display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3)}
+.bin{
+  min-height:78px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:var(--space-3);
+  border:1.5px solid var(--line-strong); border-radius:var(--radius-md);
+  background:var(--card); color:var(--ink-strong);
+  font-family:var(--font-head); font-weight:700; font-size:var(--text-h3);
+  cursor:pointer; user-select:none;
+  transition:transform 120ms ease, border-color 160ms ease, background 160ms ease;
+}
+.bin svg{width:22px; height:22px; stroke:var(--ink-soft)}
+.bin:hover{border-color:var(--brand-line)}
+.bin:active{transform:translateY(2px) scale(.99)}
+.bin:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+.bin[data-mark="right"]{border-color:var(--brand); background:var(--brand-soft); color:var(--brand-deep)}
+.bin[data-mark="right"] svg{stroke:var(--brand-deep)}
+.bin[data-mark="wrong"]{border-color:var(--status-alert); background:#FCECEB; color:var(--status-alert)}
+.bin[data-mark="wrong"] svg{stroke:var(--status-alert)}
+.bins[data-locked="true"] .bin{cursor:default}
+.bins[data-locked="true"] .bin:active{transform:none}
+
+/* שורת "עוד לא בטוח/ה" + המשך */
+.play__foot{flex:none; margin-top:var(--space-3); min-height:44px; display:flex; align-items:center; justify-content:center}
+.unsure{
+  display:inline-flex; align-items:center; gap:6px;
+  min-height:40px; padding:0 var(--space-4);
+  border:1px solid var(--line-strong); border-radius:var(--radius-pill);
+  background:transparent; color:var(--ink-soft);
+  font-family:var(--font-body); font-weight:600; font-size:var(--text-small); cursor:pointer;
+}
+.unsure:hover{color:var(--ink-strong); border-color:var(--brand-line)}
+.unsure:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+.unsure svg{width:16px; height:16px; stroke:currentColor; flex:none}
+
+/* ============================================================
+   3 · מסך סיכום (Done)
+   ============================================================ */
+.done{padding:var(--space-6) var(--space-4) var(--space-8)}
+.done__mark{
+  width:56px; height:56px; margin:var(--space-2) auto var(--space-4);
+  border-radius:var(--radius-pill);
+  background:var(--brand-soft); border:1px solid var(--brand-line);
+  display:flex; align-items:center; justify-content:center;
+}
+.done__mark svg{width:28px; height:28px; stroke:var(--brand-deep)}
+.done__title{font-family:var(--font-head); font-weight:700; font-size:var(--text-h2); color:var(--ink-strong); text-align:center}
+.done__sub{color:var(--ink-soft); font-size:var(--text-small); text-align:center; margin-top:var(--space-1)}
+
+/* תוצאה = משוב עצמי (לא ניקוד־משחקי): כמה נכון, מתוך כמה */
+.result{margin:var(--space-5) 0; padding:var(--space-5); text-align:center}
+.result__big{font-family:var(--font-head); font-weight:800; font-size:36px; color:var(--brand-deep); line-height:1}
+.result__big span{font-size:var(--text-h2); font-weight:700; color:var(--ink-soft)}
+.result__cap{font-size:var(--text-small); color:var(--ink-soft); margin-top:var(--space-1)}
+.result .progress{margin-top:var(--space-4)}
+
+/* רשימת "כדאי לחזור על" */
+.review{margin-top:var(--space-5)}
+.review__head{display:flex; align-items:center; gap:6px; font-family:var(--font-head); font-weight:700; font-size:var(--text-h3); color:var(--ink-strong); margin-bottom:var(--space-3)}
+.review__head svg{width:18px; height:18px; stroke:var(--brand-deep)}
+.review__item{
+  display:flex; align-items:center; justify-content:space-between; gap:var(--space-3);
+  padding:var(--space-3) var(--space-4);
+  border:1px solid var(--line); border-radius:var(--radius-sm);
+  background:var(--card); margin-bottom:var(--space-2);
+}
+.review__term{font-family:var(--font-head); font-weight:700; font-size:var(--text-body); color:var(--ink-strong)}
+.review__answer{font-size:var(--text-small); color:var(--ink-soft)}
+.review__answer b{color:var(--brand-deep); font-weight:700}
+
+.done__actions{display:flex; flex-direction:column; gap:var(--space-2); margin-top:var(--space-6)}
+.btn svg{width:20px; height:20px}
+
+/* מצב תנועה מופחת */
+@media (prefers-reduced-motion:reduce){
+  .term, .term[data-anim="in"], .term.is-correct, .term.is-wrong,
+  .dots__seg, .bin{transition:none; animation:none}
+  .term.is-correct{opacity:0}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     ספריית אייקונים (Lucide-style outline, עובי אחיד)
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></symbol>
+  <symbol id="ic-tasks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1.5"/><path d="m3.5 18 2 2 3.5-3.5"/><path d="M13 6h8M13 12h8M13 18h8"/></symbol>
+  <symbol id="ic-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/></symbol>
+  <symbol id="ic-progress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="11" x2="8" y2="11"/><line x1="12" y1="11" x2="12" y2="11"/><line x1="16" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="12" y1="15" x2="12" y2="15"/></symbol>
+  <symbol id="ic-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="ic-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19.5 7"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9a2.6 2.6 0 0 1 5 .9c0 1.7-2.4 2.1-2.4 3.6"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6l-6 6 6 6"/><path d="M5 12h14"/></symbol>
+</svg>
+
+<div class="phone">
+
+  <!-- ---------- TopBar ---------- -->
+  <header class="topbar-m">
+    <button class="icon-btn back" id="topBack" type="button" aria-label="חזרה">
+      <svg aria-hidden="true"><use href="#ic-back"/></svg>
+    </button>
+    <span class="topbar-m__title" id="topTitle">תרגול לחיזוק
+      <span class="topbar-m__sub" id="topSub">מנה קצרה לחיזוק החומר</span>
+    </span>
+    <button class="icon-btn" type="button" aria-label="התראות">
+      <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+    </button>
+  </header>
+
+  <!-- ---------- Stage ---------- -->
+  <main class="stage">
+
+    <!-- ====== 1 · בחירה ====== -->
+    <section class="view view--scroll" data-view="pick" data-active="true" aria-label="בחירת תרגול">
+      <div class="view__inner">
+
+        <div class="intro">
+          <span class="intro__eyebrow"><svg aria-hidden="true"><use href="#ic-target"/></svg>חיזוק מהיר</span>
+          <h1 class="intro__title">בוחרים תרגול ומתחילים</h1>
+          <p class="intro__sub">מיון מהיר של מונחים לסלים הנכונים. אין טיימר ואין לחץ — אפשר לטעות ולתקן.</p>
+        </div>
+
+        <div class="thread" aria-hidden="true"></div>
+
+        <!-- רשימת החפיסות מוזרקת כאן -->
+        <div id="deckList" aria-live="polite"></div>
+
+      </div>
+    </section>
+
+    <!-- ====== 2 · משחק ====== -->
+    <section class="view play" data-view="play" aria-label="תרגול פעיל">
+      <div class="play__head">
+        <div class="play__row">
+          <span class="play__subject" id="playSubject"><svg aria-hidden="true"><use href="#ic-book"/></svg><span id="playSubjectText">לשון</span></span>
+          <span class="play__count">קלף <b id="cardNow">1</b> מתוך <span id="cardTotal">8</span></span>
+        </div>
+        <div class="dots" id="dots" role="img" aria-label="התקדמות בתרגול"></div>
+      </div>
+
+      <p class="play__prompt" id="playPrompt">לאיזה סל שייך המונח?</p>
+
+      <div class="play__stage">
+        <div class="term" id="term" data-anim="in" aria-live="polite">—</div>
+      </div>
+
+      <p class="play__fb" id="feedback" role="status" aria-live="assertive"></p>
+
+      <div class="bins" id="bins" data-locked="false"></div>
+
+      <div class="play__foot">
+        <button class="unsure" id="btnUnsure" type="button">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>עוד לא בטוח/ה — לחזור על זה
+        </button>
+      </div>
+    </section>
+
+    <!-- ====== 3 · סיכום ====== -->
+    <section class="view view--scroll" data-view="done" aria-label="סיכום התרגול">
+      <div class="view__inner done">
+        <div class="done__mark" aria-hidden="true"><svg><use href="#ic-check"/></svg></div>
+        <h2 class="done__title">סיימת את התרגול</h2>
+        <p class="done__sub" id="doneSub">מיון מהיר · לשון</p>
+
+        <div class="card card--muted result">
+          <div class="result__big"><span id="rCorrect">0</span> <span>מתוך <span id="rTotal">8</span></span></div>
+          <p class="result__cap" id="rCap">ענית נכון בפעם הראשונה</p>
+          <div class="progress progress--thin" aria-hidden="true">
+            <div class="progress__track"><div class="progress__fill" id="rBar" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div class="review" id="review" hidden>
+          <div class="review__head"><svg aria-hidden="true"><use href="#ic-refresh"/></svg>כדאי לחזור על</div>
+          <div id="reviewList"></div>
+        </div>
+
+        <div class="done__actions">
+          <button class="btn btn--primary btn--block" id="btnAgain" type="button">
+            <svg viewBox="0 0 24 24"><use href="#ic-refresh"/></svg>לתרגל שוב
+          </button>
+          <button class="btn btn--secondary btn--block" id="btnOther" type="button">
+            <svg viewBox="0 0 24 24"><use href="#ic-layers"/></svg>לבחור תרגול אחר
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ---------- BottomNavigation ---------- -->
+  <nav class="bottom-nav" aria-label="ניווט ראשי">
+    <a class="bottom-nav__item" href="student-home.html">
+      <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-home"/></svg></span>
+      <span class="bottom-nav__label">בית</span>
+    </a>
+    <a class="bottom-nav__item" href="student-tasks.html">
+      <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-tasks"/></svg></span>
+      <span class="bottom-nav__label">משימות</span>
+    </a>
+    <a class="bottom-nav__item" href="#" aria-current="page">
+      <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-cap"/></svg></span>
+      <span class="bottom-nav__label">קורסים</span>
+    </a>
+    <a class="bottom-nav__item" href="student-progress.html">
+      <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-progress"/></svg></span>
+      <span class="bottom-nav__label">התקדמות</span>
+    </a>
+  </nav>
+
+</div>
+
+<script>
+/* ============================================================
+   משחקון מגע לחיזוק — "מיון מהיר"
+   • data-driven: כל חפיסה = מקצוע, שני סלים, ורשימת מונחים.
+   • זרימה: pick → play → done.
+   • משוב מיידי; טעות חושפת את התשובה הנכונה בלי לחץ.
+   • התוכן כאן הוא נתוני־דמו; המקור האמיתי יגיע מהשירות המשותף.
+   ============================================================ */
+(function(){
+  'use strict';
+  var LS_KEY = 'resef.games.v1';
+
+  /* ---------- חפיסות (כל הפריטים חד־משמעיים) ---------- */
+  var DECKS = [
+    {
+      id:'math-parity', subject:'מתמטיקה', icon:'ic-calc',
+      title:'מיון מהיר · זוגי או אי־זוגי',
+      prompt:'המספר זוגי או אי־זוגי?',
+      bins:[ {key:'even', label:'זוגי', icon:'ic-check'}, {key:'odd', label:'אי־זוגי', icon:'ic-close'} ],
+      items:[
+        {t:'4', a:'even'}, {t:'7', a:'odd'}, {t:'12', a:'even'}, {t:'15', a:'odd'},
+        {t:'20', a:'even'}, {t:'33', a:'odd'}, {t:'48', a:'even'}, {t:'51', a:'odd'}
+      ]
+    },
+    {
+      id:'lashon-number', subject:'לשון', icon:'ic-book',
+      title:'מיון מהיר · יחיד או רבים',
+      prompt:'המילה ביחיד או ברבים?',
+      bins:[ {key:'sing', label:'יחיד', icon:'ic-arrow'}, {key:'plur', label:'רבים', icon:'ic-layers'} ],
+      items:[
+        {t:'כיסא', a:'sing'}, {t:'ספרים', a:'plur'}, {t:'תלמידות', a:'plur'}, {t:'שולחן', a:'sing'},
+        {t:'מורה', a:'sing'}, {t:'ילדים', a:'plur'}, {t:'עץ', a:'sing'}, {t:'חלונות', a:'plur'}
+      ]
+    },
+    {
+      id:'ezrahut-rights', subject:'אזרחות', icon:'ic-globe',
+      title:'מיון מהיר · זכות או חובה',
+      prompt:'זכות של אזרח, או חובה של אזרח?',
+      bins:[ {key:'right', label:'זכות', icon:'ic-check'}, {key:'duty', label:'חובה', icon:'ic-target'} ],
+      items:[
+        {t:'חופש הביטוי', a:'right'}, {t:'תשלום מסים', a:'duty'},
+        {t:'זכות ההצבעה', a:'right'}, {t:'שמירה על החוק', a:'duty'},
+        {t:'חופש העיסוק', a:'right'}, {t:'שירות חובה בצבא', a:'duty'},
+        {t:'הליך משפטי הוגן', a:'right'}, {t:'התייצבות לעדות במשפט', a:'duty'}
+      ]
+    }
+  ];
+
+  /* ---------- אחסון קל: תוצאה אחרונה לכל חפיסה ---------- */
+  function loadStore(){
+    try{ return JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; }catch(e){ return {}; }
+  }
+  function saveLast(deckId, correct, total){
+    var s = loadStore();
+    s[deckId] = { correct:correct, total:total };
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(s)); }catch(e){}
+  }
+
+  /* ---------- עזרי DOM ---------- */
+  function $(id){ return document.getElementById(id); }
+  function ico(id){ return '<svg aria-hidden="true"><use href="#'+id+'"/></svg>'; }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  /* ---------- ניווט בין מסכים ---------- */
+  function showView(name){
+    document.querySelectorAll('.view').forEach(function(v){
+      v.setAttribute('data-active', v.getAttribute('data-view') === name ? 'true' : 'false');
+    });
+  }
+
+  /* ============================================================
+     מסך בחירה
+     ============================================================ */
+  function renderPicker(){
+    var store = loadStore();
+    var wrap = $('deckList');
+    wrap.innerHTML = '';
+    DECKS.forEach(function(d){
+      var last = store[d.id];
+      var card = document.createElement('article');
+      card.className = 'card deck';
+      card.innerHTML =
+        '<div class="deck__top">'
+        + '<span class="deck__ic" aria-hidden="true">'+ico(d.icon)+'</span>'
+        + '<div class="deck__head">'
+        +   '<div class="deck__subject">'+esc(d.subject)+'</div>'
+        +   '<div class="deck__title">'+esc(d.title.replace('מיון מהיר · ',''))+'</div>'
+        + '</div>'
+        + '</div>'
+        + '<div class="deck__meta">'
+        +   '<span class="deck__metaitem">'+ico('ic-layers')+d.items.length+' קלפים</span>'
+        +   '<span class="deck__metaitem">'+ico('ic-clock')+'כ-2 דקות</span>'
+        + '</div>'
+        + '<div class="deck__last" data-show="'+(last?'true':'false')+'">'
+        +   ico('ic-check')+'<span>בפעם הקודמת: <b>'+(last?last.correct+' מתוך '+last.total:'')+'</b></span>'
+        + '</div>'
+        + '<button class="btn btn--primary btn--block js-start" type="button">'+ico('ic-target')+'להתחיל תרגול</button>';
+      card.querySelector('.js-start').addEventListener('click', function(){ startDeck(d.id); });
+      wrap.appendChild(card);
+    });
+  }
+
+  /* ============================================================
+     מצב משחק
+     ============================================================ */
+  var game = null; // {deck, order, idx, results[]}
+
+  function startDeck(deckId){
+    var deck = DECKS.find(function(d){ return d.id === deckId; });
+    if(!deck) return;
+    // ערבוב סדר הקלפים (Fisher–Yates)
+    var order = deck.items.map(function(_,i){ return i; });
+    for(var i=order.length-1; i>0; i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+    }
+    game = { deck:deck, order:order, idx:0, results:[] };
+
+    // TopBar
+    $('topTitle').firstChild.nodeValue = 'מיון מהיר';
+    $('topSub').textContent = deck.subject;
+    $('playSubjectText').textContent = deck.subject;
+    $('playSubject').querySelector('use').setAttribute('href', '#'+deck.icon);
+    $('playPrompt').textContent = deck.prompt;
+    $('cardTotal').textContent = deck.items.length;
+
+    // סלים
+    var binsEl = $('bins');
+    binsEl.innerHTML = '';
+    binsEl.setAttribute('data-locked','false');
+    deck.bins.forEach(function(b){
+      var btn = document.createElement('button');
+      btn.className = 'bin';
+      btn.type = 'button';
+      btn.setAttribute('data-key', b.key);
+      btn.innerHTML = ico(b.icon) + '<span>'+esc(b.label)+'</span>';
+      btn.addEventListener('click', function(){ choose(b.key, btn); });
+      binsEl.appendChild(btn);
+    });
+
+    buildDots();
+    showView('play');
+    loadCard(true);
+  }
+
+  function buildDots(){
+    var dots = $('dots');
+    dots.innerHTML = '';
+    game.order.forEach(function(_,i){
+      var seg = document.createElement('span');
+      seg.className = 'dots__seg';
+      seg.setAttribute('data-i', i);
+      seg.setAttribute('data-state', i===0 ? 'current' : 'todo');
+      dots.appendChild(seg);
+    });
+  }
+  function paintDots(){
+    document.querySelectorAll('#dots .dots__seg').forEach(function(seg){
+      var i = +seg.getAttribute('data-i');
+      var r = game.results[i];
+      if(r){ seg.setAttribute('data-state', r.ok ? 'done' : 'miss'); }
+      else { seg.setAttribute('data-state', i === game.idx ? 'current' : 'todo'); }
+    });
+  }
+
+  function currentItem(){ return game.deck.items[ game.order[game.idx] ]; }
+
+  function loadCard(first){
+    var item = currentItem();
+    var term = $('term');
+    term.className = 'term';
+    term.setAttribute('data-anim','in');
+    // הצגת מונח (+רמז אם קצר מאוד)
+    term.innerHTML = esc(item.t);
+    // הפעלה מחדש של אנימציית הכניסה
+    void term.offsetWidth;
+    term.setAttribute('data-anim','in');
+
+    $('cardNow').textContent = (game.idx+1);
+    // איפוס סלים
+    document.querySelectorAll('#bins .bin').forEach(function(b){ b.removeAttribute('data-mark'); });
+    $('bins').setAttribute('data-locked','false');
+    // איפוס משוב
+    var fb = $('feedback'); fb.textContent=''; fb.removeAttribute('data-kind');
+    // כפתור "לא בטוח" חוזר
+    $('btnUnsure').style.visibility = 'visible';
+    paintDots();
+  }
+
+  var advancing = false;
+
+  function choose(key, binEl){
+    if(advancing) return;
+    if($('bins').getAttribute('data-locked') === 'true') return;
+    var item = currentItem();
+    var ok = key === item.a;
+    lockAndReveal(ok, key, item);
+  }
+
+  function markUnsure(){
+    if(advancing) return;
+    if($('bins').getAttribute('data-locked') === 'true') return;
+    var item = currentItem();
+    // מסומן כ"לחזור על זה" — נספר כלא־נכון לצורך חזרה, בלי שיפוט
+    lockAndReveal(false, null, item, true);
+  }
+
+  function lockAndReveal(ok, chosenKey, item, unsure){
+    $('bins').setAttribute('data-locked','true');
+    $('btnUnsure').style.visibility = 'hidden';
+    game.results[game.idx] = { ok:ok, item:item, unsure:!!unsure };
+
+    var bins = document.querySelectorAll('#bins .bin');
+    bins.forEach(function(b){
+      var k = b.getAttribute('data-key');
+      if(k === item.a) b.setAttribute('data-mark','right');
+      if(chosenKey && k === chosenKey && !ok) b.setAttribute('data-mark','wrong');
+    });
+
+    var term = $('term');
+    var fb = $('feedback');
+    var rightLabel = binLabel(item.a);
+
+    if(ok){
+      fb.setAttribute('data-kind','ok');
+      fb.innerHTML = ico('ic-check') + 'נכון';
+      advancing = true;
+      term.classList.add('is-correct');
+      wait(760, next);
+    } else {
+      fb.setAttribute('data-kind','no');
+      fb.innerHTML = ico('ic-arrow') + (unsure ? 'נחזור על זה — התשובה: ' : 'התשובה הנכונה: ') + rightLabel;
+      term.classList.remove('is-wrong'); void term.offsetWidth;
+      if(!unsure) term.classList.add('is-wrong');
+      advancing = true;
+      // זמן ארוך יותר לקליטת התשובה הנכונה
+      wait(1500, next);
+    }
+    paintDots();
+  }
+
+  function binLabel(key){
+    var b = game.deck.bins.find(function(x){ return x.key === key; });
+    return b ? b.label : '';
+  }
+
+  function next(){
+    advancing = false;
+    if(game.idx < game.order.length - 1){
+      game.idx++;
+      loadCard(false);
+    } else {
+      finish();
+    }
+  }
+
+  /* ---------- טיימר שמכבד prefers-reduced-motion פחות רלוונטי; פשוט setTimeout ---------- */
+  function wait(ms, fn){ setTimeout(fn, ms); }
+
+  /* ============================================================
+     סיכום
+     ============================================================ */
+  function finish(){
+    var total = game.order.length;
+    var correct = game.results.filter(function(r){ return r && r.ok; }).length;
+    saveLast(game.deck.id, correct, total);
+
+    $('doneSub').textContent = 'מיון מהיר · ' + game.deck.subject;
+    $('rCorrect').textContent = correct;
+    $('rTotal').textContent = total;
+    var pct = Math.round(correct/total*100);
+    $('rBar').style.width = pct + '%';
+
+    // כיתוב תומך (מבוגר, לא משחקי)
+    var cap;
+    if(correct === total) cap = 'מצוין — מיינת הכול נכון';
+    else if(correct >= Math.ceil(total*0.6)) cap = 'יפה. יש כמה שכדאי לחזור עליהם';
+    else cap = 'שווה לחזור על התרגול — זה בדיוק העניין';
+    $('rCap').textContent = cap;
+
+    // רשימת חזרה
+    var missed = [];
+    game.results.forEach(function(r){ if(r && !r.ok) missed.push(r); });
+    var review = $('review');
+    var list = $('reviewList');
+    list.innerHTML = '';
+    if(missed.length){
+      review.hidden = false;
+      missed.forEach(function(r){
+        var row = document.createElement('div');
+        row.className = 'review__item';
+        row.innerHTML = '<span class="review__term">'+esc(r.item.t)+'</span>'
+                      + '<span class="review__answer">התשובה: <b>'+esc(binLabel(r.item.a))+'</b></span>';
+        list.appendChild(row);
+      });
+    } else {
+      review.hidden = true;
+    }
+
+    showView('done');
+  }
+
+  /* ============================================================
+     חיווט כפתורים
+     ============================================================ */
+  $('btnUnsure').addEventListener('click', markUnsure);
+  $('btnAgain').addEventListener('click', function(){ if(game) startDeck(game.deck.id); });
+  $('btnOther').addEventListener('click', backToPicker);
+  $('topBack').addEventListener('click', function(){
+    var active = document.querySelector('.view[data-active="true"]');
+    if(active && active.getAttribute('data-view') !== 'pick'){ backToPicker(); }
+    else { /* בפועל: חזרה לעמוד הקורסים */ window.location.href = 'student-home.html'; }
+  });
+
+  function backToPicker(){
+    game = null;
+    $('topTitle').firstChild.nodeValue = 'תרגול לחיזוק';
+    $('topSub').textContent = 'מנה קצרה לחיזוק החומר';
+    renderPicker();
+    showView('pick');
+  }
+
+  /* מקלדת: 1/2 לבחירת סל, ← לחזרה ---------- */
+  document.addEventListener('keydown', function(e){
+    var active = document.querySelector('.view[data-active="true"]');
+    if(!active || active.getAttribute('data-view') !== 'play' || !game) return;
+    if($('bins').getAttribute('data-locked') === 'true') return;
+    var bins = document.querySelectorAll('#bins .bin');
+    if(e.key === '1' && bins[0]){ bins[0].click(); }
+    else if(e.key === '2' && bins[1]){ bins[1].click(); }
+  });
+
+  /* ---------- אתחול ---------- */
+  renderPicker();
+})();
+</script>
+</body>
+</html>
