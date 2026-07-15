@@ -72,6 +72,13 @@
   .tag.copy.ok{background:#4CAF6A;border-color:#4CAF6A}
   .hint{color:var(--ink-faint);font-size:.75rem;text-align:center;margin:14px 0 0}
   .empty{color:var(--ink-faint);font-size:.85rem;text-align:center;padding:22px 6px}
+  .ready{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:.72rem}
+  .rchip{padding:2px 9px;border-radius:99px;font-weight:700;display:inline-flex;align-items:center;gap:4px}
+  .rchip.ok{background:#ebf8ef;color:#2f9e44;border:1px solid #b9e4c4}
+  .rchip.block{background:#fff4e8;color:#c85d1c;border:1px solid #ffd3a8}
+  .rchip.col{background:#fff0ee;color:#d9574f;border:1px solid #ffcabf}
+  .deps{color:var(--ink-faint);font-size:.7rem;margin-top:5px}
+  .task.blocked{opacity:.72}
   .toast{position:fixed;inset-block-end:20px;inset-inline-start:50%;transform:translateX(50%) translateY(20px);
     background:var(--ink);color:#fff;padding:10px 18px;border-radius:12px;font:600 .85rem 'Assistant';
     box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;z-index:50}
@@ -104,6 +111,8 @@
     <button class="pill" data-phase="mvpA">גל A — חירום</button>
     <button class="pill" data-phase="mvpB">גל B — שגרה</button>
     <button class="pill" data-phase="later">דחוי</button>
+    <span style="width:10px"></span>
+    <button class="pill" id="readyToggle">● רק מוכנות להקצאה</button>
     <span class="spacer"></span>
     <span class="navworld" id="navworld"></span>
   </div>
@@ -127,11 +136,15 @@
   var worldId = parseInt(qp('world'),10); if(isNaN(worldId)) worldId=1;
   var world = window.WORLDS.filter(function(w){return w.id===worldId})[0] || window.WORLDS[1];
   var phaseFilter='all';
+  var readyOnly=false;
 
   // persistence
   function loadOverrides(){try{return JSON.parse(localStorage.getItem(LSKEY))||{}}catch(e){return{}}}
   function saveOverride(id,st){var o=loadOverrides();o[id]=st;localStorage.setItem(LSKEY,JSON.stringify(o))}
   function statusOf(t){var o=loadOverrides();return o[t.id]||t.status}
+  function statusById(id){var t=window.TASKS.filter(function(x){return x.id===id})[0];return t?statusOf(t):'todo'}
+  function unmetOf(id){return window.depsOf(id).filter(function(d){return statusById(d)!=='done'})}
+  function isReady(id){return unmetOf(id).length===0}
 
   document.documentElement.style.setProperty('--accent', world.color);
   document.getElementById('badge').textContent=world.num;
@@ -159,6 +172,10 @@
       b.classList.add('on');
       render();
     });
+  });
+  // ready-only toggle
+  document.getElementById('readyToggle').addEventListener('click',function(){
+    readyOnly=!readyOnly; this.classList.toggle('on',readyOnly); render();
   });
 
   var toastTimer;
@@ -198,10 +215,25 @@
     var ph=window.PHASES[t.phase]||{label:t.phase,color:'#888'};
     var fileTag = t.file ? '<a class="tag file" href="'+esc(t.file)+'" onclick="event.stopPropagation()">'+esc(t.file)+'</a>' : '';
     var copyTag = '<button class="tag copy" onclick="copyPrompt(event,\''+t.id+'\')">⧉ העתק פרומפט</button>';
-    return '<div class="task" onclick="cycle(\''+t.id+'\')">'+
+    // readiness
+    var st=statusOf(t), unmet=unmetOf(t.id), allDeps=window.depsOf(t.id), sf=window.sharedFile(t.id);
+    var rrow='';
+    if(st!=='done'){
+      if(unmet.length===0){
+        rrow += '<span class="rchip ok">● מוכן להקצאה</span>';
+      } else {
+        rrow += '<span class="rchip block">⛔ חסום: '+unmet.map(esc).join(', ')+'</span>';
+      }
+    }
+    if(sf.length){ rrow += '<span class="rchip col">⚠ קובץ משותף: '+sf.map(esc).join(', ')+'</span>'; }
+    var readyRow = rrow ? '<div class="ready">'+rrow+'</div>' : '';
+    var depsLine = allDeps.length ? '<div class="deps">תלוי ב: '+allDeps.map(esc).join(' · ')+'</div>' : '';
+    var blockedCls = (st!=='done' && unmet.length) ? ' blocked' : '';
+    return '<div class="task'+blockedCls+'" onclick="cycle(\''+t.id+'\')">'+
       '<div class="tid">'+esc(t.id)+'</div>'+
       '<div class="tt">'+esc(t.title)+'</div>'+
       '<div class="td">'+esc(t.desc)+'</div>'+
+      readyRow + depsLine +
       '<div class="tags">'+
         '<span class="tag" style="background:'+c.color+'22;color:'+c.color+'">'+esc(c.label)+'</span>'+
         '<span class="tag" style="background:'+ph.color+'22;color:'+ph.color+'">'+esc(ph.label)+'</span>'+
@@ -212,7 +244,9 @@
 
   function render(){
     var tasks=window.tasksByWorld(worldId).filter(function(t){
-      return phaseFilter==='all' || t.phase===phaseFilter;
+      if(phaseFilter!=='all' && t.phase!==phaseFilter) return false;
+      if(readyOnly && (statusOf(t)==='done' || !isReady(t.id))) return false;
+      return true;
     });
     var buckets={todo:[],doing:[],done:[]};
     tasks.forEach(function(t){buckets[statusOf(t)].push(t)});
