@@ -248,15 +248,15 @@ header.hero{ padding:var(--space-5) 0 var(--space-1); }
   <div class="filters" role="group" aria-label="סינון רשימה">
     <button data-f="all"   aria-pressed="true">הכל <span class="cnt" id="cAll">28</span></button>
     <button data-f="needs" aria-pressed="false">נדרש קשר <span class="cnt" id="cNeeds">7</span></button>
-    <button data-f="ok"    aria-pressed="false">תקין <span class="cnt" id="cOk">21</span></button>
+    <button data-f="ok"    aria-pressed="false">רגועים <span class="cnt" id="cOk">21</span></button>
   </div>
 
   <!-- ===== רשימת דופק (נבנית ב-JS) ===== -->
   <div class="pulse-list" id="list"></div>
 
   <div class="foot-note">
-    <b>מערכת רֶצֶף</b> · לוח הדופק של המחנך<br>
-    שני טריגרים בלבד: היעדרות · "רוצה לדבר" · בלי דגלים רגשיים · Mobile First · RTL
+    <b>מערכת רֶצֶף</b> · רצף הקשר של המחנך<br>
+    מידע נוכחי בלבד · בלי "רמת תלמיד", בלי היסטוריה רגשית, בלי דירוג · שני טריגרים: היעדרות · "רוצה לדבר"
   </div>
 </div>
 
@@ -310,8 +310,9 @@ function first(name){ return name.split(/[\s\-]/)[0]; }
 function pulse(s, mode){
   if(mode === "emergency"){
     if(s.seen === "today") return "good";
-    if(s.seen === "yesterday" || s.seen === "2days") return "attention";
-    return "alert";
+    // אדום שמור להיעדרות ממושכת ומובהקת בלבד (4 ימים+). 3 ימים ומטה = ענבר.
+    if(s.seen === "4days") return "alert";
+    return "attention";
   } else {
     if(s.tasks >= 3) return "good";
     if(s.tasks >= 1) return "attention";
@@ -342,12 +343,11 @@ function orderKey(s, mode){
 
 /* ---------- טקסטים ---------- */
 function seenChipText(s){
-  var v = s.g === "m" ? "לא נראה" : "לא נראתה";
-  if(s.seen === "today")     return (s.g === "m" ? "נראה" : "נראתה") + " היום";
-  if(s.seen === "yesterday") return v + " מאתמול";
-  if(s.seen === "2days")     return v + " יומיים";
-  if(s.seen === "3days")     return v + " 3 ימים";
-  return v + " 4 ימים";
+  if(s.seen === "today")     return (s.g === "m" ? "פעיל" : "פעילה") + " היום";
+  if(s.seen === "yesterday") return "אין עדכון · מאתמול";
+  if(s.seen === "2days")     return "אין עדכון · יומיים";
+  if(s.seen === "3days")     return "אין פעילות · 3 ימים";
+  return "אין פעילות · 4 ימים";
 }
 function talkText(s){ return (s.g === "m" ? "ביקש" : "ביקשה") + " לדבר"; }
 
@@ -372,9 +372,9 @@ function subLine(s, mode){
   if(mode === "emergency"){
     if(s.wantsTalk) return '<div class="sub">פנייה יזומה · התראה חיה שנמחקת בטיפול</div>';
     var st = pulse(s, mode);
-    if(st === "good")      return '<div class="sub">נוכחות תקינה</div>';
-    if(st === "attention") return '<div class="sub">היעדרות קצרה</div>';
-    return '<div class="sub">היעדרות ממושכת · כדאי קשר</div>';
+    if(st === "good")      return '<div class="sub">' + (s.g === "m" ? "פעיל" : "פעילה") + ' במערכת היום</div>';
+    if(st === "attention") return '<div class="sub">אין עדכון לאחרונה · כדאי לבדוק</div>';
+    return '<div class="sub">אין פעילות כמה ימים · כדאי קשר</div>';
   } else {
     return '<div class="sub">השלמת '+s.tasks+' מתוך 3 משימות היום</div>';
   }
@@ -396,6 +396,17 @@ var CONTACT = {
 function contactBadge(idx){
   var m = CONTACT[contactStateOf(idx)];
   return '<div class="contact-badge '+m.cls+'" id="cb-'+idx+'">'+useSvg(m.icon,13)+m.txt+'</div>';
+}
+
+/* "מה כבר נעשה" — היסטוריית הקשר האחרונה. מונע פנייה כפולה ומחזק את הרצף. */
+var LAST_ACTION = {
+  open:     {icon:"ic-alert-circle", txt:"עדיין לא נוצר קשר"},
+  progress: {icon:"ic-wa",           txt:"הודעה נשלחה · ממתין לתגובה"},
+  closed:   {icon:"ic-check",        txt:"נוצר קשר היום · הרצף חודש"}
+};
+function lastActionLine(idx){
+  var m = LAST_ACTION[contactStateOf(idx)];
+  return '<div class="last-action" id="la-'+idx+'">'+useSvg(m.icon,13)+m.txt+'</div>';
 }
 
 /* ---------- הודעות וואטסאפ מוכנות (רגועות · בלי שפה רגשית) ---------- */
@@ -424,7 +435,7 @@ function rowHTML(s, idx, mode){
   var html = '<div class="p-item'+(live?' live':'')+(closed?' cs-closed':'')+'" data-idx="'+idx+'">';
   html += '<div class="p-row">';
   html += '<div class="avatar '+av+'">'+s.n.charAt(0)+'</div>';
-  html += '<div class="who"><div class="nm">'+s.n+'</div>'+subLine(s, mode)+(actionable?contactBadge(idx):'')+'</div>';
+  html += '<div class="who"><div class="nm">'+s.n+'</div>'+subLine(s, mode)+(actionable?contactBadge(idx)+lastActionLine(idx):'')+'</div>';
   html += pulseChip(s, mode);
   html += '</div>';
 
@@ -476,9 +487,9 @@ function render(){
     if(k !== lastKey){
       if(mode === "emergency"){
         if(k===0)      html += sepHTML("live", "ic-talk", "רוצים לדבר · פנייה יזומה");
-        else if(k===1) html += sepHTML("alert", "ic-user-x", "נדרש קשר · היעדרות ממושכת");
-        else if(k===2) html += sepHTML("attention", "ic-clock", "מתעכבים · יום־יומיים");
-        else           html += sepHTML("good", "ic-check", "נוכחים היום · הכול תקין");
+        else if(k===1) html += sepHTML("alert", "ic-user-x", "נדרש קשר · אין פעילות כמה ימים");
+        else if(k===2) html += sepHTML("attention", "ic-clock", "כדאי לבדוק · אין עדכון לאחרונה");
+        else           html += sepHTML("good", "ic-check", "פעילים היום · רגוע");
       } else {
         if(k===0)      html += sepHTML("alert", "ic-alert", "נדרש קשר · טרם התחילו");
         else if(k===1) html += sepHTML("attention", "ic-clock", "באמצע · השלמה חלקית");
@@ -522,6 +533,8 @@ function setContactState(idx, st){
   contactStates[idx] = st;
   var m = CONTACT[st], cb = document.getElementById("cb-"+idx);
   if(cb){ cb.className = "contact-badge "+m.cls; cb.innerHTML = useSvg(m.icon,13)+m.txt; }
+  var la = document.getElementById("la-"+idx), lm = LAST_ACTION[st];
+  if(la && lm){ la.innerHTML = useSvg(lm.icon,13)+lm.txt; }
   var item = document.querySelector('.p-item[data-idx="'+idx+'"]');
   if(item) item.classList.toggle("cs-closed", st === "closed");
   var closeBtn = document.querySelector('#wa-'+idx+' .wa-close');
@@ -545,6 +558,25 @@ function updateHeader(){
   document.getElementById("cNeeds").textContent = needs;
   document.getElementById("cOk").textContent    = total - needs;
   document.getElementById("modeChipTxt").textContent = mode==="emergency" ? "חירום" : "שגרה";
+
+  // ----- שורת פעולה מובילה: כמה עדיין פתוחים (טרם נוצר קשר) -----
+  var open = STUDENTS.filter(function(s,i){ return isActionable(s, mode) && contactStateOf(i) === "open"; }).length;
+  var lead = document.getElementById("actionLead");
+  var leadTxt = document.getElementById("actionLeadTxt");
+  var leadIc  = lead.querySelector(".al-ic use");
+  if(open > 0){
+    lead.classList.remove("clear");
+    leadIc.setAttribute("href", mode==="emergency" ? "#ic-talk" : "#ic-alert");
+    leadTxt.innerHTML = mode==="emergency"
+      ? 'עם <b>'+open+'</b> תלמידים עדיין לא נוצר קשר היום'
+      : '<b>'+open+'</b> תלמידים עדיין לא השלימו את משימות היום';
+  } else {
+    lead.classList.add("clear");
+    leadIc.setAttribute("href", "#ic-check");
+    leadTxt.innerHTML = mode==="emergency"
+      ? 'נוצר קשר עם כולם · הרצף נשמר'
+      : 'כולם השלימו · אין פעולה נדרשת כרגע';
+  }
 }
 
 /* ---------- אינטראקציות ---------- */
