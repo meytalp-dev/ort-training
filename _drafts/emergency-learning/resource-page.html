@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · עמוד משאב</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     עמוד משאב (W6-03) — תוכן ספציפי לתצוגה בלבד.
+     כל השלד (app-shell/sidebar/topbar) + מרכיבים (card/btn/chip/badge/
+     modal/scrim/drawer/toast) מגיעים מ-components.css.
+     כאן: פריסת עמוד-המשאב, תצוגה-מקדימה-לפי-סוג, פאנל מטא, מודל שיבוץ.
+     טוקנים בלבד — אין צבעים קשיחים.
+     ============================================================ */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: var(--text-body);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ---------- ניווט-חזרה (breadcrumb) ---------- */
+  .rp-breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: var(--text-small); color: var(--ink-soft);
+    margin-bottom: var(--space-4);
+  }
+  .rp-breadcrumb a {
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--ink-soft); font-weight: 600; text-decoration: none;
+    border-radius: var(--radius-sm); padding: 2px 4px;
+  }
+  .rp-breadcrumb a:hover { color: var(--brand-deep); }
+  .rp-breadcrumb a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .rp-breadcrumb svg { width: 15px; height: 15px; flex: none; }
+  .rp-breadcrumb__sep { color: var(--ink-faint); }
+  .rp-breadcrumb__here { color: var(--ink); font-weight: 600; }
+
+  /* ---------- מתג-דמו: החלפת סוג משאב לתצוגה ---------- */
+  .rp-demo {
+    display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+    background: var(--brand-soft); border: 1px dashed var(--brand-line);
+    border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+  .rp-demo__label {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--text-label); font-weight: 700; color: var(--brand-deep);
+  }
+  .rp-demo__label svg { width: 15px; height: 15px; }
+  .rp-demo__tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rp-demo__tab {
+    font-family: var(--font-body); font-size: var(--text-label); font-weight: 600;
+    color: var(--ink-soft); background: var(--card); border: 1px solid var(--brand-line);
+    border-radius: var(--radius-pill); padding: 5px 12px; min-height: 32px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .rp-demo__tab svg { width: 14px; height: 14px; }
+  .rp-demo__tab:hover { border-color: var(--brand); }
+  .rp-demo__tab[aria-pressed="true"] { color: #fff; background: var(--brand); border-color: var(--brand); }
+  .rp-demo__tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  /* ---------- כותרת המשאב ---------- */
+  .rp-header { display: flex; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-5); flex-wrap: wrap; }
+  .rp-header__type {
+    flex: none; width: 56px; height: 56px; border-radius: var(--radius-md);
+    display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-deep);
+  }
+  .rp-header__type svg { width: 28px; height: 28px; }
+  .rp-header__main { min-width: 0; flex: 1 1 300px; }
+  .rp-header__tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .rp-header__title {
+    font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800;
+    color: var(--ink-strong); margin: 0 0 4px; line-height: 1.2;
+  }
+  .rp-header__desc { font-size: var(--text-body); color: var(--ink-soft); margin: 0; line-height: 1.5; max-width: 62ch; }
+
+  /* type-chip — וריאנט צבע לפי סוג המשאב */
+  .type-chip {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700;
+    border-radius: var(--radius-pill); padding: 3px 10px; line-height: 1.5;
+    color: var(--brand-deep); background: var(--brand-soft); border: 1px solid var(--brand-line);
+  }
+  .type-chip svg { width: 13px; height: 13px; }
+  .type-chip--assessment { color: #9A6E12; background: var(--emergency-soft); border-color: var(--emergency-line); }
+  .type-chip--reference  { color: var(--ink-soft); background: var(--surface-muted); border-color: var(--line-strong); }
+
+  /* צ'יפ רמת-תמיכה */
+  .support-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; border-radius: var(--radius-pill); padding: 3px 10px; line-height: 1.5; }
+  .support-chip svg { width: 13px; height: 13px; }
+  .support-chip--support { color: #2b6fb0; background: var(--remote-soft); border: 1px solid var(--remote-line); }
+  .support-chip--core    { color: var(--brand-deep); background: var(--brand-soft); border: 1px solid var(--brand-line); }
+  .support-chip--challenge { color: #7a5bbd; background: #F1ECFB; border: 1px solid #DCD0F3; }
+
+  .meta-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ink-soft); background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 3px 10px; }
+  .meta-chip svg { width: 13px; height: 13px; flex: none; }
+
+  /* ---------- פריסה: תצוגה מקדימה | פאנל מטא ---------- */
+  .rp-layout { display: grid; grid-template-columns: 1fr 340px; gap: var(--space-5); align-items: start; }
+
+  /* ---------- מעטפת התצוגה-המקדימה ---------- */
+  .preview { overflow: hidden; }
+  .preview__bar {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line);
+    background: var(--bg-soft);
+  }
+  .preview__bar-title { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-head); font-size: var(--text-small); font-weight: 700; color: var(--ink-strong); }
+  .preview__bar-title svg { width: 16px; height: 16px; color: var(--brand); }
+  .preview__bar-note { margin-inline-start: auto; font-size: var(--text-label); color: var(--ink-soft); }
+  .preview__stage { padding: var(--space-5); }
+
+  /* ==== מצגת ==== */
+  .pv-slide {
+    aspect-ratio: 16 / 9; border: 1px solid var(--line-strong); border-radius: var(--radius-md);
+    background: linear-gradient(160deg, #fff, var(--brand-soft));
+    padding: var(--space-6); display: flex; flex-direction: column; justify-content: center; gap: var(--space-3);
+    box-shadow: var(--shadow-card);
+  }
+  .pv-slide__kicker { font-size: var(--text-label); font-weight: 700; color: var(--brand-deep); letter-spacing: .02em; }
+  .pv-slide__title { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 800; color: var(--ink-strong); margin: 0; }
+  .pv-slide__list { margin: var(--space-2) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .pv-slide__list li { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-body); color: var(--ink); }
+  .pv-slide__list li svg { width: 18px; height: 18px; color: var(--brand); flex: none; margin-top: 2px; }
+  .pv-slidenav { display: flex; align-items: center; justify-content: center; gap: var(--space-4); margin-top: var(--space-4); }
+  .pv-slidenav__count { font-size: var(--text-small); font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; min-width: 96px; text-align: center; }
+  .pv-dots { display: flex; justify-content: center; gap: 6px; margin-top: var(--space-3); }
+  .pv-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line-strong); border: 0; padding: 0; cursor: pointer; }
+  .pv-dot[aria-current="true"] { background: var(--brand); width: 20px; border-radius: var(--radius-pill); }
+
+  /* ==== סרטון ==== */
+  .pv-video {
+    position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden;
+    background: radial-gradient(120% 120% at 50% 30%, #1c4653, #0f2d3a);
+    display: grid; place-items: center;
+  }
+  .pv-video__play {
+    width: 76px; height: 76px; border-radius: 50%; border: 0; cursor: pointer;
+    background: rgba(255,255,255,0.92); color: var(--brand-deep); display: grid; place-items: center;
+    box-shadow: var(--shadow-lg); transition: transform 160ms ease;
+  }
+  .pv-video__play:hover { transform: scale(1.06); }
+  .pv-video__play svg { width: 30px; height: 30px; margin-inline-start: 3px; }
+  .pv-video__dur { position: absolute; inset-block-end: 10px; inset-inline-end: 12px; background: rgba(15,45,58,0.8); color: #fff; font-size: 12px; font-weight: 700; border-radius: var(--radius-sm); padding: 3px 8px; font-variant-numeric: tabular-nums; }
+  .pv-chapters { margin-top: var(--space-4); display: flex; flex-direction: column; gap: 2px; }
+  .pv-chapter { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--bg-soft); border: 1px solid var(--line); }
+  .pv-chapter__t { font-size: 12px; font-weight: 700; color: var(--brand-deep); background: var(--brand-soft); border-radius: var(--radius-sm); padding: 2px 7px; font-variant-numeric: tabular-nums; flex: none; }
+  .pv-chapter__l { font-size: var(--text-small); color: var(--ink); }
+
+  /* ==== בוחן ==== */
+  .pv-quiz-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); }
+  .pv-q { border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-3); background: var(--card); }
+  .pv-q__num { font-size: var(--text-label); font-weight: 700; color: var(--ink-faint); }
+  .pv-q__text { font-family: var(--font-head); font-size: var(--text-body); font-weight: 700; color: var(--ink-strong); margin: 2px 0 var(--space-3); }
+  .pv-q__opts { display: flex; flex-direction: column; gap: 8px; }
+  .pv-opt { display: flex; align-items: center; gap: 10px; font-size: var(--text-small); color: var(--ink); padding: 9px 12px; border: 1px solid var(--line); border-radius: var(--radius-btn); background: var(--bg-soft); }
+  .pv-opt__mark { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line-strong); flex: none; display: grid; place-items: center; }
+  .pv-opt--correct { border-color: var(--brand-line); background: var(--brand-soft); color: var(--brand-deep); font-weight: 700; }
+  .pv-opt--correct .pv-opt__mark { border-color: var(--brand); background: var(--brand); color: #fff; }
+  .pv-opt--correct .pv-opt__mark svg { width: 13px; height: 13px; }
+
+  /* ==== דף עבודה ==== */
+  .pv-sheet {
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card); padding: var(--space-6); max-width: 640px; margin: 0 auto;
+  }
+  .pv-sheet__title { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 800; color: var(--ink-strong); margin: 0 0 var(--space-2); }
+  .pv-sheet__sub { font-size: var(--text-small); color: var(--ink-soft); margin: 0 0 var(--space-4); padding-bottom: var(--space-4); border-bottom: 2px solid var(--brand-soft); }
+  .pv-sheet__sec { margin-bottom: var(--space-4); }
+  .pv-sheet__sec-h { display: flex; align-items: center; gap: 8px; font-family: var(--font-head); font-weight: 700; font-size: var(--text-small); color: var(--brand-deep); margin-bottom: 8px; }
+  .pv-sheet__sec-h span { width: 22px; height: 22px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-deep); display: grid; place-items: center; font-size: 12px; flex: none; }
+  .pv-sheet__lines { display: flex; flex-direction: column; gap: 9px; }
+  .pv-sheet__line { height: 12px; border-radius: 6px; background: var(--surface-muted); }
+  .pv-sheet__q { font-size: var(--text-small); color: var(--ink); padding-inline-start: 4px; }
+
+  /* ==== סימולציה ==== */
+  .pv-sim {
+    aspect-ratio: 16 / 10; border-radius: var(--radius-md); border: 1px solid var(--line-strong);
+    background: linear-gradient(150deg, #eaf6f7, #f4ecfb);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); text-align: center; padding: var(--space-6);
+  }
+  .pv-sim__ico { width: 64px; height: 64px; border-radius: var(--radius-lg); background: #fff; color: var(--brand); display: grid; place-items: center; box-shadow: var(--shadow-card); }
+  .pv-sim__ico svg { width: 32px; height: 32px; }
+  .pv-sim__title { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 800; color: var(--ink-strong); margin: 0; }
+  .pv-sim__text { font-size: var(--text-small); color: var(--ink-soft); margin: 0; max-width: 42ch; }
+
+  /* ==== יחידה (מנות קצרות) ==== */
+  .pv-unit { display: flex; flex-direction: column; gap: var(--space-3); }
+  .pv-chunk { border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+  .pv-chunk__head { display: flex; align-items: center; gap: 10px; padding: var(--space-3) var(--space-4); background: var(--bg-soft); border-bottom: 1px solid var(--line); }
+  .pv-chunk__n { width: 26px; height: 26px; border-radius: 50%; background: var(--brand); color: #fff; font-family: var(--font-head); font-weight: 700; font-size: var(--text-small); display: grid; place-items: center; flex: none; }
+  .pv-chunk__title { font-family: var(--font-head); font-weight: 700; font-size: var(--text-small); color: var(--ink-strong); }
+  .pv-chunk__body { padding: var(--space-4); font-size: var(--text-small); color: var(--ink); line-height: 1.55; }
+  .pv-chunk__eg { margin-top: 10px; padding: 10px 12px; background: var(--brand-soft); border-radius: var(--radius-sm); font-size: var(--text-small); color: var(--brand-dark); }
+  .pv-chunk__eg b { color: var(--brand-deep); }
+
+  /* ==== קישור ==== */
+  .pv-link { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--card); }
+  .pv-link__ico { width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--surface-muted); color: var(--ink-soft); display: grid; place-items: center; flex: none; }
+  .pv-link__ico svg { width: 26px; height: 26px; }
+  .pv-link__body { min-width: 0; flex: 1; }
+  .pv-link__src { font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); }
+  .pv-link__url { font-size: var(--text-small); color: var(--brand-deep); font-weight: 600; word-break: break-all; direction: ltr; text-align: start; }
+
+  .pv-safety { display: flex; align-items: flex-start; gap: 8px; margin-top: var(--space-4); padding: var(--space-3) var(--space-4); background: var(--surface-muted); border-radius: var(--radius-sm); font-size: var(--text-label); color: var(--ink-soft); }
+  .pv-safety svg { width: 15px; height: 15px; color: var(--ink-faint); flex: none; margin-top: 1px; }
+
+  /* ---------- פאנל מטא (aside) ---------- */
+  .rp-aside { display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: var(--space-5); }
+  .rp-cta { display: flex; flex-direction: column; gap: var(--space-2); }
+  .rp-cta__note { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--text-label); color: var(--ink-soft); }
+  .rp-cta__note svg { width: 14px; height: 14px; color: var(--status-good); }
+
+  .meta-list { display: flex; flex-direction: column; gap: 2px; }
+  .meta-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; }
+  .meta-row + .meta-row { border-top: 1px solid var(--line); }
+  .meta-row__ico { width: 36px; height: 36px; border-radius: 10px; background: var(--surface-muted); color: var(--ink-soft); display: grid; place-items: center; flex: none; }
+  .meta-row__ico svg { width: 18px; height: 18px; }
+  .meta-row__body { min-width: 0; }
+  .meta-row__label { font-size: var(--text-label); color: var(--ink-soft); font-weight: 600; }
+  .meta-row__value { font-size: var(--text-small); color: var(--ink-strong); font-weight: 700; }
+  .meta-row__value small { font-weight: 500; color: var(--ink-soft); }
+
+  .rp-verified {
+    display: flex; align-items: center; gap: 10px; padding: var(--space-3) var(--space-4);
+    background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--radius-md);
+  }
+  .rp-verified svg { width: 22px; height: 22px; color: var(--brand-deep); flex: none; }
+  .rp-verified__t { font-family: var(--font-head); font-weight: 700; font-size: var(--text-small); color: var(--brand-deep); }
+  .rp-verified__s { font-size: var(--text-label); color: var(--ink-soft); }
+
+  /* ---------- מודל שיבוץ ---------- */
+  .assign-field { margin-bottom: var(--space-4); }
+  .assign-field > label, .assign-field__label { display: block; font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+  .assign-field input, .assign-field select, .assign-field textarea {
+    width: 100%; font-family: var(--font-body); font-size: var(--text-body); color: var(--ink);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-btn);
+    min-height: var(--tap); padding: 0 var(--space-3); transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+  .assign-field textarea { min-height: 72px; padding: 10px var(--space-3); resize: vertical; line-height: 1.5; }
+  .assign-field select { cursor: pointer; }
+  .assign-field input:focus-visible, .assign-field select:focus-visible, .assign-field textarea:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+
+  .class-pick { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; padding-inline-end: 2px; }
+  .class-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-btn); cursor: pointer; transition: border-color 160ms ease, background 160ms ease; }
+  .class-opt:hover { border-color: var(--brand-line); }
+  .class-opt:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
+  .class-opt input { width: 20px; height: 20px; min-height: 0; accent-color: var(--brand); flex: none; cursor: pointer; }
+  .class-opt__name { font-size: var(--text-small); font-weight: 700; color: var(--ink-strong); }
+  .class-opt__meta { font-size: var(--text-label); color: var(--ink-soft); margin-inline-start: auto; }
+
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg__opt { position: relative; }
+  .seg__opt input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg__opt span {
+    display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center;
+    min-height: 42px; padding: 0 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-btn);
+    font-size: var(--text-small); font-weight: 700; color: var(--ink-soft); cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+  }
+  .seg__opt input:checked + span { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-deep); }
+  .seg__opt input:focus-visible + span { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .assign-summary { display: flex; align-items: center; gap: 8px; font-size: var(--text-small); color: var(--ink-soft); margin-inline-end: auto; }
+  .assign-summary b { color: var(--ink-strong); }
+
+  /* ---------- רספונסיביות ---------- */
+  @media (max-width: 960px) {
+    .rp-layout { grid-template-columns: 1fr; }
+    .rp-aside { position: static; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pv-video__play, .rp-demo__tab { transition: none; }
+  }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (outline, 24×24, stroke=currentColor) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-chevron-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></symbol>
+  <symbol id="ic-chevron-e" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18.8 6.2 21.9l1.1-6.5L2.6 10.8l6.5-.9z"/></symbol>
+  <symbol id="ic-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+  <symbol id="ic-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 21h16"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
+  <symbol id="ic-user-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="8" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></symbol>
+  <symbol id="ic-bars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <!-- אייקוני סוגי-משאב -->
+  <symbol id="ic-presentation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h20M4 4v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4M12 16v4M9 20h6"/></symbol>
+  <symbol id="ic-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="14" height="14" rx="2"/><path d="m16 10 6-3v10l-6-3z"/></symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4.5v15l13-7.5z"/></symbol>
+  <symbol id="ic-quiz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 17h4"/></symbol>
+  <symbol id="ic-worksheet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></symbol>
+  <symbol id="ic-simulation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h.01M15 9h.01M9 14c.9.9 2.1 1.4 3 1.4s2.1-.5 3-1.4"/></symbol>
+  <symbol id="ic-unit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5M3 8v5"/></symbol>
+  <symbol id="ic-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></symbol>
+  <symbol id="ic-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M21 3l-9 9M10 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></symbol>
+  <symbol id="ic-support" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9-9a4.5 4.5 0 0 1 9-2 4.5 4.5 0 0 1 9 2c-2 4.5-9 9-9 9z"/></symbol>
+</svg>
+
+<!-- ============================================================
+     TeacherShell — Sidebar + Topbar + Main
+     ============================================================ -->
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="teacher-dashboard.html" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="teacher-class-board.html" aria-label="הכיתה שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+        <span class="sidebar__label">הכיתה שלי</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="שליחת משימה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">שליחת משימה</span>
+      </a>
+
+      <div class="sidebar__section">תוכן</div>
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הכיתות שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+        <span class="sidebar__label">הכיתות שלי</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רותם לוי</div>
+          <div class="sidebar__foot-role">מורה · מחנכת ט'2</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">ספריית התוכן</div>
+        <div class="topbar__subtitle">אורט · מאגר משאבים משותף</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" placeholder="חיפוש משאב בספרייה…" aria-label="חיפוש">
+      </label>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (3 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">3</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+
+        <!-- ניווט חזרה -->
+        <nav class="rp-breadcrumb" aria-label="מסלול ניווט">
+          <a href="#"><svg aria-hidden="true"><use href="#ic-book"/></svg>ספריית התוכן</a>
+          <span class="rp-breadcrumb__sep" aria-hidden="true"><svg width="14" height="14"><use href="#ic-chevron-s"/></svg></span>
+          <span class="rp-breadcrumb__here" id="crumb-subject">לשון · ט'</span>
+          <span class="rp-breadcrumb__sep" aria-hidden="true"><svg width="14" height="14"><use href="#ic-chevron-s"/></svg></span>
+          <span class="rp-breadcrumb__here" id="crumb-title">שם המשאב</span>
+        </nav>
+
+        <!-- מתג-דמו: החלפת סוג משאב (אמצעי הדגמה — מציג את "תצוגה מקדימה לפי סוג") -->
+        <div class="rp-demo" role="group" aria-label="הדגמה: מעבר בין סוגי משאב">
+          <span class="rp-demo__label"><svg aria-hidden="true"><use href="#ic-activity"/></svg>הדגמה — תצוגה מקדימה לפי סוג:</span>
+          <div class="rp-demo__tabs" id="demo-tabs"><!-- כפתורי סוגים מוזרקים ב-JS --></div>
+        </div>
+
+        <!-- כותרת המשאב -->
+        <div class="rp-header">
+          <div class="rp-header__type" id="hd-type-ico" aria-hidden="true"><svg><use href="#ic-presentation"/></svg></div>
+          <div class="rp-header__main">
+            <div class="rp-header__tags" id="hd-tags"><!-- צ'יפים מוזרקים ב-JS --></div>
+            <h1 class="rp-header__title" id="hd-title">שם המשאב</h1>
+            <p class="rp-header__desc" id="hd-desc">תיאור המשאב.</p>
+          </div>
+        </div>
+
+        <!-- פריסה: תצוגה מקדימה | פאנל מטא -->
+        <div class="rp-layout">
+
+          <!-- ===== תצוגה מקדימה לפי סוג ===== -->
+          <section class="card preview" aria-labelledby="pv-bar-title">
+            <div class="preview__bar">
+              <span class="preview__bar-title" id="pv-bar-title">
+                <svg aria-hidden="true"><use href="#ic-search"/></svg>תצוגה מקדימה
+              </span>
+              <span class="preview__bar-note" id="pv-bar-note"></span>
+            </div>
+            <div class="preview__stage" id="preview"><!-- תוכן לפי סוג מוזרק ב-JS --></div>
+          </section>
+
+          <!-- ===== פאנל מטא + שיבוץ ===== -->
+          <aside class="rp-aside" aria-label="פרטי המשאב ופעולות">
+
+            <!-- CTA ראשי -->
+            <div class="card rp-cta">
+              <button class="btn btn--primary btn--lg btn--block" type="button" id="btn-assign">
+                <svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>
+                שבץ לכיתה
+              </button>
+              <div class="rp-cta__note">
+                <svg aria-hidden="true"><use href="#ic-check-c"/></svg>
+                שיבוץ שולח את המשאב כמשימה — בלי לשנות את המקור
+              </div>
+              <div style="display:flex; gap:var(--space-2); margin-top:var(--space-2)">
+                <button class="btn btn--secondary btn--sm btn--block" type="button" data-toast="נשמר במועדפים שלך">
+                  <svg viewBox="0 0 24 24"><use href="#ic-star"/></svg>מועדף
+                </button>
+                <button class="btn btn--secondary btn--sm btn--block" type="button" data-toast="קישור שיתוף הועתק">
+                  <svg viewBox="0 0 24 24"><use href="#ic-share"/></svg>שיתוף
+                </button>
+              </div>
+            </div>
+
+            <!-- תו אימות פדגוגי -->
+            <div class="rp-verified">
+              <svg aria-hidden="true"><use href="#ic-shield"/></svg>
+              <div>
+                <div class="rp-verified__t">תוכן מאושר</div>
+                <div class="rp-verified__s" id="vf-approver">אומת ע"י מפקח מקצועי</div>
+              </div>
+            </div>
+
+            <!-- מטא: יוצר / תאריך אישור / שימושים -->
+            <div class="card">
+              <h2 class="card__title" style="margin-bottom:var(--space-2)">פרטי המשאב</h2>
+              <div class="meta-list">
+                <div class="meta-row">
+                  <span class="meta-row__ico" aria-hidden="true"><svg><use href="#ic-user-check"/></svg></span>
+                  <div class="meta-row__body">
+                    <div class="meta-row__label">יוצר/ת התוכן</div>
+                    <div class="meta-row__value" id="mt-creator">—</div>
+                  </div>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-row__ico" aria-hidden="true"><svg><use href="#ic-calendar"/></svg></span>
+                  <div class="meta-row__body">
+                    <div class="meta-row__label">תאריך אישור</div>
+                    <div class="meta-row__value" id="mt-approved">—</div>
+                  </div>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-row__ico" aria-hidden="true"><svg><use href="#ic-bars"/></svg></span>
+                  <div class="meta-row__body">
+                    <div class="meta-row__label">שימושים</div>
+                    <div class="meta-row__value" id="mt-uses">—</div>
+                  </div>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-row__ico" aria-hidden="true"><svg><use href="#ic-clock"/></svg></span>
+                  <div class="meta-row__body">
+                    <div class="meta-row__label">משך מוערך</div>
+                    <div class="meta-row__value" id="mt-time">—</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     מודל "שבץ לכיתה"
+     ============================================================ -->
+<div class="scrim" id="assign-scrim" hidden>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="assign-title" style="max-width:520px">
+    <div class="modal__head">
+      <h2 class="modal__title" id="assign-title">שיבוץ לכיתה</h2>
+      <button class="icon-btn modal__close" type="button" id="assign-close" aria-label="סגירה">
+        <svg aria-hidden="true"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+
+    <div class="modal__body">
+      <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--surface-muted); border-radius:var(--radius-btn); margin-bottom:var(--space-5)">
+        <span class="type-chip" id="assign-type-chip"><svg aria-hidden="true"><use href="#ic-presentation"/></svg>מצגת</span>
+        <span style="font-weight:700; color:var(--ink-strong); font-size:var(--text-small)" id="assign-res-title">שם המשאב</span>
+      </div>
+
+      <!-- בחירת כיתה/ות -->
+      <div class="assign-field">
+        <span class="assign-field__label">בחירת כיתה (אפשר יותר מאחת)</span>
+        <div class="class-pick" id="class-pick">
+          <label class="class-opt"><input type="checkbox" value="ט'2 · לשון" checked><span class="class-opt__name">ט'2 · לשון</span><span class="class-opt__meta">28 תלמידים</span></label>
+          <label class="class-opt"><input type="checkbox" value="ט'1 · לשון"><span class="class-opt__name">ט'1 · לשון</span><span class="class-opt__meta">26 תלמידים</span></label>
+          <label class="class-opt"><input type="checkbox" value="י'3 · לשון"><span class="class-opt__name">י'3 · לשון</span><span class="class-opt__meta">24 תלמידים</span></label>
+          <label class="class-opt"><input type="checkbox" value="י'4 · לשון"><span class="class-opt__name">י'4 · לשון</span><span class="class-opt__meta">22 תלמידים</span></label>
+        </div>
+      </div>
+
+      <!-- רמת תמיכה -->
+      <div class="assign-field">
+        <span class="assign-field__label">רמת תמיכה בהקצאה</span>
+        <div class="seg" role="radiogroup" aria-label="רמת תמיכה">
+          <label class="seg__opt"><input type="radio" name="support" value="תמיכה"><span>תמיכה</span></label>
+          <label class="seg__opt"><input type="radio" name="support" value="ליבה" checked><span>ליבה</span></label>
+          <label class="seg__opt"><input type="radio" name="support" value="אתגר"><span>אתגר</span></label>
+        </div>
+      </div>
+
+      <!-- מצב מערכת + תאריך יעד -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4)">
+        <div class="assign-field" style="margin-bottom:0">
+          <label for="assign-mode">מצב מערכת</label>
+          <select id="assign-mode">
+            <option value="routine" selected>שגרה</option>
+            <option value="remote">למידה מרחוק</option>
+            <option value="emergency">חירום</option>
+          </select>
+        </div>
+        <div class="assign-field" style="margin-bottom:0">
+          <label for="assign-due">תאריך יעד</label>
+          <input type="date" id="assign-due">
+        </div>
+      </div>
+
+      <!-- הודעה לתלמידים (רשות) -->
+      <div class="assign-field" style="margin-top:var(--space-4); margin-bottom:0">
+        <label for="assign-msg">הודעה לתלמידים <small style="font-weight:500; color:var(--ink-faint)">(רשות)</small></label>
+        <textarea id="assign-msg" placeholder="למשל: התחילו מהמנה הראשונה, אני כאן לכל שאלה."></textarea>
+      </div>
+    </div>
+
+    <div class="modal__foot">
+      <span class="assign-summary"><svg width="16" height="16" aria-hidden="true" style="color:var(--brand)"><use href="#ic-users"/></svg><span id="assign-summary-text">כיתה אחת · <b>28</b> תלמידים</span></span>
+      <button class="btn btn--secondary" type="button" id="assign-cancel">ביטול</button>
+      <button class="btn btn--primary" type="button" id="assign-confirm">
+        <svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>שבץ ושלח
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     נתוני משאבים — משאב לדוגמה לכל סוג (תצוגה מקדימה לפי סוג)
+     ============================================================ */
+  var RESOURCES = {
+    presentation: {
+      type: 'presentation', typeLabel: 'מצגת', icon: 'ic-presentation', chipMod: '',
+      title: 'שורש ומשקל — הבסיס של המילה',
+      desc: 'מצגת קצרה שמראה איך כל מילה עברית בנויה משורש (האותיות הקבועות) וממשקל (התבנית). מנות קטנות, דוגמאות מחיי היום־יום.',
+      subject: 'לשון', grade: 'ט\'', topic: 'מבוא לתצורת הפועל', support: 'core',
+      creator: 'שירה כהן', creatorRole: 'מורה ללשון · אורט',
+      approved: '12 במאי 2026', approver: 'אומת ע"י ד"ר יעל בר — מפקחת לשון',
+      usesTeachers: 14, usesClasses: 22, time: '10 דק\'',
+      slides: [
+        { kicker: 'שקף 1 · פתיחה', title: 'מאיפה מגיעה מילה?', bullets: ['לכל מילה עברית יש שלד קבוע', 'ועליו נלבשת תבנית שמשנה את המשמעות'] },
+        { kicker: 'שקף 2 · הרעיון', title: 'שורש = האותיות הקבועות', bullets: ['מהשורש ש־מ־ר: שומר, נשמר, שמירה', 'האותיות לא משתנות — הן חוזרות בכל המילים'] },
+        { kicker: 'שקף 3 · הרעיון', title: 'משקל = התבנית', bullets: ['אותו שורש, תבניות שונות', 'שַׁמָּר, מִשְׁמֶרֶת, שְׁמִירָה — כולן מ־ש־מ־ר'] },
+        { kicker: 'שקף 4 · דוגמה', title: 'ננסה יחד', bullets: ['מהשורש ל־מ־ד: לומד, מלמד, לימוד, תלמיד', 'מה השורש? מה משתנה בכל מילה?'] }
+      ]
+    },
+    video: {
+      type: 'video', typeLabel: 'סרטון', icon: 'ic-video', chipMod: '',
+      title: 'הבניינים — סרטון הסבר קצר',
+      desc: 'סרטון של כארבע דקות שמסביר מהם שבעת הבניינים בעברית, עם דוגמה לכל בניין. אפשר לעצור ולחזור בכל שלב.',
+      subject: 'לשון', grade: 'ט\'', topic: 'מבוא לתצורת הפועל', support: 'core',
+      creator: 'מערכת רֶצֶף', creatorRole: 'ספריית וידאו · אורט',
+      approved: '3 באפריל 2026', approver: 'אומת ע"י צוות פדגוגי — רֶצֶף',
+      usesTeachers: 31, usesClasses: 48, time: '4 דק\'',
+      duration: '4:12',
+      chapters: [
+        { t: '0:00', l: 'מה זה בכלל בניין?' },
+        { t: '0:48', l: 'פָּעַל וניפְעַל — הפעולה הבסיסית' },
+        { t: '1:55', l: 'פיעל והתפעל — הַדגשה' },
+        { t: '3:05', l: 'הפעיל והופעל — לגרום לפעולה' }
+      ]
+    },
+    quiz: {
+      type: 'quiz', typeLabel: 'בוחן', icon: 'ic-quiz', chipMod: 'assessment',
+      title: 'בוחן — זיהוי שורש ומשקל',
+      desc: 'בוחן קצר של שמונה שאלות לבדיקת הבנה. משוב מיידי אחרי כל שאלה, ציון אישי שנשמר לך ולתלמיד בלבד — בלי לוח מובילים.',
+      subject: 'לשון', grade: 'ט\'', topic: 'מבוא לתצורת הפועל', support: 'core',
+      creator: 'שירה כהן', creatorRole: 'מורה ללשון · אורט',
+      approved: '15 במאי 2026', approver: 'אומת ע"י ד"ר יעל בר — מפקחת לשון',
+      usesTeachers: 9, usesClasses: 12, time: '8 דק\'',
+      quizCount: 8,
+      questions: [
+        { q: 'מהו השורש של המילה "מִשְׁמֶרֶת"?', opts: ['מ־ש־מ', 'ש־מ־ר', 'מ־ר־ת'], correct: 1 },
+        { q: 'איזו מילה בנויה מהשורש ל־מ־ד?', opts: ['מלונה', 'תלמיד', 'מלמלה'], correct: 1 }
+      ]
+    },
+    worksheet: {
+      type: 'worksheet', typeLabel: 'דף עבודה', icon: 'ic-worksheet', chipMod: 'reference',
+      title: 'דף עבודה — תרגול שורשים',
+      desc: 'דף עבודה להדפסה או למילוי דיגיטלי. שלוש רמות של תרגילים: זיהוי שורש, השלמת מילים, וכתיבה חופשית.',
+      subject: 'לשון', grade: 'ט\'', topic: 'מבוא לתצורת הפועל', support: 'support',
+      creator: 'שירה כהן', creatorRole: 'מורה ללשון · אורט',
+      approved: '18 במאי 2026', approver: 'אומת ע"י ד"ר יעל בר — מפקחת לשון',
+      usesTeachers: 7, usesClasses: 10, time: '15 דק\'',
+      sheetTitle: 'תרגול: שורש ומשקל',
+      sheetSub: 'שם: ______________  ·  כיתה: ______  ·  תאריך: __________',
+      sections: [
+        { h: 'זהו את השורש', lines: 2, q: 'לכל מילה — כתבו את שלוש אותיות השורש: שומר, נזכר, מכתב, תלמיד.' },
+        { h: 'השלימו מילה', lines: 3, q: 'מהשורש כ־ת־ב — כתבו שלוש מילים שונות.' },
+        { h: 'כתיבה חופשית', lines: 3, q: 'בחרו שורש אחד וכתבו עליו משפט קצר.' }
+      ]
+    },
+    simulation: {
+      type: 'simulation', typeLabel: 'סימולציה', icon: 'ic-simulation', chipMod: '',
+      title: 'סימולציה — מכונת השורשים',
+      desc: 'כלי אינטראקטיבי: בוחרים שורש וגוררים אותו לתוך משקלים שונים, והמכונה מרכיבה את המילה. למידה תוך כדי משחק.',
+      subject: 'לשון', grade: 'ט\'', topic: 'מבוא לתצורת הפועל', support: 'challenge',
+      creator: 'מערכת רֶצֶף', creatorRole: 'כלים אינטראקטיביים · אורט',
+      approved: '20 באפריל 2026', approver: 'אומת ע"י צוות פדגוגי — רֶצֶף',
+      usesTeachers: 5, usesClasses: 6, time: '12 דק\'',
+      simTitle: 'מכונת השורשים',
+      simText: 'סימולציה בטוחה בדפדפן. התלמיד גורר שורש, בוחר משקל, ורואה את המילה נבנית — עם משוב מיידי ובלי חיבור לשום מערכת חיצונית.'
+    },
+    unit: {
+      type: 'unit', typeLabel: 'יחידה', icon: 'ic-unit', chipMod: '',
+      title: 'יחידת 10 דקות — שורש ומשקל',
+      desc: 'יחידת למידה מלאה במבנה מנות קצרות: פתיח, שתי מנות ידע עם דוגמה, ותרגול קצר. בנויה לפי סטנדרט התוכן.',
+      subject: 'לשון', grade: 'ט\'', topic: 'מבוא לתצורת הפועל', support: 'core',
+      creator: 'שירה כהן', creatorRole: 'מורה ללשון · אורט',
+      approved: '10 במאי 2026', approver: 'אומת ע"י ד"ר יעל בר — מפקחת לשון',
+      usesTeachers: 19, usesClasses: 27, time: '10 דק\'',
+      chunks: [
+        { title: 'פתיח', body: 'לכל מילה בעברית יש "שלד" קבוע. היום נגלה איך מזהים אותו — ולמה זה עוזר להבין מילים חדשות.', eg: '' },
+        { title: 'מנה 1 — מהו שורש', body: 'השורש הוא קבוצת האותיות שחוזרת בכל המילים מאותה משפחה.', eg: 'ש־מ־ר חוזר ב: <b>שומר, שמירה, נשמר, משמרת</b>.' },
+        { title: 'מנה 2 — מהו משקל', body: 'המשקל הוא התבנית שנלבשת על השורש ומשנה את המשמעות.', eg: 'אותו שורש כ־ת־ב: <b>כותב</b> (עושה) מול <b>מכתב</b> (חפץ).' },
+        { title: 'תרגול קצר', body: 'מהשורש ל־מ־ד — כמה מילים אתם מצליחים למצוא? נסו לפחות שלוש.', eg: '' }
+      ]
+    },
+    link: {
+      type: 'link', typeLabel: 'קישור', icon: 'ic-link', chipMod: 'reference',
+      title: 'האקדמיה ללשון — מחולל נטיות',
+      desc: 'קישור חיצוני לכלי של האקדמיה ללשון העברית: הזינו שורש וקבלו את כל הנטיות. מקור מאושר לבדיקה עצמית.',
+      subject: 'לשון', grade: 'ט\'', topic: 'מבוא לתצורת הפועל', support: 'core',
+      creator: 'שירה כהן', creatorRole: 'מורה ללשון · אורט',
+      approved: '5 במאי 2026', approver: 'אומת ע"י ד"ר יעל בר — מפקחת לשון',
+      usesTeachers: 11, usesClasses: 15, time: '5 דק\'',
+      linkSource: 'hebrew-academy.org.il',
+      linkUrl: 'https://hebrew-academy.org.il/kertituty'
+    }
+  };
+
+  var TYPE_ORDER = ['presentation', 'video', 'quiz', 'worksheet', 'simulation', 'unit', 'link'];
+  var SUPPORT = {
+    support:   { label: 'רמת תמיכה', cls: 'support-chip--support' },
+    core:      { label: 'רמת ליבה',  cls: 'support-chip--core' },
+    challenge: { label: 'רמת אתגר',  cls: 'support-chip--challenge' }
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function useSvg(id, cls) { return '<svg' + (cls ? ' class="' + cls + '"' : '') + ' aria-hidden="true"><use href="#' + id + '"/></svg>'; }
+
+  /* ---------- מתג-דמו: כפתור לכל סוג ---------- */
+  (function buildDemoTabs() {
+    var html = '';
+    TYPE_ORDER.forEach(function (t, i) {
+      var r = RESOURCES[t];
+      html += '<button class="rp-demo__tab" type="button" data-type="' + t + '" aria-pressed="' + (i === 0 ? 'true' : 'false') + '">' +
+              useSvg(r.icon) + esc(r.typeLabel) + '</button>';
+    });
+    $('demo-tabs').innerHTML = html;
+    $('demo-tabs').addEventListener('click', function (e) {
+      var btn = e.target.closest('.rp-demo__tab');
+      if (!btn) return;
+      $('demo-tabs').querySelectorAll('.rp-demo__tab').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+      btn.setAttribute('aria-pressed', 'true');
+      render(btn.getAttribute('data-type'));
+    });
+  })();
+
+  /* ---------- רינדור העמוד לפי משאב ---------- */
+  var current = null;
+  var slideIdx = 0;
+
+  function render(typeKey) {
+    var r = RESOURCES[typeKey];
+    current = r;
+    slideIdx = 0;
+
+    // כותרת
+    $('hd-type-ico').innerHTML = useSvg(r.icon);
+    $('hd-title').textContent = r.title;
+    $('hd-desc').textContent = r.desc;
+    $('crumb-subject').textContent = r.subject + ' · ' + r.grade;
+    $('crumb-title').textContent = r.title;
+
+    // צ'יפים
+    var sup = SUPPORT[r.support];
+    $('hd-tags').innerHTML =
+      '<span class="type-chip' + (r.chipMod ? ' type-chip--' + r.chipMod : '') + '">' + useSvg(r.icon) + esc(r.typeLabel) + '</span>' +
+      '<span class="support-chip ' + sup.cls + '">' + useSvg('ic-support') + esc(sup.label) + '</span>' +
+      '<span class="meta-chip">' + esc(r.subject) + ' · ' + esc(r.grade) + '</span>' +
+      '<span class="meta-chip">' + esc(r.topic) + '</span>';
+
+    // מטא
+    $('mt-creator').innerHTML = esc(r.creator) + ' <small>· ' + esc(r.creatorRole) + '</small>';
+    $('mt-approved').textContent = r.approved;
+    $('mt-uses').innerHTML = r.usesTeachers + ' מורים <small>· ' + r.usesClasses + ' כיתות</small>';
+    $('mt-time').textContent = r.time;
+    $('vf-approver').textContent = r.approver;
+    $('pv-bar-note').textContent = 'סוג: ' + r.typeLabel;
+
+    // תצוגה מקדימה לפי סוג
+    var pv = $('preview');
+    var fn = PREVIEWS[r.type];
+    pv.innerHTML = fn ? fn(r) : '<p>אין תצוגה מקדימה זמינה.</p>';
+    if (r.type === 'presentation') wireSlides();
+  }
+
+  /* ============================================================
+     מרנדרי תצוגה-מקדימה לפי סוג
+     ============================================================ */
+  var PREVIEWS = {
+    presentation: function (r) {
+      return '<div id="pv-slide-host"></div>' +
+             '<div class="pv-slidenav">' +
+               '<button class="icon-btn" type="button" id="slide-prev" aria-label="שקף קודם">' + useSvg('ic-chevron-e') + '</button>' +
+               '<span class="pv-slidenav__count" id="slide-count"></span>' +
+               '<button class="icon-btn" type="button" id="slide-next" aria-label="שקף הבא">' + useSvg('ic-chevron-s') + '</button>' +
+             '</div>' +
+             '<div class="pv-dots" id="slide-dots" role="tablist" aria-label="מעבר בין שקפים"></div>';
+    },
+    video: function (r) {
+      var ch = r.chapters.map(function (c) {
+        return '<div class="pv-chapter"><span class="pv-chapter__t">' + esc(c.t) + '</span><span class="pv-chapter__l">' + esc(c.l) + '</span></div>';
+      }).join('');
+      return '<div class="pv-video"><button class="pv-video__play" type="button" aria-label="נגן תצוגה מקדימה" data-toast="הפעלת תצוגה מקדימה של הסרטון">' + useSvg('ic-play') + '</button>' +
+             '<span class="pv-video__dur">' + esc(r.duration) + '</span></div>' +
+             '<div style="font-size:var(--text-label); font-weight:700; color:var(--ink-soft); margin:var(--space-4) 0 8px">פרקים בסרטון</div>' +
+             '<div class="pv-chapters">' + ch + '</div>';
+    },
+    quiz: function (r) {
+      var qs = r.questions.map(function (q, i) {
+        var opts = q.opts.map(function (o, oi) {
+          var ok = oi === q.correct;
+          return '<div class="pv-opt' + (ok ? ' pv-opt--correct' : '') + '"><span class="pv-opt__mark">' + (ok ? useSvg('ic-check') : '') + '</span>' + esc(o) + '</div>';
+        }).join('');
+        return '<div class="pv-q"><div class="pv-q__num">שאלה ' + (i + 1) + ' מתוך ' + r.quizCount + '</div>' +
+               '<div class="pv-q__text">' + esc(q.q) + '</div><div class="pv-q__opts">' + opts + '</div></div>';
+      }).join('');
+      return '<div class="pv-quiz-head">' +
+               '<span class="type-chip type-chip--assessment">' + useSvg('ic-quiz') + r.quizCount + ' שאלות</span>' +
+               '<span class="meta-chip">' + useSvg('ic-check-c') + 'משוב מיידי אחרי כל שאלה</span>' +
+               '<span class="meta-chip">ציון אישי · בלי לוח מובילים</span>' +
+             '</div>' + qs +
+             '<div class="pv-safety">' + useSvg('ic-shield') + '<span>מוצגות שתי שאלות ראשונות לתצוגה. מפתח התשובות (מסומן בירוק) גלוי למורה בלבד.</span></div>';
+    },
+    worksheet: function (r) {
+      var secs = r.sections.map(function (s, i) {
+        var lines = '';
+        for (var k = 0; k < s.lines; k++) lines += '<div class="pv-sheet__line" style="width:' + (100 - k * 8) + '%"></div>';
+        return '<div class="pv-sheet__sec"><div class="pv-sheet__sec-h"><span>' + (i + 1) + '</span>' + esc(s.h) + '</div>' +
+               '<div class="pv-sheet__q">' + esc(s.q) + '</div><div class="pv-sheet__lines" style="margin-top:8px">' + lines + '</div></div>';
+      }).join('');
+      return '<div class="pv-sheet"><h3 class="pv-sheet__title">' + esc(r.sheetTitle) + '</h3>' +
+             '<p class="pv-sheet__sub">' + esc(r.sheetSub) + '</p>' + secs + '</div>' +
+             '<div class="pv-safety" style="max-width:640px; margin:var(--space-4) auto 0">' + useSvg('ic-download') + '<span>אפשר להדפיס או לשלוח למילוי דיגיטלי. שלוש רמות קושי מובנות בדף.</span></div>';
+    },
+    simulation: function (r) {
+      return '<div class="pv-sim">' +
+               '<span class="pv-sim__ico" aria-hidden="true">' + useSvg('ic-simulation') + '</span>' +
+               '<h3 class="pv-sim__title">' + esc(r.simTitle) + '</h3>' +
+               '<p class="pv-sim__text">' + esc(r.simText) + '</p>' +
+               '<button class="btn btn--primary btn--sm" type="button" data-toast="פתיחת הסימולציה במסך מלא">' + useSvg('ic-external') + 'פתיחת הסימולציה</button>' +
+             '</div>';
+    },
+    unit: function (r) {
+      var chunks = r.chunks.map(function (c, i) {
+        return '<div class="pv-chunk"><div class="pv-chunk__head"><span class="pv-chunk__n">' + (i + 1) + '</span>' +
+               '<span class="pv-chunk__title">' + esc(c.title) + '</span></div>' +
+               '<div class="pv-chunk__body">' + esc(c.body) + (c.eg ? '<div class="pv-chunk__eg">דוגמה: ' + c.eg + '</div>' : '') + '</div></div>';
+      }).join('');
+      return '<div class="pv-unit">' + chunks + '</div>';
+    },
+    link: function (r) {
+      return '<div class="pv-link"><span class="pv-link__ico" aria-hidden="true">' + useSvg('ic-external') + '</span>' +
+             '<div class="pv-link__body"><div class="pv-link__src">' + esc(r.linkSource) + '</div>' +
+             '<div class="pv-link__url">' + esc(r.linkUrl) + '</div></div>' +
+             '<a class="btn btn--primary btn--sm" href="' + esc(r.linkUrl) + '" target="_blank" rel="noopener">' + useSvg('ic-external') + 'פתיחה</a></div>' +
+             '<div class="pv-safety">' + useSvg('ic-shield') + '<span>קישור חיצוני למקור מאושר. נפתח בכרטיסייה חדשה — התלמיד לא עוזב את רֶצֶף.</span></div>';
+    }
+  };
+
+  /* ---------- לוגיקת שקפים למצגת ---------- */
+  function wireSlides() {
+    drawSlide();
+    var dots = current.slides.map(function (_, i) {
+      return '<button class="pv-dot" type="button" role="tab" data-i="' + i + '" aria-label="שקף ' + (i + 1) + '" aria-current="' + (i === 0 ? 'true' : 'false') + '"></button>';
+    }).join('');
+    $('slide-dots').innerHTML = dots;
+    $('slide-prev').addEventListener('click', function () { goSlide(slideIdx - 1); });
+    $('slide-next').addEventListener('click', function () { goSlide(slideIdx + 1); });
+    $('slide-dots').addEventListener('click', function (e) {
+      var d = e.target.closest('.pv-dot'); if (!d) return;
+      goSlide(parseInt(d.getAttribute('data-i'), 10));
+    });
+  }
+  function goSlide(i) {
+    var n = current.slides.length;
+    slideIdx = (i + n) % n;
+    drawSlide();
+    $('slide-dots').querySelectorAll('.pv-dot').forEach(function (d, di) { d.setAttribute('aria-current', di === slideIdx ? 'true' : 'false'); });
+  }
+  function drawSlide() {
+    var s = current.slides[slideIdx];
+    var bullets = s.bullets.map(function (b) { return '<li>' + useSvg('ic-chevron-s') + '<span>' + esc(b) + '</span></li>'; }).join('');
+    $('pv-slide-host').innerHTML =
+      '<div class="pv-slide"><div class="pv-slide__kicker">' + esc(s.kicker) + '</div>' +
+      '<h3 class="pv-slide__title">' + esc(s.title) + '</h3><ul class="pv-slide__list">' + bullets + '</ul></div>';
+    $('slide-count').textContent = 'שקף ' + (slideIdx + 1) + ' מתוך ' + current.slides.length;
+  }
+
+  /* ============================================================
+     מודל "שבץ לכיתה"
+     ============================================================ */
+  var CLASS_SIZES = { "ט'2 · לשון": 28, "ט'1 · לשון": 26, "י'3 · לשון": 24, "י'4 · לשון": 22 };
+  var scrim = $('assign-scrim');
+  var lastFocus = null;
+
+  function openAssign() {
+    lastFocus = document.activeElement;
+    $('assign-res-title').textContent = current.title;
+    $('assign-type-chip').className = 'type-chip' + (current.chipMod ? ' type-chip--' + current.chipMod : '');
+    $('assign-type-chip').innerHTML = useSvg(current.icon) + esc(current.typeLabel);
+    updateSummary();
+    scrim.hidden = false;
+    requestAnimationFrame(function () { scrim.setAttribute('data-open', 'true'); });
+    var first = scrim.querySelector('.class-opt input');
+    if (first) first.focus();
+    document.addEventListener('keydown', onEsc);
+  }
+  function closeAssign() {
+    scrim.removeAttribute('data-open');
+    document.removeEventListener('keydown', onEsc);
+    setTimeout(function () { scrim.hidden = true; }, 180);
+    if (lastFocus) lastFocus.focus();
+  }
+  function onEsc(e) { if (e.key === 'Escape') closeAssign(); }
+
+  function updateSummary() {
+    var checked = Array.prototype.slice.call($('class-pick').querySelectorAll('input:checked'));
+    var students = checked.reduce(function (sum, c) { return sum + (CLASS_SIZES[c.value] || 0); }, 0);
+    var txt;
+    if (checked.length === 0) txt = '<b>לא נבחרה</b> כיתה';
+    else if (checked.length === 1) txt = 'כיתה אחת · <b>' + students + '</b> תלמידים';
+    else txt = '<b>' + checked.length + '</b> כיתות · <b>' + students + '</b> תלמידים';
+    $('assign-summary-text').innerHTML = txt;
+    $('assign-confirm').disabled = checked.length === 0;
+  }
+
+  $('btn-assign').addEventListener('click', openAssign);
+  $('assign-close').addEventListener('click', closeAssign);
+  $('assign-cancel').addEventListener('click', closeAssign);
+  scrim.addEventListener('click', function (e) { if (e.target === scrim) closeAssign(); });
+  $('class-pick').addEventListener('change', updateSummary);
+
+  $('assign-confirm').addEventListener('click', function () {
+    var checked = Array.prototype.slice.call($('class-pick').querySelectorAll('input:checked'));
+    if (checked.length === 0) return;
+    var support = (scrim.querySelector('input[name="support"]:checked') || {}).value || 'ליבה';
+    var names = checked.map(function (c) { return c.value.split(' · ')[0]; });
+    var where = names.length === 1 ? names[0] : names.length + ' כיתות';
+    closeAssign();
+    showToast('"' + current.title + '" שובץ ל־' + where + ' · רמת ' + support);
+  });
+
+  /* ============================================================
+     Toast
+     ============================================================ */
+  function showToast(msg) {
+    var region = $('toast-region');
+    var el = document.createElement('div');
+    el.className = 'toast toast--success';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="toast__icon">' + useSvg('ic-check-c') + '</span><span class="toast__msg">' + esc(msg) + '</span>' +
+                   '<button class="icon-btn toast__close" type="button" aria-label="סגירה">' + useSvg('ic-x') + '</button>';
+    region.appendChild(el);
+    var t = setTimeout(remove, 4200);
+    el.querySelector('.toast__close').addEventListener('click', function () { clearTimeout(t); remove(); });
+    function remove() { el.setAttribute('data-leaving', 'true'); setTimeout(function () { el.remove(); }, 200); }
+  }
+  document.querySelectorAll('[data-toast]').forEach(function (el) {
+    el.addEventListener('click', function () { showToast(el.getAttribute('data-toast')); });
+  });
+  // האזנה גם לכפתורים שנוצרים דינמית בתוך התצוגה-המקדימה
+  $('preview').addEventListener('click', function (e) {
+    var el = e.target.closest('[data-toast]');
+    if (el) showToast(el.getAttribute('data-toast'));
+  });
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var navScrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (navScrim) navScrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+  });
+
+  /* ---------- טעינה ראשונית ---------- */
+  render('presentation');
+})();
+</script>
+</body>
+</html>

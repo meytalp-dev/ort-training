@@ -99,6 +99,8 @@ window.TASKS = [
     prompt:'בנה/י Table (שורה 52px, עד 6 עמודות, במובייל→כרטיסים, status-chip, תפריט 3-נקודות), EmptyState (קו רצף קצר + נקודות, בלי דמויות), ורכיב גרף קווי נקי (טורקיז ראשי, grid בהיר, בלי 3D/גרדיאנט/קפיצות; קו הרצף יכול לשמש כגרף התקדמות).' },
   { id:'W0-D9', world:0, title:'נגישות WCAG AA (רוחבי)', desc:'focus, מקלדת, aria, ניגודיות, reduced-motion.', cat:'design', phase:'mvpA', status:'done', file:'a11y.css · a11y.js · a11y-checklist.md · accessibility.html',
     prompt:'הגדר/י שכבת נגישות משותפת ובדוק/י אותה על הרכיבים: מגע 44px, focus-visible ברור, ניווט מקלדת מלא, aria-label, אין הסתמכות על צבע בלבד (טקסט+אייקון), ניגודיות AA, הגדלת טקסט, prefers-reduced-motion, טקסט חלופי לגרפים, תיאור סטטוס מילולי. ספק/י צ\'קליסט לשאר הסוכנים.' },
+  { id:'W0-D10', world:0, title:'סבב האחדה — כל המסכים לספרייה המשותפת', desc:'סבב אחרון: כל מסך צורך את components.css, בלי כפילות רכיבים ובלי צבעים קשיחים.', cat:'design', phase:'mvpA', status:'todo', file:'',
+    prompt:'סבב האחדה חוצה-מסכים (עיצוב בלבד, בלי שינוי תוכן/התנהגות). עבור/י על כל מסכי גל A ואַחֵד אותם לספרייה המשותפת: (1) כל מסך חייב לקשר גם ל-components.css (לא רק tokens.css) ולצרוך את הרכיבים המשותפים (Button, Card, StatusChip, ProgressBar, SequenceLine/Step, MetricCard, ModeChip, CheckInPanel וכו\') במקום להעתיק סגנונות מקומית. (2) הסר/י צבעים קשיחים והחלף/י בטוקנים מ-tokens.css (fallback בתוך var() מותר רק אם הטוקן לא זמין ב-SVG). (3) ודא/י שקו-הרצף מופיע היכן שרלוונטי (מסלול/התקדמות) מהרכיב המשותף, לא כהעתק. אתרים ידועים לתיקון: student-subjects.html (6 hex, בלי components.css), practice-engine.html/checkin-panel.html/messages-center.html/demo-unit-hebrew.html (בלי components.css), student-tasks.html (2 hex). אל תשבור/י פריסה/RTL/נגישות AA — רק להאחיד. סרוק/י את כל קבצי ה-*.html של המסכים ותקן/י כל חריגה. בסיום — דווח/י רשימת מסכים שאוחדו ומה שונה.' },
 
   /* --- מינימיזציה ואבטחה --- */
   { id:'W0-S1', world:0, title:'מצב יומי גס — לא מעקב-שניות', desc:'רק פעיל/חלקי/לא נראה.', cat:'security', phase:'mvpA', status:'done', file:'data-model.md',
@@ -145,19 +147,19 @@ window.TASKS = [
   /* ===== תצוגה 2 — מורה + מחנך ===== */
   { id:'W2-01', world:2, title:'Dashboard מורה', desc:'הכיתות + "מה דורש אותי היום".', cat:'screen', phase:'mvpA', status:'done', file:'teacher-dashboard.html',
     prompt:'בנה/י Dashboard מורה בדסקטופ (TeacherShell): שורת KPI (תלמידים/פעילים/זקוקים לתמיכה/לא התחילו — דונאט נקי), "מה דורש אותי היום" (הגשות חדשות, נעלמים), וקיצורים "שלח משימה"/"דופק כיתתי". זה המסך הראשון לבנייה לפי הבריף.' },
-  { id:'W2-02', world:2, title:'לוח הגשות "הכיתה שלי"', desc:'מי התחיל/תקוע/סיים/נעלם.', cat:'screen', phase:'mvpA', status:'todo', file:'',
+  { id:'W2-02', world:2, title:'לוח הגשות "הכיתה שלי"', desc:'מי התחיל/תקוע/סיים/נעלם.', cat:'screen', phase:'mvpA', status:'done', file:'teacher-class-board.html',
     prompt:'בנה/י לוח הגשות: טבלה/כרטיסים של מי סיים/התחיל/לא נכנס + פאנל "דופק למידה" (הבינו/זקוקים לדוגמה/מסלול הצלה) עם המלצת פעולה בלחיצה. פילוח בלחיצה.' },
-  { id:'W2-03', world:2, title:'שליחת משימה (< 3 דק\')', desc:'יחידה → כיתה → שליחה מהטלפון.', cat:'flow', phase:'mvpA', status:'todo', file:'teacher-flow.html',
+  { id:'W2-03', world:2, title:'שליחת משימה (< 3 דק\')', desc:'יחידה → כיתה → שליחה מהטלפון.', cat:'flow', phase:'mvpA', status:'done', file:'teacher-flow.html',
     prompt:'עדכן/י את teacher-flow.html למותג רֶצֶף: בחירת יחידה (מהספרייה/אחרונות), נמענים (כיתה/קבוצה/תלמיד — רק שלו), תזמון+מסר קצר, אישור "נשלח ל-N". אפשר לשנות משך בהקצאה בלי לשנות מקור. פחות מ-3 דקות, מהטלפון.' },
   { id:'W2-04', world:2, title:'"המורה ראה" — כפתור ראיתי', desc:'אישור אנושי אצל התלמיד.', cat:'flow', phase:'mvpA', status:'todo', file:'',
     prompt:'ממש/י את זרימת "ראיתי": לחיצה על הגשה מפעילה את באנר "המורה ראה" אצל התלמיד (W1-01). נראות אנושית, בלי ציון.' },
   { id:'W2-05', world:2, title:'דופק כיתתי (מחנך)', desc:'ירוק/צהוב/אדום לכל תלמיד.', cat:'screen', phase:'mvpA', status:'todo', file:'educator-pulse.html',
     prompt:'עדכן/י את educator-pulse.html למותג רֶצֶף: דופק ירוק/צהוב/אדום לכל תלמיד (טקסט+אייקון, לא רק צבע), אדום בראש. קליק → פעולה. שפה רגועה ("נדרש קשר", לא "בסיכון").' },
-  { id:'W2-06', world:2, title:'מסך יומן קשר (מחנך)', desc:'מסך המחנך שצורך את שירות יומן-הקשר הקיים. שדות מובנים בלבד.', cat:'flow', phase:'mvpA', status:'todo', file:'',
+  { id:'W2-06', world:2, title:'מסך יומן קשר (מחנך)', desc:'מסך המחנך שצורך את שירות יומן-הקשר הקיים. שדות מובנים בלבד.', cat:'flow', phase:'mvpA', status:'done', file:'contact-log-teacher.html',
     prompt:'בנה/י את מסך המחנך ליומן קשר שצורך את השירות הקיים contact-log.js + contact-log.html (נבנו ב-W0-S3): שדות מובנים בלבד (ערוץ/תוצאה/משימת המשך — בלי טקסט חופשי), גישה מוגבלת למחנך, מחיקה אוטומטית. אל תבנה/י מחדש את הלוגיקה — עטוף/י את השירות הקיים בתוך TeacherShell (app-shells.html). ⚠️ פרוטוקול הדגלים הרגשיים (flags-protocol.md, "קשה לי 3 ברצף", FlagEvent, יועצת) — נדחה כולו מגל A (החלטת מיטל). בגל A רק שני טריגרי-קשר: "רוצה לדבר" (התראה מיידית ונמחקת) ו"היעדרות 48ש\'". אל תבנה/י דגלים רגשיים ואל תיגע/י ב-flags-protocol.md.' },
-  { id:'W2-07', world:2, title:'יצירת שיעור', desc:'שרשור יחידות + חומרים.', cat:'flow', phase:'mvpB', status:'todo', file:'',
+  { id:'W2-07', world:2, title:'יצירת שיעור', desc:'שרשור יחידות + חומרים.', cat:'flow', phase:'mvpB', status:'done', file:'lesson-create.html',
     prompt:'(גל B) בנה/י יצירת שיעור: שרשור יחידות מהספרייה לרצף (SequenceStep), צירוף חומר, תצוגה מקדימה. גרסת התלמיד חייבת לעבוד בטלפון.' },
-  { id:'W2-08', world:2, title:'בונה בוחנים', desc:'שאלות + מפתח + מעקב.', cat:'flow', phase:'mvpB', status:'todo', file:'',
+  { id:'W2-08', world:2, title:'בונה בוחנים', desc:'שאלות + מפתח + מעקב.', cat:'flow', phase:'mvpB', status:'done', file:'quiz-builder.html',
     prompt:'(גל B) בנה/י בונה בוחנים: שאלות (אמריקאי/פתוח קצר) + מפתח, תוצאות לכיתה ומעקב לאורך זמן. פרטי לכיתה.' },
   { id:'W2-09', world:2, title:'העלאת קבצי מורה + 3 רמות תמיכה', desc:'דף עבודה/מצגת → יחידה.', cat:'flow', phase:'mvpB', status:'todo', file:'content-standard.md',
     prompt:'(גל B) בנה/י FileUploader למורה (דף עבודה/מצגת/קישור/טקסט/תוכנית לימודים) שהופך לחומר יחידה + יצירת 3 רמות תמיכה (תמיכה/ליבה/אתגר). 〰️ קו הרצף לתהליך "העלאה→ניתוח→התאמה→אישור→הקצאה". לפי content-standard.md.' },
@@ -169,7 +171,7 @@ window.TASKS = [
     prompt:'(דחוי) שיתוף יחידה/משימה עם מורה אחר. לא ב-MVP.' },
 
   /* ===== תצוגה 3 — מנהל בית הספר ===== */
-  { id:'W3-01', world:3, title:'Dashboard מנהל — דופק ביה"ס', desc:'4 KPI + רשימת "נדרש קשר".', cat:'screen', phase:'mvpA', status:'todo', file:'principal-pulse.html',
+  { id:'W3-01', world:3, title:'Dashboard מנהל — דופק ביה"ס', desc:'4 KPI + רשימת "נדרש קשר".', cat:'screen', phase:'mvpA', status:'done', file:'principal-pulse.html',
     prompt:'עדכן/י את principal-pulse.html למותג רֶצֶף: 4 KPI (שיעור השתתפות/תלמידים פעילים/כיתות פעילות/נדרש קשר), רשימת "נדרש קשר" בראש (קליק→מחנך), דופק צוות, מגמת השתתפות כקו רצף. עד 2 גרפים. שפה רגועה.' },
   { id:'W3-02', world:3, title:'מתג מצב מערכת', desc:'שגרה/מרחוק/חירום → כל התצוגות.', cat:'flow', phase:'mvpA', status:'todo', file:'',
     prompt:'בנה/י מסך החלפת מצב מערכת (ModeSelector) שמשנה את מצב כל התצוגות (W0-04), עם אישור לפני מעבר והודעה למשתמשים. לא כפתורי צבע-מלא גדולים.' },
@@ -211,7 +213,7 @@ window.TASKS = [
     prompt:'בנה/י את עמוד הספרייה: גלריית משאבים + חיפוש בראש. כרטיסי משאב (סוג/מקצוע/שכבה). מובייל=עמודה אחת.' },
   { id:'W6-02', world:6, title:'מנוע סינון + סכימת סוגי תוכן', desc:'מקצוע/שכבה/רמה/סוג.', cat:'data', phase:'mvpA', status:'todo', file:'taxonomy.md',
     prompt:'בנה/י מנוע סינון (מקצוע/שכבה/רמה/סוג לפי taxonomy.md) + סכימת סוגי תוכן אחידה (יחידה/מצגת/סרטון/בוחן/דף עבודה/סימולציה/קישור). שילוב מסננים.' },
-  { id:'W6-03', world:6, title:'עמוד משאב', desc:'תצוגה מקדימה + שבץ לכיתה.', cat:'screen', phase:'mvpA', status:'todo', file:'',
+  { id:'W6-03', world:6, title:'עמוד משאב', desc:'תצוגה מקדימה + שבץ לכיתה.', cat:'screen', phase:'mvpA', status:'done', file:'resource-page.html',
     prompt:'בנה/י עמוד משאב: תצוגה מקדימה לפי סוג + פעולת "שבץ לכיתה" (למורה) + מטא (יוצר/תאריך אישור/שימושים).' },
   { id:'W6-04', world:6, title:'מועדפים + שיתוף', desc:'אוסף אישי ושיתוף.', cat:'flow', phase:'mvpB', status:'todo', file:'',
     prompt:'(גל B) מועדפים (אוסף אישי לכל משתמש) + שיתוף משאב.' },
@@ -295,6 +297,8 @@ window.DEPS = {
   'W7-01':['W0-D4','W0-D5','W0-01'],
   /* AI (גל B) */
   'W8-01':['W0-D5'],
+  /* סבב האחדה — אחרי שכל מסכי גל A נבנו */
+  'W0-D10':['W1-01','W1-02','W1-03','W1-04','W1-05','W1-06','W1-07','W1-08','W2-01','W2-02','W2-03','W2-05','W2-06','W3-01','W3-02','W6-01','W6-02','W6-03','W7-01'],
 };
 window.depsOf = function (id) { return window.DEPS[id] || []; };
 /* משימות אחרות שכותבות לאותו קובץ (אסור להריץ במקביל) */
