@@ -1,35 +1,62 @@
-# מערכת רציפות למידה — מודל הנתונים המשותף
+# רֶצֶף — מודל הנתונים המשותף (סכימה אחת לכל התצוגות)
 
-**גרסה:** 1.3 · **תאריך:** 15.7.2026 · **סטטוס:** טיוטה לאישור
-**מזהה משימה:** T0.2 · **מסמך-אב:** `spec.md`
-**עדכון 1.3 (15.7):** הסטת מרכז כובד ללמידה — נוספו `LearningSequence` (§2.4א, מסלול הלמידה), `SupportProfile` (§2.13, מנוע 3 רמות התמיכה), שדות רצף על `ContentUnit`, ומדדי למידה אמיתיים על `Submission` (`support_level`/`mastery`/`hint_used`/`recovered_after_error`/`rescue_path`).
-**עדכון 1.1:** יושר לאפיון המעודכן — נוספו ציונים (`Submission.grade` על `unit_type=assessment`), הרשמה (`Student.registered`), קבצים (`Attachment`), מסלולי העשרה (`EnrichmentTrack`), פריטי הפניה חיצוניים, והערת מחנך (`StudentNote`).
-**עדכון 1.2 (9.7):** נוסף תפקיד **יועצת** — `role` פוצל מ-`StaffMember` לטבלת `StaffRole` (כמה תפקידים לאדם), נוסף `role=counselor`, ונוספה ישות `FlagEvent` (מטא-דאטה של דגלים, נשמרת לשנה) שמאפשרת ליועצת לראות דפוס ארוך בלי התוכן הרגשי שנמחק ב-30 יום.
+**גרסה:** 3.0 · **תאריך:** 15.7.2026 · **סטטוס:** אפיון עבודה
+**מזהה משימה:** W0-01 · **מסמך-אב:** `prd.md` 3.0 · **נספח פרטיות:** `security-minimization.md` · **עיצוב:** `tokens.css`
 **מיקום:** `_drafts/emergency-learning/`
 
+> **מה זה:** מסד נתונים **אחד** שמשרת את **כל** התצוגות (תלמיד · מורה · מחנך · מנהל · מפקח · פיקוח ארצי · Admin) דרך **שכבת שירותים אחת** (prd §4). פרסונה = תצוגה מעל השירותים, לא טבלאות נפרדות. אין כפילות לוגיקה, אין שלושה מסדי נתונים.
+
+## מה השתנה מ-1.3 (T0.2 → W0-01) — קראו לפני שמשתמשים
+
+הגרסה הקודמת (1.3, נכתבה מול `spec.md`) הייתה טובה מבנית אבל **קדמה ל-PRD 3.0 ולהחלטת המינימיזציה**. שלושה תיקונים מהותיים, כל אחד עם נימוק:
+
+| # | מה השתנה | למה (מקור) |
+|---|----------|------------|
+| 1 | **`est_minutes int` (="צעד=10 דק'") הוסר** → הוחלף במודל `LearningDuration` גמיש (§2). | prd §5 — "הריגת 10 הדקות ה-hard-coded". אסור לקבע משך בשם רכיב, במודל או בלוגיקה. |
+| 2 | **check-in רגשי = מתריע ונמחק** (סטטוס חד-פעמי, בלי היסטוריה). `FlagEvent` (מטא לשנה) + תפקיד `counselor` **הועברו לנספח "מורחב — לא ב-MVP-A"** (§10). | prd §10 + `security-minimization.md` §3 שורה 3: "מתריע ונמחק… **לא נבנית היסטוריה רגשית.** סטטוס חד-פעמי, לא לוג". שמירת מטא-דגלים לשנה סותרת את גרסת "בטוחה-לביקורת". |
+| 3 | **יומן קשר + הערת מחנך = שדות מובנים בלבד** — הוסר שדה טקסט חופשי מ-MVP. | `security-minimization.md` §3 שורה 4: "שדה חופשי הוא הכי מסוכן… שדות מובנים בלבד (ערוץ / תוצאה / משימת המשך)". |
+| 4 (15.7.2026) | **`ContentUnit.level` נוסף — 3 רמות** (`basic`/`standard`/`advanced`), מתלכד עם `support_level` (`with_you`/`on_own`/`ahead`). §3.4. | הכרעת מיטל 15.7 + הדמו הדיפרנציאלי. יישור מול `content-standard.md` §2 ותמיכה במגמות המקצועיות (`taxonomy.md` §8). התלמיד לא רואה את שם הרמה. |
+
+**עקרון "לא מוחקים עבודה":** מה שהוסר מ-MVP-A לא נמחק — הוא יושב ב-§10 (נספח מורחב/דחוי) עם תנאי החזרה (בדיקת פרטיות נפרדת). הסכימה של MVP-A היא **תת-קבוצה בטוחה-לביקורת** של החזון הרחב.
+
+> ⚠️ **תלות במסמכים נלווים:** `flags-protocol.md`, `governance.md` ודמו `educator-pulse.html` נכתבו על מודל 1.3 והם עדיין מתייחסים ל-`FlagEvent`/יועצת. **תיאום ביניהם לגרסה 3.0 הוא משימה נפרדת** (ראו דיווח למתכלל) — מחוץ לסקופ של W0-01.
+
 ---
 
-## 0. עקרונות המודל
+## 0. חמשת עקרונות המודל
 
-ארבעה כללים שמעצבים כל שדה וכל קשר במסמך הזה. הם נגזרים ישירות מעקרונות-העל של המערכת (spec.md §3, §7.2):
-
-1. **`mode` על כל אירוע.** כל רשומה שמתעדת *התרחשות* (check-in, שליחת משימה, הגשה, פנייה, הודעה, מעבר מצב) נושאת שדה `mode` בערך `routine` / `remote` / `emergency`. זהו **ציר הניתוח המרכזי** של המערכת — כל דוח, כל מגמה וכל השוואה נחתכים לפיו. ישויות *סטטיות* (תלמיד, כיתה, איש צוות, בית ספר) אינן אירועים ולכן אין להן `mode`.
-2. **מקור אמת יחיד — אפס שכפול.** התוכן נכתב פעם אחת ב-`ContentUnit`. משימה שנשלחת (`Assignment`) *מפנה* אליו ב-FK, לא מעתיקה אותו. הסטטוס האישי (`Submission`) מפנה ל-`Assignment`. הדשבורדים (מחנך / מנהל / פיקוח) הם **שאילתות מסננות על אותן שורות** — לא טבלאות סיכום נפרדות. הזרימה פיקוח←ספרייה←מורה←תלמיד←דשבורדים כולה קוראת מאותו גרף נתונים.
-3. **מזעור ומחיקה מובנים (תיקון 13).** אוספים מינימום שדות (§7.2). ה-check-in הרגשי במצב חירום מסומן `is_sensitive` ותוכנו הרגשי נמחק אוטומטית **30 יום** מיצירתו. הפרדת הגישה נאכפת במבנה, לא בהצהרה: פיקוח שואב אגרגטים בלבד — אין נתיב שאילתה שמחזיר שם תלמיד לרמת הפיקוח.
-4. **שתי שכבות — הלמידה מובילה, הקשר מפעיל.** שכבת הקשר (`CheckIn`, "המורה ראה") היא **מנגנון ההפעלה** ונכנסת בלי הרשמה. שכבת הלמידה — היעד — היא הרחבה יותר: `LearningSequence`+`ContentUnit.sequence_order` נותנים את **מסלול הלמידה** ("איפה אני / הבא"); `SupportProfile` הוא **מנוע ההתאמה** (3 רמות תמיכה, פר-מקצוע, לא תווית); ו-`Submission` נושא לא רק סטטוס אלא **מדדי למידה אמיתיים** (`support_level`/`mastery`/`hint_used`/`recovered_after_error`). **ציון קיים רק על מופע הערכה** ונשמר ב-`Submission.grade` — אישי, בלי ממוצע פומבי. בחירום ההערכה רשות; ההרשמה לעולם לא חוסמת check-in.
+1. **`mode` על כל אירוע.** כל רשומה שמתעדת *התרחשות* (check-in, שליחת משימה, הגשה, פנייה, הודעה, מעבר מצב) נושאת `mode ∈ {routine, remote, emergency}`. זה **ציר הניתוח המרכזי** — כל דוח/מגמה נחתך לפיו. ישויות *סטטיות* (תלמיד, כיתה, בית ספר, איש צוות) אינן אירועים ואין להן `mode`.
+2. **מקור אמת יחיד — אפס שכפול.** התוכן נכתב פעם אחת ב-`ContentUnit`. הקצאה (`Assignment`) *מפנה* אליו ב-FK. סטטוס אישי (`Submission`) מפנה להקצאה. הדשבורדים (מחנך/מנהל/פיקוח) הם **שאילתות מסננות על אותן שורות** — לא טבלאות סיכום.
+3. **RBAC נאכף בשאילתה, לא בכפילות טבלאות.** אותה טבלה, היקף גישה שונה לפי `StaffRole`. פיקוח ארצי קורא מ**היטל מצרפי נגזר** (`NationalPulseView`, §11) שאין בו עמודת זהות ואף FK לתלמיד — **drill לתלמיד בודד אינו אסור, הוא בלתי-אפשרי מבנית** (prd §10; מטריצה מלאה = W0-02).
+4. **משך גמיש — בלי "10 דקות" בשום מקום.** המשך יושב ב-`LearningDuration` (§2). ברירת המחדל במסך תלמיד/חירום היא **מנה קצרה ומפורקת** — גמישות בתשתית, עמדה פדגוגית בברירת המחדל.
+5. **מזעור מובנה על קטינים (תיקון 13).** כל שדה שנוגע בקטין מסומן בעמודת **מינימיזציה** (מה לא נשמר ולמה). אוספים את המינימום לתפעול; מצב פעילות = **יומי גס** (פעיל/חלקי/לא נראה), בלי מעקב-שניות — **נאכף במבנה ב-§3.9 (W0-S1):** רשומה אחת ליום פר-תלמיד, בלי `activeSeconds`/`lastActiveAt`/חותמות-זמן מדויקות; check-in רגשי מתריע ונמחק.
 
 ---
 
-## 1. דיאגרמת ישויות (Mermaid erDiagram)
+## 1. מפת הישויות
+
+**14 ישויות הליבה** (מהמשימה: משתמשים · בתי ספר · כיתות · יחידות · הקצאות · הגשות · ציונים · אירועים · check-in · יומן קשר) + ישויות תמיכה שמחברות אותן בלי כפילות:
+
+| קבוצה | ישויות |
+|-------|--------|
+| **משתמשים** (זהות + הרשאה) | `Student` · `StaffMember` · `StaffRole` |
+| **ארגון** | `School` · `Class` |
+| **יחידות ותוכן** | `ContentUnit` (עם `LearningDuration` מוטבע) · `Topic` · `Skill` · `LearningSequence` · `EnrichmentTrack` |
+| **הקצאות והגשות** | `Assignment` · `Submission` (נושאת **ציון**) · `Attachment` · `StudentProgress` · `SupportProfile` |
+| **check-in וניטור** | `CheckIn` · `DailyPresence` (מצב יומי גס) · `SystemMode` |
+| **יומן קשר והודעות** | `ContactLog` · `Notification` |
+| **אירועים (מערכת)** | `AuditEvent` (לוג ביקורת מינימלי) |
+
+> **הערה:** "משתמשים" = `Student` **או** `StaffMember`; אין טבלת-על אחת כי הפרדת התלמיד מהצוות היא עצמה בקרת פרטיות (תלמיד לא נכנס לטבלת הצוות ולהפך). התפקיד תמיד ב-`StaffRole` — כך אדם אחד מחזיק כמה תפקידים (מורה מקצועי שהוא גם מחנך) בלי שכפול רשומה.
+
+### דיאגרמת ישויות (Mermaid erDiagram)
 
 ```mermaid
 erDiagram
     SCHOOL ||--o{ CLASS : "מכיל כיתות"
     SCHOOL ||--o{ SYSTEM_MODE : "יומן מצבים"
-    STAFF_MEMBER ||--o{ SYSTEM_MODE : "מפעיל מצב"
-
     STAFF_MEMBER ||--o{ STAFF_ROLE : "מחזיק תפקידים (כמה)"
-    SCHOOL ||--o{ STAFF_ROLE : "היקף בית ספר (nullable לפיקוח)"
+    SCHOOL ||--o{ STAFF_ROLE : "היקף (null לפיקוח ארצי)"
 
     CLASS ||--o{ STUDENT : "משבץ תלמידים"
     CLASS }o--|| STAFF_MEMBER : "מחנך"
@@ -41,32 +68,24 @@ erDiagram
 
     ASSIGNMENT ||--o{ SUBMISSION : "מייצר סטטוס"
     STUDENT ||--o{ SUBMISSION : "מגיש"
+    ASSIGNMENT ||--o{ ATTACHMENT : "חומר שהמורה צירף"
 
     ENRICHMENT_TRACK ||--o{ CONTENT_UNIT : "מסלול העשרה (5-6 יחידות)"
-    LEARNING_SEQUENCE ||--o{ CONTENT_UNIT : "מסלול למידה מסודר (יחידה N מ-M)"
+    LEARNING_SEQUENCE ||--o{ CONTENT_UNIT : "רצף מסודר (יחידה N מ-M)"
     TOPIC ||--o{ LEARNING_SEQUENCE : "נושא בתוכנית הלימודים"
     TOPIC ||--o{ CONTENT_UNIT : "היחידה מלמדת נושא"
     SKILL ||--o{ CONTENT_UNIT : "היחידה בונה מיומנות"
     STUDENT ||--o{ STUDENT_PROGRESS : "מפת התקדמות (פר-מסלול)"
-    LEARNING_SEQUENCE ||--o{ STUDENT_PROGRESS : "מיקום התלמיד ברצף"
+    LEARNING_SEQUENCE ||--o{ STUDENT_PROGRESS : "מיקום ברצף"
     STUDENT ||--o{ SUPPORT_PROFILE : "רמת תמיכה פר-מקצוע"
-    ASSIGNMENT ||--o{ ATTACHMENT : "חומר שהמורה צירף"
-    STAFF_MEMBER ||--o{ ATTACHMENT : "העלה"
 
     STUDENT ||--o{ CHECKIN : "עושה"
-    STAFF_MEMBER ||--o{ CHECKIN : "ראה (nullable)"
-
-    STUDENT ||--o{ FLAG_EVENT : "היסטוריית דגלים (מטא בלבד)"
-    CHECKIN |o--o| FLAG_EVENT : "מקור הדגל (nullable)"
-
+    STUDENT ||--o{ DAILY_PRESENCE : "מצב יומי גס (נגזר)"
     STUDENT ||--o{ CONTACT_LOG : "נושא הפנייה"
     STAFF_MEMBER ||--o{ CONTACT_LOG : "מתעד"
-
-    STUDENT ||--o{ STUDENT_NOTE : "נושא ההערה"
-    STAFF_MEMBER ||--o{ STUDENT_NOTE : "כותב (מחנך)"
-
     STUDENT ||--o{ NOTIFICATION : "נמען (או הורה)"
     STAFF_MEMBER ||--o{ NOTIFICATION : "נמען"
+    STAFF_MEMBER ||--o{ AUDIT_EVENT : "פעולה מתועדת"
 
     SCHOOL {
         string id PK
@@ -86,10 +105,12 @@ erDiagram
         string first_name "שם פרטי בלבד"
         string class_id FK
         string phone "לקישור אישי"
-        string guardian_phone "רשות — להודעת הורים"
+        string guardian_phone "רשות — יידוע הורה"
+        bool guardian_opted_out "opt-out יידוע הורה"
         string access_token "כניסה בלי סיסמה"
-        bool registered "נרשם לשכבת הלמידה (ציונים)"
+        bool registered "נרשם לשכבת הלמידה"
         bool active "מצבת פעילה"
+        datetime created_at
     }
     STAFF_MEMBER {
         string id PK
@@ -100,123 +121,72 @@ erDiagram
     }
     STAFF_ROLE {
         string id PK
-        string staff_id FK "אותו אדם — כמה שורות"
-        string role "homeroom/subject/counselor/principal/supervisor"
+        string staff_id FK
+        string role "homeroom/subject/principal/supervisor"
         string school_id FK "היקף (null לפיקוח)"
+        string subject "למפקח מקצועי (nullable)"
         bool active
-    }
-    FLAG_EVENT {
-        string id PK
-        string student_id FK
-        string checkin_id FK "מקור — nullable (גם היעדרות מדליקה)"
-        string trigger "hard_day_3d/wants_to_talk/absence_48h"
-        date lit_on "תאריך הדלקה — מטא בלבד"
-        string handled_by FK "מי טיפל (staff)"
-        string resolution "contacted/referred/escalated/closed"
-        string shared_note "מה שהמחנך בחר להעביר ליועצת (nullable)"
-        date delete_after "lit_on + שנה — עובדה, בלי תוכן רגשי"
-        datetime created_at
     }
     CONTENT_UNIT {
         string id PK
         string title
-        string subject "מקצוע"
-        string grade "שכבה"
-        string body "פתיח + מטלה (צעד 10 דק')"
+        string subject
+        string grade
+        string body "פתיח + מטלה"
         string unit_type "task/assessment/reference"
         string track_id FK "מסלול העשרה (nullable)"
-        string sequence_id FK "מסלול הלמידה (nullable)"
-        string topic_id FK "נושא בתוכנית הלימודים (nullable)"
-        string skill_ids "מערך — מיומנויות שהיחידה בונה"
-        int sequence_order "מיקום ברצף — יחידה N מתוך M"
+        string sequence_id FK "מסלול למידה (nullable)"
+        string topic_id FK "נושא (nullable)"
+        string skill_ids "מערך מיומנויות"
+        int sequence_order "מיקום ברצף"
         string content_source "internal/external"
-        string external_ref "קמפוס IL/מטח — לפריט הפניה"
-        int est_minutes "צעד=10; משימה=שרשרת צעדים"
-        string modes_allowed "מערך: routine/remote/emergency"
+        string external_ref "קמפוס IL/מטח (nullable)"
+        json duration "LearningDuration — §2"
+        string modes_allowed "מערך routine/remote/emergency"
         bool accessibility "מותאם ללקויות למידה"
         string parent_unit_id FK "גרסה נגישה — מפנה למקור"
         string curated_by FK "אוצרות אנושית"
         bool active
     }
-    ENRICHMENT_TRACK {
-        string id PK
-        string title "מסלול צילום / פיננסי / יזמות"
-        string theme
-        string description
-    }
-    LEARNING_SEQUENCE {
-        string id PK
-        string subject "מקצוע"
-        string grade "שכבה"
-        string topic_id FK "נושא בתוכנית הלימודים (nullable)"
-        string title "מסלול אזרחות י׳ / לשון י׳"
-        int unit_count "כמה יחידות ברצף (M)"
-        string curriculum_ref "עיגון לתוכנית הלימודים (nullable)"
-        string authored_by FK "מי בנה את המסלול — מורה/אוצר"
-    }
     TOPIC {
         string id PK
-        string subject "מקצוע"
-        string grade "שכבה"
-        string title "נושא — 'מערכת הצורות' / 'הרשות המחוקקת'"
-        string curriculum_ref "עיגון לתוכנית הלימודים הרשמית (nullable)"
-        int display_order "סדר בתוך המקצוע"
+        string subject
+        string grade
+        string title "מערכת הצורות / הרשות המחוקקת"
+        string curriculum_ref "עיגון תכל (nullable)"
+        int display_order
     }
     SKILL {
         string id PK
-        string subject "מקצוע"
-        string title "מיומנות — 'זיהוי נושא ונשוא' / 'תקציר פסקה'"
-        string topic_id FK "שייכת לנושא (nullable)"
+        string subject
+        string title "זיהוי נושא ונשוא"
+        string topic_id FK "nullable"
     }
-    STUDENT_PROGRESS {
+    LEARNING_SEQUENCE {
         string id PK
-        string student_id FK
-        string sequence_id FK "המסלול"
-        int current_order "היחידה הנוכחית (נגזר ממקסימום שהושלם +1)"
-        string next_unit_id FK "הצעד הבא — היחידה המומלצת עכשיו"
-        string next_source "sequence/rescue/enrichment — מאיפה נולד הצעד"
-        string skills_acquired "מערך skill_id — מה נרכש עד כה"
-        string skills_pending "מערך skill_id — מה עוד לא נשלט"
-        bool teacher_approved "המורה אישר את הצעד הבא (ברירת מחדל: כן)"
-        datetime updated_at
+        string subject
+        string grade
+        string topic_id FK "nullable"
+        string title "מסלול אזרחות י׳"
+        int unit_count "M ב-N מתוך M"
+        string curriculum_ref "nullable"
+        string authored_by FK "מי בנה"
     }
-    SUPPORT_PROFILE {
+    ENRICHMENT_TRACK {
         string id PK
-        string student_id FK
-        string subject "פר-מקצוע — לא תווית קבועה"
-        string chosen_level "with_you/on_own/ahead — מה התלמיד בחר"
-        string recommended_level "with_you/on_own/ahead — מה המערכת ממליצה (nullable)"
-        string active_level "with_you/on_own/ahead — הרמה בתוקף כרגע"
-        string set_by "self/system — מי קבע את active_level"
-        int rescue_entries "כמה פעמים נכנס למסלול הצלה"
-        int rescue_recoveries "כמה יצא ממנו עם הצלחה"
-        datetime updated_at
-    }
-    ATTACHMENT {
-        string id PK
-        string assignment_id FK "חומר המורה למשלוח זה"
-        string uploaded_by FK "מורה"
-        string filename
-        string storage_ref
-        int size_kb "נשמר קליל — עובד ברשת חלשה"
-        datetime created_at
-    }
-    STUDENT_NOTE {
-        string id PK
-        string student_id FK
-        string staff_id FK "מחנך בלבד"
-        string note "קצר, פרטי — לא קליני"
-        date delete_after "תום שנה"
-        datetime created_at
+        string title "צילום / פיננסי / יזמות"
+        string theme
+        string description
     }
     ASSIGNMENT {
         string id PK
         string content_unit_id FK "הפניה — לא העתקה"
         string class_id FK
-        string assigned_by FK "מורה מקצועי"
-        string mode "routine/remote/emergency"
+        string assigned_by FK
+        string mode "מוטבע מ-SystemMode"
         date scheduled_for "יכול להיות עתידי"
-        string override_body "null — התאמת AI מאושרת חד-פעמית"
+        string override_body "התאמת AI חד-פעמית (nullable)"
+        json duration_override "LearningDuration חלופי (nullable)"
         datetime created_at
     }
     SUBMISSION {
@@ -225,36 +195,75 @@ erDiagram
         string student_id FK
         string status "not_started/started/completed"
         string feedback "משוב מילולי רשות"
-        string grade "ציון — רק על unit_type=assessment (nullable)"
-        string support_level "with_you/on_own/ahead — באיזו רמה נעשתה"
-        string mastery "core/full — הבין ליבה או ליבה+הרחבות"
-        bool hint_used "נעזר ברמז"
-        bool recovered_after_error "טעה ואז הצליח"
-        bool rescue_path "נעשתה בגרסת מסלול ההצלה"
-        bool seen_by_teacher "ראיתי → מפעיל המורה ראה"
-        string mode "מוטבע לניתוח"
+        string grade "ציון — רק על assessment (nullable)"
+        string support_level "with_you/on_own/ahead"
+        string mastery "core/full"
+        bool hint_used "בוליאני גס — לא לוג"
+        bool recovered_after_error
+        bool rescue_path
+        bool seen_by_teacher "ראיתי → 'המורה ראה'"
+        string mode
         datetime completed_at
+    }
+    ATTACHMENT {
+        string id PK
+        string assignment_id FK "חומר המורה — לא מתלמיד"
+        string uploaded_by FK "מורה בלבד"
+        string filename
+        string storage_ref
+        int size_kb
+        datetime created_at
+    }
+    STUDENT_PROGRESS {
+        string id PK
+        string student_id FK
+        string sequence_id FK
+        int current_order
+        string next_unit_id FK "הצעד הבא"
+        string next_source "sequence/rescue/enrichment"
+        string skills_acquired "מערך skill_id"
+        string skills_pending "מערך skill_id"
+        bool teacher_approved "ברירת מחדל true"
+        datetime updated_at
+    }
+    SUPPORT_PROFILE {
+        string id PK
+        string student_id FK
+        string subject "פר-מקצוע — לא תווית"
+        string chosen_level "with_you/on_own/ahead"
+        string recommended_level "nullable"
+        string active_level
+        string set_by "self/system"
+        datetime updated_at
     }
     CHECKIN {
         string id PK
         string student_id FK
         date day
-        string mode "routine/remote/emergency"
+        string mode
         string type "presence/emotional"
-        string mood "null — 1 מ-4, חירום בלבד — רגיש"
-        bool distress_flag "דגל למחנך בלבד"
+        string mood "1 מ-4 — חירום בלבד — רגיש"
+        bool distress_flag "דגל למחנך — עכשיו"
         bool is_sensitive
-        date delete_after "יצירה + 30 יום (רגשי)"
-        string seen_by FK "המורה ראה — null עד אישור"
+        bool alert_sent "התראה נשלחה למחנך"
+        bool seen_by_educator "המחנך ראה"
+        date purge_after "רגשי: יצירה + טווח קצר"
         datetime created_at
+    }
+    DAILY_PRESENCE {
+        string id PK
+        string student_id FK
+        date day
+        string state "active/partial/not_seen — גס בלבד"
+        string mode
     }
     SYSTEM_MODE {
         string id PK
         string school_id FK
         string mode "routine/remote/emergency"
         string activated_by FK "מנהל / national"
-        date scheduled_for "null — מרחוק מתוכנן מראש"
-        string note
+        date scheduled_for "nullable"
+        string note "חובה במעבר"
         datetime activated_at
     }
     CONTACT_LOG {
@@ -262,407 +271,464 @@ erDiagram
         string student_id FK
         string staff_id FK "מחנך"
         date day
-        string mode "routine/remote/emergency"
+        string mode
         string outcome "contacted/no_answer/referred_to_parent"
         string channel "whatsapp/sms/phone"
-        string note "על הפנייה בלבד — לא תיאור רגשי"
+        string followup "none/retry/parent/escalate — שדה מובנה"
+        date delete_after "מחיקה אוטומטית"
         datetime created_at
     }
     NOTIFICATION {
         string id PK
         string recipient_kind "student/parent/staff"
-        string recipient_id FK "student_id או staff_id"
+        string recipient_id FK
         string channel "whatsapp/sms"
         string kind "personal_link/task/weekly_parent/mode_change/daily_report/teacher_saw"
-        string mode "routine/remote/emergency"
+        string mode
         string payload_ref "הפניה — לא העתקת תוכן"
         string status "queued/sent/delivered/read"
         datetime created_at
     }
+    AUDIT_EVENT {
+        string id PK
+        string actor_id FK "staff/admin"
+        string action "login/mode_change/export/access_grant/purge"
+        string entity_ref "על מה הפעולה"
+        string mode
+        date delete_after "מדיניות שמירה"
+        datetime created_at
+    }
 ```
-
-> **הערה על `SCHOOL`:** הישות לא הופיעה ברשימת עשר הישויות המבוקשות, אך היא נדרשת מבנית כדי שהזרימה לפיקוח (אגרגציה לפי בית ספר / רשת / מחוז) תעבוד **בלי טבלת סיכום נפרדת**. היא מוחזקת דקה (4 שדות) ומשמשת עוגן היררכיה בלבד.
 
 ---
 
-## 2. טבלאות שדות
+## 2. `LearningDuration` — מודל המשך הגמיש (הריגת "10 דקות")
 
-### 2.1 Student — תלמיד
-| שדה | טיפוס | תיאור | פרטיות |
-|------|-------|--------|---------|
-| id | PK | מזהה פנימי | — |
-| first_name | string | שם פרטי בלבד | מזעור — אין שם משפחה/ת"ז/כתובת |
-| class_id | FK→Class | הכיתה | — |
-| phone | string | לשליחת הקישור האישי | נחוץ לקשר |
-| guardian_phone | string? | טלפון הורה — להודעה השבועית בלבד | **השדה היחיד על הורה במערכת** — אין פרופיל הורה |
-| access_token | string | כניסה בקישור בלי סיסמה | סוד — לא נחשף בדשבורדים |
-| registered | bool | נרשם לשכבת הלמידה (תיעוד תרגולים+ציונים). `false` = יכול עדיין לעשות check-in | הרשמה קלה, מינימום מזהה |
-| active | bool | במצבת הפעילה (כולל נשירה סמויה) | — |
-| created_at | datetime | | |
+**זה השדרוג המרכזי של W0-01.** אין `est_minutes` ואין "10 דק'" מקובעים. המשך הוא **אובייקט מוטבע** על `ContentUnit.duration` (וניתן לדריסה חד-פעמית ב-`Assignment.duration_override` **בלי לשנות את המקור**), בדיוק לפי prd §5:
 
-**אין:** ממוצע פומבי, ת"ז, כתובת. (ציון תרגול — כן, אישי; ראו Submission.)
+```ts
+type DurationMode = "fixed" | "estimated" | "self_paced" | "teacher_controlled";
 
-### 2.2 Class — כיתה
+interface LearningDuration {
+  mode: DurationMode;        // איך נקבע הזמן
+  minMinutes?: number;       // רשות
+  targetMinutes?: number;    // רשות — "כ-X דקות"
+  maxMinutes?: number;       // רשות
+  allowExtension: boolean;   // מותר לחרוג/להאריך
+}
+```
+
+**כלל ההצגה לתלמיד (נגזר מ-`mode`, אף פעם לא badge ריק, אף פעם לא טיימר מלחיץ כברירת מחדל):**
+
+| `mode` | דוגמת נתונים | מה התלמיד רואה |
+|--------|--------------|-----------------|
+| `estimated` | `target=5, allowExtension:true` | "כ-5 דקות · אפשר לעצור ולהמשיך" |
+| `estimated` | `min=15, max=25` | "בערך 15–25 דקות" |
+| `self_paced` | — | "בקצב שלך" |
+| `teacher_controlled` | — | "בהנחיית המורה" |
+| `fixed` (מופע הערכה) | `target=20` | "20 דקות" (טיימר מוצג רק כאן) |
+
+- **ברירת המחדל במסך תלמיד/חירום = מנה קצרה ומפורקת.** בחירום ברירת המחדל קצרה יותר; מסלול הצלה קצר משמעותית מהמסלול המלא. (עמדה פדגוגית בברירת המחדל — לקהל עם קשיי קשב, היעדר עמדה הוא באג.)
+- **פיצול יחידה למקטעים** ושינוי משך בהקצאה נעשים ב-`duration_override` / `sequence_order` — **המקור לא משתנה**.
+- מי קובע: יוצר היחידה / המורה המקצה / תוכנית הלימודים / מצב המערכת — או המלצה בלבד.
+
+---
+
+## 3. טבלאות שדות + החלטת מינימיזציה
+
+> עמודת **מינימיזציה** מופיעה בכל שדה שנוגע בקטין. 🔴=לא נאסף ב-MVP · 🟡=מצומצם/נעול · 🟢=נאסף (מוצדק, מינימלי). שאר הסוכנים כפופים לעמודה הזו.
+
+### 3.1 Student — תלמיד
+| שדה | טיפוס | תיאור | מינימיזציה |
+|------|-------|--------|-------------|
+| id | PK | מזהה פנימי | 🟢 מזהה פנימי, לא ת"ז |
+| first_name | string | שם פרטי בלבד | 🟡 אין שם משפחה/ת"ז/כתובת |
+| class_id | FK→Class | הכיתה | 🟢 שיוך תפעולי |
+| phone | string | לשליחת הקישור האישי | 🟢 מינימום לקשר |
+| guardian_phone | string? | טלפון הורה — יידוע בלבד | 🟡 **השדה היחיד על הורה**. אין פרופיל/לוגין הורה |
+| guardian_opted_out | bool | ההורה ביקש להסיר יידוע | 🟢 חובה חוקית (opt-out) |
+| access_token | string | כניסה בקישור בלי סיסמה | 🟡 סוד — לא נחשף בדשבורדים |
+| registered | bool | נרשם לשכבת הלמידה. `false` = עדיין יכול לעשות check-in | 🟢 הרשמה קלה, מינימום מזהה |
+| active | bool | במצבת הפעילה | 🟢 |
+
+**אין:** ממוצע פומבי · ת"ז · כתובת · **תיוג רמת תלמיד** (חלש/בינוני/חזק — 🔴 אסור בכלל; תמיכה מוגדרת ברמת רגע/מיומנות, לא תלמיד) · **פרופיל מיומנויות מתמשך** (🟡 בלי היסטוריה נצברת ב-MVP).
+
+### 3.2 StaffMember — בעל תפקיד (זהות האדם)
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id / first_name / phone / access_token / active | | זהות האדם בלבד; התפקידים ב-`StaffRole`. **אין שדה `gender`** — נוסח נייטרלי מגדרית לכל פנייה למחנך. |
+
+### 3.3 StaffRole — תפקיד (כמה לאדם) · בסיס ה-RBAC
 | שדה | טיפוס | תיאור |
 |------|-------|--------|
 | id | PK | |
-| school_id | FK→School | |
-| name | string | לדוגמה "י'3" |
-| grade | enum | ט / י / יא / יב |
-| homeroom_teacher_id | FK→StaffMember | המחנך של הכיתה |
-
-### 2.3 StaffMember — בעל תפקיד (זהות האדם)
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| first_name | string | |
-| phone | string | |
-| access_token | string | כניסה בלי סיסמה |
-| active | bool | לדופק צוות — מי לא נכנס יומיים |
-
-> **פוצל מ-`role` יחיד לטבלת תפקידים.** `StaffMember` מחזיק את זהות האדם בלבד; התפקידים יושבים ב-`StaffRole` (שורה לכל תפקיד). כך אדם אחד יכול להיות **גם יועצת וגם מחנכת** בלי שכפול רשומה, וגם מורה מקצועי במקביל.
-
-### 2.3א StaffRole — תפקיד (כמה לאדם)
-| שדה | טיפוס | תיאור | פרטיות |
-|------|-------|--------|---------|
-| id | PK | | — |
-| staff_id | FK→StaffMember | אותו אדם — כמה שורות | — |
-| role | enum | `homeroom` (מחנך) / `subject` (מורה מקצועי) / **`counselor` (יועצת)** / `principal` (מנהל) / `supervisor` (פיקוח) | קובע היקף גישה — ראו §3 |
-| school_id | FK→School? | היקף התפקיד; `null` לפיקוח (מעבר לבית ספר בודד) | — |
-| active | bool | תפקיד פעיל (יועצת שסיימה תפקיד — `false`) | — |
-
-> **מחנך** מזוהה דרך `Class.homeroom_teacher_id` (שיוך לכיתה), **בנוסף** לשורת `StaffRole` עם `role=homeroom`. **יועצת** = שורת `StaffRole` עם `role=counselor` בהיקף בית ספר — היא לא משויכת לכיתה בודדת אלא רואה חוצה-כיתות (ראו §3).
-
-### 2.3ב FlagEvent — אירוע דגל רגשי (מטא בלבד, נשמר לשנה)
-| שדה | טיפוס | תיאור | פרטיות |
-|------|-------|--------|---------|
-| id | PK | | — |
-| student_id | FK→Student | | |
-| checkin_id | FK→CheckIn? | ה-check-in שהדליק (nullable — היעדרות 48ש' מדליקה בלי check-in) | — |
-| trigger | enum | `hard_day_3d` ("קשה לי" 3 ימים) / `wants_to_talk` / `absence_48h` | — |
-| lit_on | date | תאריך ההדלקה — **עובדה, לא תוכן רגשי** | נשמר לשנה |
-| handled_by | FK→StaffMember? | מי טיפל (מחנך/יועצת) | — |
-| resolution | enum | `contacted` / `referred` (הועבר ליועצת) / `escalated` / `closed` | — |
-| shared_note | string? | בהעברה ליועצת — **מה שהמחנך בחר לשתף** (לא כל ה-`StudentNote`). ריק אם לא הועבר | המחנך בוחר אקטיבית; אין מסירה אוטומטית |
-| delete_after | date | `lit_on` + שנה | מחיקה מדורגת |
-| created_at | datetime | | |
-
-> **זה הפתרון למתח 30-יום מול "דפוס ארוך".** ה-`CheckIn` הרגשי (עם ה-`mood` והתוכן הרגיש) נמחק ב-30 יום כמתוכנן. אבל **עובדת** ההדלקה — "נדלק דגל `hard_day_3d` ב-12.11" — נשמרת ב-`FlagEvent` לשנה, בלי שום תוכן רגשי. **היועצת רואה דפוס** ("4 דגלים ב-3 חודשים") מ-`FlagEvent`, ולא נחשפת לתוכן שנמחק. מזעור נתונים לפי תיקון 13: שומרים את המינימום שמשרת את הצורך המקצועי (דפוס), לא יותר.
-
-### 2.4 ContentUnit — משימת ספרייה ("מדף הרציפות")
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| title | string | |
-| subject | string | מקצוע |
-| grade | enum | שכבה |
-| body | text | פתיח שורה + מטלה ברורה |
-| **unit_type** | enum | `task` (משימת קשר/תרגול) / `assessment` (מופע הערכה — נושא ציון) / `reference` (פריט הפניה לתוכן חיצוני) |
-| **track_id** | FK→EnrichmentTrack? | שייכות למסלול העשרה (צילום/פיננסי/יזמות). `null` = תוכן ליבה |
-| **sequence_id** | FK→LearningSequence? | שייכות ל**מסלול למידה** מסודר. `null` = יחידה עצמאית |
-| **topic_id** | FK→Topic? | ה**נושא** בתוכנית הלימודים שהיחידה מלמדת (§2.4ב). מחבר מקצוע→נושא→יחידה |
-| **skill_ids** | array | ה**מיומנויות** שהיחידה בונה (§2.4ג). הבסיס ל"מה נרכש עד כה" במפת ההתקדמות |
-| **sequence_order** | int? | מיקום ברצף — הבסיס ל"יחידה N מתוך M" במסך התלמיד |
-| **content_source** | enum | `internal` (נכתב אצלנו) / `external` (עטיפת תוכן חיצוני) |
-| **external_ref** | string? | קישור לקמפוס IL/מטח/משה"ח — כשזה `reference`. המערכת מפנה, לא מחזיקה |
-| est_minutes | int | תקן ה**צעד** = 10. משימה משמעותית = כמה צעדים; מספר הצעדים לפי מצב |
-| modes_allowed | array | אילו מצבים מתאימים — כולל תיוג **"מתאים לחירום"** |
-| accessibility | bool | מותאם ללקויות למידה |
-| parent_unit_id | FK→ContentUnit? | אם זו גרסה נגישה — מפנה למקור, **לא מעתיקה** |
-| curated_by | FK→StaffMember | אוצרות אנושית — אין תוכן גולמי |
+| staff_id | FK→StaffMember | אותו אדם — כמה שורות |
+| role | enum | `homeroom` (מחנך) / `subject` (מורה מקצועי) / `principal` (מנהל) / `supervisor` (מפקח) |
+| school_id | FK→School? | היקף התפקיד; `null` לפיקוח ארצי |
+| subject | string? | תחום הדעת (למפקח מקצועי) |
 | active | bool | |
 
-**אין:** מחסן גולמי (המערכת מפנה למאגרים חיצוניים דרך `reference`, לא מחליפה אותם); תלות בספק חיצוני יחיד. **קבצים של המורה** נשמרים ב-`Attachment` (§2.11), לא בגוף היחידה.
+> הגישה בפועל = **איחוד** הרשאות התפקידים הפעילים. הרזולוציה יורדת ככל שעולים בהיררכיה (מחנך=פרטני בכיתתו → מנהל=מצרפי בית-ספרי → פיקוח=מצרפי ארצי). המטריצה המלאה = **W0-02** (`roles.html`). `role=counselor` — ראו §10 (מורחב).
 
-### 2.4א LearningSequence — מסלול למידה מסודר
-מגדיר את הרצף הלימודי שהופך יחידות בודדות ל**מסלול** ("איפה אני / מה הבא"). זהו המבנה שמחבר את מסך התלמיד (5.1.1) לתוכנית הלימודים.
+### 3.4 ContentUnit — יחידת ספרייה
 | שדה | טיפוס | תיאור |
 |------|-------|--------|
-| id | PK | |
-| subject | string | מקצוע (אזרחות / לשון) |
-| grade | enum | שכבה |
-| **topic_id** | FK→Topic? | ה**נושא** שהמסלול מכסה (§2.4ב) — מחבר את המסלול לתוכנית הלימודים |
-| title | string | "מסלול אזרחות י׳" |
-| unit_count | int | כמה יחידות ברצף (ה-M ב"יחידה N מתוך M") |
-| **curriculum_ref** | string? | עיגון לתוכנית הלימודים הרשמית — כדי שהמסלול לא ייראה שרירותי |
-| **authored_by** | FK→StaffMember? | מי בנה את המסלול (מורה מקצועי / אוצר). עונה על "מי קבע את המסלול" |
+| id / title / subject / grade | | |
+| body | text | פתיח + מטלה ברורה |
+| unit_type | enum | `task` / `assessment` (נושא ציון) / `reference` (הפניה חיצונית) |
+| track_id | FK→EnrichmentTrack? | `null` = תוכן ליבה |
+| sequence_id | FK→LearningSequence? | `null` = יחידה עצמאית |
+| topic_id | FK→Topic? | מחבר מקצוע→נושא→יחידה |
+| skill_ids | array | מיומנויות שהיחידה בונה |
+| sequence_order | int? | מיקום ברצף (N מתוך M) |
+| content_source | enum | `internal` / `external` |
+| external_ref | string? | קישור לקמפוס IL/מטח — כשזה `reference` |
+| **duration** | `LearningDuration` | **§2 — מחליף את `est_minutes`. בלי "10 דק'" מקובע** |
+| modes_allowed | array | כולל תיוג "מתאים לחירום" |
+| accessibility | bool | מותאם ללקויות למידה |
+| **level** | enum | **וריאנט הרמה: `basic` / `standard` / `advanced` (3 רמות).** מתלכד עם רמת התמיכה של התלמיד: `basic`↔`with_you` · `standard`↔`on_own` · `advanced`↔`ahead`. `standard` = ברירת מחדל. התלמיד לא רואה את שם הרמה (content-standard §2). |
+| parent_unit_id | FK→ContentUnit? | גרסה נגישה — מפנה למקור, לא מעתיקה. יחד עם `level` מקשר את שלושת הווריאנטים של אותה מנה |
+| curated_by | FK→StaffMember | אוצרות אנושית |
+| active | bool | |
 
-> ה"מסלול" נגזר בשאילתה: יחידות עם אותו `sequence_id`, ממוינות לפי `sequence_order`. **מפת ההתקדמות של התלמיד** (§2.4ד) שומרת את המיקום ואת הצעד הבא כישות עצמאית, כך שההמלצה נולדת מרצף מתוכנן ולא ממשימה בודדת.
+### 3.5 Topic / Skill / LearningSequence / EnrichmentTrack
+`Topic` (נושא בתכל: subject/grade/title/curriculum_ref/display_order) · `Skill` (מיומנות: subject/title/topic_id) · `LearningSequence` (רצף מסודר: subject/grade/topic_id/title/unit_count/curriculum_ref/authored_by) · `EnrichmentTrack` (אוסף 5-6 יחידות בכל סדר: title/theme/description). *מבנה זהה ל-1.3 — לא השתנה.* המסלול נגזר בשאילתה: יחידות עם אותו `sequence_id`, ממוינות לפי `sequence_order`.
 
-### 2.4ב Topic — נושא בתוכנית הלימודים
-השכבה החסרה בין **מקצוע** ל**יחידה**. בלעדיה המערכת יודעת "6 יחידות ברצף" אבל לא "אילו נושאים בתוכנית הלימודים הן מכסות". זהו התיקון המרכזי של ביקורת 1.3 (החוליה החסרה — מודל ידע מתמשך).
+### 3.6 Assignment — שליחת משימה לכיתה
 | שדה | טיפוס | תיאור |
 |------|-------|--------|
-| id | PK | |
-| subject | string | מקצוע |
-| grade | enum | שכבה |
-| title | string | "מערכת הצורות" / "הרשות המחוקקת" |
-| curriculum_ref | string? | עיגון לתוכנית הלימודים הרשמית |
-| display_order | int | סדר הנושא בתוך המקצוע |
+| content_unit_id | FK→ContentUnit | **הפניה** — מקור אמת יחיד |
+| class_id | FK→Class | כיתת יעד |
+| assigned_by | FK→StaffMember | |
+| mode | enum | מוטבע מ-`SystemMode` הנוכחי בעת השליחה |
+| scheduled_for | date | יכול להיות עתידי |
+| override_body | text? | התאמת AI מאושרת חד-פעמית. `null` = משתמשים ב-`body` המקורי |
+| **duration_override** | `LearningDuration`? | משך חלופי להקצאה זו **בלי לשנות את המקור** (§2) |
 
-### 2.4ג Skill — מיומנות
-מה התלמיד יודע לעשות, בניגוד ל"אילו יחידות עשה". מאפשר למורה לראות **איזו מיומנות נעצרה** (למשל "זיהוי נושא ונשוא"), ולא רק "כמה תלמידים לא סיימו". מזין את ההמלצה הממוקדת בדשבורד המורה (5.3, ביקורת 1.3 סעיף 5).
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| subject | string | מקצוע |
-| title | string | "זיהוי נושא ונשוא" / "תקציר פסקה" |
-| topic_id | FK→Topic? | שייכת לנושא |
+### 3.7 Submission — סטטוס תלמיד + ציון
+| שדה | טיפוס | תיאור | מינימיזציה |
+|------|-------|--------|-------------|
+| assignment_id / student_id | FK | | |
+| status | enum | `not_started`/`started`/`completed` | 🟢 סטטוס גס |
+| feedback | text? | משוב מילולי-רשות מהמורה | 🟢 |
+| **grade** | string? | ציון — **רק** כש-`unit_type=assessment`. `null` על משימה רגילה | 🟢 אישי (תלמיד+מורה), בלי ממוצע פומבי, בלי השוואה |
+| support_level | enum? | `with_you`/`on_own`/`ahead` — באיזו רמה נעשתה | 🟡 בין תלמיד למורה, לא פומבי |
+| mastery | enum? | `core`/`full` — הבין ליבה או ליבה+הרחבות | 🟡 מידע פדגוגי, לא כישלון |
+| hint_used | bool | נעזר ברמז | 🟡 **בוליאני גס אחד** — לא לוג, בלי `hintsUsed` נספר, בלי חותמת זמן |
+| recovered_after_error | bool | טעה ואז הצליח | 🟡 בוליאני גס |
+| rescue_path | bool | נעשתה בגרסת מסלול ההצלה | 🟡 |
+| seen_by_teacher | bool | "ראיתי" → מפעיל "המורה ראה" | 🟢 |
+| mode | enum | מוטבע לניתוח | |
+| completed_at | datetime? | חותמת סיום הגשה — **אירועית, לא רציפה** | 🟡 **W0-S1:** חותמת חד-פעמית פר-הגשה, לא מעקב. שממנה נגזר רק ה-`day` ל-`DailyPresence`. **אין** נתיב שאילתה שמפיק ממנה משך-משימה / שעת-פעילות / `activeSeconds` לתלמיד. אם אין צורך בסדר תוך-יומי — לצמצם ל-`date` |
 
-### 2.4ד StudentProgress — מפת ההתקדמות של התלמיד
-ה**ישות שהחסרה** לפי ביקורת 1.3: מודל ידע מתמשך, נשמר, שמחבר מקצוע→נושא→יחידה→מיומנות→מצב→הצעד הבא. במקום שההמלצה תיוולד בשאילתה חד-פעמית על משימה בודדת, היא נשענת על מפה מצטברת שהמורה יכול לראות ולאשר.
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| student_id | FK→Student | |
-| sequence_id | FK→LearningSequence | המסלול |
-| current_order | int | היחידה הנוכחית (נגזר: מקסימום `sequence_order` שהושלם + 1) |
-| **next_unit_id** | FK→ContentUnit | **הצעד הבא** — היחידה המומלצת עכשיו |
-| **next_source** | enum | `sequence` (המשך רגיל) / `rescue` (מסלול הצלה) / `enrichment` (העשרה). מסביר **למה** דווקא הצעד הזה |
-| skills_acquired | array | `skill_id` — מה נרכש עד כה (מ-`Submission.mastery=full`) |
-| skills_pending | array | `skill_id` — מה עוד לא נשלט (מזין תרגול ממוקד) |
-| **teacher_approved** | bool | המורה אישר/שינה את הצעד הבא. ברירת מחדל `true`; המורה יכול לעקוף — **המנוע ממליץ, המורה מחליט** (spec 5.1.2) |
-| updated_at | datetime | |
+> חמשת שדות הלמידה (`support_level`/`mastery`/`hint_used`/`recovered_after_error`/`rescue_path`) הם **מדדי הלמידה האמיתיים** — מבדילים בין "לחץ עד הסוף" ל"הבין". הם **בוליאנים/enum גסים פר-הגשה**, לא מעקב ברזולוציית שנייה — ולכן עומדים בעקרון המצב-הגס (`security-minimization.md` §3 שורה 2). ראו שאלה פתוחה §9.3.
 
-> **התלמיד רואה רק את החלק הרלוונטי** (הצעד הבא + מיקום במסלול). **המורה רואה את המפה** — שההמלצה נובעת מרצף מתוכנן, לא ממשימה בודדת. זה מה שהופך את המוצר מ"מערכת משימות חכמה" ל"פלטפורמת למידה" (ביקורת 1.3, סעיף 1).
-
-### 2.5 Assignment — שליחת משימה לכיתה
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| content_unit_id | FK→ContentUnit | **הפניה** לתוכן — מקור אמת יחיד |
-| class_id | FK→Class | כיתת היעד |
-| assigned_by | FK→StaffMember | המורה השולח |
-| **mode** | enum | `routine`/`remote`/`emergency` — מוטבע מ-SystemMode הנוכחי של בית הספר בעת השליחה |
-| scheduled_for | date | תאריך יעד — יכול להיות עתידי (יום מרחוק מתוכנן) |
-| override_body | text? | התאמת AI מאושרת חד-פעמית (פישוט/קיצור). `null` = משתמשים ב-`body` המקורי |
-| created_at | datetime | |
-
-> Assignment הוא ברמת **כיתה**. הסטטוס האישי מפוצל ל-Submission פר-תלמיד — כך אין שכפול תוכן, רק סטטוסים.
-
-### 2.6 Submission — סטטוס תלמיד למשימה
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| assignment_id | FK→Assignment | |
-| student_id | FK→Student | |
-| status | enum | `not_started` / `started` / `completed` |
-| feedback | text? | משוב מילולי-רשות מהמורה |
-| **grade** | string? | ציון — **רק** כאשר `ContentUnit.unit_type='assessment'`. אישי (תלמיד+מורה), בלי ממוצע פומבי. `null` על משימת קשר רגילה |
-| **support_level** | enum? | באיזו רמת תמיכה נעשתה: `with_you`/`on_own`/`ahead`. מזין את מנוע ההתאמה (5.1.2) |
-| **mastery** | enum? | `core` (הבין ליבה) / `full` (ליבה+הרחבות). "הבין ברמת ליבה" הוא מידע פדגוגי למורה, לא כישלון |
-| **hint_used** | bool | נעזר ברמז לפני התשובה — מזין את "שיעור הצלחה אחרי רמז" |
-| **recovered_after_error** | bool | טעה ואז הצליח — מזין את "אחוז ההתאוששות מטעות" |
-| **rescue_path** | bool | היחידה נעשתה בגרסת מסלול ההצלה (קצרה) |
-| seen_by_teacher | bool | לחיצת "ראיתי" → מפעילה "המורה ראה" אצל התלמיד |
-| mode | enum | מוטבע מה-Assignment לניתוח לפי מצב |
-| completed_at | datetime? | |
-
-> חמשת השדות `support_level`/`mastery`/`hint_used`/`recovered_after_error`/`rescue_path` הם **מדדי הלמידה האמיתיים** — הם מבדילים בין "לחץ עד הסוף" ל"הבין". מהם נגזרים מדדי-העל הלימודיים (spec §1) ודשבורד ההחלטה של המורה (5.3).
-
-### 2.7 CheckIn — צ'ק-אין יומי
-| שדה | טיפוס | תיאור | פרטיות |
-|------|-------|--------|---------|
-| id | PK | | |
-| student_id | FK→Student | | |
-| day | date | יום ה-check-in | |
-| **mode** | enum | `routine`/`remote`/`emergency` | ציר ניתוח |
-| type | enum | `presence` ("אני כאן", שגרה/מרחוק) / `emotional` ("איך אתה היום?", חירום) | |
-| mood | enum? | 1 מתוך 4 אפשרויות — **חירום בלבד** | **רגיש** |
-| distress_flag | bool | מצוקה — דגל למחנך בלבד, סימן ולא תיעוד קליני | נגזר מ-mood |
+### 3.8 CheckIn — צ'ק-אין (מתריע ונמחק)
+| שדה | טיפוס | תיאור | מינימיזציה |
+|------|-------|--------|-------------|
+| student_id | FK | | |
+| day | date | | |
+| mode | enum | | ציר ניתוח |
+| type | enum | `presence` ("אני כאן") / `emotional` ("איך אתה היום?", חירום) | |
+| mood | enum? | 1 מ-4 — **חירום בלבד** | 🟡 **רגיש** — נמחק (ראו למטה) |
+| distress_flag | bool | מצוקה — דגל למחנך בלבד, סימן ולא תיעוד קליני | 🟡 נגזר מ-mood, נמחק |
 | is_sensitive | bool | `true` כאשר `type=emotional` | |
-| delete_after | date? | ל-check-in רגשי: `created_at + 30 יום`. בתאריך זה `mood` ו-`distress_flag` **מתאפסים אוטומטית**; עובדת הנוכחות (שהיה check-in) נשמרת עד תום שנה"ל | תיקון 13 |
-| seen_by | FK→StaffMember? | "המורה ראה" — `null` עד אישור אנושי | |
+| alert_sent | bool | ההתראה למחנך יצאה | 🟢 עובדה תפעולית |
+| seen_by_educator | bool | "המחנך ראה" | 🟢 |
+| purge_after | date? | ל-check-in רגשי: `created_at` + טווח קצר (ברירת מחדל **מוקדם ככל האפשר** — סעיף אחסון §9). בתאריך זה `mood`+`distress_flag` **מתאפסים**. | 🟡 תיקון 13 |
 | created_at | datetime | | |
 
-> **מדיניות מחיקה (דרישה 3) — ✅ הוכרע 9.7.2026 · מחיקה חלקית:** **מוחקים את התוכן הרגשי, שומרים מטא ב-`FlagEvent`.** התוכן הרגשי (`mood`, `distress_flag`) הוא החלק הרגיש ולכן נמחק אחרי 30 יום — אבל **לא** מוחקים את הרשומה במלואה: עצם העובדה שנדלק דגל (סוגו ותאריכו) נשמרת ב-`FlagEvent` לשנה (§2.3ב), כדי שהיועצת תראה דפוס ארוך בלי התוכן שנמחק. עובדת הנוכחות הבסיסית (האם התלמיד נראה ביום X) איננה רגישה ונשמרת לפי כלל שנה"ל של §7.2 — כדי שרצף אישי ומדדי קשר לא יימחקו בטרם עת. כל המחיקות אוטומטיות ומובנות.
+> **מדיניות MVP-A (3.0, בטוחה-לביקורת):** ה-check-in הרגשי **מתריע למחנך עכשיו (`alert_sent`) ואז התוכן הרגשי נמחק** — **לא נבנית היסטוריה רגשית על קטין**. סטטוס חד-פעמי, לא לוג (`security-minimization.md` §3 שורה 3). עובדת הנוכחות הבסיסית (שהתלמיד נראה ביום X) איננה רגישה ונשמרת ב-`DailyPresence` (§3.9). **שמירת מטא-דגלים לאורך זמן (`FlagEvent`) והתפקיד שצורך אותה (יועצת) — לא ב-MVP-A. ראו §10.**
 
-### 2.8 SystemMode — יומן מצבי המערכת (פר בית ספר)
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| school_id | FK→School | |
-| mode | enum | `routine`/`remote`/`emergency` — המצב שהופעל |
-| activated_by | FK→StaffMember? | המנהל, או `null`+`note="national"` בהפעלה ארצית |
-| scheduled_for | date? | יום מרחוק שתוכנן מראש; `null` = מיידי |
-| note | string? | |
-| activated_at | datetime | |
+### 3.9 DailyPresence — מצב יומי גס (החלופה למעקב-שניות) · **W0-S1**
+| שדה | טיפוס | תיאור | מינימיזציה |
+|------|-------|--------|-------------|
+| student_id | FK | | |
+| day | date | **תאריך בלבד — בלי חלק שעה** | 🟢 גרעיניות יום |
+| state | enum | **`active`** (עשה check-in + פעולה) / **`partial`** (נכנס, בלי פעולה) / **`not_seen`** (אין אות) | 🟡 **הרזולוציה היחידה** של פעילות |
+| mode | enum | | |
 
-> **מקור האמת למצב הנוכחי** של בית ספר = רשומת ה-SystemMode האחרונה שלו. בעת יצירת כל אירוע (CheckIn/Assignment/ContactLog/Notification), ה-`mode` **מוטבע** מהמצב הנוכחי — כך אין צורך לעדכן אירועים בדיעבד, וההיסטוריה נשמרת נאמנה. מעבר מצב הוא עצמו אירוע (עם ה-mode החדש).
-
-### 2.9 ContactLog — יומן קשר של מחנך
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| student_id | FK→Student | על מי הפנייה |
-| staff_id | FK→StaffMember | המחנך שפנה |
-| day | date | |
-| mode | enum | `routine`/`remote`/`emergency` |
-| outcome | enum | `contacted` / `no_answer` / `referred_to_parent` |
-| channel | enum | `whatsapp` / `sms` / `phone` |
-| note | string? | על הפנייה בלבד — **אסור** תיאור מצב רגשי חופשי (§5.2) |
-| created_at | datetime | |
-
-> נשמר שנה אחת בלבד (§7.2), ואז נמחק אוטומטית.
-
-### 2.10 Notification — הודעה יוצאת
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| recipient_kind | enum | `student` / `parent` / `staff` |
-| recipient_id | FK | `student_id` (גם ל-`parent` — דרך `guardian_phone`) או `staff_id`. **אין ישות הורה** |
-| channel | enum | `whatsapp` / `sms` (הקישור עובד בשניהם) |
-| kind | enum | `personal_link` / `task` / `weekly_parent` / `mode_change` / `daily_report` / `teacher_saw` |
-| mode | enum | `routine`/`remote`/`emergency` |
-| payload_ref | string? | הפניה ל-assignment_id / checkin_id וכו' — **לא העתקת תוכן** |
-| status | enum | `queued` / `sent` / `delivered` / `read` |
-| created_at | datetime | |
-
-### 2.11 Attachment — חומר שהמורה צירף
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| assignment_id | FK→Assignment | המשלוח שאליו צורף הקובץ (דף עבודה/מצגת) |
-| uploaded_by | FK→StaffMember | המורה שהעלה |
-| filename | string | |
-| storage_ref | string | הפניה לאחסון — לא בגוף הרשומה |
-| size_kb | int | נשמר קליל; גרסת התלמיד חייבת לעבוד בטלפון וברשת חלשה |
-| created_at | datetime | |
-
-> העלאת קבצים ומצגות **מותרת** (spec §5.3). המגבלה היחידה: מה שמגיע לתלמיד חייב לעמוד בעקרון "עובד ברשת חלשה" — קבצים כבדים מוקלים/מומרים, לא נחסמים.
-
-### 2.12 EnrichmentTrack — מסלול העשרה
-| שדה | טיפוס | תיאור |
-|------|-------|--------|
-| id | PK | |
-| title | string | "מסלול צילום" / "חינוך פיננסי" / "יזמות" |
-| theme | string | קטגוריה |
-| description | string | |
-
-> מסלול = אוסף של 5-6 `ContentUnit` (עם `track_id` זהה) שאפשר לעשות בכל סדר. **לא קורס רב-מפגשים ולא עץ תוכן** — אין נעילה בין יחידות.
+> זהו **מקור האות היחיד** לשאלות "מי נראה / מי נעלם" בכל הדשבורדים. נגזר יומית מקיום `CheckIn`/`Submission`, ומגלם את דרישת המינימיזציה: **פעיל/חלקי/לא נראה — בלי `activeSeconds`, בלי `lastActiveAt`, בלי חותמות זמן מדויקות** (`security-minimization.md` §3 שורה 2). המערכת לא יודעת "כמה שניות במסך".
 >
-> **הבחנה חשובה:** `EnrichmentTrack` = אוסף חופשי בלי סדר (העשרה). `LearningSequence` (§2.4א) = רצף ליבה מסודר עם מיקום. שניהם לא "קורס כבד".
+> **אכיפת W0-S1 (מצב יומי גס — לא מעקב-שניות) — נאכף במבנה:**
+> - **מפתח הרשומה = `(student_id, day)`** — לכל תלמיד **רשומה אחת ליום לכל היותר**. אין שורות תוך-יומיות, אין לוג אירועי פעילות. שינוי המצב במהלך היום = **עדכון אותה שורה** (`not_seen`→`partial`→`active`), לא רשומה חדשה.
+> - **אין שדה `created_at`/`updated_at`/חותמת-זמן** על `DailyPresence` — בכוונה. השדה היחיד לזמן הוא `day` (תאריך). הוספת חותמת-זמן כאן = חריגה מ-W0-S1.
+> - **שדות אסורים במפורש** (לא קיימים ולא ייווספו ב-MVP-A): `activeSeconds` · `activeMinutes` · `timeOnTask` · `lastActiveAt` · `firstSeenAt` · `sessionCount` · `screenTime` · כל מונה/חותמת ברזולוציית שנייה/דקה.
+> - **`state` הוא enum גס משלושה ערכים** — לא סקלה, לא אחוז, לא ציון פעילות. `partial`/`active` נגזרים מ**קיום** אות (check-in / הגשה), לא מ**כמות** או **משך**.
+> - הדשבורדים (מחנך/מנהל/פיקוח) קוראים אך ורק את `state` + `day`; **אין נתיב שאילתה** שמחזיר משך/שניות/שעת-פעילות של תלמיד (עקבי עם §5–§6).
 
-### 2.13 SupportProfile — רמת התמיכה של התלמיד (פר-מקצוע)
-מנוע ההתאמה (spec §5.1.2). **לא תווית קבועה על התלמיד** — רשומה פר-מקצוע שזזה לפי בחירתו וסימני המערכת.
-| שדה | טיפוס | תיאור | פרטיות |
-|------|-------|--------|---------|
-| id | PK | | |
-| student_id | FK→Student | | |
-| subject | string | פר-מקצוע — "רץ קדימה" בלשון ו"אני איתך" במתמטיקה באותו יום | |
-| **chosen_level** | enum | `with_you`/`on_own`/`ahead` — מה ה**תלמיד בחר** ("איך בא לך ללמוד") | **בין תלמיד למורה בלבד** — לא פומבי, לא משווה |
-| **recommended_level** | enum? | מה ה**מערכת ממליצה** על סמך התנהגות (2 טעויות → הצלה; רצף הצלחות → קדימה). `null` = אין פער מהבחירה | |
-| **active_level** | enum | הרמה ב**תוקף כרגע** — מה שמריץ בפועל את חוויית הלמידה | |
-| set_by | enum | `self` / `system` — מי קבע את `active_level`. כשהמערכת מזהה פער, היא **ממליצה** (מעדכנת `recommended_level`), ולא כופה — המורה מחליט | |
-| rescue_entries | int | כמה פעמים נכנס למסלול הצלה | |
-| rescue_recoveries | int | כמה יצא ממנו עם הצלחה — מזין "אחוז התאוששות" | |
-| updated_at | datetime | | |
+### 3.10 SystemMode — יומן מצבי המערכת (פר בית ספר)
+`school_id · mode · activated_by (null+note="national" בהפעלה ארצית) · scheduled_for? · note (חובה במעבר) · activated_at`. **מקור האמת למצב הנוכחי** = הרשומה האחרונה של בית הספר. בעת יצירת כל אירוע, ה-`mode` **מוטבע** ממנה קדימה — אין עדכון בדיעבד. מעבר מצב הוא עצמו אירוע.
 
-> **שלוש רמות מובחנות (ביקורת 1.3, סעיף 4).** כדי שהמנוע ייקרא "מנוע" ולא "בורר העדפה", המערכת מבחינה בין: **מה שהתלמיד בחר** (`chosen_level`), **מה שהמערכת ממליצה** (`recommended_level`), ו**מה שהושלם בפועל** (`Submission.support_level`). כשיש פער — למשל בחר "לבד", השתמש ב-3 רמזים והצליח — המערכת מציגה למורה את הפער וממליצה על התאמה למחר. **המנוע ממליץ, המורה מחליט, התלמיד בוחר.**
->
-> **הכבוד לתלמיד נאכף במבנה:** אין נתיב שאילתה שמחזיר את הרמות לתצוגה פומבית או להשוואה בין תלמידים. המורה רואה **פילוח מצרפי** לכיתה שלו (כמה בכל רמה, מי במסלול הצלה) — לא "דירוג" תלמידים. התלמיד עצמו רואה בחירה ידידותית, לא תווית.
+### 3.11 ContactLog — יומן קשר (שדות מובנים בלבד)
+| שדה | טיפוס | תיאור | מינימיזציה |
+|------|-------|--------|-------------|
+| student_id | FK | על מי הפנייה | |
+| staff_id | FK | המחנך שפנה | |
+| day | date | | |
+| mode | enum | | |
+| outcome | enum | `contacted` / `no_answer` / `referred_to_parent` | 🟢 מובנה |
+| channel | enum | `whatsapp` / `sms` / `phone` | 🟢 מובנה |
+| followup | enum | `none` / `retry` / `parent` / `escalate` — משימת המשך | 🟢 מובנה |
+| delete_after | date | מחיקה אוטומטית | 🟡 תיקון 13 |
 
-### 2.13 StudentNote — הערת מחנך
-| שדה | טיפוס | תיאור | פרטיות |
-|------|-------|--------|---------|
-| id | PK | | |
-| student_id | FK→Student | על מי ההערה | |
-| staff_id | FK→StaffMember | **מחנך בלבד** | ההערה פרטית לכותב; אין נתיב שאילתה שחושף אותה למנהל/פיקוח |
-| note | string | הערה קצרה ("דיברתי, אבא איבד עבודה") — לא תיאור קליני | מוגבלת באורך |
-| delete_after | date | תום שנת הלימודים | תיקון 13 — נמחקת אוטומטית |
-| created_at | datetime | | |
+> **שינוי מ-1.3:** הוסר שדה הטקסט החופשי `note`. יומן הקשר = **שדות מובנים בלבד** (ערוץ / תוצאה / משימת המשך) — "שדה חופשי הוא הכי מסוכן" (`security-minimization.md` §3 שורה 4). גישה למחנך המורשה בלבד (W0-02). הערת-טקסט חופשית (`StudentNote`) — ראו §10.
+
+### 3.12 Attachment — חומר שהמורה צירף
+`assignment_id · uploaded_by (מורה) · filename · storage_ref · size_kb · created_at`. 🔴 **קבצים מ-מורה בלבד** — **בלי העלאת קבצים מתלמיד ב-MVP** (`security-minimization.md` §3 שורה 6). מה שמגיע לתלמיד חייב לעבוד ברשת חלשה (מוקל/מומר).
+
+### 3.13 StudentProgress / SupportProfile
+`StudentProgress` (מפת התקדמות פר-מסלול: current_order/next_unit_id/next_source/skills_acquired/skills_pending/teacher_approved) ו-`SupportProfile` (רמת תמיכה פר-מקצוע: chosen/recommended/active_level/set_by) — *מבנה זהה ל-1.3.* 🟡 **הכבוד לתלמיד נאכף במבנה:** אין נתיב שאילתה שמחזיר את הרמות לתצוגה פומבית או להשוואה בין תלמידים; המורה רואה **פילוח מצרפי** לכיתתו בלבד. `SupportProfile` **אינו** פרופיל מיומנויות מתמשך — הוא רמה-לפעילות-הזו, בלי היסטוריה נצברת (`security-minimization.md` §3 שורה 7). *(שדות `rescue_entries`/`rescue_recoveries` המצטברים מ-1.3 → נדחים ל-§10 כדי לא לצבור היסטוריה על קטין ב-MVP.)*
+
+### 3.14 Notification / AuditEvent
+`Notification` (recipient_kind student/parent/staff · channel · kind · mode · payload_ref **הפניה, לא העתקת תוכן** · status). **אין ישות הורה** — נמען `parent` = `guardian_phone` של התלמיד. · `AuditEvent` (actor_id · action login/mode_change/export/access_grant/purge · entity_ref · mode · delete_after) — 🟢 לוג ביקורת **מינימלי**, גישה מוגבלת, מדיניות שמירה+מחיקה מוגדרת (`security-minimization.md` §3 שורה 12). זו ישות ה"אירועים" של המערכת.
 
 ---
 
-## 3. איך הזרימה עובדת בלי שכפול נתונים (דרישה 2)
+## 4. seed JSON לדוגמה — ישות אחת לכל טבלה (לפרוטוטייפ)
+
+> אובייקט לדוגמה לכל ישות, מוכן להזרמה ל-state של הפרוטוטייפ. תאריכים ILlustrative. שמות עבריים מגוונים.
+
+```json
+{
+  "schools": [
+    { "id": "sch_01", "name": "אורט בית הערבה", "network": "אורט", "district": "מחוז דרום" }
+  ],
+  "classes": [
+    { "id": "cls_i2", "school_id": "sch_01", "name": "י'2", "grade": "י", "homeroom_teacher_id": "stf_dana" }
+  ],
+  "students": [
+    { "id": "std_yuval", "first_name": "יובל", "class_id": "cls_i2", "phone": "0500000001",
+      "guardian_phone": "0500000002", "guardian_opted_out": false, "access_token": "tok_yuval_128bit",
+      "registered": true, "active": true, "created_at": "2026-09-01T08:00:00+03:00" }
+  ],
+  "staff_members": [
+    { "id": "stf_dana", "first_name": "דנה", "phone": "0500000010", "access_token": "tok_dana_128bit", "active": true }
+  ],
+  "staff_roles": [
+    { "id": "rol_01", "staff_id": "stf_dana", "role": "homeroom", "school_id": "sch_01", "subject": null, "active": true },
+    { "id": "rol_02", "staff_id": "stf_dana", "role": "subject", "school_id": "sch_01", "subject": "לשון", "active": true }
+  ],
+  "topics": [
+    { "id": "top_mishpat", "subject": "לשון", "grade": "י", "title": "משפט פשוט ומורכב", "curriculum_ref": "011281", "display_order": 3 }
+  ],
+  "skills": [
+    { "id": "skl_nosenasu", "subject": "לשון", "title": "זיהוי נושא ונשוא", "topic_id": "top_mishpat" }
+  ],
+  "learning_sequences": [
+    { "id": "seq_lashon_i", "subject": "לשון", "grade": "י", "topic_id": "top_mishpat",
+      "title": "מסלול לשון י׳", "unit_count": 6, "curriculum_ref": "011281", "authored_by": "stf_dana" }
+  ],
+  "enrichment_tracks": [
+    { "id": "trk_photo", "title": "מסלול צילום", "theme": "מדיה", "description": "6 יחידות עצמאיות בכל סדר" }
+  ],
+  "content_units": [
+    { "id": "unt_mishpat_1", "title": "משפט פשוט מול משפט מורכב", "subject": "לשון", "grade": "י",
+      "body": "פתיח: איך יודעים אם משפט פשוט או מורכב? ...", "unit_type": "task",
+      "track_id": null, "sequence_id": "seq_lashon_i", "topic_id": "top_mishpat",
+      "skill_ids": ["skl_nosenasu"], "sequence_order": 1, "content_source": "internal", "external_ref": null,
+      "duration": { "mode": "estimated", "targetMinutes": 5, "allowExtension": true },
+      "modes_allowed": ["routine", "remote", "emergency"], "accessibility": true,
+      "parent_unit_id": null, "curated_by": "stf_dana", "active": true },
+    { "id": "unt_mishpat_test", "title": "בוחן: זיהוי סוג משפט", "subject": "לשון", "grade": "י",
+      "body": "5 משפטים — סווגו פשוט/מורכב.", "unit_type": "assessment",
+      "track_id": null, "sequence_id": "seq_lashon_i", "topic_id": "top_mishpat",
+      "skill_ids": ["skl_nosenasu"], "sequence_order": 6, "content_source": "internal", "external_ref": null,
+      "duration": { "mode": "fixed", "targetMinutes": 20, "allowExtension": false },
+      "modes_allowed": ["routine", "remote"], "accessibility": true,
+      "parent_unit_id": null, "curated_by": "stf_dana", "active": true }
+  ],
+  "assignments": [
+    { "id": "asg_01", "content_unit_id": "unt_mishpat_1", "class_id": "cls_i2", "assigned_by": "stf_dana",
+      "mode": "emergency", "scheduled_for": "2026-11-12", "override_body": null,
+      "duration_override": { "mode": "self_paced", "allowExtension": true }, "created_at": "2026-11-12T07:30:00+03:00" }
+  ],
+  "submissions": [
+    { "id": "sub_01", "assignment_id": "asg_01", "student_id": "std_yuval", "status": "completed",
+      "feedback": "יפה, שים לב למילת הקישור.", "grade": null, "support_level": "on_own", "mastery": "core",
+      "hint_used": true, "recovered_after_error": true, "rescue_path": false, "seen_by_teacher": true,
+      "mode": "emergency", "completed_at": "2026-11-12T09:10:00+03:00" }
+  ],
+  "attachments": [
+    { "id": "att_01", "assignment_id": "asg_01", "uploaded_by": "stf_dana", "filename": "dapei-avoda.pdf",
+      "storage_ref": "store/att_01", "size_kb": 180, "created_at": "2026-11-12T07:31:00+03:00" }
+  ],
+  "student_progress": [
+    { "id": "prg_01", "student_id": "std_yuval", "sequence_id": "seq_lashon_i", "current_order": 2,
+      "next_unit_id": "unt_mishpat_2", "next_source": "sequence",
+      "skills_acquired": [], "skills_pending": ["skl_nosenasu"], "teacher_approved": true,
+      "updated_at": "2026-11-12T09:10:00+03:00" }
+  ],
+  "support_profiles": [
+    { "id": "sup_01", "student_id": "std_yuval", "subject": "לשון", "chosen_level": "on_own",
+      "recommended_level": "with_you", "active_level": "on_own", "set_by": "self",
+      "updated_at": "2026-11-12T09:10:00+03:00" }
+  ],
+  "checkins": [
+    { "id": "chk_01", "student_id": "std_yuval", "day": "2026-11-12", "mode": "emergency", "type": "emotional",
+      "mood": "hard", "distress_flag": true, "is_sensitive": true, "alert_sent": true,
+      "seen_by_educator": true, "purge_after": "2026-11-19", "created_at": "2026-11-12T08:05:00+03:00" }
+  ],
+  "daily_presence": [
+    { "id": "dp_01", "student_id": "std_yuval", "day": "2026-11-12", "state": "active", "mode": "emergency" }
+  ],
+  "system_modes": [
+    { "id": "sm_01", "school_id": "sch_01", "mode": "emergency", "activated_by": "stf_principal",
+      "scheduled_for": null, "note": "הפעלת חירום — הנחיית פיקוד העורף", "activated_at": "2026-11-12T06:00:00+03:00" }
+  ],
+  "contact_logs": [
+    { "id": "cl_01", "student_id": "std_yuval", "staff_id": "stf_dana", "day": "2026-11-12", "mode": "emergency",
+      "outcome": "contacted", "channel": "whatsapp", "followup": "retry", "delete_after": "2027-11-12",
+      "created_at": "2026-11-12T10:20:00+03:00" }
+  ],
+  "notifications": [
+    { "id": "ntf_01", "recipient_kind": "parent", "recipient_id": "std_yuval", "channel": "whatsapp",
+      "kind": "weekly_parent", "mode": "emergency", "payload_ref": "weekly/std_yuval/2026-W46",
+      "status": "sent", "created_at": "2026-11-13T16:00:00+03:00" }
+  ],
+  "audit_events": [
+    { "id": "aud_01", "actor_id": "stf_principal", "action": "mode_change", "entity_ref": "sm_01",
+      "mode": "emergency", "delete_after": "2027-11-12", "created_at": "2026-11-12T06:00:00+03:00" }
+  ]
+}
+```
+
+---
+
+## 5. איך הזרימה עובדת בלי שכפול נתונים
 
 ```
-ספרייה            מורה מקצועי         תלמיד              דשבורדים
-ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנך: CheckIn+Submission+ContactLog (כיתתו)
+ספרייה            מורה מקצועי         תלמיד              דשבורדים (עדשות, לא עותקים)
+ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנך: CheckIn+DailyPresence+ContactLog (כיתתו, הווה)
 (תוכן, פעם     (FK ל-content,     (FK ל-assignment,   מנהל: אגרגט על School (סטטוסים, לא תוכן)
- אחת)           mode מוטבע)        status+mode)        פיקוח: אגרגט על School.network/district
-                                    CheckIn             (COUNT/% בלבד — אין נתיב לשם תלמיד)
+ אחת)           mode מוטבע)        status+mode)        פיקוח: אגרגט על network/district (COUNT/% — אין שם תלמיד)
 ```
 
-- **התוכן חי במקום אחד** (`ContentUnit`). כל שאר השרשרת מפנה אליו ב-FK. שינוי ניסוח משנה שורה אחת.
-- **הדשבורדים הם עדשות, לא עותקים.** אותן שורות `CheckIn`/`Submission`/`ContactLog`/`FlagEvent` נקראות בכמה רזולוציות: מחנך (פרטני, כיתתו, **הווה בלבד**) → יועצת (דפוס וחוצה-כיתות מ-`FlagEvent`, **בלי התוכן הרגשי שנמחק**) → מנהל (סטטוסים מצרפיים + עובדת קיום, לא תוכן) → פיקוח (מצרף מלא לפי רשת/מחוז). ההפרדה נאכפת בהיקף השאילתה לפי `StaffRole.role`, לא בהעתקת נתונים.
-- **התפקיד מגיע מ-`StaffRole`, לא מ-`StaffMember`.** אדם יכול להחזיק כמה שורות `StaffRole` (יועצת שהיא גם מחנכת) — הגישה בפועל היא **איחוד** ההרשאות של תפקידיו הפעילים.
-- **`mode` אחיד** מוטבע על כל אירוע מ-`SystemMode` הנוכחי — ולכן כל דוח נחתך לפי מצב בלי טבלה נפרדת למצב.
+- **התוכן חי במקום אחד** (`ContentUnit`); כל השרשרת מפנה אליו ב-FK. שינוי ניסוח = שורה אחת.
+- **הדשבורדים הם שאילתות מסננות** על אותן שורות `Submission`/`CheckIn`/`DailyPresence`/`ContactLog`, ברזולוציות שונות לפי `StaffRole`. ההפרדה נאכפת בהיקף השאילתה — לא בהעתקת נתונים.
+- **`mode` מוטבע** על כל אירוע → כל דוח נחתך לפי מצב בלי טבלה נפרדת.
 
 ---
 
-## 4. חמש שאילתות לדוגמה (במלל)
+## 6. שאילתות לדוגמה (במלל)
 
-1. **"מי לא נראה יומיים בכיתה י'3?"** (לוח הדופק של המחנך)
-   כל `Student` שבו `class_id` = הכיתה ו-`active=true`, שאין לו אף `CheckIn` שבו `day` באחד מיומיים האחרונים. אלה הצהובים. מי שאין לו check-in שלושה ימים ומעלה — או שיש לו `CheckIn.distress_flag=true` היום — הוא אדום.
-
-2. **"רשימת האדומים בבית הספר היום, מי המחנך של כל אחד, והאם כבר פנו אליו."** (עולם המנהל — רשימת אדומים)
-   כל `Student` פעיל בבית הספר (דרך `Class.school_id`) שהוא אדום (ראו שאילתה 1), מצורף ל-`Class.homeroom_teacher_id` לשם המחנך, ומצורף לבדיקה האם קיים `ContactLog` שלו מ-24 השעות האחרונות. אין → "ממתין לפנייה".
-
-3. **"שלושת המספרים של המנהל היום."** (דופק בית הספר + הדוח היומי לוואטסאפ)
-   בהינתן בית ספר: (א) מספר ה-`Student` הנבדלים עם `CheckIn` שבו `day`=היום — "כמה ראינו"; (ב) מספר האדומים; (ג) מספר ה-`StaffMember` הפעילים (שיצרו היום `Assignment`/`ContactLog`/`seen`). אפשר לחתוך לפי `mode` הנוכחי מ-`SystemMode`.
-
-4. **"אילו בתי ספר ירדו בדופק שלושה ימים ברצף?"** (עולם הפיקוח — דגל תמיכה)
-   לכל `School`, אחוז ה-check-in היומי = (תלמידים נבדלים עם CheckIn ביום) חלקי (תלמידים פעילים), לשלושת הימים האחרונים. בתי ספר שבהם האחוז יורד שלושה ימים רצופים מסומנים "מוצע לתמיכה". התוצאה מצרפית בלבד — **אין שם תלמיד או מורה** ברזולוציה הזאת.
-
-5. **"כמה תלמידים נראו היום ברמת המדינה, בבתי ספר שנמצאים במצב חירום?"** (תמונת חירום ארצית)
-   כל `School` שרשומת ה-`SystemMode` האחרונה שלו = `emergency`; לכל אלה, ספירת ה-`Student` הנבדלים עם `CheckIn` שבו `day`=היום ו-`mode='emergency'`. מוחזר כמספר/אחוז ארצי, מקובץ אופציונלית לפי `district` — בלי שמות.
-
-6. **"אילו תלמידים הראו דפוס של 3+ דגלים ב-3 החודשים האחרונים?"** (עולם היועצת — זיהוי דפוס ארוך)
-   לכל `Student` בבית הספר, ספירת `FlagEvent` שבהם `lit_on` בתוך 90 הימים האחרונים. תלמידים עם 3 ומעלה עולים לראש רשימת היועצת. **קריטי:** השאילתה קוראת רק את `FlagEvent` (עובדה: מתי + איזה טריגר), **לא** את `CheckIn.mood` — התוכן הרגשי כבר נמחק אחרי 30 יום. היועצת רואה "כמה ומתי", לא "מה הילד כתב". גישה זו פתוחה רק ל-`StaffRole.role=counselor`.
-
-> שאילתה נוספת שימושית (לוח המחנך): **"אילו check-ins היום עוד לא אושרו על ידי המורה?"** — כל `CheckIn` של כיתתי מהיום שבו `seen_by IS NULL`. אישור מפעיל את "המורה ראה" אצל התלמיד.
+1. **"מי לא נראה יומיים בכיתה י'2?"** (דופק מחנך) — כל `Student` פעיל בכיתה עם `DailyPresence.state='not_seen'` ליומיים אחרונים → צהוב; שלושה ימים ומעלה, או `CheckIn.distress_flag` היום → אדום.
+2. **"רשימת האדומים בבית הספר היום + המחנך + האם פנו."** (מנהל) — `Student` אדום דרך `Class.school_id`, מצורף ל-`homeroom_teacher_id`, ובדיקה אם קיים `ContactLog` מ-24ש'. אין → "ממתין לפנייה".
+3. **"שלושת המספרים של המנהל היום."** — (א) `Student` עם `DailyPresence.state IN (active,partial)` היום; (ב) מספר האדומים; (ג) `StaffMember` פעילים היום. חיתוך לפי `mode` הנוכחי.
+4. **"אילו בתי ספר ירדו בדופק 3 ימים ברצף?"** (פיקוח) — לכל `School`, % נוכחות = (`DailyPresence` ≠ not_seen) / (פעילים), 3 ימים. יורד רצוף → "מוצע לתמיכה". **מצרפי בלבד — אין שם תלמיד/מורה ברזולוציה הזו.**
+5. **"כמה נראו היום ארצית בבתי ספר במצב חירום?"** — כל `School` שרשומת `SystemMode` האחרונה = `emergency`; ספירת `DailyPresence.state≠not_seen` היום. מוחזר כמספר/אחוז ארצי, אופציונלית לפי `district` — בלי שמות.
+6. **"אילו check-ins היום עוד לא ראה המחנך?"** — כל `CheckIn` של כיתתי מהיום עם `seen_by_educator=false`. אישור → מפעיל "המורה ראה".
 
 ---
 
-## 5. הגדרת סיום — כל מסך מצביע על הישויות שהוא קורא/כותב
+## 7. הגדרת סיום — כל מסך → הישויות שהוא קורא/כותב (תמצית)
 
-| עולם / מסך (spec §5) | קורא | כותב |
-|----------------------|------|------|
-| **תלמיד — check-in** | CheckIn (רצף), SystemMode (מצב→סוג) | CheckIn |
-| **תלמיד — משימת 10 דק'** | Assignment, ContentUnit, Attachment, Submission | Submission (status/completed) |
-| **תלמיד — מופע הערכה** | Assignment→ContentUnit(`unit_type=assessment`) | Submission (grade — אישי) |
-| **תלמיד — הרשמה (שכבת למידה)** | Student | Student.registered |
-| **תלמיד — "המורה ראה"** | CheckIn.seen_by, Submission.seen_by_teacher | — |
-| **תלמיד — "תסביר אחרת" (AI)** | ContentUnit/Assignment (תוכן המשימה בלבד) | — (בלי זיכרון שיחה) |
-| **מחנך — לוח דופק** | CheckIn, Student, Class, ContactLog | — |
-| **מחנך — פנייה בלחיצה** | Student.phone, Class | Notification, ContactLog |
-| **מחנך — דגלים רגשיים** | CheckIn.distress_flag (כיתתו, הווה בלבד) | CheckIn.seen_by, FlagEvent (הדלקה) |
-| **מחנך — יומן קשר** | ContactLog | ContactLog |
-| **מחנך — שדה הערה** | StudentNote (כיתתו, שלו בלבד) | StudentNote |
-| **מחנך — "העבר ליועצת"** | FlagEvent (הנוכחי), StudentNote (שלו — לבחירת מה לשתף) | FlagEvent.resolution=`referred` + `shared_note` (מה שהמחנך בחר), Notification (ליועצת) |
-| **יועצת — רשימת דפוסים** | FlagEvent (חוצה-כיתות, 90 יום — מטא בלבד), Student, Class | — |
-| **יועצת — טיפול בהפניה** | FlagEvent (כולל `shared_note` שהמחנך העביר), ContactLog | FlagEvent.handled_by/resolution, ContactLog |
-| **מורה מקצועי — שלח משימה** | ContentUnit, Class | Assignment |
-| **מורה — צירוף חומרים** | Assignment | Attachment |
-| **מורה — התאמת AI** | ContentUnit | Assignment.override_body |
-| **מורה — לוח הגשות + הערכה** | Submission, Student | Submission.seen_by_teacher, Submission.grade, Notification (teacher_saw) |
-| **מנהל — 3 מספרים** | CheckIn, Submission, StaffMember (אגרגט בית ספרו) | — |
-| **מנהל — דופק צוות** | StaffMember.active, ContactLog, Assignment | — |
-| **מנהל — רשימת אדומים** | Student, CheckIn, Class, ContactLog | — |
-| **מנהל — דוח יומי לוואטסאפ** | CheckIn, Submission, StaffMember | Notification (daily_report) |
-| **מנהל — כפתור מעבר מצב** | SystemMode (נוכחי) | SystemMode (רשומה חדשה), Notification (mode_change) |
-| **ספרייה — מדף הרציפות** | ContentUnit (task/assessment/reference) | ContentUnit (אוצרות) |
-| **ספרייה — מסלולי העשרה** | EnrichmentTrack, ContentUnit.track_id | EnrichmentTrack, ContentUnit |
-| **ספרייה — פריט הפניה חיצוני** | ContentUnit(`source=external`, external_ref) | ContentUnit |
-| **ספרייה — גרסה נגישה** | ContentUnit.parent_unit_id | ContentUnit (variant) |
-| **פיקוח — תמונה מצרפית** | School, Class, Student, CheckIn (COUNT/% בלבד) | — |
-| **פיקוח — דגל תמיכה** | School + מגמת CheckIn | — (הצעת עזרה, מחוץ למודל הנתונים) |
-| **פיקוח — תמונת חירום ארצית** | SystemMode, School.district, CheckIn | — |
-| **הורים — הודעה שבועית** | Student.guardian_phone, Class | Notification (weekly_parent) |
-| **הורים — התראת מעבר מצב** | SystemMode, Student.guardian_phone | Notification (mode_change) |
-| **AI — כפתור בכל עולם** | הישות של ההקשר בלבד (משימה/פנייה/דוח) | override_body / טיוטת Notification (לאישור אנושי) |
-
-**כל מסך מהאפיון מצביע על הישויות שהוא קורא וכותב → הגדרת הסיום מתקיימת.**
+| תצוגה (prd §8) | קורא | כותב |
+|----------------|------|------|
+| תלמיד — check-in | CheckIn, SystemMode | CheckIn (מתריע), DailyPresence |
+| תלמיד — יחידה (משך גמיש) | Assignment, ContentUnit(`duration`), Attachment | Submission (status) |
+| תלמיד — מופע הערכה | Assignment→ContentUnit(`assessment`) | Submission (grade — אישי) |
+| מורה — שלח משימה | ContentUnit, Class | Assignment (+`duration_override`) |
+| מורה — לוח הגשות + הערכה | Submission, Student | Submission.seen_by_teacher/grade, Notification |
+| מחנך — דופק כיתתי | DailyPresence, CheckIn, Student, Class | CheckIn.seen_by_educator |
+| מחנך — יומן קשר | ContactLog | ContactLog (מובנה) |
+| מנהל — 3 מספרים + מתג מצב | DailyPresence, Submission, StaffMember, SystemMode | SystemMode, Notification |
+| ספרייה | ContentUnit, EnrichmentTrack, LearningSequence | ContentUnit (אוצרות) |
+| פיקוח ארצי — מצרפי | **`NationalPulseView` בלבד** (§11 — היטל מצרפי, בלי עמודת זהות) | Notification (broadcast לפי scope) |
+| הורים — יידוע | Student.guardian_phone | Notification (weekly_parent) |
+| Admin / מערכת | AuditEvent | AuditEvent |
 
 ---
 
-## 6. שאלות פתוחות למיטל
+## 8. שאלות פתוחות (לסגירה מול המשרד / מיטל)
 
-1. **✅ הוכרע 9.7.2026 — מחיקה חלקית של check-in רגשי:** **מחיקה חלקית — מוחקים את התוכן הרגשי, שומרים מטא ב-`FlagEvent`.** אחרי 30 יום `CheckIn.mood`/`distress_flag` (התוכן הרגשי) נמחקים, אבל עצם העובדה שנדלק דגל — סוגו (`trigger`) ותאריכו (`lit_on`) — נשמר ב-`FlagEvent` לשנה. עובדת הנוכחות הבסיסית נשמרת עד תום שנה"ל (§7.2). לא מוחקים את הרשומה במלואה.
-2. **✅ הוכרע 9.7.2026 — `guardian_phone`:** אוספים טלפון הורה **נפרד** (שדה `guardian_phone` על `Student`), **לא** משתמשים בטלפון התלמיד להודעות הורים. זהו השדה היחיד על הורה במערכת — אין פרופיל הורה.
-3. ~~**ריבוי תפקידים לאיש צוות.**~~ **✅ הוכרע 9.7.2026:** נוספה טבלת `StaffRole` — אדם אחד מחזיק כמה תפקידים (יועצת+מחנכת). נוסף `role=counselor`. הגישה = איחוד הרשאות התפקידים הפעילים.
+1. **🔴 אחסון (Data Residency).** איפה הנתונים יושבים פיזית? להניח **ישראל** (הנחיית רמו"ט + נוהג משה"ח לרשומות קטינים), לוודא מול המשרד לפני כל הבטחה. משפיע על `storage_ref` ב-`Attachment` (`security-minimization.md` §4.1).
+2. **🔴 טווח `purge_after` ל-check-in רגשי.** ברירת המחדל של 3.0 היא **מוקדם ככל האפשר** ("מתריע ונמחק"). כמה זמן בדיוק מחזיקים את ה-`mood` לפני איפוס — יום? עד סוף היום? להכריע עם מיטל/DPO (1.3 קבע 30 יום — נראה ארוך מדי לגרסת "בטוחה-לביקורת").
+3. **🟡 `hint_used`/`recovered_after_error`.** נשמרו כבוליאנים גסים פר-הגשה (ערך פדגוגי). `security-minimization.md` §3 שורה 2 מזכיר `hintsUsed` כדבר למזער — לאשר שבוליאני-גס-אחד מקובל (בניגוד לספירה/חותמת זמן), או להסיר גם אותם.
+4. **🟡 מדיניות שמירה ל-`ContactLog`/`AuditEvent`.** `delete_after` מוגדר כשדה — הערך המספרי (למשל שנה) טעון אישור DPO.
+5. **🟡 ערך `k` ל-k-אנונימיות ב-`NationalPulseView`** (§11.3). סף הדחקת תא קטן במצרפי הארצי — מוצע `k ≥ 5`, טעון אישור DPO מול המשרד.
 
-4. **✅ הוכרע 9.7.2026 — יועצת ודפוס ארוך:** התוכן הרגשי (`CheckIn.mood`) נמחק ב-30 יום, אבל `FlagEvent` (עובדת ההדלקה — מתי + איזה טריגר) נשמר לשנה. היועצת רואה דפוס מ-`FlagEvent` בלי התוכן הרגיש. **סף הדפוס = 90 יום** (שאילתה §4.6).
-5. **✅ הוכרע 9.7.2026 — מסירת הערת מחנך:** בהעברה ליועצת (`FlagEvent.resolution=referred`), **המחנך בוחר מה לשתף** — לא מסירה אוטומטית של `StudentNote`. ההערה נשארת פרטית לכותב; מה שעובר ליועצת הוא רק מה שהמחנך בחר להעביר אקטיבית. (ראו מיפוי המסך "מחנך — העבר ליועצת".)
-6. **✅ הוכרע 9.7.2026 — אין שדה מגדר לצוות:** **אין שדה `gender` ל-`StaffMember`** — כל הנוסחים הפונים למחנך מנוסחים נייטרלית מגדרית (לשון רבים — "ראו"/"יחזרו" — או צורה משולבת). לא נאסף מגדר לאיש צוות.
+---
+
+## 9. הערות מבניות
+
+- **`School`** לא הופיע ברשימת עשר ישויות-הליבה, אך נדרש מבנית כדי שהזרימה לפיקוח (אגרגציה לפי בית ספר/רשת/מחוז) תעבוד **בלי טבלת סיכום נפרדת**. מוחזק דק (4 שדות), עוגן היררכיה בלבד.
+- **"משתמשים"** = `Student` ∪ `StaffMember`; ההפרדה מכוונת (בקרת פרטיות). "אירועים" = `SystemMode` (מעברי מצב) + `AuditEvent` (לוג ביקורת).
+- **RBAC** מוגדר כאן ברמת עיקרון (§0.3, `StaffRole`); המטריצה המלאה נאכפת ב-**W0-02**.
+
+---
+
+## 10. נספח — מורחב / דחוי (לא ב-MVP-A · נשמר, לא נמחק)
+
+עבודת עיצוב מ-1.3 שהוצאה מ-MVP-A כדי לעמוד ב-3.0 "בטוחה-לביקורת". **חוזרת רק אחרי בדיקת פרטיות נפרדת ואישור DPO** (prd §9 "דחוי במפורש — נדחה, לא נאסר").
+
+| רכיב 1.3 | מה זה | למה נדחה מ-MVP-A | תנאי החזרה |
+|----------|-------|------------------|-------------|
+| **`FlagEvent`** | מטא-דגל (trigger + `lit_on`) שנשמר לשנה, לזיהוי דפוס ארוך | מחזיק רשומה התנהגותית לאורך זמן על קטין הנגזרת מ-check-in רגשי — מתוח מול 3.0 "מתריע ונמחק בלי היסטוריה רגשית" | אישור DPO שמטא-בלבד (בלי `mood`) אינו מב"ר + מדיניות שמירה |
+| **`role=counselor` (יועצת)** | תפקיד שצורך את `FlagEvent` לדפוס חוצה-כיתות | תלוי ב-`FlagEvent`; אינו בפרסונות של prd §8 | יחד עם `FlagEvent` |
+| **`ContactLog.note` / `StudentNote`** | הערת טקסט חופשית של מחנך | "שדה חופשי הוא הכי מסוכן" (`security-minimization.md` §3 שורה 4) — הוחלף בשדות מובנים | אם בכלל — עם הגבלת אורך, גישה ומחיקה מוקשחות |
+| **`SupportProfile.rescue_entries/recoveries`** | מונים מצטברים של כניסות/יציאות ממסלול הצלה | צובר היסטוריה על קטין; §3 שורה 7 (בלי פרופיל מתמשך) | כשיאושר פרופיל מתמשך |
+
+> הגדרות השדות המלאות של הרכיבים האלה נשמרות בהיסטוריית git של גרסה 1.3 של הקובץ הזה — לא אבדו. תיאום `flags-protocol.md`/`governance.md` לגרסה 3.0 = משימה נפרדת.
+
+---
+
+## 11. גבול המצרפיות הארצית — נאכף במבנה (W0-S6)
+
+**מזהה משימה:** W0-S6 · **מסמכי-אב:** prd §8 (פיקוח ארצי), §10 (`dashboard ארצי מצרפי — נאכף במודל הנתונים`) · `security-minimization.md` §3 שורה 5 · `governance.md` §1.2, §3.4
+
+> **הבעיה:** עד כאן המצרפיות הארצית נשענה על **מוסכמת שאילתה** — "הפיקוח שואב `COUNT/%` בלבד" (§0.3, §6 שאילתות 4–5). זו **הצהרה**: מפתח שיכתוב `SELECT first_name` בטעות שובר אותה. הדרישה של W0-S6 היא **מבנית** — שהמבנה עצמו לא *יוכל* להחזיר תלמיד בודד, לא שיבטיח לא לעשות זאת.
+
+### 11.1 העיקרון — אי אפשר לרדת (drill) לעמודה שאינה קיימת
+
+התצוגה הארצית **לא ניגשת לטבלאות האירועים** (`Submission` · `CheckIn` · `DailyPresence` · `ContactLog`). היא ניגשת אך ורק ל**היטל מצרפי נגזר** (projection / view) בשם **`NationalPulseView`**, שאין בו — **מעצם צורתו** — אף עמודת זהות ואף FK לתלמיד/צוות/כיתה. drill לתלמיד בודד דורש או עמודת מזהה או מעקב FK אל `Student`; בהיטל אין לא זה ולא זה. **אין מה לבחור ואין אחרי מה לעקוב** — האיסור אינו כלל שזוכרים לאכוף, הוא היעדר מבני.
+
+### 11.2 `NationalPulseView` — הסכימה (היטל מצרפי בלבד)
+
+היטל קריאה נגזר (materialized view / read-model), **הישות היחידה** ש-`StaffRole` ארצי (§11.4) קורא ממנה:
+
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| scope_level | enum | `national` / `district` / `network` — **גאוגרפי/ארגוני בלבד** |
+| scope_key | string | קוד מחוז/רשת. **לעולם לא מזהה אדם, כיתה או בית ספר בודד ברמת הפרט** |
+| mode | enum | `routine`/`remote`/`emergency` — ציר הניתוח (§0.1) |
+| period | date/range | יום או טווח |
+| n_schools | int | בתי ספר בהיקף |
+| n_schools_emergency | int | מתוכם במצב חירום |
+| n_active / n_partial / n_not_seen | int | ספירת נוכחות מצרפית (מ-`DailyPresence`, מקובצת) |
+| pct_seen | float | % שנראו |
+| pct_completed | float | % השלמת משימות (מ-`Submission.status`, מקובץ) |
+
+**נעדר מעצם הבנייה (לא "מוסתר" — פשוט לא קיים בהיטל):** `student_id` · `first_name` · `phone` · `access_token` · `staff_id` · `class_id` · `submission.grade` · כל תוכן `CheckIn`/`ContactLog`. אין FK מ-`NationalPulseView` לאף ישות זהות.
+
+> **מבני מול הצהרתי:** שאילתה גולמית מעל `Student` עם מדיניות "רק `COUNT`" = הצהרתית (טעות אחת חושפת שם). היטל שאין בו עמודת זהות = מבנית (אין שם מה לחשוף). זה ההבדל ש-W0-S6 דורש.
+
+### 11.3 k-אנונימיות — סגירת דליפת התא הקטן
+
+מצרפיות **הכרחית אך לא מספקת**: תא בגודל 1 מזהה מחדש (מחוז עם בית ספר יחיד בחירום; בית ספר עם תלמיד פעיל יחיד → "המספר הזה = הילד הזה"). לכן ב-`NationalPulseView`:
+
+- כל תא שאוכלוסיית הבסיס שלו `< k` — **מודחק** (מוחזר כ־`—/מוסך`) או **מתמזג כלפי מעלה** לרמת ה-scope ההורה, עד שהתא ≥ `k`.
+- הכלל אכוף **בהגדרת ההיטל**, לא ב-UI — ה-UI לא יכול לבקש את התא המודחק כי ההיטל לא מחזיר אותו.
+- **ערך `k` = שאלה פתוחה ל-DPO** (§8, סעיף חדש 5). מוצע סף שמרני (למשל `k ≥ 5`); ההכרעה מול המשרד.
+
+### 11.4 קשירת ה-RBAC — למי מותר לקרוא מה
+
+| `StaffRole` | `school_id` | ניגש ל | drill לתלמיד |
+|-------------|-------------|--------|:---:|
+| `supervisor` (פיקוח ארצי) | `null` | **`NationalPulseView` בלבד** (`scope_level=national/district`) | ✕ מבני |
+| `supervisor` (מפקח מקצועי) | `null` + `subject` | היטל מצרפי לפי בית ספר/רשת בתחום הדעת — ללא עמודת זהות | ✕ מבני |
+| `principal` | בית ספר | טבלאות האירועים בהיקף בית ספרו — **רשימת אדומים בלבד** ברזולוציית פרט (§6 שאילתה 2) | ✓ רק אדומים, בבית ספרו |
+
+מפתח הפתרון (resolver): `StaffRole.school_id = null` **אינו** נפתר להיקף "כל בתי הספר בטבלאות האירועים" — הוא נפתר **אך ורק** ל-`NationalPulseView`. אין מסלול קוד שממפה תפקיד ארצי אל שורות `Student`.
+
+### 11.5 הודעה ארצית = כתיבה בהיקף, לא קריאת יחידים
+
+"הודעות ארציות" (prd §8) הן **כתיבת `Notification`** ממוקדת לפי `scope_key` (מחוז/רשת), שמפוזרת ע"י שירות ההתראות — הפיקוח הארצי **לא מקבל את רשימת הנמענים הקטינים**. broadcast לפי היקף, בלי enumerate של אנשים.
+
+### 11.6 הגדרת סיום (W0-S6)
+
+- ✅ תצוגה ארצית קוראת מ-`NationalPulseView` בלבד; אין FK/עמודת זהות בהיטל.
+- ✅ `StaffRole` ארצי (`school_id=null`) נפתר להיטל בלבד — לא לטבלאות האירועים.
+- ✅ k-anonymity אכוף בהיטל (ערך `k` = שאלה פתוחה ל-DPO).
+- ✅ `governance.md` §1.2/§3.4 מפנים למנגנון המבני הזה (במקום ל-`§4.4` שלא היה קיים).
+- ⏳ צריכת ההיטל ב-`national-map.html` = משימה נפרדת ודחויה (prd §9) — כשתיבנה, **חובה** שתקרא מ-`NationalPulseView`, לא מ-`Student`.
