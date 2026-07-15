@@ -88,8 +88,25 @@ svg{display:block}
 .page-hd .em-note{display:none}
 .page-hd .em-note svg{color:var(--mode);flex-shrink:0}
 
+/* ---------- כותרת מקטע (מקצוע נוכחי / שאר המקצועות) ---------- */
+.subj-sec{display:flex;align-items:center;gap:var(--space-2);margin:var(--space-5) 0 var(--space-2);font-family:var(--font-head);font-size:13px;font-weight:700;color:var(--ink-soft)}
+.subj-sec:first-child{margin-top:var(--space-3)}
+.subj-sec .ln{flex:1;height:1px;background:var(--line)}
+
 /* ---------- רשימת מקצועות ---------- */
-.subjects{display:flex;flex-direction:column;gap:var(--space-4);margin-top:var(--space-3)}
+.subjects{display:flex;flex-direction:column;gap:var(--space-3);margin-top:var(--space-2)}
+
+/* ---------- כרטיס קומפקטי (שאר המקצועות) ---------- */
+.subj--compact{padding:var(--space-4)}
+.subj--compact .subj-hd{margin-bottom:var(--space-3)}
+.subj--compact .subj-ic{width:38px;height:38px}
+.subj--compact .subj-ic svg{width:20px;height:20px}
+.cbar{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)}
+.cbar .track{flex:1;height:7px;background:var(--surface-muted);border-radius:var(--radius-pill);overflow:hidden}
+.cbar .fill{height:100%;background:var(--brand);border-radius:var(--radius-pill)}
+.cbar .txt{font-size:12px;font-weight:600;color:var(--ink-soft);white-space:nowrap}
+.subj-go--sm{min-height:40px;font-size:14px;background:var(--surface-muted);color:var(--brand-deep);border:1px solid var(--brand-line);box-shadow:none}
+.subj-go--sm:hover{background:var(--brand-soft)}
 
 .subj{
   background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
@@ -325,11 +342,11 @@ svg{display:block}
       ]},
     { name:'אנגלית', icon:'globe',
       units:[
-        {t:'Vocabulary', s:'done'},
-        {t:'Grammar',    s:'done'},
-        {t:'Reading',    s:'now'},
-        {t:'Writing',    s:'next'},
-        {t:'Speaking',   s:'later'}
+        {t:'Vocabulary', he:'אוצר מילים', s:'done'},
+        {t:'Grammar',    he:'דקדוק',      s:'done'},
+        {t:'Reading',    he:'קריאה',      s:'now'},
+        {t:'Writing',    he:'כתיבה',      s:'next'},
+        {t:'Speaking',   he:'דיבור',      s:'later'}
       ]},
     { name:'מגמת חשמל', icon:'bolt',
       units:[
@@ -364,6 +381,10 @@ svg{display:block}
 
   function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
+  /* תווית יחידה: עברית ראשית לכיתוב קצר; דו-לשוני היכן שיש מקום. */
+  function label(u){ return u.he || u.t; }
+  function labelBi(u){ if(!u) return '—'; return u.he ? u.he + ' · ' + u.t : u.t; }
+
   function seqHTML(units){
     var reached={done:1,now:1}; // עד הנקודה הנוכחית (כולל) — הקו מלא
     var last=units.length-1;
@@ -381,59 +402,83 @@ svg{display:block}
           '<span class="bead">'+inner+'</span>'+
           '<span class="seg '+afterCls+'"></span>'+
         '</div>'+
-        '<span class="cap">'+esc(u.t)+'</span>'+
+        '<span class="cap">'+esc(label(u))+'</span>'+
       '</div>';
     }).join('');
   }
 
+  function subjStats(sub){
+    var done=sub.units.filter(function(u){return u.s==='done';}).length;
+    var total=sub.units.length;
+    var now=sub.units.filter(function(u){return u.s==='now';})[0];
+    var next=sub.units.filter(function(u){return u.s==='next';})[0];
+    var lastDone=null; sub.units.forEach(function(u){if(u.s==='done')lastDone=u;});
+    var complete=!now && !next && done===total;
+    return { done:done, total:total, now:now, next:next, lastDone:lastDone, complete:complete,
+      pct:Math.round((done/total)*100), left:total-done,
+      pos: complete ? 'הושלם · '+total+' יחידות' : 'יחידה '+(done+1)+' מתוך '+total };
+  }
+
+  function hdHTML(sub,x){
+    return '<div class="subj-hd">'+
+      '<span class="subj-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+ICONS[sub.icon]+'</svg></span>'+
+      '<span class="name"><h2>'+esc(sub.name)+'</h2><span class="pos">'+x.pos+'</span></span>'+
+      '<span class="pct">'+x.pct+'%<small>הושלם</small></span>'+
+    '</div>';
+  }
+
+  /* כרטיס מלא — למקצוע הנוכחי (המקצוע הבא שלי) */
+  function fullCard(sub){
+    var x=subjStats(sub);
+    var rows='';
+    rows+='<li class="s-done"><span class="k">'+K_DONE+'הושלם לאחרונה</span><span class="v">'+esc(labelBi(x.lastDone))+'</span></li>';
+    if(x.now) rows+='<li class="s-now"><span class="k">'+K_NOW+'לומדים עכשיו</span><span class="v">'+esc(labelBi(x.now))+'</span></li>';
+    if(x.complete) rows+='<li class="s-left"><span class="k">'+K_LEFT+'מה נשאר</span><span class="v">סיימת את כל המסלול</span></li>';
+    else rows+='<li class="s-left"><span class="k">'+K_LEFT+'הבא בתור</span><span class="v">'+esc(labelBi(x.next))+' · נשארו '+x.left+' יחידות</span></li>';
+
+    var btn = x.complete
+      ? '<button class="subj-go" type="button">חזרה על המסלול<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/></svg></button>'
+      : '<button class="subj-go" type="button">המשך · '+esc(label(x.now))+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>';
+
+    var aria = x.complete ? sub.name+': הושלם, כל '+x.total+' היחידות'
+      : sub.name+': יחידה '+(x.done+1)+' מתוך '+x.total+', לומדים עכשיו '+(x.now?label(x.now):'')+', נשארו '+x.left+' יחידות';
+
+    return '<article class="subj'+(x.complete?' complete':'')+'">'+
+      hdHTML(sub,x)+
+      '<div class="seq" role="img" aria-label="'+esc(aria)+'">'+seqHTML(sub.units)+'</div>'+
+      '<ul class="state">'+rows+'</ul>'+ btn +
+    '</article>';
+  }
+
+  /* כרטיס קומפקטי — שאר המקצועות (סריקה והשוואה מהירה) */
+  function compactCard(sub){
+    var x=subjStats(sub);
+    var leftTxt = x.complete ? 'הושלם' : 'נשארו '+x.left+' יחידות';
+    var btn = x.complete
+      ? '<button class="subj-go subj-go--sm" type="button">חזרה על המסלול<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/></svg></button>'
+      : '<button class="subj-go subj-go--sm" type="button">המשך · '+esc(label(x.now))+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>';
+    return '<article class="subj subj--compact'+(x.complete?' complete':'')+'">'+
+      hdHTML(sub,x)+
+      '<div class="cbar"><div class="track"><div class="fill" style="width:'+x.pct+'%"></div></div><span class="txt">'+leftTxt+'</span></div>'+
+      btn+
+    '</article>';
+  }
+
   function render(){
     var host=document.getElementById('subjects');
-    host.innerHTML=SUBJECTS.map(function(sub){
-      var done=sub.units.filter(function(u){return u.s==='done';}).length;
-      var total=sub.units.length;
-      var now=sub.units.filter(function(u){return u.s==='now';})[0];
-      var next=sub.units.filter(function(u){return u.s==='next';})[0];
-      var lastDone=null;
-      sub.units.forEach(function(u){if(u.s==='done')lastDone=u;});
-      var complete=!now && !next && done===total;
-      var pct=Math.round((done/total)*100);
-      var left=total-done;
+    if(!SUBJECTS.length){ host.innerHTML=''; document.getElementById('empty').style.display='block'; return; }
+    document.getElementById('empty').style.display='none';
 
-      var pos = complete ? 'הושלם · '+total+' יחידות'
-                         : 'יחידה '+(done+1)+' מתוך '+total;
+    // המקצוע הבא שלי = הראשון שטרם הושלם
+    var fi=0; for(var i=0;i<SUBJECTS.length;i++){ if(!subjStats(SUBJECTS[i]).complete){ fi=i; break; } }
 
-      // שורות "איפה אני"
-      var rows='';
-      rows+='<li class="s-done"><span class="k">'+K_DONE+'הושלם לאחרונה</span><span class="v">'+esc(lastDone?lastDone.t:'—')+'</span></li>';
-      if(now){
-        rows+='<li class="s-now"><span class="k">'+K_NOW+'לומדים עכשיו</span><span class="v">'+esc(now.t)+'</span></li>';
-      }
-      if(complete){
-        rows+='<li class="s-left"><span class="k">'+K_LEFT+'מה נשאר</span><span class="v">סיימת את כל המסלול</span></li>';
-      }else{
-        rows+='<li class="s-left"><span class="k">'+K_LEFT+'הבא בתור</span><span class="v">'+esc(next?next.t:'—')+' · נשארו '+left+' יחידות</span></li>';
-      }
-
-      var btn = complete
-        ? '<button class="subj-go" type="button">חזרה על המסלול<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 4v4h4"/></svg></button>'
-        : '<button class="subj-go" type="button">המשך · '+esc(now?now.t:'')+'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>';
-
-      var aria = complete
-        ? sub.name+': הושלם, כל '+total+' היחידות'
-        : sub.name+': יחידה '+(done+1)+' מתוך '+total+', לומדים עכשיו '+(now?now.t:'')+', נשארו '+left+' יחידות';
-
-      return '<article class="subj'+(complete?' complete':'')+'">'+
-        '<div class="subj-hd">'+
-          '<span class="subj-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+ICONS[sub.icon]+'</svg></span>'+
-          '<span class="name"><h2>'+esc(sub.name)+'</h2><span class="pos">'+pos+'</span></span>'+
-          '<span class="pct">'+pct+'%<small>הושלם</small></span>'+
-        '</div>'+
-        '<div class="seq" role="img" aria-label="'+esc(aria)+'">'+seqHTML(sub.units)+'</div>'+
-        '<ul class="state">'+rows+'</ul>'+
-        btn+
-      '</article>';
-    }).join('');
-    document.getElementById('empty').style.display = SUBJECTS.length ? 'none' : 'block';
+    var html='<div class="subj-sec">המקצוע הבא שלי<span class="ln"></span></div>'+fullCard(SUBJECTS[fi]);
+    var rest=SUBJECTS.filter(function(s,idx){ return idx!==fi; });
+    if(rest.length){
+      html+='<div class="subj-sec">שאר המקצועות<span class="ln"></span></div>';
+      rest.forEach(function(s){ html+=compactCard(s); });
+    }
+    host.innerHTML=html;
   }
 
   // מתג מצב מערכת (דמו) — משנה data-mode; הצבע נמשך מ-tokens.css

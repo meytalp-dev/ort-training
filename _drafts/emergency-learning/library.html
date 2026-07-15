@@ -67,6 +67,17 @@
   }
   .facet-group__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); flex: 1; min-width: 0; }
 
+  /* כפתור "מסננים נוספים" — מקפל את מסנן הרמה */
+  #facetsAdv .facet-group { border-top: 1px dashed var(--line); }
+  .lib-morefilters {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: var(--space-3);
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 700;
+    color: var(--brand-deep); background: transparent; border: 0; cursor: pointer; padding: 4px 2px;
+  }
+  .lib-morefilters:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .lib-morefilters:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 4px; }
+  .lib-morefilters svg { width: 15px; height: 15px; }
+
   /* צ'יפ-סינון (בנוי על .chip; מצב פעיל = מותג) */
   .facet-chip {
     display: inline-flex; align-items: center; gap: var(--space-2);
@@ -256,6 +267,7 @@
   <symbol id="ic-plus-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
   <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="ic-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
   <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
   <symbol id="ic-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.5 3 6 3s6-2 6-3v-5"/></symbol>
   <symbol id="ic-slider" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h11M18 6h2M4 12h4M11 12h9M4 18h8M15 18h5"/><circle cx="16" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="13" cy="18" r="2"/></symbol>
@@ -385,8 +397,15 @@
           </div>
 
           <div id="facets" aria-label="מסננים">
-            <!-- קבוצות-הסינון מוזרקות מ-JS (מקצוע / שכבה / רמה / סוג) -->
+            <!-- קבוצות ברירת-המחדל: מקצוע / שכבה / סוג -->
           </div>
+          <div id="facetsAdv" hidden aria-label="מסננים נוספים">
+            <!-- קבוצות נוספות (רמה) — נגלות בלחיצה -->
+          </div>
+          <button class="lib-morefilters" id="moreFilters" type="button" aria-expanded="false" aria-controls="facetsAdv">
+            <svg aria-hidden="true"><use href="#ic-slider"/></svg>
+            <span id="moreFiltersTxt">מסננים נוספים</span>
+          </button>
         </section>
 
         <!-- ===== סיכום + ניקוי ===== -->
@@ -531,7 +550,7 @@
   var FACET_DEFS = [
     { key:'subject', label:'מקצוע', options: Object.keys(SUBJECTS).map(function(k){ return { v:k, label:SUBJECTS[k] }; }) },
     { key:'grade',   label:'שכבה',  options: Object.keys(GRADES).map(function(k){ return { v:k, label:GRADES[k] }; }) },
-    { key:'level',   label:'רמה',   options: Object.keys(LEVELS).map(function(k){ return { v:k, label:LEVELS[k] }; }) },
+    { key:'level',   label:'רמה',   advanced:true, options: Object.keys(LEVELS).map(function(k){ return { v:k, label:LEVELS[k] }; }) },
     { key:'type',    label:'סוג',   options: Object.keys(TYPES).map(function(k){ return { v:k, label:TYPES[k].label, dot:TYPES[k].c }; }) }
   ];
 
@@ -542,6 +561,7 @@
 
   /* ---------- בניית סרגל-הסינון ---------- */
   var facetsEl = document.getElementById('facets');
+  var facetsAdvEl = document.getElementById('facetsAdv');
   FACET_DEFS.forEach(function (group) {
     var wrap = document.createElement('div');
     wrap.className = 'facet-group';
@@ -594,8 +614,20 @@
     });
 
     wrap.appendChild(chips);
-    facetsEl.appendChild(wrap);
+    (group.advanced ? facetsAdvEl : facetsEl).appendChild(wrap);
   });
+
+  /* toggle "מסננים נוספים" */
+  (function () {
+    var btn = document.getElementById('moreFilters');
+    var txt = document.getElementById('moreFiltersTxt');
+    btn.addEventListener('click', function () {
+      var open = facetsAdvEl.hidden;
+      facetsAdvEl.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      txt.textContent = open ? 'פחות מסננים' : 'מסננים נוספים';
+    });
+  })();
 
   /* ============================================================
      רינדור כרטיס-משאב
@@ -625,7 +657,7 @@
       ? '<span class="res-new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 6"/></svg>פורסם</span>'
       : '';
     var safe = r.safe
-      ? '<span class="res-safe"><svg aria-hidden="true"><use href="#ic-shield"/></svg>בטוח לחירום</span>'
+      ? '<span class="res-safe" tabindex="0" title="מותאם לרשת חלשה · משך קצר · ללא קבצים כבדים · מתאים ללמידה עצמאית"><svg aria-hidden="true"><use href="#ic-shield"/></svg>בטוח לחירום</span>'
       : '';
     var fav = F.isFavorite(r.id);
     var favBtn = '<button class="res-fav" type="button" data-fav="' + esc(r.id) + '" ' +
@@ -644,10 +676,9 @@
         '<div class="res-card__meta">' +
           (SUBJECTS[r.subject] ? '<span class="res-chip"><svg aria-hidden="true"><use href="#ic-book"/></svg>' + esc(SUBJECTS[r.subject]) + '</span>' : '') +
           (GRADES[r.grade] ? '<span class="res-chip res-chip--grade"><svg aria-hidden="true"><use href="#ic-cap"/></svg>שכבה ' + esc(GRADES[r.grade]) + '</span>' : '') +
-          (LEVELS[r.level] ? '<span class="res-chip"><svg aria-hidden="true"><use href="#ic-slider"/></svg>' + esc(LEVELS[r.level]) + '</span>' : '') +
         '</div>' +
         '<div class="res-card__foot">' +
-          '<span class="res-card__stat"><svg aria-hidden="true"><use href="#ic-repeat"/></svg>' + r.uses + ' שיבוצים · ' + r.min + ' דק\'</span>' +
+          '<span class="res-card__stat"><svg aria-hidden="true"><use href="#ic-clock"/></svg>' + r.min + ' דק\'</span>' +
           '<div class="res-card__actions">' +
             '<button class="btn btn--ghost btn--sm" type="button" data-share="' + esc(r.id) + '" aria-label="שיתוף — ' + esc(r.title) + '">' +
               '<svg viewBox="0 0 24 24"><use href="#ic-share"/></svg>שיתוף</button>' +
