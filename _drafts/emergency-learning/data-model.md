@@ -44,6 +44,11 @@ erDiagram
 
     ENRICHMENT_TRACK ||--o{ CONTENT_UNIT : "מסלול העשרה (5-6 יחידות)"
     LEARNING_SEQUENCE ||--o{ CONTENT_UNIT : "מסלול למידה מסודר (יחידה N מ-M)"
+    TOPIC ||--o{ LEARNING_SEQUENCE : "נושא בתוכנית הלימודים"
+    TOPIC ||--o{ CONTENT_UNIT : "היחידה מלמדת נושא"
+    SKILL ||--o{ CONTENT_UNIT : "היחידה בונה מיומנות"
+    STUDENT ||--o{ STUDENT_PROGRESS : "מפת התקדמות (פר-מסלול)"
+    LEARNING_SEQUENCE ||--o{ STUDENT_PROGRESS : "מיקום התלמיד ברצף"
     STUDENT ||--o{ SUPPORT_PROFILE : "רמת תמיכה פר-מקצוע"
     ASSIGNMENT ||--o{ ATTACHMENT : "חומר שהמורה צירף"
     STAFF_MEMBER ||--o{ ATTACHMENT : "העלה"
@@ -121,6 +126,8 @@ erDiagram
         string unit_type "task/assessment/reference"
         string track_id FK "מסלול העשרה (nullable)"
         string sequence_id FK "מסלול הלמידה (nullable)"
+        string topic_id FK "נושא בתוכנית הלימודים (nullable)"
+        string skill_ids "מערך — מיומנויות שהיחידה בונה"
         int sequence_order "מיקום ברצף — יחידה N מתוך M"
         string content_source "internal/external"
         string external_ref "קמפוס IL/מטח — לפריט הפניה"
@@ -141,15 +148,46 @@ erDiagram
         string id PK
         string subject "מקצוע"
         string grade "שכבה"
+        string topic_id FK "נושא בתוכנית הלימודים (nullable)"
         string title "מסלול אזרחות י׳ / לשון י׳"
         int unit_count "כמה יחידות ברצף (M)"
+        string curriculum_ref "עיגון לתוכנית הלימודים (nullable)"
+        string authored_by FK "מי בנה את המסלול — מורה/אוצר"
+    }
+    TOPIC {
+        string id PK
+        string subject "מקצוע"
+        string grade "שכבה"
+        string title "נושא — 'מערכת הצורות' / 'הרשות המחוקקת'"
+        string curriculum_ref "עיגון לתוכנית הלימודים הרשמית (nullable)"
+        int display_order "סדר בתוך המקצוע"
+    }
+    SKILL {
+        string id PK
+        string subject "מקצוע"
+        string title "מיומנות — 'זיהוי נושא ונשוא' / 'תקציר פסקה'"
+        string topic_id FK "שייכת לנושא (nullable)"
+    }
+    STUDENT_PROGRESS {
+        string id PK
+        string student_id FK
+        string sequence_id FK "המסלול"
+        int current_order "היחידה הנוכחית (נגזר ממקסימום שהושלם +1)"
+        string next_unit_id FK "הצעד הבא — היחידה המומלצת עכשיו"
+        string next_source "sequence/rescue/enrichment — מאיפה נולד הצעד"
+        string skills_acquired "מערך skill_id — מה נרכש עד כה"
+        string skills_pending "מערך skill_id — מה עוד לא נשלט"
+        bool teacher_approved "המורה אישר את הצעד הבא (ברירת מחדל: כן)"
+        datetime updated_at
     }
     SUPPORT_PROFILE {
         string id PK
         string student_id FK
         string subject "פר-מקצוע — לא תווית קבועה"
-        string level "with_you/on_own/ahead"
-        string set_by "self/system — בחירת תלמיד או סימן מערכת"
+        string chosen_level "with_you/on_own/ahead — מה התלמיד בחר"
+        string recommended_level "with_you/on_own/ahead — מה המערכת ממליצה (nullable)"
+        string active_level "with_you/on_own/ahead — הרמה בתוקף כרגע"
+        string set_by "self/system — מי קבע את active_level"
         int rescue_entries "כמה פעמים נכנס למסלול הצלה"
         int rescue_recoveries "כמה יצא ממנו עם הצלחה"
         datetime updated_at
@@ -322,6 +360,8 @@ erDiagram
 | **unit_type** | enum | `task` (משימת קשר/תרגול) / `assessment` (מופע הערכה — נושא ציון) / `reference` (פריט הפניה לתוכן חיצוני) |
 | **track_id** | FK→EnrichmentTrack? | שייכות למסלול העשרה (צילום/פיננסי/יזמות). `null` = תוכן ליבה |
 | **sequence_id** | FK→LearningSequence? | שייכות ל**מסלול למידה** מסודר. `null` = יחידה עצמאית |
+| **topic_id** | FK→Topic? | ה**נושא** בתוכנית הלימודים שהיחידה מלמדת (§2.4ב). מחבר מקצוע→נושא→יחידה |
+| **skill_ids** | array | ה**מיומנויות** שהיחידה בונה (§2.4ג). הבסיס ל"מה נרכש עד כה" במפת ההתקדמות |
 | **sequence_order** | int? | מיקום ברצף — הבסיס ל"יחידה N מתוך M" במסך התלמיד |
 | **content_source** | enum | `internal` (נכתב אצלנו) / `external` (עטיפת תוכן חיצוני) |
 | **external_ref** | string? | קישור לקמפוס IL/מטח/משה"ח — כשזה `reference`. המערכת מפנה, לא מחזיקה |
@@ -341,10 +381,50 @@ erDiagram
 | id | PK | |
 | subject | string | מקצוע (אזרחות / לשון) |
 | grade | enum | שכבה |
+| **topic_id** | FK→Topic? | ה**נושא** שהמסלול מכסה (§2.4ב) — מחבר את המסלול לתוכנית הלימודים |
 | title | string | "מסלול אזרחות י׳" |
 | unit_count | int | כמה יחידות ברצף (ה-M ב"יחידה N מתוך M") |
+| **curriculum_ref** | string? | עיגון לתוכנית הלימודים הרשמית — כדי שהמסלול לא ייראה שרירותי |
+| **authored_by** | FK→StaffMember? | מי בנה את המסלול (מורה מקצועי / אוצר). עונה על "מי קבע את המסלול" |
 
-> ה"מסלול" נגזר בשאילתה: יחידות עם אותו `sequence_id`, ממוינות לפי `sequence_order`. מיקום התלמיד = ה-`sequence_order` המקסימלי שהושלם ב-`Submission`. אין טבלת-סיכום נפרדת — עקרון מקור-אמת-יחיד.
+> ה"מסלול" נגזר בשאילתה: יחידות עם אותו `sequence_id`, ממוינות לפי `sequence_order`. **מפת ההתקדמות של התלמיד** (§2.4ד) שומרת את המיקום ואת הצעד הבא כישות עצמאית, כך שההמלצה נולדת מרצף מתוכנן ולא ממשימה בודדת.
+
+### 2.4ב Topic — נושא בתוכנית הלימודים
+השכבה החסרה בין **מקצוע** ל**יחידה**. בלעדיה המערכת יודעת "6 יחידות ברצף" אבל לא "אילו נושאים בתוכנית הלימודים הן מכסות". זהו התיקון המרכזי של ביקורת 1.3 (החוליה החסרה — מודל ידע מתמשך).
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id | PK | |
+| subject | string | מקצוע |
+| grade | enum | שכבה |
+| title | string | "מערכת הצורות" / "הרשות המחוקקת" |
+| curriculum_ref | string? | עיגון לתוכנית הלימודים הרשמית |
+| display_order | int | סדר הנושא בתוך המקצוע |
+
+### 2.4ג Skill — מיומנות
+מה התלמיד יודע לעשות, בניגוד ל"אילו יחידות עשה". מאפשר למורה לראות **איזו מיומנות נעצרה** (למשל "זיהוי נושא ונשוא"), ולא רק "כמה תלמידים לא סיימו". מזין את ההמלצה הממוקדת בדשבורד המורה (5.3, ביקורת 1.3 סעיף 5).
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id | PK | |
+| subject | string | מקצוע |
+| title | string | "זיהוי נושא ונשוא" / "תקציר פסקה" |
+| topic_id | FK→Topic? | שייכת לנושא |
+
+### 2.4ד StudentProgress — מפת ההתקדמות של התלמיד
+ה**ישות שהחסרה** לפי ביקורת 1.3: מודל ידע מתמשך, נשמר, שמחבר מקצוע→נושא→יחידה→מיומנות→מצב→הצעד הבא. במקום שההמלצה תיוולד בשאילתה חד-פעמית על משימה בודדת, היא נשענת על מפה מצטברת שהמורה יכול לראות ולאשר.
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id | PK | |
+| student_id | FK→Student | |
+| sequence_id | FK→LearningSequence | המסלול |
+| current_order | int | היחידה הנוכחית (נגזר: מקסימום `sequence_order` שהושלם + 1) |
+| **next_unit_id** | FK→ContentUnit | **הצעד הבא** — היחידה המומלצת עכשיו |
+| **next_source** | enum | `sequence` (המשך רגיל) / `rescue` (מסלול הצלה) / `enrichment` (העשרה). מסביר **למה** דווקא הצעד הזה |
+| skills_acquired | array | `skill_id` — מה נרכש עד כה (מ-`Submission.mastery=full`) |
+| skills_pending | array | `skill_id` — מה עוד לא נשלט (מזין תרגול ממוקד) |
+| **teacher_approved** | bool | המורה אישר/שינה את הצעד הבא. ברירת מחדל `true`; המורה יכול לעקוף — **המנוע ממליץ, המורה מחליט** (spec 5.1.2) |
+| updated_at | datetime | |
+
+> **התלמיד רואה רק את החלק הרלוונטי** (הצעד הבא + מיקום במסלול). **המורה רואה את המפה** — שההמלצה נובעת מרצף מתוכנן, לא ממשימה בודדת. זה מה שהופך את המוצר מ"מערכת משימות חכמה" ל"פלטפורמת למידה" (ביקורת 1.3, סעיף 1).
 
 ### 2.5 Assignment — שליחת משימה לכיתה
 | שדה | טיפוס | תיאור |
@@ -470,13 +550,17 @@ erDiagram
 | id | PK | | |
 | student_id | FK→Student | | |
 | subject | string | פר-מקצוע — "רץ קדימה" בלשון ו"אני איתך" במתמטיקה באותו יום | |
-| level | enum | `with_you` (אני איתך) / `on_own` (מנסה לבד — ברירת מחדל) / `ahead` (רץ קדימה) | **בין תלמיד למורה בלבד** — לא פומבי, לא משווה |
-| set_by | enum | `self` (התלמיד בחר "איך בא לך") / `system` (2 טעויות → הצעת הצלה; רצף הצלחות → קדימה) | |
+| **chosen_level** | enum | `with_you`/`on_own`/`ahead` — מה ה**תלמיד בחר** ("איך בא לך ללמוד") | **בין תלמיד למורה בלבד** — לא פומבי, לא משווה |
+| **recommended_level** | enum? | מה ה**מערכת ממליצה** על סמך התנהגות (2 טעויות → הצלה; רצף הצלחות → קדימה). `null` = אין פער מהבחירה | |
+| **active_level** | enum | הרמה ב**תוקף כרגע** — מה שמריץ בפועל את חוויית הלמידה | |
+| set_by | enum | `self` / `system` — מי קבע את `active_level`. כשהמערכת מזהה פער, היא **ממליצה** (מעדכנת `recommended_level`), ולא כופה — המורה מחליט | |
 | rescue_entries | int | כמה פעמים נכנס למסלול הצלה | |
 | rescue_recoveries | int | כמה יצא ממנו עם הצלחה — מזין "אחוז התאוששות" | |
 | updated_at | datetime | | |
 
-> **הכבוד לתלמיד נאכף במבנה:** אין נתיב שאילתה שמחזיר `level` לתצוגה פומבית או להשוואה בין תלמידים. המורה רואה **פילוח מצרפי** לכיתה שלו (כמה בכל רמה, מי במסלול הצלה) — לא "דירוג" תלמידים. התלמיד עצמו רואה בחירה ידידותית, לא תווית.
+> **שלוש רמות מובחנות (ביקורת 1.3, סעיף 4).** כדי שהמנוע ייקרא "מנוע" ולא "בורר העדפה", המערכת מבחינה בין: **מה שהתלמיד בחר** (`chosen_level`), **מה שהמערכת ממליצה** (`recommended_level`), ו**מה שהושלם בפועל** (`Submission.support_level`). כשיש פער — למשל בחר "לבד", השתמש ב-3 רמזים והצליח — המערכת מציגה למורה את הפער וממליצה על התאמה למחר. **המנוע ממליץ, המורה מחליט, התלמיד בוחר.**
+>
+> **הכבוד לתלמיד נאכף במבנה:** אין נתיב שאילתה שמחזיר את הרמות לתצוגה פומבית או להשוואה בין תלמידים. המורה רואה **פילוח מצרפי** לכיתה שלו (כמה בכל רמה, מי במסלול הצלה) — לא "דירוג" תלמידים. התלמיד עצמו רואה בחירה ידידותית, לא תווית.
 
 ### 2.13 StudentNote — הערת מחנך
 | שדה | טיפוס | תיאור | פרטיות |
