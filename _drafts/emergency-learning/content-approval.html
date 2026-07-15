@@ -452,6 +452,7 @@ body { margin: 0; font-family: var(--font-body); background: var(--bg); color: v
 <!-- Toast -->
 <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
 
+<script src="publish-service.js"></script>
 <script>
 (function () {
   'use strict';
@@ -757,7 +758,16 @@ body { margin: 0; font-family: var(--font-body); background: var(--bg); color: v
     u.history = u.history || [];
     u.history.unshift({ by: ROLES[state.role].name, role: state.role, text: text });
   }
-  function commit() { save(); render(); }
+  /* ---------- גשר לספרייה (W6) — מקור-אמת יחיד למדף ----------
+     במקום לחווט כל פעולה (פרסום/הסרה/משיכה) בנפרד, מיישרים את המדף
+     המשותף אחרי כל שינוי-מצב. publish-service ממפה ומשדר; הספרייה צורכת.
+     כך אין כפילות ואין דרך שהמדף ייצא מסנכרון עם מסך-האישור. */
+  function syncShelf() {
+    try { if (window.Resef && window.Resef.Publish) window.Resef.Publish.syncFrom(state.units); }
+    catch (e) { /* השירות לא נטען (למשל פתיחה בודדת) — המסך עובד גם בלעדיו */ }
+  }
+
+  function commit() { save(); syncShelf(); render(); }
 
   /* ---------- מגירת בדיקה ---------- */
   var revScrim = $('#rev-scrim'), reviewingId = null;
@@ -990,6 +1000,7 @@ body { margin: 0; font-family: var(--font-body); background: var(--bg); color: v
 
   /* ---------- אתחול ---------- */
   load();
+  syncShelf();   // יחידות שכבר 'פורסמו' (זרע/שמור) עולות למדף מיד עם הטעינה
   applyRole();
   render();
 })();

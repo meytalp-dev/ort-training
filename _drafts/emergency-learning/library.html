@@ -135,6 +135,16 @@
   }
   .res-type svg { width: 15px; height: 15px; flex: none; }
 
+  /* תג "פורסם" — משאב שהגיע מהמדף דרך אישור-התוכן (W4-02 → W6) */
+  .res-new {
+    display: inline-flex; align-items: center; gap: 5px;
+    min-height: 26px; padding: 0 9px;
+    font-size: var(--text-label); font-weight: 700; line-height: 1;
+    color: var(--brand-deep); background: var(--brand-soft);
+    border: 1px solid var(--brand-line); border-radius: var(--radius-pill);
+  }
+  .res-new svg { width: 14px; height: 14px; flex: none; }
+
   /* אייקון-בטיחות-חירום (רק כשרלוונטי) */
   .res-safe {
     display: inline-flex; align-items: center; gap: 5px; margin-inline-start: auto;
@@ -418,6 +428,7 @@
 
 <script src="search-service.js"></script>
 <script src="favorites.js"></script>
+<script src="publish-service.js"></script>
 <script>
 (function () {
   'use strict';
@@ -454,6 +465,25 @@
   var LEVELS = { basic: 'בסיסי', regular: 'רגיל', advanced: 'מתקדם' };
 
   /* ============================================================
+     גשר-פרסום (W4-02 → W6) — הספרייה *צורכת* את המדף המשותף.
+     יחידה שאושרה ופורסמה במסך אישור-התוכן מופיעה כאן אוטומטית, בלי
+     שאף אחד יעתיק תוכן: publish-service ממפה אותה למבנה-המשאב, והספרייה
+     מציירת אותה עם אותו cardHTML. כאן מאחדים את מילון-הפרסום לתוך מילוני
+     הספרייה — כדי שמקצוע-מפורסם (כולל מקצועות-העשרה) ייפול תמיד לתוך מסנן.
+     ============================================================ */
+  var P = (window.Resef && window.Resef.Publish) ? window.Resef.Publish : null;
+  if (P) {
+    var V = P.vocab();
+    function mergeVocab(target, src) {
+      Object.keys(src).forEach(function (k) { if (!(k in target)) target[k] = src[k]; });
+    }
+    mergeVocab(SUBJECTS, V.subjects);   // מוסיף econ/entre/life/photo/other — בלי לדרוס את ה-8 הקנוניים
+    mergeVocab(GRADES,   V.grades);
+    mergeVocab(LEVELS,   V.levels);
+    // TYPES של הספרייה עשיר יותר (icon/bg) — לא מאחדים לתוכו; המיפוי מפיק רק מפתחות קיימים.
+  }
+
+  /* ============================================================
      נתוני-הדגמה — מאגר משאבים (בגל A: מיטל מנפיקה תוכן)
      ============================================================ */
   var RESOURCES = [
@@ -478,6 +508,24 @@
   ];
 
   /* ============================================================
+     רשימה ממוזגת = מפורסמים (מהמדף, בראש) + מאגר-הבסיס (ללא כפילות).
+     computeAll() נקרא בכל חיפוש (items כפונקציה) ובכל אירוע-פרסום — כך
+     יחידה שפורסמה ברגע זה מופיעה מיד, גם מטאב/iframe אחר.
+     ============================================================ */
+  var MERGED = [];
+  var BY_ID = {};
+  function computeAll() {
+    var pub = P ? P.list() : [];
+    var seen = {};
+    pub.forEach(function (r) { seen[r.id] = true; });
+    MERGED = pub.concat(RESOURCES.filter(function (r) { return !seen[r.id]; }));
+    BY_ID = {};
+    MERGED.forEach(function (r) { BY_ID[r.id] = r; });
+    return MERGED;
+  }
+  computeAll();
+
+  /* ============================================================
      סכימת הסינון (W6-02) — 4 קבוצות: מקצוע / שכבה / רמה / סוג
      ============================================================ */
   var FACET_DEFS = [
@@ -488,7 +536,7 @@
   ];
 
   var STATE = {
-    searchResults: RESOURCES.slice(),   // מתעדכן ע"י SearchField (onResult)
+    searchResults: MERGED.slice(),   // מתעדכן ע"י SearchField (onResult) · כולל מפורסמים
     facets: { subject: new Set(), grade: new Set(), level: new Set(), type: new Set() }
   };
 
@@ -562,16 +610,20 @@
 
   /* המרת פריט-ספרייה ל-snapshot של מועדף (תוויות מוכנות-תצוגה) */
   function toFav(r) {
+    var t = TYPES[r.type] || TYPES.unit;
     return {
-      id: r.id, typeKey: r.type, typeLabel: TYPES[r.type].label,
+      id: r.id, typeKey: (TYPES[r.type] ? r.type : 'unit'), typeLabel: t.label,
       title: r.title, desc: r.desc,
-      subject: SUBJECTS[r.subject], grade: GRADES[r.grade], level: LEVELS[r.level],
+      subject: SUBJECTS[r.subject] || '', grade: GRADES[r.grade] || '', level: LEVELS[r.level] || '',
       min: r.min, uses: r.uses, source: 'library'
     };
   }
 
   function cardHTML(r) {
-    var t = TYPES[r.type];
+    var t = TYPES[r.type] || TYPES.unit;
+    var pub = r.published
+      ? '<span class="res-new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 6"/></svg>פורסם</span>'
+      : '';
     var safe = r.safe
       ? '<span class="res-safe"><svg aria-hidden="true"><use href="#ic-shield"/></svg>בטוח לחירום</span>'
       : '';
@@ -585,14 +637,14 @@
         '<div class="res-card__top">' +
           '<span class="res-type" style="--_t:var(' + t.c + ');--_tb:var(' + t.bg + ')">' +
             '<svg aria-hidden="true"><use href="#' + t.icon + '"/></svg>' + esc(t.label) +
-          '</span>' + safe + favBtn +
+          '</span>' + pub + safe + favBtn +
         '</div>' +
         '<h3 class="res-card__title">' + esc(r.title) + '</h3>' +
         '<p class="res-card__desc">' + esc(r.desc) + '</p>' +
         '<div class="res-card__meta">' +
-          '<span class="res-chip"><svg aria-hidden="true"><use href="#ic-book"/></svg>' + esc(SUBJECTS[r.subject]) + '</span>' +
-          '<span class="res-chip res-chip--grade"><svg aria-hidden="true"><use href="#ic-cap"/></svg>שכבה ' + esc(GRADES[r.grade]) + '</span>' +
-          '<span class="res-chip"><svg aria-hidden="true"><use href="#ic-slider"/></svg>' + esc(LEVELS[r.level]) + '</span>' +
+          (SUBJECTS[r.subject] ? '<span class="res-chip"><svg aria-hidden="true"><use href="#ic-book"/></svg>' + esc(SUBJECTS[r.subject]) + '</span>' : '') +
+          (GRADES[r.grade] ? '<span class="res-chip res-chip--grade"><svg aria-hidden="true"><use href="#ic-cap"/></svg>שכבה ' + esc(GRADES[r.grade]) + '</span>' : '') +
+          (LEVELS[r.level] ? '<span class="res-chip"><svg aria-hidden="true"><use href="#ic-slider"/></svg>' + esc(LEVELS[r.level]) + '</span>' : '') +
         '</div>' +
         '<div class="res-card__foot">' +
           '<span class="res-card__stat"><svg aria-hidden="true"><use href="#ic-repeat"/></svg>' + r.uses + ' שיבוצים · ' + r.min + ' דק\'</span>' +
@@ -635,10 +687,7 @@
     if (typeof updateNavFavCount === 'function') updateNavFavCount();
   }
 
-  /* ---------- אירועי כרטיס ---------- */
-  var BY_ID = {};
-  RESOURCES.forEach(function (r) { BY_ID[r.id] = r; });
-
+  /* ---------- אירועי כרטיס (BY_ID נבנה ב-computeAll — כולל מפורסמים) ---------- */
   grid.addEventListener('click', function (e) {
     var favBtn = e.target.closest('[data-fav]');
     if (favBtn) {
@@ -683,7 +732,7 @@
      חיפוש משותף (W0-08) — מצב filter: מסנן את המאגר במקום
      ============================================================ */
   var searchCtl = Resef.Search.filter('#libSearch', {
-    items: RESOURCES,
+    items: computeAll,   // פונקציה → נקראת בכל חיפוש · תמיד כוללת את המפורסמים העדכניים
     label: 'חיפוש בספרייה',
     placeholder: 'חיפוש משאב — כותרת, מקצוע, סוג או תגית…',
     getText: function (r) {
@@ -716,6 +765,20 @@
 
   /* רינדור ראשוני (למקרה שהחיפוש כבר הריץ onResult — נבטיח מצב עקבי) */
   applyAndRender();
+
+  /* ============================================================
+     סנכרון חי עם המדף — יחידה שפורסמה/הוסרה במסך אישור-התוכן
+     (גם מטאב או iframe אחר) מתעדכנת כאן מיד, בלי רענון.
+     ============================================================ */
+  if (P) {
+    P.onChange(function (e) {
+      if (searchCtl) searchCtl.refresh();   // getItems()→computeAll() בונה מחדש MERGED+BY_ID → onResult → applyAndRender
+      else { computeAll(); STATE.searchResults = MERGED.slice(); applyAndRender(); }
+      if (e && e.action === 'publish' && e.record && e.record.title) {
+        showToast('"' + e.record.title + '" פורסם/ה לספרייה');
+      }
+    });
+  }
 
   /* ============================================================
      שלד: מגירת-ניווט במובייל + Toast
