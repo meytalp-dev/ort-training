@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · דוחות מורה</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     דוחות מורה (W2-10) — תוכן ספציפי לתצוגה בלבד.
+     השלד (app-shell/sidebar/topbar/dashboard/card/metric-card/
+     chart-card/line-chart/rz-table) מגיע מ-components.css.
+     כאן: בקרות הדוח (בורר כיתה/מדד/טווח), כותרות מגמה, וייצוא.
+     טוקנים בלבד — אין צבעים קשיחים.
+     ============================================================ */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: var(--text-body);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ---- שורת בקרות הדוח ---- */
+  .rep-controls {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-5);
+    padding: var(--space-5); margin-bottom: var(--space-2);
+  }
+  .rep-field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+  .rep-field__label {
+    font-size: var(--text-label); font-weight: 600; color: var(--ink-soft);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .rep-field__label svg { width: 15px; height: 15px; }
+  .rep-scope-note {
+    margin-inline-start: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-size: var(--text-label); font-weight: 600; color: var(--brand-deep);
+    background: var(--brand-soft); border: 1px solid var(--brand-line);
+    border-radius: var(--radius-pill); padding: 5px 12px; align-self: center;
+  }
+  .rep-scope-note svg { width: 15px; height: 15px; flex: none; }
+
+  /* בורר כיתה (select נקי) */
+  .rep-select {
+    appearance: none; -webkit-appearance: none;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 600;
+    color: var(--ink-strong); background: var(--card);
+    border: 1px solid var(--line-strong); border-radius: var(--radius-btn);
+    padding: 10px 38px 10px 14px; min-height: var(--tap); cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23607984' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: left 12px center;
+    transition: border-color 160ms ease;
+  }
+  .rep-select:hover { border-color: var(--brand-line); }
+  .rep-select:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+  /* בקרת מקטעים (segmented) — מדד + טווח */
+  .segmented {
+    display: inline-flex; background: var(--surface-muted);
+    border: 1px solid var(--line); border-radius: var(--radius-btn); padding: 4px; gap: 4px;
+  }
+  .segmented__btn {
+    appearance: none; border: none; cursor: pointer;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 600;
+    color: var(--ink-soft); background: transparent;
+    border-radius: 9px; padding: 8px 14px; min-height: 36px; white-space: nowrap;
+    transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  }
+  .segmented__btn:hover { color: var(--ink-strong); }
+  .segmented__btn[aria-pressed="true"] {
+    background: var(--card); color: var(--brand-deep);
+    box-shadow: 0 1px 3px rgba(23,58,74,.10);
+  }
+  .segmented__btn:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+  /* ---- כותרת המגמה מעל הגרף (בסגנון trend של principal-pulse) ---- */
+  .trend-head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4); }
+  .trend-now { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800; color: var(--brand); line-height: 1; font-variant-numeric: tabular-nums; }
+  .trend-cap { font-size: var(--text-small); color: var(--ink-soft); }
+  .trend-cap b { color: var(--ink-strong); font-weight: 700; }
+  .trend-delta {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: var(--text-small); font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .trend-delta svg { width: 16px; height: 16px; }
+  .trend-delta--up   { color: var(--status-good); }
+  .trend-delta--down { color: var(--status-alert); }
+  .trend-delta--flat { color: var(--ink-soft); }
+  .trend-svg-wrap { width: 100%; overflow-x: auto; }
+  .trend-label { fill: var(--ink-faint); font-family: var(--font-body); font-size: 12px; font-weight: 500; }
+  .trend-label--now { fill: var(--ink-strong); font-weight: 700; }
+  .trend-yl { fill: var(--ink-faint); font-family: var(--font-body); font-size: 11px; font-weight: 500; }
+
+  /* ---- שלישיית מדדי סיכום מתחת לגרף ---- */
+  .rep-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-top: var(--space-5); }
+  @media (max-width: 620px){ .rep-summary { grid-template-columns: 1fr; } }
+
+  /* ---- טבלת פירוט יחידות (מה שמיוצא) ---- */
+  .rep-table-head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4);
+  }
+  .rep-bar { display: block; height: 8px; border-radius: var(--radius-pill); background: var(--surface-muted); overflow: hidden; width: 96px; flex: none; }
+  .rep-bar__fill { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
+  .rep-pct-cell { display: flex; align-items: center; gap: var(--space-3); }
+  .rep-pct-cell__val { font-weight: 700; color: var(--ink-strong); font-variant-numeric: tabular-nums; min-width: 40px; }
+
+  /* טקסט חלופי לגרף (קורא-מסך) */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  /* ---- Toast ---- */
+  .rz-toast {
+    position: fixed; inset-block-end: 20px; inset-inline-start: 50%; transform: translate(50%, 20px);
+    background: var(--ink-strong); color: #fff; font-size: var(--text-small); font-weight: 600;
+    padding: 12px 18px; border-radius: var(--radius-btn); box-shadow: var(--shadow-lg);
+    opacity: 0; pointer-events: none; transition: opacity 200ms ease, transform 200ms ease; z-index: 90;
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .rz-toast svg { width: 18px; height: 18px; }
+  .rz-toast.is-on { opacity: 1; transform: translate(50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .segmented__btn, .rep-select, .rz-toast { transition: none; }
+  }
+
+  /* ---- הדפסה / PDF ---- */
+  @media print {
+    .sidebar, .topbar, .app-shell__scrim, .rep-controls .segmented,
+    .rz-toast, .dashboard__actions, [data-nav-open] { display: none !important; }
+    body, .app-main, .app-main__inner { background: #fff !important; }
+    .app-shell { display: block; }
+    .card, .chart-card { box-shadow: none !important; border-color: #ccc !important; break-inside: avoid; }
+    .rep-print-note { display: block !important; }
+  }
+  .rep-print-note { display: none; margin-bottom: var(--space-4); color: var(--ink-soft); font-size: var(--text-small); }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (outline, 24×24, stroke=currentColor) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-report" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12.5" y="7" width="3" height="10" rx="1"/><rect x="18" y="13" width="3" height="4" rx="1"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></symbol>
+  <symbol id="ic-printer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></symbol>
+  <symbol id="ic-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></symbol>
+  <symbol id="ic-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-trend-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M17 17h4v-4"/></symbol>
+  <symbol id="ic-trend-flat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></symbol>
+</svg>
+
+<!-- ============================================================
+     TeacherShell — Sidebar + Topbar + Main
+     ============================================================ -->
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="teacher-dashboard.html" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="teacher-class-board.html" aria-label="הכיתה שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+        <span class="sidebar__label">הכיתה שלי</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="דופק כיתתי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-activity"/></svg></span>
+        <span class="sidebar__label">דופק כיתתי</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="שליחת משימה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">שליחת משימה</span>
+      </a>
+      <a class="sidebar__item" href="reports.html" aria-current="page" aria-label="דוחות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-report"/></svg></span>
+        <span class="sidebar__label">דוחות</span>
+      </a>
+
+      <div class="sidebar__section">תוכן</div>
+      <a class="sidebar__item" href="library.html" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הכיתות שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+        <span class="sidebar__label">הכיתות שלי</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רותם לוי</div>
+          <div class="sidebar__foot-role">מורה · מחנכת ט'2</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title" id="topbar-class">כיתה ט'2 · לשון</div>
+        <div class="topbar__subtitle">אורט · דוחות כיתה</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" placeholder="חיפוש יחידה בדוח…" aria-label="חיפוש">
+      </label>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (3 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">3</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+        <div class="dashboard">
+
+          <!-- כותרת + ייצוא -->
+          <div class="dashboard__head">
+            <div class="dashboard__headings">
+              <h1 class="dashboard__title">דוחות כיתה</h1>
+              <p class="dashboard__subtitle">התקדמות הכיתה לאורך זמן · עודכן היום</p>
+            </div>
+            <div class="dashboard__actions">
+              <button class="btn btn--secondary btn--sm" type="button" id="btn-print">
+                <svg viewBox="0 0 24 24"><use href="#ic-printer"/></svg>
+                הדפסה / PDF
+              </button>
+              <button class="btn btn--primary btn--sm" type="button" id="btn-export">
+                <svg viewBox="0 0 24 24"><use href="#ic-download"/></svg>
+                ייצוא CSV
+              </button>
+            </div>
+          </div>
+
+          <p class="rep-print-note">רֶצֶף · דוח התקדמות כיתה — הופק מהמסך. נתונים מצרפיים ברמת הכיתה בלבד.</p>
+
+          <!-- בקרות הדוח -->
+          <div class="card rep-controls">
+            <div class="rep-field">
+              <span class="rep-field__label"><svg aria-hidden="true"><use href="#ic-users"/></svg>כיתה</span>
+              <select class="rep-select" id="sel-class" aria-label="בחירת כיתה">
+                <option value="g2">כיתה ט'2 · לשון</option>
+                <option value="g1">כיתה ט'1 · לשון</option>
+              </select>
+            </div>
+
+            <div class="rep-field">
+              <span class="rep-field__label"><svg aria-hidden="true"><use href="#ic-report"/></svg>מדד</span>
+              <div class="segmented" role="group" aria-label="בחירת מדד" id="seg-metric">
+                <button class="segmented__btn" type="button" data-metric="participation" aria-pressed="true">שיעור השתתפות</button>
+                <button class="segmented__btn" type="button" data-metric="completion" aria-pressed="false">השלמת משימות</button>
+                <button class="segmented__btn" type="button" data-metric="units" aria-pressed="false">יחידות שהושלמו</button>
+              </div>
+            </div>
+
+            <div class="rep-field">
+              <span class="rep-field__label"><svg aria-hidden="true"><use href="#ic-calendar"/></svg>טווח</span>
+              <div class="segmented" role="group" aria-label="בחירת טווח זמן" id="seg-range">
+                <button class="segmented__btn" type="button" data-range="7" aria-pressed="true">7 ימים</button>
+                <button class="segmented__btn" type="button" data-range="14" aria-pressed="false">14 ימים</button>
+                <button class="segmented__btn" type="button" data-range="30" aria-pressed="false">30 ימים</button>
+              </div>
+            </div>
+
+            <span class="rep-scope-note"><svg aria-hidden="true"><use href="#ic-info"/></svg>פרטי לכיתה שלך · מצרפי</span>
+          </div>
+
+          <!-- הגרף הראשי — קו הרצף כמגמה -->
+          <section class="card chart-card dash-col-12" aria-labelledby="chart-title">
+            <div class="chart-card__head">
+              <h2 class="chart-card__title" id="chart-title">מגמת הכיתה לאורך זמן</h2>
+              <span class="chart-card__hint" id="chart-hint">שיעור התלמידים שהשתתפו בכל יום</span>
+            </div>
+
+            <div class="trend-head">
+              <span class="trend-now" id="trend-now">—</span>
+              <span class="trend-delta" id="trend-delta"></span>
+              <span class="trend-cap" id="trend-cap"></span>
+            </div>
+
+            <div class="chart-card__body trend-svg-wrap">
+              <svg class="line-chart" id="chart-svg" viewBox="0 0 680 240" role="img" aria-label="טוען…"></svg>
+            </div>
+            <p class="sr-only" id="chart-sr" aria-live="polite"></p>
+
+            <!-- שלישיית סיכום -->
+            <div class="rep-summary" id="rep-summary"><!-- render --></div>
+          </section>
+
+          <!-- טבלת פירוט יחידות (הבסיס לייצוא) -->
+          <section class="card dash-col-12" aria-labelledby="rep-table-title">
+            <div class="rep-table-head">
+              <div>
+                <h2 class="dashboard__section-title" id="rep-table-title" style="font-size:var(--text-h2)">פירוט לפי יחידה</h2>
+                <p class="dashboard__subtitle" style="margin-top:2px">סטטוס הקצאה מצרפי — <span id="rep-table-class">כיתה ט'2</span></p>
+              </div>
+              <span class="chip chip--good"><span class="chip__dot"></span><span id="rep-table-count">—</span></span>
+            </div>
+
+            <div class="rz-table-wrap">
+              <div class="rz-table-scroll">
+                <table class="rz-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">יחידה</th>
+                      <th scope="col">מקצוע</th>
+                      <th scope="col">הוקצתה</th>
+                      <th scope="col" class="rz-table__num">הוקצתה ל־</th>
+                      <th scope="col" class="rz-table__num">הושלמו</th>
+                      <th scope="col" class="rz-table__num">בתהליך</th>
+                      <th scope="col" class="rz-table__num">לא התחילו</th>
+                      <th scope="col">שיעור השלמה</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rep-table-body"><!-- render --></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast הדגמה -->
+<div class="rz-toast" id="toast" role="status" aria-live="polite">
+  <svg aria-hidden="true"><use href="#ic-check-c"/></svg>
+  <span id="toast-text"></span>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     נתוני הדגמה — מצרפיים ברמת הכיתה בלבד (בלי נתוני תלמיד בודד).
+     כל מדד: סדרת 30 ימים אחרונים. הטבלה: פירוט יחידות מצרפי.
+     ============================================================ */
+  var CLASSES = {
+    g2: { name: "כיתה ט'2", full: "כיתה ט'2 · לשון", size: 28 },
+    g1: { name: "כיתה ט'1", full: "כיתה ט'1 · לשון", size: 26 }
+  };
+
+  // 30 ערכים (ישן→חדש). אחוזים למדדים 1–2, ספירת יחידות למדד 3.
+  var SERIES = {
+    g2: {
+      participation: [58,61,55,64,67,63,70,66,72,69,74,71,68,73,77,75,79,76,72,78,81,77,80,83,79,82,85,81,84,86],
+      completion:    [40,44,42,48,51,47,55,52,58,54,60,57,53,61,64,62,66,63,59,67,70,66,69,72,68,71,74,70,73,76],
+      units:         [ 3, 5, 4, 6, 7, 5, 8, 6, 9, 7,10, 8, 6, 9,11,10,12, 9, 7,11,13,10,12,14,11,13,15,12,14,16]
+    },
+    g1: {
+      participation: [52,55,50,58,60,57,63,59,65,62,66,64,61,67,69,66,71,68,65,70,73,70,72,75,71,74,77,73,76,78],
+      completion:    [34,37,35,41,44,40,47,44,49,46,51,48,45,52,55,53,57,54,51,58,60,57,60,62,59,61,64,60,63,66],
+      units:         [ 2, 4, 3, 5, 6, 4, 7, 5, 8, 6, 9, 7, 5, 8,10, 9,11, 8, 6,10,12, 9,11,13,10,12,14,11,13,15]
+    }
+  };
+
+  var METRICS = {
+    participation: { label: 'שיעור השתתפות', unit: 'percent', hint: 'שיעור התלמידים שהשתתפו בכל יום', sum1: 'ממוצע', sum2: 'שיא', sum3: 'שינוי בטווח' },
+    completion:    { label: 'השלמת משימות', unit: 'percent', hint: 'שיעור המשימות שהושלמו בכל יום',    sum1: 'ממוצע', sum2: 'שיא', sum3: 'שינוי בטווח' },
+    units:         { label: 'יחידות שהושלמו', unit: 'count', hint: 'מספר היחידות שהושלמו בכיתה בכל יום', sum1: 'ממוצע יומי', sum2: 'יום שיא', sum3: 'סה״כ בטווח' }
+  };
+
+  // פירוט יחידות מצרפי לכל כיתה (assigned/done/progress/not)
+  var UNITS = {
+    g2: [
+      { t:'שורש ומשקל',       s:'לשון', d:'12.6', a:28, done:24, prog:3, not:1 },
+      { t:'מילות יחס',         s:'לשון', d:'19.6', a:28, done:21, prog:5, not:2 },
+      { t:'משפט פשוט ומורכב',  s:'לשון', d:'26.6', a:28, done:19, prog:6, not:3 },
+      { t:'סימני פיסוק',       s:'לשון', d:'3.7',  a:28, done:22, prog:4, not:2 },
+      { t:'הבנת הנקרא · מאמר', s:'לשון', d:'10.7', a:28, done:16, prog:8, not:4 }
+    ],
+    g1: [
+      { t:'שורש ומשקל',       s:'לשון', d:'12.6', a:26, done:20, prog:4, not:2 },
+      { t:'מילות יחס',         s:'לשון', d:'19.6', a:26, done:18, prog:5, not:3 },
+      { t:'משפט פשוט ומורכב',  s:'לשון', d:'26.6', a:26, done:16, prog:6, not:4 },
+      { t:'סימני פיסוק',       s:'לשון', d:'3.7',  a:26, done:19, prog:4, not:3 },
+      { t:'הבנת הנקרא · מאמר', s:'לשון', d:'10.7', a:26, done:14, prog:7, not:5 }
+    ]
+  };
+
+  var state = { cls: 'g2', metric: 'participation', range: 7 };
+
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
+  function round(n) { return Math.round(n * 10) / 10; }
+
+  /* ---------- תוויות תאריך ל-N הימים האחרונים ---------- */
+  function dateLabels(n) {
+    var out = [], today = new Date();
+    for (var i = n - 1; i >= 0; i--) {
+      var d = new Date(today.getTime() - i * 86400000);
+      out.push(d.getDate() + '.' + (d.getMonth() + 1));
+    }
+    return out;
+  }
+
+  /* ---------- חיתוך הסדרה לטווח הנבחר ---------- */
+  function sliceSeries() {
+    var full = SERIES[state.cls][state.metric];
+    return full.slice(full.length - state.range);
+  }
+
+  /* ---------- רינדור הגרף (LineChart — בריף §8, קו הרצף) ---------- */
+  function renderChart() {
+    var vals = sliceSeries();
+    var labels = dateLabels(state.range);
+    var m = METRICS[state.metric];
+    var isPct = m.unit === 'percent';
+
+    var W = 680, H = 240, padR = 34, padL = 44, padT = 22, padB = 42;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var n = vals.length;
+
+    // סקאלה: אחוזים 0–100; ספירה 0→תקרה נעימה
+    var maxV = isPct ? 100 : Math.max(4, Math.ceil(Math.max.apply(null, vals) / 4) * 4);
+    var ticks = isPct ? [25, 50, 75, 100] : [maxV * 0.25, maxV * 0.5, maxV * 0.75, maxV];
+
+    var xs = vals.map(function (_, i) { return padL + (n === 1 ? plotW / 2 : plotW * (i / (n - 1))); });
+    var ys = vals.map(function (v) { return padT + (1 - v / maxV) * plotH; });
+
+    // קווי-רשת אופקיים + תוויות ציר Y
+    var grid = '', ylabels = '';
+    ticks.forEach(function (g) {
+      var y = padT + (1 - g / maxV) * plotH;
+      grid += '<line x1="' + padL + '" y1="' + y.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y.toFixed(1) + '"/>';
+      ylabels += '<text class="trend-yl" x="' + (W - padR + 6) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="start">' + Math.round(g) + (isPct ? '%' : '') + '</text>';
+    });
+
+    // קו + מילוי-רצפה
+    var pts = xs.map(function (x, i) { return x.toFixed(1) + ' ' + ys[i].toFixed(1); });
+    var linePath = 'M ' + pts.join(' L ');
+    var base = padT + plotH;
+    var areaPath = linePath + ' L ' + xs[n - 1].toFixed(1) + ' ' + base + ' L ' + xs[0].toFixed(1) + ' ' + base + ' Z';
+
+    // דילול תוויות ציר X (עד ~8 תוויות)
+    var step = Math.ceil(n / 8);
+    var dots = '', xlabels = '';
+    xs.forEach(function (x, i) {
+      var head = (i === n - 1);
+      dots += '<circle class="line-chart__dot' + (head ? ' line-chart__dot--head' : '') + '" cx="' + x.toFixed(1) + '" cy="' + ys[i].toFixed(1) + '" r="' + (head ? 5 : 3) + '"/>';
+      // הצג את תווית ה"היום" תמיד; דלל את השאר, ודלג על תווית סמוכה מדי לתווית היום
+      if (head || (i % step === 0 && (n - 1 - i) >= Math.ceil(step / 2))) {
+        xlabels += '<text class="' + (head ? 'trend-label trend-label--now' : 'trend-label') + '" x="' + x.toFixed(1) + '" y="' + (H - 14) + '" text-anchor="middle">' + labels[i] + '</text>';
+      }
+    });
+
+    var svg = el('chart-svg');
+    svg.innerHTML =
+      '<g class="line-chart__grid">' + grid + '</g>' +
+      ylabels +
+      '<path class="line-chart__area" d="' + areaPath + '"/>' +
+      '<path class="line-chart__line" d="' + linePath + '"/>' +
+      dots + xlabels;
+
+    // כותרת מגמה + דלתא
+    var now = vals[n - 1], first = vals[0];
+    var diff = round(now - first);
+    var suffix = isPct ? '%' : '';
+    el('trend-now').textContent = now + suffix;
+
+    var dEl = el('trend-delta');
+    var dir = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
+    var dIcon = diff > 0 ? '#ic-trend-up' : (diff < 0 ? '#ic-trend-down' : '#ic-trend-flat');
+    dEl.className = 'trend-delta trend-delta--' + dir;
+    dEl.innerHTML = '<svg aria-hidden="true"><use href="' + dIcon + '"/></svg>' + (diff > 0 ? '+' : '') + diff + suffix;
+
+    var word = diff > 0 ? 'עלייה' : (diff < 0 ? 'ירידה' : 'יציבות');
+    el('trend-cap').innerHTML = 'לאורך ' + state.range + ' הימים · <b>' + word + '</b> לעומת תחילת הטווח';
+
+    el('chart-hint').textContent = m.hint;
+    el('chart-title').textContent = 'מגמת ' + m.label + ' · ' + CLASSES[state.cls].name;
+
+    // תיאור מילולי לגרף (נגישות)
+    svg.setAttribute('aria-label',
+      m.label + ' ב-' + CLASSES[state.cls].name + ', ' + state.range + ' ימים אחרונים: ' +
+      vals.join(isPct ? '%, ' : ', ') + suffix + '. ערך אחרון ' + now + suffix + '.');
+    el('chart-sr').textContent = svg.getAttribute('aria-label');
+
+    renderSummary(vals);
+  }
+
+  /* ---------- שלישיית מדדי סיכום ---------- */
+  function renderSummary(vals) {
+    var m = METRICS[state.metric];
+    var isPct = m.unit === 'percent';
+    var suffix = isPct ? '%' : '';
+    var n = vals.length;
+    var avg = round(vals.reduce(function (a, b) { return a + b; }, 0) / n);
+    var peak = Math.max.apply(null, vals);
+    var total = vals.reduce(function (a, b) { return a + b; }, 0);
+
+    var v1 = avg + suffix;
+    var v2 = peak + suffix;
+    var v3, sub3;
+    if (isPct) {
+      var diff = round(vals[n - 1] - vals[0]);
+      v3 = (diff > 0 ? '+' : '') + diff + '%';
+      sub3 = 'מתחילת הטווח';
+    } else {
+      v3 = total;
+      sub3 = 'סה״כ ' + state.range + ' ימים';
+    }
+
+    var cards = [
+      { label: m.sum1, val: v1, sub: 'לאורך הטווח' },
+      { label: m.sum2, val: v2, sub: isPct ? 'היום הטוב ביותר' : 'ביום שיא' },
+      { label: m.sum3, val: v3, sub: sub3 }
+    ];
+
+    el('rep-summary').innerHTML = cards.map(function (c) {
+      return '<div class="metric-card">' +
+        '<div class="metric-card__top"><span class="metric-card__label">' + esc(c.label) + '</span></div>' +
+        '<div class="metric-card__value">' + esc(c.val) + '</div>' +
+        '<span class="metric-card__delta metric-card__delta--flat">' + esc(c.sub) + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ---------- טבלת פירוט יחידות ---------- */
+  function renderTable() {
+    var rows = UNITS[state.cls];
+    el('rep-table-class').textContent = CLASSES[state.cls].name;
+    el('rep-table-count').textContent = rows.length + ' יחידות';
+    el('rep-table-body').innerHTML = rows.map(function (u) {
+      var pct = Math.round(u.done / u.a * 100);
+      return '<tr>' +
+        '<td data-label="יחידה"><span class="rz-table__primary">' + esc(u.t) + '</span></td>' +
+        '<td data-label="מקצוע">' + esc(u.s) + '</td>' +
+        '<td data-label="הוקצתה">' + esc(u.d) + '</td>' +
+        '<td data-label="הוקצתה ל־" class="rz-table__num">' + u.a + '</td>' +
+        '<td data-label="הושלמו" class="rz-table__num">' + u.done + '</td>' +
+        '<td data-label="בתהליך" class="rz-table__num">' + u.prog + '</td>' +
+        '<td data-label="לא התחילו" class="rz-table__num">' + u.not + '</td>' +
+        '<td data-label="שיעור השלמה"><span class="rep-pct-cell">' +
+          '<span class="rep-bar"><span class="rep-bar__fill" style="width:' + pct + '%"></span></span>' +
+          '<span class="rep-pct-cell__val">' + pct + '%</span></span></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  /* ---------- ייצוא CSV (טבלת היחידות, מצרפי) ---------- */
+  function exportCSV() {
+    var cls = CLASSES[state.cls];
+    var header = ['יחידה', 'מקצוע', 'תאריך הקצאה', 'הוקצתה ל־', 'הושלמו', 'בתהליך', 'לא התחילו', 'שיעור השלמה (%)'];
+    var lines = [header];
+    UNITS[state.cls].forEach(function (u) {
+      lines.push([u.t, u.s, u.d, u.a, u.done, u.prog, u.not, Math.round(u.done / u.a * 100)]);
+    });
+    var csv = lines.map(function (row) {
+      return row.map(function (cell) {
+        var s = String(cell);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }).join(',');
+    }).join('\r\n');
+
+    // BOM לתמיכת עברית ב-Excel
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'רצף-דוח-' + cls.name.replace(/[^֐-׿א-ת0-9]/g, '') + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('הדוח יוצא כקובץ CSV');
+  }
+
+  /* ---------- החלפת כיתה בטופ-בר ---------- */
+  function syncClass() {
+    el('topbar-class').textContent = CLASSES[state.cls].full;
+  }
+
+  function renderAll() {
+    syncClass();
+    renderChart();
+    renderTable();
+  }
+
+  /* ---------- אירועים ---------- */
+  el('sel-class').addEventListener('change', function () { state.cls = this.value; renderAll(); });
+
+  function wireSegmented(groupId, key, cast) {
+    var group = el(groupId);
+    var btns = Array.prototype.slice.call(group.querySelectorAll('.segmented__btn'));
+    group.addEventListener('click', function (e) {
+      var btn = e.target.closest('.segmented__btn');
+      if (!btn) return;
+      btns.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+      state[key] = cast(btn.getAttribute('data-' + (key === 'range' ? 'range' : 'metric')));
+      renderChart();
+    });
+    // ניווט מקלדת: חצים
+    group.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      var cur = btns.findIndex(function (b) { return b.getAttribute('aria-pressed') === 'true'; });
+      // RTL: ימין→אחורה, שמאל→קדימה
+      var dir = e.key === 'ArrowLeft' ? 1 : -1;
+      var next = (cur + dir + btns.length) % btns.length;
+      btns[next].focus();
+      btns[next].click();
+      e.preventDefault();
+    });
+  }
+  wireSegmented('seg-metric', 'metric', function (v) { return v; });
+  wireSegmented('seg-range', 'range', function (v) { return parseInt(v, 10); });
+
+  el('btn-export').addEventListener('click', exportCSV);
+  el('btn-print').addEventListener('click', function () { window.print(); });
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* ---------- Toast ---------- */
+  var toast = el('toast'), toastText = el('toast-text'), toastTimer = null;
+  function showToast(msg) {
+    if (!toast) return;
+    toastText.textContent = msg;
+    toast.classList.add('is-on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('is-on'); }, 2600);
+  }
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

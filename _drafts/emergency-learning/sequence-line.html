@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף — קו הרצף (SequenceLine / SequenceStep)</title>
+<!-- favicon: סמל רֶצֶף כ-SVG data-uri (ריבוע-מותג + 3 קווים לבנים) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.page-head { margin-bottom: 40px; }
+  header.page-head .kicker {
+    font-size: var(--text-label); font-weight: 600; letter-spacing: .04em;
+    color: var(--brand-deep); text-transform: uppercase; margin: 0 0 8px;
+  }
+  header.page-head h1 { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 700; color: var(--ink-strong); margin: 0 0 10px; }
+  header.page-head p { max-width: 64ch; color: var(--ink-soft); margin: 0; font-size: var(--text-body); }
+
+  h2.section-title {
+    font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700;
+    color: var(--ink-strong); margin: 48px 0 6px;
+  }
+  h2.section-title + .section-sub { color: var(--ink-soft); margin: 0 0 20px; font-size: var(--text-small); max-width: 66ch; }
+
+  .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .grid.wide { grid-template-columns: 1fr; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card); padding: 22px; display: flex; flex-direction: column;
+  }
+  .card .label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); margin: 0 0 4px; }
+  .card .hint { font-size: var(--text-label); color: var(--ink-faint); margin: 12px 0 0; }
+
+  .stage {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 128px; padding: 28px 20px; margin: 12px 0;
+    border-radius: var(--radius-sm); background: var(--bg-soft);
+  }
+  .stage.tall { min-height: 200px; align-items: stretch; }
+
+  .copy-btn {
+    align-self: flex-start; margin-top: auto;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 600;
+    color: var(--brand-deep); background: var(--brand-soft); border: 1px solid var(--brand-line);
+    border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer;
+    min-height: 40px; transition: background 160ms ease, color 160ms ease;
+  }
+  .copy-btn:hover { background: var(--brand-line); }
+  .copy-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .copy-btn.ok { background: var(--routine-soft); border-color: var(--routine-line); color: #2C7A46; }
+
+  .note {
+    background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 16px 18px; margin-top: 14px; font-size: var(--text-small); color: var(--ink);
+  }
+  .note.warn { background: var(--emergency-soft); border-color: var(--emergency-line); }
+  .note b { color: var(--ink-strong); }
+  .note ul { margin: 8px 0 0; padding-inline-start: 20px; }
+  .note li { margin: 4px 0; }
+
+  .spec-list { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; font-size: var(--text-small); color: var(--ink); }
+  .spec-list li { display: flex; gap: 8px; }
+  .spec-list b { color: var(--ink-strong); font-weight: 600; }
+  code {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    background: var(--surface-muted); border: 1px solid var(--line);
+    border-radius: 6px; padding: 1px 6px; font-size: 12.5px; color: var(--brand-deep);
+    direction: ltr; unicode-bidi: embed;
+  }
+
+  /* ============================================================
+     קו הרצף — SequenceLine / SequenceStep  (W0-D3)
+     החתימה הוויזואלית: קו 2px טורקיז מעוגל + נקודות 14px מסגרת 3px.
+     כל הצבעים/מידות מטוקנים בלבד.
+     ============================================================ */
+
+  /* --- הנקודה (SequenceNode) — 14px, מסגרת 3px, box-sizing:border-box --- */
+  .seq-node {
+    position: relative;
+    flex: 0 0 auto;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 3px solid var(--line-strong);
+    transition: border-color 160ms ease, background-color 160ms ease;
+  }
+  /* עתידי (todo) = ברירת מחדל: חלול, מסגרת דהויה */
+  .is-done   > .seq-node,
+  .seq-node.is-done   { border-color: var(--brand); background: var(--brand); }      /* מלא = הושלם */
+  .is-active > .seq-node,
+  .seq-node.is-active { border-color: var(--brand); background: var(--card); }        /* טבעת = פעיל עכשיו */
+  .is-todo   > .seq-node,
+  .seq-node.is-todo   { border-color: var(--line-strong); background: var(--card); }  /* חלול = עתידי */
+
+  /* פעימה עדינה סביב הנקודה הפעילה (pulse קטן — בלי קפיצות) */
+  .is-active > .seq-node::after,
+  .seq-node.is-active::after {
+    content: ""; position: absolute; inset: -4px;
+    border-radius: 50%; border: 2px solid var(--brand);
+    opacity: .5; pointer-events: none;
+    animation: seqPulse 2.4s ease-out infinite;
+  }
+  @keyframes seqPulse {
+    0%   { transform: scale(.75); opacity: .55; }
+    70%  { transform: scale(1.6); opacity: 0; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+
+  /* --- 1. רצף אופקי (שלבי יחידה / תהליך) --- */
+  .seq-h { display: flex; list-style: none; margin: 0; padding: 0; }
+  .seq-h > .seq-step {
+    flex: 1 1 0; min-width: 0; position: relative;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    text-align: center;
+  }
+  /* המחבר (קו הרצף) — פס 2px בין מרכזי הנקודות. top=6px → מרכז מיושר לנקודה 14px */
+  .seq-h > .seq-step::before {
+    content: ""; position: absolute; top: 6px; left: 50%; width: 100%; height: 2px;
+    background: var(--line-strong); border-radius: var(--radius-pill); z-index: 0;
+  }
+  .seq-h > .seq-step:first-child::before { display: none; }        /* אין מחבר לפני הראשון */
+  .seq-h > .seq-step.is-done::before,
+  .seq-h > .seq-step.is-active::before { background: var(--brand); } /* מקטע שנחצה = טורקיז */
+  .seq-h > .seq-step > .seq-node { z-index: 1; }                    /* הנקודה מכסה את הקו */
+
+  .seq-label { font-size: var(--text-small); color: var(--ink-soft); font-weight: 500; line-height: 1.3; }
+  .seq-step.is-active .seq-label { color: var(--ink-strong); font-weight: 600; }
+  .seq-step.is-done   .seq-label { color: var(--ink); }
+  .seq-sub { display: block; font-size: var(--text-label); color: var(--ink-faint); font-weight: 400; margin-top: 2px; }
+
+  /* --- 2. פס התקדמות (Progress) — הקו עצמו כמד --- */
+  .seq-progress { display: flex; align-items: center; gap: 14px; width: 100%; }
+  .seq-track {
+    position: relative; flex: 1 1 auto; height: 2px;
+    background: var(--line-strong); border-radius: var(--radius-pill);
+  }
+  .seq-fill {
+    position: absolute; inset-inline-start: 0; top: 0; height: 100%;
+    background: var(--brand); border-radius: var(--radius-pill);
+    transition: width 320ms ease;
+  }
+  .seq-fill .seq-node {
+    position: absolute; inset-inline-end: -7px; top: 50%; transform: translateY(-50%);
+  }
+  .seq-pct { flex: 0 0 auto; font-size: var(--text-small); font-weight: 700; color: var(--brand-deep); min-width: 42px; text-align: start; direction: ltr; }
+
+  /* --- 3. ציר זמן אנכי (Timeline) --- */
+  .seq-v { list-style: none; margin: 0; padding: 0; }
+  .seq-v > .seq-item {
+    position: relative; display: grid;
+    grid-template-columns: 14px 1fr; column-gap: 16px;
+    padding-bottom: 22px;
+  }
+  .seq-v > .seq-item:last-child { padding-bottom: 0; }
+  /* הקו האנכי — מנקודה זו כלפי מטה אל הבאה */
+  .seq-v > .seq-item::before {
+    content: ""; position: absolute; top: 6px; bottom: -8px;
+    inset-inline-start: 6px; width: 2px; transform: translateX(50%);
+    background: var(--line-strong); border-radius: var(--radius-pill);
+  }
+  .seq-v > .seq-item:last-child::before { display: none; }
+  .seq-v > .seq-item.is-done::before,
+  .seq-v > .seq-item.is-active::before { background: var(--brand); }
+  .seq-v > .seq-item > .seq-node { margin-top: 2px; z-index: 1; }
+  .seq-v .seq-body { min-width: 0; }
+  .seq-v .seq-time { font-size: var(--text-label); color: var(--ink-faint); font-weight: 600; }
+  .seq-v .seq-head { font-size: var(--text-body); color: var(--ink-strong); font-weight: 600; margin: 1px 0 0; }
+  .seq-v .seq-item.is-todo .seq-head { color: var(--ink-soft); font-weight: 500; }
+  .seq-v .seq-desc { font-size: var(--text-small); color: var(--ink-soft); margin: 2px 0 0; }
+
+  /* --- 4. מצב-ריק (Empty State) — נקודה פעילה + המשך דהוי --- */
+  .seq-empty { display: flex; align-items: center; gap: 0; }
+  .seq-empty .seq-node { z-index: 1; }
+  .seq-empty .seq-fade {
+    flex: 1 1 auto; height: 2px; border-radius: var(--radius-pill);
+    background: linear-gradient(to left, var(--brand-line), color-mix(in srgb, var(--brand-line) 0%, transparent)); /* טורקיז → שקוף, בלי דעיכה אפורה */
+  }
+  .seq-empty.ltr-fade .seq-fade { background: linear-gradient(to right, var(--brand-line), color-mix(in srgb, var(--brand-line) 0%, transparent)); }
+  .empty-msg { text-align: center; }
+  .empty-msg .seq-empty { justify-content: center; max-width: 220px; margin: 0 auto 14px; }
+  .empty-msg h3 { font-family: var(--font-head); font-size: var(--text-h3); color: var(--ink-strong); margin: 0 0 4px; font-weight: 650; }
+  .empty-msg p { font-size: var(--text-small); color: var(--ink-soft); margin: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .is-active > .seq-node::after, .seq-node.is-active::after { animation: none; opacity: .4; transform: scale(1.25); }
+    .seq-fill { transition: none; }
+  }
+
+  /* מקרא סטטוסים */
+  .legend { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 2px; }
+  .legend .li { display: flex; align-items: center; gap: 10px; font-size: var(--text-small); color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <p class="kicker">רֶצֶף · Design System · W0-D3</p>
+    <h1>קו הרצף — SequenceLine / SequenceStep</h1>
+    <p>החתימה הוויזואלית של המערכת: קו דק, רציף ומעוגל (<code>2px</code>, טורקיז) שעובר בין נקודות (<code>14px</code>, מסגרת <code>3px</code>) — <b>רצף שאינו נשבר</b>. הרכיב משמש לחיבור שלבים, לפס התקדמות, לתהליך יצירת יחידה, לציר זמן ולמצב-ריק. כל הצבעים והמידות נצרכים מ-<code>tokens.css</code> בלבד. לחיצה על "העתק HTML" מעתיקה את המקטע לשימוש חוזר.</p>
+  </header>
+
+  <!-- ============ 0. הנקודה + מקרא ============ -->
+  <h2 class="section-title">הנקודה — שלושה מצבים</h2>
+  <p class="section-sub">מצב הנקודה נבדל ב<b>צורה</b> (מלא / טבעת / חלול), לא רק בצבע — נגישות AA (לא-רק-צבע). הפעילה מקבלת פעימה עדינה בלבד.</p>
+  <div class="grid">
+    <div class="card">
+      <p class="label">מקרא נקודות</p>
+      <div class="stage">
+        <div class="legend">
+          <span class="li"><span class="seq-node is-done"></span> הושלם (מלא)</span>
+          <span class="li"><span class="seq-node is-active"></span> פעיל עכשיו (טבעת + פעימה)</span>
+          <span class="li"><span class="seq-node is-todo"></span> עתידי (חלול)</span>
+        </div>
+      </div>
+      <p class="hint">מלא=<code>--brand</code> · טבעת=מסגרת <code>--brand</code> על <code>--card</code> · חלול=<code>--line-strong</code></p>
+      <button class="copy-btn" type="button">העתק HTML</button>
+    </div>
+  </div>
+
+  <!-- ============ 1. שלבי יחידה ============ -->
+  <h2 class="section-title">שימוש 1 — שלבי יחידת למידה</h2>
+  <p class="section-sub">חיבור שלבי יחידה בתצוגת תלמיד: פתיחה → הקנייה → תרגול → סיכום. הזרימה מימין לשמאל (RTL). המקטעים שנחצו צבועים טורקיז; השלב הפעיל בולט.</p>
+  <div class="grid wide">
+    <div class="card">
+      <p class="label">יחידה בתהליך — 2 שלבים הושלמו, שלב 3 פעיל</p>
+      <div class="stage">
+        <ol class="seq-h" aria-label="שלבי היחידה">
+          <li class="seq-step is-done" aria-label="פתיחה — הושלם"><span class="seq-node"></span><span class="seq-label">פתיחה</span></li>
+          <li class="seq-step is-done" aria-label="הקנייה — הושלם"><span class="seq-node"></span><span class="seq-label">הקנייה</span></li>
+          <li class="seq-step is-active" aria-current="step" aria-label="תרגול — פעיל עכשיו"><span class="seq-node"></span><span class="seq-label">תרגול</span></li>
+          <li class="seq-step is-todo" aria-label="סיכום — עתידי"><span class="seq-node"></span><span class="seq-label">סיכום</span></li>
+        </ol>
+      </div>
+      <p class="hint"><code>&lt;ol class="seq-h"&gt;</code> · שלב = <code>.seq-step.is-done/.is-active/.is-todo</code></p>
+      <button class="copy-btn" type="button">העתק HTML</button>
+    </div>
+  </div>
+
+  <!-- ============ 2. תהליך יצירת יחידה ============ -->
+  <h2 class="section-title">שימוש 2 — תהליך יצירת יחידה (מורה)</h2>
+  <p class="section-sub">התהליך הקבוע: העלאה → ניתוח → התאמה → אישור → הקצאה. אותו רכיב <code>.seq-h</code> עם תווית-משנה קצרה לכל שלב.</p>
+  <div class="grid wide">
+    <div class="card">
+      <p class="label">קובץ בעיבוד — שלב "ניתוח" פעיל</p>
+      <div class="stage">
+        <ol class="seq-h" aria-label="תהליך יצירת יחידה">
+          <li class="seq-step is-done" aria-label="העלאה — הושלם"><span class="seq-node"></span><span class="seq-label">העלאה<span class="seq-sub">הקובץ נקלט</span></span></li>
+          <li class="seq-step is-active" aria-current="step" aria-label="ניתוח — פעיל עכשיו"><span class="seq-node"></span><span class="seq-label">ניתוח<span class="seq-sub">מזהה נושאים</span></span></li>
+          <li class="seq-step is-todo" aria-label="התאמה — עתידי"><span class="seq-node"></span><span class="seq-label">התאמה<span class="seq-sub">3 רמות</span></span></li>
+          <li class="seq-step is-todo" aria-label="אישור — עתידי"><span class="seq-node"></span><span class="seq-label">אישור<span class="seq-sub">בדיקת מורה</span></span></li>
+          <li class="seq-step is-todo" aria-label="הקצאה — עתידי"><span class="seq-node"></span><span class="seq-label">הקצאה<span class="seq-sub">לכיתה</span></span></li>
+        </ol>
+      </div>
+      <p class="hint">5 שלבים · תווית-משנה = <code>.seq-sub</code> · השלב הפעיל בטבעת + פעימה</p>
+      <button class="copy-btn" type="button">העתק HTML</button>
+    </div>
+  </div>
+
+  <!-- ============ 3. פס התקדמות ============ -->
+  <h2 class="section-title">שימוש 3 — פס התקדמות</h2>
+  <p class="section-sub">הקו עצמו כמד התקדמות: חלק צבוע (טורקיז) עם נקודה בקצה, והמשך דהוי. מלווה באחוז מספרי — לא הסתמכות על צבע בלבד.</p>
+  <div class="grid">
+    <div class="card">
+      <p class="label">התקדמות בקורס — 45%</p>
+      <div class="stage">
+        <div class="seq-progress" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" aria-label="התקדמות בקורס">
+          <span class="seq-track"><span class="seq-fill" style="width:45%"><span class="seq-node is-active"></span></span></span>
+          <span class="seq-pct">45%</span>
+        </div>
+      </div>
+      <p class="hint"><code>.seq-fill{width}</code> קובע · נקודה פעילה בקצה</p>
+      <button class="copy-btn" type="button">העתק HTML</button>
+    </div>
+    <div class="card">
+      <p class="label">כמעט הושלם — 80%</p>
+      <div class="stage">
+        <div class="seq-progress" role="progressbar" aria-valuenow="80" aria-valuemin="0" aria-valuemax="100" aria-label="התקדמות ביחידה">
+          <span class="seq-track"><span class="seq-fill" style="width:80%"><span class="seq-node is-active"></span></span></span>
+          <span class="seq-pct">80%</span>
+        </div>
+      </div>
+      <p class="hint">אותו רכיב · רק ה-<code>width</code> משתנה</p>
+      <button class="copy-btn" type="button">העתק HTML</button>
+    </div>
+  </div>
+
+  <!-- ============ 4. ציר זמן אנכי ============ -->
+  <h2 class="section-title">שימוש 4 — ציר זמן (כיתה / מורה)</h2>
+  <p class="section-sub">רצף אנכי לאירועי יום/שבוע: הקו עובר בין הנקודות מלמעלה למטה, זמן וכותרת לצד כל נקודה. מתאים לתצוגת מורה ומנהל.</p>
+  <div class="grid">
+    <div class="card">
+      <p class="label">ציר יום כיתה</p>
+      <div class="stage tall">
+        <ol class="seq-v" aria-label="ציר זמן היום">
+          <li class="seq-item is-done">
+            <span class="seq-node"></span>
+            <div class="seq-body">
+              <span class="seq-time">08:15</span>
+              <p class="seq-head">יחידת פתיחה נשלחה</p>
+              <p class="seq-desc">22 תלמידים קיבלו</p>
+            </div>
+          </li>
+          <li class="seq-item is-done">
+            <span class="seq-node"></span>
+            <div class="seq-body">
+              <span class="seq-time">09:40</span>
+              <p class="seq-head">רוב הכיתה סיימה הקנייה</p>
+              <p class="seq-desc">18 מתוך 22</p>
+            </div>
+          </li>
+          <li class="seq-item is-active">
+            <span class="seq-node"></span>
+            <div class="seq-body">
+              <span class="seq-time">כעת</span>
+              <p class="seq-head">תרגול בעבודה</p>
+              <p class="seq-desc">כדאי לבדוק 3 תלמידים שנעצרו</p>
+            </div>
+          </li>
+          <li class="seq-item is-todo">
+            <span class="seq-node"></span>
+            <div class="seq-body">
+              <span class="seq-time">מתוכנן</span>
+              <p class="seq-head">סיכום ומשוב</p>
+              <p class="seq-desc">ייפתח בסיום התרגול</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+      <p class="hint"><code>&lt;ol class="seq-v"&gt;</code> · פריט = <code>.seq-item</code> · הקו האנכי מ-<code>::before</code></p>
+      <button class="copy-btn" type="button">העתק HTML</button>
+    </div>
+  </div>
+
+  <!-- ============ 5. מצב-ריק ============ -->
+  <h2 class="section-title">שימוש 5 — מצב-ריק (Empty State)</h2>
+  <p class="section-sub">אלמנט גאומטרי מינימלי בלבד — נקודה אחת פעילה והמשך דהוי (הקו נמוג לשקוף). בלי דמויות מצוירות, בלי איורים.</p>
+  <div class="grid">
+    <div class="card">
+      <p class="label">אין עדיין משימות</p>
+      <div class="stage">
+        <div class="empty-msg">
+          <div class="seq-empty" aria-hidden="true">
+            <span class="seq-node is-active"></span>
+            <span class="seq-fade"></span>
+          </div>
+          <h3>הרצף מתחיל כאן</h3>
+          <p>כשמורה יקצה יחידה, היא תופיע כאן.</p>
+        </div>
+      </div>
+      <p class="hint">נקודה פעילה + <code>.seq-fade</code> (טורקיז→שקוף)</p>
+      <button class="copy-btn" type="button">העתק HTML</button>
+    </div>
+    <div class="card">
+      <p class="label">הכול הושלם להיום</p>
+      <div class="stage">
+        <div class="empty-msg">
+          <div class="seq-empty" aria-hidden="true">
+            <span class="seq-node is-active"></span>
+            <span class="seq-fade"></span>
+          </div>
+          <h3>סיימת את הרצף של היום</h3>
+          <p>נתראה מחר בהמשך.</p>
+        </div>
+      </div>
+      <p class="hint">אותו רכיב · טקסט רגוע, בלי כוכבים/גביעים</p>
+      <button class="copy-btn" type="button">העתק HTML</button>
+    </div>
+  </div>
+
+  <!-- ============ מפרט ============ -->
+  <h2 class="section-title">מפרט הרכיב</h2>
+  <ul class="spec-list">
+    <li><b>קו:</b> עובי <code>2px</code>, <code>background:var(--brand)</code>, <code>border-radius:var(--radius-pill)</code>. מקטע שלא נחצה = <code>--line-strong</code>.</li>
+    <li><b>נקודה:</b> <code>14×14</code>, מסגרת <code>3px</code>, <code>box-sizing:border-box</code>. הושלם=מלא <code>--brand</code> · פעיל=טבעת · עתידי=חלול <code>--line-strong</code>.</li>
+    <li><b>יישור מחבר:</b> אופקי <code>top:6px</code> / אנכי <code>inset-inline-start:6px</code> → מרכז הפס מיושר למרכז נקודה 14px.</li>
+    <li><b>אנימציה:</b> פעימה עדינה (<code>seqPulse</code>) סביב הנקודה הפעילה בלבד. מבוטלת ב-<code>prefers-reduced-motion</code>.</li>
+    <li><b>נגישות:</b> <code>&lt;ol&gt;</code> סמנטי, <code>aria-current="step"</code> לפעיל, <code>aria-label</code> עם מילת-סטטוס, <code>role="progressbar"</code> לפס. מצב נבדל בצורה — לא רק בצבע.</li>
+    <li><b>RTL:</b> רצף אופקי זורם ימין→שמאל טבעית. משתמש ב-<code>inset-inline-start/end</code> ללוגיקה נכונה.</li>
+  </ul>
+
+  <div class="note">
+    <b>החלטות עיצוב:</b>
+    <ul>
+      <li><b>הבחנה בצורה ולא בצבע:</b> הושלם=נקודה מלאה, פעיל=טבעת, עתידי=חלול — כדי לעמוד ב-WCAG AA "לא-רק-צבע" גם למי שאינו מבחין בטורקיז.</li>
+      <li><b>צביעת מקטע:</b> מקטע הקו נצבע טורקיז כשהשלב שאליו הוא מגיע כבר נחצה (<code>is-done/is-active</code>) — כך "הרצף שנעשה" נקרא בבירור.</li>
+      <li><b>פעימה מרוסנת:</b> טבעת אחת מתרחבת ונמוגה (2.4s), בלי קפיצות/זוהר/סיבוב. מבוטלת אוטומטית תחת reduced-motion.</li>
+      <li><b>צבע קבוע = טורקיז:</b> קו הרצף נשאר <code>--brand</code> בכל המצבים (גם חירום), כי הוא חתימת מותג ולא אינדיקטור-מצב — לכן לא נצרך <code>var(--mode)</code>.</li>
+      <li><b>מצב-ריק גאומטרי:</b> נקודה + דעיכה לשקוף בלבד. נמנעו דמויות/איורים/כוכבים כנדרש בבריף.</li>
+    </ul>
+  </div>
+
+  <div class="note warn">
+    <b>גבולות הרכיב (מה הרכיב לא עושה):</b>
+    <ul>
+      <li>לא קו קישוט בכל כרטיס — משתמשים בו רק לשלבים/התקדמות/תהליך/ציר-זמן/מצב-ריק.</li>
+      <li>לא גלים ברקע, לא קווים מאחורי טקסט, לא איורי נוף/מסלול-משחק.</li>
+      <li>לא דגלי סיום, כוכבים, מטבעות או גביעים בקצה הרצף.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+  // העתקת ה-HTML של ההדגמה שבכרטיס ללוח
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var card = btn.closest('.card');
+      var demo = card ? card.querySelector('.stage') : null;
+      if (!demo) return;
+      // נעתיק את התוכן הפנימי של הבמה (ההדגמה עצמה), לא את מעטפת הבמה
+      var html = demo.innerHTML.trim();
+      navigator.clipboard.writeText(html).then(function () {
+        var prev = btn.textContent;
+        btn.textContent = 'הועתק ✓';
+        btn.classList.add('ok');
+        setTimeout(function () { btn.textContent = prev; btn.classList.remove('ok'); }, 1600);
+      });
+    });
+  });
+</script>
+</body>
+</html>

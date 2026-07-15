@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · App Shells + ניווט (W0-D4)</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ---- תפאורת הגלריה בלבד (לא חלק מהספרייה) ---- */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    font-size: var(--text-body);
+    -webkit-text-size-adjust: 100%;
+  }
+  .page { max-width: 1320px; margin: 0 auto; padding: var(--space-6) var(--space-5) 80px; }
+  .page-head { padding: var(--space-8) 0 var(--space-6); border-bottom: 1px solid var(--line); margin-bottom: var(--space-8); }
+  .page-head h1 { font-family: var(--font-head); font-size: var(--text-display); font-weight: 800; color: var(--ink-strong); margin: 0 0 var(--space-2); }
+  .page-head p { color: var(--ink-soft); margin: 0; max-width: 66ch; }
+  .kicker { font-size: var(--text-label); font-weight: 700; letter-spacing: .06em; color: var(--brand-deep); text-transform: uppercase; margin-bottom: var(--space-2); }
+
+  section { margin-bottom: var(--space-10); }
+  .sec-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-2); flex-wrap: wrap; }
+  .sec-head h2 { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700; color: var(--ink-strong); margin: 0; }
+  .sec-head .num { font-size: var(--text-small); font-weight: 700; color: var(--brand); background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--radius-pill); padding: 2px 10px; }
+  .sec-note { color: var(--ink-soft); font-size: var(--text-small); margin: 0 0 var(--space-4); max-width: 74ch; }
+
+  /* --- בקרת גודל-מסגרת (להדגמת רספונסיביות מבוססת-Container) --- */
+  .frame-ctl { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
+  .frame-ctl__label { font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); }
+  .seg { display: inline-flex; background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 3px; gap: 2px; }
+  .seg button {
+    min-height: 34px; padding: 0 var(--space-4); border: 0; background: transparent; cursor: pointer;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 600; color: var(--ink-soft);
+    border-radius: var(--radius-pill); transition: background 160ms ease, color 160ms ease;
+  }
+  .seg button:hover { color: var(--ink-strong); }
+  .seg button[aria-pressed="true"] { background: var(--card); color: var(--brand-deep); box-shadow: var(--shadow-card); }
+  .seg button:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+  /* --- מסגרות-מכשיר --- */
+  .device {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    background: var(--card);
+    transition: width 260ms ease, max-width 260ms ease;
+  }
+  .device--desktop { width: 100%; max-width: 1180px; height: 660px; }
+  .device--phone {
+    width: 384px; max-width: 100%; height: 740px; margin-inline: auto;
+    border-radius: 34px; border-width: 8px; border-color: #0F2D3A;
+  }
+  .device-caption { font-size: var(--text-label); color: var(--ink-faint); margin: var(--space-2) 0 0; text-align: center; }
+
+  /* --- תוכן-הדגמה במיין (Placeholder — MetricCard/Table הן משימות נפרדות) --- */
+  .demo-h { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700; color: var(--ink-strong); margin: 0 0 var(--space-1); }
+  .demo-sub { color: var(--ink-soft); font-size: var(--text-small); margin: 0 0 var(--space-5); }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5); }
+  .kpi { padding: var(--space-4) var(--space-5); }
+  .kpi__num { font-family: var(--font-head); font-size: 30px; font-weight: 800; color: var(--ink-strong); font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .kpi__label { font-size: var(--text-small); color: var(--ink-soft); margin-top: 2px; }
+  .kpi--good .kpi__num { color: var(--status-good); }
+  .kpi--attention .kpi__num { color: #9A6E12; }
+  .contact-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
+  .contact-row:first-of-type { border-top: 0; }
+  .contact-row__name { font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+  .contact-row__meta { font-size: var(--text-label); color: var(--ink-soft); }
+  .contact-row .btn { margin-inline-start: auto; }
+
+  .stack { display: grid; gap: var(--space-4); }
+  .two-col { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--space-4); }
+  @container shell (max-width: 760px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* תוכן מסך התלמיד */
+  .greet { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700; color: var(--ink-strong); margin: 0 0 2px; }
+  .greet + .mode-chip { margin-bottom: var(--space-4); }
+  .next-task__meta { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-small); color: var(--ink-soft); margin-bottom: var(--space-2); }
+  .subject-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); }
+  .subject-row:hover { background: var(--surface-muted); }
+  .subject-row__ic { width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--brand-soft); color: var(--brand-deep); display: grid; place-items: center; flex: none; }
+  .subject-row__ic svg { width: 20px; height: 20px; }
+  .subject-row__t { font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+  .subject-row__s { font-size: var(--text-label); color: var(--ink-soft); }
+
+  .note { background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 14px 16px; font-size: var(--text-small); color: var(--ink); }
+  .note b { color: var(--ink-strong); }
+  code { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--surface-muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 12.5px; color: var(--brand-deep); direction: ltr; unicode-bidi: embed; }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (outline, 24×24, stroke=currentColor) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="i-base" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g>
+  </defs>
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></symbol>
+  <symbol id="ic-tasks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1.5"/><path d="m3.5 18 2 2 3.5-3.5"/><path d="M13 6h8M13 12h8M13 18h8"/></symbol>
+  <symbol id="ic-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/></symbol>
+  <symbol id="ic-progress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="18" y1="20" x2="18" y2="10"/></symbol>
+  <symbol id="ic-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 10h.01M15 10h.01"/></symbol>
+  <symbol id="ic-present" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20"/><path d="M3 3v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V3"/><path d="m8 21 4-4 4 4"/></symbol>
+  <symbol id="ic-book-txt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+</svg>
+
+<!-- מוטיב הרצף לאייקוני בורר-מצב (לשימוש חוזר) -->
+<template id="tpl-mode-mark">
+  <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+</template>
+
+<div class="page">
+  <header class="page-head">
+    <div class="kicker">רֶצֶף · Design System · W0-D4</div>
+    <h1>App Shells + ניווט</h1>
+    <p>שלושת שלדי האפליקציה של רֶצֶף — <b>StudentShell</b> (מובייל, BottomNavigation), ו-<b>TeacherShell / PrincipalShell</b> (דסקטופ, Sidebar&nbsp;248px + Topbar&nbsp;68px + Main עד 1440px). כל שלד צורך את <code>tokens.css</code> ומוגדר ב-<code>components.css</code>. הרספונסיביות מבוססת-Container — שנו/שני את גודל המסגרת כדי לראות את מעברי הטאבלט/מובייל בזמן אמת.</p>
+  </header>
+
+  <!-- ============================================================
+       1. StudentShell (מובייל)
+       ============================================================ -->
+  <section>
+    <div class="sec-head"><span class="num">1</span><h2>StudentShell — מובייל</h2></div>
+    <p class="sec-note">TopBar דק (לוגו + פעמון + אווטאר) · אזור-גלילה · <b>BottomNavigation</b> עד 4 פריטים (בית · משימות · קורסים · התקדמות). פריט פעיל = צבע-מותג + אינדיקטור-קו עליון (הֶדֵי קו-הרצף). בלי שפה ילדותית, בלי איורים.</p>
+
+    <div class="device device--phone">
+      <div class="app-shell app-shell--student app-shell--framed">
+
+        <!-- TopBar מובייל -->
+        <header class="topbar-m">
+          <div class="topbar-m__brand">
+            <svg class="logo-mobile" style="height:24px;width:auto;display:block" viewBox="0 0 118 30" role="img" aria-label="רֶצֶף">
+              <text x="74" y="22" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="21" style="fill:var(--ink-strong)">רצף</text>
+              <g transform="translate(85 3)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+                <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+                <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+                <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+              </g>
+            </svg>
+          </div>
+          <div class="topbar-m__actions">
+            <button class="icon-btn topbar__notif" type="button" aria-label="התראות (1 חדשה)">
+              <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+              <span class="badge badge--dot" aria-hidden="true"></span>
+            </button>
+            <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+              <span class="avatar avatar--sm" aria-hidden="true">ד</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- תוכן -->
+        <main class="app-main-m" aria-label="תוכן ראשי">
+          <p class="greet">בוקר טוב, דניאל</p>
+          <span class="mode-chip" data-mode="routine">
+            <span class="mode-chip__mark" aria-hidden="true"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M9 7h2M14 7h4"/><circle cx="7.5" cy="7" r="1.6" fill="currentColor" stroke="none"/></svg></span>
+            שגרה
+          </span>
+
+          <div class="card card--accent" style="margin-bottom:var(--space-4)">
+            <p class="next-task__meta"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--ink-faint)"><use href="#ic-book"/></svg>לשון · כ-10 דקות · בקצב שלך</p>
+            <h3 class="card__title">המשימה הבאה: שם הפועל</h3>
+            <p class="card__desc" style="margin-bottom:var(--space-4)">נמשיך מהמקום שבו עצרת — מנה קצרה אחת.</p>
+            <div class="progress" style="margin-bottom:var(--space-4)">
+              <div class="progress__track"><div class="progress__fill" style="width:40%"></div></div>
+              <span class="progress__label">40%</span>
+            </div>
+            <button class="btn btn--primary btn--block" type="button">להמשיך</button>
+          </div>
+
+          <h3 class="demo-h" style="font-size:var(--text-h3);margin-bottom:var(--space-2)">המקצועות שלי</h3>
+          <div class="card" style="padding:var(--space-2)">
+            <div class="subject-row">
+              <span class="subject-row__ic" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+              <div><div class="subject-row__t">לשון</div><div class="subject-row__s">3 מתוך 8 יחידות</div></div>
+            </div>
+            <div class="subject-row">
+              <span class="subject-row__ic" aria-hidden="true"><svg><use href="#ic-chart"/></svg></span>
+              <div><div class="subject-row__t">מתמטיקה</div><div class="subject-row__s">5 מתוך 10 יחידות</div></div>
+            </div>
+            <div class="subject-row">
+              <span class="subject-row__ic" aria-hidden="true"><svg><use href="#ic-book-txt"/></svg></span>
+              <div><div class="subject-row__t">אזרחות</div><div class="subject-row__s">יחידה חדשה מחכה</div></div>
+            </div>
+          </div>
+        </main>
+
+        <!-- BottomNavigation -->
+        <nav class="bottom-nav" aria-label="ניווט ראשי">
+          <a class="bottom-nav__item" href="#" aria-current="page">
+            <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-home"/></svg></span>
+            <span class="bottom-nav__label">בית</span>
+          </a>
+          <a class="bottom-nav__item" href="#">
+            <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-tasks"/></svg></span>
+            <span class="bottom-nav__label">משימות</span>
+            <span class="badge bottom-nav__badge" aria-hidden="true">2</span>
+          </a>
+          <a class="bottom-nav__item" href="#">
+            <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-cap"/></svg></span>
+            <span class="bottom-nav__label">קורסים</span>
+          </a>
+          <a class="bottom-nav__item" href="#">
+            <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-progress"/></svg></span>
+            <span class="bottom-nav__label">התקדמות</span>
+          </a>
+        </nav>
+
+      </div>
+    </div>
+    <p class="device-caption">מסגרת ~384px — תצוגת מובייל אמיתית. BottomNav מוצמד לתחתית, התוכן נגלל ביניהם.</p>
+  </section>
+
+  <!-- ============================================================
+       2. TeacherShell (דסקטופ)
+       ============================================================ -->
+  <section>
+    <div class="sec-head"><span class="num">2</span><h2>TeacherShell — מורה + מחנך</h2></div>
+    <p class="sec-note">Sidebar לבן 248px (פריט 44px, רדיוס 10, פעיל = <code>brand-soft</code> + <code>brand-deep</code>) · Topbar 68px (שם כיתה, חיפוש, פעמון, עזרה, אווטאר) · Main עד 1440px. שנו/שני גודל להדגמת ה-Sidebar המצומצם (טאבלט) והמגירה (מובייל).</p>
+
+    <div class="frame-ctl">
+      <span class="frame-ctl__label">גודל מסגרת:</span>
+      <div class="seg" role="group" aria-label="בחירת גודל תצוגה למורה">
+        <button type="button" data-size="1180" aria-pressed="true">דסקטופ</button>
+        <button type="button" data-size="880" aria-pressed="false">טאבלט</button>
+        <button type="button" data-size="420" aria-pressed="false">מובייל</button>
+      </div>
+    </div>
+
+    <div class="device device--desktop" id="frame-teacher">
+      <div class="app-shell app-shell--admin app-shell--framed">
+        <div class="app-shell__scrim" data-nav-close hidden></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar__brand">
+            <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+              <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+              <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+                <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+                <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+                <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+              </g>
+            </svg>
+            <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+              <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+                <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+                <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+                <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+              </g>
+            </svg>
+          </div>
+
+          <nav class="sidebar__nav" aria-label="ניווט ראשי">
+            <a class="sidebar__item" href="#" aria-current="page" aria-label="לוח בקרה">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+              <span class="sidebar__label">לוח בקרה</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="הכיתה שלי">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+              <span class="sidebar__label">הכיתה שלי</span>
+              <span class="badge badge--brand sidebar__badge" aria-hidden="true">4</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="דופק כיתתי">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-activity"/></svg></span>
+              <span class="sidebar__label">דופק כיתתי</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="שליחת משימה">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+              <span class="sidebar__label">שליחת משימה</span>
+            </a>
+
+            <div class="sidebar__section">תוכן</div>
+            <a class="sidebar__item" href="#" aria-label="ספריית התוכן">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+              <span class="sidebar__label">ספריית התוכן</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="הכיתות שלי">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+              <span class="sidebar__label">הכיתות שלי</span>
+            </a>
+          </nav>
+
+          <div class="sidebar__foot">
+            <div class="sidebar__user">
+              <span class="avatar avatar--sm" aria-hidden="true">רל</span>
+              <div class="sidebar__foot-text">
+                <div class="sidebar__foot-name">רותם לוי</div>
+                <div class="sidebar__foot-role">מורה · מחנכת ט'2</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- עמודה ראשית -->
+        <div class="app-shell__col">
+          <header class="topbar">
+            <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+              <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+            </button>
+            <div class="topbar__titles">
+              <div class="topbar__title">כיתה ט'2 · לשון</div>
+              <div class="topbar__subtitle">אורט · 28 תלמידים</div>
+            </div>
+            <div class="topbar__spacer"></div>
+            <label class="topbar__search">
+              <svg aria-hidden="true"><use href="#ic-search"/></svg>
+              <input type="search" placeholder="חיפוש תלמיד, יחידה או משימה…" aria-label="חיפוש">
+            </label>
+            <div class="topbar__actions">
+              <button class="icon-btn topbar__notif" type="button" aria-label="התראות (3 חדשות)">
+                <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+                <span class="badge" aria-hidden="true">3</span>
+              </button>
+              <button class="icon-btn" type="button" aria-label="עזרה">
+                <svg aria-hidden="true"><use href="#ic-help"/></svg>
+              </button>
+              <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+                <span class="avatar" aria-hidden="true">רל</span>
+              </button>
+            </div>
+          </header>
+
+          <main class="app-main" aria-label="תוכן ראשי">
+            <div class="app-main__inner">
+              <p class="demo-h">מה דורש אותי היום</p>
+              <p class="demo-sub">תמונת מצב של הכיתה — הפריטים הדחופים בראש.</p>
+
+              <div class="kpi-row">
+                <div class="card kpi"><div class="kpi__num">28</div><div class="kpi__label">תלמידים בכיתה</div></div>
+                <div class="card kpi kpi--good"><div class="kpi__num">21</div><div class="kpi__label">פעילים היום</div></div>
+                <div class="card kpi kpi--attention"><div class="kpi__num">4</div><div class="kpi__label">זקוקים לתמיכה</div></div>
+                <div class="card kpi"><div class="kpi__num">3</div><div class="kpi__label">לא התחילו</div></div>
+              </div>
+
+              <div class="two-col">
+                <div class="card">
+                  <h3 class="card__title">נדרש קשר</h3>
+                  <div class="contact-row">
+                    <span class="chip chip--alert"><span class="chip__dot"></span>נדרש קשר</span>
+                    <div><div class="contact-row__name">מאיה כהן</div><div class="contact-row__meta">לא נכנסה 3 ימים</div></div>
+                    <button class="btn btn--secondary btn--sm" type="button">פנייה</button>
+                  </div>
+                  <div class="contact-row">
+                    <span class="chip chip--attention"><span class="chip__dot"></span>תשומת לב</span>
+                    <div><div class="contact-row__name">יואב לוי</div><div class="contact-row__meta">נתקע ביחידה האחרונה</div></div>
+                    <button class="btn btn--secondary btn--sm" type="button">פנייה</button>
+                  </div>
+                  <div class="contact-row">
+                    <span class="chip chip--attention"><span class="chip__dot"></span>תשומת לב</span>
+                    <div><div class="contact-row__name">נועה בר</div><div class="contact-row__meta">הגישה חלקית</div></div>
+                    <button class="btn btn--secondary btn--sm" type="button">פנייה</button>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <h3 class="card__title">הגשות חדשות</h3>
+                  <p class="card__desc" style="margin-bottom:var(--space-4)">7 הגשות ממתינות ל"ראיתי".</p>
+                  <div class="sequence-progress" role="progressbar" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100" aria-label="הושלמו 72% מהמשימות">
+                    <div class="sequence-progress__track"><div class="sequence-progress__fill" style="width:72%"></div></div>
+                    <span class="sequence-progress__value">72%</span>
+                  </div>
+                  <button class="btn btn--primary btn--block" type="button" style="margin-top:var(--space-4)">
+                    <svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>
+                    שליחת משימה חדשה
+                  </button>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+
+      </div>
+    </div>
+    <p class="device-caption"><b>דסקטופ:</b> Sidebar מלא · <b>טאבלט:</b> Sidebar מצטמצם לאייקונים · <b>מובייל:</b> Sidebar נעלם → כפתור המבורגר פותח מגירה מימין.</p>
+  </section>
+
+  <!-- ============================================================
+       3. PrincipalShell (דסקטופ)
+       ============================================================ -->
+  <section>
+    <div class="sec-head"><span class="num">3</span><h2>PrincipalShell — מנהל בית הספר</h2></div>
+    <p class="sec-note">אותו שלד, ניווט וטופ-בר ברמת ביה"ס. בורר-המצב (שגרה/מרחוק/חירום) בולט ב-Topbar — שינוי המצב צובע את כל ה-ModeChips בעמוד. חירום = כתום רגוע, לא אדום.</p>
+
+    <div class="frame-ctl">
+      <span class="frame-ctl__label">גודל מסגרת:</span>
+      <div class="seg" role="group" aria-label="בחירת גודל תצוגה למנהל">
+        <button type="button" data-size="1180" aria-pressed="true">דסקטופ</button>
+        <button type="button" data-size="880" aria-pressed="false">טאבלט</button>
+        <button type="button" data-size="420" aria-pressed="false">מובייל</button>
+      </div>
+    </div>
+
+    <div class="device device--desktop" id="frame-principal">
+      <div class="app-shell app-shell--admin app-shell--framed">
+        <div class="app-shell__scrim" data-nav-close hidden></div>
+
+        <aside class="sidebar">
+          <div class="sidebar__brand">
+            <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+              <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+              <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+                <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+                <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+                <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+              </g>
+            </svg>
+            <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+              <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+                <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+                <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+                <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+              </g>
+            </svg>
+          </div>
+
+          <nav class="sidebar__nav" aria-label="ניווט ראשי">
+            <a class="sidebar__item" href="#" aria-current="page" aria-label="דופק בית הספר">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+              <span class="sidebar__label">דופק בית הספר</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="מעקב כיתות">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-school"/></svg></span>
+              <span class="sidebar__label">מעקב כיתות</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="פעילות מורים">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-present"/></svg></span>
+              <span class="sidebar__label">פעילות מורים</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="פעילות תלמידים">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+              <span class="sidebar__label">פעילות תלמידים</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="התראות">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-bell"/></svg></span>
+              <span class="sidebar__label">התראות</span>
+              <span class="badge sidebar__badge" aria-hidden="true">2</span>
+            </a>
+
+            <div class="sidebar__section">ניהול</div>
+            <a class="sidebar__item" href="#" aria-label="דוחות">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-chart"/></svg></span>
+              <span class="sidebar__label">דוחות</span>
+            </a>
+            <a class="sidebar__item" href="#" aria-label="הגדרות">
+              <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-settings"/></svg></span>
+              <span class="sidebar__label">הגדרות</span>
+            </a>
+          </nav>
+
+          <div class="sidebar__foot">
+            <div class="sidebar__user">
+              <span class="avatar avatar--sm" aria-hidden="true">אב</span>
+              <div class="sidebar__foot-text">
+                <div class="sidebar__foot-name">אבי בן-דוד</div>
+                <div class="sidebar__foot-role">מנהל בית הספר</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="app-shell__col">
+          <header class="topbar">
+            <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+              <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+            </button>
+            <div class="topbar__titles">
+              <div class="topbar__title">אורט בית הערבה</div>
+              <div class="topbar__subtitle">12 כיתות · 342 תלמידים</div>
+            </div>
+            <div class="topbar__spacer"></div>
+
+            <!-- בורר מצב מערכת (בולט אצל המנהל) -->
+            <div class="mode-selector mode-selector--inline mode-selector--sm" id="principal-mode" role="group" aria-label="מצב מערכת">
+              <button class="mode-option" type="button" data-mode="routine" data-set-mode="routine" aria-pressed="true">
+                <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+                שגרה
+              </button>
+              <button class="mode-option" type="button" data-mode="remote" data-set-mode="remote" aria-pressed="false">
+                <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+                מרחוק
+              </button>
+              <button class="mode-option" type="button" data-mode="emergency" data-set-mode="emergency" aria-pressed="false">
+                <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+                חירום
+              </button>
+            </div>
+
+            <div class="topbar__actions">
+              <button class="icon-btn topbar__notif" type="button" aria-label="התראות (2 חדשות)">
+                <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+                <span class="badge" aria-hidden="true">2</span>
+              </button>
+              <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+                <span class="avatar" aria-hidden="true">אב</span>
+              </button>
+            </div>
+          </header>
+
+          <main class="app-main" aria-label="תוכן ראשי">
+            <div class="app-main__inner">
+              <p class="demo-h">דופק בית הספר</p>
+              <p class="demo-sub">מצב הרציפות · המצב הפעיל: <span class="mode-chip mode-chip--sm" id="mode-echo" data-mode="routine">
+                <span class="mode-chip__mark" aria-hidden="true"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M9 7h2M14 7h4"/><circle cx="7.5" cy="7" r="1.6" fill="currentColor" stroke="none"/></svg></span>
+                <span data-mode-label>שגרה</span>
+              </span></p>
+
+              <div class="kpi-row">
+                <div class="card kpi kpi--good"><div class="kpi__num">86%</div><div class="kpi__label">שיעור השתתפות</div></div>
+                <div class="card kpi"><div class="kpi__num">294</div><div class="kpi__label">תלמידים פעילים</div></div>
+                <div class="card kpi"><div class="kpi__num">11/12</div><div class="kpi__label">כיתות פעילות</div></div>
+                <div class="card kpi kpi--attention"><div class="kpi__num">5</div><div class="kpi__label">נדרש קשר</div></div>
+              </div>
+
+              <div class="two-col">
+                <div class="card">
+                  <h3 class="card__title">נדרש קשר — כיתות</h3>
+                  <div class="contact-row">
+                    <span class="chip chip--alert"><span class="chip__dot"></span>נדרש קשר</span>
+                    <div><div class="contact-row__name">כיתה י'1</div><div class="contact-row__meta">3 תלמידים נעלמו · מחנך: י. אלון</div></div>
+                    <button class="btn btn--secondary btn--sm" type="button">למחנך</button>
+                  </div>
+                  <div class="contact-row">
+                    <span class="chip chip--attention"><span class="chip__dot"></span>נחלשת</span>
+                    <div><div class="contact-row__name">כיתה ט'4</div><div class="contact-row__meta">השתתפות ירדה ל-61%</div></div>
+                    <button class="btn btn--secondary btn--sm" type="button">למחנך</button>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <h3 class="card__title">מגמת השתתפות</h3>
+                  <p class="card__desc" style="margin-bottom:var(--space-4)">7 הימים האחרונים — כקו רצף.</p>
+                  <div class="sequence-progress sequence-progress--mode" role="progressbar" aria-valuenow="86" aria-valuemin="0" aria-valuemax="100" aria-label="שיעור השתתפות 86 אחוז">
+                    <div class="sequence-progress__track"><div class="sequence-progress__fill" style="width:86%"></div></div>
+                    <span class="sequence-progress__value">86%</span>
+                  </div>
+                  <div class="note" style="margin-top:var(--space-4)">שינוי מצב המערכת מעדכן את כללי ההפעלה בכל התצוגות — נסו/נסי את הבורר למעלה.</div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+
+      </div>
+    </div>
+    <p class="device-caption">בורר-המצב ב-Topbar צובע את ה-ModeChip שבתוכן דרך <code>data-mode</code> על <code>&lt;html&gt;</code> (system-mode.js).</p>
+  </section>
+
+  <!-- ============ מפרט + החלטות ============ -->
+  <section>
+    <div class="sec-head"><h2>החלטות עיצוב</h2></div>
+    <div class="note" style="line-height:1.7">
+      <ul style="margin:0;padding-inline-start:20px">
+        <li><b>רספונסיביות מבוססת-Container:</b> ה-Shell מגדיר <code>container-type: inline-size</code>, כך שהניווט מגיב לרוחב ה-Shell עצמו ולא לרוחב החלון — נכון גם במסך מלא וגם בתוך מסגרת-הדגמה. שלושה שברים: ≥1101 מלא · ≤1100 מצומצם · ≤760 מגירה.</li>
+        <li><b>containing-block חינם:</b> <code>container-type</code> יוצר גם containing-block ל-<code>position:absolute/fixed</code>, לכן המגירה והמסך-המוצלל ממוקמים יחסית ל-Shell — עובד גם ממוסגר, בלי לזלוג לחלון.</li>
+        <li><b>פריט-ניווט פעיל = soft, לא צבע-מלא:</b> רקע <code>brand-soft</code> + טקסט <code>brand-deep</code> + אייקון <code>brand</code>. שומר על מראה בוגר ורגוע (בריף §6).</li>
+        <li><b>RTL מלא:</b> Sidebar מימין (<code>border-inline-end</code>), המגירה נכנסת מימין (<code>translateX(100%)</code>), אשכול-הפעולות ב-Topbar נדחף לקצה השני עם <code>topbar__spacer</code> — בלי <code>row-reverse</code>.</li>
+        <li><b>נגישות:</b> מגע ≥44px (פריטי Sidebar 44px, BottomNav 52px) · <code>aria-current="page"</code> לפריט הפעיל · <code>aria-label</code> על כל פריט (נשאר נגיש גם כשה-Sidebar מצומצם לאייקונים) · <code>focus-visible</code> ברור · לא-רק-צבע (אייקון + מלל תמיד) · <code>reduced-motion</code>.</li>
+        <li><b>לא-רק-צבע ב-BottomNav:</b> הפריט הפעיל מסומן גם באינדיקטור-קו עליון קצר (הֶדֵי מוטיב קו-הרצף), לא רק בשינוי צבע.</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<script src="system-mode.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- בקרת גודל-מסגרת (מדגים רספונסיביות מבוססת-Container) ---------- */
+  document.querySelectorAll('.frame-ctl .seg').forEach(function (seg) {
+    var frame = seg.closest('section').querySelector('.device');
+    seg.querySelectorAll('button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        seg.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+        btn.setAttribute('aria-pressed', 'true');
+        var w = btn.getAttribute('data-size');
+        frame.style.width = w + 'px';
+        frame.style.maxWidth = '100%';
+        /* יציאה ממצב מגירה פתוחה בעת שינוי גודל */
+        var shell = frame.querySelector('.app-shell');
+        if (shell) shell.classList.remove('is-nav-open');
+      });
+    });
+  });
+
+  /* ---------- מגירת-ניווט במובייל (המבורגר / סגירה) ---------- */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    /* ESC סוגר */
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* ---------- ניווט: העברת aria-current="page" בלחיצה (הדגמה) ---------- */
+  document.querySelectorAll('.sidebar__nav, .bottom-nav').forEach(function (nav) {
+    nav.addEventListener('click', function (e) {
+      var item = e.target.closest('.sidebar__item, .bottom-nav__item');
+      if (!item) return;
+      e.preventDefault();
+      nav.querySelectorAll('[aria-current="page"]').forEach(function (a) { a.removeAttribute('aria-current'); });
+      item.setAttribute('aria-current', 'page');
+      /* במובייל — סגירת המגירה אחרי בחירה */
+      var shell = nav.closest('.app-shell');
+      if (shell) shell.classList.remove('is-nav-open');
+    });
+  });
+
+  /* ---------- בורר-מצב של המנהל → מצב מערכת גלובלי ---------- */
+  var LABELS = { routine: 'שגרה', remote: 'מרחוק', emergency: 'חירום' };
+  var picker = document.getElementById('principal-mode');
+  if (picker && window.Resef) {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        window.Resef.setMode(btn.getAttribute('data-set-mode'), { silent: true });
+      });
+    });
+    window.Resef.onModeChange(function (detail) {
+      var m = detail.mode;
+      /* עדכון מצב-לחוץ בבורר */
+      picker.querySelectorAll('[data-set-mode]').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-set-mode') === m ? 'true' : 'false');
+      });
+      /* עדכון ה-ModeChip שבתוכן (data-mode מפורש + תווית) */
+      var echo = document.getElementById('mode-echo');
+      if (echo) {
+        echo.setAttribute('data-mode', m);
+        var lbl = echo.querySelector('[data-mode-label]');
+        if (lbl) lbl.textContent = LABELS[m] || m;
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>

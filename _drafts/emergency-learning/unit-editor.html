@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>עורך יחידות לימוד — רֶצֶף · W4-01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--font-body); line-height:1.55;
+    -webkit-font-smoothing:antialiased; font-size:var(--text-body);
+  }
+  h1,h2,h3,h4{font-family:var(--font-head); margin:0; color:var(--ink-strong); line-height:1.2}
+  p{margin:0}
+  button{font-family:inherit}
+  input,select,textarea{font-family:inherit}
+  svg{display:block}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; background:var(--surface-muted); padding:1px 6px; border-radius:6px; font-size:.9em; direction:ltr; display:inline-block}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  a{color:var(--brand); font-weight:600}
+
+  .wrap{max-width:var(--content-max); margin:0 auto; padding:var(--space-6) var(--space-5) 96px}
+
+  /* ---------- Offline banner ---------- */
+  .offline{display:none; align-items:center; gap:10px; background:var(--emergency-soft); border-bottom:1px solid var(--emergency-line); color:var(--ink-strong); font-size:var(--text-small); font-weight:600; padding:10px var(--space-5); justify-content:center}
+  .offline svg{width:18px;height:18px;color:var(--emergency)}
+  body.is-offline .offline{display:flex}
+
+  /* ---------- כותרת ---------- */
+  header.top{padding:var(--space-4) 0 var(--space-2)}
+  .eyebrow{color:var(--brand); font-weight:700; font-size:var(--text-label); letter-spacing:.02em}
+  h1{font-size:var(--text-h1); margin:var(--space-2) 0 var(--space-1)}
+  .sub{color:var(--ink-soft); font-size:var(--text-body); max-width:80ch}
+
+  /* ---------- קו-רצף: 5 שלבי היחידה ---------- */
+  .flow{margin:var(--space-6) 0 var(--space-8)}
+  .flow-row{display:flex; align-items:center; gap:0; padding:0 var(--space-2)}
+  .fnode{width:14px; height:14px; border-radius:50%; background:var(--card); border:3px solid var(--brand); flex:none}
+  .fnode.dim{border-color:var(--line-strong)}
+  .fline{height:2px; background:var(--brand); border-radius:var(--radius-pill); flex:1}
+  .fline.dim{background:var(--line-strong)}
+  .flow-labels{display:flex; justify-content:space-between; color:var(--ink-soft); font-size:var(--text-label); padding:var(--space-2) 0 0; font-weight:600}
+
+  /* ---------- פריסה: עורך + פאנל בקרה ---------- */
+  .layout{display:grid; grid-template-columns:1fr 344px; gap:var(--space-6); align-items:start}
+  .panel-side{position:sticky; top:var(--space-4); display:flex; flex-direction:column; gap:var(--space-4)}
+  @media (max-width:1040px){
+    .layout{grid-template-columns:1fr}
+    .panel-side{position:static}
+  }
+
+  .editor-col{display:flex; flex-direction:column; gap:var(--space-5); min-width:0}
+
+  /* ---------- כרטיס שלב ---------- */
+  .step{background:var(--card); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:var(--space-5)}
+  .step__head{display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-2); flex-wrap:wrap}
+  .step__badge{width:34px;height:34px;border-radius:50%;background:var(--brand-soft);color:var(--brand-deep);font-family:var(--font-head);font-weight:800;font-size:var(--text-body);display:grid;place-items:center;flex:none}
+  .step__head h2{font-size:var(--text-h3)}
+  .step__head .hint{margin-inline-start:auto; font-size:var(--text-label); color:var(--ink-soft); font-weight:600}
+  .step__lead{color:var(--ink-soft); font-size:var(--text-small); margin:0 0 var(--space-4); max-width:70ch}
+  .step__lead code{font-size:.85em}
+
+  /* ---------- טפסים ---------- */
+  .field{display:flex; flex-direction:column; gap:6px; margin-bottom:var(--space-4)}
+  .field:last-child{margin-bottom:0}
+  .field label, .field .lbl{font-size:var(--text-label); font-weight:600; color:var(--ink-strong); display:flex; align-items:center; gap:6px}
+  .field .req{color:var(--brand-deep)}
+  .field .tip{font-size:var(--text-label); color:var(--ink-faint); font-weight:500}
+  .inp, .sel{min-height:var(--tap); border:1.5px solid var(--line-strong); background:var(--card); border-radius:var(--radius-sm); padding:0 var(--space-3); font-size:var(--text-small); color:var(--ink); width:100%}
+  textarea.inp{min-height:56px; padding:var(--space-2) var(--space-3); line-height:1.55; resize:vertical}
+  .inp:focus, .sel:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft)}
+  .inp.over{border-color:var(--status-alert); box-shadow:0 0 0 3px var(--emergency-soft)}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3)}
+  .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:var(--space-3)}
+  @media (max-width:600px){ .grid-2,.grid-3{grid-template-columns:1fr} }
+
+  .counter{font-size:var(--text-label); font-weight:600; color:var(--ink-soft); display:inline-flex; align-items:center; gap:5px}
+  .counter.warn{color:var(--status-attention)}
+  .counter.bad{color:var(--status-alert)}
+  .counter.ok{color:var(--status-good)}
+
+  /* ---------- מקטע הסבר (מנות) ---------- */
+  .chunk{border:1px solid var(--line); border-inline-start:4px solid var(--brand-line); border-radius:var(--radius-md); padding:var(--space-4); background:var(--bg-soft); margin-bottom:var(--space-3)}
+  .chunk__head{display:flex; align-items:center; gap:var(--space-2); margin-bottom:var(--space-3)}
+  .chunk__num{width:26px;height:26px;border-radius:50%;background:var(--brand-soft);color:var(--brand-deep);font-family:var(--font-head);font-weight:800;font-size:var(--text-label);display:grid;place-items:center;flex:none}
+  .chunk__head .t{font-family:var(--font-head); font-weight:700; color:var(--ink-strong); font-size:var(--text-small)}
+  .chunk__head .grow{flex:1}
+
+  /* ---------- שאלות ---------- */
+  .qitem{border:1px solid var(--line); border-inline-start:4px solid var(--brand-line); border-radius:var(--radius-md); padding:var(--space-4); background:var(--bg-soft); margin-bottom:var(--space-4)}
+  .qitem__head{display:flex; align-items:center; gap:var(--space-2); margin-bottom:var(--space-3); flex-wrap:wrap}
+  .qitem__num{width:30px;height:30px;border-radius:50%;background:var(--brand-soft);color:var(--brand-deep);font-family:var(--font-head);font-weight:800;font-size:var(--text-small);display:grid;place-items:center;flex:none}
+  .qitem__head .grow{flex:1}
+  .type-seg{display:inline-flex; gap:4px; background:var(--surface-muted); border:1px solid var(--line); border-radius:var(--radius-pill); padding:3px; flex-wrap:wrap}
+  .type-seg button{border:none; background:none; cursor:pointer; min-height:var(--tap); padding:0 12px; border-radius:var(--radius-pill); font-weight:600; font-size:var(--text-label); color:var(--ink-soft); display:inline-flex; align-items:center; gap:6px; transition:background 160ms ease,color 160ms ease}
+  .type-seg button svg{width:15px;height:15px}
+  .type-seg button[aria-pressed="true"]{background:var(--card); color:var(--brand-deep); box-shadow:var(--shadow-card)}
+  .type-seg button:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+
+  .opts-edit{display:flex; flex-direction:column; gap:var(--space-2); margin-top:var(--space-2)}
+  .opt-edit{display:flex; align-items:center; gap:var(--space-2)}
+  .opt-edit .keybtn{width:32px;height:32px;border-radius:50%;flex:none;border:2px solid var(--line-strong);background:var(--card);cursor:pointer;display:grid;place-items:center;color:var(--ink-faint);transition:all 160ms ease}
+  .opt-edit .keybtn svg{width:16px;height:16px; opacity:0}
+  .opt-edit .keybtn[aria-pressed="true"]{border-color:var(--status-good); background:var(--status-good); color:var(--card)}
+  .opt-edit .keybtn[aria-pressed="true"] svg{opacity:1}
+  .opt-edit .keybtn:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+  .opt-edit .inp{min-height:var(--tap)}
+  .opt-edit .rm{width:32px;height:32px;flex:none;border:none;background:none;color:var(--ink-faint);cursor:pointer;border-radius:8px}
+  .opt-edit .rm:hover{color:var(--status-alert); background:var(--surface-muted)}
+  .opt-edit .rm:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+  .opt-edit .rm svg{width:16px;height:16px;margin:0 auto}
+  .key-hint{display:inline-flex; align-items:center; gap:6px; font-size:var(--text-label); color:var(--ink-soft); margin-top:8px}
+  .key-hint svg{width:15px;height:15px;color:var(--status-good)}
+  .add-opt{align-self:flex-start; margin-top:8px; background:none; border:1px dashed var(--line-strong); color:var(--brand-deep); border-radius:var(--radius-sm); min-height:var(--tap); padding:0 14px; font-weight:600; font-size:var(--text-label); cursor:pointer; display:inline-flex; align-items:center; gap:6px}
+  .add-opt:hover{background:var(--brand-soft); border-color:var(--brand-line)}
+  .add-opt:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+  .add-opt svg{width:15px;height:15px}
+
+  /* ---------- רמות תמיכה (רמזים מדורגים) ---------- */
+  .support{margin-top:var(--space-4); border-top:1px dashed var(--line-strong); padding-top:var(--space-3)}
+  .support__t{display:flex; align-items:center; gap:8px; font-size:var(--text-label); font-weight:700; color:var(--brand-deep); margin-bottom:var(--space-2)}
+  .support__t svg{width:16px;height:16px}
+  .support__row{display:grid; grid-template-columns:132px 1fr; gap:var(--space-2); align-items:center; margin-bottom:var(--space-2)}
+  .support__row:last-child{margin-bottom:0}
+  .step-tag{display:inline-flex; align-items:center; gap:6px; font-size:var(--text-label); font-weight:600; color:var(--ink-strong); border-radius:var(--radius-pill); padding:5px 10px; border:1px solid var(--line); background:var(--card)}
+  .step-tag .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .step-tag.l1 .dot{background:var(--status-good)}
+  .step-tag.l2 .dot{background:var(--status-attention)}
+  .step-tag.l3 .dot{background:var(--status-alert)}
+  .support__row .inp{min-height:var(--tap)}
+  @media (max-width:560px){ .support__row{grid-template-columns:1fr} }
+
+  /* ---------- כפתורים ---------- */
+  .btn{min-height:var(--tap); border-radius:var(--radius-btn); font-family:var(--font-head); font-weight:600; font-size:var(--text-small); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:0 var(--space-4); transition:background 160ms ease,border-color 160ms ease,color 160ms ease}
+  .btn svg{width:18px;height:18px}
+  .btn-primary{background:var(--brand-deep); color:var(--card); border:1px solid var(--brand)}
+  .btn-primary:hover{background:var(--brand-deep); border-color:var(--brand-deep)}
+  .btn-primary:disabled{background:var(--line-strong); border-color:var(--line-strong); color:var(--card); cursor:not-allowed; opacity:.7}
+  .btn-ghost{background:var(--card); color:var(--brand-deep); border:1px solid var(--brand-line)}
+  .btn-ghost:hover{background:var(--brand-soft)}
+  .btn-soft{background:var(--surface-muted); color:var(--ink); border:1px solid var(--line)}
+  .btn-soft:hover{background:var(--brand-soft); border-color:var(--brand-line)}
+  .btn:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+  .btn-block{width:100%}
+  .btn-sm{min-height:var(--tap); font-size:var(--text-label); padding:0 var(--space-3)}
+
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;display:grid;place-items:center;transition:background 160ms ease,color 160ms ease,border-color 160ms ease}
+  .icon-btn:hover{color:var(--status-alert); border-color:var(--line-strong); background:var(--surface-muted)}
+  .icon-btn:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+  .icon-btn:disabled{opacity:.4; cursor:not-allowed}
+  .icon-btn svg{width:18px;height:18px}
+
+  /* ---------- פאנל בקרה (side) ---------- */
+  .ctrl{background:var(--card); border:1px solid var(--line); border-radius:var(--radius-lg); box-shadow:var(--shadow-card); padding:var(--space-5)}
+  .ctrl h3{font-size:var(--text-h3); margin-bottom:var(--space-1)}
+  .ctrl .csub{font-size:var(--text-label); color:var(--ink-soft); margin-bottom:var(--space-4)}
+
+  .meter{margin-bottom:var(--space-4)}
+  .meter:last-of-type{margin-bottom:0}
+  .meter__top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px}
+  .meter__name{font-size:var(--text-label); font-weight:600; color:var(--ink-strong)}
+  .meter__val{font-family:var(--font-head); font-weight:700; font-size:var(--text-small)}
+  .meter__val small{color:var(--ink-faint); font-weight:500; font-size:var(--text-label)}
+  .bar{height:8px; background:var(--surface-muted); border-radius:var(--radius-pill); overflow:hidden}
+  .bar > span{display:block; height:100%; border-radius:var(--radius-pill); background:var(--status-good); transition:width 200ms ease, background 200ms ease}
+  .bar.warn > span{background:var(--status-attention)}
+  .bar.bad > span{background:var(--status-alert)}
+  .val-good{color:var(--status-good)} .val-warn{color:var(--status-attention)} .val-bad{color:var(--status-alert)}
+
+  /* ---------- Checklist ---------- */
+  .checks{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+  .checks li{display:flex; align-items:flex-start; gap:9px; padding:7px 0; font-size:var(--text-label); color:var(--ink); border-bottom:1px solid var(--line)}
+  .checks li:last-child{border-bottom:none}
+  .checks .ci{width:20px;height:20px;border-radius:50%;flex:none;display:grid;place-items:center;margin-top:1px}
+  .checks .ci svg{width:13px;height:13px}
+  .checks li.pass .ci{background:var(--routine-soft); color:var(--status-good)}
+  .checks li.fail .ci{background:var(--surface-muted); color:var(--ink-faint)}
+  .checks li.fail{color:var(--ink-soft)}
+  .checks .cx{font-weight:600}
+  .checks li.pass .cx{color:var(--ink-strong)}
+
+  .verdict{display:flex; align-items:center; gap:10px; border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); font-weight:700; font-size:var(--text-small); margin-bottom:var(--space-4)}
+  .verdict svg{width:22px;height:22px;flex:none}
+  .verdict.ready{background:var(--routine-soft); border:1px solid var(--routine-line); color:var(--brand-dark)}
+  .verdict.ready svg{color:var(--status-good)}
+  .verdict.notready{background:var(--emergency-soft); border:1px solid var(--emergency-line); color:var(--ink-strong)}
+  .verdict.notready svg{color:var(--emergency)}
+  .verdict .n{font-family:var(--font-head); font-weight:800}
+
+  .side-actions{display:flex; flex-direction:column; gap:var(--space-2); margin-top:var(--space-4)}
+
+  /* ---------- טוגל רמת תמיכה (unit level) ---------- */
+  .seg{display:flex; gap:4px; background:var(--surface-muted); border:1px solid var(--line); border-radius:var(--radius-btn); padding:4px}
+  .seg button{flex:1; border:none; background:none; cursor:pointer; min-height:var(--tap); border-radius:9px; font-family:var(--font-head); font-weight:600; font-size:var(--text-label); color:var(--ink-soft); display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:background 160ms ease,color 160ms ease}
+  .seg button svg{width:15px;height:15px}
+  .seg button[aria-pressed="true"]{background:var(--card); color:var(--brand-deep); box-shadow:var(--shadow-card)}
+  .seg button:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+
+  /* ---------- צ'ק-בוקסים / מצבים ---------- */
+  .modes{display:flex; gap:var(--space-2); flex-wrap:wrap}
+  .mchk{display:inline-flex; align-items:center; gap:8px; border:1.5px solid var(--line-strong); border-radius:var(--radius-pill); padding:8px 14px; font-size:var(--text-label); font-weight:600; color:var(--ink-soft); cursor:pointer; min-height:40px; background:var(--card); transition:all 160ms ease}
+  .mchk input{position:absolute; opacity:0; width:1px; height:1px}
+  .mchk .dot{width:10px;height:10px;border-radius:50%;background:var(--line-strong)}
+  .mchk[data-m="routine"] .dot{background:var(--routine)} .mchk[data-m="remote"] .dot{background:var(--remote)} .mchk[data-m="emergency"] .dot{background:var(--emergency)}
+  .mchk.on{background:var(--brand-soft); border-color:var(--brand-line); color:var(--brand-dark)}
+  .mchk:focus-within{outline:3px solid var(--brand-bright); outline-offset:2px}
+
+  .switchrow{display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); padding:var(--space-3); border:1px solid var(--line); border-radius:var(--radius-md); background:var(--bg-soft); margin-bottom:var(--space-3)}
+  .switchrow .st{font-size:var(--text-small); font-weight:600; color:var(--ink-strong)}
+  .switchrow .sd{font-size:var(--text-label); color:var(--ink-soft)}
+  .sw{position:relative; width:46px; height:26px; flex:none; cursor:pointer}
+  .sw input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
+  .sw .track{position:absolute; inset:0; background:var(--line-strong); border-radius:var(--radius-pill); transition:background 160ms ease}
+  .sw .knob{position:absolute; top:3px; inset-inline-end:3px; width:20px; height:20px; background:var(--card); border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform 160ms ease}
+  .sw input:checked + .track{background:var(--brand)}
+  .sw input:checked + .track + .knob{transform:translateX(-20px)}
+  .sw input:focus-visible + .track{outline:3px solid var(--brand-bright); outline-offset:2px}
+
+  /* ---------- הערות ---------- */
+  .note{display:flex; gap:var(--space-3); align-items:flex-start; background:var(--brand-soft); border:1px solid var(--brand-line); border-radius:var(--radius-md); padding:var(--space-4); color:var(--ink); font-size:var(--text-small)}
+  .note svg{color:var(--brand-deep); flex:none; margin-top:2px; width:18px;height:18px}
+  .note b{color:var(--ink-strong)}
+  .note.amber{background:var(--emergency-soft); border-color:var(--emergency-line)}
+  .note.amber svg{color:var(--emergency)}
+
+  /* ---------- מודאל תצוגה + JSON ---------- */
+  .scrim{position:fixed; inset:0; background:var(--scrim); display:none; align-items:center; justify-content:center; padding:var(--space-4); z-index:200}
+  .scrim.show{display:flex}
+  .modal{background:var(--card); border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); width:100%; max-width:520px; max-height:88vh; overflow:auto; padding:var(--space-5)}
+  .modal__head{display:flex; align-items:center; gap:var(--space-2); margin-bottom:var(--space-4)}
+  .modal__head h3{font-size:var(--text-h3); flex:1}
+  pre.json{background:var(--brand-dark); color:var(--brand-line); border-radius:var(--radius-md); padding:var(--space-4); overflow:auto; direction:ltr; text-align:left; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; line-height:1.5; max-height:52vh}
+
+  /* ---------- תצוגת טלפון ---------- */
+  .phone{width:300px; max-width:100%; margin:0 auto; border:8px solid var(--brand-dark); border-radius:32px; background:var(--bg); overflow:hidden; box-shadow:var(--shadow-lg)}
+  .phone__bar{height:26px; background:var(--brand-dark); display:flex; align-items:center; justify-content:center}
+  .phone__bar span{width:56px;height:6px;border-radius:99px;background:rgba(255,255,255,.3)}
+  .phone__screen{padding:var(--space-5) var(--space-4); min-height:420px; display:flex; flex-direction:column}
+  .pv-kicker{font-size:var(--text-label); font-weight:700; color:var(--brand); margin-bottom:8px; display:flex; align-items:center; gap:6px}
+  .pv-kicker .dot{width:8px;height:8px;border-radius:50%;background:var(--brand)}
+  .pv-relevance{font-family:var(--font-head); font-weight:700; font-size:20px; color:var(--ink-strong); line-height:1.35}
+  .pv-h{font-family:var(--font-head); font-weight:700; font-size:var(--text-h3); color:var(--ink-strong); margin-bottom:8px}
+  .pv-text{font-size:var(--text-body); color:var(--ink); line-height:1.6}
+  .pv-highlight{margin-top:14px; background:var(--brand-soft); border:1px solid var(--brand-line); border-radius:var(--radius-md); padding:12px 14px; font-weight:700; color:var(--brand-dark); font-size:var(--text-small)}
+  .pv-example{background:var(--bg-soft); border:1px solid var(--line); border-inline-start:4px solid var(--brand); border-radius:var(--radius-md); padding:14px; font-size:var(--text-body); color:var(--ink); line-height:1.6}
+  .pv-q{font-family:var(--font-head); font-weight:700; font-size:var(--text-body); color:var(--ink-strong); margin-bottom:12px}
+  .pv-opt{border:1.5px solid var(--line-strong); border-radius:var(--radius-md); padding:11px 14px; font-size:var(--text-small); font-weight:600; color:var(--ink); margin-bottom:8px}
+  .pv-summary-badge{width:52px;height:52px;border-radius:50%;background:var(--routine-soft);color:var(--status-good);display:grid;place-items:center;margin-bottom:12px}
+  .pv-summary-badge svg{width:28px;height:28px}
+  .pv-remember{background:var(--brand-soft); border:1px solid var(--brand-line); border-radius:var(--radius-md); padding:14px; font-weight:700; color:var(--brand-dark); font-size:var(--text-small); margin:12px 0}
+  .pv-cta{margin-top:auto; background:var(--brand-deep); color:var(--card); text-align:center; border-radius:var(--radius-btn); padding:13px; font-family:var(--font-head); font-weight:700}
+  .pv-nav{display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); margin-top:var(--space-4)}
+  .pv-dots{display:flex; gap:6px; justify-content:center}
+  .pv-dots i{width:7px;height:7px;border-radius:50%;background:var(--line-strong)}
+  .pv-dots i.on{background:var(--brand); width:18px; border-radius:99px}
+
+  /* ---------- toast ---------- */
+  .toast{position:fixed; inset-block-end:24px; inset-inline-start:50%; transform:translateX(50%) translateY(20px); background:var(--ink-strong); color:var(--card); border-radius:var(--radius-pill); padding:12px 22px; font-weight:600; font-size:var(--text-small); box-shadow:var(--shadow-lg); display:flex; align-items:center; gap:10px; opacity:0; pointer-events:none; transition:opacity 200ms ease, transform 200ms ease; z-index:300}
+  .toast.show{opacity:1; transform:translateX(50%) translateY(0)}
+  .toast svg{width:18px;height:18px;color:var(--brand-bright)}
+
+  footer.foot{margin-top:var(--space-10); padding-top:var(--space-5); border-top:1px solid var(--line); color:var(--ink-faint); font-size:var(--text-small); text-align:center}
+  footer.foot .links{display:flex; gap:var(--space-4); flex-wrap:wrap; justify-content:center; margin-top:var(--space-2)}
+
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+
+<div class="offline" role="status">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+  אין חיבור לרשת — הטיוטה נשמרת אצלך במכשיר וממשיכה לעבוד.
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">רֶצֶף · יצירת תוכן · W4-01</div>
+    <h1>עורך יחידות לימוד</h1>
+    <p class="sub">בונים <b>יחידה אחת</b> לפי <b>תקן התוכן</b> — פתיח קצר, הסבר במנות, דוגמה מהחיים, שאלות עם רמזים מדורגים, ומסך סיום. הטופס בודק תוך כדי שהיחידה עומדת ב<b>מגבלות הקשיחות</b> (עד 10 דקות, עד 6 מסכים, מנה קצרה בכל מסך) לפני שהיא נשלחת לאישור רכז המקצוע.</p>
+  </header>
+
+  <!-- 5 שלבי היחידה כקו-רצף -->
+  <div class="flow" aria-hidden="true">
+    <div class="flow-row">
+      <span class="fnode"></span><span class="fline"></span>
+      <span class="fnode"></span><span class="fline"></span>
+      <span class="fnode"></span><span class="fline"></span>
+      <span class="fnode"></span><span class="fline"></span>
+      <span class="fnode"></span>
+    </div>
+    <div class="flow-labels">
+      <span>פתיח רלוונטיות</span><span>הסבר במנות</span><span>דוגמה מהחיים</span><span>שאלות + רמזים</span><span>מסך סיום</span>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- ===================== עורך ===================== -->
+    <div class="editor-col">
+
+      <!-- מטא-דאטה -->
+      <section class="step" aria-labelledby="h-meta">
+        <div class="step__head">
+          <span class="step__badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          </span>
+          <h2 id="h-meta">פרטי היחידה</h2>
+          <span class="hint">שדות חובה מסומנים ב־<span class="req">✳</span></span>
+        </div>
+        <p class="step__lead">אלה השדות שכל יחידה נושאת (תקן התוכן §4). הם מאפשרים למורה למצוא את היחידה תוך פחות מדקה.</p>
+
+        <div class="field">
+          <label for="f-title">כותרת היחידה <span class="req">✳</span></label>
+          <input class="inp" id="f-title" type="text" placeholder="למשל: למה המחיר משתנה?" oninput="onChange()">
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label for="f-subject">מקצוע <span class="req">✳</span></label>
+            <select class="sel" id="f-subject" onchange="onChange()">
+              <option value="">בחרו…</option>
+              <option>עברית</option><option>לשון</option><option>אזרחות</option>
+              <option>מתמטיקה</option><option>היסטוריה</option><option>מדעים</option>
+              <option>אנגלית</option><option>כלכלה</option><option>מקצועי / טכנולוגי</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-grade">שכבה <span class="req">✳</span></label>
+            <select class="sel" id="f-grade" onchange="onChange()">
+              <option value="">בחרו…</option>
+              <option>ט</option><option>י</option><option>יא</option><option>יב</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-min">משך משוער (דק') <span class="req">✳</span></label>
+            <input class="inp" id="f-min" type="number" min="1" max="30" value="10" oninput="onChange()">
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="field">
+            <label for="f-type">סוג יחידה <span class="req">✳</span></label>
+            <select class="sel" id="f-type" onchange="onTypeChange()">
+              <option value="task">רגילה — קשר/תרגול</option>
+              <option value="assessment">הערכה — נושאת ציון</option>
+              <option value="reference">הפניה — תוכן חיצוני</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-level">רמה <span class="req">✳</span></label>
+            <select class="sel" id="f-level" onchange="onChange()">
+              <option value="basic">בסיס (נגישה)</option>
+              <option value="advanced">מתקדם</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-track">מסלול העשרה</label>
+            <select class="sel" id="f-track" onchange="onChange()">
+              <option value="">— תוכן ליבה —</option>
+              <option value="photography">צילום</option>
+              <option value="finance">חינוך פיננסי</option>
+              <option value="entrepreneurship">יזמות</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" id="ref-field" hidden>
+          <label for="f-extref">קישור לתוכן חיצוני <span class="req">✳</span> <span class="tip">(קמפוס IL / מטח / משרד החינוך)</span></label>
+          <input class="inp" id="f-extref" type="url" dir="ltr" placeholder="https://" oninput="onChange()">
+        </div>
+
+        <div class="field">
+          <span class="lbl">מתאימה למצבי מערכת <span class="req">✳</span> <span class="tip">חובה לתייג במפורש אם מתאימה לחירום</span></span>
+          <div class="modes" role="group" aria-label="מצבי מערכת מתאימים">
+            <label class="mchk on" data-m="routine"><input type="checkbox" value="routine" checked onchange="toggleMode(this)"><span class="dot"></span>שגרה</label>
+            <label class="mchk on" data-m="remote"><input type="checkbox" value="remote" checked onchange="toggleMode(this)"><span class="dot"></span>מרחוק</label>
+            <label class="mchk" data-m="emergency"><input type="checkbox" value="emergency" onchange="toggleMode(this)"><span class="dot"></span>חירום</label>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="f-verby">אימות פדגוגי — שם האוצר <span class="req">✳</span></label>
+            <input class="inp" id="f-verby" type="text" placeholder="למשל: רכז מקצוע — ר. לוי" oninput="onChange()">
+          </div>
+          <div class="field">
+            <label for="f-veron">תאריך אימות פדגוגי <span class="req">✳</span></label>
+            <input class="inp" id="f-veron" type="date" oninput="onChange()">
+          </div>
+        </div>
+        <div class="note amber" style="margin-top:var(--space-2)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          <span><b>אימות אנושי חובה בכל מקצוע.</b> תוכן שנכתב עם AI עלול להישמע נכון אבל להיות שגוי. בלי תאריך אימות ושם אוצר — היחידה לא עולה למדף (תקן §4).</span>
+        </div>
+      </section>
+
+      <!-- שלב 1 -->
+      <section class="step" aria-labelledby="h-1">
+        <div class="step__head">
+          <span class="step__badge" aria-hidden="true">1</span>
+          <h2 id="h-1">פתיח רלוונטיות</h2>
+          <span class="counter" id="c-relev">—</span>
+        </div>
+        <p class="step__lead"><b>משפט אחד</b> שעונה "למה זה נוגע לי?". גוף שני, מחיי הנער/ה — וגם למי שחושב על עבודה, כסף או יזמות קטנה. לא "מטרות השיעור".</p>
+        <div class="field">
+          <label for="f-relev">משפט הפתיח <span class="req">✳</span></label>
+          <textarea class="inp" id="f-relev" rows="2" placeholder="כל פעם שאתה קונה משהו — מישהו החליט את המחיר. איך זה עובד?" oninput="onChange()"></textarea>
+        </div>
+      </section>
+
+      <!-- שלב 2 -->
+      <section class="step" aria-labelledby="h-2">
+        <div class="step__head">
+          <span class="step__badge" aria-hidden="true">2</span>
+          <h2 id="h-2">הסבר במנות</h2>
+          <span class="hint"><span id="chunk-count">1</span>/3 מסכים</span>
+        </div>
+        <p class="step__lead">כל מסך = <b>רעיון אחד בלבד</b>, עד <b>40 מילים</b>, משפטים עד <b>12 מילים</b>. רעיון גדול — מפצלים לשני מסכים, לא דוחסים. הדגשה אחת לכל מסך.</p>
+        <div id="chunks"></div>
+        <button class="btn btn-soft btn-sm" id="add-chunk" onclick="addChunk()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          הוסיפו מסך הסבר
+        </button>
+      </section>
+
+      <!-- שלב 3 -->
+      <section class="step" aria-labelledby="h-3">
+        <div class="step__head">
+          <span class="step__badge" aria-hidden="true">3</span>
+          <h2 id="h-3">דוגמה מהחיים</h2>
+          <span class="counter" id="c-ex">—</span>
+        </div>
+        <p class="step__lead">מקרה <b>קונקרטי</b> עם שם, מצב, מספר — לא הפשטה. מחבר את הרעיון לעולם אמיתי. עדיף דוגמה שגם עובד צעיר או יזם קטן יזהה.</p>
+        <div class="field">
+          <label for="f-ex">הדוגמה <span class="req">✳</span></label>
+          <textarea class="inp" id="f-ex" rows="2" placeholder="נועה קנתה נעליים ב-₪200. שבוע אחרי — אותן נעליים ב-₪140. פחות אנשים קנו, אז המחיר ירד." oninput="onChange()"></textarea>
+        </div>
+      </section>
+
+      <!-- שלב 4 -->
+      <section class="step" aria-labelledby="h-4">
+        <div class="step__head">
+          <span class="step__badge" aria-hidden="true">4</span>
+          <h2 id="h-4">שאלות הבנה + רמות תמיכה</h2>
+          <span class="hint"><span id="q-count">0</span>/3 שאלות</span>
+        </div>
+        <p class="step__lead">
+          <b>2–3 שאלות</b>. הראשונה קלה — ניצחון מהיר. לכל שאלה <b>משוב על תשובה נכונה</b> ו<b>שלושה רמזים מדורגים</b>:
+          טעות ראשונה = רמז עדין · שנייה = רמז ממוקד · שלישית = חשיפת התשובה. אף פעם לא נתקעים.
+        </p>
+        <div id="questions"></div>
+        <button class="btn btn-soft btn-sm" id="add-q" onclick="addQuestion()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          הוסיפו שאלה
+        </button>
+      </section>
+
+      <!-- שלב 5 -->
+      <section class="step" aria-labelledby="h-5">
+        <div class="step__head">
+          <span class="step__badge" aria-hidden="true">5</span>
+          <h2 id="h-5">מסך סיום</h2>
+          <span class="counter" id="c-rem">—</span>
+        </div>
+        <p class="step__lead">"סיימת!" רגוע — בלי חגיגה רועשת. <b>רעיון אחד לזכור</b> (המשפט היחיד שנשאר), וכפתור "סיימתי" שמדליק את הקשר: המורה יראה שנכחת.</p>
+        <div class="field">
+          <label for="f-remember">הרעיון לזכור <span class="req">✳</span></label>
+          <textarea class="inp" id="f-remember" rows="2" placeholder="הרבה אנשים רוצים = מחיר עולה. מעט רוצים = מחיר יורד." oninput="onChange()"></textarea>
+        </div>
+        <div class="field">
+          <label for="f-cta">טקסט כפתור הסיום</label>
+          <input class="inp" id="f-cta" type="text" value="סיימתי" oninput="onChange()">
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ===================== פאנל בקרה ===================== -->
+    <aside class="panel-side" aria-label="בקרת תקן ופעולות">
+
+      <div class="ctrl">
+        <div id="verdict" class="verdict notready">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg>
+          <span><span class="n" id="verdict-n">0</span>/12 מוכן לאישור רכז</span>
+        </div>
+
+        <h3>מגבלות קשיחות</h3>
+        <p class="csub">נבדק תוך כדי כתיבה (תקן §2)</p>
+
+        <div class="meter">
+          <div class="meter__top">
+            <span class="meter__name">מסכים</span>
+            <span class="meter__val" id="m-screens-v">1 <small>/ 6</small></span>
+          </div>
+          <div class="bar" id="m-screens"><span style="width:16%"></span></div>
+        </div>
+
+        <div class="meter">
+          <div class="meter__top">
+            <span class="meter__name">משך משוער</span>
+            <span class="meter__val" id="m-time-v">10 <small>/ 10 דק'</small></span>
+          </div>
+          <div class="bar" id="m-time"><span style="width:100%"></span></div>
+        </div>
+
+        <div class="meter">
+          <div class="meter__top">
+            <span class="meter__name">מנת הסבר ארוכה ביותר</span>
+            <span class="meter__val" id="m-words-v">0 <small>/ 40 מילים</small></span>
+          </div>
+          <div class="bar" id="m-words"><span style="width:0%"></span></div>
+        </div>
+
+        <div class="meter" style="margin-bottom:0">
+          <div class="meter__top">
+            <span class="meter__name">משפט ארוך ביותר</span>
+            <span class="meter__val" id="m-sent-v">0 <small>/ 12 מילים</small></span>
+          </div>
+          <div class="bar" id="m-sent"><span style="width:0%"></span></div>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <h3>רמת תמיכה של היחידה</h3>
+        <p class="csub">לכל יחידה גרסה נגישה — חובה, לא רשות (תקן §4)</p>
+        <div class="seg" role="group" aria-label="רמת היחידה">
+          <button type="button" id="lvl-basic" aria-pressed="true" onclick="setLevel('basic')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            בסיס · נגישה
+          </button>
+          <button type="button" id="lvl-advanced" aria-pressed="false" onclick="setLevel('advanced')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/><path d="M2 12h3"/></svg>
+            מתקדם
+          </button>
+        </div>
+        <div class="switchrow" style="margin-top:var(--space-3); margin-bottom:0">
+          <div>
+            <div class="st">בטוחה לחירום</div>
+            <div class="sd">בלי תכנים מעוררי חרדה, רגיש למפונים</div>
+          </div>
+          <label class="sw"><input type="checkbox" id="f-emsafe" onchange="onChange()" aria-label="בטוחה לחירום"><span class="track"></span><span class="knob"></span></label>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <h3>בדיקת קבלה</h3>
+        <p class="csub">הסעיפים הנבדקים אוטומטית מתוך ה־Checklist (תקן §6)</p>
+        <ul class="checks" id="checks"></ul>
+        <div class="side-actions">
+          <button class="btn btn-primary btn-block" id="btn-approve" onclick="openApprove()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+            שליחה לאישור רכז
+          </button>
+          <button class="btn btn-ghost btn-block" onclick="openPreview()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            תצוגה מקדימה (טלפון)
+          </button>
+          <div style="display:flex; gap:var(--space-2)">
+            <button class="btn btn-soft btn-sm" style="flex:1" onclick="saveDraft(true)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+              שמירת טיוטה
+            </button>
+            <button class="btn btn-soft btn-sm" style="flex:1" onclick="openJson()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              JSON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="10"/></svg>
+        <span>העורך בודק את הסעיפים הכמותיים בלבד. <b>נכונות פדגוגית ומבחן החירום</b> נבדקים ידנית ע"י רכז המקצוע לפני אישור — הכלי לא מחליף בדיקה אנושית.</span>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="foot">
+    רֶצֶף · עורך יחידות לימוד (W4-01) · טופס מובנה לפי <b>תקן התוכן</b>
+    <div class="links">
+      <a href="content-standard.md">תקן התוכן</a>
+      <a href="library.html">ספריית התוכן</a>
+      <a href="demo-unit-hebrew.html">יחידה לדוגמה</a>
+      <a href="teacher-flow.html">מסך מורה</a>
+    </div>
+  </footer>
+</div>
+
+<!-- ===================== מודאלים ===================== -->
+<div class="scrim" id="preview-scrim" role="dialog" aria-modal="true" aria-labelledby="pv-title" onclick="if(event.target===this)closeModal('preview-scrim')">
+  <div class="modal" style="max-width:380px">
+    <div class="modal__head">
+      <h3 id="pv-title">תצוגה מקדימה</h3>
+      <button class="icon-btn" onclick="closeModal('preview-scrim')" aria-label="סגירה"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="phone">
+      <div class="phone__bar"><span></span></div>
+      <div class="phone__screen" id="pv-screen"></div>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="json-scrim" role="dialog" aria-modal="true" aria-labelledby="js-title" onclick="if(event.target===this)closeModal('json-scrim')">
+  <div class="modal">
+    <div class="modal__head">
+      <h3 id="js-title">מבנה היחידה (JSON)</h3>
+      <button class="btn btn-soft btn-sm" onclick="copyJson()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>העתקה</button>
+      <button class="icon-btn" onclick="closeModal('json-scrim')" aria-label="סגירה"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <p class="csub" style="color:var(--ink-soft);font-size:var(--text-label);margin-bottom:var(--space-3)">תואם לישות <code>ContentUnit</code> (תקן §7). זה מה שהמערכת שומרת ומעבירה לאישור.</p>
+    <pre class="json" id="json-out"></pre>
+  </div>
+</div>
+
+<div class="scrim" id="approve-scrim" role="dialog" aria-modal="true" aria-labelledby="ap-title" onclick="if(event.target===this)closeModal('approve-scrim')">
+  <div class="modal" style="max-width:460px">
+    <div class="modal__head">
+      <h3 id="ap-title">שליחה לאישור רכז המקצוע</h3>
+      <button class="icon-btn" onclick="closeModal('approve-scrim')" aria-label="סגירה"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div id="approve-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toast-msg">נשמר</span>
+</div>
+
+<script>
+/* =========================================================
+   רֶצֶף · עורך יחידות לימוד — W4-01
+   מודל בזיכרון + validation חי מול תקן התוכן §2/§6
+   ========================================================= */
+const LS_KEY = 'retzef_unit_draft_v1';
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const DASH  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>';
+const RM_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+const CHK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+/* ---- מודל ---- */
+let model = {
+  level: 'basic',
+  modes: ['routine','remote'],
+  chunks: [ {heading:'', text:'', highlight:''} ],
+  questions: []
+};
+
+/* ---- ספירת מילים / משפטים ---- */
+function words(t){ return (t||'').trim().split(/\s+/).filter(Boolean).length; }
+function longestSentence(t){
+  if(!t) return 0;
+  const parts = t.split(/[.!?\n]+/).map(s=>s.trim()).filter(Boolean);
+  return parts.reduce((m,s)=>Math.max(m, words(s)), 0);
+}
+
+/* ============ מנות הסבר ============ */
+function renderChunks(){
+  const wrap = document.getElementById('chunks');
+  wrap.innerHTML = '';
+  model.chunks.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'chunk';
+    div.innerHTML = `
+      <div class="chunk__head">
+        <span class="chunk__num">${i+1}</span>
+        <span class="t">מנת הסבר ${i+1}</span>
+        <span class="grow"></span>
+        <button class="icon-btn" aria-label="מחיקת מנה" onclick="removeChunk(${i})" ${model.chunks.length<=1?'disabled':''}>${RM_SVG}</button>
+      </div>
+      <div class="field">
+        <label>כותרת המנה (רעיון אחד)</label>
+        <input class="inp" type="text" data-ck="heading" data-i="${i}" value="${esc(c.heading)}" placeholder="היצע וביקוש" oninput="chunkEdit(this)">
+      </div>
+      <div class="field">
+        <label style="display:flex;justify-content:space-between">טקסט ההסבר <span class="counter" data-cw="${i}"></span></label>
+        <textarea class="inp" rows="2" data-ck="text" data-i="${i}" placeholder="כשהרבה אנשים רוצים דבר אחד — המחיר עולה. כשאף אחד לא רוצה — המחיר יורד." oninput="chunkEdit(this)">${esc(c.text)}</textarea>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>הדגשה — נקודת העוגן (משפט אחד)</label>
+        <input class="inp" type="text" data-ck="highlight" data-i="${i}" value="${esc(c.highlight)}" placeholder="הרבה רוצים = מחיר עולה" oninput="chunkEdit(this)">
+      </div>`;
+    wrap.appendChild(div);
+  });
+  document.getElementById('add-chunk').disabled = model.chunks.length >= 3;
+  document.getElementById('chunk-count').textContent = model.chunks.length;
+}
+function chunkEdit(el){
+  const i = +el.dataset.i, k = el.dataset.ck;
+  model.chunks[i][k] = el.value;
+  onChange();
+}
+function addChunk(){ if(model.chunks.length<3){ model.chunks.push({heading:'',text:'',highlight:''}); renderChunks(); onChange(); } }
+function removeChunk(i){ if(model.chunks.length>1){ model.chunks.splice(i,1); renderChunks(); onChange(); } }
+
+/* ============ שאלות ============ */
+const Q_TYPES = {
+  multiple_choice: 'אמריקאית',
+  true_false: 'נכון / לא נכון',
+  fill_blank: 'השלמת מילה'
+};
+function newQuestion(){
+  return { q:'', kind:'multiple_choice', options:['',''], answer:0, answerText:'',
+           feedback_correct:'', hints:['','',''] };
+}
+function renderQuestions(){
+  const wrap = document.getElementById('questions');
+  wrap.innerHTML = '';
+  model.questions.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = 'qitem';
+    div.innerHTML = `
+      <div class="qitem__head">
+        <span class="qitem__num">${i+1}</span>
+        <div class="type-seg" role="group" aria-label="סוג שאלה ${i+1}">
+          ${Object.entries(Q_TYPES).map(([k,label])=>`
+            <button type="button" aria-pressed="${q.kind===k}" onclick="setQKind(${i},'${k}')">${label}</button>`).join('')}
+        </div>
+        <span class="grow"></span>
+        <button class="icon-btn" aria-label="מחיקת שאלה" onclick="removeQuestion(${i})">${RM_SVG}</button>
+      </div>
+      <div class="field">
+        <label>נוסח השאלה</label>
+        <input class="inp" type="text" data-qk="q" data-i="${i}" value="${esc(q.q)}" placeholder="${i===0?'המון אנשים רוצים כרטיס להופעה. מה יקרה למחיר?':'שאלה…'}" oninput="qEdit(this)">
+        ${i===0?'<span class="tip" style="margin-top:4px">השאלה הראשונה — קלה. ניצחון מהיר.</span>':''}
+      </div>
+      ${renderQBody(q, i)}
+      <div class="field" style="margin-top:var(--space-3)">
+        <label>משוב על תשובה נכונה <span class="tip">(למה זה נכון — משפט אחד, לא רק "כל הכבוד")</span></label>
+        <input class="inp" type="text" data-qk="feedback_correct" data-i="${i}" value="${esc(q.feedback_correct)}" placeholder="נכון! הרבה רוצים — המחיר עולה." oninput="qEdit(this)">
+      </div>
+      <div class="support">
+        <div class="support__t">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          רמות תמיכה — רמזים מדורגים אחרי טעות
+        </div>
+        <div class="support__row">
+          <span class="step-tag l1"><span class="dot"></span>טעות ראשונה</span>
+          <input class="inp" type="text" data-qk="hint0" data-i="${i}" value="${esc(q.hints[0])}" placeholder="רמז עדין: תחשוב מה קורה כשכולם רוצים את אותו דבר." oninput="qEdit(this)">
+        </div>
+        <div class="support__row">
+          <span class="step-tag l2"><span class="dot"></span>טעות שנייה</span>
+          <input class="inp" type="text" data-qk="hint1" data-i="${i}" value="${esc(q.hints[1])}" placeholder="רמז ממוקד: הרבה ביקוש דוחף את המחיר כלפי מעלה." oninput="qEdit(this)">
+        </div>
+        <div class="support__row">
+          <span class="step-tag l3"><span class="dot"></span>טעות שלישית</span>
+          <input class="inp" type="text" data-qk="hint2" data-i="${i}" value="${esc(q.hints[2])}" placeholder="חשיפת התשובה + הסבר קצר, וממשיכים הלאה." oninput="qEdit(this)">
+        </div>
+      </div>`;
+    wrap.appendChild(div);
+  });
+  document.getElementById('add-q').disabled = model.questions.length >= 3;
+  document.getElementById('q-count').textContent = model.questions.length;
+}
+function renderQBody(q, i){
+  if(q.kind === 'fill_blank'){
+    return `<div class="field" style="margin-bottom:0">
+      <label>התשובה הנכונה (המילה החסרה)</label>
+      <input class="inp" type="text" data-qk="answerText" data-i="${i}" value="${esc(q.answerText)}" placeholder="עולה" oninput="qEdit(this)">
+    </div>`;
+  }
+  const opts = q.kind === 'true_false' ? ['נכון','לא נכון'] : q.options;
+  const editable = q.kind !== 'true_false';
+  let html = `<div class="opts-edit" role="group" aria-label="אפשרויות שאלה ${i+1}">`;
+  opts.forEach((o, oi) => {
+    html += `<div class="opt-edit">
+      <button type="button" class="keybtn" aria-pressed="${q.answer===oi}" aria-label="סימון תשובה נכונה" onclick="setAnswer(${i},${oi})">${CHK_SVG}</button>
+      ${editable
+        ? `<input class="inp" type="text" data-qo="${i}" data-oi="${oi}" value="${esc(o)}" placeholder="אפשרות ${oi+1}" oninput="optEdit(this)">`
+        : `<div class="inp" style="display:flex;align-items:center;background:var(--surface-muted)">${o}</div>`}
+      ${editable && opts.length>2 ? `<button type="button" class="rm" aria-label="מחיקת אפשרות" onclick="removeOpt(${i},${oi})">${RM_SVG}</button>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
+  if(editable && opts.length<4){
+    html += `<button type="button" class="add-opt" onclick="addOpt(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>הוספת אפשרות</button>`;
+  }
+  html += `<div class="key-hint">${CHK_SVG}<span>סמנו את העיגול ליד התשובה הנכונה (המפתח).</span></div>`;
+  return html;
+}
+function qEdit(el){
+  const i=+el.dataset.i, k=el.dataset.qk;
+  if(k.startsWith('hint')){ model.questions[i].hints[+k.slice(4)] = el.value; }
+  else { model.questions[i][k] = el.value; }
+  onChange();
+}
+function optEdit(el){ model.questions[+el.dataset.qo].options[+el.dataset.oi] = el.value; onChange(); }
+function setQKind(i,k){ model.questions[i].kind=k; if(k==='true_false')model.questions[i].answer=Math.min(model.questions[i].answer,1); renderQuestions(); onChange(); }
+function setAnswer(i,oi){ model.questions[i].answer=oi; renderQuestions(); onChange(); }
+function addOpt(i){ if(model.questions[i].options.length<4){ model.questions[i].options.push(''); renderQuestions(); onChange(); } }
+function removeOpt(i,oi){ const q=model.questions[i]; if(q.options.length>2){ q.options.splice(oi,1); if(q.answer>=q.options.length)q.answer=0; renderQuestions(); onChange(); } }
+function addQuestion(){ if(model.questions.length<3){ model.questions.push(newQuestion()); renderQuestions(); onChange(); } }
+function removeQuestion(i){ model.questions.splice(i,1); renderQuestions(); onChange(); }
+
+/* ============ מצבים / רמה ============ */
+function toggleMode(cb){
+  const label = cb.closest('.mchk');
+  label.classList.toggle('on', cb.checked);
+  model.modes = [...document.querySelectorAll('.mchk input:checked')].map(x=>x.value);
+  onChange();
+}
+function setLevel(l){
+  model.level = l;
+  document.getElementById('lvl-basic').setAttribute('aria-pressed', l==='basic');
+  document.getElementById('lvl-advanced').setAttribute('aria-pressed', l==='advanced');
+  onChange();
+}
+function onTypeChange(){
+  const isRef = document.getElementById('f-type').value === 'reference';
+  document.getElementById('ref-field').hidden = !isRef;
+  onChange();
+}
+
+/* ============ VALIDATION חי ============ */
+function screenCount(){
+  // פתיח(1) + הסבר(N) + דוגמה(1) + שאלות(1) + סיום(1)
+  const hasEx = document.getElementById('f-ex').value.trim() ? 1 : 0;
+  const hasQ = model.questions.length ? 1 : 0;
+  return 1 + model.chunks.length + hasEx + hasQ + 1;
+}
+function meterClass(v, warn, bad){ return v>bad?'bad':(v>warn?'warn':''); }
+function setMeter(id, pct, cls){
+  const bar = document.getElementById(id);
+  bar.className = 'bar' + (cls?(' '+cls):'');
+  bar.firstElementChild.style.width = Math.min(100, pct) + '%';
+}
+
+function validate(){
+  // מסכים
+  const sc = screenCount();
+  document.getElementById('m-screens-v').innerHTML = `${sc} <small>/ 6</small>`;
+  setMeter('m-screens', sc/6*100, sc>6?'bad':(sc>=6?'warn':''));
+
+  // זמן
+  const mins = +document.getElementById('f-min').value || 0;
+  document.getElementById('m-time-v').innerHTML = `${mins} <small>/ 10 דק'</small>`;
+  setMeter('m-time', mins/10*100, mins>10?'bad':'');
+
+  // מילים במנה ארוכה ביותר + משפט ארוך ביותר (כולל דוגמה/פתיח/סיום)
+  let maxWords = 0, maxSent = 0;
+  model.chunks.forEach((c, i)=>{
+    const w = words(c.text);
+    maxWords = Math.max(maxWords, w);
+    maxSent = Math.max(maxSent, longestSentence(c.text));
+    const cw = document.querySelector(`[data-cw="${i}"]`);
+    if(cw){ cw.textContent = w+' / 40 מילים'; cw.className='counter '+(w>40?'bad':(w>=34?'warn':(w>0?'ok':''))); }
+  });
+  ['f-relev','f-ex','f-remember'].forEach(id=>{
+    maxSent = Math.max(maxSent, longestSentence(document.getElementById(id).value));
+  });
+  document.getElementById('m-words-v').innerHTML = `${maxWords} <small>/ 40 מילים</small>`;
+  setMeter('m-words', maxWords/40*100, maxWords>40?'bad':(maxWords>=34?'warn':''));
+  document.getElementById('m-sent-v').innerHTML = `${maxSent} <small>/ 12 מילים</small>`;
+  setMeter('m-sent', maxSent/12*100, maxSent>12?'bad':(maxSent>=11?'warn':''));
+
+  // counters לשלבים
+  setCounter('c-relev','f-relev', 'משפט');
+  setCounter('c-ex','f-ex', 'משפט');
+  setCounter('c-rem','f-remember', 'משפט');
+
+  // סימון textarea חורג
+  document.querySelectorAll('[data-ck="text"]').forEach(el=>{
+    el.classList.toggle('over', words(el.value)>40 || longestSentence(el.value)>12);
+  });
+
+  runChecklist(sc, mins, maxWords, maxSent);
+}
+function setCounter(cid, fid, unit){
+  const t = document.getElementById(fid).value;
+  const w = words(t), s = longestSentence(t);
+  const el = document.getElementById(cid);
+  if(!t.trim()){ el.textContent='—'; el.className='counter'; return; }
+  el.textContent = `${w} מילים · ${unit} ארוך: ${s}`;
+  el.className = 'counter ' + (s>12?'bad':(s>=11?'warn':'ok'));
+}
+
+/* ---- Checklist אוטומטי (הסעיפים הכמותיים מ־§6) ---- */
+function runChecklist(sc, mins, maxWords, maxSent){
+  const q = model.questions;
+  const metaOk = document.getElementById('f-title').value.trim() && document.getElementById('f-subject').value
+    && document.getElementById('f-grade').value && document.getElementById('f-verby').value.trim()
+    && document.getElementById('f-veron').value && (document.getElementById('f-type').value!=='reference' || document.getElementById('f-extref').value.trim());
+  const qOk = q.length>=2 && q.length<=3 && q.every(x=>x.q.trim() && x.feedback_correct.trim());
+  const hintsOk = q.length>0 && q.every(x=>x.hints.every(h=>h.trim()));
+  const chunksFilled = model.chunks.every(c=>c.text.trim() && c.highlight.trim());
+
+  const items = [
+    ['פתיח רלוונטיות (משפט אחד)', !!document.getElementById('f-relev').value.trim() && longestSentence(document.getElementById('f-relev').value)<=14],
+    ['הסבר במנות — רעיון + הדגשה בכל מסך', chunksFilled],
+    ['דוגמה קונקרטית מהחיים', !!document.getElementById('f-ex').value.trim()],
+    ['2–3 שאלות עם משוב על נכון', qOk],
+    ['רמזים מדורגים לכל שאלה', hintsOk],
+    ['מסך סיום — רעיון לזכור', !!document.getElementById('f-remember').value.trim()],
+    ['סה"כ ≤ 10 דקות', mins>0 && mins<=10],
+    ['≤ 6 מסכים', sc<=6],
+    ['מנת הסבר ≤ 40 מילים', maxWords<=40 && model.chunks.some(c=>c.text.trim())],
+    ['כל משפט ≤ 12 מילים', maxSent<=12 && maxSent>0],
+    ['מטא-דאטה מלאה + אימות פדגוגי', !!metaOk],
+    ['מתאימה לפחות למצב מערכת אחד', model.modes.length>0]
+  ];
+
+  const ul = document.getElementById('checks');
+  ul.innerHTML = items.map(([t,ok])=>`
+    <li class="${ok?'pass':'fail'}">
+      <span class="ci">${ok?CHECK:DASH}</span>
+      <span class="cx">${t}</span>
+    </li>`).join('');
+
+  const passed = items.filter(x=>x[1]).length;
+  document.getElementById('verdict-n').textContent = passed;
+  const vd = document.getElementById('verdict');
+  const ready = passed===items.length;
+  vd.className = 'verdict ' + (ready?'ready':'notready');
+  vd.querySelector('span').innerHTML = ready
+    ? `<span class="n">${passed}</span>/${items.length} — מוכן לאישור רכז`
+    : `<span class="n">${passed}</span>/${items.length} סעיפים מוכנים`;
+  vd.querySelector('svg').innerHTML = ready
+    ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/>'
+    : '<path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/>';
+  document.getElementById('btn-approve').disabled = !ready;
+  return {passed, total:items.length, ready};
+}
+
+/* ============ שינוי + שמירה ============ */
+let saveTimer;
+function onChange(){
+  validate();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>saveDraft(false), 800);
+}
+function collectMeta(){
+  return {
+    title: document.getElementById('f-title').value,
+    subject: document.getElementById('f-subject').value,
+    grade: document.getElementById('f-grade').value,
+    minutes: document.getElementById('f-min').value,
+    type: document.getElementById('f-type').value,
+    level: model.level,
+    track: document.getElementById('f-track').value,
+    extref: document.getElementById('f-extref').value,
+    modes: model.modes,
+    verby: document.getElementById('f-verby').value,
+    veron: document.getElementById('f-veron').value,
+    emsafe: document.getElementById('f-emsafe').checked,
+    relev: document.getElementById('f-relev').value,
+    example: document.getElementById('f-ex').value,
+    remember: document.getElementById('f-remember').value,
+    cta: document.getElementById('f-cta').value
+  };
+}
+function saveDraft(explicit){
+  const data = { meta: collectMeta(), chunks: model.chunks, questions: model.questions };
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(data)); }catch(e){}
+  if(explicit) toast('הטיוטה נשמרה במכשיר');
+}
+function loadDraft(){
+  let raw; try{ raw = localStorage.getItem(LS_KEY); }catch(e){ return false; }
+  if(!raw) return false;
+  try{
+    const d = JSON.parse(raw); const m = d.meta||{};
+    setVal('f-title',m.title); setVal('f-subject',m.subject); setVal('f-grade',m.grade);
+    setVal('f-min',m.minutes); setVal('f-type',m.type); setVal('f-track',m.track);
+    setVal('f-extref',m.extref); setVal('f-verby',m.verby); setVal('f-veron',m.veron);
+    setVal('f-relev',m.relev); setVal('f-ex',m.example); setVal('f-remember',m.remember); setVal('f-cta',m.cta);
+    document.getElementById('f-emsafe').checked = !!m.emsafe;
+    model.chunks = (d.chunks&&d.chunks.length)?d.chunks:[{heading:'',text:'',highlight:''}];
+    model.questions = d.questions||[];
+    model.level = m.level||'basic';
+    model.modes = m.modes||['routine','remote'];
+    document.querySelectorAll('.mchk input').forEach(cb=>{
+      cb.checked = model.modes.includes(cb.value);
+      cb.closest('.mchk').classList.toggle('on', cb.checked);
+    });
+    setLevel(model.level);
+    onTypeChange();
+    return true;
+  }catch(e){ return false; }
+}
+function setVal(id,v){ if(v!=null) document.getElementById(id).value = v; }
+
+/* ============ דוגמה מוזרקת ============ */
+function loadExample(){
+  setVal('f-title','למה המחיר משתנה?'); setVal('f-subject','כלכלה'); setVal('f-grade','י');
+  setVal('f-min','10'); setVal('f-verby','רכז מקצוע — ר. לוי'); setVal('f-veron','2026-07-08');
+  document.getElementById('f-emsafe').checked = true;
+  setVal('f-relev','כל פעם שאתה קונה משהו — מישהו החליט את המחיר. איך זה עובד?');
+  setVal('f-ex','נועה קנתה נעליים ב-₪200. שבוע אחרי — אותן נעליים ב-₪140. פחות אנשים קנו, אז המחיר ירד.');
+  setVal('f-remember','הרבה אנשים רוצים = מחיר עולה. מעט רוצים = מחיר יורד.');
+  model.chunks = [{heading:'היצע וביקוש', text:'כשהרבה אנשים רוצים דבר אחד — המחיר עולה. כשאף אחד לא רוצה — המחיר יורד.', highlight:'הרבה רוצים = מחיר עולה'}];
+  model.questions = [{
+    q:'המון אנשים רוצים כרטיס להופעה. מה יקרה למחיר?', kind:'multiple_choice',
+    options:['יעלה','יירד','יישאר אותו דבר'], answer:0, answerText:'',
+    feedback_correct:'נכון! הרבה רוצים — המחיר עולה.',
+    hints:['תחשוב מה קורה כשכולם רוצים את אותו דבר.','הרבה ביקוש דוחף את המחיר כלפי מעלה.','כשהביקוש גבוה מההיצע — המחיר עולה. זו התשובה.']
+  },{
+    q:'חנות נשארה עם מלאי ענק שאף אחד לא קונה. מה כדאי לעשות למחיר?', kind:'multiple_choice',
+    options:['להעלות','להוריד','לא לשנות'], answer:1, answerText:'',
+    feedback_correct:'נכון — מעט ביקוש, מורידים מחיר כדי למכור.',
+    hints:['מה עושים כדי לפתות אנשים לקנות?','אם אף אחד לא קונה במחיר הנוכחי — משהו צריך לרדת.','מלאי גדול + מעט קונים = מורידים מחיר. זו התשובה.']
+  }];
+  renderChunks(); renderQuestions(); onChange();
+}
+
+/* ============ תצוגה מקדימה (טלפון) ============ */
+let pvIndex = 0, pvScreens = [];
+function buildPreviewScreens(){
+  const m = collectMeta();
+  const s = [];
+  s.push({t:'relevance'});
+  model.chunks.forEach((c,i)=> s.push({t:'explain', i}));
+  if(m.example.trim()) s.push({t:'example'});
+  if(model.questions.length) s.push({t:'questions', qi:0});
+  s.push({t:'summary'});
+  return s;
+}
+function openPreview(){ pvScreens = buildPreviewScreens(); pvIndex=0; renderPreview(); openModal('preview-scrim'); }
+function renderPreview(){
+  const m = collectMeta();
+  const sc = pvScreens[pvIndex];
+  const el = document.getElementById('pv-screen');
+  let body='';
+  if(sc.t==='relevance'){
+    body = `<div class="pv-kicker"><span class="dot"></span>${esc(m.subject||'רֶצֶף')}</div>
+      <div class="pv-relevance">${esc(m.relev)||'<span style="color:var(--ink-faint)">— פתיח רלוונטיות —</span>'}</div>`;
+  } else if(sc.t==='explain'){
+    const c = model.chunks[sc.i];
+    body = `<div class="pv-kicker"><span class="dot"></span>הסבר ${sc.i+1}</div>
+      ${c.heading?`<div class="pv-h">${esc(c.heading)}</div>`:''}
+      <div class="pv-text">${esc(c.text)||'<span style="color:var(--ink-faint)">— טקסט ההסבר —</span>'}</div>
+      ${c.highlight?`<div class="pv-highlight">${esc(c.highlight)}</div>`:''}`;
+  } else if(sc.t==='example'){
+    body = `<div class="pv-kicker"><span class="dot"></span>דוגמה מהחיים</div>
+      <div class="pv-example">${esc(m.example)}</div>`;
+  } else if(sc.t==='questions'){
+    const q = model.questions[0];
+    const opts = q.kind==='true_false'?['נכון','לא נכון']:(q.kind==='fill_blank'?['השלמת מילה']:q.options);
+    body = `<div class="pv-kicker"><span class="dot"></span>שאלה</div>
+      <div class="pv-q">${esc(q.q)||'— נוסח השאלה —'}</div>
+      ${q.kind==='fill_blank'
+        ? `<div class="pv-opt" style="border-style:dashed">_____ (${esc(q.answerText)||'תשובה'})</div>`
+        : opts.map(o=>`<div class="pv-opt">${esc(o)}</div>`).join('')}`;
+  } else {
+    body = `<div style="text-align:center;display:flex;flex-direction:column;align-items:center">
+      <div class="pv-summary-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="pv-h">סיימת!</div></div>
+      <div class="pv-remember">${esc(m.remember)||'— הרעיון לזכור —'}</div>`;
+    body += `<div class="pv-cta">${esc(m.cta)||'סיימתי'}</div>`;
+  }
+  // dots
+  const dots = pvScreens.map((_,i)=>`<i class="${i===pvIndex?'on':''}"></i>`).join('');
+  el.innerHTML = body + `<div class="pv-nav">
+      <button class="icon-btn" onclick="pvNav(-1)" ${pvIndex===0?'disabled':''} aria-label="הקודם"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      <div class="pv-dots">${dots}</div>
+      <button class="icon-btn" onclick="pvNav(1)" ${pvIndex===pvScreens.length-1?'disabled':''} aria-label="הבא"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    </div>`;
+}
+function pvNav(d){ pvIndex=Math.max(0,Math.min(pvScreens.length-1,pvIndex+d)); renderPreview(); }
+
+/* ============ JSON ============ */
+function buildJson(){
+  const m = collectMeta();
+  const screens = [];
+  screens.push({ type:'relevance', text:m.relev });
+  model.chunks.forEach(c=> screens.push({ type:'explain', heading:c.heading, text:c.text, highlight:c.highlight }));
+  if(m.example.trim()) screens.push({ type:'example', text:m.example });
+  if(model.questions.length){
+    screens.push({ type:'questions', items: model.questions.map(q=>{
+      const item = { q:q.q, kind:q.kind, feedback_correct:q.feedback_correct, hints:q.hints.filter(h=>h.trim()) };
+      if(q.kind==='fill_blank'){ item.answer_text = q.answerText; }
+      else { item.options = q.kind==='true_false'?['נכון','לא נכון']:q.options; item.answer = q.answer; }
+      return item;
+    })});
+  }
+  screens.push({ type:'summary', remember:m.remember, cta:m.cta||'סיימתי' });
+  const id = 'unit_' + (m.subject||'x').slice(0,4) + '_' + Date.now().toString(36);
+  return {
+    id, title: m.title,
+    meta: {
+      subject:m.subject, unit_type:m.type,
+      track_id: m.track||null,
+      content_source: m.type==='reference'?'external':'internal',
+      external_ref: m.type==='reference'?(m.extref||null):null,
+      grade:m.grade, level:m.level, est_minutes:Number(m.minutes)||10,
+      recommended_mode: m.modes,
+      accessibility: m.level==='basic',
+      parent_unit_id: null,
+      pedagogy_verified_on: m.veron||null,
+      pedagogy_verified_by: m.verby||null,
+      emergency_safe: m.emsafe
+    },
+    screens
+  };
+}
+function openJson(){ document.getElementById('json-out').textContent = JSON.stringify(buildJson(), null, 2); openModal('json-scrim'); }
+function copyJson(){
+  const txt = document.getElementById('json-out').textContent;
+  navigator.clipboard?.writeText(txt).then(()=>toast('ה-JSON הועתק'), ()=>toast('העתקה נכשלה'));
+}
+
+/* ============ אישור ============ */
+function openApprove(){
+  const m = collectMeta();
+  const modeLabels = {routine:'שגרה', remote:'מרחוק', emergency:'חירום'};
+  document.getElementById('approve-body').innerHTML = `
+    <div class="note" style="margin-bottom:var(--space-4)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+      <span>כל 12 הבדיקות הכמותיות עברו. היחידה עוברת כעת ל<b>רכז המקצוע</b> — שבודק <b>נכונות פדגוגית</b> ו<b>מבחן החירום</b> ומאשר לעלייה למדף (זרימת אישור W4-02).</span>
+    </div>
+    <div style="font-size:var(--text-small);color:var(--ink); line-height:1.9; margin-bottom:var(--space-4)">
+      <div><b>${esc(m.title)||'ללא כותרת'}</b></div>
+      <div style="color:var(--ink-soft)">${esc(m.subject)} · שכבה ${esc(m.grade)} · ${m.level==='basic'?'בסיס (נגישה)':'מתקדם'} · כ-${esc(m.minutes)} דק'</div>
+      <div style="color:var(--ink-soft)">מצבים: ${m.modes.map(x=>modeLabels[x]).join(' · ')}${m.emsafe?' · בטוחה לחירום':''}</div>
+      <div style="color:var(--ink-soft)">אימות: ${esc(m.verby)} · ${esc(m.veron)}</div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="doApprove()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      שליחה לרכז המקצוע
+    </button>`;
+  openModal('approve-scrim');
+}
+function doApprove(){ closeModal('approve-scrim'); toast('היחידה נשלחה לאישור רכז המקצוע'); }
+
+/* ============ עזר ============ */
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function openModal(id){ document.getElementById(id).classList.add('show'); document.body.style.overflow='hidden'; }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); document.body.style.overflow=''; }
+let toastTimer;
+function toast(msg){
+  document.getElementById('toast-msg').textContent = msg;
+  const t = document.getElementById('toast'); t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ ['preview-scrim','json-scrim','approve-scrim'].forEach(closeModal); } });
+window.addEventListener('online',()=>document.body.classList.remove('is-offline'));
+window.addEventListener('offline',()=>document.body.classList.add('is-offline'));
+
+/* ============ אתחול ============ */
+(function init(){
+  if(!navigator.onLine) document.body.classList.add('is-offline');
+  const had = loadDraft();
+  if(!had){ loadExample(); }
+  else { renderChunks(); renderQuestions(); onChange(); }
+})();
+</script>
+</body>
+</html>

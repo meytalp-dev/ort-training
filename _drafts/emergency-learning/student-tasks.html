@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>המשימות שלי — רֶצֶף · W1-04</title>
+<meta name="theme-color" content="#0B8F98">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- שפת העיצוב המשותפת של רֶצֶף (מקור אמת יחיד) -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+/* ============================================================
+   מסך "המשימות שלי" — תלמיד · Mobile First · W1-04
+   כל הצבעים/מידות מ-tokens.css. כאן רק פריסה ורכיבים ייחודיים למסך.
+   ============================================================ */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--surface-muted);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:var(--text-body);
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  display:flex; align-items:stretch; justify-content:center;
+}
+
+/* מסגרת-מכשיר: במובייל = מסך מלא; בדסקטופ = טלפון ממורכז */
+.phone{
+  width:100%; max-width:460px;
+  height:100vh; height:100dvh;
+  background:var(--bg);
+  display:flex; flex-direction:column;
+  position:relative; overflow:hidden;
+}
+@media (min-width:600px){
+  body{padding:var(--space-6) 0}
+  .phone{
+    height:min(880px, calc(100vh - 2 * var(--space-6)));
+    border-radius:28px;
+    box-shadow:var(--shadow-lg);
+    border:1px solid var(--line);
+  }
+}
+
+/* ---------- TopBar ---------- */
+.topbar-m{position:relative; z-index:5}
+.topbar-m__title{font-family:var(--font-head); font-weight:700; font-size:var(--text-h3); color:var(--ink-strong)}
+
+/* ---------- באנר רשת חלשה (OfflineBanner) ---------- */
+.netbar{
+  flex:none;
+  display:none;
+  align-items:center; gap:var(--space-2);
+  padding:var(--space-2) var(--space-4);
+  background:var(--emergency-soft);
+  border-bottom:1px solid var(--emergency-line);
+  color:var(--ink-strong);
+  font-size:var(--text-small); font-weight:600;
+}
+.netbar[data-show="true"]{display:flex}
+.netbar svg{width:18px;height:18px;flex:none;stroke:var(--emergency)}
+.netbar .netbar__sub{font-weight:500;color:var(--ink-soft)}
+
+/* ---------- אזור גלילה ---------- */
+.scroll{flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch}
+.scroll__inner{padding:var(--space-4) var(--space-4) var(--space-8)}
+
+.intro{margin:var(--space-1) 0 var(--space-4)}
+.intro__sub{color:var(--ink-soft); font-size:var(--text-small); margin-top:2px}
+
+/* ---------- מסנן (סֶגמנט) ---------- */
+.filter{
+  display:flex; gap:var(--space-2);
+  overflow-x:auto; scrollbar-width:none;
+  padding-bottom:var(--space-3);
+  margin-bottom:var(--space-2);
+}
+.filter::-webkit-scrollbar{display:none}
+.filter__btn{
+  flex:none;
+  display:inline-flex; align-items:center; gap:6px;
+  min-height:40px; padding:0 var(--space-4);
+  border:1px solid var(--line-strong); border-radius:var(--radius-pill);
+  background:var(--card); color:var(--ink-soft);
+  font-family:var(--font-body); font-weight:600; font-size:var(--text-small);
+  cursor:pointer; transition:background 160ms ease,color 160ms ease,border-color 160ms ease;
+}
+.filter__btn:hover{color:var(--ink-strong)}
+.filter__btn:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+.filter__btn[aria-pressed="true"]{
+  background:var(--brand-soft); border-color:var(--brand-line); color:var(--brand-deep);
+}
+.filter__count{
+  min-width:20px; height:20px; padding:0 5px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:var(--radius-pill); background:var(--surface-muted);
+  font-size:var(--text-label); font-weight:700; color:var(--ink-soft);
+}
+.filter__btn[aria-pressed="true"] .filter__count{background:var(--card); color:var(--brand-deep)}
+
+/* ---------- כותרת קבוצה ---------- */
+.group__head{
+  display:flex; align-items:center; gap:var(--space-2);
+  margin:var(--space-5) 0 var(--space-3);
+}
+.group__head:first-child{margin-top:var(--space-2)}
+.group__title{font-family:var(--font-head); font-weight:700; font-size:var(--text-h3); color:var(--ink-strong)}
+.group__n{font-size:var(--text-small); font-weight:600; color:var(--ink-faint)}
+
+/* ---------- כרטיס משימה ---------- */
+.task{margin-bottom:var(--space-3); padding:var(--space-4)}
+.task__top{display:flex; align-items:flex-start; gap:var(--space-3); margin-bottom:var(--space-2)}
+.task__ic{
+  width:38px; height:38px; flex:none;
+  border-radius:var(--radius-sm);
+  background:var(--brand-soft); color:var(--brand-deep);
+  display:flex; align-items:center; justify-content:center;
+}
+.task__ic svg{width:20px; height:20px}
+.task__head{flex:1; min-width:0}
+.task__subject{font-size:var(--text-label); font-weight:600; color:var(--ink-soft); margin-bottom:1px}
+.task__title{font-family:var(--font-head); font-weight:700; font-size:var(--text-h3); color:var(--ink-strong); line-height:1.25}
+.task__desc{color:var(--ink-soft); font-size:var(--text-small); margin:var(--space-1) 0 var(--space-3)}
+
+.task__meta{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:var(--text-small); color:var(--ink-soft); font-weight:500;
+}
+.task__meta svg{width:15px; height:15px; stroke:var(--ink-faint); flex:none}
+
+/* שורת דחיפות + זמן */
+.task__tags{display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; margin-bottom:var(--space-1)}
+
+.task__actions{margin-top:var(--space-4)}
+
+/* ---------- תג דחיפות (chip מרחיב את components.css) ---------- */
+.chip svg{width:14px;height:14px}
+
+/* ---------- סטטוס: קו הרצף הוגש → המורה ראה → משוב ---------- */
+.status{
+  margin-top:var(--space-4);
+  padding-top:var(--space-4);
+  border-top:1px solid var(--line);
+}
+.status .sequence{margin:0 var(--space-1)}
+.status .sequence-node svg{width:9px;height:9px;stroke:#fff}
+.status--queued{--seq-color:var(--emergency); --seq-track:var(--emergency-line)}
+
+.status__note{
+  display:flex; align-items:flex-start; gap:var(--space-2);
+  margin-top:var(--space-3); padding:var(--space-3);
+  background:var(--surface-muted); border-radius:var(--radius-sm);
+  font-size:var(--text-small); color:var(--ink);
+}
+.status__note svg{width:16px;height:16px;flex:none;stroke:var(--ink-soft);margin-top:2px}
+.status__note--feedback{background:var(--brand-soft); color:var(--ink-strong)}
+.status__note--feedback svg{stroke:var(--brand-deep)}
+.status__note b{font-weight:700}
+.status__note--queued{background:var(--emergency-soft)}
+.status__note--queued svg{stroke:var(--emergency)}
+
+/* טקסט ההגשה של התלמיד (תצוגה בלבד) */
+.mysub{
+  margin-top:var(--space-3); padding:var(--space-3);
+  border:1px dashed var(--line-strong); border-radius:var(--radius-sm);
+  font-size:var(--text-small); color:var(--ink-soft);
+}
+.mysub b{color:var(--ink); font-weight:600}
+
+/* ---------- מצב ריק ---------- */
+.empty{
+  text-align:center; padding:var(--space-10) var(--space-4);
+  color:var(--ink-soft);
+}
+.empty__line{
+  width:120px; height:2px; margin:0 auto var(--space-4);
+  background:var(--brand-line); border-radius:var(--radius-pill);
+  position:relative;
+}
+.empty__line::before{
+  content:""; position:absolute; inset-inline-start:0; top:50%; transform:translateY(-50%);
+  width:12px; height:12px; border-radius:50%;
+  background:var(--card); border:3px solid var(--brand);
+}
+.empty__t{font-family:var(--font-head); font-weight:700; font-size:var(--text-h3); color:var(--ink-strong); margin-bottom:var(--space-1)}
+.empty__s{font-size:var(--text-small)}
+
+/* ============================================================
+   Bottom Sheet — הגשה (טקסט / "סיימתי")
+   נשען על scrim מ-components.css; פאנל מותאם לתחתית במובייל.
+   ============================================================ */
+.sheet-scrim{align-items:flex-end; justify-content:center; padding:0}
+@media (min-width:600px){.sheet-scrim{align-items:center; padding:var(--space-4)}}
+.sheet{
+  width:100%; max-width:460px;
+  background:var(--card);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow:var(--shadow-lg);
+  padding:var(--space-5) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom,0px));
+  transform:translateY(16px); opacity:0;
+  transition:transform 200ms ease, opacity 200ms ease;
+  max-height:88vh; overflow-y:auto;
+}
+@media (min-width:600px){.sheet{border-radius:var(--radius-lg)}}
+.sheet-scrim[data-open="true"] .sheet{transform:none; opacity:1}
+.sheet__grab{width:38px;height:4px;border-radius:var(--radius-pill);background:var(--line-strong);margin:0 auto var(--space-4)}
+.sheet__head{margin-bottom:var(--space-4)}
+.sheet__eyebrow{font-size:var(--text-label); font-weight:600; color:var(--brand); margin-bottom:2px}
+.sheet__title{font-family:var(--font-head); font-weight:700; font-size:var(--text-h2); color:var(--ink-strong); line-height:1.2}
+.sheet__sub{font-size:var(--text-small); color:var(--ink-soft); margin-top:var(--space-1)}
+
+.field{margin-bottom:var(--space-4)}
+.field__label{display:block; font-size:var(--text-small); font-weight:600; color:var(--ink); margin-bottom:var(--space-2)}
+.field__opt{font-weight:500; color:var(--ink-faint)}
+.field textarea{
+  width:100%; min-height:110px; resize:vertical;
+  padding:var(--space-3);
+  border:1.5px solid var(--line-strong); border-radius:var(--radius-md);
+  background:var(--bg-soft); color:var(--ink);
+  font-family:var(--font-body); font-size:var(--text-body); line-height:1.5;
+}
+.field textarea:focus-visible{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft)}
+.field__hint{font-size:var(--text-label); color:var(--ink-faint); margin-top:var(--space-2)}
+
+.sheet__nofile{
+  display:flex; align-items:center; gap:var(--space-2);
+  font-size:var(--text-label); color:var(--ink-soft);
+  margin-bottom:var(--space-4);
+}
+.sheet__nofile svg{width:16px;height:16px;stroke:var(--ink-faint);flex:none}
+
+.sheet__actions{display:flex; flex-direction:column; gap:var(--space-2)}
+
+/* פס מצב-רשת בתוך הסֵשן (מיידע שההגשה תמתין) */
+.sheet__net{
+  display:none; align-items:center; gap:var(--space-2);
+  padding:var(--space-2) var(--space-3); margin-bottom:var(--space-3);
+  background:var(--emergency-soft); border:1px solid var(--emergency-line);
+  border-radius:var(--radius-sm); font-size:var(--text-label); color:var(--ink-strong); font-weight:600;
+}
+.sheet__net[data-show="true"]{display:flex}
+.sheet__net svg{width:16px;height:16px;stroke:var(--emergency);flex:none}
+
+/* ---------- כפתור הדגמת-רשת (דמו בלבד) ---------- */
+.demo-net{
+  display:inline-flex; align-items:center; gap:6px;
+  height:32px; padding:0 var(--space-3);
+  border:1px solid var(--line-strong); border-radius:var(--radius-pill);
+  background:var(--card); color:var(--ink-soft);
+  font-family:var(--font-body); font-size:var(--text-label); font-weight:600; cursor:pointer;
+}
+.demo-net:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+.demo-net svg{width:15px;height:15px;flex:none}
+.demo-net[data-offline="true"]{background:var(--emergency-soft); border-color:var(--emergency-line); color:var(--ink-strong)}
+
+/* קו רצף עדין בין הכותרת לרשימה (הֶדֵי המוטיב) */
+.thread{height:2px; background:var(--brand-line); border-radius:var(--radius-pill); margin:0 0 var(--space-4); opacity:.7}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     ספריית אייקונים (Lucide-style outline, עובי אחיד)
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></symbol>
+  <symbol id="ic-tasks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="7" rx="1.5"/><path d="m3.5 18 2 2 3.5-3.5"/><path d="M13 6h8M13 12h8M13 18h8"/></symbol>
+  <symbol id="ic-cap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/></symbol>
+  <symbol id="ic-progress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="11" x2="8" y2="11"/><line x1="12" y1="11" x2="12" y2="11"/><line x1="16" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="12" y1="15" x2="12" y2="15"/></symbol>
+  <symbol id="ic-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19.5 7"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.7-.8L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l14 8-14 8z"/></symbol>
+  <symbol id="ic-wifi-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.8a15.9 15.9 0 0 1 4.6-2.9"/><path d="M12 4c3.8 0 7.3 1.4 10 3.8"/><path d="M5 12.8a10 10 0 0 1 2.5-1.6"/><path d="M14.5 11.5a10 10 0 0 1 4.5 1.3"/><line x1="12" y1="20" x2="12.01" y2="20"/></symbol>
+  <symbol id="ic-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.8a10 10 0 0 1 14 0"/><path d="M2 8.8a15.9 15.9 0 0 1 20 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-paperclip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49"/></symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></symbol>
+</svg>
+
+<div class="phone">
+
+  <!-- ---------- TopBar ---------- -->
+  <header class="topbar-m">
+    <div class="topbar-m__brand">
+      <span class="topbar-m__title">המשימות שלי</span>
+    </div>
+    <div class="topbar-m__actions">
+      <!-- כפתור הדגמת-רשת (דמו בלבד — לבדיקת התנהגות ברשת חלשה) -->
+      <button class="demo-net" id="demoNet" type="button" aria-pressed="false" title="הדגמת רשת חלשה">
+        <svg aria-hidden="true"><use href="#ic-wifi"/></svg>
+        <span id="demoNetLabel">רשת תקינה</span>
+      </button>
+      <button class="icon-btn" type="button" aria-label="התראות (1 חדשה)">
+        <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+        <span class="badge badge--dot" aria-hidden="true"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ---------- באנר רשת חלשה ---------- -->
+  <div class="netbar" id="netbar" role="status" aria-live="polite">
+    <svg aria-hidden="true"><use href="#ic-wifi-off"/></svg>
+    <span>
+      <span id="netbarMsg">אין חיבור כרגע.</span>
+      <span class="netbar__sub" id="netbarSub">מה שתסמן/י יישמר וישלח כשהחיבור יחזור.</span>
+    </span>
+  </div>
+
+  <!-- ---------- אזור גלילה ---------- -->
+  <div class="scroll">
+    <div class="scroll__inner">
+
+      <div class="intro">
+        <p class="intro__sub">כל מה שהמורים ביקשו — הפתוחות למעלה. אפשר להגיש גם ברשת חלשה.</p>
+      </div>
+      <div class="thread" aria-hidden="true"></div>
+
+      <!-- מסנן -->
+      <div class="filter" role="group" aria-label="סינון משימות">
+        <button class="filter__btn" data-filter="all" type="button" aria-pressed="true">הכל <span class="filter__count" data-count="all">0</span></button>
+        <button class="filter__btn" data-filter="open" type="button" aria-pressed="false">פתוחות <span class="filter__count" data-count="open">0</span></button>
+        <button class="filter__btn" data-filter="progress" type="button" aria-pressed="false">בטיפול <span class="filter__count" data-count="progress">0</span></button>
+        <button class="filter__btn" data-filter="feedback" type="button" aria-pressed="false">קיבלו משוב <span class="filter__count" data-count="feedback">0</span></button>
+      </div>
+
+      <!-- הרשימה מוזרקת כאן -->
+      <div id="list" aria-live="polite"></div>
+
+    </div>
+  </div>
+
+  <!-- ---------- BottomNavigation ---------- -->
+  <nav class="bottom-nav" aria-label="ניווט ראשי">
+    <a class="bottom-nav__item" href="student-home.html">
+      <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-home"/></svg></span>
+      <span class="bottom-nav__label">בית</span>
+    </a>
+    <a class="bottom-nav__item" href="#" aria-current="page">
+      <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-tasks"/></svg></span>
+      <span class="bottom-nav__label">משימות</span>
+      <span class="badge bottom-nav__badge" id="navBadge" aria-hidden="true">0</span>
+    </a>
+    <a class="bottom-nav__item" href="#">
+      <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-cap"/></svg></span>
+      <span class="bottom-nav__label">קורסים</span>
+    </a>
+    <a class="bottom-nav__item" href="#">
+      <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-progress"/></svg></span>
+      <span class="bottom-nav__label">התקדמות</span>
+    </a>
+  </nav>
+
+</div>
+
+<!-- ============================================================
+     Bottom Sheet — הגשת משימה
+     ============================================================ -->
+<div class="scrim sheet-scrim" id="sheetScrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" id="sheet">
+    <div class="sheet__grab" aria-hidden="true"></div>
+    <div class="sheet__head">
+      <p class="sheet__eyebrow" id="sheetEyebrow">הגשה</p>
+      <h2 class="sheet__title" id="sheetTitle">להגיש משימה</h2>
+      <p class="sheet__sub" id="sheetSub"></p>
+    </div>
+
+    <div class="sheet__net" id="sheetNet" data-show="false">
+      <svg aria-hidden="true"><use href="#ic-wifi-off"/></svg>
+      <span>אין חיבור — ההגשה תישמר ותישלח אוטומטית כשהחיבור יחזור.</span>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="subText">
+        אפשר לכתוב משהו למורה <span class="field__opt">(לא חובה)</span>
+      </label>
+      <textarea id="subText" placeholder="למשל: סיימתי, אבל לא הבנתי את החלק האחרון…" maxlength="600"></textarea>
+      <p class="field__hint">אפשר גם פשוט ללחוץ "סיימתי" בלי לכתוב כלום.</p>
+    </div>
+
+    <div class="sheet__nofile">
+      <svg aria-hidden="true"><use href="#ic-paperclip"/></svg>
+      <span>אין צורך לצרף קובץ — ההגשה היא בטקסט או בלחיצת "סיימתי".</span>
+    </div>
+
+    <div class="sheet__actions">
+      <button class="btn btn--primary btn--block" id="btnDone" type="button">
+        <svg viewBox="0 0 24 24"><use href="#ic-check"/></svg>
+        <span id="btnDoneLabel">סיימתי — להגיש</span>
+      </button>
+      <button class="btn btn--ghost btn--block" id="btnCancel" type="button">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- אזור Toast -->
+<div class="toast-region" id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+/* ============================================================
+   מסך "המשימות שלי" — לוגיקה
+   • סטטוסים: open → submitted → seen → feedback
+   • הגשה = טקסט / "סיימתי" בלבד (אין העלאת קובץ — W0/S).
+   • רשת חלשה: הגשה offline נכנסת לתור (localStorage) ונשלחת כשחוזר החיבור.
+   ============================================================ */
+(function(){
+  'use strict';
+  var LS_KEY = 'resef.studentTasks.v1';
+
+  /* ---- נתוני דמו (המקור האמיתי יגיע מהשירות המשותף) ---- */
+  var SEED = [
+    { id:'t1', subject:'לשון',    icon:'ic-book',   urgency:'urgent', title:'שם הפועל — תרגול',        desc:'מנה קצרה: לזהות שם פועל במשפט.',        duration:'כ-5 דקות',  status:'open' },
+    { id:'t2', subject:'מתמטיקה', icon:'ic-calc',   urgency:'today',  title:'משוואות עם נעלם אחד',      desc:'3 תרגילים קצרים עם משוב מיידי.',        duration:'15–25 דק׳', status:'open' },
+    { id:'t3', subject:'אזרחות',  icon:'ic-globe',  urgency:'week',   title:'קריאה: זכויות וחובות',     desc:'קטע קצר + שאלה אחת לחשיבה.',            duration:'בקצב שלך',  status:'open' },
+    { id:'t4', subject:'לשון',    icon:'ic-book',   urgency:'week',   title:'הבנת הנקרא — פסקה',        desc:'שאלה פתוחה קצרה על הטקסט.',            duration:'כ-10 דקות', status:'submitted', myText:'סיימתי, הכל היה ברור.' },
+    { id:'t5', subject:'מתמטיקה', icon:'ic-calc',   urgency:'today',  title:'שברים — חיבור וחיסור',     desc:'תרגול קצר לחיזוק.',                    duration:'15–25 דק׳', status:'seen',  myText:'סיימתי' },
+    { id:'t6', subject:'אזרחות',  icon:'ic-globe',  urgency:'week',   title:'סיכום: רשויות השלטון',     desc:'מיפוי קצר של שלוש הרשויות.',           duration:'שיעור מלא',  status:'feedback', myText:'הגשתי סיכום בשלושה משפטים.', feedback:'עבודה יפה נועה! הוספת דוגמה טובה. כדאי לחדד את ההבדל בין המחוקקת למבצעת.' }
+  ];
+
+  /* מקרא דחיפות: אייקון + טקסט (לא-רק-צבע) */
+  var URGENCY = {
+    urgent: { cls:'chip--alert',     icon:'ic-alert',    label:'דחוף · להיום' },
+    today:  { cls:'chip--attention', icon:'ic-clock',    label:'להיום' },
+    week:   { cls:'chip--unknown',   icon:'ic-calendar', label:'השבוע' }
+  };
+  var URGENCY_ORDER = { urgent:0, today:1, week:2 };
+
+  /* קבוצות לתצוגה */
+  var GROUPS = [
+    { key:'open',     title:'פתוחות',       statuses:['open'] },
+    { key:'progress', title:'הוגשו · בטיפול', statuses:['submitted','seen'] },
+    { key:'feedback', title:'קיבלו משוב',    statuses:['feedback'] }
+  ];
+
+  var tasks = load();
+  var currentFilter = 'all';
+  var activeId = null;         // המשימה שמוגשת כרגע בסֵשן
+  var lastTrigger = null;      // להחזרת פוקוס
+  var online = true;           // מצב רשת (כולל הדגמה)
+
+  /* ---------- אחסון ---------- */
+  function load(){
+    try{
+      var saved = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+      if(saved && saved.length){
+        // מיזוג: סטטוס/טקסט שמורים גוברים על ה-SEED
+        var map = {}; saved.forEach(function(s){ map[s.id]=s; });
+        return SEED.map(function(t){
+          var s = map[t.id];
+          return s ? Object.assign({}, t, { status:s.status, myText:s.myText, feedback:s.feedback||t.feedback, queued:s.queued }) : t;
+        });
+      }
+    }catch(e){}
+    return SEED.map(function(t){ return Object.assign({}, t); });
+  }
+  function persist(){
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify(tasks.map(function(t){
+        return { id:t.id, status:t.status, myText:t.myText, feedback:t.feedback, queued:t.queued };
+      })));
+    }catch(e){}
+  }
+
+  /* ---------- עזרי DOM ---------- */
+  function el(tag, cls, html){
+    var n = document.createElement(tag);
+    if(cls) n.className = cls;
+    if(html != null) n.innerHTML = html;
+    return n;
+  }
+  function ico(id, cls){ return '<svg' + (cls?' class="'+cls+'"':'') + ' aria-hidden="true"><use href="#'+id+'"/></svg>'; }
+
+  /* ---------- קו-רצף סטטוס: הוגש → המורה ראה → משוב ---------- */
+  function statusStepper(task){
+    // מצב כל שלב
+    var steps = [
+      { label:'הוגש',       sub: task.queued ? 'ממתין לשליחה' : 'נשלח' },
+      { label:'המורה ראה',  sub:'' },
+      { label:'משוב',       sub:'' }
+    ];
+    var reached = { submitted:0, seen:1, feedback:2 }[task.status];
+    var wrapCls = 'status' + (task.queued ? ' status--queued' : '');
+    var ol = '<ol class="sequence sequence--horizontal" aria-label="מצב ההגשה">';
+    steps.forEach(function(s, i){
+      var state = i < reached ? 'is-done' : (i === reached ? 'is-current' : 'is-upcoming');
+      var srWord = i < reached ? 'הושלם' : (i === reached ? 'שלב נוכחי' : 'בהמשך');
+      var nodeInner = i < reached ? ico('ic-check') : '';
+      ol += '<li class="sequence-step '+state+'">'
+          +   '<span class="sequence-node" aria-hidden="true">'+nodeInner+'</span>'
+          +   '<span class="sequence-label">'+s.label+' <span class="sr-only">— '+srWord+'</span></span>'
+          +   (s.sub ? '<span class="sequence-sub">'+s.sub+'</span>' : '')
+          + '</li>';
+    });
+    ol += '</ol>';
+    return '<div class="'+wrapCls+'">' + ol + '</div>';
+  }
+
+  /* ---------- כרטיס משימה ---------- */
+  function taskCard(task){
+    var card = el('article', 'card task');
+    card.setAttribute('data-id', task.id);
+
+    var u = URGENCY[task.urgency];
+    var html = '';
+
+    // ראש: אייקון מקצוע + כותרת
+    html += '<div class="task__top">'
+         +   '<span class="task__ic" aria-hidden="true">'+ico(task.icon)+'</span>'
+         +   '<div class="task__head">'
+         +     '<div class="task__subject">'+task.subject+'</div>'
+         +     '<h3 class="task__title">'+task.title+'</h3>'
+         +   '</div>'
+         + '</div>';
+
+    html += '<p class="task__desc">'+task.desc+'</p>';
+
+    // דחיפות + זמן — רק לפתוחות מציגים דחיפות בולטת
+    html += '<div class="task__tags">';
+    if(task.status === 'open'){
+      html += '<span class="chip '+u.cls+'">'+ico(u.icon)+u.label+'</span>';
+    }
+    html += '<span class="task__meta">'+ico('ic-clock')+task.duration+'</span>';
+    html += '</div>';
+
+    // תוכן לפי סטטוס
+    if(task.status === 'open'){
+      html += '<div class="task__actions">'
+           +   '<button class="btn btn--primary btn--block js-submit" type="button">'
+           +     ico('ic-play')+'להתחיל ולהגיש'
+           +   '</button>'
+           + '</div>';
+    } else {
+      // הגשת התלמיד (תצוגה)
+      if(task.myText){
+        html += '<div class="mysub"><b>ההגשה שלי:</b> '+escapeHtml(task.myText)+'</div>';
+      }
+      // קו-רצף סטטוס
+      html += statusStepper(task);
+
+      if(task.queued){
+        html += '<div class="status__note status__note--queued">'+ico('ic-wifi-off')
+             +  '<span>ההגשה נשמרה במכשיר ותישלח אוטומטית כשהחיבור יחזור.</span></div>';
+      } else if(task.status === 'submitted'){
+        html += '<div class="status__note">'+ico('ic-clock')
+             +  '<span>הוגש. ממתין שהמורה יראה — אין צורך לעשות כלום.</span></div>';
+      } else if(task.status === 'seen'){
+        html += '<div class="status__note">'+ico('ic-eye')
+             +  '<span><b>המורה ראה</b> את ההגשה שלך. משוב יגיע בקרוב אם צריך.</span></div>';
+      } else if(task.status === 'feedback'){
+        html += '<div class="status__note status__note--feedback">'+ico('ic-message')
+             +  '<span><b>משוב מהמורה:</b> '+escapeHtml(task.feedback||'')+'</span></div>';
+      }
+    }
+
+    card.innerHTML = html;
+
+    var btn = card.querySelector('.js-submit');
+    if(btn){ btn.addEventListener('click', function(){ openSheet(task.id, btn); }); }
+    return card;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+
+  /* ---------- רינדור הרשימה ---------- */
+  function statusGroup(status){
+    if(status === 'open') return 'open';
+    if(status === 'feedback') return 'feedback';
+    return 'progress'; // submitted / seen
+  }
+
+  function render(){
+    var list = document.getElementById('list');
+    list.innerHTML = '';
+
+    // ספירות
+    var counts = { all:tasks.length, open:0, progress:0, feedback:0 };
+    tasks.forEach(function(t){ counts[statusGroup(t.status)]++; });
+    Object.keys(counts).forEach(function(k){
+      document.querySelectorAll('[data-count="'+k+'"]').forEach(function(n){ n.textContent = counts[k]; });
+    });
+    var badge = document.getElementById('navBadge');
+    badge.textContent = counts.open;
+    badge.style.display = counts.open ? '' : 'none';
+
+    var anyShown = false;
+    GROUPS.forEach(function(g){
+      if(currentFilter !== 'all' && currentFilter !== g.key) return;
+
+      var items = tasks.filter(function(t){ return g.statuses.indexOf(t.status) !== -1; });
+      if(!items.length) return;
+
+      // מיון: פתוחות לפי דחיפות; שאר לפי סדר קבוע
+      if(g.key === 'open'){
+        items.sort(function(a,b){ return URGENCY_ORDER[a.urgency] - URGENCY_ORDER[b.urgency]; });
+      }
+
+      anyShown = true;
+      var head = el('div', 'group__head');
+      head.innerHTML = '<span class="group__title">'+g.title+'</span><span class="group__n">'+items.length+'</span>';
+      list.appendChild(head);
+      items.forEach(function(t){ list.appendChild(taskCard(t)); });
+    });
+
+    if(!anyShown){
+      var empty = el('div', 'empty');
+      empty.innerHTML = '<div class="empty__line" aria-hidden="true"></div>'
+                      + '<div class="empty__t">אין כאן משימות כרגע</div>'
+                      + '<div class="empty__s">כשיגיע משהו חדש — הוא יופיע כאן, הפתוחות למעלה.</div>';
+      list.appendChild(empty);
+    }
+  }
+
+  /* ---------- Bottom Sheet ---------- */
+  var scrim = document.getElementById('sheetScrim');
+  var sheet = document.getElementById('sheet');
+  var subText = document.getElementById('subText');
+
+  function openSheet(id, trigger){
+    activeId = id;
+    lastTrigger = trigger || null;
+    var task = tasks.find(function(t){ return t.id === id; });
+    document.getElementById('sheetSub').textContent = task.subject + ' · ' + task.title;
+    subText.value = '';
+    updateSheetNet();
+    scrim.hidden = false;
+    // כפיית reflow לפני אנימציה
+    void scrim.offsetWidth;
+    scrim.setAttribute('data-open','true');
+    document.addEventListener('keydown', onKeydown);
+    setTimeout(function(){ subText.focus(); }, 60);
+  }
+
+  function closeSheet(){
+    scrim.setAttribute('data-open','false');
+    document.removeEventListener('keydown', onKeydown);
+    setTimeout(function(){
+      scrim.hidden = true;
+      if(lastTrigger && document.contains(lastTrigger)) lastTrigger.focus();
+      activeId = null;
+    }, 180);
+  }
+
+  function onKeydown(e){
+    if(e.key === 'Escape'){ closeSheet(); return; }
+    if(e.key === 'Tab'){ trapFocus(e); }
+  }
+  function trapFocus(e){
+    var f = sheet.querySelectorAll('button, textarea, [href], input, [tabindex]:not([tabindex="-1"])');
+    f = Array.prototype.filter.call(f, function(n){ return !n.disabled && n.offsetParent !== null; });
+    if(!f.length) return;
+    var first = f[0], last = f[f.length-1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+
+  scrim.addEventListener('click', function(e){ if(e.target === scrim) closeSheet(); });
+  document.getElementById('btnCancel').addEventListener('click', closeSheet);
+
+  /* ---------- הגשה ---------- */
+  document.getElementById('btnDone').addEventListener('click', function(){
+    if(!activeId) return;
+    var task = tasks.find(function(t){ return t.id === activeId; });
+    var text = subText.value.trim();
+    task.myText = text || 'סיימתי';
+    task.status = 'submitted';
+    task.queued = !online;      // ברשת חלשה — נכנס לתור
+    persist();
+    render();
+
+    if(online){
+      toast('ההגשה נשלחה למורה', 'success', 'ic-check');
+      // סימולציית "המורה ראה" אחרי זמן קצר (דמו)
+      scheduleSeen(task.id);
+    } else {
+      toast('נשמר במכשיר — יישלח כשהחיבור יחזור', 'warn', 'ic-wifi-off');
+    }
+    closeSheet();
+    updateNetBanner();
+  });
+
+  function scheduleSeen(id){
+    setTimeout(function(){
+      var t = tasks.find(function(x){ return x.id === id; });
+      if(t && t.status === 'submitted' && !t.queued){
+        t.status = 'seen'; persist(); render();
+        toast('המורה ראה את ההגשה שלך', 'info', 'ic-eye');
+      }
+    }, 6000);
+  }
+
+  /* ---------- Toast ---------- */
+  function toast(msg, variant, icon){
+    var region = document.getElementById('toasts');
+    var t = el('div', 'toast toast--'+(variant||'info'));
+    t.setAttribute('role','status');
+    t.innerHTML = '<span class="toast__icon">'+ico(icon||'ic-check')+'</span><span class="toast__msg">'+msg+'</span>';
+    region.appendChild(t);
+    setTimeout(function(){
+      t.setAttribute('data-leaving','true');
+      setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 200);
+    }, 3200);
+  }
+
+  /* ---------- רשת ---------- */
+  function isOnline(){ return online; }
+  function updateSheetNet(){
+    document.getElementById('sheetNet').setAttribute('data-show', online ? 'false' : 'true');
+    document.getElementById('btnDoneLabel').textContent = online ? 'סיימתי — להגיש' : 'סיימתי — לשמור להגשה';
+  }
+  function updateNetBanner(){
+    var queued = tasks.filter(function(t){ return t.queued; }).length;
+    var bar = document.getElementById('netbar');
+    if(!online){
+      bar.setAttribute('data-show','true');
+      document.getElementById('netbarMsg').textContent = 'אין חיבור כרגע.';
+      document.getElementById('netbarSub').textContent = queued
+        ? (queued===1 ? 'הגשה אחת ממתינה לשליחה.' : queued+' הגשות ממתינות לשליחה.')
+        : 'מה שתסמן/י יישמר וישלח כשהחיבור יחזור.';
+    } else if(queued){
+      bar.setAttribute('data-show','true');
+      document.getElementById('netbar').querySelector('svg use').setAttribute('href','#ic-refresh');
+      document.getElementById('netbarMsg').textContent = 'שולח הגשות שהמתינו…';
+      document.getElementById('netbarSub').textContent = '';
+    } else {
+      bar.setAttribute('data-show','false');
+    }
+  }
+
+  function goOnline(){
+    online = true;
+    var queued = tasks.filter(function(t){ return t.queued; });
+    if(queued.length){
+      updateNetBanner();
+      // שליחת התור
+      setTimeout(function(){
+        queued.forEach(function(t){ t.queued = false; scheduleSeen(t.id); });
+        persist(); render();
+        toast(queued.length===1 ? 'ההגשה שהמתינה נשלחה' : queued.length+' הגשות נשלחו', 'success', 'ic-check');
+        document.getElementById('netbar').querySelector('svg use').setAttribute('href','#ic-wifi-off');
+        updateNetBanner();
+      }, 1200);
+    } else {
+      updateNetBanner();
+    }
+    updateSheetNet();
+  }
+  function goOffline(){
+    online = false;
+    updateNetBanner();
+    updateSheetNet();
+  }
+
+  // רשת אמיתית של הדפדפן
+  window.addEventListener('online',  function(){ setDemo(false); goOnline(); });
+  window.addEventListener('offline', function(){ setDemo(true); goOffline(); });
+
+  // כפתור הדגמה
+  var demoBtn = document.getElementById('demoNet');
+  function setDemo(offlineState){
+    demoBtn.setAttribute('data-offline', offlineState ? 'true' : 'false');
+    demoBtn.setAttribute('aria-pressed', offlineState ? 'true' : 'false');
+    demoBtn.querySelector('svg use').setAttribute('href', offlineState ? '#ic-wifi-off' : '#ic-wifi');
+    document.getElementById('demoNetLabel').textContent = offlineState ? 'רשת חלשה' : 'רשת תקינה';
+  }
+  demoBtn.addEventListener('click', function(){
+    if(online){ setDemo(true); goOffline(); }
+    else { setDemo(false); goOnline(); }
+  });
+
+  /* ---------- מסננים ---------- */
+  document.querySelectorAll('.filter__btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.filter__btn').forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+      btn.setAttribute('aria-pressed','true');
+      currentFilter = btn.getAttribute('data-filter');
+      render();
+    });
+  });
+
+  /* ---------- אתחול ---------- */
+  online = navigator.onLine !== false;
+  setDemo(!online);
+  render();
+  updateNetBanner();
+})();
+</script>
+</body>
+</html>

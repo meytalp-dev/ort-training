@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · פעילות מורים — מנהל</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     פעילות מורים — תצוגת מנהל (W3-04) · מותג רֶצֶף
+     "מי מלמד, איפה שקט." מצרפי, מסך תמיכה — לא הערכת עובדים.
+     כל השלד (app-shell/sidebar/topbar/dashboard/metric-card/rz-table/
+     line-chart) מגיע מ-components.css. כאן: רק תוכן-הפרסונה.
+     טוקנים בלבד — אין צבעים קשיחים.
+     ============================================================ */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: var(--text-body);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ---- שורת בורר-מצב בתוך הטופ-בר ---- */
+  .topbar__mode { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+  .topbar__mode-label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  @media (max-width: 1100px) { .topbar__mode-label { display: none; } }
+
+  /* ---- כותרת הדשבורד: תג-מצב לצד הכותרת ---- */
+  .dash-head-meta { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
+
+  /* ---- באנר "מסך תמיכה" (לא הערכת עובדים) ---- */
+  .support-note {
+    display: flex; gap: var(--space-3); align-items: flex-start;
+    background: var(--brand-soft); border: 1px solid var(--brand-line);
+    border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-4); font-size: var(--text-small); color: var(--ink);
+  }
+  .support-note svg { width: 18px; height: 18px; flex: none; color: var(--brand-deep); margin-top: 1px; }
+  .support-note b { color: var(--brand-deep); font-weight: 700; }
+
+  /* ---- "שקט מתמשך" — רשימת שורות ---- */
+  .quiet__intro {
+    display: flex; gap: var(--space-3); align-items: flex-start;
+    background: var(--surface-muted); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-4); font-size: var(--text-small); color: var(--ink-soft);
+  }
+  .quiet__intro svg { width: 18px; height: 18px; flex: none; color: var(--brand-deep); margin-top: 1px; }
+  .quiet__intro b { color: var(--ink-strong); font-weight: 700; }
+
+  .q-row {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) 0; border-top: 1px solid var(--line);
+  }
+  .q-row:first-of-type { border-top: 0; }
+  .q-row__avatar {
+    flex: none; width: 40px; height: 40px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--surface-muted); color: var(--ink-soft);
+    font-family: var(--font-head); font-weight: 700; font-size: var(--text-small);
+  }
+  .q-row__body { min-width: 0; flex: 1 1 auto; }
+  .q-row__name { font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+  .q-row__meta { font-size: var(--text-label); color: var(--ink-soft); margin-top: 1px; }
+  .q-row__meta .sub { color: var(--ink); font-weight: 600; }
+  .q-row__side { margin-inline-start: auto; display: flex; align-items: center; gap: var(--space-3); flex: none; }
+  .q-row__days {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: var(--text-label); font-weight: 700; font-variant-numeric: tabular-nums;
+    color: var(--ink-soft); white-space: nowrap;
+  }
+  .q-row__days svg { width: 14px; height: 14px; flex: none; }
+
+  /* פעולה עדינה → בדיקת שלום (WhatsApp) */
+  .q-check {
+    display: inline-flex; align-items: center; gap: 6px;
+    min-height: var(--tap); padding: 0 var(--space-4);
+    border-radius: var(--radius-btn); text-decoration: none; white-space: nowrap;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 700;
+    background: var(--card); color: var(--brand-deep); border: 1px solid var(--brand-line);
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  .q-check:hover { background: var(--brand-soft); border-color: var(--brand); }
+  .q-check:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+  .q-check svg { width: 16px; height: 16px; flex: none; }
+
+  /* ---- פעילות לפי מקצוע — פסי-רצף אופקיים ---- */
+  .subj { display: flex; flex-direction: column; gap: var(--space-4); }
+  .subj__row { display: grid; grid-template-columns: 92px 1fr auto; align-items: center; gap: var(--space-3); }
+  .subj__name { font-size: var(--text-small); font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .subj__track { height: 10px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+  .subj__fill { height: 100%; border-radius: 999px; background: var(--brand); transition: width 400ms ease; }
+  .subj__fill--quiet { background: var(--status-unknown); }
+  .subj__val {
+    font-size: var(--text-small); font-weight: 700; color: var(--ink-strong);
+    font-variant-numeric: tabular-nums; min-width: 46px; text-align: start;
+  }
+  .subj__val .u { font-weight: 500; color: var(--ink-soft); font-size: var(--text-label); }
+  .subj__row--quiet .subj__name { color: var(--ink-soft); }
+
+  /* ---- מגמת שליחת משימות — כותרת פנימית + סיכום ---- */
+  .trend-head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4); }
+  .trend-now { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800; color: var(--mode); line-height: 1; font-variant-numeric: tabular-nums; }
+  .trend-cap { font-size: var(--text-small); color: var(--ink-soft); }
+  .trend-cap b { color: var(--ink-strong); font-weight: 700; }
+  .trend-svg-wrap { width: 100%; overflow-x: auto; }
+  .trend-label { fill: var(--ink-faint); font-family: var(--font-body); font-size: 12px; font-weight: 500; }
+  .trend-label--now { fill: var(--ink-strong); font-weight: 700; }
+
+  /* ---- טבלת פעילות: תא-מורה + sparkline משימות ---- */
+  .t-teacher { display: inline-flex; align-items: center; gap: var(--space-3); }
+  .t-avatar {
+    flex: none; width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center; font-family: var(--font-head);
+    font-weight: 700; font-size: var(--text-small); color: #fff;
+  }
+  .spark { display: inline-flex; align-items: flex-end; gap: 3px; height: 26px; }
+  .spark__bar { width: 6px; border-radius: 2px; background: var(--brand-line); }
+  .spark__bar--on { background: var(--brand); }
+  .spark__bar--zero { height: 3px !important; background: var(--line-strong); }
+  .t-freq { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink-strong); }
+  .t-freq .u { font-weight: 500; color: var(--ink-soft); font-size: var(--text-label); }
+
+  /* פילטר-מקטע קטן מעל הטבלה */
+  .t-filter { display: inline-flex; gap: 6px; background: var(--surface-muted); border-radius: var(--radius-pill); padding: 4px; }
+  .t-filter__btn {
+    appearance: none; border: 0; cursor: pointer; background: transparent;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 600; color: var(--ink-soft);
+    min-height: 34px; padding: 0 var(--space-4); border-radius: var(--radius-pill);
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .t-filter__btn[aria-pressed="true"] { background: var(--card); color: var(--brand-deep); box-shadow: var(--shadow-card); }
+  .t-filter__btn:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+  .rz-table tr[hidden] { display: none; }
+  .t-empty { padding: var(--space-6); text-align: center; color: var(--ink-soft); font-size: var(--text-small); }
+
+  /* Toast קטן לאישור פעולה (הדגמה) */
+  .rz-toast {
+    position: fixed; inset-block-end: 20px; inset-inline-start: 50%; transform: translate(50%, 20px);
+    background: var(--ink-strong); color: #fff; font-size: var(--text-small); font-weight: 600;
+    padding: 12px 18px; border-radius: var(--radius-btn); box-shadow: var(--shadow-lg);
+    opacity: 0; pointer-events: none; transition: opacity 200ms ease, transform 200ms ease; z-index: 90;
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .rz-toast svg { width: 18px; height: 18px; }
+  .rz-toast.is-on { opacity: 1; transform: translate(50%, 0); }
+
+  @media (max-width: 760px) {
+    .dashboard__grid > .dash-col-8,
+    .dashboard__grid > .dash-col-4,
+    .dashboard__grid > .dash-col-12 { grid-column: 1 / -1; }
+    .q-row { flex-wrap: wrap; }
+    .q-row__side { margin-inline-start: 52px; }
+    .subj__row { grid-template-columns: 80px 1fr auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .subj__fill, .spark__bar { transition: none; }
+    .rz-toast { transition: none; }
+  }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (outline, 24×24, stroke=currentColor) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M8 13h8M8 17h5"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M4 19a2 2 0 0 0 2 2h13"/></symbol>
+  <symbol id="ic-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="ic-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-trend-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M17 17h4v-4"/></symbol>
+  <symbol id="ic-trend-flat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></symbol>
+</svg>
+
+<!-- ============================================================
+     PrincipalShell — Sidebar + Topbar + Main (מלא-מסך)
+     ============================================================ -->
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="principal-pulse.html" aria-label="דופק בית הספר">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">דופק בית הספר</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="כיתות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-grid"/></svg></span>
+        <span class="sidebar__label">כיתות</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="נדרש קשר">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-heart"/></svg></span>
+        <span class="sidebar__label">נדרש קשר</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="פעילות מורים">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+        <span class="sidebar__label">פעילות מורים</span>
+      </a>
+
+      <div class="sidebar__section">ניהול</div>
+      <a class="sidebar__item" href="#" aria-label="דוחות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-file"/></svg></span>
+        <span class="sidebar__label">דוחות</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הודעה לקהילה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">הודעה לקהילה</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רב</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רון בקר</div>
+          <div class="sidebar__foot-role">מנהל · אורט בית הערבה</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">אורט בית הערבה</div>
+        <div class="topbar__subtitle">26 אנשי צוות · 14 כיתות</div>
+      </div>
+      <div class="topbar__spacer"></div>
+
+      <!-- בורר מצב מערכת (משנה את כל הדשבורד) -->
+      <div class="topbar__mode">
+        <span class="topbar__mode-label">מצב בית הספר</span>
+        <div class="mode-selector mode-selector--inline mode-selector--sm" id="mode-picker" role="group" aria-label="מצב בית הספר">
+          <button class="mode-option" type="button" data-mode="routine" data-set-mode="routine" aria-pressed="true">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            שגרה
+          </button>
+          <button class="mode-option" type="button" data-mode="remote" data-set-mode="remote" aria-pressed="false">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            מרחוק
+          </button>
+          <button class="mode-option" type="button" data-mode="emergency" data-set-mode="emergency" aria-pressed="false">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            חירום
+          </button>
+        </div>
+      </div>
+
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (2 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">2</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רב</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+        <div class="dashboard">
+
+          <!-- כותרת -->
+          <div class="dashboard__head">
+            <div class="dashboard__headings">
+              <h1 class="dashboard__title">פעילות מורים</h1>
+              <div class="dash-head-meta">
+                <p class="dashboard__subtitle" id="dash-sub">מי מלמד, איפה שקט · עודכן לפני 8 דקות</p>
+                <span class="mode-chip mode-chip--sm" id="mode-chip">
+                  <span class="mode-chip__mark" aria-hidden="true"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M9 7h2M14 7h4"/><circle cx="7.5" cy="7" r="1.6" fill="currentColor" stroke="none"/></svg></span>
+                  <span id="mode-chip-label">שגרה</span>
+                </span>
+              </div>
+            </div>
+            <div class="dashboard__actions">
+              <button class="btn btn--secondary btn--sm" type="button" data-toast="פותח את דוח הפעילות השבועי">
+                <svg viewBox="0 0 24 24"><use href="#ic-file"/></svg>
+                דוח שבועי
+              </button>
+              <button class="btn btn--primary btn--sm" type="button" data-toast="פותח הודעה מרכזת לצוות ההוראה">
+                <svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>
+                הודעה לצוות
+              </button>
+            </div>
+          </div>
+
+          <!-- באנר תמיכה (מסך תמיכה, לא הערכת עובדים) -->
+          <div class="support-note">
+            <svg aria-hidden="true"><use href="#ic-heart"/></svg>
+            <span><b>מסך תמיכה, לא פיקוח.</b> המספרים מראים איפה יש פעילות ואיפה שקט מתמשך — כדי לתת יד, לא כדי לדרג. אינו מיועד להערכת עובדים.</span>
+          </div>
+
+          <!-- שורת KPI — 4 -->
+          <div class="dashboard__kpis" id="kpis"><!-- render --></div>
+
+          <!-- גריד אזורים 12-עמודות -->
+          <div class="dashboard__grid">
+
+            <!-- שקט מתמשך (בראש) -->
+            <section class="card dash-col-8" aria-labelledby="quiet-title">
+              <h2 class="dashboard__section-title" id="quiet-title" style="font-size:var(--text-h2)">שקט מתמשך</h2>
+              <div class="quiet__intro">
+                <svg aria-hidden="true"><use href="#ic-clock"/></svg>
+                <span id="quiet-intro"><!-- render --></span>
+              </div>
+              <div id="quiet-list"><!-- render --></div>
+            </section>
+
+            <!-- פעילות לפי מקצוע -->
+            <section class="card dash-col-4" aria-labelledby="subj-title">
+              <h2 class="dashboard__section-title" id="subj-title">פעילות לפי מקצוע</h2>
+              <p class="chart-card__hint" style="margin:0 0 var(--space-4)">משימות שנשלחו השבוע, לכל תחום דעת</p>
+              <div class="subj" id="subj-list"><!-- render --></div>
+            </section>
+
+            <!-- מגמת שליחת משימות — קו הרצף -->
+            <section class="card chart-card dash-col-12" aria-labelledby="trend-title">
+              <div class="chart-card__head">
+                <h2 class="chart-card__title" id="trend-title">מגמת שליחת משימות · 7 ימים אחרונים</h2>
+                <span class="chart-card__hint">סך המשימות שנשלחו לתלמידים בכל יום</span>
+              </div>
+              <div class="trend-head">
+                <span class="trend-now" id="trend-now">18</span>
+                <span class="trend-cap" id="trend-cap">היום · <b>קצב יציב</b></span>
+              </div>
+              <div class="chart-card__body trend-svg-wrap">
+                <svg class="line-chart" id="trend-svg" viewBox="0 0 640 220" role="img" aria-label="טוען…"></svg>
+              </div>
+            </section>
+
+            <!-- טבלת פעילות מורים -->
+            <section class="card dash-col-12" aria-labelledby="table-title">
+              <div class="chart-card__head" style="margin-bottom:var(--space-4)">
+                <h2 class="dashboard__section-title" id="table-title" style="font-size:var(--text-h2);margin:0">כל צוות ההוראה</h2>
+                <div class="t-filter" id="t-filter" role="group" aria-label="סינון לפי מצב פעילות">
+                  <button class="t-filter__btn" type="button" data-filter="all" aria-pressed="true">הכול</button>
+                  <button class="t-filter__btn" type="button" data-filter="good" aria-pressed="false">פעילים</button>
+                  <button class="t-filter__btn" type="button" data-filter="attention" aria-pressed="false">כדאי לבדוק</button>
+                  <button class="t-filter__btn" type="button" data-filter="quiet" aria-pressed="false">בשקט</button>
+                </div>
+              </div>
+              <div class="rz-table-wrap">
+                <div class="rz-table-scroll">
+                  <table class="rz-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">מורה</th>
+                        <th scope="col">תחום / כיתה</th>
+                        <th scope="col">משימות · 7 ימים</th>
+                        <th scope="col">תדירות</th>
+                        <th scope="col">פעילות אחרונה</th>
+                        <th scope="col">מצב</th>
+                        <th scope="col" class="rz-table__actions"><span class="sr-only">פעולה</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="table-body"><!-- render --></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="t-empty" id="t-empty" hidden>אין מורים בקטגוריה הזו כרגע.</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast הדגמה -->
+<div class="rz-toast" id="toast" role="status" aria-live="polite">
+  <svg aria-hidden="true"><use href="#ic-check-c"/></svg>
+  <span id="toast-text"></span>
+</div>
+
+<script src="system-mode.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     נתוני דמו — משתנים לפי מצב המערכת (שגרה / מרחוק / חירום).
+     מקור אמת אמיתי (Sheets/API) — טרם הוכרע.
+     כלל מינימיזציה: נתוני *צוות* בלבד (לא נתוני קטין). מצרפי.
+     שפה רגועה: "שקט מתמשך" / "כדאי לבדוק" — לא "לא מתפקד"/"כשל".
+     ============================================================ */
+  var DATA = {
+    routine: {
+      sub: 'מי מלמד, איפה שקט · תמונה שבועית · עודכן לפני 8 דקות',
+      kpis: {
+        active: '22', activeOf: '/26', activeDelta: 'up', activeNote: 'שלחו משימה השבוע',
+        tasks: '84', tasksDelta: 'up', tasksNote: '9 יותר מהשבוע שעבר',
+        freq: '3.2', freqNote: 'משימות למורה בשבוע',
+        quiet: '3', quietDelta: 'down', quietNote: 'ירד מ-5'
+      },
+      trend: { vals: [10, 14, 13, 16, 15, 8, 18], now: '18', cap: 'היום · <b>קצב יציב</b> לאורך השבוע' },
+      quietIntro: '<b>לא שלחו משימה 5 ימים ומעלה.</b> בשגרה זה לרוב בסדר גמור — רק כדאי מבט. אפשר לפתוח בדיקת שלום קצרה.',
+      subj: [
+        ['לשון', 14, false], ['מתמטיקה', 18, false], ['אנגלית', 12, false],
+        ['מדעים', 11, false], ['אזרחות', 6, false], ['היסטוריה', 4, true], ['אמנות', 5, false]
+      ]
+    },
+    remote: {
+      sub: 'מי מלמד, איפה שקט · יום למידה מרחוק · עודכן לפני 8 דקות',
+      kpis: {
+        active: '20', activeOf: '/26', activeDelta: 'up', activeNote: 'שלחו משימה היום',
+        tasks: '46', tasksDelta: 'up', tasksNote: '11 יותר מאתמול',
+        freq: '2.3', freqNote: 'משימות למורה היום',
+        quiet: '4', quietDelta: 'flat', quietNote: 'בלי משימה יומיים'
+      },
+      trend: { vals: [6, 9, 8, 11, 10, 7, 13], now: '13', cap: 'היום · <b>עלייה קלה</b> בשליחה מרחוק' },
+      quietIntro: '<b>לא שלחו משימה יומיים ומעלה.</b> במרחוק זו תזכורת עדינה — אולי צריך יד עם הכלים. אפשר לפתוח בדיקת שלום.',
+      subj: [
+        ['מתמטיקה', 11, false], ['לשון', 9, false], ['אנגלית', 8, false],
+        ['מדעים', 7, false], ['אזרחות', 4, false], ['אמנות', 2, true], ['היסטוריה', 1, true]
+      ]
+    },
+    emergency: {
+      sub: 'מי מלמד, איפה שקט · רציפות בזמן חירום · עודכן לפני 8 דקות',
+      kpis: {
+        active: '15', activeOf: '/26', activeDelta: 'up', activeNote: 'שלחו משימה היום',
+        tasks: '28', tasksDelta: 'up', tasksNote: '6 יותר מאתמול',
+        freq: '1.4', freqNote: 'משימות למורה היום',
+        quiet: '6', quietDelta: 'down', quietNote: 'ירד מ-8'
+      },
+      trend: { vals: [3, 5, 6, 5, 8, 7, 10], now: '10', cap: 'היום · <b>מגמת עלייה</b> — בחירום כל שיעור שנשלח נחשב' },
+      quietIntro: '<b>לא שלחו משימה 3 ימים ומעלה.</b> בחירום ייתכן שגם המורה מתמודד/ת. פנייה חמה תעזור לחבר בחזרה.',
+      subj: [
+        ['לשון', 7, false], ['מתמטיקה', 6, false], ['אנגלית', 4, false],
+        ['מדעים', 3, false], ['היסטוריה', 1, true], ['אזרחות', 1, true], ['אמנות', 0, true]
+      ]
+    }
+  };
+
+  /* שקט מתמשך — לפי מצב. days = מספר ימים בלי שליחת משימה. */
+  var QUIET = {
+    routine: [
+      { n: 'אבי ט.', role: 'היסטוריה', cls: 'ט׳–י׳', days: 'בלי משימה 6 ימים' },
+      { n: 'גיל נ.', role: 'פיזיקה', cls: 'יא׳–יב׳', days: 'בלי משימה 5 ימים' },
+      { n: 'דורון ס.', role: 'מחנך יא׳2', cls: 'יא׳2 · אין כיסוי', days: 'בלי משימה 5 ימים' }
+    ],
+    remote: [
+      { n: 'אבי ט.', role: 'היסטוריה', cls: 'ט׳–י׳', days: 'בלי משימה 3 ימים' },
+      { n: 'גיל נ.', role: 'פיזיקה', cls: 'יא׳–יב׳', days: 'בלי משימה יומיים' },
+      { n: 'קרן מ.', role: 'אמנות', cls: 'כלל השכבות', days: 'בלי משימה יומיים' },
+      { n: 'דורון ס.', role: 'מחנך יא׳2', cls: 'יא׳2 · אין כיסוי', days: 'בלי משימה יומיים' }
+    ],
+    emergency: [
+      { n: 'אבי ט.', role: 'היסטוריה', cls: 'ט׳–י׳', days: 'בלי משימה 5 ימים' },
+      { n: 'קרן מ.', role: 'אמנות', cls: 'כלל השכבות', days: 'בלי משימה 4 ימים' },
+      { n: 'גיל נ.', role: 'פיזיקה', cls: 'יא׳–יב׳', days: 'בלי משימה 4 ימים' },
+      { n: 'תמר ג.', role: 'אזרחות', cls: 'י׳–יא׳', days: 'בלי משימה 3 ימים' },
+      { n: 'יעל ש.', role: 'לשון', cls: 'ט׳–י׳', days: 'בלי משימה 3 ימים' },
+      { n: 'דורון ס.', role: 'מחנך יא׳2', cls: 'יא׳2 · אין כיסוי', days: 'בלי משימה 3 ימים' }
+    ]
+  };
+
+  /* צוות ההוראה — קבוע בכל המצבים.
+     s7 = משימות שנשלחו ב-7 הימים האחרונים (ג׳→היום). freq = ממוצע שבועי. */
+  var TEACHERS = [
+    { n: 'רונית א.', role: 'מחנכת ט׳1', s7: [1,0,2,1,0,1,2], freq: '3.4', last: 'שלחה משימה היום', st: 'good' },
+    { n: 'משה ב.', role: 'מתמטיקה · ט׳–י׳', s7: [2,1,1,2,1,0,2], freq: '4.1', last: 'שלח משימה היום', st: 'good' },
+    { n: 'דנה כ.', role: 'מחנכת ט׳2', s7: [1,1,0,1,2,1,1], freq: '3.0', last: 'שלחה משימה אתמול', st: 'good' },
+    { n: 'נועה ל.', role: 'אנגלית · ט׳–יא׳', s7: [1,2,1,1,0,1,1], freq: '3.6', last: 'שלחה משימה היום', st: 'good' },
+    { n: 'עומר ד.', role: 'מדעים · ט׳–י׳', s7: [0,1,1,0,2,1,1], freq: '2.8', last: 'שלח משימה היום', st: 'good' },
+    { n: 'שירה מ.', role: 'מחנכת י׳1', s7: [1,0,1,1,0,1,0], freq: '2.4', last: 'שלחה משימה אתמול', st: 'good' },
+    { n: 'סיון א.', role: 'מחנכת יא׳1', s7: [1,1,0,0,1,0,1], freq: '2.2', last: 'שלחה משימה היום', st: 'good' },
+    { n: 'מירי פ.', role: 'מחנכת י׳2', s7: [0,1,0,1,0,1,1], freq: '2.1', last: 'שלחה משימה היום', st: 'good' },
+    { n: 'תמר ג.', role: 'אזרחות · י׳–יא׳', s7: [1,0,0,0,1,0,0], freq: '1.2', last: 'נכנסה, בלי משימה יומיים', st: 'attention' },
+    { n: 'יעל ש.', role: 'לשון · ט׳–י׳', s7: [1,1,0,0,0,0,0], freq: '1.0', last: 'ללא משימה 3 ימים', st: 'attention' },
+    { n: 'קרן מ.', role: 'אמנות', s7: [1,0,0,0,1,0,0], freq: '1.1', last: 'שלחה משימה אתמול', st: 'attention' },
+    { n: 'אבי ט.', role: 'היסטוריה · ט׳–י׳', s7: [1,0,0,0,0,0,0], freq: '0.6', last: 'ללא משימה 6 ימים', st: 'quiet' },
+    { n: 'גיל נ.', role: 'פיזיקה · יא׳–יב׳', s7: [0,1,0,0,0,0,0], freq: '0.7', last: 'שקט 5 ימים', st: 'quiet' },
+    { n: 'דורון ס.', role: 'מחנך יא׳2', s7: [0,0,0,0,0,0,0], freq: '0.4', last: 'שקט 5 ימים · כיתה בלי משימה', st: 'quiet' }
+  ];
+
+  var STATUS = {
+    good:      { chip: 'chip--good',      label: 'פעיל/ה' },
+    attention: { chip: 'chip--attention', label: 'כדאי לבדוק' },
+    quiet:     { chip: 'chip--unknown',   label: 'שקט/ה' }
+  };
+  var AVA_BG = { good: 'var(--status-good)', attention: 'var(--status-attention)', quiet: 'var(--status-unknown)' };
+
+  var TREND_LABELS = ['ג׳', 'ד׳', 'ה׳', 'ו׳', 'א׳', 'ב׳', 'היום'];
+  var DELTA_ICON = { up: 'ic-trend-up', down: 'ic-trend-down', flat: 'ic-trend-flat' };
+
+  /* ---------- עזרים ---------- */
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function waLink(text) { return 'https://api.whatsapp.com/send?phone=&text=' + encodeURIComponent(text); }
+  function icon(id) { return '<svg aria-hidden="true"><use href="#' + id + '"/></svg>'; }
+
+  /* ---------- KPI ---------- */
+  function renderKpis(k) {
+    function delta(dir, note) {
+      return '<span class="metric-card__delta metric-card__delta--' + dir + '">' +
+        '<svg aria-hidden="true"><use href="#' + DELTA_ICON[dir] + '"/></svg>' + esc(note) + '</span>';
+    }
+    el('kpis').innerHTML =
+      /* 1 — מורים פעילים (צבע-מצב) */
+      '<div class="metric-card metric-card--mode metric-card--accent">' +
+        '<div class="metric-card__top"><span class="metric-card__icon">' + icon('ic-users') + '</span>' +
+        '<span class="metric-card__label">מורים פעילים</span></div>' +
+        '<div class="metric-card__value">' + esc(k.active) + '<span class="metric-card__unit">' + esc(k.activeOf) + '</span></div>' +
+        delta(k.activeDelta, k.activeNote) + '</div>' +
+      /* 2 — משימות שנשלחו */
+      '<div class="metric-card metric-card--good">' +
+        '<div class="metric-card__top"><span class="metric-card__icon">' + icon('ic-send') + '</span>' +
+        '<span class="metric-card__label">משימות שנשלחו</span></div>' +
+        '<div class="metric-card__value">' + esc(k.tasks) + '</div>' +
+        delta(k.tasksDelta, k.tasksNote) + '</div>' +
+      /* 3 — תדירות ממוצעת */
+      '<div class="metric-card">' +
+        '<div class="metric-card__top"><span class="metric-card__icon">' + icon('ic-repeat') + '</span>' +
+        '<span class="metric-card__label">תדירות ממוצעת</span></div>' +
+        '<div class="metric-card__value">' + esc(k.freq) + '</div>' +
+        '<span class="metric-card__delta metric-card__delta--flat">' + icon('ic-trend-flat') + esc(k.freqNote) + '</span></div>' +
+      /* 4 — שקט מתמשך (התראה) */
+      '<div class="metric-card metric-card--alert metric-card--accent-alert">' +
+        '<div class="metric-card__top"><span class="metric-card__icon">' + icon('ic-clock') + '</span>' +
+        '<span class="metric-card__label">שקט מתמשך</span></div>' +
+        '<div class="metric-card__value">' + esc(k.quiet) + '</div>' +
+        delta(k.quietDelta, k.quietNote) + '</div>';
+  }
+
+  /* ---------- שקט מתמשך ---------- */
+  function renderQuiet(mode) {
+    var list = QUIET[mode];
+    el('quiet-intro').innerHTML = DATA[mode].quietIntro;
+    el('quiet-list').innerHTML = list.map(function (r) {
+      var msg = 'היי ' + r.n + ', רק בודקים איך הולך — לא ראינו משימה חדשה כמה ימים. הכול בסדר? צריך/ה עזרה עם משהו במערכת? תודה!';
+      var action = '<a class="q-check" href="' + waLink(msg) + '" target="_blank" rel="noopener" ' +
+        'aria-label="בדיקת שלום ל' + esc(r.n) + '">' + icon('ic-heart') + 'בדיקת שלום</a>';
+      return '<div class="q-row">' +
+        '<span class="q-row__avatar" aria-hidden="true">' + esc(r.n.charAt(0)) + '</span>' +
+        '<div class="q-row__body">' +
+          '<div class="q-row__name">' + esc(r.n) + ' · ' + esc(r.role) + '</div>' +
+          '<div class="q-row__meta"><span class="q-row__days">' + icon('ic-clock') + esc(r.days) + '</span> · <span class="sub">' + esc(r.cls) + '</span></div>' +
+        '</div>' +
+        '<div class="q-row__side">' + action + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ---------- פעילות לפי מקצוע ---------- */
+  function renderSubjects(mode) {
+    var rows = DATA[mode].subj;
+    var max = rows.reduce(function (m, r) { return Math.max(m, r[1]); }, 1);
+    el('subj-list').innerHTML = rows.map(function (r) {
+      var name = r[0], val = r[1], quiet = r[2];
+      var pct = Math.round((val / max) * 100);
+      return '<div class="subj__row' + (quiet ? ' subj__row--quiet' : '') + '">' +
+        '<span class="subj__name">' + esc(name) + '</span>' +
+        '<span class="subj__track"><span class="subj__fill' + (quiet ? ' subj__fill--quiet' : '') + '" style="width:' + Math.max(pct, 4) + '%"></span></span>' +
+        '<span class="subj__val">' + val + ' <span class="u">משימות</span></span>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ---------- מגמת שליחת משימות — קו הרצף (LineChart, בריף §8) ---------- */
+  function renderTrend(mode) {
+    var t = DATA[mode].trend;
+    var vals = t.vals;
+    var W = 640, H = 220, padX = 30, padT = 20, padB = 40;
+    var plotW = W - padX * 2, plotH = H - padT - padB;
+    var n = vals.length;
+    var vmax = Math.max.apply(null, vals) * 1.15 || 1;
+    var xs = vals.map(function (v, i) { return padX + plotW * (i / (n - 1)); });
+    var ys = vals.map(function (v) { return padT + (1 - v / vmax) * plotH; });
+
+    /* קווי-רשת אופקיים בהירים מאוד (רבעים) */
+    var grid = '';
+    [0.25, 0.5, 0.75].forEach(function (g) {
+      var y = padT + (1 - g) * plotH;
+      grid += '<line x1="' + padX + '" y1="' + y.toFixed(1) + '" x2="' + (W - padX) + '" y2="' + y.toFixed(1) + '"/>';
+    });
+
+    var linePts = xs.map(function (x, i) { return x.toFixed(1) + ' ' + ys[i].toFixed(1); });
+    var linePath = 'M ' + linePts.join(' L ');
+    var areaPath = linePath + ' L ' + xs[n - 1].toFixed(1) + ' ' + (padT + plotH) + ' L ' + xs[0].toFixed(1) + ' ' + (padT + plotH) + ' Z';
+
+    var dots = xs.map(function (x, i) {
+      var head = (i === n - 1);
+      return '<circle class="line-chart__dot' + (head ? ' line-chart__dot--head' : '') + '" cx="' + x.toFixed(1) + '" cy="' + ys[i].toFixed(1) + '" r="' + (head ? 5 : 3.5) + '"/>';
+    }).join('');
+
+    var labels = xs.map(function (x, i) {
+      var cls = (i === n - 1) ? 'trend-label trend-label--now' : 'trend-label';
+      return '<text class="' + cls + '" x="' + x.toFixed(1) + '" y="' + (H - 14) + '" text-anchor="middle">' + TREND_LABELS[i] + '</text>';
+    }).join('');
+
+    var svg = el('trend-svg');
+    svg.innerHTML =
+      '<g class="line-chart__grid">' + grid + '</g>' +
+      '<path class="line-chart__area line-chart__area--mode" d="' + areaPath + '"/>' +
+      '<path class="line-chart__line line-chart__line--mode" d="' + linePath + '"/>' +
+      dots + labels;
+    svg.setAttribute('aria-label',
+      'מגמת שליחת משימות ב-7 הימים האחרונים, משימות ליום: ' + vals.join(', ') + '. היום ' + t.now + '.');
+
+    el('trend-now').textContent = t.now;
+    el('trend-cap').innerHTML = t.cap;
+  }
+
+  /* ---------- Sparkline משימות (7 ימים) ---------- */
+  function spark(s7) {
+    var max = Math.max.apply(null, s7) || 1;
+    var bars = s7.map(function (v, i) {
+      var zero = (v === 0);
+      var h = zero ? 3 : Math.round(6 + (v / max) * 20);
+      var on = (i === s7.length - 1 && v > 0);
+      return '<span class="spark__bar' + (zero ? ' spark__bar--zero' : (on ? ' spark__bar--on' : '')) + '" style="height:' + h + 'px"></span>';
+    }).join('');
+    var total = s7.reduce(function (a, b) { return a + b; }, 0);
+    return '<span class="spark" role="img" aria-label="' + total + ' משימות ב-7 הימים האחרונים">' + bars + '</span>';
+  }
+
+  /* ---------- טבלת פעילות מורים ---------- */
+  function renderTable() {
+    el('table-body').innerHTML = TEACHERS.map(function (s) {
+      var st = STATUS[s.st];
+      var action = (s.st === 'quiet' || s.st === 'attention')
+        ? '<a class="q-check" style="min-height:36px;padding:0 var(--space-3)" href="' + waLink('היי ' + s.n + ', רק בודקים איך הולך — לא ראינו פעילות חדשה במערכת כמה ימים. הכול בסדר? צריך/ה עזרה? תודה!') + '" target="_blank" rel="noopener" aria-label="בדיקת שלום ל' + esc(s.n) + '">' + icon('ic-heart') + 'בדיקת שלום</a>'
+        : '';
+      return '<tr data-st="' + s.st + '">' +
+        '<td><span class="t-teacher">' +
+          '<span class="t-avatar" aria-hidden="true" style="background:' + AVA_BG[s.st] + '">' + esc(s.n.charAt(0)) + '</span>' +
+          '<span class="rz-table__primary">' + esc(s.n) + '</span></span></td>' +
+        '<td>' + esc(s.role) + '</td>' +
+        '<td>' + spark(s.s7) + '</td>' +
+        '<td><span class="t-freq">' + esc(s.freq) + ' <span class="u">בשבוע</span></span></td>' +
+        '<td>' + esc(s.last) + '</td>' +
+        '<td><span class="chip ' + st.chip + '"><span class="chip__dot"></span>' + st.label + '</span></td>' +
+        '<td class="rz-table__actions">' + action + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  /* ---------- פילטר טבלה ---------- */
+  function applyFilter(f) {
+    var rows = el('table-body').querySelectorAll('tr');
+    var shown = 0;
+    rows.forEach(function (tr) {
+      var on = (f === 'all' || tr.getAttribute('data-st') === f);
+      tr.hidden = !on;
+      if (on) shown++;
+    });
+    el('t-empty').hidden = (shown > 0);
+  }
+
+  /* ---------- רינדור מלא לפי מצב ---------- */
+  function renderAll(mode) {
+    var d = DATA[mode] || DATA.routine;
+    el('dash-sub').textContent = d.sub;
+    renderKpis(d.kpis);
+    renderQuiet(mode);
+    renderSubjects(mode);
+    renderTrend(mode);
+  }
+
+  /* ---------- בורר מצב — דרך שירות המצב המשותף (Resef) ---------- */
+  var picker = el('mode-picker');
+  var chipLabel = el('mode-chip-label');
+  var MODE_HE = { routine: 'שגרה', remote: 'מרחוק', emergency: 'חירום' };
+
+  function syncPicker(mode) {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-set-mode') === mode ? 'true' : 'false');
+    });
+    el('mode-chip').setAttribute('data-mode', mode);
+    if (chipLabel) chipLabel.textContent = MODE_HE[mode] || 'שגרה';
+  }
+
+  if (window.Resef) {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        window.Resef.setMode(btn.getAttribute('data-set-mode'), { silent: true });
+      });
+    });
+    document.addEventListener('resef:modechange', function (e) {
+      var m = e.detail.mode;
+      syncPicker(m);
+      renderAll(m);
+    });
+    var start = window.Resef.getMode();
+    syncPicker(start);
+    renderAll(start);
+  } else {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var m = btn.getAttribute('data-set-mode');
+        document.documentElement.setAttribute('data-mode', m);
+        syncPicker(m); renderAll(m);
+      });
+    });
+    syncPicker('routine'); renderAll('routine');
+  }
+
+  renderTable();   /* טבלת הצוות זהה בכל המצבים */
+
+  /* ---------- פילטר ---------- */
+  var filterGroup = el('t-filter');
+  filterGroup.addEventListener('click', function (e) {
+    var btn = e.target.closest('.t-filter__btn');
+    if (!btn) return;
+    filterGroup.querySelectorAll('.t-filter__btn').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+    btn.setAttribute('aria-pressed', 'true');
+    applyFilter(btn.getAttribute('data-filter'));
+  });
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* ---------- ניווט: aria-current="page" בלחיצה ---------- */
+  document.querySelectorAll('.sidebar__nav').forEach(function (nav) {
+    nav.addEventListener('click', function (e) {
+      var item = e.target.closest('.sidebar__item');
+      if (!item || item.getAttribute('href') !== '#') return;   /* קישורים אמיתיים ממשיכים */
+      e.preventDefault();
+      nav.querySelectorAll('[aria-current="page"]').forEach(function (a) { a.removeAttribute('aria-current'); });
+      item.setAttribute('aria-current', 'page');
+      var shell = nav.closest('.app-shell');
+      if (shell) shell.classList.remove('is-nav-open');
+    });
+  });
+
+  /* ---------- Toast הדגמה ---------- */
+  var toast = el('toast'), toastText = el('toast-text'), toastTimer = null;
+  function showToast(msg) {
+    if (!toast) return;
+    toastText.textContent = msg;
+    toast.classList.add('is-on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('is-on'); }, 2600);
+  }
+  document.querySelectorAll('[data-toast]').forEach(function (elx) {
+    elx.addEventListener('click', function () { showToast(elx.getAttribute('data-toast')); });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מרכז ההודעות שלי — רֶצֶף · W1-08</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<!-- ספריית הרכיבים המשותפת של רֶצֶף -->
+<link rel="stylesheet" href="components.css">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--font-body); line-height:1.55;
+    -webkit-font-smoothing:antialiased; font-size:var(--text-body);
+  }
+  h1,h2,h3,h4{font-family:var(--font-head); margin:0; color:var(--ink-strong); line-height:1.2}
+  p{margin:0}
+  button{font-family:inherit}
+
+  /* עטיפה: מרכז את מסך המובייל של התלמיד לצפייה בדסקטופ */
+  .stage{max-width:var(--content-max); margin:0 auto; padding:var(--space-6) var(--space-4) 80px}
+  .stage-head{text-align:center; margin-bottom:var(--space-5)}
+  .eyebrow{color:var(--brand); font-weight:700; font-size:var(--text-label); letter-spacing:.02em}
+  .stage-head h1{font-size:var(--text-h2); margin:var(--space-2) 0 var(--space-1)}
+  .stage-head p{color:var(--ink-soft); font-size:var(--text-small); max-width:60ch; margin:0 auto}
+
+  /* בורר-מצב לדמו בלבד */
+  .demo-modes{display:flex; align-items:center; justify-content:center; gap:var(--space-2); margin-top:var(--space-4)}
+  .demo-modes .lbl{font-size:var(--text-label); color:var(--ink-faint); font-weight:600}
+  .seg{display:inline-flex; gap:4px; background:var(--surface-muted); border:1px solid var(--line); border-radius:var(--radius-pill); padding:4px}
+  .seg button{
+    display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:0 var(--space-3);
+    border:0; background:transparent; border-radius:var(--radius-pill); cursor:pointer;
+    font-weight:600; font-size:var(--text-label); color:var(--ink-soft); transition:background 160ms ease,color 160ms ease;
+  }
+  .seg button .d{width:9px; height:9px; border-radius:50%; flex:none}
+  .seg button[data-m="routine"] .d{background:var(--routine)}
+  .seg button[data-m="remote"] .d{background:var(--remote)}
+  .seg button[data-m="emergency"] .d{background:var(--emergency)}
+  .seg button[aria-pressed="true"]{background:var(--card); color:var(--ink-strong); box-shadow:var(--shadow-card)}
+  .seg button:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+
+  /* ============ מסך המובייל ============ */
+  .phone{
+    max-width:430px; margin:0 auto; background:var(--card);
+    border:1px solid var(--line); border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-lg); overflow:hidden;
+  }
+
+  /* --- TopBar --- */
+  .bar{
+    display:flex; align-items:center; gap:var(--space-3);
+    padding:var(--space-4); background:var(--mode-soft); border-bottom:1px solid var(--mode-line);
+  }
+  .bar .back{
+    width:var(--tap); height:var(--tap); margin:calc(var(--space-2) * -1); flex:none;
+    display:grid; place-items:center; border:0; background:transparent; color:var(--ink-strong);
+    border-radius:var(--radius-sm); cursor:pointer;
+  }
+  .bar .back:focus-visible{outline:3px solid var(--brand-bright); outline-offset:-2px}
+  .bar .ttl{font-family:var(--font-head); font-weight:700; font-size:var(--text-h3); color:var(--ink-strong)}
+  .bar .count{
+    margin-inline-start:auto; display:inline-flex; align-items:center; gap:6px;
+    background:var(--card); border:1px solid var(--mode-line); color:var(--mode);
+    border-radius:var(--radius-pill); padding:4px 10px; font-weight:700; font-size:var(--text-label);
+  }
+  .bar .count span{color:var(--ink-strong)}
+  .bar .count[data-empty="true"]{color:var(--ink-faint)}
+  .bar .count[data-empty="true"] span{color:var(--ink-faint)}
+
+  .body{padding:var(--space-4); display:flex; flex-direction:column; gap:var(--space-4)}
+
+  /* --- פאנל "המורה ראה" (נראות, לא ציון) --- */
+  .seen{
+    background:var(--brand-soft); border:1px solid var(--brand-line);
+    border-radius:var(--radius-md); padding:var(--space-4);
+  }
+  .seen-h{display:flex; align-items:center; gap:var(--space-2); margin-bottom:2px}
+  .seen-h svg{color:var(--brand-deep); flex:none}
+  .seen-h h2{font-size:var(--text-h3); color:var(--brand-dark)}
+  .seen .hint{color:var(--ink-soft); font-size:var(--text-label); margin-bottom:var(--space-3)}
+  .seen-list{display:flex; flex-direction:column; gap:var(--space-2)}
+  .seen-row{
+    display:flex; align-items:center; gap:var(--space-3);
+    background:var(--card); border:1px solid var(--brand-line); border-radius:var(--radius-sm);
+    padding:var(--space-2) var(--space-3);
+  }
+  .seen-row .eye{width:30px; height:30px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--brand-soft); color:var(--brand-deep)}
+  .seen-row .txt{min-width:0; flex:1}
+  .seen-row .txt b{font-family:var(--font-head); font-weight:700; color:var(--ink-strong); font-size:var(--text-small)}
+  .seen-row .txt .m{color:var(--ink); font-size:var(--text-small)}
+  .seen-row .txt .t{color:var(--ink-faint); font-size:var(--text-label)}
+
+  /* --- טאבים: הכל / חדשות --- */
+  .toolbar{display:flex; align-items:center; gap:var(--space-2)}
+  .tabs{display:inline-flex; gap:4px; background:var(--surface-muted); border:1px solid var(--line); border-radius:var(--radius-pill); padding:4px}
+  .tabs button{
+    display:inline-flex; align-items:center; gap:6px; min-height:var(--tap); padding:0 var(--space-4);
+    border:0; background:transparent; border-radius:var(--radius-pill); cursor:pointer;
+    font-weight:600; font-size:var(--text-small); color:var(--ink-soft); transition:background 160ms ease,color 160ms ease;
+  }
+  .tabs button[aria-pressed="true"]{background:var(--card); color:var(--ink-strong); box-shadow:var(--shadow-card)}
+  .tabs button:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+  .tabs .pill{
+    min-width:20px; height:20px; padding:0 6px; border-radius:var(--radius-pill);
+    display:inline-grid; place-items:center; background:var(--brand); color:var(--card); font-size:11px; font-weight:700;
+  }
+  .tabs button[aria-pressed="true"] .pill{background:var(--brand)}
+  .mark-all{
+    margin-inline-start:auto; min-height:var(--tap); padding:0 var(--space-2);
+    border:0; background:transparent; color:var(--brand); cursor:pointer;
+    font-weight:600; font-size:var(--text-small); text-decoration:underline; border-radius:6px;
+  }
+  .mark-all:disabled{color:var(--ink-faint); text-decoration:none; cursor:default}
+  .mark-all:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+
+  /* --- רשימת הודעות --- */
+  .msgs{display:flex; flex-direction:column; gap:var(--space-2)}
+  .msg{
+    display:flex; gap:var(--space-3); align-items:flex-start; width:100%; text-align:start;
+    background:var(--card); border:1px solid var(--line); border-inline-start:3px solid var(--line);
+    border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); cursor:pointer;
+    transition:border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  }
+  .msg:hover{border-color:var(--line-strong); box-shadow:var(--shadow-card)}
+  .msg:focus-visible{outline:3px solid var(--brand-bright); outline-offset:2px}
+  .msg[data-unread="true"]{border-inline-start-color:var(--brand); background:var(--bg-soft)}
+  .msg .ava{
+    width:38px; height:38px; border-radius:50%; flex:none; display:grid; place-items:center;
+    background:var(--surface-muted); color:var(--brand-deep); border:1px solid var(--brand-line);
+    font-family:var(--font-head); font-weight:700; font-size:var(--text-small);
+  }
+  .msg .main{min-width:0; flex:1}
+  .msg .row1{display:flex; align-items:baseline; gap:var(--space-2)}
+  .msg .who{font-family:var(--font-head); font-weight:700; color:var(--ink-strong); font-size:var(--text-small)}
+  .msg .subj{font-size:var(--text-label); color:var(--brand-deep); background:var(--brand-soft); border-radius:var(--radius-pill); padding:1px 8px; flex:none}
+  .msg .time{margin-inline-start:auto; font-size:var(--text-label); color:var(--ink-faint); flex:none}
+  .msg .text{color:var(--ink); font-size:var(--text-small); margin-top:3px}
+  .msg[data-unread="true"] .text{color:var(--ink-strong)}
+  .msg .dot{width:10px; height:10px; border-radius:50%; background:var(--brand); flex:none; margin-top:6px}
+  .msg[data-unread="false"] .dot{visibility:hidden}
+  .msg .sr-state{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+
+  /* --- Empty state: קו-רצף מינימלי --- */
+  .empty{display:none; flex-direction:column; align-items:center; gap:var(--space-3); padding:var(--space-8) var(--space-4); text-align:center}
+  .empty.show{display:flex}
+  .empty .seq{display:flex; align-items:center; width:150px}
+  .empty .n{width:12px; height:12px; border-radius:50%; border:3px solid var(--brand); background:var(--card); flex:none}
+  .empty .n.dim{border-color:var(--line-strong)}
+  .empty .l{height:2px; background:var(--line-strong); flex:1; border-radius:var(--radius-pill)}
+  .empty h3{font-size:var(--text-h3); color:var(--ink-strong)}
+  .empty p{font-size:var(--text-small); color:var(--ink-soft); max-width:34ch}
+
+  /* --- toast אישור (וריאנט מסך — פּיל; רכיב Toast הכללי הוא מלבני) --- */
+  .msg-toast{
+    position:fixed; inset-inline:0; bottom:20px; margin:0 auto; width:max-content; max-width:90vw;
+    display:flex; align-items:center; gap:var(--space-2);
+    background:var(--ink-strong); color:var(--card); border-radius:var(--radius-pill);
+    padding:10px var(--space-4); font-size:var(--text-small); font-weight:600;
+    box-shadow:var(--shadow-lg); opacity:0; transform:translateY(8px); pointer-events:none;
+    transition:opacity 200ms ease, transform 200ms ease; z-index:80;
+  }
+  .msg-toast.show{opacity:1; transform:translateY(0)}
+  .msg-toast svg{color:var(--brand-bright); flex:none}
+
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+
+  .foot{margin-top:var(--space-6); text-align:center; color:var(--ink-faint); font-size:var(--text-label)}
+  .foot a{color:var(--brand); font-weight:600}
+
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="stage-head">
+    <div class="eyebrow">רֶצֶף · עולם התלמיד · W1-08</div>
+    <h1>מרכז ההודעות שלי</h1>
+    <p>הודעות מהמורים במקום אחד, וסימן רגוע ש<b>ראו אותך</b> — נראות, לא ציון. מובייל.</p>
+    <div class="demo-modes">
+      <span class="lbl">מצב מערכת (דמו):</span>
+      <div class="seg" role="group" aria-label="בחירת מצב מערכת להדגמה">
+        <button type="button" data-m="routine" aria-pressed="true"><span class="d"></span>שגרה</button>
+        <button type="button" data-m="remote" aria-pressed="false"><span class="d"></span>מרחוק</button>
+        <button type="button" data-m="emergency" aria-pressed="false"><span class="d"></span>חירום</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ מסך המובייל של התלמיד ============ -->
+  <div class="phone">
+    <div class="bar">
+      <button type="button" class="back" aria-label="חזרה למסך הבית">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <span class="ttl">ההודעות שלי</span>
+      <span class="count" id="topCount" aria-hidden="true"><span id="topCountNum">3</span> חדשות</span>
+    </div>
+
+    <div class="body">
+      <!-- פאנל "המורה ראה" -->
+      <section class="seen" aria-labelledby="seenH">
+        <div class="seen-h">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          <h2 id="seenH">ראו אותך</h2>
+        </div>
+        <p class="hint">מורים ראו את מה ששלחת. זה סימן שיש מי שמלווה — לא ציון ולא בדיקה.</p>
+        <div class="seen-list">
+          <div class="seen-row">
+            <span class="eye" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <span class="txt"><b>רותם לוי</b> <span class="m">· מחנכת ראתה את הצ'ק-אין שלך</span><br><span class="t">לפני כשעתיים</span></span>
+          </div>
+          <div class="seen-row">
+            <span class="eye" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <span class="txt"><b>דניאל כהן</b> <span class="m">· מורה לעברית ראה שסיימת את היחידה</span><br><span class="t">אתמול</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- טאבים + סמן הכל כנקרא -->
+      <div class="toolbar">
+        <div class="tabs" role="group" aria-label="סינון הודעות">
+          <button type="button" data-tab="all" aria-pressed="true">הכל</button>
+          <button type="button" data-tab="unread" aria-pressed="false">חדשות <span class="pill" id="tabUnread">3</span></button>
+        </div>
+        <button type="button" class="mark-all" id="markAll">סימון הכל כנקרא</button>
+      </div>
+
+      <!-- רשימת הודעות -->
+      <div class="msgs" id="msgs" aria-live="polite"></div>
+
+      <!-- Empty state -->
+      <div class="empty" id="empty">
+        <div class="seq" aria-hidden="true">
+          <span class="n"></span><span class="l"></span><span class="n dim"></span><span class="l"></span><span class="n dim"></span>
+        </div>
+        <h3 id="emptyTtl">אין הודעות חדשות</h3>
+        <p id="emptyMsg">כשמורה ישלח לך משהו — זה יופיע כאן. אפשר לחזור למסך הבית בינתיים.</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">מסך תלמיד · מובייל-first · <a href="student-home.html">חזרה למסך הבית</a></p>
+</div>
+
+<div class="msg-toast" id="toast" role="status" aria-live="polite">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+  <span id="toastText">הכול סומן כנקרא</span>
+</div>
+
+<script>
+/* ============================================================
+   מרכז הודעות התלמיד — W1-08
+   הודעות מהמורים + סימון "חדש" + מצב-נקרא נשמר מקומית.
+   מינימיזציה: אין ניתוח AI על התלמיד, אין שדה חופשי שהתלמיד יוצר,
+   מצב-הנקרא נשמר ב-localStorage בלבד (לא נצבר לפרופיל).
+   ============================================================ */
+(function(){
+  'use strict';
+
+  // --- נתוני דמו: הודעות מהמורים לתלמיד ---
+  var MESSAGES = [
+    { id:'m5', who:'דניאל כהן', subj:'עברית', init:'ד', unread:true,
+      time:'לפני 20 דק׳',
+      text:'העליתי יחידה חדשה — "סדר פעולות בטקסט". אין לחץ, אפשר בקצב שלך.' },
+    { id:'m4', who:'רותם לוי', subj:'מחנכת', init:'ר', unread:true,
+      time:'לפני שעה',
+      text:'ראיתי שסימנת "צריך עזרה". אני כאן — נדבר מחר בבוקר, בסדר?' },
+    { id:'m3', who:'שירה אבן', subj:'מתמטיקה', init:'ש', unread:true,
+      time:'אתמול',
+      text:'כל הכבוד שהמשכת אתמול. השבוע נתקדם לאט, צעד־צעד.' },
+    { id:'m2', who:'רותם לוי', subj:'מחנכת', init:'ר', unread:false,
+      time:'אתמול',
+      text:'תזכורת רכה: יש שיעור מקוון ביום ראשון ב-10:00. נשמח שתצטרף.' },
+    { id:'m1', who:'דניאל כהן', subj:'עברית', init:'ד', unread:false,
+      time:'לפני יומיים',
+      text:'אם קשה להתחבר לרשת — יש גם גרסה לקריאה בלי וידאו.' }
+  ];
+
+  var STORE_KEY = 'resef.w108.read';
+  var msgsEl = document.getElementById('msgs');
+  var emptyEl = document.getElementById('empty');
+  var emptyTtl = document.getElementById('emptyTtl');
+  var emptyMsg = document.getElementById('emptyMsg');
+  var tabUnread = document.getElementById('tabUnread');
+  var topCount = document.getElementById('topCount');
+  var topCountNum = document.getElementById('topCountNum');
+  var markAllBtn = document.getElementById('markAll');
+  var toastEl = document.getElementById('toast');
+  var toastText = document.getElementById('toastText');
+  var currentTab = 'all';
+
+  // --- טעינת מצב-נקרא מקומי (מיזוג עם ברירת המחדל) ---
+  function loadRead(){
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return;
+      var read = JSON.parse(raw);
+      MESSAGES.forEach(function(m){ if(read[m.id]) m.unread = false; });
+    } catch(e){ /* אין localStorage — ממשיכים עם ברירת המחדל */ }
+  }
+  function saveRead(){
+    try {
+      var read = {};
+      MESSAGES.forEach(function(m){ if(!m.unread) read[m.id] = 1; });
+      localStorage.setItem(STORE_KEY, JSON.stringify(read));
+    } catch(e){ /* התעלמות */ }
+  }
+
+  function unreadCount(){
+    return MESSAGES.reduce(function(n,m){ return n + (m.unread?1:0); }, 0);
+  }
+
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+
+  function render(){
+    var list = MESSAGES.filter(function(m){ return currentTab==='unread' ? m.unread : true; });
+    msgsEl.innerHTML = '';
+
+    list.forEach(function(m){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'msg';
+      btn.setAttribute('data-unread', m.unread ? 'true' : 'false');
+      btn.setAttribute('data-id', m.id);
+      var stateWord = m.unread ? 'הודעה שלא נקראה' : 'הודעה שנקראה';
+      btn.setAttribute('aria-label', stateWord + ' מ' + m.who + ', ' + m.subj + ': ' + m.text);
+      btn.innerHTML =
+        '<span class="dot" aria-hidden="true"></span>' +
+        '<span class="ava" aria-hidden="true">' + esc(m.init) + '</span>' +
+        '<span class="main">' +
+          '<span class="row1">' +
+            '<span class="who">' + esc(m.who) + '</span>' +
+            '<span class="subj">' + esc(m.subj) + '</span>' +
+            '<span class="time">' + esc(m.time) + '</span>' +
+          '</span>' +
+          '<span class="text">' + esc(m.text) + '</span>' +
+        '</span>';
+      btn.addEventListener('click', function(){ openMsg(m, btn); });
+      msgsEl.appendChild(btn);
+    });
+
+    // Empty state
+    var showEmpty = list.length === 0;
+    emptyEl.classList.toggle('show', showEmpty);
+    if(showEmpty){
+      if(currentTab==='unread'){
+        emptyTtl.textContent = 'אין הודעות חדשות';
+        emptyMsg.textContent = 'קראת את הכול. יופיע כאן סימן כשמורה ישלח משהו חדש.';
+      } else {
+        emptyTtl.textContent = 'אין עדיין הודעות';
+        emptyMsg.textContent = 'כשמורה ישלח לך משהו — זה יופיע כאן. אפשר לחזור למסך הבית בינתיים.';
+      }
+    }
+    updateCounters();
+  }
+
+  function updateCounters(){
+    var u = unreadCount();
+    tabUnread.textContent = u;
+    tabUnread.style.display = u ? '' : 'none';
+    topCountNum.textContent = u;
+    // הטקסט שאחרי המספר הוא node הטקסט השני בתוך .count
+    var tail = topCount.lastChild;
+    if(u){
+      topCount.setAttribute('data-empty','false');
+      topCount.setAttribute('aria-hidden','false');
+      topCount.setAttribute('aria-label', u + ' הודעות שלא נקראו');
+      tail.nodeValue = ' חדשות';
+    } else {
+      topCount.setAttribute('data-empty','true');
+      topCount.setAttribute('aria-hidden','false');
+      topCount.setAttribute('aria-label','אין הודעות חדשות');
+      tail.nodeValue = ' — הכול נקרא';
+    }
+    markAllBtn.disabled = (u === 0);
+  }
+
+  function openMsg(m, btn){
+    // פתיחת הודעה = סימון כנקראה (אישור אנושי — לא ציון)
+    if(m.unread){
+      m.unread = false;
+      saveRead();
+      if(btn){ btn.setAttribute('data-unread','false'); }
+      showToast('ההודעה סומנה כנקראה');
+    }
+    // בדמו אין ניווט לעמוד נפרד — רק עדכון מצב
+    if(currentTab==='unread'){ render(); } else { updateCounters(); }
+  }
+
+  var toastTimer;
+  function showToast(msg){
+    toastText.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 2400);
+  }
+
+  // --- טאבים ---
+  Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function(b){
+    b.addEventListener('click', function(){
+      currentTab = b.getAttribute('data-tab');
+      Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function(x){
+        x.setAttribute('aria-pressed', x===b ? 'true' : 'false');
+      });
+      render();
+    });
+  });
+
+  // --- סימון הכל כנקרא ---
+  markAllBtn.addEventListener('click', function(){
+    if(!unreadCount()) return;
+    MESSAGES.forEach(function(m){ m.unread = false; });
+    saveRead();
+    render();
+    showToast('הכול סומן כנקרא');
+  });
+
+  // --- בורר מצב מערכת (דמו) ---
+  Array.prototype.forEach.call(document.querySelectorAll('.demo-modes .seg button'), function(b){
+    b.addEventListener('click', function(){
+      var mode = b.getAttribute('data-m');
+      document.documentElement.setAttribute('data-mode', mode);
+      Array.prototype.forEach.call(document.querySelectorAll('.demo-modes .seg button'), function(x){
+        x.setAttribute('aria-pressed', x===b ? 'true' : 'false');
+      });
+    });
+  });
+
+  loadRead();
+  render();
+})();
+</script>
+</body>
+</html>

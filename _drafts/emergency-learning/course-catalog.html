@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>קטלוג הקורסים — מסלולי העשרה · רֶצֶף</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- מקור אמת לצבעים/מידות, ואז ספריית הרכיבים המשותפת -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+/* ============================================================
+   רֶצֶף · תצוגה 7 — קטלוג קורסי העשרה (W7-02)
+   course-catalog.html
+   ▸ קטלוג רב-תחומי: AI · יזמות · פיננסים · אנגלית · עיצוב · מדיה
+   ▸ סינון לפי תחום + רמה, בשילוב חיפוש-טקסט
+   ▸ כל קורס = CourseCard (בשפת enrichment-course.html · W7-01)
+   כל הצבעים/המידות מ-tokens.css. .facet-chip מ-components.css.
+   Mobile First (תלמיד) · RTL מלא · נגישות AA.
+   ============================================================ */
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--font-body);background:var(--bg);color:var(--ink);
+  line-height:1.6;font-size:var(--text-body);min-height:100vh;
+}
+h1,h2,h3,h4{font-family:var(--font-head);line-height:1.3;font-weight:700}
+svg{display:block}
+button{font-family:inherit}
+
+/* ---------- מעטפת טלפון (תלמיד — Mobile First) ---------- */
+.app{
+  max-width:430px;width:100%;margin:0 auto;min-height:100vh;background:var(--bg);
+  display:flex;flex-direction:column;position:relative;
+}
+
+/* ---------- פס עליון ---------- */
+.topbar{
+  position:sticky;top:0;z-index:30;
+  background:color-mix(in srgb,var(--bg) 92%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  padding:11px 18px 12px;
+}
+.topbar .row{display:flex;align-items:center;gap:9px}
+.brandmark{display:inline-flex;align-items:center;gap:8px;font-weight:800;color:var(--brand-deep);font-size:15px;font-family:var(--font-head)}
+.brandmark .dot{width:9px;height:9px;border-radius:50%;background:var(--brand)}
+.track-chip{
+  margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:700;color:var(--brand-deep);
+  background:var(--brand-soft);border:1px solid var(--brand-line);
+  border-radius:var(--radius-pill);padding:4px 11px;
+}
+.track-chip svg{width:14px;height:14px}
+
+/* ---------- כותרת הדף ---------- */
+.head{padding:18px 18px 4px}
+.head h1{font-size:var(--text-h1);color:var(--ink-strong);line-height:1.2;margin-bottom:6px}
+.head p{font-size:15px;color:var(--ink-soft);max-width:34em}
+
+/* ---------- אזור סינון (דביק) ---------- */
+.filters{
+  position:sticky;top:56px;z-index:20;
+  background:color-mix(in srgb,var(--bg) 94%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  padding:14px 18px 12px;border-bottom:1px solid var(--line);
+}
+/* שדה חיפוש */
+.search{position:relative;margin-bottom:12px}
+.search .ic{
+  position:absolute;inset-inline-start:13px;top:50%;transform:translateY(-50%);
+  color:var(--ink-faint);pointer-events:none;
+}
+.search .ic svg{width:18px;height:18px}
+.search input{
+  width:100%;min-height:var(--tap);
+  border:1.5px solid var(--line-strong);border-radius:var(--radius-btn);
+  background:var(--card);color:var(--ink);
+  font-family:var(--font-body);font-size:16px;font-weight:500;
+  padding:0 42px;
+  transition:border-color .16s ease,box-shadow .16s ease;
+}
+.search input::placeholder{color:var(--ink-faint);font-weight:500}
+.search input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.search .clear{
+  position:absolute;inset-inline-end:8px;top:50%;transform:translateY(-50%);
+  width:30px;height:30px;border:0;border-radius:50%;background:var(--surface-muted);
+  color:var(--ink-soft);cursor:pointer;display:none;align-items:center;justify-content:center;
+}
+.search .clear svg{width:15px;height:15px}
+.search .clear.show{display:inline-flex}
+.search .clear:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+
+/* קבוצת צ'יפים — נגללת אופקית במובייל */
+.facet{margin-bottom:9px}
+.facet:last-of-type{margin-bottom:0}
+.facet .lbl{
+  display:block;font-size:var(--text-label);font-weight:700;color:var(--ink-soft);
+  margin-bottom:6px;
+}
+.facet .chips{
+  display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;
+  scrollbar-width:none;-ms-overflow-style:none;
+}
+.facet .chips::-webkit-scrollbar{display:none}
+/* .facet-chip מגיע מ-components.css; רק דחיפת אי-כיווץ במסך הנגלל */
+.facet .facet-chip{flex:none}
+.facet-chip .dt{width:9px;height:9px;border-radius:50%;flex:none}
+
+/* תחתית הסינון — ספירה + ניקוי */
+.filt-foot{
+  display:flex;align-items:center;gap:10px;margin-top:12px;
+  padding-top:11px;border-top:1px solid var(--line);
+}
+.count{font-size:var(--text-small);color:var(--ink-soft)}
+.count b{color:var(--ink-strong);font-weight:800}
+.clear-all{
+  margin-inline-start:auto;display:none;align-items:center;gap:6px;
+  border:0;background:transparent;color:var(--brand-deep);
+  font-family:var(--font-body);font-size:var(--text-small);font-weight:700;
+  cursor:pointer;padding:6px 8px;border-radius:var(--radius-pill);
+  transition:background .16s ease;
+}
+.clear-all.show{display:inline-flex}
+.clear-all:hover{background:var(--brand-soft)}
+.clear-all:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.clear-all svg{width:14px;height:14px}
+
+/* ---------- רשימת הקורסים ---------- */
+.list{
+  flex:1;padding:16px 18px calc(24px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:12px;
+}
+
+/* CourseCard */
+.course-card{
+  display:flex;flex-direction:column;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);padding:16px 16px 15px;position:relative;
+  text-align:start;width:100%;color:inherit;text-decoration:none;cursor:pointer;
+  transition:transform .14s ease,box-shadow .16s ease,border-color .16s ease;
+}
+a.course-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--brand-line)}
+.course-card:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.course-card.is-soon{cursor:default}
+.course-card.is-soon:hover{transform:none;box-shadow:var(--shadow-card);border-color:var(--line)}
+
+.cc-top{display:flex;align-items:flex-start;gap:13px}
+.cc-art{
+  width:48px;height:48px;border-radius:14px;flex:none;
+  background:var(--brand-soft);color:var(--brand);border:1px solid var(--brand-line);
+  display:flex;align-items:center;justify-content:center;
+}
+.cc-art svg{width:25px;height:25px}
+.cc-head{flex:1;min-width:0}
+.cc-kicker{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11.5px;font-weight:800;letter-spacing:.02em;color:var(--brand-deep);
+  margin-bottom:4px;
+}
+.cc-kicker .dt{width:8px;height:8px;border-radius:50%;flex:none}
+.cc-head h2{font-size:17.5px;color:var(--ink-strong);line-height:1.25}
+.cc-desc{font-size:14px;color:var(--ink-soft);margin-top:9px;line-height:1.5}
+
+.cc-foot{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:13px;padding-top:12px;border-top:1px solid var(--line);
+}
+.fact{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:12px;font-weight:600;color:var(--ink-soft);
+}
+.fact svg{width:14px;height:14px;color:var(--ink-faint);flex:none}
+.cc-dot{width:4px;height:4px;border-radius:50%;background:var(--line-strong);flex:none}
+.cc-level{
+  display:inline-flex;align-items:center;
+  font-size:11.5px;font-weight:700;color:var(--brand-deep);
+  background:var(--brand-soft);border:1px solid var(--brand-line);
+  border-radius:var(--radius-pill);padding:2px 9px;
+}
+.cc-go{
+  margin-inline-start:auto;display:inline-flex;align-items:center;gap:5px;
+  font-size:12.5px;font-weight:700;color:var(--brand);
+}
+.cc-go svg{width:16px;height:16px}
+.cc-soon{
+  margin-inline-start:auto;display:inline-flex;align-items:center;gap:5px;
+  font-size:11.5px;font-weight:700;color:var(--ink-soft);
+  background:var(--surface-muted);border:1px solid var(--line);
+  border-radius:var(--radius-pill);padding:3px 10px;
+}
+.cc-soon svg{width:13px;height:13px}
+
+/* ---------- מצב ריק (מוטיב קו הרצף) ---------- */
+.empty{
+  display:none;flex-direction:column;align-items:center;text-align:center;
+  padding:40px 20px;color:var(--ink-soft);
+}
+.empty.show{display:flex}
+.empty svg.line{width:120px;height:22px;color:var(--brand-line);margin-bottom:14px}
+.empty h3{font-size:var(--text-h3);color:var(--ink-strong);margin-bottom:4px}
+.empty p{font-size:14px;max-width:26em}
+.empty .reset{
+  margin-top:16px;min-height:var(--tap);padding:0 20px;
+  border:1.5px solid var(--brand-line);border-radius:var(--radius-btn);
+  background:var(--card);color:var(--brand-deep);
+  font-family:var(--font-body);font-size:15px;font-weight:700;cursor:pointer;
+}
+.empty .reset:hover{background:var(--brand-soft)}
+.empty .reset:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+
+mark.hit{background:var(--brand-line);color:inherit;font-weight:700;border-radius:4px;padding:0 1px}
+
+@media (prefers-reduced-motion:reduce){
+  .course-card,.clear-all,.search input{transition:none}
+  a.course-card:hover{transform:none}
+}
+
+/* דסקטופ — הקטלוג מתרחב לרשת, נשאר במעטפת המותג */
+@media (min-width:720px){
+  .app{max-width:900px}
+  .list{
+    display:grid;grid-template-columns:repeat(2,1fr);
+    gap:14px;align-items:stretch;
+  }
+  .empty{grid-column:1/-1}
+  .course-card{height:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- פס עליון -->
+  <div class="topbar">
+    <div class="row">
+      <span class="brandmark"><span class="dot"></span>רֶצֶף</span>
+      <span class="track-chip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4M10 12h2M18 12h4"/><circle cx="8" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
+        מסלולי העשרה
+      </span>
+    </div>
+  </div>
+
+  <!-- כותרת -->
+  <header class="head">
+    <h1>קטלוג הקורסים</h1>
+    <p>מסלולי העשרה קצרים לבחירה — כל אחד עצמאי, בקצב שלכם. בחרו תחום שמעניין אתכם ורמה שמתאימה לכם.</p>
+  </header>
+
+  <!-- סינון -->
+  <div class="filters">
+    <div class="search">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+      <input type="search" id="q" autocomplete="off" placeholder="חיפוש קורס לפי שם או נושא…" aria-label="חיפוש בקטלוג הקורסים">
+      <button class="clear" id="qClear" type="button" aria-label="ניקוי חיפוש"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <div class="facet">
+      <span class="lbl" id="domLbl">תחום</span>
+      <div class="chips" id="domChips" role="group" aria-labelledby="domLbl"></div>
+    </div>
+
+    <div class="facet">
+      <span class="lbl" id="lvlLbl">רמה</span>
+      <div class="chips" id="lvlChips" role="group" aria-labelledby="lvlLbl"></div>
+    </div>
+
+    <div class="filt-foot">
+      <span class="count" id="count" role="status" aria-live="polite"></span>
+      <button class="clear-all" id="clearAll" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4 8.5 14"/><path d="M5 20c-.5-2 .5-4 2.5-5l8-4"/><path d="M11 15c2 1 3.5 3 3 5H8c-.5-2 .5-4 3-5z"/></svg>
+        ניקוי כל המסננים
+      </button>
+    </div>
+  </div>
+
+  <!-- רשימת הקורסים -->
+  <main class="list" id="list" aria-label="רשימת הקורסים"></main>
+
+  <!-- מצב ריק -->
+  <div class="empty" id="empty">
+    <svg class="line" viewBox="0 0 120 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 11h30M46 11h12M70 11h14M96 11h20"/><circle cx="40" cy="11" r="3" fill="currentColor" stroke="none"/></svg>
+    <h3>לא נמצאו קורסים</h3>
+    <p>נסו להסיר מסנן או לנקות הכול ולהתחיל מחדש.</p>
+    <button class="reset" id="emptyReset" type="button">ניקוי המסננים</button>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   קטלוג הקורסים — נתונים + מנוע סינון (וניל, ללא תלות)
+   כל קורס: תחום (domain) · רמה (level) · פרטי CourseCard.
+   רק "צילום בסמארטפון" חי (מקושר ל-W7-01); השאר "בקרוב".
+   ============================================================ */
+
+/* אייקוני-קו (SVG · outline · לא-אימוג'י) */
+var ICON = {
+  ai:'<path d="M9 3h6M9 21h6M3 9v6M21 9v6"/><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 10h4v4h-4z"/>',
+  venture:'<path d="M4.5 16.5 3 21l4.5-1.5"/><path d="M15 5c3.5 1 6 4 6 8 0 1.5-.4 2.5-.4 2.5s-3-.5-5.5 1c-2 1.2-3.6 1-3.6 1l-3-3s-.2-1.6 1-3.6c1.5-2.5 1-5.5 1-5.5S13.5 4 15 5z"/><circle cx="15" cy="10" r="1.5"/>',
+  finance:'<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="14" r="1.6"/>',
+  english:'<path d="M4 5h9M8.5 5v10"/><path d="M13 19l3.5-8 3.5 8M14 16h5"/>',
+  design:'<path d="M12 3 4 8v8l8 5 8-5V8z"/><path d="M12 3v18M4 8l8 5 8-5"/>',
+  media:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  units:'<path d="m12 3 8 4-8 4-8-4 8-4z"/><path d="m4 12 8 4 8-4"/><path d="m4 17 8 4 8-4"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  arrow:'<path d="M15 6l-6 6 6 6"/>',
+  soon:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+};
+
+/* תחומים (עם צבע-נקודה מטוקנים בלבד — לזיהוי-על, לא כקישוט) */
+var DOMAINS = [
+  { id:'ai',      label:'בינה מלאכותית', icon:'ai',      dot:'var(--brand)' },
+  { id:'venture', label:'יזמות',         icon:'venture', dot:'var(--routine)' },
+  { id:'finance', label:'פיננסים',       icon:'finance', dot:'var(--remote)' },
+  { id:'english', label:'אנגלית',        icon:'english', dot:'var(--brand-bright)' },
+  { id:'design',  label:'עיצוב',         icon:'design',  dot:'var(--emergency)' },
+  { id:'media',   label:'מדיה וצילום',   icon:'media',   dot:'var(--brand-deep)' }
+];
+var DOMAP = {}; DOMAINS.forEach(function(d){ DOMAP[d.id]=d; });
+
+/* רמות */
+var LEVELS = [
+  { id:'basic',    label:'מתחילים' },
+  { id:'advanced', label:'מתקדם' }
+];
+var LVLMAP = {}; LEVELS.forEach(function(l){ LVLMAP[l.id]=l; });
+
+/* מאגר הקורסים (נתוני הדגמה — מסלולי העשרה רב-תחומיים) */
+var COURSES = [
+  // מדיה — הקורס החי
+  { id:'photo', domain:'media', level:'basic', title:'צילום בסמארטפון',
+    desc:'לצלם תמונה שמספרת סיפור — לפוסט, למותג או לפרויקט. רק עם הטלפון שבכיס.',
+    units:6, dur:'~10 דק ליחידה', href:'enrichment-course.html', live:true,
+    tags:['צילום','תמונה','אור','קומפוזיציה','עריכה'] },
+  { id:'video', domain:'media', level:'advanced', title:'עריכת סרטון קצר בטלפון',
+    desc:'להפוך כמה קליפים לסרטון אחד שזורם — חיתוך, קצב, כתוביות ומוזיקה.',
+    units:5, dur:'15–20 דק ליחידה', tags:['וידאו','עריכה','רילס','טיקטוק'] },
+
+  // בינה מלאכותית
+  { id:'ai-daily', domain:'ai', level:'basic', title:'עוזר AI לחיים ולעבודה',
+    desc:'לכתוב הודעה, לסכם טקסט, להתכונן למבחן — לבקש נכון ולקבל תשובה שימושית.',
+    units:5, dur:'בקצב שלך', tags:['בינה מלאכותית','פרומפט','צ׳אט','כלים'] },
+  { id:'ai-image', domain:'ai', level:'advanced', title:'יוצרים תמונות עם AI',
+    desc:'לתאר במילים ולקבל תמונה — לפוסט, לרעיון או למצגת. מה עובד ומה לא.',
+    units:4, dur:'~12 דק ליחידה', tags:['בינה מלאכותית','תמונות','יצירה','עיצוב'] },
+
+  // יזמות
+  { id:'idea-biz', domain:'venture', level:'basic', title:'מהרעיון לעסק קטן',
+    desc:'איך בודקים אם רעיון שווה, מי הלקוח, ומה הצעד הראשון בלי כסף גדול.',
+    units:6, dur:'שיעור קצר', tags:['יזמות','עסק','רעיון','לקוח'] },
+  { id:'sales-page', domain:'venture', level:'advanced', title:'לבנות דף מכירה שעובד',
+    desc:'מבנה של עמוד שמסביר, משכנע ומזמין לפעולה — צעד אחר צעד.',
+    units:5, dur:'~15 דק ליחידה', tags:['יזמות','שיווק','מכירה','דף נחיתה'] },
+
+  // פיננסים
+  { id:'budget', domain:'finance', level:'basic', title:'כסף חכם — ניהול תקציב אישי',
+    desc:'לאן הכסף הולך, איך בונים תקציב פשוט, ואיך חוסכים בלי להרגיש.',
+    units:5, dur:'בקצב שלך', tags:['פיננסים','כסף','תקציב','חיסכון'] },
+  { id:'credit', domain:'finance', level:'advanced', title:'מבינים אשראי, חיסכון וריבית',
+    desc:'מה זו ריבית, איך אשראי עובד, ולמה חיסכון קטן היום שווה הרבה מחר.',
+    units:4, dur:'~12 דק ליחידה', tags:['פיננסים','אשראי','ריבית','בנק'] },
+
+  // אנגלית
+  { id:'eng-work', domain:'english', level:'basic', title:'אנגלית לעבודה ולרשת',
+    desc:'מילים וביטויים שבאמת בשימוש — בהודעה, בראיון עבודה או ברשת.',
+    units:6, dur:'~10 דק ליחידה', tags:['אנגלית','english','דיבור','עבודה'] },
+  { id:'eng-write', domain:'english', level:'advanced', title:'לכתוב אנגלית בלי לפחד',
+    desc:'משפט ברור, אימייל קצר, פוסט — מבנה פשוט שאפשר להישען עליו.',
+    units:4, dur:'~12 דק ליחידה', tags:['אנגלית','english','כתיבה','writing'] },
+
+  // עיצוב
+  { id:'canva', domain:'design', level:'basic', title:'עיצוב פוסט בקנבה',
+    desc:'להפוך רעיון לפוסט נקי ומזמין — תבניות, טקסט וצבע שעובדים יחד.',
+    units:5, dur:'~10 דק ליחידה', tags:['עיצוב','קנבה','canva','פוסט'] },
+  { id:'design-basics', domain:'design', level:'advanced', title:'צבע, פונט וחלל — יסודות העיצוב',
+    desc:'למה עיצוב אחד נראה יקר ואחר זול — שלושת הכללים שמאחורי זה.',
+    units:4, dur:'בקצב שלך', tags:['עיצוב','צבע','פונט','טיפוגרפיה'] }
+];
+
+/* ---------- מצב סינון ---------- */
+var state = { q:'', domain:[], level:[] };
+
+var list = document.getElementById('list');
+var empty = document.getElementById('empty');
+var countEl = document.getElementById('count');
+var clearAll = document.getElementById('clearAll');
+
+function svg(paths){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>'; }
+
+/* נירמול עברי בסיסי לחיפוש (ניקוד + סופיות) */
+function norm(s){
+  return String(s==null?'':s)
+    .replace(/[֑-ׇ]/g,'')            // ניקוד/טעמים
+    .replace(/ך/g,'כ').replace(/ם/g,'מ').replace(/ן/g,'נ').replace(/ף/g,'פ').replace(/ץ/g,'צ')
+    .replace(/["'׳״]/g,'').toLowerCase().trim();
+}
+function haystack(c){
+  return norm([c.title, c.desc, DOMAP[c.domain].label, (c.tags||[]).join(' ')].join(' '));
+}
+
+/* בדיקת התאמה לפריט בהינתן state (עם אופציית התעלמות מפאה — לספירות) */
+function pass(c, st, except){
+  if(except!=='q' && st.q && haystack(c).indexOf(norm(st.q))<0) return false;
+  if(except!=='domain' && st.domain.length && st.domain.indexOf(c.domain)<0) return false;
+  if(except!=='level'  && st.level.length  && st.level.indexOf(c.level)<0)  return false;
+  return true;
+}
+function filtered(){ return COURSES.filter(function(c){ return pass(c,state,null); }); }
+
+/* ספירות חיות לכל ערך-פאה (בהתחשב בשאר הפאות) */
+function counts(facet){
+  var out={};
+  COURSES.forEach(function(c){
+    if(!pass(c,state,facet)) return;
+    var v = facet==='domain'?c.domain:c.level;
+    out[v]=(out[v]||0)+1;
+  });
+  return out;
+}
+
+/* הדגשת מונח-חיפוש (בטוח מפני HTML) */
+function esc(s){ return String(s).replace(/[&<>"]/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+function hl(text, term){
+  var safe = esc(text);
+  if(!term) return safe;
+  var nt = norm(term); if(!nt) return safe;
+  var nText = norm(text);
+  // מיפוי-מיקום בטוח רק כשהנירמול שומר-אורך (בלי ניקוד/גרשיים בטקסט הגלוי).
+  // אחרת — מחזירים טקסט מוגן בלי סימון, כדי שלא ייחתך במקום הלא-נכון.
+  if(nText.length !== safe.length) return safe;
+  var out='', i=0;
+  while(i<safe.length){
+    var idx = nText.indexOf(nt, i);
+    if(idx<0){ out+=safe.slice(i); break; }
+    out += safe.slice(i, idx) + '<mark class="hit">' + safe.slice(idx, idx+nt.length) + '</mark>';
+    i = idx+nt.length;
+  }
+  return out;
+}
+
+/* ---------- בניית צ'יפים ---------- */
+function buildChips(hostId, defs, facet){
+  var host=document.getElementById(hostId);
+  host.innerHTML = defs.map(function(d){
+    var dot = d.dot ? '<span class="dt" style="background:'+d.dot+'"></span>' : '';
+    var ic  = d.icon ? svg(ICON[d.icon]) : '';
+    return '<button class="facet-chip" type="button" role="button" aria-pressed="false" data-v="'+d.id+'">'
+      + dot + ic + '<span>'+d.label+'</span>'
+      + '<span class="facet-chip__count" aria-hidden="true"></span></button>';
+  }).join('');
+  host.querySelectorAll('.facet-chip').forEach(function(btn){
+    btn.addEventListener('click', function(){ toggle(facet, btn.getAttribute('data-v')); });
+  });
+}
+
+function toggle(facet, v){
+  var arr=state[facet], i=arr.indexOf(v);
+  if(i>=0) arr.splice(i,1); else arr.push(v);
+  apply();
+}
+
+/* ---------- כרטיס קורס ---------- */
+function card(c, term){
+  var dom = DOMAP[c.domain];
+  var tag = c.live ? 'a' : 'div';
+  var attrs = c.live
+    ? ' href="'+c.href+'" aria-label="פתיחת הקורס '+esc(c.title)+'"'
+    : ' role="group" aria-label="'+esc(c.title)+' — בקרוב"';
+  var foot = c.live
+    ? '<span class="cc-go">התחלה'+svg(ICON.arrow)+'</span>'
+    : '<span class="cc-soon">'+svg(ICON.soon)+'בקרוב</span>';
+
+  return '<'+tag+' class="course-card'+(c.live?'':' is-soon')+'"'+attrs+'>'
+    + '<div class="cc-top">'
+    +   '<span class="cc-art">'+svg(ICON[dom.icon])+'</span>'
+    +   '<div class="cc-head">'
+    +     '<span class="cc-kicker"><span class="dt" style="background:'+dom.dot+'"></span>'+dom.label+'</span>'
+    +     '<h2>'+hl(c.title,term)+'</h2>'
+    +   '</div>'
+    + '</div>'
+    + '<p class="cc-desc">'+hl(c.desc,term)+'</p>'
+    + '<div class="cc-foot">'
+    +   '<span class="cc-level">'+LVLMAP[c.level].label+'</span>'
+    +   '<span class="cc-dot" aria-hidden="true"></span>'
+    +   '<span class="fact">'+svg(ICON.units)+c.units+' יחידות</span>'
+    +   '<span class="cc-dot" aria-hidden="true"></span>'
+    +   '<span class="fact">'+svg(ICON.clock)+c.dur+'</span>'
+    +   foot
+    + '</div>'
+    + '</'+tag+'>';
+}
+
+/* ---------- החלה ---------- */
+function apply(){
+  var rows = filtered();
+  var term = state.q;
+
+  // רשימה / מצב-ריק
+  list.innerHTML = rows.map(function(c){ return card(c, term); }).join('');
+  var none = rows.length===0;
+  empty.classList.toggle('show', none);
+  list.style.display = none ? 'none' : '';
+
+  // עדכון צ'יפים (pressed + ספירה + השבתת אפסים)
+  [['domain','domChips'],['level','lvlChips']].forEach(function(pair){
+    var facet=pair[0], cnt=counts(facet), sel=state[facet];
+    document.getElementById(pair[1]).querySelectorAll('.facet-chip').forEach(function(btn){
+      var v=btn.getAttribute('data-v'), on=sel.indexOf(v)>=0, c=cnt[v]||0;
+      btn.setAttribute('aria-pressed', on?'true':'false');
+      var cEl=btn.querySelector('.facet-chip__count'); if(cEl) cEl.textContent = c?String(c):'';
+      var dis = !on && c===0;
+      btn.disabled = dis; btn.setAttribute('aria-disabled', dis?'true':'false');
+    });
+  });
+
+  // ספירה + ניקוי
+  var n=rows.length;
+  countEl.innerHTML = n===0 ? 'לא נמצאו קורסים' :
+    n===1 ? 'נמצא <b>קורס אחד</b>' : 'נמצאו <b>'+n+'</b> קורסים';
+  var dirty = !!state.q || state.domain.length || state.level.length;
+  clearAll.classList.toggle('show', !!dirty);
+}
+
+/* ---------- ניקוי ---------- */
+function clearFilters(){
+  state={ q:'', domain:[], level:[] };
+  qInput.value=''; qClear.classList.remove('show');
+  apply();
+}
+
+/* ---------- חיפוש ---------- */
+var qInput=document.getElementById('q'), qClear=document.getElementById('qClear'), tmr=null;
+qInput.addEventListener('input', function(){
+  state.q=qInput.value; qClear.classList.toggle('show', !!qInput.value);
+  if(tmr) clearTimeout(tmr); tmr=setTimeout(apply, 80);
+});
+qInput.addEventListener('keydown', function(e){
+  if(e.key==='Escape' && qInput.value){ e.preventDefault(); state.q=''; qInput.value=''; qClear.classList.remove('show'); apply(); }
+});
+qClear.addEventListener('click', function(){ state.q=''; qInput.value=''; qClear.classList.remove('show'); apply(); qInput.focus(); });
+clearAll.addEventListener('click', clearFilters);
+document.getElementById('emptyReset').addEventListener('click', clearFilters);
+
+/* ---------- אתחול ---------- */
+buildChips('domChips', DOMAINS, 'domain');
+buildChips('lvlChips', LEVELS, 'level');
+apply();
+</script>
+</body>
+</html>

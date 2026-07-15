@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · דוחות + הודעות ארציות — פיקוח ארצי</title>
+<!-- favicon: סמל רֶצֶף (ריבוע-מותג + 3 קווי הרצף) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ============================================================
+   רֶצֶף — דוחות + הודעות ארציות (W5-03) · פיקוח ארצי · RTL
+   ------------------------------------------------------------
+   שני כלים בעמוד אחד:
+   1) מחולל דוחות מצרפיים — סינון לפי מחוז / מקצוע / טווח-זמן,
+      תצוגה מקדימה מצרפית, ייצוא ושיתוף למנהלים.
+   2) פרסום הודעה ארצית — יעד (כל בתי הספר / מחוז / תפקיד),
+      עדיפות, תצוגה מקדימה חיה, פרסום, ורשימת הודעות אחרונות.
+   🔒 מצרפי בלבד (W0-S6): אין drill לתלמיד בודד, בלי שמות. הדוח
+      יורד עד רמת מחוז/מקצוע/בית-ספר מצרפי בלבד.
+   סגנון: תאום מלא ל-national-map.html (הסקרין האחות של אותה
+   פרסונה) — סרגל-מצב sticky, hero, קו-הרצף כגרף מגמה. טוקנים
+   מ-tokens.css בלבד, בלי צבעים קשיחים.
+   ============================================================ */
+:root{
+  --ok:var(--status-good);         --ok-soft:#EAF7EE;  --ok-line:#C4E9CE;
+  --watch:var(--status-attention); --watch-soft:#FBF3E0; --watch-line:#EAD9A8;
+  --help:var(--emergency);         --help-soft:var(--emergency-soft); --help-line:var(--emergency-line); --help-deep:#B4611A;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);line-height:1.6;font-size:var(--text-body);padding-bottom:56px}
+h1,h2,h3,h4{font-family:var(--font-head);line-height:1.3;font-weight:700}
+svg{display:block}
+button,select,input,textarea{font-family:inherit}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 18px}
+
+/* ---------- ModeSelector עליון ---------- */
+.mode-switch{position:sticky;top:0;z-index:60;background:rgba(246,250,251,.94);backdrop-filter:saturate(1.2) blur(8px);-webkit-backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--line);padding:10px 0 12px}
+.mode-switch .wrap{display:flex;flex-direction:column;gap:9px}
+.mode-switch .ttl{font-size:var(--text-label);font-weight:700;color:var(--ink-faint);letter-spacing:.02em}
+.seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:var(--surface-muted);border:1px solid var(--line);border-radius:14px;padding:5px;max-width:460px}
+.seg button{font-weight:600;font-size:14px;border:1.5px solid transparent;border-radius:10px;padding:0 4px;height:var(--tap);cursor:pointer;color:var(--ink-soft);background:transparent;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .16s ease,color .16s ease,border-color .16s ease}
+.seg button .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.seg button[data-m="routine"] .dot{background:var(--routine)}
+.seg button[data-m="remote"] .dot{background:var(--remote)}
+.seg button[data-m="emergency"] .dot{background:var(--emergency)}
+.seg button[aria-pressed="true"]{color:var(--ink-strong);background:var(--mode-soft);border-color:var(--mode-line);font-weight:700}
+.seg button:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+
+/* ---------- כותרת ---------- */
+header.hero{padding:24px 0 6px}
+header.hero .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header.hero .eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--brand-deep);background:var(--brand-soft);border:1px solid var(--brand-line);padding:4px 12px;border-radius:var(--radius-pill);margin-bottom:10px}
+header.hero h1{font-size:var(--text-h1);color:var(--brand-deep);line-height:1.2}
+.mode-chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink-strong);background:var(--mode-soft);border:1.5px solid var(--mode-line);border-radius:var(--radius-pill);padding:4px 12px}
+.mode-chip .d{width:9px;height:9px;border-radius:50%;background:var(--mode)}
+header.hero .date{margin-inline-start:auto;font-size:13px;font-weight:700;color:var(--ink-faint)}
+header.hero .lead{color:var(--ink-soft);font-size:15.5px;margin-top:10px;max-width:640px}
+header.hero .lead b{color:var(--ink)}
+
+/* ---------- ניווט-פרסונה (עמודי הפיקוח) ---------- */
+.persona-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.persona-nav a{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;text-decoration:none;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);border-radius:var(--radius-pill);padding:7px 14px;min-height:var(--tap);transition:border-color .16s ease,color .16s ease,background .16s ease}
+.persona-nav a:hover{border-color:var(--brand-line);color:var(--brand-deep);background:var(--brand-soft)}
+.persona-nav a[aria-current="page"]{color:#fff;background:var(--brand);border-color:var(--brand)}
+.persona-nav a[aria-current="page"] svg{color:#fff}
+.persona-nav a:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.persona-nav a svg{width:17px;height:17px;color:var(--ink-faint)}
+
+section{margin:26px 0}
+.sec-head{display:flex;align-items:flex-end;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.sec-head .n{font-family:var(--font-head);font-size:13px;font-weight:700;color:#fff;background:var(--brand);width:26px;height:26px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sec-head h2{font-size:var(--text-h2);color:var(--ink)}
+.sec-head .hint{font-size:13px;color:var(--ink-soft);margin-inline-start:auto}
+
+/* ---------- באנר מצרפיות (חוזר) ---------- */
+.agg-banner{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;color:var(--ink-soft);background:var(--surface-muted);border:1px solid var(--line);border-radius:11px;padding:9px 13px}
+.agg-banner svg{flex-shrink:0;color:var(--brand)}
+.agg-banner b{color:var(--ink)}
+
+/* ---------- כרטיס בסיס ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:18px;box-shadow:var(--shadow-card)}
+
+/* ---------- 1 · מחולל דוחות: פאנל בקרה ---------- */
+.builder{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:end}
+@media(max-width:760px){.builder{grid-template-columns:1fr 1fr}}
+@media(max-width:460px){.builder{grid-template-columns:1fr}}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fld label{font-size:11.5px;font-weight:700;color:var(--ink-faint)}
+.fld select{min-height:var(--tap);border:1px solid var(--line-strong);border-radius:11px;padding:0 12px;font-size:14.5px;font-weight:600;color:var(--ink);background:var(--card);cursor:pointer;width:100%}
+.fld select:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.builder-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.builder-note{font-size:12.5px;color:var(--ink-faint);margin-inline-start:auto}
+
+/* כפתורים */
+.btn{font-weight:600;font-size:15px;border:0;border-radius:var(--radius-btn);min-height:var(--tap);padding:0 18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .12s ease,box-shadow .18s ease,background .16s ease,border-color .16s ease}
+.btn svg{width:18px;height:18px;flex-shrink:0}
+.btn:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.btn--primary{background:var(--brand);color:#fff;box-shadow:0 6px 16px rgba(11,143,152,.22)}
+.btn--primary:hover{transform:translateY(-1px);background:var(--brand-deep)}
+.btn--ghost{background:var(--card);color:var(--brand-deep);border:1px solid var(--brand-line)}
+.btn--ghost:hover{background:var(--brand-soft);border-color:var(--brand)}
+.btn--sm{min-height:38px;font-size:13.5px;padding:0 14px}
+.btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+
+/* ---------- דוח: תצוגה מקדימה ---------- */
+.report{margin-top:16px;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--card);box-shadow:var(--shadow-card);overflow:hidden}
+.report__head{display:flex;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line);background:linear-gradient(160deg,var(--brand-soft),var(--card) 65%)}
+.report__head .rt{min-width:0;flex:1}
+.report__head h3{font-size:var(--text-h2);color:var(--brand-deep);line-height:1.25}
+.report__head .scope{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.report__head .stamp{font-size:12px;color:var(--ink-faint);font-weight:700;white-space:nowrap;text-align:end}
+.rchip{font-size:11.5px;font-weight:700;border-radius:var(--radius-pill);padding:3px 10px;white-space:nowrap;color:var(--brand-deep);background:var(--card);border:1px solid var(--brand-line)}
+.rchip.mode{color:var(--ink-strong);background:var(--mode-soft);border-color:var(--mode-line)}
+.report__body{padding:20px}
+
+/* KPI מצרפי */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:600px){.kpis{grid-template-columns:1fr}}
+.kpi{border:1px solid var(--line);border-radius:var(--radius-md);padding:15px 16px;background:var(--bg);position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:var(--mode)}
+.kpi .k{font-size:13px;font-weight:700;color:var(--ink-soft)}
+.kpi .v{font-family:var(--font-head);font-weight:800;font-size:34px;line-height:1;margin:8px 0 5px;color:var(--brand-deep);font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12px;color:var(--ink-faint)}
+.kpi .trend{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;margin-top:4px}
+.kpi .trend.up{color:var(--ok)} .kpi .trend.down{color:var(--help-deep)} .kpi .trend.flat{color:var(--ink-faint)}
+.kpi .trend svg{width:14px;height:14px}
+
+/* מגמה — קו הרצף */
+.rtrend{border:1px solid var(--line);border-radius:var(--radius-md);padding:14px 16px 12px;margin-bottom:18px;background:var(--bg)}
+.rtrend .rt-top{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.rtrend .rt-top .lbl{font-size:13px;font-weight:700;color:var(--ink)}
+.rtrend .rt-top .cap{font-size:12px;color:var(--ink-faint)}
+.rtrend .rt-top .now{margin-inline-start:auto;font-family:var(--font-head);font-weight:800;font-size:20px;color:var(--brand-deep)}
+.rtrend svg.line{width:100%;height:64px}
+.rtrend .rt-foot{font-size:12.5px;color:var(--ink-soft);margin-top:6px}
+.rtrend .rt-foot b{color:var(--mode)}
+
+/* טבלת פילוח מצרפי */
+.rtable-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.rtable-title svg{width:18px;height:18px;color:var(--brand)}
+.rtable{width:100%;border-collapse:collapse;font-size:14px}
+.rtable th{text-align:start;font-size:12px;font-weight:700;color:var(--ink-faint);padding:0 10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.rtable th.num{text-align:end}
+.rtable td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.rtable tr:last-child td{border-bottom:0}
+.rtable .rn{font-weight:700;color:var(--ink)}
+.rtable .sub{font-size:12px;color:var(--ink-faint);font-weight:600}
+.rtable td.num{text-align:end;font-family:var(--font-head);font-weight:800;color:var(--brand-deep);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rtable .barcell{width:34%;min-width:120px}
+.rtable .minibar{height:8px;border-radius:var(--radius-pill);background:var(--line);overflow:hidden}
+.rtable .minibar>span{display:block;height:100%;border-radius:var(--radius-pill);background:linear-gradient(90deg,var(--brand-bright),var(--brand))}
+.rtable .minibar>span.silent{background:linear-gradient(90deg,#ffc078,var(--help))}
+.rtable .flag{font-size:11px;font-weight:700;color:var(--help-deep);background:var(--help-soft);border:1px solid var(--help-line);border-radius:var(--radius-pill);padding:2px 8px;white-space:nowrap;margin-inline-start:6px}
+@media(max-width:560px){
+  .rtable .barcell{display:none}
+}
+
+/* מצב ריק לדוח (Empty State — קו רצף) */
+.rempty{border:1px dashed var(--line-strong);border-radius:var(--radius-lg);padding:34px 20px;text-align:center;background:var(--bg-soft)}
+.rempty svg.el{width:180px;max-width:80%;height:34px;margin:0 auto 14px}
+.rempty h3{font-size:var(--text-h3);color:var(--ink);margin-bottom:4px}
+.rempty p{font-size:13.5px;color:var(--ink-soft);max-width:360px;margin:0 auto}
+
+/* ---------- 2 · הודעה ארצית ---------- */
+.msg-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+@media(max-width:900px){.msg-grid{grid-template-columns:1fr}}
+
+.field{margin-bottom:16px}
+.field>label,.field .flabel{display:block;font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:7px}
+.field input[type=text],.field textarea{width:100%;border:1px solid var(--line-strong);border-radius:12px;padding:11px 13px;font-size:15px;color:var(--ink);background:var(--card);line-height:1.55}
+.field input[type=text]:focus-visible,.field textarea:focus-visible{outline:3px solid var(--brand-bright);outline-offset:1px;border-color:var(--brand-line)}
+.field textarea{min-height:112px;resize:vertical}
+.field .hintline{font-size:12px;color:var(--ink-faint);margin-top:6px;display:flex;justify-content:space-between;gap:8px}
+
+/* בורר-אפשרויות (chips בחירה) */
+.choices{display:flex;gap:8px;flex-wrap:wrap}
+.choice{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:9px 14px;cursor:pointer;font-size:14px;font-weight:700;color:var(--ink-soft);min-height:var(--tap);transition:border-color .14s ease,background .14s ease,color .14s ease}
+.choice svg{width:17px;height:17px}
+.choice:hover{border-color:var(--brand-line)}
+.choice[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
+.choice:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.choice.pri[data-v="action"][aria-pressed="true"]{border-color:var(--help);background:var(--help-soft);color:var(--help-deep)}
+
+.subfield{margin-top:12px}
+.subfield[hidden]{display:none}
+
+/* תצוגה מקדימה של ההודעה */
+.preview-wrap{position:sticky;top:78px}
+@media(max-width:900px){.preview-wrap{position:static}}
+.preview-label{font-size:12px;font-weight:700;color:var(--ink-faint);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.preview-label svg{width:15px;height:15px}
+.announce{border:1px solid var(--brand-line);border-radius:var(--radius-lg);background:var(--card);box-shadow:var(--shadow-lg);overflow:hidden}
+.announce__bar{height:6px;background:var(--brand)}
+.announce.pri-action .announce__bar{background:var(--help)}
+.announce__body{padding:18px}
+.announce__from{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.announce__logo{width:38px;height:38px;border-radius:11px;background:var(--brand);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.announce__logo svg{width:22px;height:16px}
+.announce__meta{min-width:0}
+.announce__meta .who{font-weight:700;font-size:14px;color:var(--ink-strong)}
+.announce__meta .aud{font-size:12px;color:var(--ink-faint);font-weight:600}
+.announce__pri{margin-inline-start:auto;flex-shrink:0;font-size:11.5px;font-weight:700;border-radius:var(--radius-pill);padding:3px 11px;color:var(--brand-deep);background:var(--brand-soft);border:1px solid var(--brand-line);display:inline-flex;align-items:center;gap:5px}
+.announce__pri svg{width:13px;height:13px}
+.announce.pri-action .announce__pri{color:var(--help-deep);background:var(--help-soft);border-color:var(--help-line)}
+.announce__title{font-family:var(--font-head);font-weight:800;font-size:var(--text-h3);color:var(--ink-strong);line-height:1.3;margin-bottom:6px;word-break:break-word}
+.announce__text{font-size:14.5px;color:var(--ink);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.announce__text.empty{color:var(--ink-faint)}
+.announce__foot{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-faint);display:flex;align-items:center;gap:6px}
+.announce__foot svg{width:14px;height:14px;color:var(--brand)}
+
+.publish-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.publish-note{font-size:12px;color:var(--ink-faint);margin-top:10px;display:flex;gap:7px;align-items:flex-start}
+.publish-note svg{width:15px;height:15px;flex-shrink:0;color:var(--brand);margin-top:1px}
+
+/* מצב "פורסם" */
+.published{display:none;text-align:center;border:1px solid var(--ok-line);background:var(--ok-soft);border-radius:var(--radius-lg);padding:20px}
+.published.on{display:block}
+.published .ic{width:46px;height:46px;border-radius:50%;background:var(--ok);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.published h4{font-size:var(--text-h3);color:var(--ok);margin-bottom:4px}
+.published p{font-size:13px;color:var(--ink-soft)}
+.published .again{margin-top:14px}
+
+/* רשימת הודעות אחרונות */
+.recent{display:flex;flex-direction:column;margin-top:6px}
+.recent__row{display:flex;align-items:center;gap:12px;padding:13px 2px;border-top:1px solid var(--line)}
+.recent__row:first-child{border-top:0}
+.recent__ic{width:34px;height:34px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--brand-soft);color:var(--brand-deep);border:1px solid var(--brand-line)}
+.recent__ic.action{background:var(--help-soft);color:var(--help-deep);border-color:var(--help-line)}
+.recent__ic svg{width:18px;height:18px}
+.recent__main{flex:1;min-width:0}
+.recent__title{font-weight:700;font-size:14.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent__meta{font-size:12px;color:var(--ink-faint);font-weight:600;margin-top:2px;display:flex;gap:6px;flex-wrap:wrap}
+.recent__reach{flex-shrink:0;text-align:end}
+.recent__reach .num{font-family:var(--font-head);font-weight:800;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+.recent__reach .lbl{font-size:11px;color:var(--ink-faint);font-weight:600}
+
+/* פוטר */
+.foot-note{margin:38px 0 0;padding:16px;text-align:center;font-size:13px;color:var(--ink-faint);border-top:1px solid var(--line)}
+.foot-note b{color:var(--brand-deep)}
+
+/* Toast */
+.toast{position:fixed;inset-block-end:20px;inset-inline-start:50%;transform:translate(50%,20px);background:var(--ink-strong);color:#fff;font-size:var(--text-small);font-weight:600;padding:12px 18px;border-radius:var(--radius-btn);box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:90;display:flex;align-items:center;gap:8px}
+.toast svg{width:18px;height:18px}
+.toast.on{opacity:1;transform:translate(50%,0)}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition-duration:.001ms!important;animation-duration:.001ms!important;animation-iteration-count:1!important}
+  .btn--primary:hover{transform:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== ModeSelector ========== -->
+<div class="mode-switch">
+  <div class="wrap">
+    <span class="ttl">מצב הפעלה ארצי · משנה את מסגור הדוח וההודעה</span>
+    <div class="seg" role="group" aria-label="בחירת מצב מערכת">
+      <button data-m="routine"   aria-pressed="true"><span class="dot" aria-hidden="true"></span>שגרה</button>
+      <button data-m="remote"    aria-pressed="false"><span class="dot" aria-hidden="true"></span>מרחוק</button>
+      <button data-m="emergency" aria-pressed="false"><span class="dot" aria-hidden="true"></span>חירום</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ========== כותרת ========== -->
+  <header class="hero">
+    <span class="eyebrow">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M8 13h8M8 17h5"/></svg>
+      פיקוח ארצי · דוחות והודעות
+    </span>
+    <div class="row">
+      <h1>דוחות + הודעות ארציות</h1>
+      <span class="mode-chip"><span class="d" aria-hidden="true"></span><span id="modeChipLabel">שגרה</span></span>
+      <span class="date">היום · ה׳, 9 ביולי</span>
+    </div>
+    <p class="lead" id="lead"></p>
+
+    <nav class="persona-nav" aria-label="עמודי הפיקוח הארצי">
+      <a href="national-map.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-5.2-7-11a7 7 0 0 1 14 0c0 5.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+        תמונה ארצית
+      </a>
+      <a href="national-reports.html" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M8 13h8M8 17h5"/></svg>
+        דוחות והודעות
+      </a>
+    </nav>
+  </header>
+
+  <!-- ========== 1 · מחולל דוחות מצרפיים ========== -->
+  <section>
+    <div class="sec-head"><span class="n">1</span><h2>מחולל דוחות מצרפיים</h2><span class="hint">מחוז · מקצוע · טווח זמן</span></div>
+
+    <div class="card">
+      <div class="agg-banner" style="margin-bottom:16px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span><b>מצרפי בלבד.</b> הדוח מסכם מחוזות, מקצועות ובתי ספר — אין שמות תלמידים ואין drill לתלמיד בודד.</span>
+      </div>
+
+      <div class="builder">
+        <div class="fld">
+          <label for="rDist">מחוז</label>
+          <select id="rDist"><option value="">כל המחוזות</option></select>
+        </div>
+        <div class="fld">
+          <label for="rSubj">מקצוע</label>
+          <select id="rSubj"><option value="">כל המקצועות</option></select>
+        </div>
+        <div class="fld">
+          <label for="rRange">טווח זמן</label>
+          <select id="rRange">
+            <option value="week">השבוע האחרון</option>
+            <option value="month" selected>החודש האחרון</option>
+            <option value="quarter">הרבעון האחרון</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label for="rBreak">פילוח לפי</label>
+          <select id="rBreak">
+            <option value="dist">מחוז</option>
+            <option value="subj">מקצוע</option>
+            <option value="net">רשת</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="builder-actions">
+        <button class="btn btn--primary" id="btnGen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18.7 8l-5.2 5.2-3-3L7 13.7"/></svg>
+          הפק דוח
+        </button>
+        <span class="builder-note">הדוח נבנה מנתונים מצרפיים לדוגמה · תצוגה מקדימה בלבד</span>
+      </div>
+
+      <!-- מצב ריק / דוח -->
+      <div id="reportSlot">
+        <div class="rempty" id="reportEmpty">
+          <svg class="el" viewBox="0 0 180 34" role="img" aria-label="קו רצף — ממתין להפקת דוח" fill="none">
+            <path d="M8 17 H100" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M100 17 H172" stroke="var(--line-strong)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="2 7"/>
+            <circle cx="8" cy="17" r="6" fill="var(--card)" stroke="var(--brand)" stroke-width="3"/>
+            <circle cx="54" cy="17" r="6" fill="var(--card)" stroke="var(--brand)" stroke-width="3"/>
+            <circle cx="100" cy="17" r="7" fill="var(--brand)"/>
+            <circle cx="146" cy="17" r="5.5" fill="var(--card)" stroke="var(--line-strong)" stroke-width="3"/>
+          </svg>
+          <h3>בחרו סינון והפיקו דוח</h3>
+          <p>בחרו מחוז, מקצוע וטווח זמן — נבנה עבורכם דוח מצרפי עם מגמה, KPI ופילוח לייצוא ולשיתוף.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 2 · הודעה ארצית ========== -->
+  <section>
+    <div class="sec-head"><span class="n">2</span><h2>פרסום הודעה ארצית</h2><span class="hint">יעד · עדיפות · תצוגה מקדימה</span></div>
+
+    <div class="card">
+      <div class="msg-grid">
+
+        <!-- עמודה 1: טופס -->
+        <div>
+          <div class="field">
+            <span class="flabel">למי מפרסמים?</span>
+            <div class="choices" id="audChoices" role="group" aria-label="קהל היעד">
+              <button type="button" class="choice" data-aud="all" aria-pressed="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V10l9-6 9 6v11"/><path d="M9 21v-6h6v6"/></svg>
+                כל בתי הספר
+              </button>
+              <button type="button" class="choice" data-aud="dist" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-5.2-7-11a7 7 0 0 1 14 0c0 5.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+                לפי מחוז
+              </button>
+              <button type="button" class="choice" data-aud="role" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                לפי תפקיד
+              </button>
+            </div>
+
+            <div class="subfield" id="subDist" hidden>
+              <label for="mDist" class="flabel" style="margin-bottom:6px">בחירת מחוז</label>
+              <div class="fld"><select id="mDist"></select></div>
+            </div>
+            <div class="subfield" id="subRole" hidden>
+              <label for="mRole" class="flabel" style="margin-bottom:6px">בחירת תפקיד</label>
+              <div class="fld">
+                <select id="mRole">
+                  <option value="מנהלי בתי הספר">מנהלי בתי הספר</option>
+                  <option value="מפקחים מקצועיים">מפקחים מקצועיים</option>
+                  <option value="מחנכים">מחנכים</option>
+                  <option value="רכזי שכבות">רכזי שכבות</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="flabel">עדיפות</span>
+            <div class="choices" id="priChoices" role="group" aria-label="עדיפות ההודעה">
+              <button type="button" class="choice pri" data-v="info" aria-pressed="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+                לידיעה
+              </button>
+              <button type="button" class="choice pri" data-v="action" aria-pressed="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                דורש פעולה
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="mTitle">כותרת ההודעה</label>
+            <input type="text" id="mTitle" maxlength="70" placeholder="למשל: היערכות ליום למידה מרחוק — יום ה׳">
+            <div class="hintline"><span>משפט קצר וברור</span><span id="titleCount">0 / 70</span></div>
+          </div>
+
+          <div class="field">
+            <label for="mBody">תוכן ההודעה</label>
+            <textarea id="mBody" maxlength="480" placeholder="כתבו הנחיה מצרפית קצרה למנהלים/למפקחים. בלי שמות תלמידים, בלי נתונים אישיים."></textarea>
+            <div class="hintline"><span>שפה רגועה ומעשית</span><span id="bodyCount">0 / 480</span></div>
+          </div>
+
+          <div class="publish-row">
+            <button class="btn btn--primary" id="btnPublish" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+              פרסם הודעה ארצית
+            </button>
+            <button class="btn btn--ghost" id="btnClear" type="button">ניקוי</button>
+          </div>
+          <div class="publish-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span>ההודעה נשלחת לתפקידים ולבתי ספר — לא לתלמידים ולא להורים ישירות. בלי מידע אישי על קטין.</span>
+          </div>
+        </div>
+
+        <!-- עמודה 2: תצוגה מקדימה + פורסם -->
+        <div class="preview-wrap">
+          <div class="preview-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            תצוגה מקדימה
+          </div>
+
+          <div class="announce" id="preview">
+            <div class="announce__bar"></div>
+            <div class="announce__body">
+              <div class="announce__from">
+                <span class="announce__logo" aria-hidden="true">
+                  <svg viewBox="0 0 34 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/><path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/><path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/></svg>
+                </span>
+                <div class="announce__meta">
+                  <div class="who">רֶצֶף · פיקוח ארצי</div>
+                  <div class="aud" id="pvAud">כל בתי הספר</div>
+                </div>
+                <span class="announce__pri" id="pvPri">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+                  <span id="pvPriLbl">לידיעה</span>
+                </span>
+              </div>
+              <div class="announce__title" id="pvTitle">כותרת ההודעה תופיע כאן</div>
+              <div class="announce__text empty" id="pvBody">תוכן ההודעה יופיע כאן תוך כדי הקלדה.</div>
+              <div class="announce__foot">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <span id="pvReach">מגיע לכ־25 בתי ספר</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="published" id="publishedBox" role="status" aria-live="polite">
+            <span class="ic" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg></span>
+            <h4>ההודעה פורסמה</h4>
+            <p id="publishedMsg">נשלחה לכל בתי הספר.</p>
+            <button class="btn btn--ghost btn--sm again" id="btnAgain" type="button">כתיבת הודעה נוספת</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- הודעות אחרונות -->
+      <div style="margin-top:22px;border-top:1px solid var(--line);padding-top:18px">
+        <div class="rtable-title" style="margin-bottom:12px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+          הודעות אחרונות
+        </div>
+        <div class="recent" id="recentList"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot-note">
+    <b>רֶצֶף · דוחות והודעות ארציות</b> · מצרפי כדי לתמוך, לא כדי לדרג<br>
+    אין שמות תלמידים · אין drill לתלמיד בודד · הודעות מגיעות לתפקידים ולבתי ספר, לא לקטינים
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>
+  <span id="toastText">בוצע</span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var root = document.documentElement;
+
+  /* ============================================================
+     נתוני-דוגמה מצרפיים (עקביים עם national-map.html: אותם מחוזות,
+     רשתות ומקצועות). ברמת מחוז/רשת/מקצוע בלבד — בלי בית ספר בודד
+     בשמו בטבלה, ובוודאי בלי תלמיד.
+     ============================================================ */
+  var DISTRICTS = ['צפון','חיפה','מרכז','תל אביב','ירושלים','דרום'];
+  var NETS = ['אורט','עמל','דרכא','אמית','ברנקו וייס','מקומי'];
+  var SUBJECTS = [
+    {nm:'לשון', a:94},{nm:'מתמטיקה', a:90},{nm:'אנגלית', a:88},
+    {nm:'אזרחות', a:76},{nm:'תנ״ך', a:63},{nm:'היסטוריה', a:58},
+    {nm:'ספרות', a:44},{nm:'ביולוגיה', a:37},{nm:'גיאוגרפיה', a:24},
+    {nm:'פיזיקה', a:19},{nm:'מקצועות טכנולוגיים', a:16}
+  ];
+  /* בסיס מצרפי לכל מחוז: מדד רציפות, מס' בתי ספר, מגמה */
+  var DIST_BASE = {
+    'צפון':    {idx:74, schools:9, seen:68, tr:1},
+    'חיפה':    {idx:64, schools:3, seen:59, tr:-2},
+    'מרכז':    {idx:71, schools:2, seen:64, tr:0},
+    'תל אביב': {idx:85, schools:2, seen:80, tr:2},
+    'ירושלים': {idx:81, schools:1, seen:75, tr:0},
+    'דרום':    {idx:60, schools:8, seen:55, tr:-3}
+  };
+  var NET_BASE = {
+    'אורט':{idx:77,schools:8,seen:71}, 'עמל':{idx:66,schools:5,seen:60},
+    'דרכא':{idx:68,schools:4,seen:62}, 'אמית':{idx:78,schools:1,seen:72},
+    'ברנקו וייס':{idx:83,schools:1,seen:77}, 'מקומי':{idx:63,schools:6,seen:57}
+  };
+
+  var MODE_HE = {routine:'שגרה', remote:'מרחוק', emergency:'חירום'};
+  /* מקדם מצב על ההשתתפות המצרפית + סדרת מגמה + מסגור */
+  var MODE = {
+    routine:  {factor:1.00, subjFactor:1.00, lead:'מפיקים דוחות מצרפיים לתמונת רציפות ארצית, ומפרסמים הודעות מכוונות למנהלים ולמפקחים — <b>בלי שם של תלמיד אחד</b>.',
+               trend:{week:[70,71,72,73], month:[64,67,70,73], quarter:[58,63,68,73]}, foot:'הרציפות הארצית <b>מתייצבת</b> לאורך הטווח שנבחר.'},
+    remote:   {factor:0.92, subjFactor:0.85, lead:'יום למידה מרחוק. מפיקים דוח מצרפי של <b>מי מחזיק מהבית</b>, ומפרסמים היערכות מכוונת לפני היום הבא.',
+               trend:{week:[72,71,70,69], month:[73,72,70,69], quarter:[70,71,70,69]}, foot:'ירידה קלה ורגועה — <b>טבעי בטווח מרחוק</b>.'},
+    emergency:{factor:0.82, subjFactor:0.62, lead:'הפעלה ארצית. הדוח המצרפי מודד <b>כמה ראינו</b> ואיפה צריך גיבוי, וההודעה הארצית ממקדת את הצוותים.',
+               trend:{week:[58,55,58,61], month:[71,60,58,61], quarter:[73,64,60,61]}, foot:'התאוששות הקשר אחרי ההפעלה — <b>הכיוון נכון</b>.'}
+  };
+  var RANGE_HE = {week:'השבוע האחרון', month:'החודש האחרון', quarter:'הרבעון האחרון'};
+  var RANGE_TICKS = {week:['ב׳','ג׳','ד׳','ה׳'], month:['שבוע 1','שבוע 2','שבוע 3','שבוע 4'], quarter:['חודש 1','חודש 2','חודש 3','היום']};
+  var BREAK_HE = {dist:'מחוז', subj:'מקצוע', net:'רשת'};
+
+  function el(id){ return document.getElementById(id); }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function currentMode(){ return root.getAttribute('data-mode')||'routine'; }
+  function clamp(n){ return Math.max(0,Math.min(100,Math.round(n))); }
+
+  /* ---------- Toast ---------- */
+  var toast=el('toast'), toastTimer=null;
+  function showToast(msg){
+    el('toastText').textContent=msg; toast.classList.add('on');
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ toast.classList.remove('on'); },2400);
+  }
+
+  /* ---------- אתחול תפריטי סינון ---------- */
+  function fillSelect(id, values, keepFirst){
+    var sel=el(id);
+    values.forEach(function(v){ var op=document.createElement('option'); op.value=v; op.textContent=v; sel.appendChild(op); });
+  }
+  fillSelect('rDist', DISTRICTS);
+  fillSelect('rSubj', SUBJECTS.map(function(s){return s.nm;}));
+  fillSelect('mDist', DISTRICTS);
+
+  /* ============================================================
+     1 · מחולל הדוחות
+     ============================================================ */
+  var trendUp='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19L19 5M19 5h-8M19 5v8"/></svg>';
+  var trendDown='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5l14 14M19 19h-8M19 19v-8"/></svg>';
+  var trendFlat='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg>';
+  function trendChip(tr){
+    if(tr>0) return '<span class="trend up">'+trendUp+'עלה '+tr+' נק׳</span>';
+    if(tr<0) return '<span class="trend down">'+trendDown+'ירד '+Math.abs(tr)+' נק׳</span>';
+    return '<span class="trend flat">'+trendFlat+'יציב</span>';
+  }
+
+  /* קו-הרצף כגרף מגמה (בריף §3/§8) */
+  function trendLineSVG(vals){
+    var W=320,H=64,padX=14,padY=12;
+    var min=Math.min.apply(null,vals), max=Math.max.apply(null,vals), span=(max-min)||1;
+    var pts=vals.map(function(v,i){
+      return {x:padX+i*((W-2*padX)/(vals.length-1)), y:padY+(1-(v-min)/span)*(H-2*padY)};
+    });
+    var d=pts.map(function(p,i){ return (i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1); }).join(' ');
+    var nodes=pts.map(function(p,i){
+      var last=i===pts.length-1;
+      return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(last?4.5:3)+'" fill="'+(last?'var(--mode)':'var(--card)')+'" stroke="var(--mode)" stroke-width="'+(last?0:2.5)+'"/>';
+    }).join('');
+    return '<path d="'+d+'" fill="none" stroke="var(--mode)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+nodes;
+  }
+
+  var lastReport=null; /* לשמירת נתוני הדוח האחרון לצורך "ייצוא" */
+
+  function buildReport(){
+    var mode=currentMode(), M=MODE[mode];
+    var dist=el('rDist').value, subj=el('rSubj').value, range=el('rRange').value, brk=el('rBreak').value;
+
+    /* אם מפלחים לפי מחוז אבל נבחר מחוז יחיד — נעבור לפילוח מקצוע (הגיוני יותר) */
+    var effBreak=brk;
+    if(brk==='dist' && dist) effBreak='subj';
+    if(brk==='net' && dist){ /* רשת עדיין הגיוני בתוך מחוז */ }
+
+    /* KPI מצרפי */
+    var srcDist = dist ? {only:dist} : null;
+    var baseIdxArr=[], baseSeenArr=[], schools=0;
+    DISTRICTS.forEach(function(dn){
+      if(dist && dn!==dist) return;
+      var b=DIST_BASE[dn]; baseIdxArr.push(b.idx); baseSeenArr.push(b.seen); schools+=b.schools;
+    });
+    function avg(a){ return a.reduce(function(x,y){return x+y;},0)/a.length; }
+    var subjFactor = subj ? ((SUBJECTS.filter(function(s){return s.nm===subj;})[0].a)/70) : 1; /* מקצוע חלש מוריד מדד */
+    var idx=clamp(avg(baseIdxArr)*M.factor*Math.min(1.05,subjFactor));
+    var seen=clamp(avg(baseSeenArr)*M.factor*Math.min(1.05,subjFactor));
+    var trVals=M.trend[range];
+    var netTr=trVals[trVals.length-1]-trVals[0];
+
+    /* פילוח */
+    var rows=[];
+    if(effBreak==='subj'){
+      rows=SUBJECTS.map(function(s){
+        var val=clamp(s.a*M.subjFactor*(dist?(DIST_BASE[dist].idx/72):1));
+        return {nm:s.nm, sub:'השתתפות ארצית', val:val, silent:val<35};
+      }).sort(function(a,b){return b.val-a.val;});
+    } else if(effBreak==='net'){
+      rows=NETS.map(function(n){
+        var b=NET_BASE[n]; var val=clamp(b.idx*M.factor);
+        return {nm:n, sub:b.schools+' בתי ספר', val:val, silent:val<45};
+      }).sort(function(a,b){return b.val-a.val;});
+    } else { /* dist */
+      rows=DISTRICTS.map(function(dn){
+        var b=DIST_BASE[dn]; var val=clamp(b.idx*M.factor);
+        return {nm:'מחוז '+dn, sub:b.schools+' בתי ספר', val:val, silent:val<50};
+      }).sort(function(a,b){return b.val-a.val;});
+    }
+
+    var scopeChips=[];
+    scopeChips.push('<span class="rchip mode">'+MODE_HE[mode]+'</span>');
+    scopeChips.push('<span class="rchip">'+(dist?('מחוז '+dist):'כל המחוזות')+'</span>');
+    scopeChips.push('<span class="rchip">'+(subj?subj:'כל המקצועות')+'</span>');
+    scopeChips.push('<span class="rchip">'+RANGE_HE[range]+'</span>');
+    scopeChips.push('<span class="rchip">פילוח: '+BREAK_HE[effBreak]+'</span>');
+
+    var maxVal=Math.max.apply(null,rows.map(function(r){return r.val;}))||100;
+    var tableRows=rows.map(function(r){
+      var w=Math.round(r.val/maxVal*100);
+      return '<tr>'+
+        '<td><div class="rn">'+esc(r.nm)+(r.silent?'<span class="flag">שותק</span>':'')+'</div><div class="sub">'+esc(r.sub)+'</div></td>'+
+        '<td class="barcell"><div class="minibar" aria-hidden="true"><span class="'+(r.silent?'silent':'')+'" style="width:'+w+'%"></span></div></td>'+
+        '<td class="num">'+r.val+'%</td>'+
+      '</tr>';
+    }).join('');
+
+    var html=
+      '<div class="report" id="reportCard">'+
+        '<div class="report__head">'+
+          '<div class="rt">'+
+            '<h3>דוח רציפות מצרפי</h3>'+
+            '<div class="scope">'+scopeChips.join('')+'</div>'+
+          '</div>'+
+          '<div class="stamp">הופק היום<br>09.07.2026 · 14:30</div>'+
+        '</div>'+
+        '<div class="report__body">'+
+
+          '<div class="kpis">'+
+            kpi('מדד רציפות מצרפי', idx+'%', 'ממוצע משוקלל של בתי הספר בטווח', trendChip(netTr))+
+            kpi('נראו בטווח', seen+'%', 'check-in או משימה שהושלמה', '')+
+            kpi('בתי ספר בדוח', String(schools), (dist?('מחוז '+dist):'ארצי')+' · מצרפי בלבד', '')+
+          '</div>'+
+
+          '<div class="rtrend">'+
+            '<div class="rt-top"><span class="lbl">מגמת רציפות</span><span class="cap">'+RANGE_HE[range]+'</span><span class="now">'+seen+'%</span></div>'+
+            '<svg class="line" viewBox="0 0 320 64" preserveAspectRatio="none" role="img" aria-label="מגמת רציפות מצרפית לאורך '+RANGE_HE[range]+', מ-'+trVals[0]+' אחוז ל-'+trVals[trVals.length-1]+' אחוז">'+trendLineSVG(trVals)+'</svg>'+
+            '<p class="rt-foot">'+M.foot+' <span style="color:var(--ink-faint)">(מ-'+trVals[0]+'% ל-'+trVals[trVals.length-1]+'%)</span></p>'+
+          '</div>'+
+
+          '<div class="rtable-title">'+
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="12" y="6" width="3" height="11"/><rect x="17" y="13" width="3" height="4"/></svg>'+
+            'פילוח לפי '+BREAK_HE[effBreak]+
+          '</div>'+
+          '<table class="rtable"><thead><tr><th>'+BREAK_HE[effBreak]+'</th><th class="barcell"></th><th class="num">רציפות</th></tr></thead>'+
+          '<tbody>'+tableRows+'</tbody></table>'+
+
+          '<div class="agg-banner" style="margin-top:18px">'+
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="9"/></svg>'+
+            '<span>כל השורות מצרפיות. אין נתיב מהדוח לתלמיד בודד או לשם פרטי.</span>'+
+          '</div>'+
+
+          '<div class="builder-actions" style="margin-top:16px">'+
+            '<button class="btn btn--ghost btn--sm" id="btnCsv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg>ייצוא CSV</button>'+
+            '<button class="btn btn--ghost btn--sm" id="btnPrint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="7"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/></svg>הדפסה / PDF</button>'+
+            '<button class="btn btn--primary btn--sm" id="btnShareRep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>שיתוף למנהלים</button>'+
+          '</div>'+
+
+        '</div>'+
+      '</div>';
+
+    el('reportSlot').innerHTML=html;
+
+    /* שמירת נתונים ל-CSV */
+    lastReport={dist:dist||'כל המחוזות', subj:subj||'כל המקצועות', range:RANGE_HE[range], mode:MODE_HE[mode],
+                idx:idx, seen:seen, schools:schools, brk:BREAK_HE[effBreak], rows:rows};
+
+    /* מאזינים לפעולות הדוח */
+    el('btnCsv').addEventListener('click', exportCsv);
+    el('btnPrint').addEventListener('click', function(){ window.print(); });
+    el('btnShareRep').addEventListener('click', function(){ showToast('הדוח שותף למנהלי בתי הספר בטווח שנבחר'); });
+
+    el('reportCard').setAttribute('tabindex','-1');
+    el('reportCard').focus();
+  }
+
+  function kpi(k,v,s,trend){
+    return '<div class="kpi"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div><div class="s">'+esc(s)+'</div>'+(trend||'')+'</div>';
+  }
+
+  function exportCsv(){
+    if(!lastReport) return;
+    var L=[];
+    L.push('דוח רציפות מצרפי · רֶצֶף');
+    L.push('מצב,'+lastReport.mode);
+    L.push('מחוז,'+lastReport.dist);
+    L.push('מקצוע,'+lastReport.subj);
+    L.push('טווח,'+lastReport.range);
+    L.push('מדד רציפות מצרפי,'+lastReport.idx+'%');
+    L.push('נראו,'+lastReport.seen+'%');
+    L.push('בתי ספר,'+lastReport.schools);
+    L.push('');
+    L.push('פילוח לפי '+lastReport.brk+',רציפות %,שותק');
+    lastReport.rows.forEach(function(r){
+      L.push('"'+r.nm.replace(/"/g,'""')+'",'+r.val+','+(r.silent?'כן':'לא'));
+    });
+    var csv='﻿'+L.join('\r\n'); /* BOM לעברית */
+    var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url; a.download='resef-national-report.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('הדוח יוצא כ־CSV (מצרפי)');
+  }
+
+  el('btnGen').addEventListener('click', buildReport);
+
+  /* ============================================================
+     2 · הודעה ארצית
+     ============================================================ */
+  var aud='all', pri='info';
+  var TOTAL_SCHOOLS=25;
+
+  function audText(){
+    if(aud==='all') return {lbl:'כל בתי הספר', reach:'מגיע לכ־'+TOTAL_SCHOOLS+' בתי ספר', n:TOTAL_SCHOOLS, unit:'בתי ספר'};
+    if(aud==='dist'){ var d=el('mDist').value; var n=DIST_BASE[d]?DIST_BASE[d].schools:0; return {lbl:'מחוז '+d, reach:'מגיע ל־'+n+' בתי ספר במחוז '+d, n:n, unit:'בתי ספר'}; }
+    var r=el('mRole').value; return {lbl:r, reach:'מגיע לכל ה'+r, n:'—', unit:r};
+  }
+
+  function priInfo(){
+    if(pri==='action') return {lbl:'דורש פעולה', cls:'pri-action',
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'};
+    return {lbl:'לידיעה', cls:'',
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>'};
+  }
+
+  function renderPreview(){
+    var a=audText(), p=priInfo();
+    var title=el('mTitle').value.trim();
+    var body=el('mBody').value.trim();
+
+    el('pvAud').textContent=a.lbl;
+    el('pvReach').textContent=a.reach;
+
+    var pv=el('preview');
+    pv.classList.toggle('pri-action', pri==='action');
+    el('pvPri').className='announce__pri';
+    el('pvPri').innerHTML=p.icon+'<span id="pvPriLbl">'+p.lbl+'</span>';
+
+    el('pvTitle').textContent = title || 'כותרת ההודעה תופיע כאן';
+    el('pvTitle').style.color = title ? 'var(--ink-strong)' : 'var(--ink-faint)';
+
+    var pb=el('pvBody');
+    if(body){ pb.textContent=body; pb.classList.remove('empty'); }
+    else { pb.textContent='תוכן ההודעה יופיע כאן תוך כדי הקלדה.'; pb.classList.add('empty'); }
+
+    /* כפתור הפרסום פעיל רק כשיש כותרת ותוכן */
+    el('btnPublish').disabled = !(title && body);
+
+    el('titleCount').textContent=el('mTitle').value.length+' / 70';
+    el('bodyCount').textContent=el('mBody').value.length+' / 480';
+  }
+
+  /* בורר קהל יעד */
+  Array.prototype.forEach.call(document.querySelectorAll('#audChoices .choice'), function(b){
+    b.addEventListener('click', function(){
+      aud=b.getAttribute('data-aud');
+      Array.prototype.forEach.call(document.querySelectorAll('#audChoices .choice'), function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); });
+      el('subDist').hidden = aud!=='dist';
+      el('subRole').hidden = aud!=='role';
+      renderPreview();
+    });
+  });
+  el('mDist').addEventListener('change', renderPreview);
+  el('mRole').addEventListener('change', renderPreview);
+
+  /* בורר עדיפות */
+  Array.prototype.forEach.call(document.querySelectorAll('#priChoices .choice'), function(b){
+    b.addEventListener('click', function(){
+      pri=b.getAttribute('data-v');
+      Array.prototype.forEach.call(document.querySelectorAll('#priChoices .choice'), function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); });
+      renderPreview();
+    });
+  });
+
+  el('mTitle').addEventListener('input', renderPreview);
+  el('mBody').addEventListener('input', renderPreview);
+
+  /* ---------- הודעות אחרונות ---------- */
+  var RECENTS=[
+    {title:'סיכום שבועי — הרציפות הארצית מתייצבת', aud:'כל בתי הספר', date:'8.7', pri:'info', reach:'25 בתי ספר'},
+    {title:'היערכות ליום למידה מרחוק — יום ה׳', aud:'מחוז דרום', date:'6.7', pri:'action', reach:'8 בתי ספר'},
+    {title:'מדף התוכן במקצועות העיוניים — עדכון', aud:'מפקחים מקצועיים', date:'2.7', pri:'info', reach:'כלל המפקחים'}
+  ];
+  function priBadgeIcon(p){
+    return p==='action'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>';
+  }
+  function renderRecents(){
+    el('recentList').innerHTML=RECENTS.map(function(r){
+      return '<div class="recent__row">'+
+        '<span class="recent__ic'+(r.pri==='action'?' action':'')+'" aria-hidden="true">'+priBadgeIcon(r.pri)+'</span>'+
+        '<div class="recent__main">'+
+          '<div class="recent__title">'+esc(r.title)+'</div>'+
+          '<div class="recent__meta"><span>'+esc(r.aud)+'</span><span>·</span><span>'+(r.pri==='action'?'דורש פעולה':'לידיעה')+'</span><span>·</span><span>'+esc(r.date)+'</span></div>'+
+        '</div>'+
+        '<div class="recent__reach"><div class="num">'+esc(String(r.reach).replace(/[^0-9]/g,'')||'—')+'</div><div class="lbl">'+(/[0-9]/.test(r.reach)?'יעדים':'תפוצה')+'</div></div>'+
+      '</div>';
+    }).join('');
+  }
+
+  /* ---------- פרסום ---------- */
+  el('btnPublish').addEventListener('click', function(){
+    var a=audText();
+    var title=el('mTitle').value.trim();
+    /* הוספה לראש רשימת ההודעות האחרונות */
+    RECENTS.unshift({title:title, aud:a.lbl, date:'היום', pri:pri, reach:(typeof a.n==='number'?a.n+' בתי ספר':a.unit)});
+    renderRecents();
+    el('publishedMsg').textContent='נשלחה ל'+a.lbl+'.';
+    document.querySelector('.msg-grid > div:first-child').style.display='none';
+    el('preview').style.display='none';
+    el('publishedBox').classList.add('on');
+    showToast('ההודעה פורסמה (מצרפי · בלי מידע אישי)');
+  });
+  function resetComposer(){
+    el('mTitle').value=''; el('mBody').value='';
+    aud='all'; pri='info';
+    Array.prototype.forEach.call(document.querySelectorAll('#audChoices .choice'), function(x){ x.setAttribute('aria-pressed', x.getAttribute('data-aud')==='all'?'true':'false'); });
+    Array.prototype.forEach.call(document.querySelectorAll('#priChoices .choice'), function(x){ x.setAttribute('aria-pressed', x.getAttribute('data-v')==='info'?'true':'false'); });
+    el('subDist').hidden=true; el('subRole').hidden=true;
+    document.querySelector('.msg-grid > div:first-child').style.display='';
+    el('preview').style.display='';
+    el('publishedBox').classList.remove('on');
+    renderPreview();
+  }
+  el('btnClear').addEventListener('click', function(){ resetComposer(); showToast('הטופס נוקה'); });
+  el('btnAgain').addEventListener('click', resetComposer);
+
+  /* ============================================================
+     מצב מערכת + מסגור
+     ============================================================ */
+  function syncMode(){
+    var m=currentMode();
+    el('modeChipLabel').textContent=MODE_HE[m];
+    el('lead').innerHTML=MODE[m].lead;
+    /* אם כבר הופק דוח — נבנה מחדש כדי לשקף את המצב */
+    if(lastReport) buildReport();
+  }
+  var btns=document.querySelectorAll('.seg button');
+  Array.prototype.forEach.call(btns, function(b){
+    b.addEventListener('click', function(){
+      root.setAttribute('data-mode', b.getAttribute('data-m'));
+      Array.prototype.forEach.call(btns, function(x){ x.setAttribute('aria-pressed', x===b?'true':'false'); });
+      syncMode();
+    });
+  });
+
+  /* ---------- ראשון ---------- */
+  root.setAttribute('data-mode','routine');
+  syncMode();
+  renderRecents();
+  renderPreview();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · מעקב כיתות ומרכז התראות — מנהל</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     מעקב כיתות + מרכז התראות — מסך המנהל (W3-06) · מותג רֶצֶף
+     כל השלד (app-shell/sidebar/topbar/card/chip/metric-card/
+     alert-card/alert-center/badge/btn) מגיע מ-components.css.
+     כאן: רק גריד-הכיתות + פס-סיכום + סרגל-סינון + ספָּרקליין קו-הרצף.
+     טוקנים בלבד — אין צבעים קשיחים.
+     ============================================================ */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: var(--text-body);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ---- שורת בורר-מצב בתוך הטופ-בר ---- */
+  .topbar__mode { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+  .topbar__mode-label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  @media (max-width: 1100px) { .topbar__mode-label { display: none; } }
+
+  /* ---- כותרת הדשבורד: תג-מצב לצד הכותרת ---- */
+  .dash-head-meta { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
+
+  /* ---- פס-סיכום מצב הכיתות (4 מספרים) ---- */
+  .classsum {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3); margin-bottom: var(--space-6);
+  }
+  .classsum__cell {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: 2px;
+    border-top: 3px solid var(--line-strong);
+  }
+  .classsum__cell--good { border-top-color: var(--status-good); }
+  .classsum__cell--att  { border-top-color: var(--status-attention); }
+  .classsum__cell--alert { border-top-color: var(--status-alert); }
+  .classsum__cell--mode { border-top-color: var(--mode); }
+  .classsum__val { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800; color: var(--ink-strong); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .classsum__cell--good .classsum__val  { color: var(--status-good); }
+  .classsum__cell--att  .classsum__val  { color: #9A6E12; }
+  .classsum__cell--alert .classsum__val { color: var(--status-alert); }
+  .classsum__label { font-size: var(--text-small); font-weight: 600; color: var(--ink-soft); }
+  @media (max-width: 720px) { .classsum { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ---- סרגל-סינון (סינון הכיתות לפי מצב) ---- */
+  .filterbar { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-5); }
+  .filter-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    min-height: 38px; padding: 0 var(--space-4);
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 700;
+    color: var(--ink-soft); background: var(--card);
+    border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+    cursor: pointer; transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  .filter-chip:hover { background: var(--surface-muted); border-color: var(--brand-line); }
+  .filter-chip:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+  .filter-chip__dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .filter-chip__dot--good  { background: var(--status-good); }
+  .filter-chip__dot--att   { background: var(--status-attention); }
+  .filter-chip__dot--alert { background: var(--status-alert); }
+  .filter-chip__num { font-variant-numeric: tabular-nums; color: var(--ink-faint); font-weight: 700; }
+  .filter-chip[aria-pressed="true"] {
+    color: var(--brand-deep); background: var(--brand-soft); border-color: var(--brand);
+  }
+  .filter-chip[aria-pressed="true"] .filter-chip__num { color: var(--brand-deep); }
+
+  /* ---- גריד הכיתות ---- */
+  .classgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); gap: var(--space-4); }
+  .classcard {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card); padding: var(--space-4) var(--space-5) var(--space-5);
+    display: flex; flex-direction: column; gap: var(--space-3);
+    border-top: 3px solid var(--line-strong);
+  }
+  .classcard--good  { border-top-color: var(--status-good); }
+  .classcard--att   { border-top-color: var(--status-attention); }
+  .classcard--alert { border-top-color: var(--status-alert); }
+  .classcard[hidden] { display: none; }
+
+  .classcard__top { display: flex; align-items: flex-start; gap: var(--space-3); }
+  .classcard__id { min-width: 0; flex: 1 1 auto; }
+  .classcard__name { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700; color: var(--ink-strong); line-height: 1.15; }
+  .classcard__hr { font-size: var(--text-label); color: var(--ink-soft); margin-top: 2px; }
+  .classcard__hr b { color: var(--ink); font-weight: 600; }
+
+  /* ספָּרקליין 7-ימים — מוטיב קו הרצף בזעיר */
+  .classcard__spark { width: 100%; height: 44px; display: block; overflow: visible; }
+  .spark__area { fill: var(--surface-muted); opacity: .8; }
+  .spark__line { fill: none; stroke: var(--status-unknown); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .spark__dot  { fill: var(--card); stroke: var(--status-unknown); stroke-width: 2.4; }
+  .classcard--good  .spark__line { stroke: var(--status-good); }
+  .classcard--good  .spark__dot  { stroke: var(--status-good); }
+  .classcard--good  .spark__area { fill: #EAF7EE; }
+  .classcard--att   .spark__line { stroke: var(--status-attention); }
+  .classcard--att   .spark__dot  { stroke: var(--status-attention); }
+  .classcard--att   .spark__area { fill: #FBF3E0; }
+  .classcard--alert .spark__line { stroke: var(--status-alert); }
+  .classcard--alert .spark__dot  { stroke: var(--status-alert); }
+  .classcard--alert .spark__area { fill: #FCECEB; }
+
+  .classcard__stats { display: flex; align-items: baseline; gap: var(--space-2); }
+  .classcard__part { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 800; color: var(--ink-strong); line-height: 1; font-variant-numeric: tabular-nums; }
+  .classcard__part-label { font-size: var(--text-label); color: var(--ink-soft); }
+  .classcard__active { margin-inline-start: auto; font-size: var(--text-small); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .classcard__active b { color: var(--ink-strong); font-weight: 700; }
+
+  .classcard__foot { margin-top: auto; }
+  .classcard__action {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; min-height: var(--tap); padding: 0 var(--space-4);
+    border-radius: var(--radius-btn); text-decoration: none; white-space: nowrap;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 700;
+    background: var(--card); color: var(--brand-deep); border: 1px solid var(--brand-line);
+    cursor: pointer; transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  }
+  .classcard__action:hover { background: var(--brand-soft); border-color: var(--brand); transform: translateY(-1px); }
+  .classcard__action:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+  .classcard__action svg { width: 16px; height: 16px; flex: none; }
+  .classcard__rest {
+    display: flex; align-items: center; gap: 7px;
+    font-size: var(--text-small); color: var(--status-good); font-weight: 600;
+    padding: var(--space-2) 0;
+  }
+  .classcard__rest svg { width: 16px; height: 16px; flex: none; }
+
+  /* מצב-ריק לסינון ללא תוצאות */
+  .grid-empty { padding: var(--space-8); text-align: center; color: var(--ink-soft); font-size: var(--text-small); }
+  .grid-empty[hidden] { display: none; }
+
+  /* ---- מרכז ההתראות — כותרת מקטע ---- */
+  .sec-block { margin-top: var(--space-10); }
+  .sec-block__head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2); }
+  .sec-block__head h2 { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700; color: var(--ink-strong); margin: 0; }
+  .sec-block__hint { font-size: var(--text-small); color: var(--ink-soft); }
+  .privacy-note {
+    display: flex; gap: var(--space-3); align-items: flex-start;
+    background: var(--surface-muted); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4);
+    margin: var(--space-4) 0; font-size: var(--text-small); color: var(--ink-soft);
+  }
+  .privacy-note svg { width: 18px; height: 18px; flex: none; color: var(--brand-deep); margin-top: 1px; }
+  .privacy-note b { color: var(--ink-strong); font-weight: 700; }
+
+  /* ---- טופ-בר: פעמון התראות עם פאנל ---- */
+  .bell-wrap { position: relative; }
+  .bell-panel { position: absolute; inset-block-start: calc(100% + 8px); inset-inline-end: 0; z-index: 50; }
+  .bell-panel[hidden] { display: none; }
+
+  /* Toast קטן לאישור פעולה (הדגמה) */
+  .rz-toast {
+    position: fixed; inset-block-end: 20px; inset-inline-start: 50%; transform: translate(50%, 20px);
+    background: var(--ink-strong); color: #fff; font-size: var(--text-small); font-weight: 600;
+    padding: 12px 18px; border-radius: var(--radius-btn); box-shadow: var(--shadow-lg);
+    opacity: 0; pointer-events: none; transition: opacity 200ms ease, transform 200ms ease; z-index: 90;
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .rz-toast svg { width: 18px; height: 18px; }
+  .rz-toast.is-on { opacity: 1; transform: translate(50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .classcard__action:hover { transform: none; }
+    .rz-toast { transition: none; }
+  }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (outline, 24×24, stroke=currentColor) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M8 13h8M8 17h5"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6Z"/><path d="m9.5 12 1.8 1.8L15 10"/></symbol>
+  <symbol id="ic-alert-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="ic-alert-tri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5Z"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</svg>
+
+<!-- ============================================================
+     PrincipalShell — Sidebar + Topbar + Main (מלא-מסך)
+     ============================================================ -->
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="principal-pulse.html" aria-label="דופק בית הספר">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">דופק בית הספר</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="מעקב כיתות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-grid"/></svg></span>
+        <span class="sidebar__label">מעקב כיתות</span>
+      </a>
+      <a class="sidebar__item" href="#alerts" aria-label="מרכז התראות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-bell"/></svg></span>
+        <span class="sidebar__label">מרכז התראות</span>
+        <span class="badge badge--brand sidebar__badge" id="nav-alert-badge" aria-hidden="true">4</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="צוות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+        <span class="sidebar__label">צוות</span>
+      </a>
+
+      <div class="sidebar__section">ניהול</div>
+      <a class="sidebar__item" href="#" aria-label="דוחות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-file"/></svg></span>
+        <span class="sidebar__label">דוחות</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הודעה לקהילה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">הודעה לקהילה</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רב</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רון בקר</div>
+          <div class="sidebar__foot-role">מנהל · אורט בית הערבה</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">אורט בית הערבה</div>
+        <div class="topbar__subtitle">279 תלמידים · 14 כיתות · 26 אנשי צוות</div>
+      </div>
+      <div class="topbar__spacer"></div>
+
+      <!-- בורר מצב מערכת (משנה את כל המסך) -->
+      <div class="topbar__mode">
+        <span class="topbar__mode-label">מצב בית הספר</span>
+        <div class="mode-selector mode-selector--inline mode-selector--sm" id="mode-picker" role="group" aria-label="מצב בית הספר">
+          <button class="mode-option" type="button" data-set-mode="routine" aria-pressed="true">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            שגרה
+          </button>
+          <button class="mode-option" type="button" data-set-mode="remote" aria-pressed="false">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            מרחוק
+          </button>
+          <button class="mode-option" type="button" data-set-mode="emergency" aria-pressed="false">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            חירום
+          </button>
+        </div>
+      </div>
+
+      <div class="topbar__actions">
+        <div class="bell-wrap">
+          <button class="icon-btn topbar__notif" type="button" id="bellBtn" aria-haspopup="true" aria-expanded="false" aria-controls="bellPanel" aria-label="התראות">
+            <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+            <span class="badge" id="bellBadge" aria-hidden="true">4</span>
+          </button>
+          <div class="bell-panel" id="bellPanel" hidden>
+            <div class="alert-center alert-center--panel" role="region" aria-label="התראות אחרונות">
+              <div class="alert-center__head">
+                <h2 class="alert-center__title">התראות אחרונות</h2>
+                <span class="alert-center__count alert-center__count--brand" id="bellPanelCount">4</span>
+              </div>
+              <ul class="alert-center__list" id="bellPanelList"><!-- render --></ul>
+              <div class="alert-center__foot"><a href="#alerts">צפייה בכל ההתראות</a></div>
+            </div>
+          </div>
+        </div>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רב</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+        <div class="dashboard">
+
+          <!-- כותרת -->
+          <div class="dashboard__head">
+            <div class="dashboard__headings">
+              <h1 class="dashboard__title">מעקב כיתות ומרכז התראות</h1>
+              <div class="dash-head-meta">
+                <p class="dashboard__subtitle" id="dash-sub">תמונת מצב לכל כיתה · עודכן לפני 8 דקות</p>
+                <span class="mode-chip mode-chip--sm" id="mode-chip">
+                  <span class="mode-chip__mark" aria-hidden="true"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M9 7h2M14 7h4"/><circle cx="7.5" cy="7" r="1.6" fill="currentColor" stroke="none"/></svg></span>
+                  <span id="mode-chip-label">שגרה</span>
+                </span>
+              </div>
+            </div>
+            <div class="dashboard__actions">
+              <button class="btn btn--secondary btn--sm" type="button" data-toast="פותח את הדוח היומי">
+                <svg viewBox="0 0 24 24"><use href="#ic-file"/></svg>
+                הדוח היומי
+              </button>
+            </div>
+          </div>
+
+          <!-- ============ מעקב כיתות ============ -->
+          <section aria-labelledby="classes-title">
+            <div class="sec-block__head" style="margin-bottom:var(--space-4)">
+              <h2 id="classes-title" style="font-family:var(--font-head);font-size:var(--text-h2);font-weight:700;color:var(--ink-strong);margin:0">מעקב כיתות</h2>
+              <span class="sec-block__hint">מצב כל כיתה במבט אחד · הקו מראה את מגמת ההשתתפות ב-7 הימים האחרונים</span>
+            </div>
+
+            <!-- פס-סיכום 4 מספרים -->
+            <div class="classsum" id="classsum"><!-- render --></div>
+
+            <!-- סרגל-סינון -->
+            <div class="filterbar" id="filterbar" role="group" aria-label="סינון כיתות לפי מצב">
+              <button class="filter-chip" type="button" data-filter="all" aria-pressed="true">
+                הכול <span class="filter-chip__num" id="f-all">12</span>
+              </button>
+              <button class="filter-chip" type="button" data-filter="good" aria-pressed="false">
+                <span class="filter-chip__dot filter-chip__dot--good"></span>פעילות <span class="filter-chip__num" id="f-good">0</span>
+              </button>
+              <button class="filter-chip" type="button" data-filter="att" aria-pressed="false">
+                <span class="filter-chip__dot filter-chip__dot--att"></span>נחלשות <span class="filter-chip__num" id="f-att">0</span>
+              </button>
+              <button class="filter-chip" type="button" data-filter="alert" aria-pressed="false">
+                <span class="filter-chip__dot filter-chip__dot--alert"></span>שקטות <span class="filter-chip__num" id="f-alert">0</span>
+              </button>
+            </div>
+
+            <div class="classgrid" id="classgrid" aria-live="polite"><!-- render --></div>
+            <p class="grid-empty" id="grid-empty" hidden>אין כיתות במצב זה כרגע. אפשר לחזור ל"הכול".</p>
+          </section>
+
+          <!-- ============ מרכז התראות ============ -->
+          <section class="sec-block" id="alerts" aria-labelledby="alerts-title">
+            <div class="alert-center" role="region" aria-label="מרכז התראות" id="mainCenter">
+              <div class="alert-center__head">
+                <h2 class="alert-center__title" id="alerts-title">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-alert-bell"/></svg>
+                  מרכז התראות
+                </h2>
+                <span class="alert-center__count" data-count-target aria-label="התראות פתוחות">4</span>
+                <button class="btn btn--sm btn--ghost alert-center__head-action" type="button" data-mark-all>סמן הכל כנקרא</button>
+              </div>
+
+              <div class="privacy-note">
+                <svg aria-hidden="true"><use href="#ic-shield"/></svg>
+                <span><b>התראה = הפניה לפעולה, לא דירוג.</b> כל שורה מסתיימת בפעולה אחת — פנייה למחנך/ת או פתיחת מעקב. אין כאן "אדומים" לשיפוט, ואין נתונים אישיים מעבר לנדרש לפנייה.</span>
+              </div>
+
+              <ul class="alert-center__list" data-alert-list id="alert-list"><!-- render --></ul>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast הדגמה -->
+<div class="rz-toast" id="toast" role="status" aria-live="polite">
+  <svg aria-hidden="true"><use href="#ic-check-c"/></svg>
+  <span id="toast-text"></span>
+</div>
+
+<script src="system-mode.js"></script>
+<script>
+(function () {
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ============================================================
+     נתוני דמו — משתנים לפי מצב המערכת (שגרה / מרחוק / חירום).
+     מקור אמת אמיתי (Sheets/API) — טרם הוכרע (מיטל: "נחשוב על זה").
+     שפה רגועה: "פעילה" / "נחלשת" / "שקטה" — לא "אדום"/"כשל".
+     st: 'good'=פעילה · 'att'=נחלשת · 'alert'=שקטה
+     ============================================================ */
+
+  /* מצבת הכיתות — קבוע (שם, מחנך/ת, מצבת). המצב משתנה לפי מוד. */
+  var ROSTER = [
+    { name: 'ט׳1',  hr: 'רונית א.', total: 28 },
+    { name: 'ט׳2',  hr: 'דנה כ.',   total: 27 },
+    { name: 'ט׳3',  hr: 'איל ב.',   total: 26 },
+    { name: 'ט׳4',  hr: 'תמר ג.',   total: 26 },
+    { name: 'י׳1',  hr: 'שירה מ.',  total: 25 },
+    { name: 'י׳2',  hr: 'מירי פ.',  total: 24 },
+    { name: 'י׳3',  hr: 'גיל נ.',   total: 24 },
+    { name: 'יא׳1', hr: 'סיון א.',  total: 23 },
+    { name: 'יא׳2', hr: 'דורון ס.', total: 22 },
+    { name: 'יא׳3', hr: 'קרן מ.',   total: 22 },
+    { name: 'יב׳1', hr: 'נועה ל.',  total: 21 },
+    { name: 'יב׳2', hr: 'עומר ד.',  total: 20 }
+  ];
+
+  /* לכל מצב: [st, participation%, spark(7 ערכים)] לפי סדר ROSTER */
+  var STATE = {
+    routine: [
+      ['good',  88, [80,82,83,85,84,87,88]],
+      ['good',  84, [78,80,82,81,83,85,84]],
+      ['att',   61, [76,74,70,68,66,63,61]],
+      ['good',  90, [85,86,88,87,89,90,90]],
+      ['good',  82, [79,80,81,80,82,83,82]],
+      ['att',   64, [78,75,72,70,68,66,64]],
+      ['good',  86, [82,83,84,85,86,86,86]],
+      ['good',  80, [76,77,79,78,80,81,80]],
+      ['alert', 38, [58,52,48,45,42,40,38]],
+      ['good',  83, [80,81,82,82,83,84,83]],
+      ['good',  87, [83,84,85,86,87,87,87]],
+      ['good',  85, [81,82,83,84,84,85,85]]
+    ],
+    remote: [
+      ['good',  76, [70,72,73,74,75,76,76]],
+      ['att',   58, [70,67,64,62,60,59,58]],
+      ['alert', 41, [58,54,50,47,44,42,41]],
+      ['good',  81, [74,76,78,79,80,81,81]],
+      ['att',   55, [68,64,61,59,57,56,55]],
+      ['att',   52, [66,62,59,57,55,53,52]],
+      ['good',  74, [68,70,71,72,73,74,74]],
+      ['good',  70, [64,66,67,68,69,70,70]],
+      ['alert', 33, [52,47,43,40,37,35,33]],
+      ['good',  72, [66,68,69,70,71,72,72]],
+      ['good',  78, [72,74,75,76,77,78,78]],
+      ['att',   60, [72,69,66,64,62,61,60]]
+    ],
+    emergency: [
+      ['att',   54, [64,60,57,55,53,54,54]],
+      ['att',   47, [58,54,51,49,47,47,47]],
+      ['alert', 29, [46,42,38,35,32,30,29]],
+      ['good',  66, [56,59,61,63,64,65,66]],
+      ['alert', 31, [48,44,40,37,34,32,31]],
+      ['att',   44, [56,52,49,47,45,44,44]],
+      ['att',   58, [50,52,54,55,56,57,58]],
+      ['att',   49, [58,54,52,50,49,49,49]],
+      ['alert', 22, [40,35,31,28,25,23,22]],
+      ['att',   52, [46,48,49,50,51,52,52]],
+      ['good',  63, [54,57,59,60,61,62,63]],
+      ['alert', 36, [50,46,43,40,38,37,36]]
+    ]
+  };
+
+  var ST_META = {
+    good:  { chip: 'chip--good',      card: 'classcard--good',  label: 'פעילה',  icon: 'ic-check-c' },
+    att:   { chip: 'chip--attention', card: 'classcard--att',   label: 'נחלשת',  icon: 'ic-alert-tri' },
+    alert: { chip: 'chip--alert',     card: 'classcard--alert', label: 'שקטה',   icon: 'ic-alert-bell' }
+  };
+
+  var DASH_SUB = {
+    routine:   'תמונת מצב לכל כיתה · עודכן לפני 8 דקות',
+    remote:    'יום למידה מרחוק · תמונת מצב לכל כיתה · עודכן לפני 8 דקות',
+    emergency: 'רציפות בזמן חירום · תמונת מצב לכל כיתה · עודכן לפני 8 דקות'
+  };
+
+  /* מרכז התראות — לפי מצב. sev: alert/attention/info · act: 'wa'|'toast' */
+  var ALERTS = {
+    routine: [
+      { sev: 'attention', icon: 'ic-alert-tri', tag: 'כדאי לבדוק', title: 'יא׳2 — נחלשת שבוע שלישי ברציפות',
+        text: 'ההשתתפות ירדה ל-38%. כדאי לתאם עם המחנך דורון ס. צעד המשך.', meta: 'לפני שעה · מקור: מעקב כיתות',
+        act: 'wa', wa: 'היי דורון, שמנו לב שההשתתפות ביא׳2 נחלשת כבר כמה שבועות. אפשר שנחשוב יחד על צעד המשך? תודה רבה.', btn: 'פנייה למחנך/ת' },
+      { sev: 'attention', icon: 'ic-book', tag: 'מקצוע לא פעיל', title: 'לשון — בלי משימה חדשה 6 ימים (ט׳3)',
+        text: 'המורה יעל ש. לא שלחה יחידה חדשה בלשון לט׳3 השבוע. שאר המקצועות פעילים.', meta: 'היום · מקור: פעילות מורים',
+        act: 'wa', wa: 'היי יעל, רק בודקים — לא ראינו יחידת לשון חדשה לט׳3 השבוע. הכול בסדר? צריכה משהו?', btn: 'פנייה למורה' },
+      { sev: 'info', icon: 'ic-file', tag: 'עדכון', title: 'הדוח השבועי להורים מוכן',
+        text: 'סיכום הפעילות השבועי מוכן לעיון לפני שליחה למשפחות.', meta: 'היום, 07:40',
+        act: 'toast', toast: 'פותח את הדוח השבועי להורים', btn: 'צפייה בדוח' },
+      { sev: 'info', icon: 'ic-check-c', tag: 'רציפות תקינה', title: '9 מתוך 12 הכיתות פעילות השבוע',
+        text: 'רוב בית הספר בקצב יציב. אין כרגע כיתה במצב שדורש פעולה דחופה.', meta: 'עודכן היום',
+        act: 'toast', toast: 'מציג את הכיתות הפעילות', btn: 'צפייה בכיתות' }
+    ],
+    remote: [
+      { sev: 'alert', icon: 'ic-alert-bell', tag: 'נדרש קשר', title: 'יא׳2 — פחות משליש נכנסו היום',
+        text: 'רק 33% מהכיתה נכנסו ליום הלמידה מרחוק. כדאי לתאם עם המחנך דורון ס. פנייה יזומה.', meta: 'לפני 25 דקות · מקור: מעקב כיתות',
+        act: 'wa', wa: 'היי דורון, ביום הלמידה מרחוק היום פחות משליש מיא׳2 נכנסו. אפשר לפנות למשפחות ולבדוק מה חוסם? תודה.', btn: 'פנייה למחנך/ת' },
+      { sev: 'attention', icon: 'ic-alert-tri', tag: 'כדאי לבדוק', title: '3 כיתות מתחת ל-55% היום',
+        text: 'ט׳2, י׳1 וי׳2 מתחת לרף ההשתתפות של יום מרחוק. מגמה יורדת מתחילת השבוע.', meta: 'היום, 10:15 · מקור: מעקב כיתות',
+        act: 'toast', toast: 'מסנן את הכיתות הנחלשות', btn: 'צפייה בנחלשות' },
+      { sev: 'attention', icon: 'ic-book', tag: 'מקצוע לא פעיל', title: 'מתמטיקה — בלי משימת מרחוק (ט׳3)',
+        text: 'לא נשלחה משימת מתמטיקה מותאמת ללמידה מרחוק בט׳3 היום.', meta: 'היום · מקור: פעילות מורים',
+        act: 'wa', wa: 'היי משה, לא ראינו משימת מתמטיקה למרחוק בט׳3 היום. אפשר לשלוח יחידה קצרה? תודה רבה.', btn: 'פנייה למורה' },
+      { sev: 'info', icon: 'ic-send', tag: 'עדכון', title: 'תזכורת מרחוק נשלחה ל-73 תלמידים',
+        text: 'הודעת "מתחילים יום מרחוק" נשלחה אוטומטית למי שטרם נכנס עד 09:00.', meta: 'היום, 09:00',
+        act: 'toast', toast: 'מציג את פרטי התזכורת', btn: 'פרטים' }
+    ],
+    emergency: [
+      { sev: 'alert', icon: 'ic-alert-bell', tag: 'נדרש קשר', title: 'יא׳2 — לא ראינו 22% מהכיתה כמה ימים',
+        text: 'ההשתתפות ביא׳2 בשפל. כמה תלמידים לא נראו במערכת 3 ימים ומעלה. כדאי לתאם פנייה עם המחנך דורון ס.', meta: 'לפני 15 דקות · מקור: מעקב כיתות',
+        act: 'wa', wa: 'היי דורון, בחירום — כמה תלמידים ביא׳2 לא נראו במערכת כמה ימים. אפשר שנחלק ביניכם פניות טלפוניות היום? תודה רבה.', btn: 'פנייה למחנך/ת' },
+      { sev: 'alert', icon: 'ic-alert-bell', tag: 'נדרש קשר', title: '4 כיתות מתחת ל-40% היום',
+        text: 'ט׳3, י׳1, יא׳3 ויא׳2 מתחת לרף בחירום. כדאי לוודא שלכל כיתה יש מחנך/ת שמלווה ופונה.', meta: 'היום, 09:30 · מקור: מעקב כיתות',
+        act: 'toast', toast: 'מסנן את הכיתות השקטות', btn: 'צפייה בשקטות' },
+      { sev: 'attention', icon: 'ic-book', tag: 'מקצוע לא פעיל', title: '2 מקצועות בלי חומר חירום (ט׳3)',
+        text: 'לשון והיסטוריה בט׳3 עדיין ללא יחידת המשך בחירום. אפשר להקצות מהספרייה.', meta: 'היום · מקור: פעילות מורים',
+        act: 'toast', toast: 'פותח את ספריית התוכן להקצאה', btn: 'הקצאה מהספרייה' },
+      { sev: 'info', icon: 'ic-heart', tag: 'רציפות מתחזקת', title: 'ההשתתפות עלתה מ-35% ל-41% השבוע',
+        text: 'בחירום כל עלייה היא הישג. שלוש כיתות חזרו מעל הרף מאתמול.', meta: 'עודכן היום',
+        act: 'toast', toast: 'מציג את מגמת ההשתתפות', btn: 'צפייה במגמה' }
+    ]
+  };
+
+  var SEV_ICON = { alert: 'ic-alert-bell', attention: 'ic-alert-tri', info: 'ic-file' };
+
+  /* ---------- עזרים ---------- */
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function waLink(text) { return 'https://api.whatsapp.com/send?phone=&text=' + encodeURIComponent(text); }
+  function icon(id) { return '<svg aria-hidden="true"><use href="#' + id + '"/></svg>'; }
+
+  /* ---------- ספָּרקליין (מוטיב קו הרצף) ---------- */
+  function sparkSvg(vals) {
+    var W = 200, H = 44, padX = 6, padY = 7;
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var range = (max - min) || 1;
+    var n = vals.length;
+    var xs = vals.map(function (v, i) { return padX + (W - padX * 2) * (i / (n - 1)); });
+    var ys = vals.map(function (v) { return padY + (1 - (v - min) / range) * (H - padY * 2); });
+    var pts = xs.map(function (x, i) { return x.toFixed(1) + ' ' + ys[i].toFixed(1); });
+    var line = 'M ' + pts.join(' L ');
+    var area = line + ' L ' + xs[n - 1].toFixed(1) + ' ' + (H - 1) + ' L ' + xs[0].toFixed(1) + ' ' + (H - 1) + ' Z';
+    var lastX = xs[n - 1].toFixed(1), lastY = ys[n - 1].toFixed(1);
+    return '<svg class="classcard__spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path class="spark__area" d="' + area + '"/>' +
+      '<path class="spark__line" d="' + line + '"/>' +
+      '<circle class="spark__dot" cx="' + lastX + '" cy="' + lastY + '" r="3.2"/>' +
+    '</svg>';
+  }
+
+  /* ---------- מצב פעיל של הסינון ---------- */
+  var activeFilter = 'all';
+
+  /* ---------- רינדור גריד כיתות ---------- */
+  function renderClasses(mode) {
+    var st = STATE[mode];
+    var counts = { good: 0, att: 0, alert: 0 };
+    var html = ROSTER.map(function (r, i) {
+      var s = st[i], code = s[0], part = s[1], spark = s[2];
+      counts[code]++;
+      var m = ST_META[code];
+      var active = Math.round(part / 100 * r.total);
+      /* פעולה: כיתה נחלשת/שקטה → פנייה למחנך/ת. פעילה → שורת "אין פעולה נדרשת". */
+      var foot;
+      if (code === 'good') {
+        foot = '<div class="classcard__rest">' + icon('ic-check-c') + 'רציפות תקינה · אין פעולה נדרשת</div>';
+      } else {
+        var verb = (code === 'alert') ? 'שקטה כבר כמה ימים' : 'נחלשת לאחרונה';
+        var msg = 'היי ' + r.hr + ', שמנו לב שכיתה ' + r.name + ' ' + verb + ' (' + part + '% השתתפות). אפשר שנחשוב יחד על צעד המשך? תודה רבה.';
+        foot = '<a class="classcard__action" href="' + waLink(msg) + '" target="_blank" rel="noopener" ' +
+          'aria-label="פנייה למחנך/ת ' + esc(r.hr) + ' בנוגע לכיתה ' + esc(r.name) + '">' +
+          icon('ic-send') + 'פנייה למחנך/ת</a>';
+      }
+      return '<article class="classcard ' + m.card + '" data-st="' + code + '" ' +
+          'aria-label="כיתה ' + esc(r.name) + ', מצב: ' + m.label + ', השתתפות ' + part + '%">' +
+        '<div class="classcard__top">' +
+          '<div class="classcard__id">' +
+            '<div class="classcard__name">' + esc(r.name) + '</div>' +
+            '<div class="classcard__hr">מחנך/ת: <b>' + esc(r.hr) + '</b></div>' +
+          '</div>' +
+          '<span class="chip ' + m.chip + '">' + icon(m.icon) + m.label + '</span>' +
+        '</div>' +
+        sparkSvg(spark) +
+        '<div class="classcard__stats">' +
+          '<span class="classcard__part">' + part + '%</span>' +
+          '<span class="classcard__part-label">השתתפות השבוע</span>' +
+          '<span class="classcard__active"><b>' + active + '</b>/' + r.total + ' פעילים</span>' +
+        '</div>' +
+        '<div class="classcard__foot">' + foot + '</div>' +
+      '</article>';
+    }).join('');
+    el('classgrid').innerHTML = html;
+
+    /* פס-סיכום */
+    var total = ROSTER.length;
+    el('classsum').innerHTML =
+      cell('mode',  total,        'כיתות במעקב') +
+      cell('good',  counts.good,  'פעילות') +
+      cell('att',   counts.att,   'נחלשות') +
+      cell('alert', counts.alert, 'שקטות');
+
+    /* מוני-סינון */
+    el('f-all').textContent = total;
+    el('f-good').textContent = counts.good;
+    el('f-att').textContent = counts.att;
+    el('f-alert').textContent = counts.alert;
+
+    applyFilter();
+  }
+
+  function cell(kind, val, label) {
+    return '<div class="classsum__cell classsum__cell--' + kind + '">' +
+      '<span class="classsum__val">' + val + '</span>' +
+      '<span class="classsum__label">' + label + '</span></div>';
+  }
+
+  /* ---------- סינון ---------- */
+  function applyFilter() {
+    var cards = el('classgrid').querySelectorAll('.classcard');
+    var shown = 0;
+    cards.forEach(function (c) {
+      var match = (activeFilter === 'all') || (c.getAttribute('data-st') === activeFilter);
+      c.hidden = !match;
+      if (match) shown++;
+    });
+    el('grid-empty').hidden = shown !== 0;
+  }
+
+  el('filterbar').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-filter]');
+    if (!btn) return;
+    activeFilter = btn.getAttribute('data-filter');
+    el('filterbar').querySelectorAll('[data-filter]').forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b === btn));
+    });
+    applyFilter();
+  });
+
+  /* ---------- מרכז ההתראות ---------- */
+  function alertCardHtml(a, compact) {
+    var sevClass = 'alert-card--' + (a.sev === 'attention' ? 'attention' : a.sev === 'info' ? 'info' : 'alert');
+    var action;
+    if (a.act === 'wa') {
+      action = '<a class="btn btn--sm btn--alert-action" href="' + waLink(a.wa) + '" target="_blank" rel="noopener" role="button">' + esc(a.btn) + '</a>';
+    } else {
+      action = '<button class="btn btn--sm btn--alert-action" type="button" data-toast="' + esc(a.toast) + '">' + esc(a.btn) + '</button>';
+    }
+    var meta = (!compact && a.meta)
+      ? '<div class="alert-card__meta"><span class="alert-card__meta-item">' + icon('ic-clock') + esc(a.meta) + '</span></div>'
+      : '';
+    var text = compact ? '' : '<p class="alert-card__text">' + esc(a.text) + '</p>';
+    var dismiss = compact ? '' :
+      '<button class="alert-card__dismiss" type="button" data-dismiss aria-label="סגירת ההתראה">' + icon('ic-x') + '</button>';
+    var unread = compact ? '' : ' alert-card--unread';
+    var unreadAttr = compact ? '' : ' data-unread="true"';
+    return '<article class="alert-card ' + sevClass + (compact ? ' alert-card--compact' : unread) + '" role="listitem"' + unreadAttr + '>' +
+      '<span class="alert-card__icon" aria-hidden="true">' + '<svg viewBox="0 0 24 24"><use href="#' + a.icon + '"/></svg>' + '</span>' +
+      '<div class="alert-card__body">' +
+        '<div class="alert-card__head"><span class="alert-card__tag"><span class="alert-card__tag-dot"></span>' + esc(a.tag) + '</span></div>' +
+        '<h3 class="alert-card__title">' + esc(a.title) + '</h3>' +
+        text + meta +
+        '<div class="alert-card__actions">' + action + '</div>' +
+      '</div>' + dismiss +
+    '</article>';
+  }
+
+  function renderAlerts(mode) {
+    var list = ALERTS[mode];
+    el('alert-list').innerHTML = list.map(function (a) {
+      return '<li class="alert-center__item">' + alertCardHtml(a, false) + '</li>';
+    }).join('');
+    /* פאנל פעמון — 2 הראשונות בגרסה קומפקטית */
+    el('bellPanelList').innerHTML = list.slice(0, 2).map(function (a) {
+      return '<li class="alert-center__item">' + alertCardHtml(a, true) + '</li>';
+    }).join('');
+    bindAlertActions();
+    refreshCount();
+  }
+
+  /* ---------- לוגיקת מרכז התראות (דחייה / מונה / סמן-הכל / מצב-ריק) ---------- */
+  var center = el('mainCenter');
+  function refreshCount() {
+    var target = center.querySelector('[data-count-target]');
+    var unread = center.querySelectorAll('.alert-card[data-unread="true"]').length;
+    var open = center.querySelectorAll('.alert-center__item').length;
+    if (target) target.textContent = unread;
+    var badge = el('bellBadge'), navBadge = el('nav-alert-badge'), panelCount = el('bellPanelCount');
+    if (badge) { badge.textContent = unread; badge.style.display = unread ? '' : 'none'; }
+    if (navBadge) { navBadge.textContent = open; navBadge.style.display = open ? '' : 'none'; }
+    if (panelCount) panelCount.textContent = unread;
+  }
+
+  function dismissCard(card) {
+    var item = card.closest('.alert-center__item') || card;
+    var finish = function () { item.remove(); refreshCount(); showEmptyIfNeeded(); };
+    if (reduce) { finish(); return; }
+    card.setAttribute('data-dismissing', 'true');
+    var done = false;
+    card.addEventListener('transitionend', function () { if (!done) { done = true; finish(); } });
+    setTimeout(function () { if (!done) { done = true; finish(); } }, 260);
+  }
+
+  function showEmptyIfNeeded() {
+    var list = el('alert-list');
+    if (list && list.children.length === 0 && !center.querySelector('.alert-center__empty')) {
+      var empty = document.createElement('div');
+      empty.className = 'alert-center__empty';
+      empty.innerHTML =
+        '<span class="alert-center__empty-line" aria-hidden="true">' +
+          '<span class="en-dot"></span><span class="en-seg"></span>' +
+          '<span class="en-dot en-dot--pending"></span><span class="en-seg"></span>' +
+          '<span class="en-dot en-dot--pending"></span></span>' +
+        '<h3 class="alert-center__empty-title">אין התראות פתוחות</h3>' +
+        '<p class="alert-center__empty-text">הרצף נמשך כרגיל. נעדכן כאן ברגע שיהיה משהו שדורש תשומת לב.</p>';
+      list.replaceWith(empty);
+    }
+  }
+
+  function bindAlertActions() {
+    center.querySelectorAll('[data-dismiss]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var card = btn.closest('.alert-card');
+        if (card) dismissCard(card);
+      });
+    });
+    document.querySelectorAll('[data-toast]').forEach(function (b) {
+      if (b.getAttribute('data-toast-bound')) return;
+      b.setAttribute('data-toast-bound', '1');
+      b.addEventListener('click', function () { showToast(b.getAttribute('data-toast')); });
+    });
+  }
+
+  var markAll = center.querySelector('[data-mark-all]');
+  if (markAll) {
+    markAll.addEventListener('click', function () {
+      center.querySelectorAll('.alert-card--unread').forEach(function (c) {
+        c.classList.remove('alert-card--unread');
+        c.setAttribute('data-unread', 'false');
+      });
+      refreshCount();
+    });
+  }
+
+  /* ---------- רינדור מלא לפי מצב ---------- */
+  function renderAll(mode) {
+    el('dash-sub').textContent = DASH_SUB[mode] || DASH_SUB.routine;
+    renderClasses(mode);
+    /* איפוס מרכז ההתראות למקרה שנמחקו התראות ואז הוחלף מצב */
+    var list = el('alert-list');
+    if (!list) {
+      var empty = center.querySelector('.alert-center__empty');
+      if (empty) {
+        var ul = document.createElement('ul');
+        ul.className = 'alert-center__list';
+        ul.setAttribute('data-alert-list', '');
+        ul.id = 'alert-list';
+        empty.replaceWith(ul);
+      }
+    }
+    renderAlerts(mode);
+  }
+
+  /* ---------- בורר מצב — דרך שירות המצב המשותף (Resef) ---------- */
+  var picker = el('mode-picker');
+  var chipLabel = el('mode-chip-label');
+  var MODE_HE = { routine: 'שגרה', remote: 'מרחוק', emergency: 'חירום' };
+
+  function syncPicker(mode) {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-set-mode') === mode ? 'true' : 'false');
+    });
+    el('mode-chip').setAttribute('data-mode', mode);
+    if (chipLabel) chipLabel.textContent = MODE_HE[mode] || 'שגרה';
+  }
+
+  if (window.Resef) {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        window.Resef.setMode(btn.getAttribute('data-set-mode'), { silent: true });
+      });
+    });
+    document.addEventListener('resef:modechange', function (e) {
+      var m = e.detail.mode;
+      syncPicker(m);
+      renderAll(m);
+    });
+    var start = window.Resef.getMode();
+    syncPicker(start);
+    renderAll(start);
+  } else {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var m = btn.getAttribute('data-set-mode');
+        document.documentElement.setAttribute('data-mode', m);
+        syncPicker(m); renderAll(m);
+      });
+    });
+    syncPicker('routine'); renderAll('routine');
+  }
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* ---------- ניווט: העברת aria-current="page" בלחיצה (עוגנים בלבד) ---------- */
+  document.querySelectorAll('.sidebar__nav').forEach(function (nav) {
+    nav.addEventListener('click', function (e) {
+      var item = e.target.closest('.sidebar__item');
+      if (!item) return;
+      var href = item.getAttribute('href') || '';
+      if (href.charAt(0) !== '#') return;   /* קישור לעמוד אחר — לא לחסום */
+      nav.querySelectorAll('[aria-current="page"]').forEach(function (a) { a.removeAttribute('aria-current'); });
+      item.setAttribute('aria-current', 'page');
+      var shell = nav.closest('.app-shell');
+      if (shell) shell.classList.remove('is-nav-open');
+    });
+  });
+
+  /* ---------- פאנל פעמון (טופ-בר) ---------- */
+  var bellBtn = el('bellBtn'), bellPanel = el('bellPanel');
+  function closePanel() { bellPanel.hidden = true; bellBtn.setAttribute('aria-expanded', 'false'); }
+  function openPanel() {
+    bellPanel.hidden = false; bellBtn.setAttribute('aria-expanded', 'true');
+    var first = bellPanel.querySelector('button, a[href]');
+    if (first) first.focus();
+  }
+  if (bellBtn && bellPanel) {
+    bellBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (bellPanel.hidden) openPanel(); else closePanel();
+    });
+    document.addEventListener('click', function (e) {
+      if (!bellPanel.hidden && !bellPanel.contains(e.target) && e.target !== bellBtn) closePanel();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !bellPanel.hidden) { closePanel(); bellBtn.focus(); }
+    });
+  }
+
+  /* ---------- Toast הדגמה ---------- */
+  var toast = el('toast'), toastText = el('toast-text'), toastTimer = null;
+  function showToast(msg) {
+    if (!toast || !msg) return;
+    toastText.textContent = msg;
+    toast.classList.add('is-on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('is-on'); }, 2600);
+  }
+  document.querySelectorAll('.dashboard__actions [data-toast]').forEach(function (b) {
+    b.addEventListener('click', function () { showToast(b.getAttribute('data-toast')); });
+  });
+})();
+</script>
+</body>
+</html>

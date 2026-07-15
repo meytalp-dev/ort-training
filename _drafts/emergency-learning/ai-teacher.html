@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>עוזר AI לתוכן · המורה — רֶצֶף</title>
+<!-- favicon: סמל רֶצֶף (ריבוע-מותג + 3 קווים) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     עוזר AI לתוכן (W8-01) — מסך מורה, גל B.
+     AI על חומר לימוד בלבד: חילוץ מטרות · פירוק מצגת · שאלות/משוב ·
+     קיצור/התאמת שפה (3 פרומפטים) · 3 רמות תמיכה · כרטיס יציאה.
+     אף פעם על נתוני תלמיד (W0-S4) — כל קריאה עוברת דרך ai-boundary.js.
+     צורך tokens.css + components.css. כל צבע/מידה מטוקנים בלבד.
+     ============================================================ */
+  * { box-sizing: border-box; }
+
+  /* ---------- כותרת עמוד ---------- */
+  .page-head { display: flex; align-items: flex-start; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4); }
+  .page-head__text { flex: 1 1 260px; min-width: 0; }
+  .page-head h1 { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 700; color: var(--ink-strong); margin: 0 0 4px; }
+  .page-head p { color: var(--ink-soft); margin: 0; font-size: var(--text-body); }
+
+  /* ---------- באנר הגבול (W0-S4) ---------- */
+  .boundary-banner {
+    display: flex; align-items: flex-start; gap: var(--space-3);
+    background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4); margin-bottom: var(--space-5);
+  }
+  .boundary-banner__icon { flex: 0 0 auto; color: var(--brand-deep); margin-top: 2px; }
+  .boundary-banner__icon svg { width: 22px; height: 22px; }
+  .boundary-banner__text { flex: 1 1 auto; min-width: 0; }
+  .boundary-banner__text strong { color: var(--ink-strong); font-weight: 700; }
+  .boundary-banner__text p { margin: 2px 0 0; font-size: var(--text-small); color: var(--ink-soft); line-height: 1.5; }
+  .boundary-banner__text code { font-family: ui-monospace, monospace; font-size: 12px; background: var(--card); border: 1px solid var(--brand-line); border-radius: 6px; padding: 1px 5px; color: var(--brand-deep); }
+
+  /* ---------- מסילת התהליך (קו הרצף) ---------- */
+  .flow-rail { margin-bottom: var(--space-6); }
+  .flow-rail .sequence { max-width: 760px; }
+
+  /* ---------- פריסת סדנה: חומר+פעולות | טיוטה ---------- */
+  .workspace { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); align-items: start; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-card); overflow: hidden; }
+  .panel__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--line); }
+  .panel__head h2 { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700; color: var(--ink-strong); margin: 0; }
+  .panel__head .panel__ico { color: var(--brand-deep); display: inline-flex; }
+  .panel__head .panel__ico svg { width: 20px; height: 20px; }
+  .panel__tag { font-size: var(--text-label); font-weight: 600; color: var(--brand-deep); background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--radius-pill); padding: 2px 10px; margin-inline-start: auto; }
+  .panel__body { padding: var(--space-4) var(--space-5) var(--space-5); }
+
+  /* ---------- בורר חומר ---------- */
+  .src-picker { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--space-4); }
+  .src-picker > label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); }
+  .src-picker select {
+    font-family: var(--font-body); font-size: var(--text-body); color: var(--ink);
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-btn);
+    min-height: var(--tap); padding: 0 var(--space-3); cursor: pointer; width: 100%;
+  }
+  .src-picker select:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+
+  /* ---------- כרטיס חומר לימוד ---------- */
+  .material-card { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); padding: var(--space-4); margin-bottom: var(--space-5); }
+  .material-card__top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .kind-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; border-radius: var(--radius-pill); padding: 2px 9px; color: var(--brand-deep); background: var(--brand-soft); border: 1px solid var(--brand-line); }
+  .kind-chip svg { width: 13px; height: 13px; }
+  .material-card h3 { font-size: var(--text-h3); font-weight: 700; color: var(--ink-strong); margin: 0 0 2px; font-family: var(--font-head); }
+  .material-card__sub { font-size: var(--text-small); color: var(--ink-soft); margin: 0 0 10px; }
+  .material-body { font-size: var(--text-small); color: var(--ink); line-height: 1.6; }
+  .material-body .m-screen { padding: 8px 0; border-top: 1px dashed var(--line-strong); }
+  .material-body .m-screen:first-child { border-top: none; }
+  .material-body .m-screen b { color: var(--ink-strong); }
+  .material-body .m-tag { display: inline-block; font-size: 11px; font-weight: 600; color: var(--ink-soft); background: var(--surface-muted); border-radius: 6px; padding: 1px 6px; margin-inline-end: 6px; }
+
+  /* ---------- רשת פעולות AI ---------- */
+  .actions-title { font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); text-transform: none; margin: 0 0 var(--space-3); letter-spacing: 0; }
+  .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .action-card {
+    display: flex; flex-direction: column; gap: 6px; text-align: start;
+    border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--card);
+    padding: var(--space-3) var(--space-4); cursor: pointer; min-height: var(--tap);
+    font-family: var(--font-body); transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  }
+  .action-card:hover:not(:disabled) { border-color: var(--brand-line); box-shadow: var(--shadow-card); }
+  .action-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .action-card:disabled { opacity: .5; cursor: default; }
+  .action-card__head { display: flex; align-items: center; gap: 8px; }
+  .action-card__head .a-ico { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: var(--brand-soft); color: var(--brand-deep); flex: 0 0 auto; }
+  .action-card__head .a-ico svg { width: 18px; height: 18px; }
+  .action-card__head b { font-size: var(--text-small); font-weight: 700; color: var(--ink-strong); }
+  .action-card__desc { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; margin: 0; }
+  .action-card.is-busy { border-color: var(--brand); }
+
+  /* ---------- הדגמת גבול ---------- */
+  .demo-toggle { display: flex; align-items: flex-start; gap: 10px; margin-top: var(--space-5); padding: var(--space-3) var(--space-4); border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); background: var(--surface-muted); }
+  .demo-toggle input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--emergency); flex: 0 0 auto; cursor: pointer; }
+  .demo-toggle label { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; cursor: pointer; }
+  .demo-toggle label b { color: var(--ink-strong); }
+
+  /* ---------- פאנל טיוטה ---------- */
+  .draft-empty { text-align: center; padding: var(--space-8) var(--space-4); color: var(--ink-soft); }
+  .draft-empty__line { display: inline-flex; align-items: center; gap: 6px; margin-bottom: var(--space-4); }
+  .draft-empty__line .n { width: 12px; height: 12px; border-radius: 50%; border: 3px solid var(--brand); background: var(--card); }
+  .draft-empty__line .n.dim { border-color: var(--line-strong); }
+  .draft-empty__line .l { width: 40px; height: 2px; border-radius: 999px; background: var(--brand); }
+  .draft-empty__line .l.dim { background: var(--line-strong); }
+  .draft-empty p { margin: 0; font-size: var(--text-small); }
+  .draft-empty p.big { font-size: var(--text-body); font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+
+  .draft { display: none; }
+  .draft.is-on { display: block; }
+  .draft__actname { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-label); font-weight: 700; color: var(--brand-deep); background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--radius-pill); padding: 3px 11px; margin-bottom: var(--space-3); }
+  .draft__actname svg { width: 14px; height: 14px; }
+
+  .draft-block { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-soft); padding: var(--space-4); margin-bottom: var(--space-4); }
+  .draft-block h4 { font-size: var(--text-small); font-weight: 700; color: var(--ink-strong); margin: 0 0 8px; }
+  .draft-block ul, .draft-block ol { margin: 0; padding-inline-start: 20px; }
+  .draft-block li { font-size: var(--text-small); color: var(--ink); line-height: 1.6; margin-bottom: 6px; }
+  .draft-block li:last-child { margin-bottom: 0; }
+  .draft-screen { padding: 8px 0; border-top: 1px dashed var(--line-strong); font-size: var(--text-small); color: var(--ink); line-height: 1.55; }
+  .draft-screen:first-of-type { border-top: none; }
+  .draft-screen b { color: var(--ink-strong); }
+  .draft-screen .m-tag { display: inline-block; font-size: 11px; font-weight: 600; color: var(--ink-soft); background: var(--surface-muted); border-radius: 6px; padding: 1px 6px; margin-inline-end: 6px; }
+  .draft-screen.is-new { background: var(--brand-soft); border-radius: 8px; padding: 8px 10px; border-top: none; }
+  .draft-screen.is-new::before { content: "חדש"; font-size: 10px; font-weight: 700; color: var(--card); background: var(--brand); border-radius: 5px; padding: 1px 6px; margin-inline-end: 8px; }
+
+  /* רשימת "מה שיניתי" */
+  .changes-block { border: 1px solid var(--brand-line); background: var(--brand-soft); border-radius: var(--radius-sm); padding: var(--space-4); margin-bottom: var(--space-4); }
+  .changes-block h4 { color: var(--brand-dark); display: flex; align-items: center; gap: 6px; }
+  .changes-block h4 svg { width: 16px; height: 16px; }
+  .changes-block li { color: var(--brand-dark); }
+
+  /* צ'יפים של בקרות עצמיות */
+  .controls-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-4); }
+  .ctl-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; border-radius: var(--radius-pill); padding: 3px 10px; border: 1px solid; }
+  .ctl-chip svg { width: 13px; height: 13px; }
+  .ctl-chip--ok { color: var(--status-good); background: #EAF7EE; border-color: #C4E9CE; }
+  .ctl-chip--warn { color: #9A6E12; background: #FBF3E0; border-color: #EAD9A8; }
+
+  /* דגלים למורה */
+  .flags-block { border: 1px solid #EAD9A8; background: #FBF3E0; border-radius: var(--radius-sm); padding: var(--space-4); margin-bottom: var(--space-4); }
+  .flags-block h4 { color: #7A5610; display: flex; align-items: center; gap: 6px; }
+  .flags-block h4 svg { width: 16px; height: 16px; }
+  .flags-block li { color: #7A5610; }
+
+  /* שורת אישור */
+  .draft-approve { display: flex; gap: var(--space-3); flex-wrap: wrap; padding-top: var(--space-4); border-top: 1px solid var(--line); }
+  .owner-note { font-size: 12px; color: var(--ink-faint); margin: var(--space-3) 0 0; line-height: 1.5; }
+
+  /* חסימת גבול */
+  .draft-blocked { display: none; text-align: center; padding: var(--space-6) var(--space-4); }
+  .draft-blocked.is-on { display: block; }
+  .draft-blocked__icon { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 50%; background: var(--emergency-soft); color: var(--emergency); border: 1px solid var(--emergency-line); margin-bottom: var(--space-4); }
+  .draft-blocked__icon svg { width: 28px; height: 28px; }
+  .draft-blocked h3 { font-size: var(--text-h3); font-weight: 700; color: var(--ink-strong); margin: 0 0 6px; }
+  .draft-blocked p { font-size: var(--text-small); color: var(--ink-soft); margin: 0 auto var(--space-3); max-width: 380px; line-height: 1.6; }
+  .draft-blocked code { font-family: ui-monospace, monospace; font-size: 12px; background: var(--card); border: 1px solid var(--line-strong); border-radius: 6px; padding: 2px 7px; color: var(--ink); display: inline-block; margin-top: 4px; word-break: break-all; }
+
+  /* ---------- רספונסיביות ---------- */
+  @media (max-width: 1024px) {
+    .workspace { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .actions-grid { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ מאגר אייקונים (sprite) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="M5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16Z"/><path d="M19 14l.6 1.6L21 16l-1.4.4L19 18l-.6-1.6L17 16l1.4-.4L19 14Z"/></symbol>
+  <symbol id="ic-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="ic-slides" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+  <symbol id="ic-help-circ" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.8 2.8-2.8 2.8"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-type" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2M9 20h6M12 5v15"/></symbol>
+  <symbol id="ic-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5M2 17l10 5 10-5"/></symbol>
+  <symbol id="ic-ticket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M13 7v10"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-check-circ" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="m22 4-10 10.01L9 11"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></symbol>
+  <symbol id="ic-shield-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.7 14A8.5 8.5 0 0 0 20 12V5l-8-3-3.3 1.24"/><path d="M4.7 4.7 4 5v7c0 6 8 10 8 10a15.6 15.6 0 0 0 4.3-2.9"/><line x1="2" y1="2" x2="22" y2="22"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+</svg>
+
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar (מורה) -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="teacher-dashboard.html" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="teacher-class-board.html" aria-label="הכיתה שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+        <span class="sidebar__label">הכיתה שלי</span>
+      </a>
+
+      <div class="sidebar__section">תוכן</div>
+      <a class="sidebar__item" href="library.html" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="lesson-create.html" aria-label="יצירת שיעור">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">יצירת שיעור</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="עוזר AI לתוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-sparkles"/></svg></span>
+        <span class="sidebar__label">עוזר AI לתוכן</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רותם לוי</div>
+          <div class="sidebar__foot-role">מורה · לשון</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">עוזר AI לתוכן</div>
+        <div class="topbar__subtitle">רותם לוי · חומר לימוד בלבד</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (3 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">3</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+
+        <!-- כותרת -->
+        <div class="page-head">
+          <div class="page-head__text">
+            <h1>עוזר AI לתוכן</h1>
+            <p>בחרו חומר לימוד, בחרו פעולה — וקבלו טיוטה שאתם קוראים ומאשרים לפני שליחה.</p>
+          </div>
+        </div>
+
+        <!-- באנר הגבול (W0-S4) -->
+        <div class="boundary-banner" role="note">
+          <span class="boundary-banner__icon" aria-hidden="true"><svg><use href="#ic-shield"/></svg></span>
+          <div class="boundary-banner__text">
+            <strong>ה-AI עובד רק על חומר לימוד — אף פעם על נתוני תלמיד.</strong>
+            <p>כל פעולה נשלחת דרך שער אחד (<code>ai-boundary.js</code>) שבודק שרק תוכן — לא שם, ציון, נוכחות או check-in — יוצא למודל. המורה הוא הבעלים: ה-AI מכין טיוטה, אתם קוראים, עורכים ומאשרים. הוא לא שולח כלום לתלמיד בעצמו.</p>
+          </div>
+        </div>
+
+        <!-- מסילת התהליך — קו הרצף -->
+        <div class="flow-rail">
+          <ol class="sequence sequence--horizontal" aria-label="שלבי העבודה עם עוזר ה-AI">
+            <li class="sequence-step is-current" aria-current="step"><span class="sequence-node"></span><span class="sequence-label">בחירת חומר</span></li>
+            <li class="sequence-step is-upcoming"><span class="sequence-node"></span><span class="sequence-label">בחירת פעולה</span></li>
+            <li class="sequence-step is-upcoming"><span class="sequence-node"></span><span class="sequence-label">טיוטת AI</span></li>
+            <li class="sequence-step is-upcoming"><span class="sequence-node"></span><span class="sequence-label">אישור המורה</span></li>
+            <li class="sequence-step is-upcoming"><span class="sequence-node"></span><span class="sequence-label">צירוף ליחידה</span></li>
+          </ol>
+        </div>
+
+        <!-- סדנה -->
+        <div class="workspace">
+
+          <!-- פאנל חומר + פעולות -->
+          <section class="panel" aria-labelledby="src-h">
+            <div class="panel__head">
+              <span class="panel__ico" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+              <h2 id="src-h">חומר הלימוד</h2>
+              <span class="panel__tag">תוכן בלבד</span>
+            </div>
+            <div class="panel__body">
+              <div class="src-picker">
+                <label for="src-select">בחרו חומר מהספרייה או מהעלאה שלכם</label>
+                <select id="src-select" aria-label="בחירת חומר לימוד">
+                  <option value="civics">מסמך · אזרחות — הפרדת רשויות (י׳)</option>
+                  <option value="history">מצגת · היסטוריה — המהפכה התעשייתית (י׳)</option>
+                  <option value="lashon">יחידה · לשון — שם הפועל (ט׳)</option>
+                </select>
+              </div>
+
+              <div class="material-card" id="material-card" aria-live="polite">
+                <!-- מוזרם ב-JS -->
+              </div>
+
+              <p class="actions-title">פעולות AI על החומר הזה</p>
+              <div class="actions-grid" id="actions-grid" role="group" aria-label="פעולות עוזר ה-AI">
+                <!-- מוזרם ב-JS -->
+              </div>
+
+              <div class="demo-toggle">
+                <input type="checkbox" id="demo-leak" aria-describedby="demo-leak-desc">
+                <label for="demo-leak" id="demo-leak-desc">
+                  <b>הדגמת הגבול:</b> סמנו כדי לנסות "להזליג" מזהה תלמיד למעטפה. הפעלת כל פעולה תיחסם על-ידי <code style="font-family:ui-monospace,monospace;font-size:11px">ai-boundary.js</code> — כך רואים שהקו האדום נאכף בקוד, לא בהבטחה.
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <!-- פאנל טיוטה -->
+          <section class="panel" aria-labelledby="draft-h">
+            <div class="panel__head">
+              <span class="panel__ico" aria-hidden="true"><svg><use href="#ic-sparkles"/></svg></span>
+              <h2 id="draft-h">טיוטת ה-AI</h2>
+              <span class="panel__tag" id="draft-status">ממתין לפעולה</span>
+            </div>
+            <div class="panel__body">
+
+              <!-- מצב ריק -->
+              <div class="draft-empty" id="draft-empty">
+                <div class="draft-empty__line" aria-hidden="true">
+                  <span class="n"></span><span class="l"></span><span class="n dim"></span><span class="l dim"></span><span class="n dim"></span>
+                </div>
+                <p class="big">בחרו פעולה כדי לראות טיוטה</p>
+                <p>כל טיוטה מגיעה עם רשימת "מה שיניתי" — ואתם מאשרים לפני שליחה.</p>
+              </div>
+
+              <!-- חסימת גבול -->
+              <div class="draft-blocked" id="draft-blocked" role="alert">
+                <span class="draft-blocked__icon" aria-hidden="true"><svg><use href="#ic-shield-off"/></svg></span>
+                <h3>הגבול חסם את הקריאה</h3>
+                <p>המעטפה הכילה נתון תלמיד, ולכן <b>המודל לא נקרא בכלל</b>. זה בדיוק מה שאמור לקרות — AI ברֶצֶף עובד על חומר לימוד בלבד (W0-S4).</p>
+                <code id="blocked-detail"></code>
+              </div>
+
+              <!-- טיוטה -->
+              <div class="draft" id="draft" aria-live="polite">
+                <!-- מוזרם ב-JS -->
+              </div>
+
+            </div>
+          </section>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- אזור toast -->
+<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="false"></div>
+
+<!-- הגבול הארכיטקטוני — כל קריאת AI עוברת דרך כאן -->
+<script src="ai-boundary.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var navScrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (navScrim) navScrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('.app-shell__scrim[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  /* ============================================================
+     חומרי לימוד לדוגמה (מבנה ContentUnit — data-model §2.4).
+     תוכן בלבד: כותרת/מקצוע/גוף/מסכים. אין כאן שום נתון תלמיד.
+     ============================================================ */
+  var MATERIALS = {
+    civics: {
+      kind: 'document', kindLabel: 'מסמך', title: 'הפרדת רשויות', subject: 'אזרחות · כיתה י׳',
+      body: 'מנגנון הפרדת הרשויות נועד למנוע ריכוז עוצמה בלתי מבוקר בידי גורם יחיד, ובכך להבטיח את חירויות הפרט. עקרון הפרדת הרשויות קובע כי סמכויות השלטון מחולקות בין שלוש רשויות — המחוקקת, המבצעת והשופטת — אשר כל אחת מפקחת על רעותה במסגרת מערכת של איזונים ובלמים.',
+      screens: null
+    },
+    history: {
+      kind: 'presentation', kindLabel: 'מצגת', title: 'המהפכה התעשייתית', subject: 'היסטוריה · כיתה י׳',
+      body: null,
+      slides: [
+        'שקופית 1 — כותרת: המהפכה התעשייתית',
+        'שקופית 2: פעם כל דבר נעשה ביד — בבית, בכפר, לאט.',
+        'שקופית 3: מכונת הקיטור הפעילה מכונות בלי כוח אדם. פתאום אפשר לייצר הרבה, מהר, וזול.',
+        'שקופית 4: מפעל טקסטיל אחד ייצר בשבוע מה שכפר שלם ייצר ביד בשנה.',
+        'שקופית 5: אנשים עברו מהכפר לעיר, לעבוד במפעלים. החברה השתנתה.'
+      ],
+      screens: null
+    },
+    lashon: {
+      kind: 'unit', kindLabel: 'יחידה', title: 'שם הפועל', subject: 'לשון · כיתה ט׳', unit_type: 'task',
+      body: null,
+      screens: [
+        { type:'relevance', label:'פתיח', text:'האופן שבו אתה מנסח פעולה משתנה — לפעמים אתה אומר "לרוץ", לפעמים "רץ". מה ההבדל?' },
+        { type:'explain', label:'הסבר', heading:'שם הפועל', text:'שם הפועל הוא צורה בלתי נטויה של הפועל, המביעה את הפעולה באופן מופשט, ללא ציון הזמן או הגוף המבצע, ומאופיינת לרוב בתחילית "ל" (לכתוב, לרוץ).' },
+        { type:'example', label:'דוגמה', text:'"אני אוהב לרוץ בבוקר." המילה "לרוץ" היא שם הפועל — היא לא אומרת מתי ולא מי.' }
+      ]
+    }
+  };
+
+  /* ============================================================
+     פעולות ה-AI (W8-01). כל פעולה עובדת על חומר לימוד בלבד.
+     appliesTo — לאילו סוגי חומר הפעולה זמינה.
+     ============================================================ */
+  var ACTIONS = [
+    { id:'goals',    label:'חילוץ מטרות',       icon:'#ic-target',    desc:'שולף 2–4 מטרות לימוד מהמסמך — כטיוטה לאישור.', appliesTo:['document','presentation','unit'] },
+    { id:'breakdown',label:'פירוק מצגת ליחידה', icon:'#ic-slides',    desc:'הופך מצגת לרצף מסכים לפי מבנה 5 השלבים.',        appliesTo:['presentation','document'] },
+    { id:'questions',label:'יצירת שאלות ומשוב', icon:'#ic-help-circ', desc:'2–3 שאלות הבנה + משוב ורמז — בלי לחשוף תשובה.',   appliesTo:['document','presentation','unit'] },
+    { id:'simplify', label:'פשט שפה',           icon:'#ic-type',      desc:'אותו ידע, עברית פשוטה יותר. מושג חובה נשמר ומוסבר.', appliesTo:['unit','document'] },
+    { id:'levels',   label:'3 רמות תמיכה',      icon:'#ic-layers',    desc:'בסיס · רגיל · אתגר — אותו נושא, שלוש רמות עומק.',  appliesTo:['unit','document'] },
+    { id:'exit',     label:'כרטיס יציאה',       icon:'#ic-ticket',    desc:'1–3 שאלות סיכום קצרות לבדיקת הבנה בסוף היחידה.',   appliesTo:['unit','document','presentation'] }
+  ];
+
+  var currentId = 'civics';
+
+  /* ---------- רינדור כרטיס החומר ---------- */
+  function renderMaterial() {
+    var m = MATERIALS[currentId];
+    var inner = '';
+    inner += '<div class="material-card__top">';
+    inner += '<span class="kind-chip"><svg aria-hidden="true"><use href="#ic-book"/></svg>' + esc(m.kindLabel) + '</span>';
+    inner += '</div>';
+    inner += '<h3>' + esc(m.title) + '</h3>';
+    inner += '<div class="material-card__sub">' + esc(m.subject) + '</div>';
+    inner += '<div class="material-body">';
+    if (m.body) {
+      inner += '<p style="margin:0">' + esc(m.body) + '</p>';
+    } else if (m.slides) {
+      m.slides.forEach(function (s) { inner += '<div class="m-screen">' + esc(s) + '</div>'; });
+    } else if (m.screens) {
+      m.screens.forEach(function (s) {
+        inner += '<div class="m-screen"><span class="m-tag">' + esc(s.label) + '</span>';
+        if (s.heading) inner += '<b>' + esc(s.heading) + ':</b> ';
+        inner += esc(s.text) + '</div>';
+      });
+    }
+    inner += '</div>';
+    document.getElementById('material-card').innerHTML = inner;
+  }
+
+  /* ---------- רינדור כפתורי הפעולות ---------- */
+  function renderActions() {
+    var m = MATERIALS[currentId];
+    var html = '';
+    ACTIONS.forEach(function (a) {
+      var enabled = a.appliesTo.indexOf(m.kind) !== -1;
+      html += '<button class="action-card" type="button" data-action="' + a.id + '"' + (enabled ? '' : ' disabled aria-disabled="true"') + '>';
+      html += '<span class="action-card__head"><span class="a-ico" aria-hidden="true"><svg><use href="' + a.icon + '"/></svg></span><b>' + esc(a.label) + '</b></span>';
+      html += '<p class="action-card__desc">' + esc(a.desc) + (enabled ? '' : ' <span style="color:var(--ink-faint)">(לא רלוונטי לחומר זה)</span>') + '</p>';
+      html += '</button>';
+    });
+    document.getElementById('actions-grid').innerHTML = html;
+  }
+
+  /* ============================================================
+     בניית המעטפה (envelope) — רק חומר לימוד.
+     במצב הדגמה: מזליגים studentId כדי להוכיח שהשער חוסם.
+     ============================================================ */
+  function buildEnvelope(action) {
+    var m = MATERIALS[currentId];
+    var material = { title: m.title, subject: m.subject };
+    if (m.body) material.body = m.body;
+    if (m.slides) material.slides = m.slides.slice();
+    if (m.screens) material.screens = JSON.parse(JSON.stringify(m.screens));
+    if (m.unit_type) material.unit_type = m.unit_type;
+    if (action === 'goals') material.task = 'extract_goals';
+
+    var envelope = {
+      scope: 'learning_material',
+      actor: { role: 'teacher' },
+      material: material
+    };
+
+    // הדגמת הגבול: הזלגת נתון תלמיד — השער אמור לזרוק AiBoundaryError.
+    if (document.getElementById('demo-leak').checked) {
+      envelope.material.studentId = 'stu-8842';
+    }
+    return envelope;
+  }
+
+  /* ============================================================
+     "המודל" — סטאב מקומי. מקבל את material בלבד (לא את המעטפה).
+     במערכת האמיתית: קריאת claude-sonnet-5 לפי ai-teacher-prompts.md.
+     כאן: מחזיר טיוטה מובנית להדגמת הזרימה והאישור.
+     ============================================================ */
+  function callModel(material) {
+    // material.title קובע איזו טיוטה מוחזרת (דטרמיניסטי, לצורך הדגמה).
+    return DRAFTS[lastAction](MATERIALS[currentId]);
+  }
+
+  var lastAction = 'goals';
+
+  /* ---------- מחוללי הטיוטות (per-action) ---------- */
+  var DRAFTS = {
+    goals: function (m) {
+      return {
+        title: 'מטרות שחולצו מהחומר',
+        controls: [
+          { ok:true,  text:'אפס המצאה — כל מטרה נשענת על מה שבמסמך' },
+          { ok:true,  text:'לא נגזר מנתון תלמיד' }
+        ],
+        result:
+          '<div class="draft-block"><h4>מטרות לימוד (טיוטה)</h4><ol>' +
+          '<li>התלמיד יסביר מהי הפרדת רשויות ומדוע היא קיימת.</li>' +
+          '<li>התלמיד יזהה את שלוש הרשויות — מחוקקת, מבצעת ושופטת — ומה תפקיד כל אחת.</li>' +
+          '<li>התלמיד ידגים כיצד רשות אחת מפקחת על רעותה (איזונים ובלמים).</li>' +
+          '</ol></div>',
+        changes: [
+          'ניסחתי 3 מטרות מתוך המסמך — לא הוספתי מטרה שאין לה בסיס בטקסט.',
+          'כל מטרה מנוסחת כפועל שהתלמיד עושה ("יסביר", "יזהה", "ידגים"), לשימושך בהמשך.'
+        ],
+        flags: [],
+        pedagogyRecheck: true
+      };
+    },
+    breakdown: function (m) {
+      return {
+        title: 'המצגת פורקה ליחידה',
+        controls: [
+          { ok:true, text:'מבנה 5 השלבים נשמר' },
+          { ok:true, text:'אפס המצאה — רק תוכן מהשקופיות' }
+        ],
+        result:
+          '<div class="draft-block"><h4>יחידה מוצעת (מבנה מסכים)</h4>' +
+          '<div class="draft-screen"><span class="m-tag">פתיח</span>פעם כל דבר נעשה ביד. ואז הגיעה מכונה ששינתה הכול. איך זה קשור לטלפון שבידך?</div>' +
+          '<div class="draft-screen"><span class="m-tag">הסבר</span><b>מכונת הקיטור:</b> היא הפעילה מכונות בלי כוח שריר. פתאום אפשר לייצר הרבה, מהר, וזול.</div>' +
+          '<div class="draft-screen"><span class="m-tag">דוגמה</span>מפעל טקסטיל אחד ייצר בשבוע מה שכפר שלם ייצר ביד בשנה.</div>' +
+          '<div class="draft-screen"><span class="m-tag">שאלות</span>2 שאלות הבנה על מה השתנה ולמה (ראו פעולת "יצירת שאלות").</div>' +
+          '<div class="draft-screen"><span class="m-tag">סיום</span>3 דברים לזכור: מיד → מכונה, ייצור המוני, מעבר לעיר.</div>' +
+          '</div>',
+        changes: [
+          'המרתי 5 שקופיות ל-5 מסכים במבנה: פתיח → הסבר → דוגמה → שאלות → סיום.',
+          'לא הוספתי עובדה, שם או תאריך שלא היו במצגת. מסך השאלות סומן להשלמה בפעולה נפרדת.',
+          'שקופית הכותרת הפכה למסך פתיח עם שאלה מעוררת — אותו תוכן, ניסוח פותח.'
+        ],
+        flags: [
+          'המצגת לא כללה שאלות הבנה — הוספתי מסך "שאלות" ריק שדורש מילוי. הפעילו "יצירת שאלות" או מלאו ידנית.'
+        ],
+        pedagogyRecheck: true
+      };
+    },
+    questions: function (m) {
+      return {
+        title: 'שאלות הבנה + משוב',
+        controls: [
+          { ok:true, text:'שאלות מבוססות על החומר בלבד' },
+          { ok:true, text:'רמז ומשוב — בלי לחשוף תשובה מראש' }
+        ],
+        result:
+          '<div class="draft-block"><h4>שאלה 1 (אמריקאית)</h4>' +
+          '<ul><li><b>שאלה:</b> מהו שם הפועל?</li>' +
+          '<li><b>תשובות:</b> א. הפועל בצורתו הבסיסית, בלי זמן ובלי גוף · ב. הפועל בזמן עבר · ג. שם עצם</li>' +
+          '<li><b>משוב לתשובה נכונה:</b> נכון — שם הפועל מביע את הפעולה בלי מתי ובלי מי.</li>' +
+          '<li><b>רמז אחרי טעות:</b> חשוב על "לרוץ" — האם היא מספרת מתי הפעולה קרתה?</li></ul></div>' +
+          '<div class="draft-block"><h4>שאלה 2 (זיהוי)</h4>' +
+          '<ul><li><b>שאלה:</b> באיזו מילה יש שם הפועל — "רצתי" או "לרוץ"?</li>' +
+          '<li><b>משוב לתשובה נכונה:</b> נכון, "לרוץ" מתחילה ב-ל ואין בה זמן או גוף.</li>' +
+          '<li><b>רמז אחרי טעות:</b> איזו מילה מתחילה באות ל׳?</li></ul></div>',
+        changes: [
+          'יצרתי 2 שאלות הבנה מהחומר — כל אחת עם משוב לתשובה נכונה ורמז לטעות.',
+          'הרמז מכוון לחשיבה, לא חושף את התשובה (עקרון ai-redlines בדיקה #4).',
+          'לא הוספתי מושג שלא נלמד ביחידה.'
+        ],
+        flags: [],
+        pedagogyRecheck: true
+      };
+    },
+    simplify: function (m) {
+      return {
+        title: 'גרסה בעברית פשוטה',
+        controls: [
+          { ok:true, text:'מבנה נשמר — אותם מסכים, אותו סדר' },
+          { ok:true, text:'מושג חובה נשמר והוסבר' },
+          { ok:true, text:'אפס המצאה' }
+        ],
+        result:
+          '<div class="draft-block"><h4>מקור מול מפושט — מסך ההסבר</h4>' +
+          '<div class="draft-screen"><span class="m-tag">מקור</span>שם הפועל הוא צורה בלתי נטויה של הפועל, המביעה את הפעולה באופן מופשט, ללא ציון הזמן או הגוף המבצע, ומאופיינת לרוב בתחילית "ל".</div>' +
+          '<div class="draft-screen is-new">שם הפועל הוא הפועל בצורתו הבסיסית. הוא מתחיל ב-ל: לכתוב, לרוץ, לאכול. הוא לא מספר לנו מתי (זמן) ולא מי (גוף). רק את הפעולה עצמה.</div>' +
+          '</div>',
+        changes: [
+          'החלפתי "צורה בלתי נטויה", "מביעה באופן מופשט", "הגוף המבצע", "מאופיינת בתחילית" במילים יומיומיות.',
+          'פירקתי משפט אחד ארוך לארבעה קצרים.'
+        ],
+        preserved: [
+          { c:'שם הפועל', kept:'נשמר — הוסבר כ"הפועל בצורתו הבסיסית".' },
+          { c:'תחילית ל׳', kept:'נשמר — הוסבר כ"מתחיל ב-ל".' },
+          { c:'בלי זמן ובלי גוף', kept:'נשמר — "לא מתי ולא מי".' }
+        ],
+        flags: [],
+        pedagogyRecheck: true
+      };
+    },
+    levels: function (m) {
+      return {
+        title: '3 רמות תמיכה',
+        controls: [
+          { ok:true, text:'אותו נושא בשלוש הרמות' },
+          { ok:true, text:'מושג חובה נשמר בכל רמה' }
+        ],
+        result:
+          '<div class="draft-block"><h4>בסיס <span class="m-tag" style="background:#EAF7EE;color:var(--status-good)">level: basic</span></h4>' +
+          '<p style="margin:0;font-size:var(--text-small);line-height:1.6">מסך אחד: "שם הפועל = הפועל שמתחיל ב-ל: לרוץ, לכתוב." דוגמה אחת + שאלה אחת. פחות עומס, אותו מושג.</p></div>' +
+          '<div class="draft-block"><h4>רגיל <span class="m-tag">level: standard</span></h4>' +
+          '<p style="margin:0;font-size:var(--text-small);line-height:1.6">היחידה כמו שהיא: הסבר + דוגמה + 2 שאלות. "לא מתי, לא מי — רק הפעולה".</p></div>' +
+          '<div class="draft-block"><h4>אתגר <span class="m-tag" style="background:var(--brand-soft);color:var(--brand-deep)">level: challenge</span></h4>' +
+          '<p style="margin:0;font-size:var(--text-small);line-height:1.6">שאלה נוספת: להבחין בין שם הפועל לבין שם פעולה ("ריצה"). אותו נושא, עומק נוסף — בלי חומר חדש שלא נלמד.</p></div>',
+        changes: [
+          'יצרתי 3 גרסאות מאותה יחידה: בסיס (פחות מסכים), רגיל (כמו המקור), אתגר (שאלת הבחנה נוספת).',
+          'המושג "שם הפועל" והכלל "בלי זמן ובלי גוף" נשמרו בכל שלוש הרמות.',
+          'רמת האתגר נשענת על הבחנה בתוך הנושא — לא על תוכן חיצוני חדש.'
+        ],
+        flags: [
+          'רמת האתגר מזכירה "שם פעולה". אם עדיין לא נלמד בכיתה — הסירו, או שבצו את גרסת האתגר רק למי שמוכן.'
+        ],
+        pedagogyRecheck: true
+      };
+    },
+    exit: function (m) {
+      return {
+        title: 'כרטיס יציאה',
+        controls: [
+          { ok:true, text:'קצר — בדיקת הבנה בסוף היחידה' },
+          { ok:true, text:'נשען על מה שנלמד ביחידה' }
+        ],
+        result:
+          '<div class="draft-block"><h4>כרטיס יציאה (טיוטה)</h4><ol>' +
+          '<li>במילים שלך: מה זה שם הפועל?</li>' +
+          '<li>סמן את שם הפועל: "אני רוצה <b>ללמוד</b> לנגן." — איזו מילה?</li>' +
+          '<li>דרג 1–3: כמה הרגשת שהבנת את הנושא? (1 = צריך עוד הסבר, 3 = הבנתי)</li>' +
+          '</ol></div>',
+        changes: [
+          'יצרתי כרטיס יציאה עם 3 שאלות: הבנה במילים שלך, זיהוי, ודירוג עצמי.',
+          'כל השאלות על מה שנלמד ביחידה — בלי מושג חדש.',
+          'שאלת הדירוג העצמי היא מטא-קוגניציה קלה, לא ציון — לשיקולך אם להשאיר.'
+        ],
+        flags: [],
+        pedagogyRecheck: true
+      };
+    }
+  };
+
+  /* ---------- רינדור הטיוטה ---------- */
+  function renderDraft(d, actionLabel) {
+    var html = '';
+    html += '<span class="draft__actname"><svg aria-hidden="true"><use href="#ic-sparkles"/></svg>' + esc(actionLabel) + '</span>';
+
+    // בקרות עצמיות
+    if (d.controls && d.controls.length) {
+      html += '<div class="controls-row">';
+      d.controls.forEach(function (c) {
+        html += '<span class="ctl-chip ' + (c.ok ? 'ctl-chip--ok' : 'ctl-chip--warn') + '"><svg aria-hidden="true"><use href="' + (c.ok ? '#ic-check' : '#ic-alert') + '"/></svg>' + esc(c.text) + '</span>';
+      });
+      html += '</div>';
+    }
+
+    // התוצאה
+    html += d.result;
+
+    // מושגים שנשמרו (פרומפט "פשט שפה")
+    if (d.preserved && d.preserved.length) {
+      html += '<div class="draft-block"><h4>מושגים שנשמרו</h4><ul>';
+      d.preserved.forEach(function (p) { html += '<li><b>' + esc(p.c) + ':</b> ' + esc(p.kept) + '</li>'; });
+      html += '</ul></div>';
+    }
+
+    // רשימת "מה שיניתי" — חובה
+    html += '<div class="changes-block"><h4><svg aria-hidden="true"><use href="#ic-list"/></svg>מה שיניתי — קראו ואשרו</h4><ul>';
+    d.changes.forEach(function (c) { html += '<li>' + esc(c) + '</li>'; });
+    html += '</ul></div>';
+
+    // דגלים למורה
+    if (d.flags && d.flags.length) {
+      html += '<div class="flags-block"><h4><svg aria-hidden="true"><use href="#ic-alert"/></svg>לתשומת לבך — החלטה שלך</h4><ul>';
+      d.flags.forEach(function (f) { html += '<li>' + esc(f) + '</li>'; });
+      html += '</ul></div>';
+    }
+
+    // תזכורת אימות פדגוגי מחדש (החלטת מיטל · ai-teacher-prompts §7)
+    if (d.pedagogyRecheck) {
+      html += '<div class="controls-row"><span class="ctl-chip ctl-chip--warn"><svg aria-hidden="true"><use href="#ic-shield"/></svg>נדרש אימות פדגוגי מחדש לפני שליחה</span></div>';
+    }
+
+    // שורת אישור — המורה הוא הבעלים
+    html += '<div class="draft-approve">';
+    html += '<button class="btn btn--primary" type="button" data-approve><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-check-circ"/></svg>אשר וצרף ליחידה</button>';
+    html += '<button class="btn btn--secondary" type="button" data-edit><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-edit"/></svg>ערוך ידנית</button>';
+    html += '<button class="btn btn--ghost" type="button" data-discard>בטל טיוטה</button>';
+    html += '</div>';
+    html += '<p class="owner-note">ה-AI לא שולח כלום לתלמיד. הטיוטה נשמרת רק אם תאשרו — ואז חוזרת לבדיקת ההבנה הפדגוגית לפני שיבוץ במשלוח.</p>';
+
+    return html;
+  }
+
+  /* ---------- מצבי הפאנל הימני ---------- */
+  var elEmpty = document.getElementById('draft-empty');
+  var elBlocked = document.getElementById('draft-blocked');
+  var elDraft = document.getElementById('draft');
+  var elStatus = document.getElementById('draft-status');
+
+  function showEmpty() {
+    elEmpty.style.display = '';
+    elBlocked.classList.remove('is-on');
+    elDraft.classList.remove('is-on');
+    elDraft.innerHTML = '';
+    elStatus.textContent = 'ממתין לפעולה';
+  }
+  function showBlocked(detail) {
+    elEmpty.style.display = 'none';
+    elDraft.classList.remove('is-on');
+    elDraft.innerHTML = '';
+    elBlocked.classList.add('is-on');
+    document.getElementById('blocked-detail').textContent = detail;
+    elStatus.textContent = 'נחסם';
+  }
+  function showDraft(html, label) {
+    elEmpty.style.display = 'none';
+    elBlocked.classList.remove('is-on');
+    elDraft.innerHTML = html;
+    elDraft.classList.add('is-on');
+    elStatus.textContent = 'טיוטה · ' + label;
+  }
+
+  /* ---------- toast ---------- */
+  function toast(msg, kind) {
+    var region = document.getElementById('toast-region');
+    var t = document.createElement('div');
+    t.className = 'toast' + (kind === 'ok' ? ' toast--good' : '');
+    t.setAttribute('role', 'status');
+    t.innerHTML = '<span class="toast__icon" aria-hidden="true"><svg><use href="#ic-check"/></svg></span><span class="toast__msg">' + esc(msg) + '</span>';
+    region.appendChild(t);
+    setTimeout(function () { t.setAttribute('data-leaving', 'true'); setTimeout(function () { t.remove(); }, 200); }, 3200);
+  }
+
+  /* ============================================================
+     הפעלת פעולה — כל קריאה עוברת דרך RETZEF_AI_BOUNDARY.gateway().
+     אם המעטפה מכילה נתון תלמיד — gateway זורק AiBoundaryError,
+     המודל לא נקרא, ואנחנו מציגים חסימה.
+     ============================================================ */
+  function runAction(actionId, btn) {
+    var action = ACTIONS.filter(function (a) { return a.id === actionId; })[0];
+    if (!action) return;
+    lastAction = actionId;
+
+    var envelope = buildEnvelope(actionId);
+    if (btn) btn.classList.add('is-busy');
+    elStatus.textContent = 'מריץ…';
+
+    RETZEF_AI_BOUNDARY.gateway(envelope, callModel)
+      .then(function (draft) {
+        if (btn) btn.classList.remove('is-busy');
+        showDraft(renderDraft(draft, action.label), action.label);
+      })
+      .catch(function (err) {
+        if (btn) btn.classList.remove('is-busy');
+        if (err && err.name === 'AiBoundaryError') {
+          var where = '';
+          if (err.detail && err.detail.hits && err.detail.hits.length) {
+            where = err.detail.hits.map(function (h) { return h.path + ' (' + h.reason + ')'; }).join(' · ');
+          } else if (err.detail && err.detail.field) {
+            where = err.detail.field;
+          }
+          showBlocked('AiBoundaryError: ' + err.message + (where ? '  →  ' + where : ''));
+          toast('הגבול חסם — נתוני תלמיד לא נשלחים למודל', 'block');
+        } else {
+          showBlocked('שגיאה לא צפויה: ' + (err && err.message ? err.message : err));
+        }
+      });
+  }
+
+  /* ---------- אירועים ---------- */
+  document.getElementById('actions-grid').addEventListener('click', function (e) {
+    var btn = e.target.closest('.action-card');
+    if (!btn || btn.disabled) return;
+    runAction(btn.getAttribute('data-action'), btn);
+  });
+
+  document.getElementById('src-select').addEventListener('change', function (e) {
+    currentId = e.target.value;
+    renderMaterial();
+    renderActions();
+    showEmpty();
+  });
+
+  document.getElementById('demo-leak').addEventListener('change', function () {
+    showEmpty();
+  });
+
+  // כפתורי הטיוטה (אישור / עריכה / ביטול) — מוקצים בדלגציה
+  elDraft.addEventListener('click', function (e) {
+    if (e.target.closest('[data-approve]')) {
+      toast('הטיוטה אושרה. נשמרה כיחידה חדשה — ממתינה לאימות פדגוגי לפני שיבוץ.', 'ok');
+    } else if (e.target.closest('[data-edit]')) {
+      toast('פתיחת עריכה ידנית — כאן המורה עורך לפני אישור.', 'ok');
+    } else if (e.target.closest('[data-discard]')) {
+      showEmpty();
+    }
+  });
+
+  /* ---------- אתחול ---------- */
+  renderMaterial();
+  renderActions();
+  showEmpty();
+
+})();
+</script>
+</body>
+</html>

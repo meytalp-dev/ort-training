@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לוח מקצועי · מצב תחום הדעת — רֶצֶף (W4-04)</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="a11y.css">
+<style>
+/* ============================================================
+   W4-04 · לוח מקצועי + אנליטיקה (מפקח מקצועי, תצוגה 4)
+   צורך: tokens.css · components.css (app-shell/sidebar/topbar/
+   metric-card/chart-card/line-chart/rz-table/chip/sequence) · a11y.css
+   כלל: הכול מטוקנים — בלי צבעים קשיחים. סגנון ייחודי-למסך בלבד כאן.
+   פרטיות: מצרפי בלבד. אין drill לתלמיד בודד (security-minimization §3, שורה 5).
+   ============================================================ */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--ink);
+  line-height: 1.6; font-size: var(--text-body); -webkit-text-size-adjust: 100%; }
+
+/* --- כותרת המסך --- */
+.pa-head { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-5); }
+.pa-head h1 { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800;
+  color: var(--ink-strong); margin: 0 0 var(--space-1); }
+.pa-head p { color: var(--ink-soft); margin: 0; font-size: var(--text-small); max-width: 58ch; }
+
+/* --- בורר תחום דעת (סגמנטי) — משנה את התחום המוצג --- */
+.domain-switch { display: inline-flex; align-items: center; gap: var(--space-2);
+  background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 4px; flex-wrap: wrap; }
+.domain-switch__label { font-size: var(--text-label); font-weight: 700; color: var(--ink-faint);
+  padding-inline-start: var(--space-2); }
+.domain-switch button { min-height: 36px; padding: 0 var(--space-3); border: 0; background: transparent;
+  cursor: pointer; font-family: var(--font-body); font-size: var(--text-small); font-weight: 650;
+  color: var(--ink-soft); border-radius: var(--radius-sm); display: inline-flex; align-items: center;
+  gap: var(--space-2); transition: background 160ms ease, color 160ms ease; }
+.domain-switch button svg { width: 17px; height: 17px; flex: none; }
+.domain-switch button:hover { color: var(--ink-strong); }
+.domain-switch button[aria-pressed="true"] { background: var(--card); color: var(--brand-deep); box-shadow: var(--shadow-card); }
+.domain-switch button:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+/* --- באנר מצרפיות (הבטחת פרטיות) --- */
+.agg-note { display: flex; align-items: flex-start; gap: var(--space-3); background: var(--brand-soft);
+  border: 1px solid var(--brand-line); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5); }
+.agg-note__ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--card); color: var(--brand-deep); border: 1px solid var(--brand-line); }
+.agg-note__ico svg { width: 19px; height: 19px; }
+.agg-note__txt { font-size: var(--text-small); color: var(--ink); }
+.agg-note__txt b { color: var(--brand-dark); }
+
+/* --- גריד KPI --- */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); margin-bottom: var(--space-5); }
+
+/* --- גריד תוכן דו-טורי --- */
+.pa-cols { display: grid; grid-template-columns: 1.35fr 1fr; gap: var(--space-4); margin-bottom: var(--space-5); align-items: start; }
+
+/* כרטיס-מסגרת כללי */
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card); padding: var(--space-5); }
+.panel__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3);
+  margin-bottom: var(--space-4); }
+.panel__title { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700;
+  color: var(--ink-strong); margin: 0; }
+.panel__hint { font-size: var(--text-label); color: var(--ink-soft); }
+
+/* ============================================================
+   גרף מגמת השלמה — קו רצף כגרף (בריף §3/§8)
+   ============================================================ */
+.trend-svg { width: 100%; height: 190px; display: block; overflow: visible; }
+.trend-xlabels { display: flex; justify-content: space-between; margin-top: var(--space-2);
+  font-size: var(--text-label); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   בריאות התחום — פס סגמנטי (מצליחות / יציבות / זקוקות)
+   ============================================================ */
+.health-bar { display: flex; height: 16px; border-radius: var(--radius-pill); overflow: hidden;
+  border: 1px solid var(--line); background: var(--surface-muted); margin-bottom: var(--space-4); }
+.health-bar__seg { height: 100%; transition: width 300ms ease; min-width: 3px; }
+.health-bar__seg--good { background: var(--status-good); }
+.health-bar__seg--stable { background: var(--status-attention); }
+.health-bar__seg--attention { background: var(--status-alert); }
+.health-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.health-legend li { display: flex; align-items: center; gap: var(--space-3); }
+.health-legend__dot { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+.health-legend__dot svg { width: 12px; height: 12px; display: block; color: var(--card); }
+.health-legend__dot--good { background: var(--status-good); }
+.health-legend__dot--stable { background: var(--status-attention); }
+.health-legend__dot--attention { background: var(--status-alert); }
+.health-legend__txt { flex: 1; }
+.health-legend__txt b { font-family: var(--font-head); color: var(--ink-strong); font-weight: 700; }
+.health-legend__txt span { display: block; font-size: var(--text-label); color: var(--ink-soft); }
+.health-legend__n { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 800;
+  color: var(--ink-strong); font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   רשימת יחידות מובחרות (מצליחות / ננטשות)
+   ============================================================ */
+.unit-list { display: grid; gap: var(--space-3); }
+.ul-item { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4);
+  background: var(--bg-soft); }
+.ul-item__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.ul-item__title { font-family: var(--font-head); font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+.ul-item__meta { font-size: var(--text-label); color: var(--ink-soft); margin-top: 2px; }
+.ul-item__rate { font-family: var(--font-head); font-weight: 800; font-size: var(--text-h3);
+  font-variant-numeric: tabular-nums; flex: none; }
+.ul-item__rate--good { color: var(--status-good); }
+.ul-item__rate--attention { color: var(--status-alert); }
+.ul-item__foot { display: flex; align-items: center; gap: 6px; margin-top: var(--space-2);
+  font-size: var(--text-label); color: var(--ink-soft); }
+.ul-item__foot svg { width: 14px; height: 14px; flex: none; }
+
+/* מסע-יחידה — קו רצף עם נקודת נטישה שכיחה (מצרפי) */
+.journey { margin-top: var(--space-2); }
+.journey__cap { font-size: var(--text-label); color: var(--ink-soft); margin-bottom: 6px; }
+.journey__cap b { color: var(--status-alert); font-weight: 700; }
+.journey__rail { display: flex; align-items: center; }
+.journey__node { width: 13px; height: 13px; border-radius: 50%; background: var(--card);
+  border: 2.5px solid var(--brand); flex: none; }
+.journey__node--done { background: var(--brand); }
+.journey__node--drop { border-color: var(--status-alert); background: var(--status-alert);
+  box-shadow: 0 0 0 4px var(--status-alert-soft, rgba(217,87,79,.16)); }
+.journey__seg { flex: 1; height: 2.5px; background: var(--brand); border-radius: 999px; min-width: 10px; }
+.journey__seg--faint { background: var(--line-strong); }
+
+/* ============================================================
+   טבלת יחידות התחום — מצרפי
+   ============================================================ */
+.rz-table__num { text-align: end; font-variant-numeric: tabular-nums; }
+.rate-cell { display: flex; align-items: center; gap: var(--space-2); justify-content: flex-end; }
+.rate-cell__bar { width: 74px; height: 6px; border-radius: 999px; background: var(--surface-muted);
+  overflow: hidden; flex: none; }
+.rate-cell__fill { height: 100%; border-radius: 999px; background: var(--status-good); }
+.rate-cell__fill--stable { background: var(--status-attention); }
+.rate-cell__fill--attention { background: var(--status-alert); }
+.rate-cell__val { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink-strong); min-width: 42px; }
+.rate-cell__val--suppressed { color: var(--ink-faint); font-weight: 600; }
+.suppressed-note { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-faint);
+  font-size: var(--text-label); }
+.suppressed-note svg { width: 13px; height: 13px; }
+.pa-filters { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.fchip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px;
+  padding: 0 var(--space-4); border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  background: var(--card); color: var(--ink-soft); font-family: var(--font-body); font-size: var(--text-small);
+  font-weight: 650; cursor: pointer; transition: background 160ms ease, border-color 160ms ease, color 160ms ease; }
+.fchip:hover { border-color: var(--brand-line); color: var(--ink-strong); }
+.fchip[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
+.fchip:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+.fchip .fchip__n { font-variant-numeric: tabular-nums; background: var(--surface-muted); color: var(--ink-soft);
+  border-radius: var(--radius-pill); min-width: 22px; height: 20px; padding: 0 6px; display: inline-grid;
+  place-items: center; font-size: var(--text-label); font-weight: 700; }
+.fchip[aria-pressed="true"] .fchip__n { background: var(--card); color: var(--brand-deep); }
+
+/* צ'יפ בריאות ליחידה (בטבלה) — לא-רק-צבע */
+.hchip { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 10px;
+  border-radius: var(--radius-pill); font-size: var(--text-label); font-weight: 700; white-space: nowrap;
+  border: 1px solid transparent; }
+.hchip svg { width: 13px; height: 13px; flex: none; }
+.hchip--good { color: var(--status-good); background: #EAF7EE; border-color: #C4E9CE; }
+.hchip--stable { color: #9A6E12; background: #FBF3E0; border-color: #EAD9A8; }
+.hchip--attention { color: var(--status-alert); background: #FBECEB; border-color: #F1C9C6; }
+.hchip--low { color: var(--ink-soft); background: var(--surface-muted); border-color: var(--line-strong); }
+
+.empty { text-align: center; padding: var(--space-10) var(--space-4); color: var(--ink-soft); }
+.empty svg { width: 40px; height: 40px; color: var(--ink-faint); margin-bottom: var(--space-3); }
+.empty p { margin: 0; }
+
+/* ============================================================
+   רספונסיביות
+   ============================================================ */
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .pa-cols { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .pa-head { flex-direction: column; }
+  .domain-switch { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">דלג/י לתוכן</a>
+
+<!-- ============================================================
+     ספריית אייקונים (subset) — כולם currentColor
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-check-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="ic-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="ic-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7h-6M21 7v6"/></symbol>
+  <symbol id="ic-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M21 17h-6M21 17v-6"/></symbol>
+  <symbol id="ic-flat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1Z"/></symbol>
+  <symbol id="ic-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M7 21h10"/><path d="m5 7 14-2"/><path d="M5 7 2 13a3 3 0 0 0 6 0L5 7Z"/><path d="m19 5-3 6a3 3 0 0 0 6 0l-3-6Z"/></symbol>
+  <symbol id="ic-calc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14v4M8 18h4"/></symbol>
+  <symbol id="ic-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7-4-4-7 7v4h4Z"/><path d="M3 21h6"/></symbol>
+</svg>
+
+<!-- ============================================================
+     InspectorShell — Sidebar + Topbar + Main (מפקח מקצועי)
+     ============================================================ -->
+<div class="app-shell app-shell--admin" id="shell" data-role="inspector">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="subject-analytics.html" aria-current="page" aria-label="לוח מקצועי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-chart"/></svg></span>
+        <span class="sidebar__label">לוח מקצועי</span>
+      </a>
+      <a class="sidebar__item" href="content-approval.html" aria-label="אישור תוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-check-square"/></svg></span>
+        <span class="sidebar__label">אישור תוכן</span>
+      </a>
+      <a class="sidebar__item" href="unit-editor.html" aria-label="עורך היחידות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-edit"/></svg></span>
+        <span class="sidebar__label">עורך היחידות</span>
+      </a>
+      <a class="sidebar__item" href="library.html" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+
+      <div class="sidebar__section">תחום הדעת</div>
+      <a class="sidebar__item" href="subject-analytics.html" aria-label="מצב תחום הדעת">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-layers"/></svg></span>
+        <span class="sidebar__label">מצב תחום הדעת</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">יב</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">ד"ר יעל בר</div>
+          <div class="sidebar__foot-role" id="side-role">מפקחת מקצועית · לשון</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">לוח מקצועי</div>
+        <div class="topbar__subtitle" id="topbar-sub">אורט · פיקוח מקצועי · נתונים מצרפיים</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" id="q" placeholder="חיפוש יחידה או שכבה…" aria-label="חיפוש יחידה">
+      </label>
+      <div class="topbar__actions">
+        <button class="icon-btn" type="button" aria-label="התראות">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">יב</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי" id="main-content">
+      <div class="app-main__inner">
+
+        <!-- כותרת + בורר תחום -->
+        <div class="pa-head">
+          <div>
+            <h1>מצב תחום הדעת</h1>
+            <p>תמונה מצרפית של התחום על פני בתי הספר: אילו יחידות עובדות, אילו נִנטשות, והיכן כדאי לחזק את התוכן.</p>
+          </div>
+          <div class="domain-switch" role="group" aria-label="בחירת תחום דעת">
+            <span class="domain-switch__label">תחום:</span>
+            <button type="button" data-domain="lashon" aria-pressed="true"><svg aria-hidden="true"><use href="#ic-pen"/></svg>לשון</button>
+            <button type="button" data-domain="ezrahut" aria-pressed="false"><svg aria-hidden="true"><use href="#ic-scale"/></svg>אזרחות</button>
+            <button type="button" data-domain="math" aria-pressed="false"><svg aria-hidden="true"><use href="#ic-calc"/></svg>מתמטיקה</button>
+          </div>
+        </div>
+
+        <!-- הבטחת מצרפיות -->
+        <div class="agg-note" role="note">
+          <div class="agg-note__ico" aria-hidden="true"><svg><use href="#ic-lock"/></svg></div>
+          <div class="agg-note__txt">
+            <b>נתונים מצרפיים בלבד.</b> הלוח מציג מספרים על פני בתי ספר — אין גישה לתלמיד בודד ואין שמות.
+            יחידה עם פחות מ־<b id="k-min">15</b> הקצאות אינה מציגה שיעור, כדי שלא ניתן יהיה לזהות אף לומד/ת.
+          </div>
+        </div>
+
+        <!-- KPI -->
+        <div class="kpi-grid" id="kpi"><!-- מוזרק ב-JS --></div>
+
+        <!-- מגמת התחום + בריאות היחידות -->
+        <div class="pa-cols">
+          <!-- גרף מגמה -->
+          <section class="panel chart-card" aria-labelledby="trend-t">
+            <div class="panel__head">
+              <h2 class="panel__title" id="trend-t">מגמת השלמה בתחום</h2>
+              <span class="panel__hint">שיעור השלמה מצרפי · 8 שבועות אחרונים</span>
+            </div>
+            <div class="chart-card__body">
+              <svg class="trend-svg" id="trend" viewBox="0 0 640 190" preserveAspectRatio="none"
+                   role="img" aria-labelledby="trend-desc"></svg>
+              <p id="trend-desc" class="sr-only"></p>
+              <div class="trend-xlabels" id="trend-x"></div>
+            </div>
+            <div class="chart-legend">
+              <span class="chart-legend__item"><span class="chart-legend__dot" style="background:var(--brand)"></span>שיעור השלמה בתחום<span class="chart-legend__val" id="trend-now">—</span></span>
+              <span class="chart-legend__item"><span class="chart-legend__dot" style="background:var(--ink-faint)"></span>ממוצע כלל־התחומים<span class="chart-legend__val" id="trend-avg">—</span></span>
+            </div>
+          </section>
+
+          <!-- בריאות היחידות -->
+          <section class="panel" aria-labelledby="health-t">
+            <div class="panel__head">
+              <h2 class="panel__title" id="health-t">בריאות היחידות</h2>
+              <span class="panel__hint" id="health-total">—</span>
+            </div>
+            <div class="health-bar" id="health-bar" role="img" aria-labelledby="health-desc"></div>
+            <p id="health-desc" class="sr-only"></p>
+            <ul class="health-legend" id="health-legend"></ul>
+          </section>
+        </div>
+
+        <!-- מצליחות מול ננטשות -->
+        <div class="pa-cols">
+          <section class="panel" aria-labelledby="best-t">
+            <div class="panel__head">
+              <h2 class="panel__title" id="best-t">היחידות שעובדות הכי טוב</h2>
+              <span class="panel__hint">שיעור השלמה גבוה</span>
+            </div>
+            <div class="unit-list" id="best-list"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="worst-t">
+            <div class="panel__head">
+              <h2 class="panel__title" id="worst-t">יחידות שנִנטשות</h2>
+              <span class="panel__hint">נטישה גבוהה · כדאי לחזק</span>
+            </div>
+            <div class="unit-list" id="worst-list"></div>
+          </section>
+        </div>
+
+        <!-- טבלת כל היחידות -->
+        <section class="panel" aria-labelledby="tbl-t" style="padding:0;overflow:hidden">
+          <div style="padding:var(--space-5) var(--space-5) 0">
+            <div class="panel__head">
+              <h2 class="panel__title" id="tbl-t">כל יחידות התחום</h2>
+              <button class="btn btn--secondary btn--sm" type="button" id="export-btn">
+                <svg viewBox="0 0 24 24"><use href="#ic-download"/></svg>ייצוא CSV
+              </button>
+            </div>
+            <!-- מסנני בריאות -->
+            <div class="pa-filters" role="group" aria-label="סינון לפי בריאות היחידה">
+              <button class="fchip" type="button" data-filter="all" aria-pressed="true">הכול <span class="fchip__n" data-count="all">0</span></button>
+              <button class="fchip" type="button" data-filter="good" aria-pressed="false">מצליחות <span class="fchip__n" data-count="good">0</span></button>
+              <button class="fchip" type="button" data-filter="stable" aria-pressed="false">יציבות <span class="fchip__n" data-count="stable">0</span></button>
+              <button class="fchip" type="button" data-filter="attention" aria-pressed="false">זקוקות לתשומת לב <span class="fchip__n" data-count="attention">0</span></button>
+            </div>
+          </div>
+          <div class="rz-table-wrap" style="border:0;border-radius:0;box-shadow:none">
+            <div class="rz-table-scroll">
+              <table class="rz-table" id="tbl">
+                <thead>
+                  <tr>
+                    <th scope="col">יחידה</th>
+                    <th scope="col">שכבה</th>
+                    <th scope="col">רמה</th>
+                    <th scope="col" class="rz-table__num">הקצאות</th>
+                    <th scope="col" class="rz-table__num">בתי ספר</th>
+                    <th scope="col" class="rz-table__num">שיעור השלמה</th>
+                    <th scope="col">מצב</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody"><!-- מוזרק ב-JS --></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="empty" id="empty" hidden>
+            <svg aria-hidden="true"><use href="#ic-inbox"/></svg>
+            <p>אין יחידות במצב זה.</p>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(function () {
+  'use strict';
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+
+  /* ספף מצרפיות (k-anonymity) — פחות מזה: לא מציגים שיעור */
+  var K_MIN = 15;
+
+  /* ---------- נתוני-זרע · מצרפי בלבד (אין מזהה תלמיד) ----------
+     כל יחידה: הקצאות/השלמות מצרפיות על פני בתי ספר, מספר בתי ספר,
+     מספר שלבי היחידה, ושלב-הנטישה השכיח (מצרפי). trend = שיעור שבועי. */
+  var DOMAINS = {
+    lashon: {
+      name: 'לשון', role: 'מפקחת מקצועית · לשון',
+      trend: [58, 61, 60, 64, 63, 66, 68, 71],
+      benchmark: 64,
+      units: [
+        { id:'l1', title:'מבנה ההברה', grade:'ט',  level:'core',    steps:5, schools:9, assign:214, complete:170, dropStep:0 },
+        { id:'l2', title:'שם הפועל וגזרותיו', grade:'י', level:'challenge', steps:6, schools:7, assign:132, complete:58, dropStep:3 },
+        { id:'l3', title:'משמעות ומשלב', grade:'יא', level:'core', steps:4, schools:8, assign:188, complete:151, dropStep:0 },
+        { id:'l4', title:'תחביר — נושא ונשוא', grade:'ט', level:'support', steps:5, schools:10, assign:246, complete:205, dropStep:0 },
+        { id:'l5', title:'הבנת הנקרא — טקסט טיעון', grade:'יב', level:'core', steps:6, schools:6, assign:97, complete:41, dropStep:4 },
+        { id:'l6', title:'ניקוד — תנועות גדולות', grade:'ט', level:'support', steps:4, schools:5, assign:71, complete:52, dropStep:0 },
+        { id:'l7', title:'שכבות הלשון', grade:'יא', level:'challenge', steps:5, schools:4, assign:12, complete:5, dropStep:2 },
+        { id:'l8', title:'צירופים כבולים', grade:'י', level:'core', steps:4, schools:6, assign:104, complete:74, dropStep:0 }
+      ]
+    },
+    ezrahut: {
+      name: 'אזרחות', role: 'מפקחת מקצועית · אזרחות',
+      trend: [52, 54, 55, 57, 56, 59, 58, 61],
+      benchmark: 64,
+      units: [
+        { id:'e1', title:'שלוש רשויות השלטון', grade:'יא', level:'core', steps:5, schools:11, assign:263, complete:210, dropStep:0 },
+        { id:'e2', title:'זכויות אדם ואזרח', grade:'י', level:'core', steps:5, schools:9, assign:198, complete:139, dropStep:0 },
+        { id:'e3', title:'הכרזת העצמאות', grade:'ט', level:'support', steps:4, schools:8, assign:176, complete:151, dropStep:0 },
+        { id:'e4', title:'שסעים בחברה הישראלית', grade:'יב', level:'challenge', steps:6, schools:5, assign:88, complete:34, dropStep:4 },
+        { id:'e5', title:'מגילת זכויות — עיון', grade:'יב', level:'challenge', steps:6, schools:4, assign:64, complete:24, dropStep:3 },
+        { id:'e6', title:'דמוקרטיה — עקרונות יסוד', grade:'י', level:'core', steps:4, schools:7, assign:141, complete:104, dropStep:0 },
+        { id:'e7', title:'מערכת המשפט', grade:'יא', level:'core', steps:5, schools:3, assign:11, complete:6, dropStep:2 }
+      ]
+    },
+    math: {
+      name: 'מתמטיקה', role: 'מפקח מקצועי · מתמטיקה',
+      trend: [63, 62, 65, 66, 68, 67, 70, 72],
+      benchmark: 64,
+      units: [
+        { id:'m1', title:'שברים בחיי היום-יום', grade:'ט', level:'support', steps:4, schools:12, assign:288, complete:247, dropStep:0 },
+        { id:'m2', title:'אחוזים והנחות', grade:'ט', level:'core', steps:5, schools:11, assign:254, complete:198, dropStep:0 },
+        { id:'m3', title:'משוואות ממעלה ראשונה', grade:'י', level:'core', steps:5, schools:9, assign:201, complete:132, dropStep:2 },
+        { id:'m4', title:'פונקציה ריבועית', grade:'יא', level:'challenge', steps:6, schools:6, assign:118, complete:46, dropStep:3 },
+        { id:'m5', title:'גיאומטריה — משפטי חפיפה', grade:'י', level:'core', steps:5, schools:5, assign:96, complete:44, dropStep:3 },
+        { id:'m6', title:'הסתברות בסיסית', grade:'יא', level:'core', steps:4, schools:7, assign:133, complete:101, dropStep:0 },
+        { id:'m7', title:'טריגונומטריה — סינוס', grade:'יב', level:'challenge', steps:6, schools:3, assign:9, complete:3, dropStep:2 }
+      ]
+    }
+  };
+
+  var LEVEL = { support:'תמיכה', core:'ליבה', challenge:'אתגר' };
+
+  var state = { domain:'lashon', filter:'all', q:'' };
+
+  /* ---------- חישובים ---------- */
+  function rate(u) { return u.assign ? u.complete / u.assign : 0; }
+  function enough(u) { return u.assign >= K_MIN; }
+  /* קטגוריית בריאות — רק ליחידות עם מספיק נתונים */
+  function health(u) {
+    if (!enough(u)) return 'low';
+    var r = rate(u);
+    if (r >= 0.70) return 'good';
+    if (r >= 0.45) return 'stable';
+    return 'attention';
+  }
+  function pct(x) { return Math.round(x * 100); }
+
+  function domainStats(d) {
+    var units = d.units, valid = units.filter(enough);
+    var totAssign = units.reduce(function (s, u) { return s + u.assign; }, 0);
+    var totComplete = valid.reduce(function (s, u) { return s + u.complete; }, 0);
+    var totValidAssign = valid.reduce(function (s, u) { return s + u.assign; }, 0);
+    var avgRate = totValidAssign ? totComplete / totValidAssign : 0;
+    var buckets = { good:0, stable:0, attention:0, low:0 };
+    units.forEach(function (u) { buckets[health(u)]++; });
+    return { count: units.length, totAssign: totAssign, avgRate: avgRate, buckets: buckets, valid: valid.length };
+  }
+
+  /* ---------- KPI ---------- */
+  function renderKPI(d, st) {
+    var attention = st.buckets.attention;
+    var deltaNow = d.trend[d.trend.length - 1] - d.trend[d.trend.length - 2];
+    var dir = deltaNow > 0 ? 'up' : (deltaNow < 0 ? 'down' : 'flat');
+    var dirIco = { up:'#ic-up', down:'#ic-down', flat:'#ic-flat' }[dir];
+    var dirTxt = deltaNow > 0 ? ('עלייה ' + deltaNow + ' נק\' מהשבוע שעבר')
+               : (deltaNow < 0 ? ('ירידה ' + Math.abs(deltaNow) + ' נק\' מהשבוע שעבר') : 'ללא שינוי מהשבוע שעבר');
+
+    var cards = [
+      { ico:'#ic-book', label:'יחידות פעילות במדף', value: st.count, unit:'', sub:'בתחום ' + d.name, cls:'' },
+      { ico:'#ic-users', label:'הקצאות בתחום', value: st.totAssign.toLocaleString('he-IL'), unit:'', sub:'סה״כ על פני בתי הספר', cls:'' },
+      { ico:'#ic-check-c', label:'שיעור השלמה ממוצע', value: pct(st.avgRate), unit:'%', sub:dirTxt, cls: st.avgRate>=0.6?'metric-card--good':'metric-card--attention', delta:{dir:dir, ico:dirIco, txt:(deltaNow>0?'+':'')+deltaNow+' נק\''} },
+      { ico:'#ic-alert', label:'יחידות זקוקות לתשומת לב', value: attention, unit:'', sub: attention? 'נטישה גבוהה — כדאי לחזק':'אין יחידות בסיכון', cls: attention?'metric-card--alert':'metric-card--good', accent: attention?'metric-card--accent-alert':'metric-card--accent-good' }
+    ];
+
+    $('#kpi').innerHTML = cards.map(function (c) {
+      var deltaHTML = c.delta ? ('<span class="metric-card__delta metric-card__delta--' + c.delta.dir + '">' +
+        '<svg viewBox="0 0 24 24"><use href="' + c.delta.ico + '"/></svg>' + esc(c.delta.txt) + '</span>') : '';
+      return '<article class="metric-card ' + (c.cls||'') + ' ' + (c.accent||'') + '">' +
+        '<div class="metric-card__top"><span class="metric-card__icon"><svg viewBox="0 0 24 24"><use href="' + c.ico + '"/></svg></span>' +
+        '<span class="metric-card__label">' + esc(c.label) + '</span></div>' +
+        '<div class="metric-card__value">' + esc(c.value) + (c.unit?'<span class="metric-card__unit">' + esc(c.unit) + '</span>':'') + '</div>' +
+        deltaHTML +
+        '<p class="metric-card__sub">' + esc(c.sub) + '</p>' +
+        '</article>';
+    }).join('');
+  }
+
+  /* ---------- גרף מגמה (קו רצף) ---------- */
+  function renderTrend(d) {
+    var W = 640, H = 190, padY = 22, padX = 8;
+    var data = d.trend, n = data.length;
+    var min = 30, max = 100; // סקאלה קבועה לשיעור %
+    function x(i) { /* RTL: אינדקס 0 מימין */ return W - padX - (i / (n - 1)) * (W - padX * 2); }
+    function y(v) { return padY + (1 - (v - min) / (max - min)) * (H - padY * 2); }
+
+    var grid = '';
+    [40, 60, 80, 100].forEach(function (g) {
+      var yy = y(g);
+      grid += '<line x1="0" y1="' + yy.toFixed(1) + '" x2="' + W + '" y2="' + yy.toFixed(1) + '" stroke="var(--line)" stroke-width="1"/>';
+      grid += '<text x="' + (W - 2) + '" y="' + (yy - 3).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--ink-faint)">' + g + '%</text>';
+    });
+
+    // קו benchmark מקווקו
+    var by = y(d.benchmark);
+    var bench = '<line x1="0" y1="' + by.toFixed(1) + '" x2="' + W + '" y2="' + by.toFixed(1) +
+      '" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-dasharray="4 5" stroke-linecap="round"/>';
+
+    var linePts = data.map(function (v, i) { return x(i).toFixed(1) + ',' + y(v).toFixed(1); }).join(' ');
+    var area = 'M ' + x(0).toFixed(1) + ',' + (H - padY) + ' L ' +
+      data.map(function (v, i) { return x(i).toFixed(1) + ',' + y(v).toFixed(1); }).join(' L ') +
+      ' L ' + x(n - 1).toFixed(1) + ',' + (H - padY) + ' Z';
+
+    var dots = data.map(function (v, i) {
+      var head = i === n - 1;
+      return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="' + (head ? 5 : 3) + '" ' +
+        (head ? 'fill="var(--brand)" stroke="none"' : 'fill="var(--card)" stroke="var(--brand)" stroke-width="2"') + '/>';
+    }).join('');
+
+    $('#trend').innerHTML =
+      grid + bench +
+      '<path d="' + area + '" fill="var(--brand-soft)" opacity=".55"/>' +
+      '<polyline points="' + linePts + '" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      dots;
+
+    // תוויות ציר X (שבועות) — RTL: החדש מימין
+    var labels = [];
+    for (var i = 0; i < n; i++) labels.push('ש' + (i + 1)); // RTL: ש1 (הישן) מימין ← ש8 (החדש) משמאל, בהתאמה לנתונים
+    $('#trend-x').innerHTML = labels.map(function (l) { return '<span>' + l + '</span>'; }).join('');
+    $('#trend-now').textContent = data[n - 1] + '%';
+    $('#trend-avg').textContent = d.benchmark + '%';
+    $('#trend-desc').textContent = 'שיעור ההשלמה בתחום ' + d.name + ' עלה מ־' + data[0] + '% ל־' + data[n - 1] +
+      '% במהלך 8 השבועות האחרונים. הממוצע בכלל התחומים הוא ' + d.benchmark + '%.';
+  }
+
+  /* ---------- בריאות היחידות (פס סגמנטי) ---------- */
+  function renderHealth(d, st) {
+    var b = st.buckets;
+    var total = st.count;
+    var shown = b.good + b.stable + b.attention; // low לא נכלל בפס (אין מספיק נתונים)
+    function w(x) { return shown ? (x / shown * 100).toFixed(1) + '%' : '0%'; }
+    $('#health-bar').innerHTML =
+      '<div class="health-bar__seg health-bar__seg--good" style="width:' + w(b.good) + '"></div>' +
+      '<div class="health-bar__seg health-bar__seg--stable" style="width:' + w(b.stable) + '"></div>' +
+      '<div class="health-bar__seg health-bar__seg--attention" style="width:' + w(b.attention) + '"></div>';
+    $('#health-desc').textContent = 'מתוך ' + shown + ' יחידות עם מספיק נתונים: ' + b.good + ' מצליחות, ' +
+      b.stable + ' יציבות, ' + b.attention + ' זקוקות לתשומת לב.';
+    $('#health-total').textContent = total + ' יחידות · ' + b.low + ' עם נתונים מעטים';
+
+    var rows = [
+      { cls:'good', ico:'#ic-check', title:'מצליחות', sub:'שיעור השלמה 70% ומעלה', n:b.good },
+      { cls:'stable', ico:'#ic-flat', title:'יציבות', sub:'שיעור השלמה 45%–69%', n:b.stable },
+      { cls:'attention', ico:'#ic-alert', title:'זקוקות לתשומת לב', sub:'נטישה גבוהה — מתחת ל־45%', n:b.attention }
+    ];
+    $('#health-legend').innerHTML = rows.map(function (r) {
+      return '<li><span class="health-legend__dot health-legend__dot--' + r.cls + '"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="' + r.ico + '"/></svg></span>' +
+        '<span class="health-legend__txt"><b>' + r.title + '</b><span>' + r.sub + '</span></span>' +
+        '<span class="health-legend__n">' + r.n + '</span></li>';
+    }).join('');
+  }
+
+  /* ---------- מסע-יחידה (נטישה שכיחה) ---------- */
+  function journeyHTML(u) {
+    var parts = [];
+    for (var s = 0; s < u.steps; s++) {
+      var isDrop = (u.dropStep === s && u.dropStep > 0);
+      var cls = 'journey__node';
+      if (isDrop) cls += ' journey__node--drop';
+      else if (u.dropStep === 0 || s < u.dropStep) cls += ' journey__node--done';
+      parts.push('<span class="' + cls + '"></span>');
+      if (s < u.steps - 1) {
+        var faint = (u.dropStep > 0 && s >= u.dropStep);
+        parts.push('<span class="journey__seg' + (faint ? ' journey__seg--faint' : '') + '"></span>');
+      }
+    }
+    return '<div class="journey">' +
+      '<div class="journey__cap">נקודת נטישה שכיחה: <b>שלב ' + (u.dropStep + 1) + ' מתוך ' + u.steps + '</b></div>' +
+      '<div class="journey__rail" role="img" aria-label="רוב הנטישה בשלב ' + (u.dropStep + 1) + ' מתוך ' + u.steps + '">' +
+      parts.join('') + '</div></div>';
+  }
+
+  /* ---------- רשימות מצליחות / ננטשות ---------- */
+  function renderLists(d) {
+    var valid = d.units.filter(enough);
+    var best = valid.slice().sort(function (a, b) { return rate(b) - rate(a); }).slice(0, 3);
+    var worst = valid.slice().sort(function (a, b) { return rate(a) - rate(b); }).slice(0, 3);
+
+    $('#best-list').innerHTML = best.map(function (u) {
+      return '<div class="ul-item">' +
+        '<div class="ul-item__top">' +
+          '<div><div class="ul-item__title">' + esc(u.title) + '</div>' +
+          '<div class="ul-item__meta">שכבה ' + esc(u.grade) + ' · ' + LEVEL[u.level] + ' · ' + u.schools + ' בתי ספר</div></div>' +
+          '<div class="ul-item__rate ul-item__rate--good">' + pct(rate(u)) + '%</div>' +
+        '</div>' +
+        '<div class="ul-item__foot"><svg aria-hidden="true"><use href="#ic-check-c"/></svg>' +
+          u.complete.toLocaleString('he-IL') + ' מתוך ' + u.assign.toLocaleString('he-IL') + ' הקצאות הושלמו</div>' +
+        '</div>';
+    }).join('');
+
+    $('#worst-list').innerHTML = worst.map(function (u) {
+      return '<div class="ul-item">' +
+        '<div class="ul-item__top">' +
+          '<div><div class="ul-item__title">' + esc(u.title) + '</div>' +
+          '<div class="ul-item__meta">שכבה ' + esc(u.grade) + ' · ' + LEVEL[u.level] + ' · ' + u.schools + ' בתי ספר</div></div>' +
+          '<div class="ul-item__rate ul-item__rate--attention">' + pct(rate(u)) + '%</div>' +
+        '</div>' +
+        (u.dropStep > 0 ? journeyHTML(u) :
+          '<div class="ul-item__foot"><svg aria-hidden="true"><use href="#ic-info"/></svg>נטישה מפוזרת לאורך היחידה</div>') +
+        '</div>';
+    }).join('');
+  }
+
+  /* ---------- טבלה ---------- */
+  function renderTable(d) {
+    var q = state.q.trim().toLowerCase();
+    var counts = { all:0, good:0, stable:0, attention:0 };
+    d.units.forEach(function (u) {
+      counts.all++;
+      var h = health(u);
+      if (counts[h] != null) counts[h]++;
+    });
+    $$('[data-count]').forEach(function (n) { n.textContent = counts[n.getAttribute('data-count')] || 0; });
+    $$('.fchip').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-filter') === state.filter); });
+
+    var rows = d.units.filter(function (u) {
+      var h = health(u);
+      if (state.filter !== 'all' && h !== state.filter) return false;
+      if (q) {
+        var hay = (u.title + ' ' + u.grade + ' ' + LEVEL[u.level]).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    }).sort(function (a, b) { return rate(a) - rate(b); }); // הזקוקות-לתשומת-לב בראש
+
+    $('#tbody').innerHTML = rows.map(rowHTML).join('');
+    $('#empty').hidden = rows.length > 0;
+    $('.rz-table-wrap').style.display = rows.length > 0 ? '' : 'none';
+  }
+
+  var HCHIP = {
+    good:      { cls:'hchip--good',      ico:'#ic-check',  label:'מצליחה' },
+    stable:    { cls:'hchip--stable',    ico:'#ic-flat',   label:'יציבה' },
+    attention: { cls:'hchip--attention', ico:'#ic-alert',  label:'זקוקה לתשומת לב' },
+    low:       { cls:'hchip--low',       ico:'#ic-lock',   label:'נתונים מעטים' }
+  };
+
+  function rowHTML(u) {
+    var h = health(u);
+    var hc = HCHIP[h];
+    var rateHTML;
+    if (!enough(u)) {
+      rateHTML = '<span class="suppressed-note"><svg aria-hidden="true"><use href="#ic-lock"/></svg>מוסתר · פחות מ־' + K_MIN + ' הקצאות</span>';
+    } else {
+      var r = rate(u);
+      var fillCls = h === 'good' ? '' : (h === 'stable' ? ' rate-cell__fill--stable' : ' rate-cell__fill--attention');
+      rateHTML = '<div class="rate-cell">' +
+        '<span class="rate-cell__bar"><span class="rate-cell__fill' + fillCls + '" style="width:' + pct(r) + '%"></span></span>' +
+        '<span class="rate-cell__val">' + pct(r) + '%</span></div>';
+    }
+    return '<tr>' +
+      '<td data-label="יחידה"><span class="rz-table__primary">' + esc(u.title) + '</span></td>' +
+      '<td data-label="שכבה">' + esc(u.grade) + '</td>' +
+      '<td data-label="רמה">' + LEVEL[u.level] + '</td>' +
+      '<td data-label="הקצאות" class="rz-table__num">' + u.assign.toLocaleString('he-IL') + '</td>' +
+      '<td data-label="בתי ספר" class="rz-table__num">' + u.schools + '</td>' +
+      '<td data-label="שיעור השלמה" class="rz-table__num">' + rateHTML + '</td>' +
+      '<td data-label="מצב"><span class="hchip ' + hc.cls + '"><svg aria-hidden="true"><use href="' + hc.ico + '"/></svg>' + hc.label + '</span></td>' +
+      '</tr>';
+  }
+
+  /* ---------- ייצוא CSV (מצרפי) ---------- */
+  function exportCSV() {
+    var d = DOMAINS[state.domain];
+    var head = ['יחידה', 'שכבה', 'רמה', 'הקצאות', 'בתי ספר', 'שיעור השלמה', 'מצב'];
+    var lines = [head.join(',')];
+    d.units.forEach(function (u) {
+      var r = enough(u) ? (pct(rate(u)) + '%') : 'מוסתר';
+      var row = [u.title, u.grade, LEVEL[u.level], u.assign, u.schools, r, HCHIP[health(u)].label];
+      lines.push(row.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','));
+    });
+    var blob = new Blob(['﻿' + lines.join('\r\n')], { type:'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'retzef-' + state.domain + '-מצרפי.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('הקובץ יורד — נתונים מצרפיים בלבד, בלי שמות.');
+  }
+
+  /* ---------- Toast ---------- */
+  function toast(msg) {
+    var region = $('#toast-region');
+    var el = document.createElement('div');
+    el.className = 'toast toast--success';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="toast__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#ic-check-c"/></svg></span>' +
+      '<span class="toast__msg">' + esc(msg) + '</span>';
+    region.appendChild(el);
+    setTimeout(function () { el.setAttribute('data-leaving', 'true'); setTimeout(function () { el.remove(); }, 200); }, 3200);
+  }
+
+  /* ---------- רינדור כולל ---------- */
+  function renderAll() {
+    var d = DOMAINS[state.domain];
+    var st = domainStats(d);
+    $('#side-role').textContent = d.role;
+    $('#topbar-sub').textContent = 'אורט · פיקוח מקצועי · ' + d.name;
+    $('#k-min').textContent = K_MIN;
+    renderKPI(d, st);
+    renderTrend(d);
+    renderHealth(d, st);
+    renderLists(d);
+    renderTable(d);
+  }
+
+  /* ---------- אירועים ---------- */
+  $$('.domain-switch button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.domain = b.getAttribute('data-domain');
+      state.filter = 'all';
+      $$('.domain-switch button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+      renderAll();
+    });
+  });
+  $$('.fchip').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.filter = b.getAttribute('data-filter');
+      renderTable(DOMAINS[state.domain]);
+    });
+  });
+  $('#q').addEventListener('input', function () { state.q = this.value; renderTable(DOMAINS[state.domain]); });
+  $('#export-btn').addEventListener('click', exportCSV);
+
+  // ניווט-מובייל (Sidebar drawer) — עקבי עם שאר המסכים
+  var shell = $('#shell');
+  $$('[data-nav-open]').forEach(function (b) { b.addEventListener('click', function () {
+    shell.classList.add('is-nav-open'); $('.app-shell__scrim').hidden = false; }); });
+  $$('[data-nav-close]').forEach(function (b) { b.addEventListener('click', function () {
+    shell.classList.remove('is-nav-open'); $('.app-shell__scrim').hidden = true; }); });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>

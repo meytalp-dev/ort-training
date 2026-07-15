@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מחומר ליחידה · העלאת חומר מורה — רֶצֶף</title>
+<!-- favicon: סמל רֶצֶף (ריבוע-מותג + 3 קווים) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     מחומר ליחידה (W2-09) — מסך מורה, גל B · Desktop First.
+     FileUploader (דף עבודה/מצגת/קישור/טקסט/תוכנית לימודים) → חומר יחידה
+     → יצירת 3 רמות תמיכה (תמיכה / ליבה / אתגר).
+     קו הרצף מוביל את התהליך: העלאה → ניתוח → התאמה → אישור → הקצאה.
+     כל צבע/מידה מטוקנים בלבד (tokens.css). נגישות WCAG AA.
+     ============================================================ */
+  * { box-sizing: border-box; }
+
+  /* ---------- כותרת עמוד ---------- */
+  .page-head { display: flex; align-items: flex-start; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-5); }
+  .page-head__text { flex: 1 1 260px; min-width: 0; }
+  .page-head h1 { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 700; color: var(--ink-strong); margin: 0 0 4px; }
+  .page-head p { color: var(--ink-soft); margin: 0; font-size: var(--text-body); max-width: 60ch; }
+
+  /* ---------- מסילת התהליך (קו הרצף) ---------- */
+  .process-rail { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: var(--space-5) var(--space-6); margin-bottom: var(--space-5); }
+  .process-rail .sequence { max-width: 860px; margin: 0 auto; }
+
+  /* ---------- מיכל שלב ---------- */
+  .stage-wrap { position: relative; }
+  .stage-panel[hidden] { display: none; }
+  .stage-panel { animation: fadeUp 220ms ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .stage-panel { animation: none; } }
+
+  .stage-head { margin-bottom: var(--space-4); }
+  .stage-head .stage-kicker { font-size: var(--text-label); font-weight: 600; letter-spacing: .03em; color: var(--brand-deep); margin: 0 0 4px; }
+  .stage-head h2 { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700; color: var(--ink-strong); margin: 0 0 4px; }
+  .stage-head p { color: var(--ink-soft); margin: 0; font-size: var(--text-body); max-width: 66ch; }
+
+  /* ---------- פוטר-פעולות של שלב ---------- */
+  .stage-foot { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--line); }
+  .stage-foot .spacer { flex: 1 1 auto; }
+  .stage-foot__hint { font-size: var(--text-small); color: var(--ink-faint); }
+
+  /* ============================================================
+     שלב 1 — FileUploader
+     ============================================================ */
+  /* בורר סוג-מקור (segmented / tablist) */
+  .source-tabs { display: flex; flex-wrap: wrap; gap: var(--space-2); background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 6px; margin-bottom: var(--space-5); }
+  .source-tab {
+    flex: 1 1 150px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: var(--tap); padding: 0 var(--space-3);
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 600; color: var(--ink-soft);
+    background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer;
+    transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .source-tab svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .source-tab:hover { color: var(--ink); }
+  .source-tab[aria-selected="true"] { color: var(--brand-deep); background: var(--card); border-color: var(--brand-line); box-shadow: var(--shadow-card); }
+  .source-tab:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .source-panel[hidden] { display: none; }
+
+  /* אזור גרירה (Dropzone) */
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3);
+    text-align: center; padding: var(--space-10) var(--space-6);
+    background: var(--bg-soft); border: 2px dashed var(--line-strong); border-radius: var(--radius-md);
+    cursor: pointer; transition: border-color 160ms ease, background 160ms ease;
+  }
+  .dropzone:hover { border-color: var(--brand-line); background: var(--brand-soft); }
+  .dropzone.is-dragover { border-color: var(--brand); background: var(--brand-soft); }
+  .dropzone:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+  .dropzone__icon { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-deep); }
+  .dropzone__icon svg { width: 24px; height: 24px; }
+  .dropzone__title { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 650; color: var(--ink-strong); }
+  .dropzone__title b { color: var(--brand-deep); text-decoration: underline; text-underline-offset: 2px; }
+  .dropzone__hint { font-size: var(--text-small); color: var(--ink-soft); margin: 0; }
+
+  /* רשימת קבצים שנקלטו */
+  .file-list { list-style: none; margin: var(--space-4) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+  .file-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+  .file-item__icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-deep); }
+  .file-item__icon svg { width: 20px; height: 20px; }
+  .file-item__body { min-width: 0; flex: 1 1 auto; }
+  .file-item__name { font-size: var(--text-body); font-weight: 600; color: var(--ink-strong); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-item__meta { font-size: var(--text-label); color: var(--ink-soft); margin: 2px 0 0; }
+  .file-item__remove { flex-shrink: 0; }
+
+  /* קלט קישור / טקסט */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); }
+  .field input, .field select, .field textarea {
+    font-family: var(--font-body); font-size: var(--text-body); color: var(--ink); width: 100%;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-btn);
+    min-height: var(--tap); padding: 10px var(--space-3); transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+  .field textarea { min-height: 168px; resize: vertical; line-height: 1.6; }
+  .field select { cursor: pointer; }
+  .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+  .field__hint { font-size: var(--text-label); color: var(--ink-faint); }
+  .link-row { display: flex; gap: var(--space-3); align-items: flex-end; flex-wrap: wrap; }
+  .link-row .field { flex: 1 1 320px; }
+
+  /* בורר תוכנית לימודים (CurriculumPicker) */
+  .curri-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+  .curri-topics { margin-top: var(--space-5); }
+  .curri-topics__label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); margin: 0 0 var(--space-3); }
+  .topic-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .topic-chip {
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 600; color: var(--ink-soft);
+    background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-pill);
+    padding: 8px 14px; min-height: 40px; cursor: pointer; transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .topic-chip:hover { border-color: var(--line-strong); }
+  .topic-chip[aria-pressed="true"] { color: var(--brand-deep); background: var(--brand-soft); border-color: var(--brand-line); }
+  .topic-chip:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  /* ============================================================
+     שלב 2 — ניתוח
+     ============================================================ */
+  .analyzing { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); text-align: center; padding: var(--space-10) var(--space-6); }
+  .analyzing__ring { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--brand-line); border-top-color: var(--brand); animation: spin 900ms linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .analyzing__ring { animation: spin 2.4s linear infinite; } }
+  .analyzing p { margin: 0; color: var(--ink-soft); font-size: var(--text-body); }
+  .analyzing .analyzing__file { font-weight: 600; color: var(--ink-strong); }
+
+  .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+  .analysis-note { display: flex; gap: var(--space-3); align-items: flex-start; background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); margin-top: var(--space-4); }
+  .analysis-note svg { width: 20px; height: 20px; color: var(--brand-deep); flex-shrink: 0; margin-top: 1px; }
+  .analysis-note p { margin: 0; font-size: var(--text-small); color: var(--ink); }
+  .concept-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: 6px; }
+
+  /* ============================================================
+     שלב 3 — התאמה · 3 רמות תמיכה
+     ============================================================ */
+  .level-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+  .level-card {
+    display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line);
+    border-top: 3px solid var(--_accent, var(--brand)); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card); overflow: hidden; transition: box-shadow 160ms ease, opacity 160ms ease;
+  }
+  .level-card.is-off { opacity: .5; }
+  .level-card--support   { --_accent: var(--brand-line); }
+  .level-card--core      { --_accent: var(--brand); }
+  .level-card--challenge { --_accent: var(--brand-deep); }
+  .level-card__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-3); }
+  .level-card__icon { width: 40px; height: 40px; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-deep); flex-shrink: 0; }
+  .level-card__icon svg { width: 20px; height: 20px; }
+  .level-card__titles { flex: 1 1 auto; min-width: 0; }
+  .level-card__name { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700; color: var(--ink-strong); margin: 0; }
+  .level-card__for { font-size: var(--text-label); color: var(--ink-soft); margin: 1px 0 0; }
+  .level-card__body { padding: 0 var(--space-4) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); flex: 1 1 auto; }
+  .level-changes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .level-changes li { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-small); color: var(--ink); line-height: 1.4; }
+  .level-changes svg { width: 15px; height: 15px; color: var(--brand); flex-shrink: 0; margin-top: 3px; }
+  .level-preview { background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); margin-top: auto; }
+  .level-preview__label { font-size: var(--text-label); font-weight: 600; color: var(--ink-faint); margin: 0 0 5px; }
+  .level-preview__text { font-size: var(--text-small); color: var(--ink); margin: 0; line-height: 1.5; }
+  .level-card__foot { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--line); background: var(--bg-soft); }
+  .level-card__foot .btn { margin-inline-start: auto; }
+
+  /* מתג הכללה (toggle switch) */
+  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .switch__track { width: 40px; height: 24px; border-radius: var(--radius-pill); background: var(--line-strong); position: relative; transition: background 160ms ease; flex-shrink: 0; }
+  .switch__track::after { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(23,58,74,.2); transition: transform 160ms ease; }
+  .switch input:checked + .switch__track { background: var(--brand); }
+  .switch input:checked + .switch__track::after { transform: translateX(-16px); }
+  .switch input:focus-visible + .switch__track { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .switch__label { font-size: var(--text-small); font-weight: 600; color: var(--ink); }
+
+  .level-lead { display: flex; gap: var(--space-3); align-items: flex-start; background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); }
+  .level-lead svg { width: 20px; height: 20px; color: var(--brand-deep); flex-shrink: 0; margin-top: 1px; }
+  .level-lead p { margin: 0; font-size: var(--text-small); color: var(--ink); }
+
+  /* ============================================================
+     שלב 4 — אישור
+     ============================================================ */
+  .ai-banner { display: flex; gap: var(--space-3); align-items: flex-start; background: var(--emergency-soft); border: 1px solid var(--emergency-line); border-radius: var(--radius-sm); padding: var(--space-4); margin-bottom: var(--space-5); }
+  .ai-banner svg { width: 22px; height: 22px; color: #B96C1E; flex-shrink: 0; margin-top: 1px; }
+  .ai-banner b { color: var(--ink-strong); }
+  .ai-banner p { margin: 2px 0 0; font-size: var(--text-small); color: var(--ink); }
+
+  .approve-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--space-4); align-items: start; }
+  .checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .checklist li { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; font-size: var(--text-small); color: var(--ink); border-bottom: 1px solid var(--line); }
+  .checklist li:last-child { border-bottom: 0; }
+  .checklist__ok { width: 20px; height: 20px; border-radius: 50%; background: #EAF7EE; color: var(--status-good); display: grid; place-items: center; flex-shrink: 0; }
+  .checklist__ok svg { width: 13px; height: 13px; }
+  .verify-field { display: flex; flex-direction: column; gap: 6px; margin-top: var(--space-4); }
+  .verify-field label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); }
+
+  /* ============================================================
+     שלב 5 — הקצאה
+     ============================================================ */
+  .assign-modes { display: flex; flex-direction: column; gap: var(--space-3); }
+  .assign-opt { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-md); cursor: pointer; transition: border-color 160ms ease, background 160ms ease; }
+  .assign-opt:hover { border-color: var(--brand-line); }
+  .assign-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .assign-opt__radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-strong); flex-shrink: 0; margin-top: 1px; display: grid; place-items: center; transition: border-color 160ms ease; }
+  .assign-opt__radio::after { content: ""; width: 11px; height: 11px; border-radius: 50%; background: var(--brand); transform: scale(0); transition: transform 160ms ease; }
+  .assign-opt input:checked + .assign-opt__radio { border-color: var(--brand); }
+  .assign-opt input:checked + .assign-opt__radio::after { transform: scale(1); }
+  .assign-opt input:focus-visible + .assign-opt__radio { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .assign-opt:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
+  .assign-opt__body strong { display: block; font-size: var(--text-body); color: var(--ink-strong); font-weight: 650; }
+  .assign-opt__body span { font-size: var(--text-small); color: var(--ink-soft); }
+
+  .assign-summary { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin-top: var(--space-5); }
+  .assign-stat { background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); }
+  .assign-stat__n { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700; color: var(--brand-deep); }
+  .assign-stat__l { font-size: var(--text-label); color: var(--ink-soft); margin-top: 2px; }
+
+  /* מצב-סיום (הצלחה) */
+  .done-state { text-align: center; padding: var(--space-8) var(--space-6); }
+  .done-state .seq-done { display: flex; align-items: center; justify-content: center; gap: 0; max-width: 320px; margin: 0 auto var(--space-5); }
+  .done-state h2 { font-family: var(--font-head); font-size: var(--text-h2); color: var(--ink-strong); margin: 0 0 6px; }
+  .done-state p { color: var(--ink-soft); margin: 0 auto var(--space-6); max-width: 46ch; }
+
+  /* עזר: כרטיס-משנה עם כותרת */
+  .subcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-card); padding: var(--space-5); }
+  .subcard > h3 { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700; color: var(--ink-strong); margin: 0 0 var(--space-4); }
+  .subcard + .subcard { margin-top: var(--space-4); }
+
+  /* ---------- רספונסיביות ---------- */
+  @media (max-width: 1080px) {
+    .level-grid, .curri-grid, .analysis-grid, .approve-grid, .assign-summary { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 720px) {
+    .source-tab { flex: 1 1 46%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ מאגר אייקונים (sprite) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="ic-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></symbol>
+  <symbol id="ic-presentation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20M3 3v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V3"/><path d="m12 15 4 6M12 15l-4 6M12 12v3"/></symbol>
+  <symbol id="ic-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></symbol>
+  <symbol id="ic-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6.1H3M21 12.1H3M15.1 18H3"/></symbol>
+  <symbol id="ic-curriculum" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></symbol>
+  <symbol id="ic-wand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 12-12"/><path d="M15 4V2M15 10V8M11 6H9M21 6h-2M18.4 3.6 17 5M18.4 8.4 17 7"/></symbol>
+  <symbol id="ic-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="ic-chevron-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="ic-chevron-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-heart-hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 14h2a2 2 0 0 0 2-2 2 2 0 0 0-2-2h-3.5a2 2 0 0 0-1.4.6L4 14"/><path d="m7 18 1.6-1.4a2 2 0 0 1 1.4-.6H14a2 2 0 0 0 2-2l3.6-3.4a2 2 0 1 1 2.8 2.8L15 21l-4-1H2"/><path d="M2 15v6M18.7 2.3a2.5 2.5 0 0 0-3.4 0L14 3.5l-1.3-1.2a2.5 2.5 0 0 0-3.4 3.6L14 10l4.7-4.1a2.5 2.5 0 0 0 0-3.6Z"/></symbol>
+  <symbol id="ic-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="ic-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+</svg>
+
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar (מורה) -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="teacher-dashboard.html" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="teacher-class-board.html" aria-label="הכיתה שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+        <span class="sidebar__label">הכיתה שלי</span>
+      </a>
+      <a class="sidebar__item" href="lesson-create.html" aria-label="שליחת משימה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">שליחת משימה</span>
+      </a>
+
+      <div class="sidebar__section">תוכן</div>
+      <a class="sidebar__item" href="library.html" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="העלאת חומר">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-upload"/></svg></span>
+        <span class="sidebar__label">העלאת חומר</span>
+      </a>
+      <a class="sidebar__item" href="lesson-create.html" aria-label="יצירת שיעור">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-plus"/></svg></span>
+        <span class="sidebar__label">יצירת שיעור</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רותם לוי</div>
+          <div class="sidebar__foot-role">מורה · לשון</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">העלאת חומר · מחומר ליחידה</div>
+        <div class="topbar__subtitle">רותם לוי · כיתה י'2</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (3 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">3</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+
+        <!-- כותרת -->
+        <div class="page-head">
+          <div class="page-head__text">
+            <h1>מחומר ליחידה</h1>
+            <p>העלו דף עבודה, מצגת, קישור, טקסט או פריט מתוכנית הלימודים — והמערכת תבנה ממנו יחידת רֶצֶף עם שלוש רמות תמיכה. אתם מאשרים לפני שזה מגיע לתלמידים.</p>
+          </div>
+        </div>
+
+        <!-- מסילת התהליך — קו הרצף -->
+        <div class="process-rail">
+          <ol class="sequence sequence--horizontal" id="rail" aria-label="שלבי יצירת היחידה">
+            <li class="sequence-step is-current" data-step="1" aria-current="step"><span class="sequence-node"></span><span class="sequence-label">העלאה<span class="sequence-sub">קליטת חומר</span></span></li>
+            <li class="sequence-step is-upcoming" data-step="2"><span class="sequence-node"></span><span class="sequence-label">ניתוח<span class="sequence-sub">זיהוי נושא</span></span></li>
+            <li class="sequence-step is-upcoming" data-step="3"><span class="sequence-node"></span><span class="sequence-label">התאמה<span class="sequence-sub">3 רמות</span></span></li>
+            <li class="sequence-step is-upcoming" data-step="4"><span class="sequence-node"></span><span class="sequence-label">אישור<span class="sequence-sub">בדיקת מורה</span></span></li>
+            <li class="sequence-step is-upcoming" data-step="5"><span class="sequence-node"></span><span class="sequence-label">הקצאה<span class="sequence-sub">לכיתה</span></span></li>
+          </ol>
+        </div>
+
+        <div class="stage-wrap">
+
+          <!-- ============================================================
+               שלב 1 — העלאה (FileUploader)
+               ============================================================ -->
+          <section class="stage-panel" id="stage-1" aria-labelledby="stage-1-h">
+            <div class="stage-head">
+              <p class="stage-kicker">שלב 1 מתוך 5</p>
+              <h2 id="stage-1-h">העלאת חומר</h2>
+              <p>בחרו את מקור החומר. אפשר להעלות יותר מקובץ אחד — הכול הופך ליחידה אחת.</p>
+            </div>
+
+            <div class="card">
+              <!-- בורר סוג מקור -->
+              <div class="source-tabs" role="tablist" aria-label="סוג החומר">
+                <button class="source-tab" role="tab" id="tab-worksheet" aria-selected="true" aria-controls="src-worksheet" data-src="worksheet" type="button"><svg aria-hidden="true"><use href="#ic-file-text"/></svg>דף עבודה</button>
+                <button class="source-tab" role="tab" id="tab-slides" aria-selected="false" aria-controls="src-slides" data-src="slides" type="button"><svg aria-hidden="true"><use href="#ic-presentation"/></svg>מצגת</button>
+                <button class="source-tab" role="tab" id="tab-link" aria-selected="false" aria-controls="src-link" data-src="link" type="button"><svg aria-hidden="true"><use href="#ic-link"/></svg>קישור</button>
+                <button class="source-tab" role="tab" id="tab-text" aria-selected="false" aria-controls="src-text" data-src="text" type="button"><svg aria-hidden="true"><use href="#ic-text"/></svg>טקסט</button>
+                <button class="source-tab" role="tab" id="tab-curri" aria-selected="false" aria-controls="src-curri" data-src="curri" type="button"><svg aria-hidden="true"><use href="#ic-curriculum"/></svg>תוכנית לימודים</button>
+              </div>
+
+              <!-- פאנל: דף עבודה -->
+              <div class="source-panel" id="src-worksheet" role="tabpanel" aria-labelledby="tab-worksheet" tabindex="0">
+                <div class="dropzone" data-drop="worksheet" role="button" tabindex="0" aria-label="העלאת דף עבודה — גררו קובץ או לחצו לבחירה">
+                  <span class="dropzone__icon" aria-hidden="true"><svg><use href="#ic-upload"/></svg></span>
+                  <span class="dropzone__title">גררו דף עבודה לכאן או <b>בחרו קובץ</b></span>
+                  <p class="dropzone__hint">PDF · Word · תמונה — עד 20MB. קבצים כבדים יומרו לגרסה קלה לרשת חלשה.</p>
+                </div>
+                <input type="file" hidden data-file-input="worksheet" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" multiple>
+              </div>
+
+              <!-- פאנל: מצגת -->
+              <div class="source-panel" id="src-slides" role="tabpanel" aria-labelledby="tab-slides" tabindex="0" hidden>
+                <div class="dropzone" data-drop="slides" role="button" tabindex="0" aria-label="העלאת מצגת — גררו קובץ או לחצו לבחירה">
+                  <span class="dropzone__icon" aria-hidden="true"><svg><use href="#ic-presentation"/></svg></span>
+                  <span class="dropzone__title">גררו מצגת לכאן או <b>בחרו קובץ</b></span>
+                  <p class="dropzone__hint">PowerPoint · PDF — כל שקף הופר למנת-מסך קצרה של רעיון אחד.</p>
+                </div>
+                <input type="file" hidden data-file-input="slides" accept=".ppt,.pptx,.pdf" multiple>
+              </div>
+
+              <!-- פאנל: קישור -->
+              <div class="source-panel" id="src-link" role="tabpanel" aria-labelledby="tab-link" tabindex="0" hidden>
+                <div class="link-row">
+                  <div class="field">
+                    <label for="link-url">קישור לחומר</label>
+                    <input type="url" id="link-url" placeholder="https://…  (קמפוס IL / מטח / משרד החינוך / סרטון)" dir="ltr" autocomplete="off">
+                    <span class="field__hint">קישור לתוכן חיצוני נשמר כפריט הפניה — המערכת מפנה אליו, מוסיפה פתיח ושאלה, ולא מעתיקה את התוכן.</span>
+                  </div>
+                  <button class="btn btn--secondary" type="button" id="link-add"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-plus"/></svg>הוספה</button>
+                </div>
+              </div>
+
+              <!-- פאנל: טקסט -->
+              <div class="source-panel" id="src-text" role="tabpanel" aria-labelledby="tab-text" tabindex="0" hidden>
+                <div class="field">
+                  <label for="text-paste">הדביקו טקסט</label>
+                  <textarea id="text-paste" placeholder="הדביקו כאן קטע לימוד, שאלה או הסבר. המערכת תפרק אותו למנות קצרות לפי תקן התוכן."></textarea>
+                  <span class="field__hint">כל מנת-מסך: רעיון אחד, עד 40 מילים, משפט עד 12 מילים.</span>
+                </div>
+              </div>
+
+              <!-- פאנל: תוכנית לימודים -->
+              <div class="source-panel" id="src-curri" role="tabpanel" aria-labelledby="tab-curri" tabindex="0" hidden>
+                <div class="curri-grid">
+                  <div class="field">
+                    <label for="curri-subject">מקצוע</label>
+                    <select id="curri-subject">
+                      <option value="lashon">לשון</option>
+                      <option value="civics">אזרחות</option>
+                      <option value="math">מתמטיקה</option>
+                      <option value="history">היסטוריה</option>
+                      <option value="science">מדעים</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="curri-grade">שכבה</label>
+                    <select id="curri-grade">
+                      <option value="ט">כיתה ט'</option>
+                      <option value="י" selected>כיתה י'</option>
+                      <option value="יא">כיתה יא'</option>
+                      <option value="יב">כיתה יב'</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="curri-search">חיפוש נושא</label>
+                    <input type="text" id="curri-search" placeholder="למשל: שם המספר" autocomplete="off">
+                  </div>
+                </div>
+                <div class="curri-topics">
+                  <p class="curri-topics__label">נושאים בתוכנית — לשון · כיתה י'</p>
+                  <div class="topic-chips" id="curri-topics" role="group" aria-label="בחירת נושא מהתוכנית">
+                    <button class="topic-chip" type="button" aria-pressed="false">שם המספר</button>
+                    <button class="topic-chip" type="button" aria-pressed="false">משפט פשוט ומורכב</button>
+                    <button class="topic-chip" type="button" aria-pressed="false">בניין הפעיל</button>
+                    <button class="topic-chip" type="button" aria-pressed="false">שדה סמנטי</button>
+                    <button class="topic-chip" type="button" aria-pressed="false">כתיב מלא וחסר</button>
+                    <button class="topic-chip" type="button" aria-pressed="false">משלב לשוני</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- רשימת חומרים שנקלטו -->
+              <ul class="file-list" id="file-list" aria-label="חומרים שנקלטו" hidden></ul>
+            </div>
+
+            <div class="stage-foot">
+              <span class="stage-foot__hint" id="upload-hint">בחרו חומר כדי להמשיך.</span>
+              <span class="spacer"></span>
+              <button class="btn btn--primary" type="button" id="go-analyze" disabled>
+                המשך לניתוח
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron-l"/></svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               שלב 2 — ניתוח
+               ============================================================ -->
+          <section class="stage-panel" id="stage-2" aria-labelledby="stage-2-h" hidden>
+            <div class="stage-head">
+              <p class="stage-kicker">שלב 2 מתוך 5</p>
+              <h2 id="stage-2-h">ניתוח החומר</h2>
+              <p>המערכת קוראת את מה שהעלית, מזהה נושא ורמה, ומחלקת אותו למנות קצרות.</p>
+            </div>
+
+            <!-- מצב בעיבוד -->
+            <div class="card" id="analyze-loading">
+              <div class="analyzing" role="status" aria-live="polite">
+                <span class="analyzing__ring" aria-hidden="true"></span>
+                <p>מנתח את <span class="analyzing__file" id="analyze-fname">החומר</span>…</p>
+                <p class="stage-foot__hint">מזהה נושא, מפרק למנות, מציע רמות תמיכה.</p>
+              </div>
+            </div>
+
+            <!-- תוצאות הניתוח -->
+            <div id="analyze-result" hidden>
+              <div class="subcard">
+                <h3>מה זיהינו</h3>
+                <div class="analysis-grid">
+                  <div class="field">
+                    <label for="an-subject">מקצוע</label>
+                    <select id="an-subject">
+                      <option value="lashon" selected>לשון</option>
+                      <option value="civics">אזרחות</option>
+                      <option value="math">מתמטיקה</option>
+                      <option value="history">היסטוריה</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="an-grade">שכבה</label>
+                    <select id="an-grade">
+                      <option value="ט">כיתה ט'</option>
+                      <option value="י" selected>כיתה י'</option>
+                      <option value="יא">כיתה יא'</option>
+                      <option value="יב">כיתה יב'</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="an-title">כותרת היחידה</label>
+                    <input type="text" id="an-title" value="שם המספר — זכר ונקבה">
+                  </div>
+                  <div class="field">
+                    <label for="an-type">סוג יחידה</label>
+                    <select id="an-type">
+                      <option value="task" selected>משימה (task)</option>
+                      <option value="assessment">הערכה (assessment) — נושאת ציון</option>
+                      <option value="reference">הפניה (reference)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="field" style="margin-top:var(--space-4)">
+                  <label id="an-concepts-l">מושגי מפתח שזוהו</label>
+                  <div class="concept-chips" aria-labelledby="an-concepts-l">
+                    <span class="chip chip--unknown">שם המספר</span>
+                    <span class="chip chip--unknown">התאם במין</span>
+                    <span class="chip chip--unknown">מונה וסודר</span>
+                    <span class="chip chip--unknown">שגיאות נפוצות</span>
+                  </div>
+                </div>
+
+                <div class="analysis-grid" style="margin-top:var(--space-4)">
+                  <div class="field">
+                    <label>מסכים משוערים ביחידה</label>
+                    <input type="text" value="5 מסכים · כ-8 דקות" readonly>
+                  </div>
+                  <div class="field">
+                    <label>מבנה לפי תקן התוכן</label>
+                    <input type="text" value="פתיח · הסבר ×2 · דוגמה · שאלות · סיום" readonly>
+                  </div>
+                </div>
+
+                <div class="analysis-note">
+                  <svg aria-hidden="true"><use href="#ic-shield"/></svg>
+                  <p><b>הניתוח פועל על החומר שהעלית — לא על נתוני תלמידים.</b> התוצר סומן כתוכן שנוצר בעזרת מערכת, ויעבור אישור אנושי שלך בשלב הבא לפני שיגיע לכיתה.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="stage-foot">
+              <button class="btn btn--ghost" type="button" data-back="1">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron-r"/></svg>
+                חזרה להעלאה
+              </button>
+              <span class="spacer"></span>
+              <button class="btn btn--primary" type="button" id="go-adapt" disabled>
+                המשך להתאמה
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron-l"/></svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               שלב 3 — התאמה · 3 רמות תמיכה
+               ============================================================ -->
+          <section class="stage-panel" id="stage-3" aria-labelledby="stage-3-h" hidden>
+            <div class="stage-head">
+              <p class="stage-kicker">שלב 3 מתוך 5</p>
+              <h2 id="stage-3-h">שלוש רמות תמיכה</h2>
+              <p>אותה יחידה, שלוש גרסאות — כדי שכל תלמיד יקבל את מה שמתאים לו. אפשר לכבות רמה שלא צריך.</p>
+            </div>
+
+            <div class="level-lead">
+              <svg aria-hidden="true"><use href="#ic-info"/></svg>
+              <p>הרמות נבדלות באורך ההסבר, בכמות הרמזים ובעומק השאלה — <b>לא בנושא</b>. כולן מכסות את אותו רעיון מרכזי ועומדות בתקן התוכן.</p>
+            </div>
+
+            <div class="level-grid">
+              <!-- תמיכה -->
+              <div class="level-card level-card--support" data-level="support">
+                <div class="level-card__head">
+                  <span class="level-card__icon" aria-hidden="true"><svg><use href="#ic-heart-hand"/></svg></span>
+                  <div class="level-card__titles">
+                    <p class="level-card__name">תמיכה</p>
+                    <p class="level-card__for">גרסה נגישה · יותר ליווי</p>
+                  </div>
+                </div>
+                <div class="level-card__body">
+                  <ul class="level-changes">
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>משפטים קצרים יותר, מילים יומיומיות</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>רמז אחרי כל טעות — שלושה שלבים</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>דוגמה נוספת לכל רעיון</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>אפשרות הקראה לטקסט</li>
+                  </ul>
+                  <div class="level-preview">
+                    <p class="level-preview__label">תצוגה מקדימה · פתיח</p>
+                    <p class="level-preview__text">"כמה חברים הזמנת ליום ההולדת? שלושה? שלוש? יש הבדל — וזה מה שנלמד היום."</p>
+                  </div>
+                </div>
+                <div class="level-card__foot">
+                  <label class="switch">
+                    <input type="checkbox" data-level-toggle="support" checked>
+                    <span class="switch__track" aria-hidden="true"></span>
+                    <span class="switch__label">כלולה</span>
+                  </label>
+                  <button class="btn btn--ghost btn--sm" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-edit"/></svg>עריכה</button>
+                </div>
+              </div>
+
+              <!-- ליבה -->
+              <div class="level-card level-card--core" data-level="core">
+                <div class="level-card__head">
+                  <span class="level-card__icon" aria-hidden="true"><svg><use href="#ic-target"/></svg></span>
+                  <div class="level-card__titles">
+                    <p class="level-card__name">ליבה</p>
+                    <p class="level-card__for">הגרסה הסטנדרטית</p>
+                  </div>
+                </div>
+                <div class="level-card__body">
+                  <ul class="level-changes">
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>ההסבר המלא לפי תקן התוכן</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>2–3 שאלות עם משוב מיידי ורמז</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>דוגמה אחת קונקרטית מהחיים</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>5 מסכים · כ-8 דקות</li>
+                  </ul>
+                  <div class="level-preview">
+                    <p class="level-preview__label">תצוגה מקדימה · פתיח</p>
+                    <p class="level-preview__text">"שלושה בנים או שלוש בנות? שם המספר משתנה לפי המין — בוא נראה איך זה עובד."</p>
+                  </div>
+                </div>
+                <div class="level-card__foot">
+                  <label class="switch">
+                    <input type="checkbox" data-level-toggle="core" checked>
+                    <span class="switch__track" aria-hidden="true"></span>
+                    <span class="switch__label">כלולה</span>
+                  </label>
+                  <button class="btn btn--ghost btn--sm" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-edit"/></svg>עריכה</button>
+                </div>
+              </div>
+
+              <!-- אתגר -->
+              <div class="level-card level-card--challenge" data-level="challenge">
+                <div class="level-card__head">
+                  <span class="level-card__icon" aria-hidden="true"><svg><use href="#ic-flag"/></svg></span>
+                  <div class="level-card__titles">
+                    <p class="level-card__name">אתגר</p>
+                    <p class="level-card__for">הרחבה למתקדמים</p>
+                  </div>
+                </div>
+                <div class="level-card__body">
+                  <ul class="level-changes">
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>אותו רעיון, פחות רמזים</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>שאלת יישום פתוחה יותר</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>מקרה-קצה שדורש הסבר</li>
+                    <li><svg aria-hidden="true"><use href="#ic-check"/></svg>רעיון להרחבה בסיום</li>
+                  </ul>
+                  <div class="level-preview">
+                    <p class="level-preview__label">תצוגה מקדימה · פתיח</p>
+                    <p class="level-preview__text">"מתי כותבים 'שלושת הבנים' ומתי 'שלושה בנים'? ההבדל קטן — וקובע אם המשפט תקין."</p>
+                  </div>
+                </div>
+                <div class="level-card__foot">
+                  <label class="switch">
+                    <input type="checkbox" data-level-toggle="challenge" checked>
+                    <span class="switch__track" aria-hidden="true"></span>
+                    <span class="switch__label">כלולה</span>
+                  </label>
+                  <button class="btn btn--ghost btn--sm" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-edit"/></svg>עריכה</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="stage-foot">
+              <button class="btn btn--ghost" type="button" data-back="2">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron-r"/></svg>
+                חזרה לניתוח
+              </button>
+              <span class="stage-foot__hint" id="levels-hint">3 רמות נבחרו</span>
+              <span class="spacer"></span>
+              <button class="btn btn--primary" type="button" id="go-approve">
+                המשך לאישור
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron-l"/></svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               שלב 4 — אישור
+               ============================================================ -->
+          <section class="stage-panel" id="stage-4" aria-labelledby="stage-4-h" hidden>
+            <div class="stage-head">
+              <p class="stage-kicker">שלב 4 מתוך 5</p>
+              <h2 id="stage-4-h">אישור לפני הקצאה</h2>
+              <p>אתם עוברים על היחידה ומאשרים. תוכן שנוצר בעזרת המערכת לא מגיע לתלמיד בלי אישור אנושי.</p>
+            </div>
+
+            <div class="ai-banner">
+              <svg aria-hidden="true"><use href="#ic-alert"/></svg>
+              <div>
+                <b>תוכן שנוצר בעזרת מערכת — נדרש אישור אנושי.</b>
+                <p>ההתאמה לשלוש הרמות בוצעה אוטומטית מהחומר שהעלית. עברו על התוכן ואשרו שהוא נכון ומתאים לכיתה.</p>
+              </div>
+            </div>
+
+            <div class="approve-grid">
+              <div class="subcard">
+                <h3>בדיקת קבלה — לפי תקן התוכן</h3>
+                <ul class="checklist">
+                  <li><span class="checklist__ok" aria-hidden="true"><svg><use href="#ic-check"/></svg></span>מבנה 5 שלבים: פתיח · הסבר · דוגמה · שאלות · סיום</li>
+                  <li><span class="checklist__ok" aria-hidden="true"><svg><use href="#ic-check"/></svg></span>עד 6 מסכים · עד 10 דקות · מנה של רעיון אחד למסך</li>
+                  <li><span class="checklist__ok" aria-hidden="true"><svg><use href="#ic-check"/></svg></span>עברית פשוטה · משפט עד 12 מילים · בלי אימוג'ים</li>
+                  <li><span class="checklist__ok" aria-hidden="true"><svg><use href="#ic-check"/></svg></span>גרסה נגישה קיימת (רמת "תמיכה")</li>
+                  <li><span class="checklist__ok" aria-hidden="true"><svg><use href="#ic-check"/></svg></span>עובד ב-390px · אופליין אחרי טעינה · רשת חלשה</li>
+                  <li><span class="checklist__ok" aria-hidden="true"><svg><use href="#ic-check"/></svg></span>מבחן החירום: בלי תכנים מעוררי חרדה, רגיש למפונים</li>
+                </ul>
+                <div class="analysis-note" style="margin-top:var(--space-4)">
+                  <svg aria-hidden="true"><use href="#ic-info"/></svg>
+                  <p>סעיף אחד עדיין דורש אותך: <b>אימות פדגוגי מול מקור סמכותי</b> — שהתוכן נכון, לא רק "נשמע נכון". מלאו את פרטי האימות ואשרו.</p>
+                </div>
+              </div>
+
+              <div class="subcard">
+                <h3>אימות פדגוגי ואישור</h3>
+                <div class="verify-field">
+                  <label for="verify-by">מי אימת (רכז המקצוע)</label>
+                  <input type="text" id="verify-by" value="רותם לוי · רכזת לשון">
+                </div>
+                <div class="verify-field">
+                  <label for="verify-src">מקור סמכותי</label>
+                  <input type="text" id="verify-src" placeholder="למשל: האקדמיה ללשון · אתר לשון · ספר לימוד מאושר">
+                </div>
+                <label class="switch" style="margin-top:var(--space-4)">
+                  <input type="checkbox" id="verify-check">
+                  <span class="switch__track" aria-hidden="true"></span>
+                  <span class="switch__label">בדקתי — התוכן נכון ומתאים לכיתה</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="stage-foot">
+              <button class="btn btn--ghost" type="button" data-back="3">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron-r"/></svg>
+                חזרה לרמות
+              </button>
+              <span class="stage-foot__hint" id="approve-hint">סמנו שבדקתם כדי להמשיך</span>
+              <span class="spacer"></span>
+              <button class="btn btn--primary" type="button" id="go-assign" disabled>
+                אישור והמשך להקצאה
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron-l"/></svg>
+              </button>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               שלב 5 — הקצאה
+               ============================================================ -->
+          <section class="stage-panel" id="stage-5" aria-labelledby="stage-5-h" hidden>
+            <div class="stage-head">
+              <p class="stage-kicker">שלב 5 מתוך 5</p>
+              <h2 id="stage-5-h">הקצאה לכיתה</h2>
+              <p>בחרו כיתה ואיך לחלק את הרמות. אפשר להתאים רמה לכל תלמיד או לתת לכולם את אותה גרסה.</p>
+            </div>
+
+            <div class="approve-grid">
+              <div class="subcard">
+                <h3>איך לחלק את הרמות</h3>
+                <div class="assign-modes" role="radiogroup" aria-label="שיטת חלוקת הרמות">
+                  <label class="assign-opt">
+                    <input type="radio" name="assign-mode" value="auto" checked>
+                    <span class="assign-opt__radio" aria-hidden="true"></span>
+                    <span class="assign-opt__body">
+                      <strong>התאמה אישית לכל תלמיד</strong>
+                      <span>כל תלמיד מקבל את הרמה שמתאימה לו, לפי מה שהמורה סימן. בלי חשיפה — התלמיד לא רואה באיזו רמה הוא.</span>
+                    </span>
+                  </label>
+                  <label class="assign-opt">
+                    <input type="radio" name="assign-mode" value="choice">
+                    <span class="assign-opt__radio" aria-hidden="true"></span>
+                    <span class="assign-opt__body">
+                      <strong>התלמיד בוחר בעצמו</strong>
+                      <span>כולם מקבלים את שלוש הרמות, והתלמיד בוחר מאיפה להתחיל ואם לעלות מדרגה.</span>
+                    </span>
+                  </label>
+                  <label class="assign-opt">
+                    <input type="radio" name="assign-mode" value="single">
+                    <span class="assign-opt__radio" aria-hidden="true"></span>
+                    <span class="assign-opt__body">
+                      <strong>אותה רמה לכולם</strong>
+                      <span>כל הכיתה מקבלת את רמת הליבה. פשוט ומהיר.</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="subcard">
+                <h3>יעד ומצב</h3>
+                <div class="field">
+                  <label for="assign-class">כיתה</label>
+                  <select id="assign-class">
+                    <option>י'2 · לשון (28 תלמידים)</option>
+                    <option>י'1 · לשון (26 תלמידים)</option>
+                    <option>ט'3 · לשון (30 תלמידים)</option>
+                  </select>
+                </div>
+                <div class="field" style="margin-top:var(--space-3)">
+                  <label for="assign-mode-sys">מצב מערכת בהקצאה</label>
+                  <select id="assign-mode-sys">
+                    <option value="routine">שגרה</option>
+                    <option value="remote">מרחוק</option>
+                    <option value="emergency" selected>חירום</option>
+                  </select>
+                </div>
+                <div class="assign-summary">
+                  <div class="assign-stat"><div class="assign-stat__n" id="sum-levels">3</div><div class="assign-stat__l">רמות תמיכה</div></div>
+                  <div class="assign-stat"><div class="assign-stat__n">28</div><div class="assign-stat__l">תלמידים בכיתה</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="stage-foot">
+              <button class="btn btn--ghost" type="button" data-back="4">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-chevron-r"/></svg>
+                חזרה לאישור
+              </button>
+              <span class="spacer"></span>
+              <button class="btn btn--primary" type="button" id="do-assign">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-send"/></svg>
+                הקצאה לכיתה
+              </button>
+            </div>
+          </section>
+
+          <!-- ============================================================
+               סיום — הצלחה
+               ============================================================ -->
+          <section class="stage-panel" id="stage-done" aria-labelledby="stage-done-h" hidden>
+            <div class="card">
+              <div class="done-state">
+                <div class="seq-done" aria-hidden="true">
+                  <span class="sequence-node" style="background:var(--brand);border-color:var(--brand)"></span>
+                  <span class="sequence-line" style="flex:0 0 40px"></span>
+                  <span class="sequence-node" style="background:var(--brand);border-color:var(--brand)"></span>
+                  <span class="sequence-line" style="flex:0 0 40px"></span>
+                  <span class="sequence-node" style="background:var(--brand);border-color:var(--brand)"></span>
+                </div>
+                <h2 id="stage-done-h">היחידה הוקצתה לכיתה י'2</h2>
+                <p>שלוש רמות התמיכה מחכות לתלמידים. תוכלו לעקוב אחרי מי התחיל ומי סיים בלוח הכיתה.</p>
+                <button class="btn btn--primary" type="button" id="restart">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-plus"/></svg>
+                  יצירת יחידה נוספת
+                </button>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- אזור התראות (Toast) -->
+<div class="toast-region" id="toast-region" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<script>
+(function () {
+  'use strict';
+  var qs = function (s, r) { return (r || document).querySelector(s); };
+  var qsa = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ---------- Toast ---------- */
+  function toast(msg, kind) {
+    kind = kind || 'success';
+    var region = qs('#toast-region');
+    var el = document.createElement('div');
+    el.className = 'toast toast--' + kind;
+    el.innerHTML =
+      '<span class="toast__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>' +
+      '<span class="toast__msg"></span>';
+    el.querySelector('.toast__msg').textContent = msg;
+    region.appendChild(el);
+    setTimeout(function () {
+      el.setAttribute('data-leaving', 'true');
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 220);
+    }, 3200);
+  }
+
+  /* ---------- ניהול שלבים + מסילת הרצף ---------- */
+  var totalSteps = 5;
+  var current = 1;
+  var railSteps = qsa('#rail .sequence-step');
+
+  function panelFor(step) {
+    if (step === 'done') return qs('#stage-done');
+    return qs('#stage-' + step);
+  }
+
+  function showStep(step) {
+    // הסתרת כל הפאנלים
+    qsa('.stage-panel').forEach(function (p) { p.hidden = true; });
+    var panel = panelFor(step);
+    if (panel) panel.hidden = false;
+
+    if (step !== 'done') current = step;
+
+    // עדכון מסילת הרצף
+    var activeIdx = step === 'done' ? totalSteps + 1 : step;
+    railSteps.forEach(function (li) {
+      var n = parseInt(li.getAttribute('data-step'), 10);
+      li.classList.remove('is-done', 'is-current', 'is-upcoming', 'is-interactive');
+      li.removeAttribute('aria-current');
+      if (n < activeIdx) {
+        li.classList.add('is-done', 'is-interactive');
+        li.setAttribute('tabindex', '0');
+        li.setAttribute('role', 'button');
+      } else if (n === activeIdx) {
+        li.classList.add('is-current');
+        li.setAttribute('aria-current', 'step');
+        li.removeAttribute('tabindex');
+        li.removeAttribute('role');
+      } else {
+        li.classList.add('is-upcoming');
+        li.removeAttribute('tabindex');
+        li.removeAttribute('role');
+      }
+    });
+
+    // גלילה לראש התוכן
+    var main = qs('.app-main');
+    if (main) main.scrollTo ? main.scrollTo({ top: 0, behavior: 'smooth' }) : (main.scrollTop = 0);
+  }
+
+  // קפיצה אחורה לשלב שהושלם דרך המסילה
+  railSteps.forEach(function (li) {
+    function jump() {
+      if (!li.classList.contains('is-interactive')) return;
+      showStep(parseInt(li.getAttribute('data-step'), 10));
+    }
+    li.addEventListener('click', jump);
+    li.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); jump(); }
+    });
+  });
+
+  // כפתורי "חזרה"
+  qsa('[data-back]').forEach(function (b) {
+    b.addEventListener('click', function () { showStep(parseInt(b.getAttribute('data-back'), 10)); });
+  });
+
+  /* ============================================================
+     שלב 1 — FileUploader
+     ============================================================ */
+  var materials = []; // { id, name, meta, icon }
+  var uid = 0;
+
+  var srcIcon = {
+    worksheet: 'ic-file-text', slides: 'ic-presentation',
+    link: 'ic-link', text: 'ic-text', curri: 'ic-curriculum'
+  };
+
+  // מעבר בין לשוניות סוג-מקור
+  var tabs = qsa('.source-tab');
+  tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () { selectTab(tab); });
+    tab.addEventListener('keydown', function (e) {
+      var i = tabs.indexOf(tab), n = null;
+      if (e.key === 'ArrowLeft')  n = tabs[(i + 1) % tabs.length];       // RTL: שמאל = הבא
+      if (e.key === 'ArrowRight') n = tabs[(i - 1 + tabs.length) % tabs.length];
+      if (n) { e.preventDefault(); selectTab(n); n.focus(); }
+    });
+  });
+  function selectTab(tab) {
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      qs('#' + t.getAttribute('aria-controls')).hidden = !on;
+    });
+  }
+
+  function fmtSize(bytes) {
+    if (!bytes && bytes !== 0) return '';
+    if (bytes < 1024) return bytes + 'B';
+    if (bytes < 1048576) return Math.round(bytes / 1024) + 'KB';
+    return (bytes / 1048576).toFixed(1) + 'MB';
+  }
+
+  function addMaterial(name, meta, iconId) {
+    materials.push({ id: ++uid, name: name, meta: meta, icon: iconId });
+    renderMaterials();
+  }
+  function removeMaterial(id) {
+    materials = materials.filter(function (m) { return m.id !== id; });
+    renderMaterials();
+  }
+  function renderMaterials() {
+    var list = qs('#file-list');
+    list.innerHTML = '';
+    list.hidden = materials.length === 0;
+    materials.forEach(function (m) {
+      var li = document.createElement('li');
+      li.className = 'file-item';
+      li.innerHTML =
+        '<span class="file-item__icon" aria-hidden="true"><svg><use href="#' + m.icon + '"/></svg></span>' +
+        '<div class="file-item__body"><p class="file-item__name"></p><p class="file-item__meta"></p></div>' +
+        '<button class="icon-btn file-item__remove" type="button" aria-label="הסרה"><svg aria-hidden="true"><use href="#ic-trash"/></svg></button>';
+      li.querySelector('.file-item__name').textContent = m.name;
+      li.querySelector('.file-item__meta').textContent = m.meta;
+      li.querySelector('.file-item__remove').addEventListener('click', function () { removeMaterial(m.id); });
+      list.appendChild(li);
+    });
+    // עדכון כפתור המשך
+    var go = qs('#go-analyze');
+    go.disabled = materials.length === 0;
+    qs('#upload-hint').textContent = materials.length === 0
+      ? 'בחרו חומר כדי להמשיך.'
+      : materials.length + ' פריטים נקלטו · אפשר להוסיף עוד או להמשיך.';
+  }
+
+  // Dropzones — לחיצה + גרירה + בחירת קובץ
+  qsa('.dropzone').forEach(function (dz) {
+    var key = dz.getAttribute('data-drop');
+    var input = qs('[data-file-input="' + key + '"]');
+    function open() { if (input) input.click(); }
+    dz.addEventListener('click', open);
+    dz.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('is-dragover'); });
+    dz.addEventListener('dragleave', function () { dz.classList.remove('is-dragover'); });
+    dz.addEventListener('drop', function (e) {
+      e.preventDefault(); dz.classList.remove('is-dragover');
+      handleFiles(e.dataTransfer.files, key);
+    });
+    if (input) input.addEventListener('change', function () { handleFiles(input.files, key); input.value = ''; });
+  });
+  function handleFiles(files, key) {
+    Array.prototype.forEach.call(files || [], function (f) {
+      var meta = (key === 'slides' ? 'מצגת' : 'דף עבודה') + ' · ' + (fmtSize(f.size) || 'קובץ');
+      addMaterial(f.name, meta, srcIcon[key]);
+    });
+    toast('החומר נקלט');
+  }
+
+  // הוספת קישור
+  qs('#link-add').addEventListener('click', function () {
+    var inp = qs('#link-url');
+    var v = (inp.value || '').trim();
+    if (!v) { inp.focus(); return; }
+    var name = v.replace(/^https?:\/\//, '').split('/')[0] || v;
+    addMaterial(name, 'קישור · פריט הפניה', 'ic-link');
+    inp.value = '';
+    toast('הקישור נוסף כפריט הפניה');
+  });
+
+  // הוספת טקסט (בעת עזיבת השדה, אם יש תוכן ולא נוסף עדיין)
+  var textAdded = false;
+  qs('#text-paste').addEventListener('blur', function () {
+    var v = (this.value || '').trim();
+    if (v.length > 20 && !textAdded) {
+      var words = v.split(/\s+/).length;
+      addMaterial('טקסט שהודבק', 'טקסט · ' + words + ' מילים', 'ic-text');
+      textAdded = true;
+    }
+  });
+
+  // בחירת נושא מתוכנית לימודים
+  qsa('#curri-topics .topic-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      var on = chip.getAttribute('aria-pressed') === 'true';
+      // בחירה יחידה
+      qsa('#curri-topics .topic-chip').forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
+      // הסרת פריט תוכנית קודם
+      materials = materials.filter(function (m) { return m.icon !== 'ic-curriculum'; });
+      if (!on) {
+        chip.setAttribute('aria-pressed', 'true');
+        addMaterial('תוכנית לימודים · ' + chip.textContent, 'לשון · כיתה י\'', 'ic-curriculum');
+      } else {
+        renderMaterials();
+      }
+    });
+  });
+
+  /* ============================================================
+     מעבר משלב 1 → 2 (העלאה → ניתוח, עם סימולציית עיבוד)
+     ============================================================ */
+  qs('#go-analyze').addEventListener('click', function () {
+    showStep(2);
+    // שם החומר הראשון בכותרת הניתוח
+    if (materials[0]) qs('#analyze-fname').textContent = materials[0].name;
+    qs('#analyze-loading').hidden = false;
+    qs('#analyze-result').hidden = true;
+    qs('#go-adapt').disabled = true;
+    // סימולציית ניתוח
+    setTimeout(function () {
+      qs('#analyze-loading').hidden = true;
+      qs('#analyze-result').hidden = false;
+      qs('#go-adapt').disabled = false;
+      toast('הניתוח הושלם — אפשר לעבור להתאמה', 'info');
+    }, 1600);
+  });
+
+  qs('#go-adapt').addEventListener('click', function () { showStep(3); });
+
+  /* ============================================================
+     שלב 3 — מתגי רמות
+     ============================================================ */
+  function levelCount() {
+    return qsa('[data-level-toggle]').filter(function (t) { return t.checked; }).length;
+  }
+  qsa('[data-level-toggle]').forEach(function (t) {
+    t.addEventListener('change', function () {
+      var card = t.closest('.level-card');
+      card.classList.toggle('is-off', !t.checked);
+      t.parentNode.querySelector('.switch__label').textContent = t.checked ? 'כלולה' : 'כבויה';
+      var n = levelCount();
+      qs('#levels-hint').textContent = n + ' רמות נבחרו';
+      qs('#go-approve').disabled = n === 0;
+      qs('#sum-levels').textContent = n;
+    });
+  });
+
+  qs('#go-approve').addEventListener('click', function () { showStep(4); });
+
+  /* ============================================================
+     שלב 4 — אישור
+     ============================================================ */
+  qs('#verify-check').addEventListener('change', function () {
+    qs('#go-assign').disabled = !this.checked;
+    qs('#approve-hint').textContent = this.checked ? 'אפשר להקצות' : 'סמנו שבדקתם כדי להמשיך';
+  });
+  qs('#go-assign').addEventListener('click', function () { showStep(5); });
+
+  /* ============================================================
+     שלב 5 — הקצאה
+     ============================================================ */
+  qs('#do-assign').addEventListener('click', function () {
+    var cls = qs('#assign-class').value.split('·')[0].trim();
+    qs('#stage-done-h').textContent = 'היחידה הוקצתה לכיתה ' + cls;
+    showStep('done');
+    toast('היחידה הוקצתה בהצלחה');
+  });
+
+  // יצירת יחידה נוספת — איפוס
+  qs('#restart').addEventListener('click', function () {
+    materials = []; textAdded = false;
+    renderMaterials();
+    qs('#link-url').value = ''; qs('#text-paste').value = '';
+    qsa('#curri-topics .topic-chip').forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
+    qsa('[data-level-toggle]').forEach(function (t) {
+      t.checked = true; t.closest('.level-card').classList.remove('is-off');
+      t.parentNode.querySelector('.switch__label').textContent = 'כלולה';
+    });
+    qs('#levels-hint').textContent = '3 רמות נבחרו';
+    qs('#go-approve').disabled = false;
+    qs('#sum-levels').textContent = '3';
+    qs('#verify-check').checked = false; qs('#go-assign').disabled = true;
+    qs('#approve-hint').textContent = 'סמנו שבדקתם כדי להמשיך';
+    selectTab(qs('#tab-worksheet'));
+    showStep(1);
+  });
+
+  /* ---------- ניווט מובייל (sidebar) ---------- */
+  var shell = qs('.app-shell');
+  qsa('[data-nav-open]').forEach(function (b) { b.addEventListener('click', function () { shell.classList.add('is-nav-open'); qs('.app-shell__scrim').hidden = false; }); });
+  qsa('[data-nav-close]').forEach(function (b) { b.addEventListener('click', function () { shell.classList.remove('is-nav-open'); qs('.app-shell__scrim').hidden = true; }); });
+
+  // אתחול
+  renderMaterials();
+  showStep(1);
+})();
+</script>
+</body>
+</html>

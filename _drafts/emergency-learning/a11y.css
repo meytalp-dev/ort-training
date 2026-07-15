@@ -1,0 +1,254 @@
+/* ============================================================
+   רֶצֶף — שכבת נגישות משותפת (W0-D9) · WCAG 2.1 AA
+   a11y.css · נלווה ל: tokens.css + components.css + design-system-brief.md §9
+   ------------------------------------------------------------
+   מה זה: שכבה רוחבית שכל מסך/רכיב טוען מיד אחרי components.css.
+   נותנת "בחינם" לכל תצוגה: focus-visible אחיד, ניווט-מקלדת נראה,
+   יעד-מגע 44px, כיבוד prefers-reduced-motion, מצב ניגודיות גבוהה
+   (forced-colors / prefers-contrast), עזרי קורא-מסך, וטקסט-חלופי.
+   ------------------------------------------------------------
+   טעינה (בכל קובץ HTML, בסדר הזה):
+     <link rel="stylesheet" href="tokens.css">
+     <link rel="stylesheet" href="components.css">   (אם נטען)
+     <link rel="stylesheet" href="a11y.css">          ← אחרון, מנצח
+     <script src="a11y.js" defer></script>            (עוזרי JS — אופציונלי)
+   כלל: בלי צבעים/מידות קשיחים — הכל דרך tokens.css.
+   ============================================================ */
+
+
+/* ============================================================
+   1. יעד-מגע ≥44px  (WCAG 2.5.5 / 2.5.8)
+   כל אלמנט אינטראקטיבי חייב אזור-נגיעה של 44px לפחות.
+   הרכיבים המובנים (.btn/.icon-btn) כבר עומדים בזה; כאן רשת-ביטחון
+   לאלמנטים נטיביים ולקישורי-ניווט, + עזר .tap-target להגדלה שקופה.
+   ============================================================ */
+:where(button, [role="button"], [role="tab"], [role="menuitem"],
+       [role="switch"], [role="checkbox"], [role="radio"],
+       a[href], label[for], summary, select) {
+  min-height: var(--tap, 44px);
+}
+/* קלט טקסט/בורר — גובה נוח ללא שבירת שדות צרים */
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+       textarea, select) {
+  min-height: var(--tap, 44px);
+}
+
+/* עזר: מרחיב אזור-נגיעה ל-44px גם כשהאלמנט הנראה קטן (אייקון/קישור-טקסט),
+   בלי לשנות את המראה. הצב על אב position:relative. */
+.tap-target { position: relative; }
+.tap-target::after {
+  content: "";
+  position: absolute;
+  inset: 50% 50% auto auto;
+  transform: translate(50%, -50%);
+  min-width: var(--tap, 44px);
+  min-height: var(--tap, 44px);
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ============================================================
+   2. focus-visible אחיד — נראה לכל מי שמנווט במקלדת  (WCAG 2.4.7)
+   כלל: לא מסירים מיקוד בלי חלופה. משתמשים ב-:focus-visible כדי
+   לא להציק למשתמשי-עכבר, אבל שומרים טבעת ברורה למקלדת.
+   ------------------------------------------------------------
+   .rz הוא ה-namespace של הרכיבים; אם לא הוסף, הבסיס עדיין חל דרך
+   :where(...) בעדיפות-אפס (לא דורס עיצוב קיים).
+   ============================================================ */
+
+/* בסיס רך (עדיפות 0) — כל אלמנט אינטראקטיבי שלא הוגדר לו focus ידני */
+:where(a[href], button, input, select, textarea, summary,
+       [tabindex]:not([tabindex="-1"]),
+       [role="button"], [role="link"], [role="tab"],
+       [role="menuitem"], [role="option"], [role="switch"],
+       [role="checkbox"], [role="radio"]):focus-visible {
+  outline: 3px solid var(--brand-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 10px);
+}
+
+/* לא להסתיר מיקוד גם כשהדפדפן לא תומך ב-:focus-visible (fallback) */
+.rz :focus { outline-color: var(--brand-bright); }
+.rz :focus:not(:focus-visible) { outline: none; }
+
+/* עוגני-דילוג ומטרות תוכן שמקבלות פוקוס תכנותי (tabindex=-1) —
+   לא מציגים טבעת כשמדלגים אליהם, כדי לא לבלבל. */
+[tabindex="-1"]:focus { outline: none; }
+
+
+/* ============================================================
+   3. Skip Link — "דלג לתוכן"  (WCAG 2.4.1)
+   ראשון ב-<body>: <a class="skip-link" href="#main">דלג לתוכן</a>
+   מוסתר עד שמקבל פוקוס במקלדת, ואז קופץ לפינה העליונה (ימין ב-RTL).
+   ============================================================ */
+.skip-link {
+  position: fixed;
+  top: var(--space-3, 12px);
+  inset-inline-start: var(--space-3, 12px);
+  z-index: 2000;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap, 44px);
+  padding: 0 var(--space-4, 16px);
+  font-family: var(--font-body);
+  font-size: var(--text-body, 16px);
+  font-weight: 600;
+  color: #fff;
+  background: var(--brand-deep);
+  border: 2px solid var(--brand-bright);
+  border-radius: var(--radius-btn, 12px);
+  box-shadow: var(--shadow-lg);
+  text-decoration: none;
+  transform: translateY(-160%);
+  transition: transform 160ms ease;
+}
+.skip-link:focus { transform: translateY(0); }
+
+
+/* ============================================================
+   4. עזרי קורא-מסך — טקסט חלופי ותיאור מילולי  (WCAG 1.1.1 / 1.4.1)
+   .sr-only          — טקסט לקורא-מסך בלבד (מוגדר גם ב-components.css; נשמר כאן
+                        כדי ש-a11y.css יעבוד גם בלי components.css).
+   .sr-only-focusable — נחשף כשמקבל פוקוס (למשל skip-link טקסטואלי).
+   .not-color-only    — תזכורת-קוד: מצב שאסור להסתמך בו על צבע בלבד.
+   ============================================================ */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* אזור-חי לשידור סטטוס לקורא-מסך (a11y.js משתמש בו; אפשר גם ידני).
+   ריק ויזואלית — הטקסט מוזרק ומוקרא. */
+.a11y-live {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+/* ============================================================
+   5. prefers-reduced-motion — כיבוד בקשת "פחות תנועה"  (WCAG 2.3.3)
+   רשת-ביטחון רוחבית: מבטלת אנימציות/מעברים/גלילה-חלקה בכל האתר.
+   רכיב שרוצה מעבר עדין הכרחי — יגדיר אותו בעצמו מעל שכבה זו.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* ============================================================
+   6. ניגודיות גבוהה / Forced Colors (Windows High Contrast)  (WCAG 1.4.11)
+   כשמצב-ניגודיות-גבוהה פעיל — לוודא שהמסגרות והמיקוד נשמרים גם
+   כשהצבעים נדרסים ע"י המערכת. משתמשים בצבעי-מערכת סמנטיים.
+   ============================================================ */
+@media (forced-colors: active) {
+  /* מיקוד תמיד נראה בצבע-המערכת */
+  :where(a, button, input, select, textarea, summary,
+         [tabindex], [role]):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  /* גבולות רכיבים שמסתמכים על צל/צבע-רקע — לאכוף קו נראה */
+  .card, .chip, .btn, .badge, .modal__panel, .drawer__panel,
+  .toast, .sequence-node {
+    border: 1px solid CanvasText !important;
+  }
+  /* פסי-התקדמות: המילוי חייב גבול כדי להיראות בלי צבע */
+  .progress__fill, .sequence-progress__fill { outline: 1px solid CanvasText; }
+  /* לא לאבד את הכיווץ החזותי של skip-link */
+  .skip-link { border: 2px solid CanvasText; }
+}
+
+/* prefers-contrast: more — מחזקים גבולות וטקסט-משני מעט */
+@media (prefers-contrast: more) {
+  .rz { --line: var(--line-strong); }
+  :where(a[href]) { text-decoration: underline; }
+  .card, .chip, .btn--secondary { border-width: 1.5px; }
+}
+
+
+/* ============================================================
+   7. הגדלת טקסט וזום  (WCAG 1.4.4 / 1.4.10)
+   מאפשרים הגדלת טקסט עד 200% בלי אובדן תוכן:
+   - לא לחסום text-size-adjust במובייל.
+   - קונטיינרים גמישים (max-width ב-ch, לא גבהים קשיחים על טקסט).
+   כאן מכבים חסימות נפוצות ומספקים עזר .allow-zoom.
+   ============================================================ */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* קישור/כפתור עם טקסט ארוך לא ייחתך בזום — גלישה מותרת */
+.btn, .chip { white-space: normal; }
+@supports (overflow-wrap: anywhere) {
+  .btn, .chip, .card__title, .card__desc { overflow-wrap: anywhere; }
+}
+
+
+/* ============================================================
+   8. טקסט חלופי לגרפים  (WCAG 1.1.1)
+   כל גרף/SVG-נתונים חייב חלופה קריאה. שני דפוסים נתמכים:
+   א. <figure> עם <figcaption class="chart-alt"> גלוי (מומלץ).
+   ב. טבלת-נתונים חבויה .chart-data (sr-only) לצד ה-SVG.
+   ============================================================ */
+.chart-alt {
+  font-size: var(--text-small, 14px);
+  color: var(--ink-soft);
+  margin-top: var(--space-2, 8px);
+  line-height: 1.5;
+}
+/* טבלת-נתונים נגישה, חבויה ויזואלית אך זמינה לקורא-מסך */
+.chart-data { /* השתמש/י יחד עם .sr-only על ה-<table> */ }
+/* SVG דקורטיבי בלבד — חובה aria-hidden; SVG-נתונים — role="img"+aria-label */
+svg[aria-hidden="true"] { pointer-events: none; }
+
+
+/* ============================================================
+   9. "לא-רק-צבע" — עזרי-קוד לחיזוק מצב לא-ויזואלי  (WCAG 1.4.1)
+   כל סטטוס/מצב חייב סימן נוסף מלבד הצבע: אייקון, נקודה, טקסט, או
+   קו-תחתון. אלה עזרים; העיצוב עצמו כבר בונה נקודה+טקסט ב-.chip.
+   ============================================================ */
+/* קישור בתוך גוף-טקסט: קו-תחתון (לא רק צבע) */
+.rz .prose a[href], .content a[href] { text-decoration: underline; text-underline-offset: 2px; }
+
+/* מחוון "נדרש" בטופס — כוכבית + טקסט לקורא-מסך */
+.req-mark { color: var(--status-alert); font-weight: 700; }
+.req-mark::after { content: ""; }
+
+
+/* ============================================================
+   10. עזרי-נגישות כלליים
+   ============================================================ */
+/* אכיפת [hidden] מול display:flex/grid מקומי */
+[hidden] { display: none !important; }
+
+/* גלילה נגישה: אזור נגלל צריך פוקוס תכנותי + תיאור */
+.a11y-scroll:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+/* מטרת-דילוג ראשית — הצב id="main" tabindex="-1" על ה-<main> */
+#main:focus { outline: none; }

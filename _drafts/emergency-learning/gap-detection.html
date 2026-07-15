@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>זיהוי פערים מקצועיים · איפה חסר תוכן — רֶצֶף (W4-05)</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="a11y.css">
+<style>
+/* ============================================================
+   W4-05 · זיהוי פערים מקצועיים (מפקח מקצועי, תחום דעת אחד)
+   שני חלקים: (1) מפת כיסוי — איפה חסר תוכן · (2) נקודות חיכוך —
+   איפה תלמידים נתקעים. הכול מצרפי — בלי מידע אישי של תלמיד.
+   צורך: tokens.css · components.css (metric-card/chip/rz-table/
+   drawer/toast/sidebar/topbar/app-shell/sequence) · a11y.css.
+   מקורות המשך: unit-editor.html (W4-01) · content-approval.html
+   (W4-02) · library.html (W6). כלל: הכול מטוקנים — בלי צבע קשיח.
+   ============================================================ */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--ink);
+  line-height: 1.6; font-size: var(--text-body); -webkit-text-size-adjust: 100%; }
+
+/* --- כותרת המסך --- */
+.gd-head { margin-bottom: var(--space-5); }
+.gd-head h1 { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800;
+  color: var(--ink-strong); margin: 0 0 var(--space-1); }
+.gd-head p { color: var(--ink-soft); margin: 0; font-size: var(--text-small); max-width: 62ch; }
+
+/* --- פס-תחום: מגביל את התצוגה לתחום הדעת + מצרפי בלבד (מינימיזציה) --- */
+.scope { display: flex; align-items: center; gap: var(--space-3); background: var(--brand-soft);
+  border: 1px solid var(--brand-line); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5); flex-wrap: wrap; }
+.scope__ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--card); color: var(--brand-deep); border: 1px solid var(--brand-line); }
+.scope__ico svg { width: 19px; height: 19px; }
+.scope__txt { font-size: var(--text-small); color: var(--ink); }
+.scope__txt b { color: var(--brand-dark); }
+.scope__pills { display: inline-flex; gap: var(--space-2); flex-wrap: wrap; margin-inline-start: auto; }
+.scope__pill { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px;
+  border-radius: var(--radius-pill); font-size: var(--text-label); font-weight: 700; white-space: nowrap;
+  background: var(--card); border: 1px solid var(--brand-line); color: var(--brand-deep); }
+.scope__pill svg { width: 14px; height: 14px; flex: none; }
+
+/* --- רשת מוני-על --- */
+.gd-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);
+  margin-bottom: var(--space-6); }
+@media (max-width: 900px) { .gd-metrics { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .gd-metrics { grid-template-columns: 1fr; } }
+
+/* --- כותרת-חלק --- */
+.sec-head { display: flex; align-items: baseline; gap: var(--space-3); margin: var(--space-4) 0 var(--space-4); flex-wrap: wrap; }
+.sec-head h2 { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 700;
+  color: var(--ink-strong); margin: 0; }
+.sec-head p { margin: 0; color: var(--ink-soft); font-size: var(--text-small); }
+
+/* --- מקרא כיסוי --- */
+.legend { display: flex; gap: var(--space-4); flex-wrap: wrap; margin-inline-start: auto;
+  font-size: var(--text-label); color: var(--ink-soft); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; }
+.legend i { width: 14px; height: 14px; border-radius: 50%; flex: none; box-sizing: border-box; }
+.legend .lg-covered { background: var(--status-good); }
+.legend .lg-thin { background: var(--card); border: 3px solid var(--status-attention); }
+.legend .lg-missing { background: var(--card); border: 2px dashed var(--ink-faint); }
+
+/* ============================================================
+   מפת כיסוי — כרטיס לכל שכבה, עם "מסילת רצף" של הנושאים
+   ============================================================ */
+.cov-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+@media (max-width: 860px) { .cov-grid { grid-template-columns: 1fr; } }
+
+.cov-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card); padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
+.cov-card__head { display: flex; align-items: center; gap: var(--space-3); }
+.cov-card__grade { width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center;
+  background: var(--brand-soft); color: var(--brand-deep); border: 1px solid var(--brand-line);
+  font-family: var(--font-head); font-weight: 800; font-size: var(--text-h3); }
+.cov-card__t { font-family: var(--font-head); font-weight: 700; color: var(--ink-strong); font-size: var(--text-h3); line-height: 1.2; }
+.cov-card__c { font-size: var(--text-label); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+/* מסילת הנושאים — מוטיב קו הרצף, כאן מראה איפה הרצף נשבר */
+.cov-rail { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding: var(--space-2) 0 0; }
+.cov-rail__step { flex: 1 1 0; min-width: 46px; display: flex; flex-direction: column; align-items: center;
+  position: relative; text-align: center; }
+.cov-rail__step::before { content: ""; position: absolute; top: 9px; height: 2px; background: var(--line-strong);
+  inset-inline-start: -50%; width: 100%; z-index: 0; }
+.cov-rail__step:first-child::before { content: none; }
+.cov-rail__step[data-state="covered"]::before,
+.cov-rail__step[data-state="thin"]::before { background: var(--brand-line); }
+.cov-rail__node { position: relative; z-index: 1; width: 20px; height: 20px; border-radius: 50%;
+  box-sizing: border-box; background: var(--card); display: grid; place-items: center; }
+.cov-rail__step[data-state="covered"] .cov-rail__node { background: var(--status-good); border: 2px solid var(--status-good); }
+.cov-rail__step[data-state="covered"] .cov-rail__node svg { width: 11px; height: 11px; color: var(--card); }
+.cov-rail__step[data-state="thin"] .cov-rail__node { border: 4px solid var(--status-attention); }
+.cov-rail__step[data-state="missing"] .cov-rail__node { border: 2px dashed var(--ink-faint); }
+.cov-rail__lbl { margin-top: 6px; font-size: 11px; line-height: 1.25; color: var(--ink-soft); max-width: 8ch; }
+.cov-rail__step[data-state="missing"] .cov-rail__lbl { color: var(--ink-faint); }
+
+/* רשימת נושאים לחיצה */
+.cov-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.cov-item { width: 100%; display: flex; align-items: center; gap: var(--space-3); text-align: start;
+  background: var(--bg-soft); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3); cursor: pointer; font-family: var(--font-body);
+  transition: background 160ms ease, border-color 160ms ease; }
+.cov-item:hover { background: var(--surface-muted); border-color: var(--brand-line); }
+.cov-item:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+.cov-item__name { font-size: var(--text-small); font-weight: 650; color: var(--ink-strong); flex: 1; min-width: 0; line-height: 1.3; }
+.cov-item__units { font-size: var(--text-label); color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cov-item__go { color: var(--ink-faint); flex: none; display: grid; place-items: center; }
+.cov-item__go svg { width: 16px; height: 16px; transform: scaleX(-1); }
+
+/* ============================================================
+   נקודות חיכוך — טבלה מצרפית
+   ============================================================ */
+.fric-note { display: flex; align-items: flex-start; gap: var(--space-2); font-size: var(--text-label);
+  color: var(--ink-soft); background: var(--surface-muted); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-4); }
+.fric-note svg { width: 16px; height: 16px; flex: none; color: var(--ink-faint); margin-top: 2px; }
+
+.rate { display: flex; flex-direction: column; gap: 4px; min-width: 108px; }
+.rate__top { display: flex; align-items: baseline; gap: 6px; }
+.rate__val { font-family: var(--font-head); font-weight: 800; font-size: var(--text-h3);
+  color: var(--ink-strong); font-variant-numeric: tabular-nums; }
+.rate__cap { font-size: var(--text-label); color: var(--ink-soft); }
+.rate__bar { height: 6px; border-radius: var(--radius-pill); background: var(--surface-muted); overflow: hidden; }
+.rate__fill { height: 100%; border-radius: var(--radius-pill); background: var(--status-good); }
+.rate--attention .rate__fill { background: var(--status-attention); }
+.rate--alert .rate__fill { background: var(--status-alert); }
+
+.trend { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); }
+.trend svg { width: 15px; height: 15px; flex: none; }
+.trend--down { color: var(--status-alert); }
+.trend--up { color: var(--status-good); }
+.trend--flat { color: var(--ink-soft); }
+
+.fric-actions-col { text-align: end; white-space: nowrap; }
+.rz-table td:last-child { text-align: end; }
+.fric-act-cell { display: inline-flex; gap: var(--space-2); align-items: center; justify-content: flex-end; flex-wrap: nowrap; }
+.fric-act-cell .btn { white-space: nowrap; }
+
+.empty { text-align: center; padding: var(--space-10) var(--space-4); color: var(--ink-soft); }
+.empty svg { width: 40px; height: 40px; color: var(--ink-faint); margin-bottom: var(--space-3); }
+.empty p { margin: 0; }
+
+/* ============================================================
+   מגירת פרטים — כיסוי נושא / נקודת חיכוך
+   ============================================================ */
+.dv { display: flex; flex-direction: column; gap: var(--space-4); }
+.dv__tags { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.dv__meta { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4);
+  background: var(--surface-muted); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); }
+.dv__meta dt { font-size: var(--text-label); color: var(--ink-soft); font-weight: 600; margin: 0; }
+.dv__meta dd { margin: 2px 0 0; color: var(--ink-strong); font-weight: 650; font-size: var(--text-small); }
+.dv__finding { border-inline-start: 3px solid var(--brand); background: var(--bg-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: var(--space-3); font-size: var(--text-small); color: var(--ink); }
+.dv__finding b { color: var(--ink-strong); }
+.dv__sec-t { font-family: var(--font-head); font-size: var(--text-label); font-weight: 700;
+  color: var(--ink-faint); margin: var(--space-1) 0 0; }
+.dv__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+.dv__stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: var(--space-3); text-align: center; }
+.dv__stat b { display: block; font-family: var(--font-head); font-weight: 800; font-size: var(--text-h3);
+  color: var(--ink-strong); font-variant-numeric: tabular-nums; }
+.dv__stat span { font-size: var(--text-label); color: var(--ink-soft); }
+.dv__rec { display: flex; gap: var(--space-3); background: var(--brand-soft); border: 1px solid var(--brand-line);
+  border-radius: var(--radius-sm); padding: var(--space-3); }
+.dv__rec svg { width: 20px; height: 20px; color: var(--brand-deep); flex: none; }
+.dv__rec p { margin: 0; font-size: var(--text-small); color: var(--brand-dark); }
+.dv__rec b { color: var(--brand-dark); }
+.drawer__foot-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; padding-top: var(--space-3); border-top: 1px solid var(--line); }
+
+@media (max-width: 640px) {
+  .rz-table td[data-label="פעולה"] { flex-direction: column; align-items: stretch; }
+  .fric-act-cell { flex-wrap: wrap; justify-content: stretch; width: 100%; }
+  .fric-act-cell .btn { flex: 1 1 auto; justify-content: center; }
+  .legend { margin-inline-start: 0; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">דלג/י לתוכן</a>
+
+<!-- ============================================================
+     ספריית אייקונים (subset) — כולם currentColor, outline בלבד
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="ic-check-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="ic-gaps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14.5h7M17.5 18h3.5" stroke-dasharray="0.1 3.2"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1Z"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-split" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3 13 11"/><path d="M11 13 3 21"/><path d="M8 3H3v5"/><path d="M21 16v5h-5"/></symbol>
+  <symbol id="ic-life" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.6"/><path d="m5 5 3.7 3.7M15.3 15.3 19 19M19 5l-3.7 3.7M8.7 15.3 5 19"/></symbol>
+  <symbol id="ic-trend-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 7 6 6 4-4 8 8"/><path d="M21 21v-6h-6"/></symbol>
+  <symbol id="ic-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 6-6 4 4 8-8"/><path d="M21 9V3h-6"/></symbol>
+  <symbol id="ic-trend-flat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+</svg>
+
+<!-- ============================================================
+     InspectorShell — Sidebar + Topbar + Main (מפקח מקצועי)
+     ============================================================ -->
+<div class="app-shell app-shell--admin" id="shell" data-role="inspector">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <div class="sidebar__section">תחום הדעת</div>
+      <a class="sidebar__item" href="library.html" aria-label="ספריית המקצוע">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית המקצוע</span>
+      </a>
+      <a class="sidebar__item" href="unit-editor.html" aria-label="עורך היחידות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-edit"/></svg></span>
+        <span class="sidebar__label">עורך היחידות</span>
+      </a>
+      <a class="sidebar__item" href="content-approval.html" aria-label="אישור תוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-check-square"/></svg></span>
+        <span class="sidebar__label">אישור תוכן</span>
+      </a>
+
+      <div class="sidebar__section">ניתוח</div>
+      <a class="sidebar__item" href="gap-detection.html" aria-current="page" aria-label="זיהוי פערים">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-gaps"/></svg></span>
+        <span class="sidebar__label">זיהוי פערים</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">יב</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">ד"ר יעל בר</div>
+          <div class="sidebar__foot-role">מפקחת מקצועית · לשון</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">זיהוי פערים</div>
+        <div class="topbar__subtitle">לשון · פיקוח מקצועי · נתונים מצרפיים</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" id="q" placeholder="חיפוש נושא, שכבה או יחידה…" aria-label="חיפוש">
+      </label>
+      <div class="topbar__actions">
+        <button class="icon-btn" type="button" aria-label="התראות"><svg aria-hidden="true"><use href="#ic-bell"/></svg></button>
+        <button class="icon-btn" type="button" aria-label="עזרה"><svg aria-hidden="true"><use href="#ic-help"/></svg></button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי"><span class="avatar" aria-hidden="true">יב</span></button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי" id="main-content">
+      <div class="app-main__inner">
+
+        <!-- כותרת -->
+        <div class="gd-head">
+          <h1>זיהוי פערים מקצועיים</h1>
+          <p>שתי שאלות בתמונה אחת: <b>איפה חסר תוכן</b> ברצף הלמידה של תחום הדעת, ו<b>איפה תלמידים נתקעים</b> ביחידות שכבר קיימות. הכול מצרפי — הכיוון הוא איפה להשקיע בכתיבה ובשיפור, לא מי התלמיד.</p>
+        </div>
+
+        <!-- פס-תחום + מינימיזציה -->
+        <div class="scope" role="note">
+          <div class="scope__ico" aria-hidden="true"><svg><use href="#ic-shield"/></svg></div>
+          <div class="scope__txt">
+            <b>התצוגה מוגבלת לתחום הדעת שלך.</b> הנתונים נאספים על פני כל בתי הספר, אך מוצגים <b>מצרפית בלבד</b> — בלי שמות, בלי מידע אישי של תלמיד, בלי drill לתלמיד בודד.
+          </div>
+          <div class="scope__pills">
+            <span class="scope__pill"><svg aria-hidden="true"><use href="#ic-book"/></svg>לשון</span>
+            <span class="scope__pill"><svg aria-hidden="true"><use href="#ic-users"/></svg>14 בתי ספר</span>
+          </div>
+        </div>
+
+        <!-- מוני-על -->
+        <div class="gd-metrics" id="metrics"><!-- מוזרק ב-JS --></div>
+
+        <!-- ============ חלק 1: מפת כיסוי ============ -->
+        <div class="sec-head">
+          <h2>מפת כיסוי — איפה חסר תוכן</h2>
+          <div class="legend" aria-hidden="true">
+            <span><i class="lg-covered"></i>מכוסה</span>
+            <span><i class="lg-thin"></i>דליל</span>
+            <span><i class="lg-missing"></i>חסר</span>
+          </div>
+        </div>
+        <p class="sr-only">מקרא: מכוסה = שתי יחידות מאושרות ומעלה; דליל = יחידה אחת בלבד; חסר = אין תוכן מאושר.</p>
+        <div class="cov-grid" id="cov-grid"><!-- מוזרק ב-JS --></div>
+
+        <!-- ============ חלק 2: נקודות חיכוך ============ -->
+        <div class="sec-head" style="margin-top:var(--space-8)">
+          <h2>נקודות חיכוך — איפה תלמידים נתקעים</h2>
+          <p>יחידות מאושרות עם שיעור השלמה נמוך או כניסה גבוהה למסלול הצלה. ממוין מהחזק ביותר.</p>
+        </div>
+        <div class="fric-note" role="note">
+          <svg aria-hidden="true"><use href="#ic-info"/></svg>
+          <span>כל המספרים <b>מצרפיים</b> (אחוזים על פני כל בתי הספר בתחום). אין כאן זהות של תלמיד — הכלי מפנה תשומת לב ליחידה, לא לילד.</span>
+        </div>
+        <div class="rz-table-wrap">
+          <div class="rz-table-scroll">
+            <table class="rz-table" id="fric-tbl">
+              <thead>
+                <tr>
+                  <th scope="col">יחידה</th>
+                  <th scope="col">שיעור השלמה</th>
+                  <th scope="col">כניסה למסלול הצלה</th>
+                  <th scope="col">מגמה</th>
+                  <th scope="col" class="fric-actions-col">פעולה</th>
+                </tr>
+              </thead>
+              <tbody id="fric-body"><!-- מוזרק ב-JS --></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     מגירת פרטים
+     ============================================================ -->
+<div class="scrim scrim--drawer" id="dv-scrim" hidden>
+  <div class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="dv-title">
+    <div class="drawer__head">
+      <h2 class="drawer__title" id="dv-title">פרטים</h2>
+      <button class="icon-btn" type="button" id="dv-close" aria-label="סגירה"><svg aria-hidden="true"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="drawer__body">
+      <div class="dv" id="dv-body"><!-- מוזרק ב-JS --></div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(function () {
+  'use strict';
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+
+  /* ============================================================
+     נתוני-זרע — מצרפיים בלבד (תחום: לשון · 14 בתי ספר)
+     כיסוי לפי taxonomy.md (לשון). state נגזר ממספר יחידות מאושרות:
+        units>=2 → covered · units==1 → thin · units==0 → missing
+     ============================================================ */
+  var SUBJECT = 'לשון';
+
+  var COVERAGE = [
+    { grade:'ט', topics:[
+      { name:'הבנת הנקרא — זיהוי רעיון מרכזי', units:3, updated:'2026-06-30' },
+      { name:'אוצר מילים ומשמעות', units:2, updated:'2026-06-24' },
+      { name:'פיסוק בסיסי', units:1, updated:'2026-05-19' },
+      { name:'מבוא לתצורת הפועל — בניינים', units:0, updated:'' }
+    ]},
+    { grade:'י', topics:[
+      { name:'מערכת הצורות — הפועל: בניינים וגזרות', units:3, updated:'2026-07-02' },
+      { name:'שם העצם ותצורתו', units:1, updated:'2026-06-11' },
+      { name:'הבעה בכתב — טקסט מידע/הסבר', units:0, updated:'' }
+    ]},
+    { grade:'יא', topics:[
+      { name:'גזרות הפועל — חפ"נ, חפי"צ, ל"י', units:2, updated:'2026-07-05' },
+      { name:'הניקוד וכתיב מלא/חסר', units:0, updated:'' },
+      { name:'הבנת הנקרא — טקסט טיעון', units:1, updated:'2026-06-15' },
+      { name:'הבעה — כתיבת טיעון מנומק', units:1, updated:'2026-06-20' }
+    ]},
+    { grade:'יב', topics:[
+      { name:'חזרה ואינטגרציה — צורות ותחביר', units:1, updated:'2026-06-28' },
+      { name:'תחביר — משפט פשוט/מורכב/מאוחה', units:0, updated:'' },
+      { name:'הבנה והבעה — סיכום ממזג מקורות', units:0, updated:'' }
+    ]}
+  ];
+
+  /* נקודות חיכוך — אחוזים מצרפיים על פני בתי הספר */
+  var FRICTION = [
+    { id:'f-hafan', unit:'גזרת חפ"נ — נָפַל, נִגַּשׁ', grade:'יא', topic:'גזרות הפועל',
+      completion:41, rescue:58, cohort:212, schools:11, trend:'down',
+      finding:'רוב התלמידים שמגיעים ליחידה נכנסים למסלול ההצלה ורבים לא מסיימים. הצעד "זיהוי שורש כשהנ׳ נופלת" מתגלה כמחסום.',
+      rec:'לפצל את היחידה למנה נוספת שמתמקדת רק בזיהוי השורש, ולהוסיף גרסת רמת-תמיכה עם דוגמה מודרכת.' },
+    { id:'f-hufal', unit:'בניין הופעל — הזמן והמשמעות', grade:'י', topic:'בניינים וגזרות',
+      completion:55, rescue:44, cohort:264, schools:12, trend:'flat',
+      finding:'כמחצית מסיימים; ההבחנה בין הופעל להֻפְעַל בהטיה חוזרת כנקודת עצירה.',
+      rec:'להוסיף מנת-תרגול קצרה עם ניגוד ישיר בין הופעל לפועל, ולוודא רמת-אתגר לתלמידים שמסיימים מהר.' },
+    { id:'f-comma', unit:'הפסיק במשפט מורכב', grade:'ט', topic:'פיסוק בסיסי',
+      completion:63, rescue:31, cohort:301, schools:13, trend:'up',
+      finding:'שיעור ההשלמה משתפר מאז עדכון הדוגמה. עדיין קצת גבוה מהרצוי בכניסה למסלול הצלה.',
+      rec:'לשמר את הכיוון — הדוגמה החדשה עוזרת. אפשר להוסיף כרטיס-יציאה קצר לחיזוק.' }
+  ];
+
+  /* ---------- עזרי-כיסוי ---------- */
+  function stateOf(units) { return units >= 2 ? 'covered' : (units === 1 ? 'thin' : 'missing'); }
+  var STATE_LABEL = { covered:'מכוסה', thin:'דליל · יחידה אחת', missing:'חסר תוכן' };
+  var STATE_CHIP  = { covered:'chip--good', thin:'chip--attention', missing:'chip--alert' };
+
+  function fmt(iso) {
+    if (!iso) return '';
+    var p = String(iso).split('-'); if (p.length !== 3) return iso;
+    return p[2] + '.' + p[1] + '.' + p[0].slice(2);
+  }
+
+  /* ---------- מוני-על ---------- */
+  function renderMetrics() {
+    var covered = 0, thin = 0, missing = 0, total = 0;
+    COVERAGE.forEach(function (g) { g.topics.forEach(function (t) {
+      total++; var s = stateOf(t.units);
+      if (s === 'covered') covered++; else if (s === 'thin') thin++; else missing++;
+    }); });
+
+    var cards = [
+      { label:'נושאים מכוסים', value:covered, unit:'/ ' + total, icon:'#ic-check-c', variant:'metric-card--good', sub:'שתי יחידות מאושרות ומעלה' },
+      { label:'נושאים חסרי תוכן', value:missing, unit:'', icon:'#ic-alert', variant:'metric-card--alert', sub:'אין יחידה מאושרת — פער ברצף' },
+      { label:'נושאים דלילים', value:thin, unit:'', icon:'#ic-book', variant:'metric-card--attention', sub:'יחידה אחת בלבד — בלי חלופת רמה' },
+      { label:'נקודות חיכוך', value:FRICTION.length, unit:'', icon:'#ic-life', variant:'', sub:'יחידות קיימות שבהן נתקעים' }
+    ];
+    $('#metrics').innerHTML = cards.map(function (c) {
+      return '<div class="metric-card ' + c.variant + '">' +
+        '<div class="metric-card__top"><span class="metric-card__icon" aria-hidden="true"><svg><use href="' + c.icon + '"/></svg></span>' +
+        '<span class="metric-card__label">' + esc(c.label) + '</span></div>' +
+        '<div class="metric-card__value">' + c.value + (c.unit ? ' <span class="metric-card__unit">' + esc(c.unit) + '</span>' : '') + '</div>' +
+        '<p class="metric-card__sub">' + esc(c.sub) + '</p>' +
+        '</div>';
+    }).join('');
+  }
+
+  /* ---------- מפת כיסוי ---------- */
+  function renderCoverage() {
+    $('#cov-grid').innerHTML = COVERAGE.map(function (g) {
+      var cov = 0, thin = 0, miss = 0;
+      g.topics.forEach(function (t) { var s = stateOf(t.units); if (s === 'covered') cov++; else if (s === 'thin') thin++; else miss++; });
+
+      var rail = g.topics.map(function (t) {
+        var s = stateOf(t.units);
+        var node = s === 'covered' ? '<span class="cov-rail__node"><svg aria-hidden="true"><use href="#ic-check"/></svg></span>'
+                                   : '<span class="cov-rail__node"></span>';
+        return '<div class="cov-rail__step" data-state="' + s + '">' + node +
+          '<span class="cov-rail__lbl">' + esc(shortName(t.name)) + '</span></div>';
+      }).join('');
+
+      var list = g.topics.map(function (t, i) {
+        var s = stateOf(t.units);
+        var meta = t.units === 0 ? 'אין יחידה' : (t.units + ' יחידות');
+        return '<li><button class="cov-item" type="button" data-grade="' + esc(g.grade) + '" data-idx="' + i + '">' +
+          '<span class="chip ' + STATE_CHIP[s] + '" style="flex:none"><span class="chip__dot"></span>' + esc(STATE_LABEL[s].split(' · ')[0]) + '</span>' +
+          '<span class="cov-item__name">' + esc(t.name) + '</span>' +
+          '<span class="cov-item__units">' + esc(meta) + '</span>' +
+          '<span class="cov-item__go" aria-hidden="true"><svg><use href="#ic-arrow"/></svg></span>' +
+          '</button></li>';
+      }).join('');
+
+      var summ = [];
+      if (cov) summ.push(cov + ' מכוסים');
+      if (thin) summ.push(thin + ' דלילים');
+      if (miss) summ.push(miss + ' חסרים');
+
+      return '<section class="cov-card" aria-label="כיסוי שכבה ' + esc(g.grade) + '">' +
+        '<div class="cov-card__head">' +
+          '<span class="cov-card__grade" aria-hidden="true">' + esc(g.grade) + '</span>' +
+          '<div><div class="cov-card__t">שכבה ' + esc(g.grade) + '</div>' +
+          '<div class="cov-card__c">' + esc(summ.join(' · ')) + '</div></div>' +
+        '</div>' +
+        '<div class="cov-rail" role="img" aria-label="רצף הנושאים בשכבה ' + esc(g.grade) + ' — ' + esc(summ.join(', ')) + '">' + rail + '</div>' +
+        '<ul class="cov-list">' + list + '</ul>' +
+        '</section>';
+    }).join('');
+
+    $$('#cov-grid .cov-item').forEach(function (b) {
+      b.addEventListener('click', function () {
+        openTopic(b.getAttribute('data-grade'), parseInt(b.getAttribute('data-idx'), 10));
+      });
+    });
+  }
+
+  function shortName(n) {
+    // תווית קצרה למסילה — המילה/צירוף הראשון
+    var clean = n.replace(/—.*$/, '').trim();
+    if (clean.length > 14) clean = clean.slice(0, 13) + '…';
+    return clean;
+  }
+
+  /* ---------- נקודות חיכוך ---------- */
+  function rateTone(v) { return v >= 70 ? '' : (v >= 50 ? 'rate--attention' : 'rate--alert'); }
+  var TREND = {
+    down: { cls:'trend--down', icon:'#ic-trend-down', label:'מחמיר' },
+    up:   { cls:'trend--up',   icon:'#ic-trend-up',   label:'משתפר' },
+    flat: { cls:'trend--flat', icon:'#ic-trend-flat', label:'יציב' }
+  };
+
+  function renderFriction() {
+    var rows = FRICTION.slice().sort(function (a, b) { return a.completion - b.completion; });
+    $('#fric-body').innerHTML = rows.map(function (f) {
+      var tr = TREND[f.trend];
+      // מסלול הצלה: אחוז גבוה = בעייתי, לכן טון הפוך
+      var rescueTone = f.rescue >= 50 ? 'rate--alert' : (f.rescue >= 35 ? 'rate--attention' : '');
+      return '<tr>' +
+        '<td data-label="יחידה"><span class="rz-table__primary">' + esc(f.unit) + '</span>' +
+          '<span class="rz-table__sub">' + esc(SUBJECT) + ' · שכבה ' + esc(f.grade) + ' · ' + esc(f.topic) + '</span></td>' +
+        '<td data-label="שיעור השלמה"><div class="rate ' + rateTone(f.completion) + '">' +
+          '<div class="rate__top"><span class="rate__val">' + f.completion + '%</span><span class="rate__cap">סיימו</span></div>' +
+          '<div class="rate__bar"><span class="rate__fill" style="width:' + f.completion + '%"></span></div></div></td>' +
+        '<td data-label="כניסה למסלול הצלה"><div class="rate ' + rescueTone + '">' +
+          '<div class="rate__top"><span class="rate__val">' + f.rescue + '%</span><span class="rate__cap">נכנסו</span></div>' +
+          '<div class="rate__bar"><span class="rate__fill" style="width:' + f.rescue + '%"></span></div></div></td>' +
+        '<td data-label="מגמה"><span class="trend ' + tr.cls + '"><svg aria-hidden="true"><use href="' + tr.icon + '"/></svg>' + tr.label + '</span></td>' +
+        '<td data-label="פעולה"><div class="fric-act-cell">' +
+          '<button class="btn btn--secondary btn--sm" type="button" data-fric="' + f.id + '"><svg viewBox="0 0 24 24"><use href="#ic-eye"/></svg>בדיקה</button>' +
+          '</div></td>' +
+        '</tr>';
+    }).join('');
+
+    $$('#fric-body [data-fric]').forEach(function (b) {
+      b.addEventListener('click', function () { openFriction(b.getAttribute('data-fric')); });
+    });
+  }
+
+  /* ============================================================
+     מגירת פרטים
+     ============================================================ */
+  var lastFocus = null;
+
+  function openTopic(grade, idx) {
+    var g = COVERAGE.find(function (x) { return x.grade === grade; });
+    if (!g) return;
+    var t = g.topics[idx]; if (!t) return;
+    var s = stateOf(t.units);
+
+    var finding, rec, actions;
+    if (s === 'missing') {
+      finding = '<b>אין תוכן מאושר בנושא זה.</b> תלמידים שמגיעים לנקודה זו ברצף הלמידה נעצרים — אין יחידה להקצות.';
+      rec = 'הנקודה החסרה עם ההשפעה הגדולה ביותר על הרצף. כדאי לכתוב יחידה, או להזמין אוצר לכתוב.';
+      actions = '<a class="btn btn--primary" href="unit-editor.html"><svg viewBox="0 0 24 24"><use href="#ic-plus"/></svg>צור טיוטת יחידה</a>' +
+                '<button class="btn btn--secondary" type="button" data-invite><svg viewBox="0 0 24 24"><use href="#ic-edit"/></svg>הזמן אוצר לכתוב</button>';
+    } else if (s === 'thin') {
+      finding = '<b>יחידה אחת בלבד.</b> אין חלופה ברמת תמיכה שונה — תלמיד שהיחידה לא מתאימה לו נשאר בלי מסלול.';
+      rec = 'להוסיף גרסת רמת-תמיכה או רמת-אתגר לאותו נושא, כדי שיהיה מסלול לכל תלמיד.';
+      actions = '<a class="btn btn--primary" href="unit-editor.html"><svg viewBox="0 0 24 24"><use href="#ic-plus"/></svg>הוסף רמת תמיכה</a>' +
+                '<a class="btn btn--secondary" href="library.html"><svg viewBox="0 0 24 24"><use href="#ic-book"/></svg>הצג בספרייה</a>';
+    } else {
+      finding = '<b>הנושא מכוסה.</b> ' + t.units + ' יחידות מאושרות זמינות במדף.';
+      rec = 'אין פעולה נדרשת. אפשר לעבור לספרייה כדי לראות את היחידות.';
+      actions = '<a class="btn btn--secondary" href="library.html"><svg viewBox="0 0 24 24"><use href="#ic-book"/></svg>הצג בספרייה</a>';
+    }
+
+    $('#dv-title').textContent = t.name;
+    $('#dv-body').innerHTML =
+      '<div class="dv__tags"><span class="chip ' + STATE_CHIP[s] + '"><span class="chip__dot"></span>' + esc(STATE_LABEL[s]) + '</span>' +
+        '<span class="chip chip--unknown">שכבה ' + esc(grade) + '</span></div>' +
+      '<dl class="dv__meta">' +
+        '<div><dt>תחום דעת</dt><dd>' + esc(SUBJECT) + '</dd></div>' +
+        '<div><dt>שכבה</dt><dd>' + esc(grade) + '</dd></div>' +
+        '<div><dt>יחידות מאושרות</dt><dd>' + t.units + '</dd></div>' +
+        '<div><dt>עדכון אחרון</dt><dd>' + (t.updated ? esc(fmt(t.updated)) : '—') + '</dd></div>' +
+      '</dl>' +
+      '<div><p class="dv__sec-t">הממצא</p><div class="dv__finding">' + finding + '</div></div>' +
+      '<div class="dv__rec"><svg aria-hidden="true"><use href="#ic-info"/></svg><p><b>הצעד הבא:</b> ' + esc(rec) + '</p></div>';
+    $('#dv-body').innerHTML += '<div class="drawer__foot-actions">' + actions + '</div>';
+    bindDrawerActions();
+    openDrawer();
+  }
+
+  function openFriction(id) {
+    var f = FRICTION.find(function (x) { return x.id === id; });
+    if (!f) return;
+    var tr = TREND[f.trend];
+
+    $('#dv-title').textContent = f.unit;
+    $('#dv-body').innerHTML =
+      '<div class="dv__tags"><span class="chip chip--unknown">שכבה ' + esc(f.grade) + '</span>' +
+        '<span class="chip chip--unknown">' + esc(f.topic) + '</span>' +
+        '<span class="trend ' + tr.cls + '"><svg aria-hidden="true"><use href="' + tr.icon + '"/></svg>' + tr.label + '</span></div>' +
+      '<p class="dv__sec-t">נתונים מצרפיים</p>' +
+      '<div class="dv__stats">' +
+        '<div class="dv__stat"><b>' + f.completion + '%</b><span>סיימו</span></div>' +
+        '<div class="dv__stat"><b>' + f.rescue + '%</b><span>מסלול הצלה</span></div>' +
+        '<div class="dv__stat"><b>' + f.schools + '</b><span>בתי ספר</span></div>' +
+      '</div>' +
+      '<div class="fric-note" style="margin:0"><svg aria-hidden="true"><use href="#ic-shield"/></svg>' +
+        '<span>מבוסס על ' + f.cohort + ' מפגשי-למידה מצרפיים. בלי זהות תלמיד.</span></div>' +
+      '<div><p class="dv__sec-t">הממצא</p><div class="dv__finding">' + esc(f.finding) + '</div></div>' +
+      '<div class="dv__rec"><svg aria-hidden="true"><use href="#ic-info"/></svg><p><b>הצעד הבא:</b> ' + esc(f.rec) + '</p></div>' +
+      '<div class="drawer__foot-actions">' +
+        '<a class="btn btn--primary" href="unit-editor.html"><svg viewBox="0 0 24 24"><use href="#ic-split"/></svg>פתח לשיפור בעורך</a>' +
+        '<a class="btn btn--secondary" href="library.html"><svg viewBox="0 0 24 24"><use href="#ic-book"/></svg>הצג את היחידה</a>' +
+      '</div>';
+    bindDrawerActions();
+    openDrawer();
+  }
+
+  function bindDrawerActions() {
+    var inv = $('#dv-body [data-invite]');
+    if (inv) inv.addEventListener('click', function () {
+      toast('נשלחה בקשת כתיבה לאוצר התוכן של התחום.');
+      closeDrawer();
+    });
+  }
+
+  function openDrawer() {
+    lastFocus = document.activeElement;
+    var sc = $('#dv-scrim');
+    sc.hidden = false;
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(function () { sc.setAttribute('data-open', 'true'); });
+    $('#dv-close').focus();
+  }
+  function closeDrawer() {
+    var sc = $('#dv-scrim');
+    sc.removeAttribute('data-open');
+    document.body.style.overflow = '';
+    window.setTimeout(function () { sc.hidden = true; }, 220);
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  /* ---------- Toast ---------- */
+  function toast(msg) {
+    var region = $('#toast-region');
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="toast__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>' +
+      '<span class="toast__msg">' + esc(msg) + '</span>';
+    region.appendChild(el);
+    window.setTimeout(function () {
+      el.setAttribute('data-leaving', 'true');
+      window.setTimeout(function () { el.remove(); }, 220);
+    }, 3200);
+  }
+
+  /* ---------- ניווט מובייל + סגירות ---------- */
+  function initNav() {
+    var shell = $('#shell');
+    $$('[data-nav-open]').forEach(function (b) { b.addEventListener('click', function () {
+      shell.classList.add('is-nav-open'); $('.app-shell__scrim').hidden = false; }); });
+    $$('[data-nav-close]').forEach(function (b) { b.addEventListener('click', function () {
+      shell.classList.remove('is-nav-open'); $('.app-shell__scrim').hidden = true; }); });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('#dv-scrim').hidden) closeDrawer();
+  });
+
+  /* ---------- אתחול ---------- */
+  function init() {
+    renderMetrics();
+    renderCoverage();
+    renderFriction();
+    $('#dv-close').addEventListener('click', closeDrawer);
+    $('#dv-scrim').addEventListener('click', function (e) { if (e.target === this) closeDrawer(); });
+    initNav();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>

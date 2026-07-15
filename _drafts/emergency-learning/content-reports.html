@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>דיווח והצעות תוכן · דגל → מפקח + תור אישור — רֶצֶף (W6-05)</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="a11y.css">
+<style>
+/* ============================================================
+   W6-05 · דיווח + הצעת תוכן (תצוגה 6 — ספריית התוכן)
+   שני תורים שנפגשים אצל המפקח:
+     דיווח על תוכן בעייתי (מורה/מחנך → דגל → מפקח)
+     הצעת תוכן חדש        (מורה → תור אישור → מפקח → ספרייה)
+   צורך: tokens.css · components.css (app-shell/sidebar/topbar/rz-table/
+   chip/btn/badge/scrim/drawer/modal/toast) · a11y.css.
+   כלל: הכול מטוקנים — בלי צבעים קשיחים. סגנון ייחודי-למסך בלבד כאן.
+   מינימיזציה: כל השדות עוסקים ב*תוכן* ובמבוגרים (מורה/מפקח) — לא בקטין.
+   אין הערת-טקסט על תלמיד, אין נתוני קטין. (security-minimization.md)
+   ============================================================ */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--ink);
+  line-height: 1.6; font-size: var(--text-body); -webkit-text-size-adjust: 100%; }
+
+/* --- כותרת המסך + בורר-תפקיד --- */
+.cr-head { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-5); }
+.cr-head h1 { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800;
+  color: var(--ink-strong); margin: 0 0 var(--space-1); }
+.cr-head p { color: var(--ink-soft); margin: 0; font-size: var(--text-small); max-width: 60ch; }
+
+.role-switch { display: inline-flex; align-items: center; gap: var(--space-2);
+  background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 4px; flex-wrap: wrap; }
+.role-switch__label { font-size: var(--text-label); font-weight: 700; color: var(--ink-faint);
+  padding-inline-start: var(--space-2); }
+.role-switch button { min-height: 36px; padding: 0 var(--space-3); border: 0; background: transparent;
+  cursor: pointer; font-family: var(--font-body); font-size: var(--text-small); font-weight: 650;
+  color: var(--ink-soft); border-radius: var(--radius-sm); display: inline-flex; align-items: center;
+  gap: var(--space-2); transition: background 160ms ease, color 160ms ease; }
+.role-switch button svg { width: 17px; height: 17px; flex: none; }
+.role-switch button:hover { color: var(--ink-strong); }
+.role-switch button[aria-pressed="true"] { background: var(--card); color: var(--brand-deep); box-shadow: var(--shadow-card); }
+.role-switch button:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+/* --- פס-הסבר (הזרימה) --- */
+.gate { display: flex; align-items: flex-start; gap: var(--space-3); background: var(--brand-soft);
+  border: 1px solid var(--brand-line); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5); }
+.gate__ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--card); color: var(--brand-deep); border: 1px solid var(--brand-line); }
+.gate__ico svg { width: 19px; height: 19px; }
+.gate__txt { font-size: var(--text-small); color: var(--ink); }
+.gate__txt b { color: var(--brand-dark); }
+
+/* --- שורת פעולות מהירות (מורה בלבד) --- */
+.quick { display: flex; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-5); }
+.quick[hidden] { display: none; }
+
+/* --- טאבים (דיווחים / הצעות) --- */
+.seg { display: inline-flex; gap: 4px; background: var(--surface-muted); border: 1px solid var(--line);
+  border-radius: var(--radius-md); padding: 4px; margin-bottom: var(--space-4); flex-wrap: wrap; }
+.seg button { min-height: 40px; padding: 0 var(--space-4); border: 0; background: transparent; cursor: pointer;
+  font-family: var(--font-body); font-size: var(--text-small); font-weight: 700; color: var(--ink-soft);
+  border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: var(--space-2);
+  transition: background 160ms ease, color 160ms ease; }
+.seg button svg { width: 17px; height: 17px; flex: none; }
+.seg button:hover { color: var(--ink-strong); }
+.seg button[aria-selected="true"] { background: var(--card); color: var(--brand-deep); box-shadow: var(--shadow-card); }
+.seg button:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+.seg__n { font-variant-numeric: tabular-nums; background: var(--card); color: var(--ink-soft);
+  border-radius: var(--radius-pill); min-width: 22px; height: 20px; padding: 0 6px; display: inline-grid;
+  place-items: center; font-size: var(--text-label); font-weight: 700; }
+.seg button[aria-selected="true"] .seg__n { background: var(--brand-soft); color: var(--brand-deep); }
+
+/* --- מסנני-מצב --- */
+.cr-filters { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.fchip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px;
+  padding: 0 var(--space-4); border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  background: var(--card); color: var(--ink-soft); font-family: var(--font-body); font-size: var(--text-small);
+  font-weight: 650; cursor: pointer; transition: background 160ms ease, border-color 160ms ease, color 160ms ease; }
+.fchip:hover { border-color: var(--brand-line); color: var(--ink-strong); }
+.fchip[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
+.fchip:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+.fchip__n { font-variant-numeric: tabular-nums; background: var(--surface-muted); color: var(--ink-soft);
+  border-radius: var(--radius-pill); min-width: 22px; height: 20px; padding: 0 6px; display: inline-grid;
+  place-items: center; font-size: var(--text-label); font-weight: 700; }
+.fchip[aria-pressed="true"] .fchip__n { background: var(--card); color: var(--brand-deep); }
+
+/* --- תג-סיבה + תג-סוג --- */
+.tag { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px;
+  border-radius: var(--radius-pill); font-size: var(--text-label); font-weight: 700; white-space: nowrap;
+  border: 1px solid transparent; }
+.tag svg { width: 14px; height: 14px; flex: none; }
+.tag--reason { color: #9A6E12; background: #FBF3E0; border-color: #EAD9A8; }
+.tag--type   { color: var(--brand-deep); background: var(--brand-soft); border-color: var(--brand-line); }
+
+/* --- טבלה: תאים ייחודיים --- */
+.rz-table td:last-child { text-align: end; }
+.rz-table__actions-cell { display: inline-flex; gap: var(--space-2); align-items: center;
+  justify-content: flex-end; flex-wrap: nowrap; }
+.rz-table__actions-cell .btn { white-space: nowrap; }
+.who { font-size: var(--text-label); color: var(--ink-soft); line-height: 1.35; }
+.who b { color: var(--ink-strong); font-weight: 650; display: block; }
+.empty { text-align: center; padding: var(--space-10) var(--space-4); color: var(--ink-soft); }
+.empty svg { width: 40px; height: 40px; color: var(--ink-faint); margin-bottom: var(--space-3); }
+.empty p { margin: 0; }
+
+/* ============================================================
+   טפסים (מודל דיווח / מודל הצעה) — שדות מקומיים על טוקנים
+   ============================================================ */
+.field { display: block; margin-bottom: var(--space-4); }
+.field:last-child { margin-bottom: 0; }
+.field__label { display: block; font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; }
+.field__req { color: var(--status-alert); }
+.field__hint { font-size: var(--text-label); color: var(--ink-faint); font-weight: 400; margin-inline-start: 4px; }
+.field input, .field select, .field textarea { width: 100%; font-family: var(--font-body);
+  font-size: var(--text-small); color: var(--ink); background: var(--card); border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm); padding: 10px var(--space-3); min-height: 44px; }
+.field textarea { min-height: 82px; resize: vertical; line-height: 1.5; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+  outline: 3px solid var(--brand-bright); outline-offset: 1px; border-color: var(--brand); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+
+/* בורר-סיבה (רדיו-כרטיסים) */
+.reasons { border: 0; margin: 0 0 var(--space-4); padding: 0; display: grid; gap: 8px; }
+.reasons legend { font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; padding: 0; }
+.reason-opt { display: flex; gap: var(--space-2); align-items: center; border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); cursor: pointer; min-height: 44px;
+  transition: border-color 140ms ease, background 140ms ease; }
+.reason-opt:hover { border-color: var(--brand-line); }
+.reason-opt input { width: 20px; height: 20px; flex: none; accent-color: var(--brand); cursor: pointer; }
+.reason-opt svg { width: 17px; height: 17px; flex: none; color: var(--ink-soft); }
+.reason-opt span { font-size: var(--text-small); color: var(--ink); font-weight: 600; }
+.reason-opt:has(input:checked) { border-color: var(--brand); background: var(--brand-soft); }
+.reason-opt:has(input:checked) svg { color: var(--brand-deep); }
+.reason-opt:has(input:focus-visible) { outline: 3px solid var(--brand-bright); outline-offset: 1px; }
+
+/* ============================================================
+   מגירת בדיקה/טיפול (מפקח + תצוגה)
+   ============================================================ */
+.rev { display: flex; flex-direction: column; gap: var(--space-4); }
+.rev__tags { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.rev__title { margin: 0; font-family: var(--font-head); font-size: var(--text-h2); color: var(--ink-strong); }
+.rev__meta { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4);
+  background: var(--surface-muted); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); }
+.rev__meta dt { font-size: var(--text-label); color: var(--ink-soft); font-weight: 600; margin: 0; }
+.rev__meta dd { margin: 2px 0 0; color: var(--ink-strong); font-weight: 650; font-size: var(--text-small); }
+.rev__sec-t { font-family: var(--font-head); font-size: var(--text-label); font-weight: 700;
+  color: var(--ink-faint); margin: var(--space-1) 0 calc(-1 * var(--space-1)); }
+.rev__quote { border-inline-start: 3px solid var(--brand); background: var(--bg-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: var(--space-3); font-size: var(--text-small); color: var(--ink); }
+.rev__quote--empty { color: var(--ink-soft); font-style: italic; border-inline-start-color: var(--line-strong); }
+.rev__link { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-small);
+  color: var(--brand-deep); font-weight: 650; word-break: break-all; }
+.rev__link svg { width: 15px; height: 15px; flex: none; }
+
+/* אישור-אחריות (מפקח מאשר הצעה) */
+.accountability { display: flex; gap: var(--space-2); align-items: flex-start;
+  border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); padding: var(--space-3);
+  background: var(--bg-soft); cursor: pointer; }
+.accountability input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--brand); cursor: pointer; }
+.accountability span { font-size: var(--text-small); color: var(--ink); }
+.accountability b { color: var(--ink-strong); }
+
+/* שדה הערת-החזרה */
+.note-field { display: none; }
+.note-field.is-on { display: block; }
+.note-field label { display: block; font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; }
+.note-field textarea { width: 100%; min-height: 70px; resize: vertical; font-family: var(--font-body);
+  font-size: var(--text-small); color: var(--ink); border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm); padding: var(--space-3); background: var(--card); }
+.note-field textarea:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 1px; border-color: var(--brand); }
+
+.drawer__foot-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; padding-top: var(--space-3);
+  border-top: 1px solid var(--line); }
+
+/* פס-זמן קצר */
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.timeline li { display: flex; gap: var(--space-3); align-items: flex-start; font-size: var(--text-label); }
+.timeline__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); margin-top: 5px; flex: none; }
+.timeline__body b { color: var(--ink-strong); font-weight: 650; }
+.timeline__body span { color: var(--ink-soft); display: block; }
+
+/* מובייל */
+@media (max-width: 640px) {
+  .rz-table td[data-label="פעולות"] { flex-direction: column; align-items: stretch; }
+  .rz-table__actions-cell { flex-wrap: wrap; justify-content: stretch; width: 100%; }
+  .rz-table__actions-cell .btn { flex: 1 1 auto; justify-content: center; }
+  .cr-head { flex-direction: column; }
+  .role-switch { width: 100%; }
+  .quick .btn { flex: 1 1 auto; justify-content: center; }
+  .field-row { grid-template-columns: 1fr; }
+  .rev__meta { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">דלג/י לתוכן</a>
+
+<!-- ספריית אייקונים (subset) — כולם currentColor -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2Z"/></symbol>
+  <symbol id="ic-check-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-x-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1Z"/></symbol>
+</svg>
+
+<!-- ============================================================
+     Shell — Sidebar + Topbar + Main. data-role מחליף זהות מורה/מפקח
+     ============================================================ -->
+<div class="app-shell app-shell--admin" id="shell" data-role="teacher">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="teacher-dashboard.html" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="library.html" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="content-approval.html" aria-label="אישור תוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-check-square"/></svg></span>
+        <span class="sidebar__label">אישור תוכן</span>
+      </a>
+      <a class="sidebar__item" href="content-reports.html" aria-current="page" aria-label="דיווח והצעות תוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-flag"/></svg></span>
+        <span class="sidebar__label">דיווח והצעות</span>
+        <span class="badge badge--brand sidebar__badge" id="nav-badge" aria-hidden="true">0</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true" id="side-avatar">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name" id="side-name">רותם לוי</div>
+          <div class="sidebar__foot-role" id="side-role">מורה · מחנכת ט'2</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">דיווח והצעות תוכן</div>
+        <div class="topbar__subtitle" id="topbar-sub">אורט · ספריית התוכן</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" id="q" placeholder="חיפוש משאב, מקצוע או שכבה…" aria-label="חיפוש">
+      </label>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" id="top-badge" aria-hidden="true">0</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true" id="top-avatar">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי" id="main-content">
+      <div class="app-main__inner">
+
+        <!-- כותרת + בורר תפקיד -->
+        <div class="cr-head">
+          <div>
+            <h1>דיווח והצעות תוכן</h1>
+            <p id="head-sub">נתקלת בתוכן בעייתי בספרייה? דווח/י — והדגל מגיע למפקח/ת. יש רעיון לחומר טוב? הצע/י אותו — וההצעה נכנסת לתור אישור.</p>
+          </div>
+          <div class="role-switch" role="group" aria-label="בחירת תצוגת תפקיד">
+            <span class="role-switch__label">תצוגה:</span>
+            <button type="button" id="role-teacher" aria-pressed="true">
+              <svg aria-hidden="true"><use href="#ic-user"/></svg>מורה
+            </button>
+            <button type="button" id="role-inspector" aria-pressed="false">
+              <svg aria-hidden="true"><use href="#ic-shield"/></svg>מפקח מקצועי
+            </button>
+          </div>
+        </div>
+
+        <!-- פס-הסבר -->
+        <div class="gate" role="note" id="gate">
+          <div class="gate__ico" aria-hidden="true"><svg><use href="#ic-shield"/></svg></div>
+          <div class="gate__txt" id="gate-txt"></div>
+        </div>
+
+        <!-- פעולות מהירות (מורה) -->
+        <div class="quick" id="quick">
+          <button class="btn btn--danger" type="button" id="btn-report">
+            <svg viewBox="0 0 24 24"><use href="#ic-flag"/></svg>דיווח על תוכן בעייתי
+          </button>
+          <button class="btn btn--primary" type="button" id="btn-propose">
+            <svg viewBox="0 0 24 24"><use href="#ic-bulb"/></svg>הצעת תוכן חדש
+          </button>
+        </div>
+
+        <!-- טאבים -->
+        <div class="seg" role="tablist" aria-label="בחירת תור">
+          <button role="tab" type="button" id="tab-reports" data-tab="reports" aria-selected="true" aria-controls="tbody">
+            <svg aria-hidden="true"><use href="#ic-flag"/></svg>דיווחים <span class="seg__n" id="seg-reports">0</span>
+          </button>
+          <button role="tab" type="button" id="tab-proposals" data-tab="proposals" aria-selected="false" aria-controls="tbody">
+            <svg aria-hidden="true"><use href="#ic-bulb"/></svg>הצעות תוכן <span class="seg__n" id="seg-proposals">0</span>
+          </button>
+        </div>
+
+        <!-- מסנני-מצב -->
+        <div class="cr-filters" id="filters" role="group" aria-label="סינון לפי מצב"></div>
+
+        <!-- הטבלה -->
+        <div class="rz-table-wrap" id="tbl-wrap">
+          <div class="rz-table-scroll">
+            <table class="rz-table" id="tbl">
+              <thead id="thead"></thead>
+              <tbody id="tbody" role="tabpanel" aria-label="פריטים בתור"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty" id="empty" hidden>
+          <svg aria-hidden="true"><use href="#ic-inbox"/></svg>
+          <p id="empty-txt">אין פריטים במצב זה.</p>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     מגירת בדיקה/טיפול (מפקח + תצוגה)
+     ============================================================ -->
+<div class="scrim scrim--drawer" id="rev-scrim" hidden>
+  <div class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="rev-title">
+    <div class="drawer__head">
+      <h2 class="drawer__title" id="rev-title">פרטים</h2>
+      <button class="icon-btn" type="button" id="rev-close" aria-label="סגירה"><svg aria-hidden="true"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="drawer__body">
+      <div class="rev" id="rev-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     מודל דיווח (מורה)
+     ============================================================ -->
+<div class="scrim" id="rep-scrim" hidden>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="rep-title">
+    <div class="modal__head">
+      <h2 class="modal__title" id="rep-title">דיווח על תוכן בעייתי</h2>
+      <button class="icon-btn modal__close" type="button" id="rep-close" aria-label="סגירה"><svg aria-hidden="true"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <p style="margin:0 0 var(--space-4);font-size:var(--text-small);color:var(--ink-soft)">הדיווח מגיע למפקח/ת המקצועי/ת של תחום הדעת. אין צורך בפרטי תלמידים — הדיווח עוסק בתוכן בלבד.</p>
+      <div class="field">
+        <label class="field__label" for="rep-resource">המשאב שעליו מדווחים <span class="field__req">*</span></label>
+        <select id="rep-resource"></select>
+      </div>
+      <fieldset class="reasons" id="rep-reasons">
+        <legend>סיבת הדיווח <span class="field__req">*</span></legend>
+      </fieldset>
+      <div class="field">
+        <label class="field__label" for="rep-note">פירוט <span class="field__hint">(לא חובה — מה בדיוק הבעיה?)</span></label>
+        <textarea id="rep-note" placeholder="למשל: הקישור מוביל לעמוד שגיאה 404 · הדוגמה בשקף 3 לא מדויקת…"></textarea>
+      </div>
+    </div>
+    <div class="modal__foot">
+      <button class="btn btn--primary" type="button" id="rep-send"><svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>שליחת דיווח למפקח</button>
+      <button class="btn btn--ghost" type="button" id="rep-cancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     מודל הצעת תוכן (מורה)
+     ============================================================ -->
+<div class="scrim" id="pro-scrim" hidden>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="pro-title">
+    <div class="modal__head">
+      <h2 class="modal__title" id="pro-title">הצעת תוכן חדש</h2>
+      <button class="icon-btn modal__close" type="button" id="pro-close" aria-label="סגירה"><svg aria-hidden="true"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <p style="margin:0 0 var(--space-4);font-size:var(--text-small);color:var(--ink-soft)">ההצעה נכנסת לתור אישור. מפקח/ת מקצועי/ת קורא/ת, מאמת/ת ומאשר/ת — ורק אז המשאב נכנס לספרייה.</p>
+      <div class="field">
+        <label class="field__label" for="pro-name">שם המשאב <span class="field__req">*</span></label>
+        <input type="text" id="pro-name" placeholder="למשל: סרטון קצר — איך עובד בית משפט">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field__label" for="pro-subject">מקצוע <span class="field__req">*</span></label>
+          <input type="text" id="pro-subject" placeholder="אזרחות">
+        </div>
+        <div class="field">
+          <label class="field__label" for="pro-grade">שכבה</label>
+          <select id="pro-grade">
+            <option value="ט">ט'</option><option value="י">י'</option>
+            <option value="יא">יא'</option><option value="יב">יב'</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label class="field__label" for="pro-type">סוג התוכן</label>
+          <select id="pro-type">
+            <option value="link">קישור</option><option value="unit">יחידה</option>
+            <option value="deck">מצגת</option><option value="video">סרטון</option>
+            <option value="quiz">בוחן</option><option value="work">דף עבודה</option>
+            <option value="sim">סימולציה</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="pro-link">קישור <span class="field__hint">(אם יש)</span></label>
+          <input type="url" id="pro-link" placeholder="https://…" dir="ltr">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="pro-why">למה זה שווה? <span class="field__req">*</span></label>
+        <textarea id="pro-why" placeholder="במה זה עוזר לתלמידים · לאיזה שלב בשיעור זה מתאים…"></textarea>
+      </div>
+    </div>
+    <div class="modal__foot">
+      <button class="btn btn--primary" type="button" id="pro-send"><svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>שליחה לתור אישור</button>
+      <button class="btn btn--ghost" type="button" id="pro-cancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(function () {
+  'use strict';
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+
+  var STORE = 'retzef_content_reports_v1';
+
+  /* ---------- זהויות ---------- */
+  var ROLES = {
+    teacher:   { name: 'רותם לוי',   initials: 'רל', role: 'מורה · מחנכת ט\'2',       sub: 'אורט · ספריית התוכן' },
+    inspector: { name: 'ד"ר יעל בר', initials: 'יב', role: 'מפקחת מקצועית · לשון',    sub: 'אורט · פיקוח ואישור תוכן' }
+  };
+
+  /* ---------- מטא ---------- */
+  var TYPES = { unit:'יחידה', deck:'מצגת', video:'סרטון', quiz:'בוחן', work:'דף עבודה', sim:'סימולציה', link:'קישור' };
+  var REASONS = {
+    incorrect: { label:'מידע שגוי / לא מדויק',            icon:'#ic-alert' },
+    broken:    { label:'קישור שבור / לא נפתח',            icon:'#ic-link'  },
+    age:       { label:'לא מתאים לשכבת הגיל',             icon:'#ic-users' },
+    anxiety:   { label:'תוכן מעורר חרדה (רגישות חירום)',  icon:'#ic-shield'},
+    other:     { label:'בעיה אחרת',                       icon:'#ic-info'  }
+  };
+
+  /* מצבי-דיווח */
+  var R_STATUS = {
+    open:      { label:'ממתין לטיפול', chip:'chip--attention' },
+    fixed:     { label:'טופל — תוקן',  chip:'chip--good'      },
+    removed:   { label:'הוסר מהמדף',   chip:'chip--alert'     },
+    dismissed: { label:'נדחה — תקין',  chip:'chip--unknown'   }
+  };
+  /* מצבי-הצעה */
+  var P_STATUS = {
+    pending:   { label:'ממתין לאישור',  chip:'chip--attention' },
+    approved:  { label:'אושר — בספרייה', chip:'chip--good'      },
+    rejected:  { label:'הוחזר לתיקון',  chip:'chip--alert'     }
+  };
+
+  /* משאבים בספרייה — למקור הבחירה בדיווח (זרע) */
+  var LIB = [
+    { id:'r-branches', title:'שלוש רשויות השלטון', subject:'אזרחות', grade:'יא', type:'unit' },
+    { id:'r-supply',   title:'למה המחיר משתנה?',    subject:'כלכלה',  grade:'י',  type:'unit' },
+    { id:'r-indrev',   title:'סרטון: המהפכה התעשייתית', subject:'היסטוריה', grade:'יא', type:'video' },
+    { id:'r-frac',     title:'בוחן שברים',          subject:'מתמטיקה', grade:'ט', type:'quiz' },
+    { id:'r-cv',       title:'דף עבודה — כתיבת קורות חיים', subject:'כישורי חיים', grade:'י', type:'work' }
+  ];
+  function libById(id) { return LIB.find(function (x) { return x.id === id; }); }
+
+  /* ---------- נתוני-זרע ---------- */
+  var SEED_REPORTS = [
+    { id:'rep-1', resourceId:'r-indrev', reason:'broken', note:'הקישור לסרטון מוביל לעמוד "וידאו לא זמין".',
+      by:{ name:'אורן דגן', role:'מחנך · י\'1' }, createdOn:'2026-07-14', status:'open' },
+    { id:'rep-2', resourceId:'r-branches', reason:'incorrect', note:'בשקף על בג"ץ הדוגמה לא מדויקת — כדאי לבדוק מול מקור.',
+      by:{ name:'רותם לוי', role:'מורה · מחנכת ט\'2' }, createdOn:'2026-07-13', status:'open' },
+    { id:'rep-3', resourceId:'r-cv', reason:'age', note:'הדוגמה מניחה ניסיון תעסוקתי — לא מתאים לשכבה צעירה.',
+      by:{ name:'רותם לוי', role:'מורה · מחנכת ט\'2' }, createdOn:'2026-07-10', status:'fixed',
+      resolution:{ action:'fixed', note:'עודכנה הדוגמה לגרסה מותאמת ט\'-י\'.', by:'ד"ר יעל בר', on:'2026-07-11' } },
+    { id:'rep-4', resourceId:'r-frac', reason:'other', note:'נראה ששאלה 4 מופיעה פעמיים.',
+      by:{ name:'נועה גל', role:'מורה · מתמטיקה' }, createdOn:'2026-07-09', status:'dismissed',
+      resolution:{ action:'dismissed', note:'נבדק — השאלות שונות (אחת עם אחוזים). התוכן תקין.', by:'ד"ר יעל בר', on:'2026-07-10' } }
+  ];
+
+  var SEED_PROPOSALS = [
+    { id:'pro-1', title:'סימולטור ריבית דריבית', subject:'פיננסים (העשרה)', grade:'י', type:'sim',
+      link:'https://example.org/compound-interest', why:'ממחיש חזותית איך חיסכון גדל — מצוין לפתיחת יחידת חיסכון.',
+      by:{ name:'רותם לוי', role:'מורה · מחנכת ט\'2' }, createdOn:'2026-07-14', status:'pending' },
+    { id:'pro-2', title:'סרטון קצר: איך עובד בית משפט', subject:'אזרחות', grade:'יא', type:'video',
+      link:'https://example.org/court-explained', why:'שלוש דקות ברורות — מחבר את הנושא של הפרדת רשויות לחיים.',
+      by:{ name:'אורן דגן', role:'מחנך · י\'1' }, createdOn:'2026-07-13', status:'pending' },
+    { id:'pro-3', title:'דף עבודה — תקציב אישי לחודש', subject:'כישורי חיים', grade:'ט', type:'work',
+      link:'', why:'תרגול מעשי של הכנסות מול הוצאות. מתאים גם למצב מרחוק.',
+      by:{ name:'רותם לוי', role:'מורה · מחנכת ט\'2' }, createdOn:'2026-07-08', status:'approved',
+      review:{ note:'תוכן מדויק ומתאים. נוסף לספרייה.', by:'ד"ר יעל בר', on:'2026-07-09' } },
+    { id:'pro-4', title:'קישור: מחשבון שכר נטו', subject:'כלכלה', grade:'י', type:'link',
+      link:'https://example.org/net-salary', why:'עוזר להבין את ההבדל בין ברוטו לנטו.',
+      by:{ name:'רותם לוי', role:'מורה · מחנכת ט\'2' }, createdOn:'2026-07-07', status:'rejected',
+      review:{ note:'לוודא שהמחשבון עדכני למדרגות המס של 2026, ולהוסיף הקשר לימודי קצר לפני השימוש.', by:'ד"ר יעל בר', on:'2026-07-08' } }
+  ];
+
+  /* ---------- מצב ---------- */
+  var state = { role:'teacher', tab:'reports', filter:'all', q:'', reports:[], proposals:[] };
+
+  function load() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) {}
+    if (saved && saved.reports && saved.proposals) {
+      state.reports = saved.reports; state.proposals = saved.proposals;
+    } else {
+      state.reports   = SEED_REPORTS.map(function (x) { return JSON.parse(JSON.stringify(x)); });
+      state.proposals = SEED_PROPOSALS.map(function (x) { return JSON.parse(JSON.stringify(x)); });
+    }
+  }
+  function save() { try { localStorage.setItem(STORE, JSON.stringify({ reports:state.reports, proposals:state.proposals })); } catch (e) {} }
+  function commit() { save(); render(); }
+  function todayISO() { return '2026-07-15'; }
+  function fmt(iso) { if (!iso) return ''; var p = String(iso).split('-'); return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0].slice(2) : iso; }
+  var _seq = 0;
+  function uid(pre) { _seq++; return pre + '-new-' + _seq + '-' + (state.reports.length + state.proposals.length); }
+
+  /* ---------- זהות/שלד לפי תפקיד ---------- */
+  var GATE = {
+    teacher:   'איתרת בעיה בתוכן? <b>דווח/י</b> — הדגל מגיע ישר למפקח/ת המקצועי/ת. יש רעיון לחומר? <b>הצע/י</b> — וההצעה נכנסת לתור אישור. אפשר לעקוב כאן אחרי הסטטוס.',
+    inspector: 'לפניך <b>תור הטיפול המקצועי</b>: דגלים על תוכן קיים והצעות לחומר חדש. כל פריט נבדק — <b>מתוקן, מוסר, מאושר או נדחה</b>. אישור הצעה = לקיחת אחריות פדגוגית.'
+  };
+  function applyRole() {
+    var r = ROLES[state.role];
+    $('#shell').setAttribute('data-role', state.role);
+    $('#side-name').textContent = r.name;
+    $('#side-role').textContent = r.role;
+    $('#side-avatar').textContent = r.initials;
+    $('#top-avatar').textContent = r.initials;
+    $('#topbar-sub').textContent = r.sub;
+    $('#gate-txt').innerHTML = GATE[state.role];
+    $('#role-teacher').setAttribute('aria-pressed', state.role === 'teacher');
+    $('#role-inspector').setAttribute('aria-pressed', state.role === 'inspector');
+    $('#quick').hidden = state.role !== 'teacher';   // רק מורה מדווח/מציע
+  }
+
+  /* ---------- הפריטים הרלוונטיים לתפקיד ---------- */
+  function myReports()   { return state.role === 'inspector' ? state.reports   : state.reports.filter(function (x) { return x.by.name === ROLES.teacher.name; }); }
+  function myProposals() { return state.role === 'inspector' ? state.proposals : state.proposals.filter(function (x) { return x.by.name === ROLES.teacher.name; }); }
+
+  /* ---------- ספירות ---------- */
+  function reportCounts() {
+    var list = myReports(); var c = { all:list.length, open:0, fixed:0, removed:0, dismissed:0 };
+    list.forEach(function (x) { if (c[x.status] != null) c[x.status]++; }); return c;
+  }
+  function proposalCounts() {
+    var list = myProposals(); var c = { all:list.length, pending:0, approved:0, rejected:0 };
+    list.forEach(function (x) { if (c[x.status] != null) c[x.status]++; }); return c;
+  }
+  /* עומס-התור לתג ההתראה */
+  function queueBadge() {
+    if (state.role === 'inspector') {
+      return state.reports.filter(function (x) { return x.status === 'open'; }).length +
+             state.proposals.filter(function (x) { return x.status === 'pending'; }).length;
+    }
+    // מורה: כמה מהפריטים שלי דורשים תשומת לב (הוחזרו לתיקון)
+    return myProposals().filter(function (x) { return x.status === 'rejected'; }).length;
+  }
+
+  /* ---------- הגדרת מסננים לפי טאב ---------- */
+  var FILTERS = {
+    reports:   [ ['all','הכול'], ['open','ממתין'], ['fixed','טופל'], ['removed','הוסר'], ['dismissed','נדחה'] ],
+    proposals: [ ['all','הכול'], ['pending','ממתין'], ['approved','אושר'], ['rejected','הוחזר'] ]
+  };
+
+  /* ---------- כפתורי-פעולה ---------- */
+  function reportActions(x) {
+    var a = [];
+    if (state.role === 'inspector') {
+      if (x.status === 'open') a.push({ key:'handle', label:'טיפול', icon:'#ic-shield', cls:'btn--primary' });
+      else a.push({ key:'view', label:'הצג', icon:'#ic-eye', cls:'btn--secondary' });
+    } else {
+      a.push({ key:'view', label:'הצג', icon:'#ic-eye', cls:'btn--secondary' });
+      if (x.status === 'open') a.push({ key:'withdraw', label:'משיכה', icon:'#ic-x-circle', cls:'btn--ghost' });
+    }
+    return a;
+  }
+  function proposalActions(x) {
+    var a = [];
+    if (state.role === 'inspector') {
+      if (x.status === 'pending') a.push({ key:'review', label:'בדיקה', icon:'#ic-shield', cls:'btn--primary' });
+      else a.push({ key:'view', label:'הצג', icon:'#ic-eye', cls:'btn--secondary' });
+    } else {
+      a.push({ key:'view', label:'הצג', icon:'#ic-eye', cls:'btn--secondary' });
+      if (x.status === 'pending')  a.push({ key:'withdraw', label:'משיכה', icon:'#ic-x-circle', cls:'btn--ghost' });
+      if (x.status === 'rejected') a.push({ key:'resend', label:'עריכה מחדש', icon:'#ic-edit', cls:'btn--primary' });
+    }
+    return a;
+  }
+
+  /* ---------- רינדור ---------- */
+  function render() {
+    var rc = reportCounts(), pc = proposalCounts();
+    $('#seg-reports').textContent = rc.all;
+    $('#seg-proposals').textContent = pc.all;
+    $('#tab-reports').setAttribute('aria-selected', state.tab === 'reports');
+    $('#tab-proposals').setAttribute('aria-selected', state.tab === 'proposals');
+
+    // תג-התראה
+    var qb = queueBadge();
+    $('#nav-badge').textContent = qb; $('#top-badge').textContent = qb;
+    $('#nav-badge').style.display = qb ? '' : 'none';
+    $('#top-badge').style.display = qb ? '' : 'none';
+
+    // מסננים
+    var counts = state.tab === 'reports' ? rc : pc;
+    $('#filters').innerHTML = FILTERS[state.tab].map(function (f) {
+      var pressed = state.filter === f[0];
+      return '<button class="fchip" type="button" data-filter="' + f[0] + '" aria-pressed="' + pressed + '">' +
+        esc(f[1]) + ' <span class="fchip__n">' + (counts[f[0]] || 0) + '</span></button>';
+    }).join('');
+    $$('#filters .fchip').forEach(function (b) {
+      b.addEventListener('click', function () { state.filter = b.getAttribute('data-filter'); render(); });
+    });
+
+    if (state.tab === 'reports') renderReports(); else renderProposals();
+  }
+
+  function matchQ(hay) {
+    var q = state.q.trim().toLowerCase(); if (!q) return true;
+    return hay.toLowerCase().indexOf(q) !== -1;
+  }
+
+  function renderReports() {
+    $('#thead').innerHTML = '<tr>' +
+      '<th scope="col">משאב</th><th scope="col">סיבת הדיווח</th><th scope="col">מדווח/ת</th>' +
+      '<th scope="col">מצב</th><th scope="col" style="text-align:end">פעולות</th></tr>';
+
+    var rows = myReports().filter(function (x) {
+      if (state.filter !== 'all' && x.status !== state.filter) return false;
+      var res = libById(x.resourceId) || {};
+      return matchQ((res.title || '') + ' ' + (res.subject || '') + ' ' + (res.grade || ''));
+    });
+    // חדשים למעלה
+    rows.sort(function (a, b) { return (a.status === 'open' ? -1 : 0) - (b.status === 'open' ? -1 : 0); });
+
+    $('#tbody').innerHTML = rows.map(function (x) {
+      var res = libById(x.resourceId) || { title:'(משאב לא ידוע)', subject:'—', grade:'—' };
+      var rs = R_STATUS[x.status], re = REASONS[x.reason] || REASONS.other;
+      var acts = actsHTML(reportActions(x), 'report', x.id);
+      return '<tr>' +
+        '<td data-label="משאב"><span class="rz-table__primary">' + esc(res.title) + '</span>' +
+          '<span class="rz-table__sub">' + esc(res.subject) + ' · שכבה ' + esc(res.grade) + ' · ' + (TYPES[res.type] || '') + '</span></td>' +
+        '<td data-label="סיבת הדיווח"><span class="tag tag--reason"><svg aria-hidden="true"><use href="' + re.icon + '"/></svg>' + esc(re.label) + '</span></td>' +
+        '<td data-label="מדווח/ת"><div class="who"><b>' + esc(x.by.name) + '</b>' + esc(x.by.role) + ' · ' + esc(fmt(x.createdOn)) + '</div></td>' +
+        '<td data-label="מצב"><span class="chip ' + rs.chip + '"><span class="chip__dot"></span>' + rs.label + '</span></td>' +
+        '<td data-label="פעולות"><div class="rz-table__actions-cell">' + acts + '</div></td>' +
+        '</tr>';
+    }).join('');
+    finishTable(rows.length, state.role === 'inspector' ? 'אין דיווחים במצב זה. התור נקי 👍' : 'עוד לא דיווחת על תוכן. נתקלת בבעיה? הכפתור למעלה.');
+  }
+
+  function renderProposals() {
+    $('#thead').innerHTML = '<tr>' +
+      '<th scope="col">הצעה</th><th scope="col">פרטים</th><th scope="col">מציע/ה</th>' +
+      '<th scope="col">מצב</th><th scope="col" style="text-align:end">פעולות</th></tr>';
+
+    var rows = myProposals().filter(function (x) {
+      if (state.filter !== 'all' && x.status !== state.filter) return false;
+      return matchQ(x.title + ' ' + x.subject + ' ' + x.grade);
+    });
+    rows.sort(function (a, b) { return (a.status === 'pending' ? -1 : 0) - (b.status === 'pending' ? -1 : 0); });
+
+    $('#tbody').innerHTML = rows.map(function (x) {
+      var ps = P_STATUS[x.status];
+      var acts = actsHTML(proposalActions(x), 'proposal', x.id);
+      return '<tr>' +
+        '<td data-label="הצעה"><span class="rz-table__primary">' + esc(x.title) + '</span>' +
+          (x.link ? '<span class="rz-table__sub"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px" fill="none" stroke="currentColor" stroke-width="2"><use href="#ic-link"/></svg> מצורף קישור</span>' : '') + '</td>' +
+        '<td data-label="פרטים"><span class="tag tag--type"><svg aria-hidden="true"><use href="#ic-book"/></svg>' + (TYPES[x.type] || 'תוכן') + '</span>' +
+          '<div class="rz-table__sub" style="margin-top:4px">' + esc(x.subject) + ' · שכבה ' + esc(x.grade) + '</div></td>' +
+        '<td data-label="מציע/ה"><div class="who"><b>' + esc(x.by.name) + '</b>' + esc(x.by.role) + ' · ' + esc(fmt(x.createdOn)) + '</div></td>' +
+        '<td data-label="מצב"><span class="chip ' + ps.chip + '"><span class="chip__dot"></span>' + ps.label + '</span></td>' +
+        '<td data-label="פעולות"><div class="rz-table__actions-cell">' + acts + '</div></td>' +
+        '</tr>';
+    }).join('');
+    finishTable(rows.length, state.role === 'inspector' ? 'אין הצעות במצב זה. התור נקי 👍' : 'עוד לא הצעת תוכן. יש לך רעיון טוב? הכפתור למעלה.');
+  }
+
+  function actsHTML(list, kind, id) {
+    return list.map(function (a) {
+      return '<button class="btn ' + a.cls + ' btn--sm" type="button" data-act="' + a.key + '" data-kind="' + kind + '" data-id="' + id + '">' +
+        '<svg viewBox="0 0 24 24"><use href="' + a.icon + '"/></svg>' + a.label + '</button>';
+    }).join('');
+  }
+
+  function finishTable(n, emptyMsg) {
+    $('#empty').hidden = n > 0;
+    $('#empty-txt').textContent = emptyMsg;
+    $('#tbl-wrap').style.display = n > 0 ? '' : 'none';
+    $$('#tbody [data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        onAction(b.getAttribute('data-act'), b.getAttribute('data-kind'), b.getAttribute('data-id'));
+      });
+    });
+  }
+
+  /* ---------- פעולות ---------- */
+  function find(kind, id) {
+    return (kind === 'report' ? state.reports : state.proposals).find(function (x) { return x.id === id; });
+  }
+  function onAction(act, kind, id) {
+    var x = find(kind, id); if (!x) return;
+    switch (act) {
+      case 'view':     openDrawer(kind, x, false); break;
+      case 'handle':   openDrawer('report', x, true); break;
+      case 'review':   openDrawer('proposal', x, true); break;
+      case 'withdraw': doWithdraw(kind, x); break;
+      case 'resend':   openProposeModal(x); break;
+    }
+  }
+
+  function doWithdraw(kind, x) {
+    var list = kind === 'report' ? state.reports : state.proposals;
+    var i = list.indexOf(x); if (i >= 0) list.splice(i, 1);
+    toast(kind === 'report' ? 'הדיווח נמשך בחזרה' : 'ההצעה נמשכה בחזרה', 'info');
+    commit();
+  }
+
+  /* ---------- מגירת בדיקה/טיפול ---------- */
+  var revScrim = $('#rev-scrim');
+  function log(x, text, by) { x.history = x.history || []; x.history.unshift({ by: by || ROLES[state.role].name, text: text }); }
+
+  function openDrawer(kind, x, actionable) {
+    if (kind === 'report') openReportDrawer(x, actionable);
+    else openProposalDrawer(x, actionable);
+  }
+
+  function openReportDrawer(x, actionable) {
+    var res = libById(x.resourceId) || { title:'(משאב לא ידוע)', subject:'—', grade:'—', type:'link' };
+    var rs = R_STATUS[x.status], re = REASONS[x.reason] || REASONS.other;
+    var html = '' +
+      '<div class="rev__tags">' +
+        '<span class="tag tag--reason"><svg aria-hidden="true"><use href="' + re.icon + '"/></svg>' + esc(re.label) + '</span>' +
+        '<span class="chip ' + rs.chip + '"><span class="chip__dot"></span>' + rs.label + '</span></div>' +
+      '<h3 class="rev__title">' + esc(res.title) + '</h3>' +
+      '<dl class="rev__meta">' +
+        '<div><dt>מקצוע</dt><dd>' + esc(res.subject) + '</dd></div>' +
+        '<div><dt>שכבה</dt><dd>' + esc(res.grade) + '</dd></div>' +
+        '<div><dt>סוג משאב</dt><dd>' + (TYPES[res.type] || '—') + '</dd></div>' +
+        '<div><dt>דווח על ידי</dt><dd>' + esc(x.by.name) + '</dd></div>' +
+      '</dl>' +
+      '<div class="rev__sec-t">פירוט הדיווח</div>' +
+      (x.note ? '<div class="rev__quote">' + esc(x.note) + '</div>'
+              : '<div class="rev__quote rev__quote--empty">לא צורף פירוט — רק סיבת הדגל.</div>');
+
+    if (x.resolution) {
+      html += '<div class="rev__sec-t">מה נעשה</div>' +
+        '<div class="rev__quote">' + esc(x.resolution.note || '—') +
+        '<div style="margin-top:6px;color:var(--ink-soft);font-size:var(--text-label)">' +
+          esc(x.resolution.by) + ' · ' + esc(fmt(x.resolution.on)) + '</div></div>';
+    }
+
+    if (actionable && state.role === 'inspector' && x.status === 'open') {
+      html += '<div class="note-field" id="rn-field"><label for="rn-note">הערת טיפול (מה נעשה / למה נדחה)</label>' +
+        '<textarea id="rn-note" placeholder="מתעד/ת את ההחלטה — משמש למעקב מקצועי"></textarea></div>' +
+        '<div class="drawer__foot-actions">' +
+          '<button class="btn btn--primary" type="button" data-res="fixed"><svg viewBox="0 0 24 24"><use href="#ic-check"/></svg>סומן כטופל</button>' +
+          '<button class="btn btn--danger" type="button" data-res="removed"><svg viewBox="0 0 24 24"><use href="#ic-trash"/></svg>הסרה מהמדף</button>' +
+          '<button class="btn btn--ghost" type="button" data-res="dismissed"><svg viewBox="0 0 24 24"><use href="#ic-x-circle"/></svg>דחייה — תקין</button>' +
+        '</div>';
+    } else {
+      html += '<div class="drawer__foot-actions"><button class="btn btn--ghost" type="button" id="rev-dismiss">סגירה</button></div>';
+    }
+
+    $('#rev-body').innerHTML = html;
+    $('#rev-title').textContent = actionable ? 'טיפול בדיווח' : 'פרטי הדיווח';
+    openScrim(revScrim);
+
+    $$('#rev-body [data-res]').forEach(function (b) {
+      b.addEventListener('click', function () { resolveReport(x, b.getAttribute('data-res')); });
+    });
+    var d = $('#rev-dismiss'); if (d) d.addEventListener('click', function () { closeScrim(revScrim); });
+  }
+
+  function resolveReport(x, action) {
+    var note = ($('#rn-note') && $('#rn-note').value.trim()) || '';
+    if ((action === 'removed' || action === 'dismissed') && !note) {
+      var f = $('#rn-field'); f.classList.add('is-on'); $('#rn-note').focus();
+      toast('כדאי לתעד למה — כתוב/כתבי הערה קצרה', 'info'); return;
+    }
+    x.status = action;
+    x.resolution = { action: action, note: note, by: ROLES.inspector.name, on: todayISO() };
+    var msg = action === 'fixed' ? 'סומן כטופל · המדווח/ת יעודכן' :
+              action === 'removed' ? 'המשאב הוסר מהמדף' : 'הדיווח נדחה — התוכן תקין';
+    closeScrim(revScrim);
+    toast(msg, action === 'removed' ? 'warn' : action === 'dismissed' ? 'info' : 'success');
+    commit();
+  }
+
+  function openProposalDrawer(x, actionable) {
+    var ps = P_STATUS[x.status];
+    var html = '' +
+      '<div class="rev__tags">' +
+        '<span class="tag tag--type"><svg aria-hidden="true"><use href="#ic-book"/></svg>' + (TYPES[x.type] || 'תוכן') + '</span>' +
+        '<span class="chip ' + ps.chip + '"><span class="chip__dot"></span>' + ps.label + '</span></div>' +
+      '<h3 class="rev__title">' + esc(x.title) + '</h3>' +
+      '<dl class="rev__meta">' +
+        '<div><dt>מקצוע</dt><dd>' + esc(x.subject) + '</dd></div>' +
+        '<div><dt>שכבה</dt><dd>' + esc(x.grade) + '</dd></div>' +
+        '<div><dt>סוג תוכן</dt><dd>' + (TYPES[x.type] || '—') + '</dd></div>' +
+        '<div><dt>הציע/ה</dt><dd>' + esc(x.by.name) + '</dd></div>' +
+      '</dl>' +
+      (x.link ? '<div class="rev__sec-t">קישור</div><a class="rev__link" href="' + esc(x.link) + '" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#ic-link"/></svg>' + esc(x.link) + '</a>' : '') +
+      '<div class="rev__sec-t">למה זה שווה</div><div class="rev__quote">' + esc(x.why) + '</div>';
+
+    if (x.review) {
+      html += '<div class="rev__sec-t">' + (x.status === 'approved' ? 'הערת אישור' : 'מה לתקן') + '</div>' +
+        '<div class="rev__quote">' + esc(x.review.note || '—') +
+        '<div style="margin-top:6px;color:var(--ink-soft);font-size:var(--text-label)">' +
+          esc(x.review.by) + ' · ' + esc(fmt(x.review.on)) + '</div></div>';
+    }
+
+    if (actionable && state.role === 'inspector' && x.status === 'pending') {
+      html += '<label class="accountability" style="margin-top:var(--space-2)"><input type="checkbox" id="pro-acc">' +
+        '<span><b>בדקתי את ההצעה ואני מאשר/ת אחריות פדגוגית.</b> התוכן מדויק, מתאים לשכבה, ואין בו חומר מעורר חרדה.</span></label>' +
+        '<div class="note-field" id="pr-field"><label for="pr-note">מה צריך לתקן לפני אישור (חובה בהחזרה)</label>' +
+          '<textarea id="pr-note" placeholder="הערה קצרה למציע/ה"></textarea></div>' +
+        '<div class="drawer__foot-actions">' +
+          '<button class="btn btn--primary" type="button" id="pro-approve" disabled><svg viewBox="0 0 24 24"><use href="#ic-check"/></svg>אישור והוספה לספרייה</button>' +
+          '<button class="btn btn--danger" type="button" id="pro-return"><svg viewBox="0 0 24 24"><use href="#ic-x-circle"/></svg>החזרה לתיקון</button>' +
+        '</div>';
+    } else {
+      html += '<div class="drawer__foot-actions"><button class="btn btn--ghost" type="button" id="rev-dismiss">סגירה</button></div>';
+    }
+
+    $('#rev-body').innerHTML = html;
+    $('#rev-title').textContent = actionable ? 'בדיקת הצעה' : 'פרטי ההצעה';
+    openScrim(revScrim);
+
+    var acc = $('#pro-acc'), okBtn = $('#pro-approve');
+    if (acc) acc.addEventListener('change', function () { okBtn.disabled = !acc.checked; });
+    if (okBtn) okBtn.addEventListener('click', function () { approveProposal(x); });
+    var ret = $('#pro-return'); if (ret) ret.addEventListener('click', function () { returnProposal(x); });
+    var d = $('#rev-dismiss'); if (d) d.addEventListener('click', function () { closeScrim(revScrim); });
+  }
+
+  function approveProposal(x) {
+    x.status = 'approved';
+    x.review = { note: 'אושר — נוסף לספרייה.', by: ROLES.inspector.name, on: todayISO() };
+    closeScrim(revScrim);
+    toast('אושר · המשאב נוסף לספריית התוכן', 'success');
+    commit();
+  }
+  function returnProposal(x) {
+    var field = $('#pr-field'), note = $('#pr-note');
+    if (!field.classList.contains('is-on')) { field.classList.add('is-on'); note.focus(); toast('כתוב/כתבי מה לתקן, ואז אשר/י החזרה', 'info'); return; }
+    if (!note.value.trim()) { note.focus(); toast('חובה לכתוב מה צריך לתקן', 'warn'); return; }
+    x.status = 'rejected';
+    x.review = { note: note.value.trim(), by: ROLES.inspector.name, on: todayISO() };
+    closeScrim(revScrim);
+    toast('הוחזר לתיקון · המציע/ה קיבל/ה הערה', 'info');
+    commit();
+  }
+
+  /* ---------- מודל דיווח (מורה) ---------- */
+  var repScrim = $('#rep-scrim');
+  function openReportModal() {
+    $('#rep-resource').innerHTML = LIB.map(function (r) {
+      return '<option value="' + r.id + '">' + esc(r.title) + ' — ' + esc(r.subject) + ' · ' + esc(r.grade) + '</option>';
+    }).join('');
+    $('#rep-reasons').innerHTML = '<legend>סיבת הדיווח <span class="field__req">*</span></legend>' +
+      Object.keys(REASONS).map(function (k, i) {
+        return '<label class="reason-opt"><input type="radio" name="rep-reason" value="' + k + '"' + (i === 0 ? ' checked' : '') + '>' +
+          '<svg aria-hidden="true"><use href="' + REASONS[k].icon + '"/></svg><span>' + esc(REASONS[k].label) + '</span></label>';
+      }).join('');
+    $('#rep-note').value = '';
+    openScrim(repScrim);
+  }
+  function sendReport() {
+    var resourceId = $('#rep-resource').value;
+    var reason = (document.querySelector('input[name="rep-reason"]:checked') || {}).value || 'other';
+    var rep = {
+      id: uid('rep'), resourceId: resourceId, reason: reason, note: $('#rep-note').value.trim(),
+      by: { name: ROLES.teacher.name, role: ROLES.teacher.role }, createdOn: todayISO(), status: 'open'
+    };
+    state.reports.unshift(rep);
+    closeScrim(repScrim);
+    state.tab = 'reports'; state.filter = 'all';
+    toast('הדיווח נשלח · המפקח/ת קיבל/ה התראה', 'success');
+    commit();
+  }
+
+  /* ---------- מודל הצעה (מורה) ---------- */
+  var proScrim = $('#pro-scrim'), editingProposalId = null;
+  function openProposeModal(existing) {
+    editingProposalId = existing ? existing.id : null;
+    $('#pro-title').textContent = existing ? 'עריכה ושליחה מחדש' : 'הצעת תוכן חדש';
+    $('#pro-name').value    = existing ? existing.title : '';
+    $('#pro-subject').value = existing ? existing.subject : '';
+    $('#pro-grade').value   = existing ? existing.grade : 'ט';
+    $('#pro-type').value    = existing ? existing.type : 'link';
+    $('#pro-link').value    = existing ? (existing.link || '') : '';
+    $('#pro-why').value     = existing ? existing.why : '';
+    openScrim(proScrim);
+  }
+  function sendProposal() {
+    var title = $('#pro-name').value.trim(), subject = $('#pro-subject').value.trim(), why = $('#pro-why').value.trim();
+    if (!title)   { $('#pro-name').focus();    toast('צריך שם למשאב', 'warn'); return; }
+    if (!subject) { $('#pro-subject').focus(); toast('צריך לציין מקצוע', 'warn'); return; }
+    if (!why)     { $('#pro-why').focus();     toast('כתוב/כתבי בקצרה למה זה שווה', 'warn'); return; }
+    var data = {
+      title: title, subject: subject, grade: $('#pro-grade').value, type: $('#pro-type').value,
+      link: $('#pro-link').value.trim(), why: why,
+      by: { name: ROLES.teacher.name, role: ROLES.teacher.role }, createdOn: todayISO(), status: 'pending', review: null
+    };
+    if (editingProposalId) {
+      var ex = find('proposal', editingProposalId);
+      if (ex) { Object.keys(data).forEach(function (k) { ex[k] = data[k]; }); }
+    } else {
+      data.id = uid('pro'); state.proposals.unshift(data);
+    }
+    closeScrim(proScrim);
+    state.tab = 'proposals'; state.filter = 'all';
+    toast('ההצעה נשלחה לתור האישור', 'success');
+    commit();
+  }
+
+  /* ---------- Scrim helpers ---------- */
+  var lastFocus = null;
+  function openScrim(s) {
+    lastFocus = document.activeElement;
+    s.hidden = false;
+    requestAnimationFrame(function () { s.setAttribute('data-open', 'true'); });
+    var f = s.querySelector('select, input, textarea, button'); if (f) setTimeout(function () { f.focus(); }, 60);
+    document.body.style.overflow = 'hidden';
+  }
+  function closeScrim(s) {
+    s.removeAttribute('data-open');
+    setTimeout(function () { s.hidden = true; }, 200);
+    document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  [ ['#rev-close', revScrim], ['#rep-close', repScrim], ['#rep-cancel', repScrim],
+    ['#pro-close', proScrim], ['#pro-cancel', proScrim] ].forEach(function (p) {
+    var el = $(p[0]); if (el) el.addEventListener('click', function () { closeScrim(p[1]); });
+  });
+  [revScrim, repScrim, proScrim].forEach(function (s) {
+    s.addEventListener('click', function (e) { if (e.target === s) closeScrim(s); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') [revScrim, repScrim, proScrim].forEach(function (s) { if (!s.hidden) closeScrim(s); });
+  });
+
+  /* ---------- Toast ---------- */
+  var TOAST_ICON = { success:'#ic-check-c', info:'#ic-info', warn:'#ic-alert', error:'#ic-x-circle' };
+  function toast(msg, kind) {
+    kind = kind || 'info';
+    var region = $('#toast-region');
+    var el = document.createElement('div');
+    el.className = 'toast toast--' + kind;
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="toast__icon"><svg aria-hidden="true"><use href="' + (TOAST_ICON[kind] || '#ic-info') + '"/></svg></span>' +
+      '<span class="toast__msg">' + esc(msg) + '</span>' +
+      '<button class="icon-btn toast__close" type="button" aria-label="סגירה"><svg aria-hidden="true"><use href="#ic-x"/></svg></button>';
+    region.appendChild(el);
+    var close = function () { el.setAttribute('data-leaving', 'true'); setTimeout(function () { el.remove(); }, 200); };
+    el.querySelector('.toast__close').addEventListener('click', close);
+    setTimeout(close, 3400);
+  }
+
+  /* ---------- בורר תפקיד ---------- */
+  $('#role-teacher').addEventListener('click', function () {
+    if (state.role !== 'teacher') { state.role = 'teacher'; state.filter = 'all'; applyRole(); render(); }
+  });
+  $('#role-inspector').addEventListener('click', function () {
+    if (state.role !== 'inspector') {
+      state.role = 'inspector';
+      state.filter = state.tab === 'reports' ? 'open' : 'pending';  // המפקח נכנס ישר לתור
+      applyRole(); render();
+    }
+  });
+
+  /* ---------- טאבים ---------- */
+  $$('.seg button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.tab = b.getAttribute('data-tab');
+      state.filter = state.role === 'inspector' ? (state.tab === 'reports' ? 'open' : 'pending') : 'all';
+      render();
+    });
+  });
+
+  /* ---------- כפתורי-פעולה מהירים ---------- */
+  $('#btn-report').addEventListener('click', openReportModal);
+  $('#btn-propose').addEventListener('click', function () { openProposeModal(null); });
+  $('#rep-send').addEventListener('click', sendReport);
+  $('#pro-send').addEventListener('click', sendProposal);
+  $('#q').addEventListener('input', function () { state.q = this.value; render(); });
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  $$('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    $$('[data-nav-open]', shell).forEach(function (b) { b.addEventListener('click', open); });
+    $$('[data-nav-close]', shell).forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* ---------- אתחול ---------- */
+  load();
+  applyRole();
+  render();
+})();
+</script>
+</body>
+</html>

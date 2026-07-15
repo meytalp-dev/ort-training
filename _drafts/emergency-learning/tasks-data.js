@@ -135,9 +135,9 @@ window.TASKS = [
     prompt:'בנה/י רכיב CheckInPanel: בשגרה "מה נלמד היום"; בחירום 4 אפשרויות בלחיצה (מוכן/להתחיל לאט/צריך עזרה/לא יכול עכשיו) עם אייקוני-קו (לא אימוג\'י). מפעיל התראה למחנך ונמחק — בלי היסטוריה (ר\' W0-S2).' },
   { id:'W1-08', world:1, title:'מרכז הודעות + "המורה ראה"', desc:'הודעות מהמורים + אישור אנושי.', cat:'screen', phase:'mvpA', status:'done', file:'messages-center.html',
     prompt:'בנה/י מרכז הודעות לתלמיד: הודעות מהמורים + התראת "המורה ראה" (נראות, לא ציון). סימון על חדשות, מובייל.' },
-  { id:'W1-09', world:1, title:'משחקי למידה', desc:'משחקון מגע קצר.', cat:'screen', phase:'later', status:'todo', file:'',
+  { id:'W1-09', world:1, title:'משחקי למידה', desc:'משחקון מגע קצר.', cat:'screen', phase:'later', status:'done', file:'learning-games.html',
     prompt:'(דחוי) משחקון מגע קצר לחיזוק — בוגר, לא משחקי-ילדותי, בלי כוכבים/גביעים. לבנות רק אחרי אישור גל A.' },
-  { id:'W1-10', world:1, title:'מסך סרטונים', desc:'סרטוני הסבר, רשת חלשה.', cat:'screen', phase:'later', status:'todo', file:'',
+  { id:'W1-10', world:1, title:'מסך סרטונים', desc:'סרטוני הסבר, רשת חלשה.', cat:'screen', phase:'later', status:'done', file:'student-videos.html',
     prompt:'(דחוי) מסך סרטוני הסבר קצרים, איכות משתנה לרשת חלשה, חלופה טקסטואלית. לבנות רק אחרי גל A.' },
   { id:'W1-11', world:1, title:'שילוב שיעור זום', desc:'כניסה לשיעור מקוון.', cat:'integ', phase:'later', status:'todo', file:'',
     prompt:'(דחוי) כפתור הצטרפות לזום + זמן. בלי הקלטת קטין ללא היתר. לא ב-MVP.' },
@@ -167,7 +167,7 @@ window.TASKS = [
     prompt:'(גל B) בנה/י מסך דוחות מורה: התקדמות כיתה לאורך זמן (גרף קווי נקי) + ייצוא. פרטי לכיתה.' },
   { id:'W2-11', world:2, title:'ניהול שיעורי זום', desc:'תזמון, קישור, נוכחות.', cat:'integ', phase:'later', status:'todo', file:'',
     prompt:'(דחוי) ניהול שיעורי זום: תזמון/קישור/נוכחות. לא ב-MVP.' },
-  { id:'W2-12', world:2, title:'שיתוף תכנים בין מורים', desc:'שיתוף יחידה/משימה עם עמית.', cat:'flow', phase:'later', status:'todo', file:'',
+  { id:'W2-12', world:2, title:'שיתוף תכנים בין מורים', desc:'שיתוף יחידה/משימה עם עמית.', cat:'flow', phase:'later', status:'done', file:'content-sharing.html',
     prompt:'(דחוי) שיתוף יחידה/משימה עם מורה אחר. לא ב-MVP.' },
 
   /* ===== תצוגה 3 — מנהל בית הספר ===== */
@@ -233,11 +233,11 @@ window.TASKS = [
   /* ===== תצוגה 8 — שירות AI (צד מורה ב-MVP) ===== */
   { id:'W8-01', world:8, title:'AI למורה — חומר לימוד בלבד', desc:'חילוץ מטרות, פירוק מצגת, שאלות.', cat:'ai', phase:'mvpB', status:'done', file:'ai-teacher.html',
     prompt:'(גל B) בנה/י פאנל AI למורה על חומר לימוד בלבד: חילוץ מטרות ממסמך, פירוק מצגת ליחידה, יצירת שאלות/משוב, קיצור/התאמת שפה, 3 רמות תמיכה, כרטיס יציאה. אף פעם על נתוני תלמיד (W0-S4). לפי ai-teacher-prompts.md + ai-redlines.md.' },
-  { id:'W8-02', world:8, title:'AI למנהל/מפקח — מצרפי', desc:'זיהוי מגמות על מצרפי.', cat:'ai', phase:'later', status:'todo', file:'',
+  { id:'W8-02', world:8, title:'AI למנהל/מפקח — מצרפי', desc:'זיהוי מגמות על מצרפי.', cat:'ai', phase:'later', status:'done', file:'ai-admin-insights.html',
     prompt:'(דחוי) AI על נתונים מצרפיים בלבד: זיהוי מגמות והמלצות. לא על קטין בודד.' },
   { id:'W8-03', world:8, title:'AI פונה-לתלמיד', desc:'חסום ב-MVP.', cat:'ai', phase:'later', status:'todo', file:'ai-redlines.md',
     prompt:'(דחוי — חסום ב-MVP) AI לתלמיד. אסור בגל A/B: נתוני קטין לא יוצאים למודל חיצוני (W0-S4). לפתוח רק עם תשתית מאושרת ואישור אבטחת מידע.' },
-  { id:'W8-04', world:8, title:'מסך ניהול redlines/prompts', desc:'ניהול גבולות AI.', cat:'flow', phase:'later', status:'todo', file:'ai-redlines.md',
+  { id:'W8-04', world:8, title:'מסך ניהול redlines/prompts', desc:'ניהול גבולות AI.', cat:'flow', phase:'later', status:'done', file:'ai-redlines-admin.html',
     prompt:'(דחוי) מסך ניהול redlines/prompts למנהל מערכת (ai-redlines.md).' },
 
   /* ===== תצוגה 9 — ניהול מערכת (דחוי) ===== */

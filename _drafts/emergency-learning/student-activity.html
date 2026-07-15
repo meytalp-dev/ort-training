@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · פעילות תלמידים — מנהל</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     פעילות תלמידים — תצוגת מנהל (W3-05) · מותג רֶצֶף
+     כל השלד (app-shell/sidebar/topbar/dashboard/metric-card/rz-table/
+     line-chart/chip/drawer/toast) מגיע מ-components.css. כאן: רק
+     תוכן-הפרסונה + גרף דו-קווי (check-in + הגשה) + נעלמים-לפי-כיתה
+     (מצרפי) + טבלת פעילות-לפי-כיתה עם drill לרמת כיתה (לא לתלמיד/מב"ר).
+     טוקנים בלבד — אין צבעים קשיחים.
+     ============================================================ */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: var(--text-body);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ---- בורר-מצב בתוך הטופ-בר ---- */
+  .topbar__mode { display: flex; align-items: center; gap: var(--space-2); flex: none; }
+  .topbar__mode-label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+  @media (max-width: 1100px) { .topbar__mode-label { display: none; } }
+
+  /* ---- כותרת + מטא ---- */
+  .dash-head-meta { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-top: var(--space-2); }
+
+  /* ---- באנר מצרפיות (גבול פרטיות) ---- */
+  .agg-note {
+    display: flex; gap: var(--space-3); align-items: flex-start;
+    background: var(--brand-soft); border: 1px solid var(--brand-line);
+    border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-5); font-size: var(--text-small); color: var(--ink);
+  }
+  .agg-note svg { width: 18px; height: 18px; flex: none; color: var(--brand-deep); margin-top: 1px; }
+  .agg-note b { color: var(--brand-deep); font-weight: 700; }
+
+  /* ---- בורר טווח זמן (segmented) ---- */
+  .range-seg {
+    display: inline-flex; background: var(--surface-muted);
+    border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 3px;
+  }
+  .range-seg__btn {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    min-height: 34px; padding: 0 var(--space-4); border-radius: var(--radius-pill);
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 600; color: var(--ink-soft);
+    transition: background 160ms ease, color 160ms ease;
+  }
+  .range-seg__btn[aria-pressed="true"] { background: var(--card); color: var(--brand-deep); box-shadow: var(--shadow-card); }
+  .range-seg__btn:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+  /* ---- גרף דו-קווי: כותרת + מקרא מילולי ---- */
+  .trend2-head { display: flex; align-items: baseline; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-3); }
+  .trend2-stat { display: flex; flex-direction: column; gap: 2px; }
+  .trend2-stat__val { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .trend2-stat__val--checkin { color: var(--brand-deep); }
+  .trend2-stat__val--submit  { color: var(--status-good); }
+  .trend2-stat__cap { font-size: var(--text-label); color: var(--ink-soft); font-weight: 600; }
+  .trend-svg-wrap { width: 100%; overflow-x: auto; }
+  .trend-label { fill: var(--ink-faint); font-family: var(--font-body); font-size: 12px; font-weight: 500; }
+  .trend-label--now { fill: var(--ink-strong); font-weight: 700; }
+  /* קו הגשה — ירוק, מקווקו עדין (הבחנה גם בלי צבע) */
+  .line-chart__line--submit { fill: none; stroke: var(--status-good); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 2 6; }
+  .line-chart__dot--submit  { fill: var(--card); stroke: var(--status-good); stroke-width: 2; }
+  .line-chart__dot--submit-head { fill: var(--status-good); stroke: none; }
+  .chart-legend__dot--checkin { background: var(--brand); }
+  .chart-legend__dot--submit  { background: var(--status-good); }
+
+  /* ---- נעלמים לפי כיתה — פסים אופקיים מצרפיים ---- */
+  .miss-total { display: flex; align-items: baseline; gap: var(--space-2); margin-bottom: var(--space-4); }
+  .miss-total__num { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800; color: var(--status-alert); line-height: 1; font-variant-numeric: tabular-nums; }
+  .miss-total__cap { font-size: var(--text-small); color: var(--ink-soft); }
+  .miss-list { display: flex; flex-direction: column; gap: var(--space-3); }
+  .miss-row { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: var(--space-3); }
+  .miss-row__cls { font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+  .miss-row__track { height: 8px; background: var(--surface-muted); border-radius: var(--radius-pill); overflow: hidden; }
+  .miss-row__fill { height: 100%; background: var(--status-alert); border-radius: var(--radius-pill); transition: width 220ms ease; }
+  .miss-row__val { font-size: var(--text-small); font-weight: 700; color: var(--ink-strong); font-variant-numeric: tabular-nums; min-width: 18px; text-align: start; }
+
+  /* ---- טבלת פעילות לפי כיתה: תא דו-מדד ---- */
+  .cls-metric { display: inline-flex; align-items: center; gap: var(--space-2); font-variant-numeric: tabular-nums; }
+  .cls-metric__bar { width: 56px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-muted); overflow: hidden; flex: none; }
+  .cls-metric__fill { display: block; height: 100%; border-radius: var(--radius-pill); }
+  .cls-metric__fill--checkin { background: var(--brand); }
+  .cls-metric__fill--submit  { background: var(--status-good); }
+  .cls-metric__pct { font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); min-width: 34px; }
+  .cls-trend { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-label); font-weight: 700; }
+  .cls-trend svg { width: 15px; height: 15px; flex: none; }
+  .cls-trend--up   { color: var(--status-good); }
+  .cls-trend--down { color: var(--status-alert); }
+  .cls-trend--flat { color: var(--ink-soft); }
+  .cls-miss { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cls-miss--zero { color: var(--ink-faint); }
+  .cls-miss--some { color: var(--status-alert); }
+  .drill-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    min-height: 36px; padding: 0 var(--space-3);
+    border-radius: var(--radius-btn); text-decoration: none; white-space: nowrap; cursor: pointer;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 700;
+    background: var(--card); color: var(--brand-deep); border: 1px solid var(--brand-line);
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  .drill-btn:hover { background: var(--brand-soft); border-color: var(--brand); }
+  .drill-btn:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+  .drill-btn svg { width: 15px; height: 15px; flex: none; }
+
+  /* ---- Drawer: פירוט כיתה (מצרפי) ---- */
+  .drawer__panel { gap: var(--space-5); }
+  .dr-sub { font-size: var(--text-small); color: var(--ink-soft); margin: -4px 0 0; }
+  .dr-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+  .dr-tile { background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); text-align: center; }
+  .dr-tile__val { font-family: var(--font-head); font-size: var(--text-h2); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink-strong); }
+  .dr-tile__val--miss { color: var(--status-alert); }
+  .dr-tile__lbl { font-size: var(--text-label); color: var(--ink-soft); font-weight: 600; margin-top: 4px; }
+  .dr-section-title { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 650; color: var(--ink-strong); margin: 0 0 var(--space-2); }
+  .dr-mini-wrap { width: 100%; }
+  .dr-privacy { display: flex; gap: var(--space-3); align-items: flex-start; background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); font-size: var(--text-small); color: var(--ink-soft); }
+  .dr-privacy svg { width: 18px; height: 18px; flex: none; color: var(--brand-deep); margin-top: 1px; }
+  .dr-privacy b { color: var(--ink-strong); font-weight: 700; }
+  .dr-hr { display: flex; align-items: center; gap: var(--space-3); }
+  .dr-hr__avatar { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-deep); font-family: var(--font-head); font-weight: 700; font-size: var(--text-small); }
+  .dr-hr__name { font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+  .dr-hr__role { font-size: var(--text-label); color: var(--ink-soft); }
+  .dr-action {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: var(--tap); padding: 0 var(--space-4); width: 100%;
+    border-radius: var(--radius-btn); text-decoration: none; white-space: nowrap;
+    font-family: var(--font-body); font-size: var(--text-small); font-weight: 700;
+    background: var(--brand); color: #fff; border: 1px solid var(--brand); box-shadow: var(--shadow-card);
+    transition: background 160ms ease, transform 160ms ease;
+  }
+  .dr-action:hover { background: var(--brand-deep); transform: translateY(-1px); }
+  .dr-action:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+  .dr-action svg { width: 16px; height: 16px; flex: none; }
+
+  /* Toast קטן לאישור פעולה (הדגמה) */
+  .rz-toast {
+    position: fixed; inset-block-end: 20px; inset-inline-start: 50%; transform: translate(50%, 20px);
+    background: var(--ink-strong); color: #fff; font-size: var(--text-small); font-weight: 600;
+    padding: 12px 18px; border-radius: var(--radius-btn); box-shadow: var(--shadow-lg);
+    opacity: 0; pointer-events: none; transition: opacity 200ms ease, transform 200ms ease; z-index: 950;
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .rz-toast svg { width: 18px; height: 18px; }
+  .rz-toast.is-on { opacity: 1; transform: translate(50%, 0); }
+
+  @media (max-width: 760px) {
+    .dashboard__grid > .dash-col-8,
+    .dashboard__grid > .dash-col-4,
+    .dashboard__grid > .dash-col-12 { grid-column: 1 / -1; }
+    .dr-tiles { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dr-action:hover { transform: none; }
+    .rz-toast, .miss-row__fill { transition: none; }
+  }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (outline, 24×24, stroke=currentColor) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M8 13h8M8 17h5"/></symbol>
+  <symbol id="ic-check-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="m9 14 2 2 4-4"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+  <symbol id="ic-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.16 3.19"/><path d="M6.6 6.6A18 18 0 0 0 2 12s3 8 10 8a9 9 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><line x1="2" y1="2" x2="22" y2="22"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 5 3 8 7 9 4-1 7-4 7-9V6Z"/><path d="m9.5 12 1.8 1.8L15 10"/></symbol>
+  <symbol id="ic-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></symbol>
+  <symbol id="ic-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-trend-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M17 17h4v-4"/></symbol>
+  <symbol id="ic-trend-flat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></symbol>
+</svg>
+
+<!-- ============================================================
+     PrincipalShell — Sidebar + Topbar + Main (מלא-מסך)
+     ============================================================ -->
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="principal-pulse.html" aria-label="דופק בית הספר">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">דופק בית הספר</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="פעילות תלמידים">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-activity"/></svg></span>
+        <span class="sidebar__label">פעילות תלמידים</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="כיתות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-grid"/></svg></span>
+        <span class="sidebar__label">כיתות</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="נדרש קשר">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-heart"/></svg></span>
+        <span class="sidebar__label">נדרש קשר</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="צוות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+        <span class="sidebar__label">צוות</span>
+      </a>
+
+      <div class="sidebar__section">ניהול</div>
+      <a class="sidebar__item" href="#" aria-label="דוחות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-file"/></svg></span>
+        <span class="sidebar__label">דוחות</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הודעה לקהילה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">הודעה לקהילה</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רב</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רון בקר</div>
+          <div class="sidebar__foot-role">מנהל · אורט בית הערבה</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">אורט בית הערבה</div>
+        <div class="topbar__subtitle">279 תלמידים · 14 כיתות · 26 אנשי צוות</div>
+      </div>
+      <div class="topbar__spacer"></div>
+
+      <!-- בורר מצב מערכת (משנה את כל התצוגה) -->
+      <div class="topbar__mode">
+        <span class="topbar__mode-label">מצב בית הספר</span>
+        <div class="mode-selector mode-selector--inline mode-selector--sm" id="mode-picker" role="group" aria-label="מצב בית הספר">
+          <button class="mode-option" type="button" data-mode="routine" data-set-mode="routine" aria-pressed="true">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            שגרה
+          </button>
+          <button class="mode-option" type="button" data-mode="remote" data-set-mode="remote" aria-pressed="false">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            מרחוק
+          </button>
+          <button class="mode-option" type="button" data-mode="emergency" data-set-mode="emergency" aria-pressed="false">
+            <span class="mode-option__mark" aria-hidden="true"><svg viewBox="0 0 22 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M10 7h2M16 7h4"/><circle cx="8" cy="7" r="1.7" fill="currentColor" stroke="none"/></svg></span>
+            חירום
+          </button>
+        </div>
+      </div>
+
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (2 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">2</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רב</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+        <div class="dashboard">
+
+          <!-- כותרת -->
+          <div class="dashboard__head">
+            <div class="dashboard__headings">
+              <h1 class="dashboard__title">פעילות תלמידים</h1>
+              <div class="dash-head-meta">
+                <p class="dashboard__subtitle" id="dash-sub">מבט מצרפי · השתתפות והגשות · עודכן לפני 8 דקות</p>
+                <span class="mode-chip mode-chip--sm" id="mode-chip">
+                  <span class="mode-chip__mark" aria-hidden="true"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M9 7h2M14 7h4"/><circle cx="7.5" cy="7" r="1.6" fill="currentColor" stroke="none"/></svg></span>
+                  <span id="mode-chip-label">שגרה</span>
+                </span>
+              </div>
+            </div>
+            <div class="dashboard__actions">
+              <div class="range-seg" id="range-seg" role="group" aria-label="טווח זמן">
+                <button class="range-seg__btn" type="button" data-range="7" aria-pressed="true">7 ימים</button>
+                <button class="range-seg__btn" type="button" data-range="30" aria-pressed="false">30 ימים</button>
+              </div>
+              <button class="btn btn--secondary btn--sm" type="button" data-toast="פותח את דוח הפעילות לייצוא">
+                <svg viewBox="0 0 24 24"><use href="#ic-file"/></svg>
+                ייצוא דוח
+              </button>
+            </div>
+          </div>
+
+          <!-- באנר מצרפיות (גבול פרטיות) -->
+          <div class="agg-note">
+            <svg aria-hidden="true"><use href="#ic-shield"/></svg>
+            <span><b>מבט מצרפי בלבד.</b> המספרים כאן הם ברמת בית הספר והכיתה — <b>בלי מידע אישי או רגיש על תלמיד/ה בודד/ת.</b> פנייה אישית נעשית תמיד דרך המחנך/ת האחראי/ת.</span>
+          </div>
+
+          <!-- שורת KPI — 4 -->
+          <div class="dashboard__kpis" id="kpis"><!-- render --></div>
+
+          <!-- גריד אזורים 12-עמודות -->
+          <div class="dashboard__grid">
+
+            <!-- מגמת השתתפות והגשה — קו הרצף (גרף דו-קווי) -->
+            <section class="card chart-card dash-col-8" aria-labelledby="trend-title">
+              <div class="chart-card__head">
+                <h2 class="chart-card__title" id="trend-title">מגמת השתתפות והגשה</h2>
+                <span class="chart-card__hint" id="trend-hint">7 הימים האחרונים</span>
+              </div>
+              <div class="trend2-head">
+                <div class="trend2-stat">
+                  <span class="trend2-stat__val trend2-stat__val--checkin" id="ck-now">72%</span>
+                  <span class="trend2-stat__cap">שיעור check-in היום</span>
+                </div>
+                <div class="trend2-stat">
+                  <span class="trend2-stat__val trend2-stat__val--submit" id="sb-now">61%</span>
+                  <span class="trend2-stat__cap">שיעור הגשה היום</span>
+                </div>
+              </div>
+              <div class="chart-card__body trend-svg-wrap">
+                <svg class="line-chart" id="trend-svg" viewBox="0 0 640 220" role="img" aria-label="טוען…"></svg>
+              </div>
+              <div class="chart-legend" aria-hidden="true">
+                <span class="chart-legend__item"><span class="chart-legend__dot chart-legend__dot--checkin"></span>check-in <span class="chart-legend__val" id="ck-lg">72%</span></span>
+                <span class="chart-legend__item"><span class="chart-legend__dot chart-legend__dot--submit"></span>הגשה <span class="chart-legend__val" id="sb-lg">61%</span></span>
+              </div>
+            </section>
+
+            <!-- נעלמים לפי כיתה — מצרפי (ספירות, בלי שמות) -->
+            <section class="card dash-col-4" aria-labelledby="miss-title">
+              <h2 class="dashboard__section-title" id="miss-title">נעלמים — לפי כיתה</h2>
+              <div class="miss-total">
+                <span class="miss-total__num" id="miss-total">0</span>
+                <span class="miss-total__cap" id="miss-cap">תלמידים שלא ראינו לאחרונה</span>
+              </div>
+              <div class="miss-list" id="miss-list"><!-- render --></div>
+            </section>
+
+            <!-- פעילות לפי כיתה — טבלה עם drill (רמת כיתה בלבד) -->
+            <section class="card dash-col-12" aria-labelledby="cls-title">
+              <h2 class="dashboard__section-title" id="cls-title" style="font-size:var(--text-h2)">פעילות לפי כיתה</h2>
+              <p class="dashboard__subtitle" style="margin:0 0 var(--space-4)">לחיצה על "פירוט" פותחת תמונת-כיתה מצרפית — בלי חשיפת תלמיד/ה בודד/ת.</p>
+              <div class="rz-table-wrap">
+                <div class="rz-table-scroll">
+                  <table class="rz-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">כיתה</th>
+                        <th scope="col">check-in</th>
+                        <th scope="col">הגשה</th>
+                        <th scope="col">מגמה</th>
+                        <th scope="col">נעלמים</th>
+                        <th scope="col" class="rz-table__actions"><span class="sr-only">פירוט</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="cls-body"><!-- render --></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============ Drawer — פירוט כיתה (מצרפי) ============ -->
+<div class="scrim scrim--drawer" id="drawer" hidden>
+  <div class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="dr-title" tabindex="-1">
+    <div class="drawer__head">
+      <h2 class="drawer__title" id="dr-title">כיתה</h2>
+      <button class="icon-btn drawer__close" type="button" aria-label="סגירה" data-drawer-close>
+        <svg aria-hidden="true"><use href="#ic-x"/></svg>
+      </button>
+    </div>
+    <div class="drawer__body" id="dr-body"><!-- render --></div>
+  </div>
+</div>
+
+<!-- Toast הדגמה -->
+<div class="rz-toast" id="toast" role="status" aria-live="polite">
+  <svg aria-hidden="true"><use href="#ic-check-c"/></svg>
+  <span id="toast-text"></span>
+</div>
+
+<script src="system-mode.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     נתוני דמו — מצרפיים בלבד. משתנים לפי מצב המערכת + טווח (7/30).
+     גבול פרטיות (security-minimization.md §3, שורות 2/3/5):
+       • רמת התצוגה = בית ספר → כיתה. אין drill לתלמיד בודד.
+       • נעלמים = ספירה לכל כיתה, בלי שמות ובלי מידע רגיש/רגשי.
+       • פעולה אישית מנותבת למחנך/ת (RBAC), לא נחשפת כאן.
+     שפה רגועה: "נעלמים / לא ראינו / כדאי לבדוק" — לא "סיכון"/"אדום".
+     מקור אמת אמיתי (Sheets/API) — טרם הוכרע.
+     ============================================================ */
+
+  /* KPI + טרנד לפי מצב, לכל טווח (7 / 30). */
+  var DATA = {
+    routine: {
+      sub: 'מבט מצרפי · השתתפות והגשות · עודכן לפני 8 דקות',
+      kpis: {
+        checkin: '72%', checkinDelta: 'up',   checkinNote: 'עלה מ-67% בשבוע שעבר',
+        submit:  '61%', submitDelta:  'up',   submitNote:  'עלה מ-58% בשבוע שעבר',
+        trendWord: 'עלייה קלה', trendDelta: 'up', trendNote: '+5% לעומת תחילת השבוע',
+        missing: '5', missDelta: 'down', missNote: 'ירד מ-7'
+      },
+      r7:  { checkin: [67,68,70,69,71,73,72], submit: [56,58,57,59,60,62,61], ckNow:'72%', sbNow:'61%' },
+      r30: { checkin: [61,63,64,66,65,68,70,69,71,73,72], submit: [52,54,53,56,57,58,60,59,61,62,61], ckNow:'72%', sbNow:'61%' },
+      missCap: 'תלמידים שלא השלימו אף משימה השבוע'
+    },
+    remote: {
+      sub: 'יום למידה מרחוק · השתתפות והגשות · עודכן לפני 8 דקות',
+      kpis: {
+        checkin: '63%', checkinDelta: 'up',   checkinNote: 'עלה מ-56% אתמול',
+        submit:  '49%', submitDelta:  'up',   submitNote:  'עלה מ-44% אתמול',
+        trendWord: 'יציב', trendDelta: 'flat', trendNote: 'סביב 60% מתחילת השבוע',
+        missing: '8', missDelta: 'flat', missNote: 'לא נכנסו עד 12:00'
+      },
+      r7:  { checkin: [55,58,60,59,61,64,63], submit: [42,45,47,46,48,50,49], ckNow:'63%', sbNow:'49%' },
+      r30: { checkin: [50,53,55,54,57,59,58,60,62,64,63], submit: [38,41,43,42,45,47,46,48,50,51,49], ckNow:'63%', sbNow:'49%' },
+      missCap: 'תלמידים שלא נכנסו ליום הלמידה'
+    },
+    emergency: {
+      sub: 'רציפות בזמן חירום · השתתפות והגשות · עודכן לפני 8 דקות',
+      kpis: {
+        checkin: '44%', checkinDelta: 'up',   checkinNote: 'עלה מ-38% אתמול',
+        submit:  '31%', submitDelta:  'up',   submitNote:  'עלה מ-26% אתמול',
+        trendWord: 'מגמת עלייה', trendDelta: 'up', trendNote: 'בחירום כל השתתפות היא הישג',
+        missing: '11', missDelta: 'down', missNote: 'ירד מ-14'
+      },
+      r7:  { checkin: [31,34,37,35,40,42,44], submit: [20,23,25,24,27,29,31], ckNow:'44%', sbNow:'31%' },
+      r30: { checkin: [22,26,29,28,32,34,36,38,40,42,44], submit: [14,17,19,18,21,23,25,26,28,30,31], ckNow:'44%', sbNow:'31%' },
+      missCap: 'תלמידים שלא ראינו 3 ימים ומעלה'
+    }
+  };
+
+  /* פעילות לפי כיתה — לכל מצב. ck=check-in%, sb=הגשה%, miss=ספירת נעלמים,
+     hr=מחנך/ת. total=מס' תלמידים בכיתה (לחישוב מצרפי בלבד). */
+  var CLASSES = {
+    routine: [
+      { cls:'ט׳1', total:22, ck:81, sb:70, miss:0, hr:'רונית א.' },
+      { cls:'ט׳2', total:24, ck:64, sb:52, miss:1, hr:'דנה כ.' },
+      { cls:'ט׳3', total:21, ck:74, sb:63, miss:0, hr:'ליאור ט.' },
+      { cls:'י׳1',  total:20, ck:78, sb:66, miss:0, hr:'שירה מ.' },
+      { cls:'י׳2',  total:19, ck:69, sb:58, miss:1, hr:'מירי פ.' },
+      { cls:'י׳3',  total:20, ck:71, sb:60, miss:0, hr:'עומר ד.' },
+      { cls:'יא׳1', total:18, ck:75, sb:64, miss:0, hr:'סיון א.' },
+      { cls:'יא׳2', total:19, ck:55, sb:44, miss:2, hr:'דורון ס.' },
+      { cls:'יא׳3', total:18, ck:70, sb:59, miss:0, hr:'קרן מ.' },
+      { cls:'יב׳1', total:19, ck:79, sb:68, miss:0, hr:'אבי ט.' },
+      { cls:'יב׳2', total:18, ck:72, sb:61, miss:1, hr:'תמר ג.' },
+      { cls:'יב׳3', total:19, ck:76, sb:65, miss:0, hr:'גיל נ.' }
+    ],
+    remote: [
+      { cls:'ט׳1', total:22, ck:72, sb:58, miss:1, hr:'רונית א.' },
+      { cls:'ט׳2', total:24, ck:52, sb:39, miss:2, hr:'דנה כ.' },
+      { cls:'ט׳3', total:21, ck:64, sb:50, miss:1, hr:'ליאור ט.' },
+      { cls:'י׳1',  total:20, ck:68, sb:54, miss:0, hr:'שירה מ.' },
+      { cls:'י׳2',  total:19, ck:58, sb:45, miss:1, hr:'מירי פ.' },
+      { cls:'י׳3',  total:20, ck:61, sb:47, miss:0, hr:'עומר ד.' },
+      { cls:'יא׳1', total:18, ck:66, sb:52, miss:0, hr:'סיון א.' },
+      { cls:'יא׳2', total:19, ck:44, sb:31, miss:2, hr:'דורון ס.' },
+      { cls:'יא׳3', total:18, ck:60, sb:46, miss:1, hr:'קרן מ.' },
+      { cls:'יב׳1', total:19, ck:70, sb:56, miss:0, hr:'אבי ט.' },
+      { cls:'יב׳2', total:18, ck:63, sb:49, miss:0, hr:'תמר ג.' },
+      { cls:'יב׳3', total:19, ck:67, sb:53, miss:0, hr:'גיל נ.' }
+    ],
+    emergency: [
+      { cls:'ט׳1', total:22, ck:54, sb:40, miss:1, hr:'רונית א.' },
+      { cls:'ט׳2', total:24, ck:33, sb:22, miss:3, hr:'דנה כ.' },
+      { cls:'ט׳3', total:21, ck:46, sb:32, miss:1, hr:'ליאור ט.' },
+      { cls:'י׳1',  total:20, ck:50, sb:36, miss:1, hr:'שירה מ.' },
+      { cls:'י׳2',  total:19, ck:41, sb:28, miss:1, hr:'מירי פ.' },
+      { cls:'י׳3',  total:20, ck:44, sb:30, miss:0, hr:'עומר ד.' },
+      { cls:'יא׳1', total:18, ck:48, sb:34, miss:0, hr:'סיון א.' },
+      { cls:'יא׳2', total:19, ck:28, sb:18, miss:3, hr:'דורון ס.' },
+      { cls:'יא׳3', total:18, ck:42, sb:29, miss:1, hr:'קרן מ.' },
+      { cls:'יב׳1', total:19, ck:52, sb:38, miss:0, hr:'אבי ט.' },
+      { cls:'יב׳2', total:18, ck:45, sb:31, miss:0, hr:'תמר ג.' },
+      { cls:'יב׳3', total:19, ck:49, sb:35, miss:0, hr:'גיל נ.' }
+    ]
+  };
+
+  var TREND_LABELS_7  = ['ג׳', 'ד׳', 'ה׳', 'ו׳', 'א׳', 'ב׳', 'היום'];
+  var DELTA_ICON = { up: 'ic-trend-up', down: 'ic-trend-down', flat: 'ic-trend-flat' };
+  /* לנעלמים: ירידה = חיובי (פחות נעלמים) → צבע ירוק (מחלקת --up);
+     עלייה = לא-רצוי → צבע אדום (מחלקת --down). האייקון נשאר בכיוון האמיתי. */
+  var MISS_DELTA_DIR = { up: 'down', down: 'up', flat: 'flat' };
+
+  var state = { mode: 'routine', range: '7' };
+
+  /* ---------- עזרים ---------- */
+  function el(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function waLink(text) { return 'https://api.whatsapp.com/send?phone=&text=' + encodeURIComponent(text); }
+  function icon(id, cls) { return '<svg aria-hidden="true"' + (cls ? ' class="' + cls + '"' : '') + '><use href="#' + id + '"/></svg>'; }
+
+  /* ---------- KPI ---------- */
+  function renderKpis(k) {
+    function delta(dir, note, cls) {
+      var d = cls || dir;
+      return '<span class="metric-card__delta metric-card__delta--' + d + '">' +
+        '<svg aria-hidden="true"><use href="#' + DELTA_ICON[dir] + '"/></svg>' + esc(note) + '</span>';
+    }
+    el('kpis').innerHTML =
+      /* 1 — שיעור check-in (צבע-מצב) */
+      '<div class="metric-card metric-card--mode metric-card--accent">' +
+        '<div class="metric-card__top"><span class="metric-card__icon">' + icon('ic-check-c') + '</span>' +
+        '<span class="metric-card__label">שיעור check-in</span></div>' +
+        '<div class="metric-card__value">' + esc(k.checkin) + '</div>' +
+        delta(k.checkinDelta, k.checkinNote) + '</div>' +
+      /* 2 — שיעור הגשה */
+      '<div class="metric-card metric-card--good">' +
+        '<div class="metric-card__top"><span class="metric-card__icon">' + icon('ic-check-doc') + '</span>' +
+        '<span class="metric-card__label">שיעור הגשה</span></div>' +
+        '<div class="metric-card__value">' + esc(k.submit) + '</div>' +
+        delta(k.submitDelta, k.submitNote) + '</div>' +
+      /* 3 — מגמת השתתפות */
+      '<div class="metric-card">' +
+        '<div class="metric-card__top"><span class="metric-card__icon">' + icon('ic-activity') + '</span>' +
+        '<span class="metric-card__label">מגמת השתתפות</span></div>' +
+        '<div class="metric-card__value" style="font-size:var(--text-h1)">' + esc(k.trendWord) + '</div>' +
+        delta(k.trendDelta, k.trendNote) + '</div>' +
+      /* 4 — נעלמים (התראה) */
+      '<div class="metric-card metric-card--alert metric-card--accent-alert">' +
+        '<div class="metric-card__top"><span class="metric-card__icon">' + icon('ic-eye-off') + '</span>' +
+        '<span class="metric-card__label">נעלמים</span></div>' +
+        '<div class="metric-card__value">' + esc(k.missing) + '</div>' +
+        delta(k.missDelta, k.missNote, MISS_DELTA_DIR[k.missDelta]) + '</div>';
+  }
+
+  /* ---------- גרף דו-קווי (check-in + הגשה) — קו הרצף ---------- */
+  function seriesPaths(vals, W, padX, padT, plotW, plotH) {
+    var n = vals.length;
+    var xs = vals.map(function (v, i) { return padX + plotW * (i / (n - 1)); });
+    var ys = vals.map(function (v) { return padT + (1 - v / 100) * plotH; });
+    var pts = xs.map(function (x, i) { return x.toFixed(1) + ' ' + ys[i].toFixed(1); });
+    return { xs: xs, ys: ys, path: 'M ' + pts.join(' L ') };
+  }
+
+  function renderTrend() {
+    var md = DATA[state.mode];
+    var r = state.range === '30' ? md.r30 : md.r7;
+    var ck = r.checkin, sb = r.submit;
+    var W = 640, H = 220, padX = 30, padT = 20, padB = 40;
+    var plotW = W - padX * 2, plotH = H - padT - padB;
+    var n = ck.length;
+
+    /* קווי-רשת אופקיים בהירים מאוד (25/50/75) */
+    var grid = '';
+    [25, 50, 75].forEach(function (g) {
+      var y = padT + (1 - g / 100) * plotH;
+      grid += '<line x1="' + padX + '" y1="' + y.toFixed(1) + '" x2="' + (W - padX) + '" y2="' + y.toFixed(1) + '"/>';
+    });
+
+    var C = seriesPaths(ck, W, padX, padT, plotW, plotH);
+    var S = seriesPaths(sb, W, padX, padT, plotW, plotH);
+
+    /* נקודות */
+    function dots(SP, headCls, dotCls) {
+      return SP.xs.map(function (x, i) {
+        var head = (i === n - 1);
+        return '<circle class="' + (head ? headCls : dotCls) + '" cx="' + x.toFixed(1) + '" cy="' + SP.ys[i].toFixed(1) + '" r="' + (head ? 5 : 3) + '"/>';
+      }).join('');
+    }
+
+    /* תוויות ציר-X — רק בטווח 7 ימים (30 צפוף מדי) */
+    var labels = '';
+    if (state.range === '7') {
+      labels = C.xs.map(function (x, i) {
+        var cls = (i === n - 1) ? 'trend-label trend-label--now' : 'trend-label';
+        return '<text class="' + cls + '" x="' + x.toFixed(1) + '" y="' + (H - 14) + '" text-anchor="middle">' + TREND_LABELS_7[i] + '</text>';
+      }).join('');
+    }
+
+    var svg = el('trend-svg');
+    svg.innerHTML =
+      '<g class="line-chart__grid">' + grid + '</g>' +
+      '<path class="line-chart__line line-chart__line--mode" d="' + C.path + '"/>' +
+      '<path class="line-chart__line--submit" d="' + S.path + '"/>' +
+      dots(C, 'line-chart__dot--head', 'line-chart__dot') +
+      dots(S, 'line-chart__dot--submit-head', 'line-chart__dot--submit') +
+      labels;
+    svg.setAttribute('aria-label',
+      'מגמת ' + (state.range === '30' ? '30' : '7') + ' ימים. שיעור check-in: ' + ck.join('%, ') + '%. ' +
+      'שיעור הגשה: ' + sb.join('%, ') + '%. היום — check-in ' + r.ckNow + ', הגשה ' + r.sbNow + '.');
+
+    el('ck-now').textContent = r.ckNow;
+    el('sb-now').textContent = r.sbNow;
+    el('ck-lg').textContent = r.ckNow;
+    el('sb-lg').textContent = r.sbNow;
+    el('trend-hint').textContent = state.range === '30' ? '30 הימים האחרונים' : '7 הימים האחרונים';
+  }
+
+  /* ---------- נעלמים לפי כיתה — מצרפי (ספירות בלבד) ---------- */
+  function renderMissing() {
+    var list = CLASSES[state.mode].filter(function (c) { return c.miss > 0; })
+      .sort(function (a, b) { return b.miss - a.miss; });
+    var total = CLASSES[state.mode].reduce(function (s, c) { return s + c.miss; }, 0);
+    var max = list.reduce(function (m, c) { return Math.max(m, c.miss); }, 1);
+
+    el('miss-total').textContent = total;
+    el('miss-cap').textContent = DATA[state.mode].missCap;
+
+    if (!list.length) {
+      el('miss-list').innerHTML =
+        '<div class="empty-state empty-state--compact" style="padding:var(--space-6) 0">' +
+        '<svg width="120" height="40" viewBox="0 0 120 40" aria-hidden="true">' +
+          '<line x1="12" y1="20" x2="108" y2="20" stroke="var(--brand-line)" stroke-width="2" stroke-linecap="round"/>' +
+          '<circle cx="60" cy="20" r="6" fill="var(--card)" stroke="var(--brand)" stroke-width="3"/>' +
+        '</svg>' +
+        '<p class="empty-state__text">כל הכיתות בקשר — אין נעלמים כרגע.</p></div>';
+      return;
+    }
+
+    el('miss-list').innerHTML = list.map(function (c) {
+      var w = Math.round((c.miss / max) * 100);
+      return '<div class="miss-row">' +
+        '<span class="miss-row__cls">' + esc(c.cls) + '</span>' +
+        '<span class="miss-row__track" role="img" aria-label="' + esc(c.cls) + ': ' + c.miss + ' נעלמים">' +
+          '<span class="miss-row__fill" style="width:' + w + '%"></span></span>' +
+        '<span class="miss-row__val">' + c.miss + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ---------- טבלת פעילות לפי כיתה ---------- */
+  function trendDir(c) {
+    /* מגמת הכיתה נגזרת ממצב מול הממוצע — הדגמה יציבה (בלי אקראיות) */
+    if (c.miss >= 2 || c.ck < 45) return 'down';
+    if (c.ck >= 72) return 'up';
+    return 'flat';
+  }
+  var TREND_HE = { up: { w: 'עולה', ic: 'ic-trend-up' }, down: { w: 'יורדת', ic: 'ic-trend-down' }, flat: { w: 'יציבה', ic: 'ic-trend-flat' } };
+
+  function metricCell(pct, kind) {
+    return '<span class="cls-metric">' +
+      '<span class="cls-metric__bar"><span class="cls-metric__fill cls-metric__fill--' + kind + '" style="width:' + pct + '%"></span></span>' +
+      '<span class="cls-metric__pct">' + pct + '%</span></span>';
+  }
+
+  function renderClasses() {
+    el('cls-body').innerHTML = CLASSES[state.mode].map(function (c, i) {
+      var dir = trendDir(c), t = TREND_HE[dir];
+      var missCls = c.miss > 0 ? 'cls-miss--some' : 'cls-miss--zero';
+      var missTxt = c.miss > 0 ? c.miss : '—';
+      return '<tr>' +
+        '<td><span class="rz-table__primary">' + esc(c.cls) + '</span></td>' +
+        '<td>' + metricCell(c.ck, 'checkin') + '</td>' +
+        '<td>' + metricCell(c.sb, 'submit') + '</td>' +
+        '<td><span class="cls-trend cls-trend--' + dir + '">' + icon(t.ic) + t.w + '</span></td>' +
+        '<td><span class="cls-miss ' + missCls + '">' + missTxt + '</span></td>' +
+        '<td class="rz-table__actions">' +
+          '<button class="drill-btn" type="button" data-drill="' + i + '" aria-label="פירוט מצרפי לכיתה ' + esc(c.cls) + '">' +
+            'פירוט' + icon('ic-chevron') + '</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  /* ---------- Drawer: פירוט כיתה (מצרפי) ---------- */
+  var drawer = el('drawer');
+  var drawerPanel = drawer.querySelector('.drawer__panel');
+  var lastFocus = null;
+
+  function miniTrend(c) {
+    /* מגמת check-in של הכיתה — 7 נקודות סביב הערך הנוכחי, דטרמיניסטי */
+    var base = c.ck;
+    var seq = [-8, -6, -5, -3, -2, -1, 0].map(function (d, i) {
+      var v = base + d + ((i % 2 === 0) ? -1 : 1);
+      return Math.max(4, Math.min(98, v));
+    });
+    seq[6] = base;
+    var W = 340, H = 96, padX = 14, padT = 10, padB = 12;
+    var plotW = W - padX * 2, plotH = H - padT - padB;
+    var SP = seriesPaths(seq, W, padX, padT, plotW, plotH);
+    var dots = SP.xs.map(function (x, i) {
+      var head = (i === seq.length - 1);
+      return '<circle class="' + (head ? 'line-chart__dot--head' : 'line-chart__dot') + '" cx="' + x.toFixed(1) + '" cy="' + SP.ys[i].toFixed(1) + '" r="' + (head ? 4 : 2.6) + '"/>';
+    }).join('');
+    return '<svg class="line-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" ' +
+      'aria-label="מגמת check-in של הכיתה: ' + seq.join('%, ') + '%.">' +
+      '<path class="line-chart__area line-chart__area--mode" d="' + SP.path + ' L ' + SP.xs[seq.length - 1].toFixed(1) + ' ' + (padT + plotH) + ' L ' + SP.xs[0].toFixed(1) + ' ' + (padT + plotH) + ' Z"/>' +
+      '<path class="line-chart__line line-chart__line--mode" d="' + SP.path + '"/>' + dots + '</svg>';
+  }
+
+  function openDrawer(c) {
+    var dir = trendDir(c), t = TREND_HE[dir];
+    var active = c.total - c.miss;
+    el('dr-title').textContent = 'כיתה ' + c.cls;
+    el('dr-body').innerHTML =
+      '<p class="dr-sub">תמונת-כיתה מצרפית · ' + c.total + ' תלמידים · מגמה ' + t.w + '</p>' +
+      '<div class="dr-tiles">' +
+        '<div class="dr-tile"><div class="dr-tile__val">' + c.ck + '%</div><div class="dr-tile__lbl">check-in</div></div>' +
+        '<div class="dr-tile"><div class="dr-tile__val">' + c.sb + '%</div><div class="dr-tile__lbl">הגשה</div></div>' +
+        '<div class="dr-tile"><div class="dr-tile__val' + (c.miss > 0 ? ' dr-tile__val--miss' : '') + '">' + (c.miss || '—') + '</div><div class="dr-tile__lbl">נעלמים</div></div>' +
+      '</div>' +
+      '<div>' +
+        '<h3 class="dr-section-title">מגמת check-in · 7 ימים</h3>' +
+        '<div class="dr-mini-wrap">' + miniTrend(c) + '</div>' +
+      '</div>' +
+      '<div class="dr-privacy">' + icon('ic-eye-off') +
+        '<span><b>עד כאן המבט המצרפי.</b> שמות ומידע אישי של תלמיד/ה אינם מוצגים למנהל. ' +
+        (c.miss > 0 ? 'ל' + c.miss + ' תלמידים שלא ראינו — הטיפול האישי נעשה דרך המחנך/ת.' : 'הכיתה בקשר — אין נעלמים כרגע.') +
+        '</span></div>' +
+      '<div>' +
+        '<h3 class="dr-section-title">מחנך/ת הכיתה</h3>' +
+        '<div class="dr-hr">' +
+          '<span class="dr-hr__avatar" aria-hidden="true">' + esc(c.hr.charAt(0)) + '</span>' +
+          '<div><div class="dr-hr__name">' + esc(c.hr) + '</div><div class="dr-hr__role">מחנך/ת ' + esc(c.cls) + '</div></div>' +
+        '</div>' +
+      '</div>' +
+      '<a class="dr-action" href="' + waLink('היי ' + c.hr + ', מסתכל על פעילות ' + c.cls + ' ברֶצֶף' +
+        (c.miss > 0 ? ' — יש ' + c.miss + ' תלמידים שלא ראינו לאחרונה. אפשר לבדוק מה שלומם?' : '. הכול נראה תקין, רק מיישר קו. תודה!') ) +
+        '" target="_blank" rel="noopener" aria-label="פנייה למחנך/ת ' + esc(c.hr) + '">' +
+        icon('ic-send') + 'פנייה למחנך/ת</a>';
+
+    drawer.hidden = false;
+    /* force reflow לפני מעבר */
+    void drawer.offsetWidth;
+    drawer.setAttribute('data-open', 'true');
+    lastFocus = document.activeElement;
+    drawerPanel.focus();
+    document.addEventListener('keydown', onDrawerKey);
+  }
+
+  function closeDrawer() {
+    drawer.removeAttribute('data-open');
+    document.removeEventListener('keydown', onDrawerKey);
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var done = function () { drawer.hidden = true; };
+    if (reduce) { done(); }
+    else { setTimeout(done, 180); }
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  function onDrawerKey(e) {
+    if (e.key === 'Escape') { closeDrawer(); return; }
+    if (e.key === 'Tab') {
+      /* לכידת focus בתוך המגירה */
+      var f = drawerPanel.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+
+  el('cls-body').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-drill]');
+    if (!btn) return;
+    openDrawer(CLASSES[state.mode][+btn.getAttribute('data-drill')]);
+  });
+  drawer.addEventListener('click', function (e) {
+    if (e.target === drawer || e.target.closest('[data-drawer-close]')) closeDrawer();
+  });
+
+  /* ---------- רינדור מלא ---------- */
+  function renderAll() {
+    var d = DATA[state.mode] || DATA.routine;
+    el('dash-sub').textContent = d.sub;
+    renderKpis(d.kpis);
+    renderTrend();
+    renderMissing();
+    renderClasses();
+  }
+
+  /* ---------- בורר טווח זמן ---------- */
+  el('range-seg').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-range]');
+    if (!b) return;
+    state.range = b.getAttribute('data-range');
+    el('range-seg').querySelectorAll('[data-range]').forEach(function (x) {
+      x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+    });
+    renderTrend();
+  });
+
+  /* ---------- בורר מצב — דרך שירות המצב המשותף (Resef) ---------- */
+  var picker = el('mode-picker');
+  var chipLabel = el('mode-chip-label');
+  var MODE_HE = { routine: 'שגרה', remote: 'מרחוק', emergency: 'חירום' };
+
+  function syncPicker(mode) {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-set-mode') === mode ? 'true' : 'false');
+    });
+    el('mode-chip').setAttribute('data-mode', mode);
+    if (chipLabel) chipLabel.textContent = MODE_HE[mode] || 'שגרה';
+  }
+
+  if (window.Resef) {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        window.Resef.setMode(btn.getAttribute('data-set-mode'), { silent: true });
+      });
+    });
+    document.addEventListener('resef:modechange', function (e) {
+      state.mode = e.detail.mode;
+      syncPicker(state.mode);
+      renderAll();
+    });
+    state.mode = window.Resef.getMode();
+    syncPicker(state.mode);
+    renderAll();
+  } else {
+    picker.querySelectorAll('[data-set-mode]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        state.mode = btn.getAttribute('data-set-mode');
+        document.documentElement.setAttribute('data-mode', state.mode);
+        syncPicker(state.mode); renderAll();
+      });
+    });
+    syncPicker('routine'); renderAll();
+  }
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* ---------- ניווט: העברת aria-current="page" בלחיצה ---------- */
+  document.querySelectorAll('.sidebar__nav').forEach(function (nav) {
+    nav.addEventListener('click', function (e) {
+      var item = e.target.closest('.sidebar__item');
+      if (!item || item.getAttribute('href') !== '#') return;
+      e.preventDefault();
+      nav.querySelectorAll('[aria-current="page"]').forEach(function (a) { a.removeAttribute('aria-current'); });
+      item.setAttribute('aria-current', 'page');
+      var shell = nav.closest('.app-shell');
+      if (shell) shell.classList.remove('is-nav-open');
+    });
+  });
+
+  /* ---------- Toast הדגמה ---------- */
+  var toast = el('toast'), toastText = el('toast-text'), toastTimer = null;
+  function showToast(msg) {
+    if (!toast) return;
+    toastText.textContent = msg;
+    toast.classList.add('is-on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('is-on'); }, 2600);
+  }
+  document.querySelectorAll('[data-toast]').forEach(function (elx) {
+    elx.addEventListener('click', function () { showToast(elx.getAttribute('data-toast')); });
+  });
+})();
+</script>
+</body>
+</html>
