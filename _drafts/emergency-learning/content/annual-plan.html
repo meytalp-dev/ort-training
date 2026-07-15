@@ -10,7 +10,7 @@
   --bg:#F6FAFB; --panel:#fff; --ink:#173A4A; --ink-strong:#0F2D3A; --ink-soft:#5B7480; --ink-faint:#8FA6AF;
   --brand:#0B8F98; --brand-deep:#08666D; --brand-soft:#E8F8F9; --line:#E2ECEF; --line-soft:#EEF4F5;
   --t2:#3AA65A; --t2s:#EBF8EF; --t3:#7A5CF0; --t3s:#F0ECFE; --t4:#D9574F; --t4s:#FDEEEC; --t5:#D99A18; --t5s:#FFF7E8;
-  --k:#0B8F98; --ks:#E8F8F9; --s:#7A5CF0; --ss:#F0ECFE; --r:#D99A18; --rs:#FFF7E8;
+  --k:#0B8F98; --ks:#E8F8F9; --s:#7A5CF0; --ss:#F0ECFE; --r:#D99A18; --rs:#FFF7E8; --h:#C65D8E; --hs:#FCEBF3;
   --font-head:"Heebo",sans-serif; --font-body:"Assistant",sans-serif;
   --sb:312px;
 }
@@ -67,6 +67,9 @@ button{font-family:inherit;cursor:pointer}
 .legend .li{display:flex;align-items:center;gap:7px}
 .legend .tb{font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 8px}
 .tb.k{background:var(--ks);color:var(--k)} .tb.s{background:var(--ss);color:var(--s)} .tb.r{background:var(--rs);color:var(--r)}
+.mtag{font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px;display:inline-block;white-space:nowrap;margin-inline-end:2px}
+.mtag.k{background:var(--ks);color:var(--k)} .mtag.s{background:var(--ss);color:var(--s)}
+.mtag.r{background:var(--rs);color:var(--r)} .mtag.h{background:var(--hs);color:var(--h)}
 
 /* Module (נושא) card */
 .mod{background:var(--panel);border:1px solid var(--line);border-radius:15px;margin-top:14px;overflow:hidden;box-shadow:0 3px 12px rgba(23,58,74,.045)}
@@ -173,22 +176,73 @@ window.addEventListener('DOMContentLoaded', function(){
 });
 
 var STATUS={planned:'מתוכנן',doing:'בעבודה',draft:'טיוטה',review:'בבדיקה',verified:'מאומת'};
-var ASSESS={
-  knowledge:{lbl:'שאלת הבנה · חידון אמריקאי · הסבר עצמי'},
-  skill:{lbl:'משימת ביצוע + רשימת תיוג (עבר/לא עבר)'},
-  resp:{lbl:'תרחיש שיפוט · החלטה מנומקת · רפלקציה'}
+
+/* מאגר דרכי הערכה מגוונות. fam קובע צבע: sel=בחירה/סגור · open=בונה/פתוח · perf=ביצוע · high=חשיבה גבוהה */
+var METHODS={
+  mc:      {lbl:'שאלה אמריקאית (בחירה מרובה)',            fam:'sel'},
+  tf:      {lbl:'נכון / לא נכון + הצדקה',                 fam:'sel'},
+  match:   {lbl:'שאלת התאמה (מושג ↔ הגדרה / כלי ↔ שימוש)', fam:'sel'},
+  sort:    {lbl:'מיון פריטים לקטגוריות',                   fam:'sel'},
+  order:   {lbl:'סידור שלבים לפי הסדר הנכון',              fam:'sel'},
+  fill:    {lbl:'השלמת מונח חסר במשפט',                    fam:'sel'},
+  label:   {lbl:'זיהוי ותיוג על תרשים / תמונה',            fam:'sel'},
+  explain: {lbl:'הסבר במילים שלך + דוגמה',                 fam:'open'},
+  example: {lbl:'תן/י דוגמה משלך מהחיים',                  fam:'open'},
+  compare: {lbl:'טבלת השוואה (במה שונים?)',                fam:'open'},
+  perform: {lbl:'משימת ביצוע + רשימת תיוג (עבר/לא עבר)',    fam:'perf'},
+  demo:    {lbl:'הדגמה מצולמת של הביצוע',                  fam:'perf'},
+  sim:     {lbl:'תרגול מודרך / סימולציה',                  fam:'perf'},
+  calc:    {lbl:'תרגיל פתור + הצגת דרך',                    fam:'perf'},
+  scenario:{lbl:'תרחיש: "מה היית עושה?" + נימוק',          fam:'high'},
+  cases:   {lbl:'ניתוח מקרה / מקור',                       fam:'high'},
+  reflect: {lbl:'רפלקציה קצרה / יומן למידה',               fam:'high'},
+  oral:    {lbl:'הצגה בעל-פה / ראיון קצר',                 fam:'high'}
 };
+var FAM={sel:{t:'בחירה',cls:'k'},open:{t:'בונה',cls:'s'},perf:{t:'ביצוע',cls:'r'},high:{t:'חשיבה',cls:'h'}};
+
+/* בוחר שיטת הערכה לפי תוכן תת-הנושא + סוג המאפיין. rot = מונה סבב לגיוון ויזואלי. */
+function pickMethod(text, trait, subj, rot){
+  var t=text;
+  function has(re){ return re.test(t); }
+  if(trait==='מיומנות'){
+    if(has(/הדגמ|הצג|הצגת|הנחיה|ליווי/)) return 'demo';
+    if(has(/חישוב|מדיד|כמות|יחס|מינון|תמחור|חשב/)) return 'calc';
+    if(has(/תרגול|סימולצ|התנסות|הפעל/)) return 'sim';
+    return ['perform','demo','sim'][rot%3];
+  }
+  if(trait==='אחריות') return ['scenario','reflect','oral'][rot%3];
+  // ידע — לפי אופי התוכן
+  if(subj && (subj.id==='math')) return has(/גרף|נתונים|טבל|תרשים/)?'label':'calc';
+  if(has(/שלב|שלבים|תהליך|רצף|נוהל|סדר\b|הכנת|מהלך/)) return 'order';
+  if(has(/סוגי|סוגים|מיון|סיווג|קטגור|משפחות|קבוצות/)) return 'sort';
+  if(has(/הבחנה|הבדל|לעומת|מול\b|שונה|השוואה|בין .* ל/)) return 'compare';
+  if(has(/כלים|מכשיר|אביזר|מונח|מושג|הגדר|מינוח|טרמינ|רכיבים של/)) return 'match';
+  if(has(/מבנה|אנטומי|חלקי|רכיבי|מפ[הת]|שרטוט|דיאגרמ|תרשים|צילום|תמונה|זיהוי/)) return 'label';
+  if(has(/בטיחות|כלל|תקן|תקנה|חוק|אסור|מותר|זהירות|סיכון|היגיינ|סטריל|חיטוי/)) return 'tf';
+  if(has(/מדוע|למה\b|חשיבות|משמעות|עקרון|מטרה|יתרון|השפעה|תפקיד|קשר בין|גורם/)) return 'explain';
+  if(has(/שירות|לקוח|אתיק|דילמ|החלט|תקשורת|מקצועי[ת]? התנהג/)) return 'scenario';
+  if(has(/דוגמ|יישום|בחיי|יומיומ|שימוש/)) return 'example';
+  if(subj && subj.danger && has(/מקור|טקסט|יצירה|תעוד|עדות|רטורי|מניפולצ|ביקורת|פרשנ/)) return 'cases';
+  // ברירת מחדל — סבב מגוון של סגורות/פתוחות (לא רק אמריקאית)
+  return ['mc','fill','explain','match','tf'][rot%5];
+}
 function tierColor(t){return getComputedStyle(document.documentElement).getPropertyValue('--t'+t).trim();}
 
 function comp(id){ return (window.CURRICULUM[id]||{}).mods||[]; }
 function modNum(pmN){ var m=String(pmN).match(/\d+/); return m?parseInt(m[0]):null; }
 function compFor(id,pmN){ var n=modNum(pmN); return comp(id).find(function(m){return m.n===n;})||{knowledge:[],skills:[]}; }
 
-function subtopics(mod){
+function subtopics(mod, subj){
   // mod = curriculum module {knowledge[],skills[]}
-  var out=[];
-  (mod.knowledge||[]).forEach(function(k){ out.push({trait:'ידע',cls:'k',text:k,check:'יודע ומסביר: '+k,assess:'knowledge'});});
-  (mod.skills||[]).forEach(function(s){ out.push({trait:'מיומנות',cls:'s',text:s,check:'מבצע בפועל: '+s,assess:'skill'});});
+  var out=[], rk=0, rs=0;
+  (mod.knowledge||[]).forEach(function(k){
+    var meth=pickMethod(k,'ידע',subj,rk++);
+    out.push({trait:'ידע',cls:'k',text:k,check:'יודע ומסביר: '+k,method:meth});
+  });
+  (mod.skills||[]).forEach(function(s){
+    var meth=pickMethod(s,'מיומנות',subj,rs++);
+    out.push({trait:'מיומנות',cls:'s',text:s,check:'מבצע בפועל: '+s,method:meth});
+  });
   return out;
 }
 
@@ -308,14 +362,15 @@ function renderSubject(subj){
   if(subj.danger){
     html+='<div class="verify-banner">'+ICON.warn+'<div><b>אזור-סכנה פדגוגי.</b> כל מאפיין וכל שאלת הערכה עוברים אימות מול מקור סמכותי ('+(subj.verify||'משה"ח')+') דרך Perplexity + הסקיל <b>verify-pedagogy</b> — לפני מסירה. אין יחידה שעולה בלי חתימת מפקח מקצועי.</div></div>';
   }
-  html+='<div class="legend"><span style="font-weight:800;color:var(--ink-strong)">מקרא מאפיינים:</span>'+
-    '<span class="li"><span class="tb k">ידע</span> → שאלה/חידון/הסבר</span>'+
-    '<span class="li"><span class="tb s">מיומנות</span> → ביצוע + רשימת תיוג</span>'+
-    '<span class="li"><span class="tb r">אחריות</span> → תרחיש/רפלקציה</span></div>';
+  html+='<div class="legend"><span style="font-weight:800;color:var(--ink-strong)">דרכי הערכה — נבחרות לפי תוכן:</span>'+
+    '<span class="li"><span class="mtag k">בחירה</span> אמריקאית · התאמה · מיון · סידור · נכון/לא-נכון · תיוג</span>'+
+    '<span class="li"><span class="mtag s">בונה</span> הסבר · דוגמה · השוואה</span>'+
+    '<span class="li"><span class="mtag r">ביצוע</span> משימה · הדגמה · סימולציה · חישוב</span>'+
+    '<span class="li"><span class="mtag h">חשיבה</span> תרחיש · ניתוח מקרה · רפלקציה</span></div>';
 
   subj.modules.forEach(function(pm,i){
     var c=compFor(subj.id,pm.n);
-    var subs=subtopics(c);
+    var subs=subtopics(c,subj);
     var open = pm.status==='doing'||i===0;
     html+='<div class="mod'+(open?' open':'')+'" data-mi="'+i+'">'+
       '<div class="mod-h">'+
@@ -340,9 +395,10 @@ function modBody(subj,pm,c,subs){
     return '<p style="color:var(--ink-faint);font-size:12.5px;padding:8px 0">— אין פירוט כשירויות במקור למודולה זו (מטלת גמר/מסכמת). ייצור לפי §0.4.</p>'+tools(subj,pm);
   }
   var rows=subs.map(function(s){
+    var m=METHODS[s.method], fam=FAM[m.fam];
     return '<tr><td class="c-trait"><span class="tb '+s.cls+'">'+s.trait+'</span></td>'+
       '<td class="check">'+s.check+'</td>'+
-      '<td class="c-assess"><span class="assess-txt">'+ICON.check+ASSESS[s.assess].lbl+'</span></td></tr>';
+      '<td class="c-assess"><span class="mtag '+fam.cls+'">'+fam.t+'</span> '+m.lbl+'</td></tr>';
   }).join('');
   var tbl='<table class="st-tbl"><thead><tr><th class="c-trait">מאפיין</th><th>מה בודקים (תת-נושא)</th><th class="c-assess">איך נבחן</th></tr></thead><tbody>'+rows+'</tbody></table>';
   var assessRow = c.assess ? '<div class="mod-assess"><b>תוצר המודולה (הערכה מסכמת):</b> '+c.assess+'</div>' : '';
@@ -357,8 +413,8 @@ function tools(subj,pm){
 
 function copyPrompt(subj,mi){
   var pm=subj.modules[mi], c=compFor(subj.id,pm.n);
-  var subs=subtopics(c);
-  var lines=subs.map(function(s){ return '   - ['+s.trait+'] '+s.text+'  → הערכה: '+ASSESS[s.assess].lbl; }).join('\n');
+  var subs=subtopics(c,subj);
+  var lines=subs.map(function(s){ return '   - ['+s.trait+'] '+s.text+'  → הערכה: '+METHODS[s.method].lbl; }).join('\n');
   var danger = subj.danger ?
     ('5. אזור-סכנה: כל קביעה פדגוגית עוברת Perplexity + מקור סמכותי ('+(subj.verify||'משה"ח / אקדמיה ללשון')+'). הרץ verify-pedagogy לפני מסירה.') :
     '5. מגמה מקצועית: נגזר ממסמך המקור בלבד — בלי המצאות. תייג מקור לכל קביעה.';
