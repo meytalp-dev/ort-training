@@ -306,6 +306,43 @@ button{font-family:'Assistant',sans-serif}
 .b-stat.prog .n{color:var(--pulse-yellow)}
 .b-stat.none .n{color:var(--ink-faint)}
 
+.board-hd .role-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--brand);margin:2px 0 4px}
+
+/* דופק הלמידה — פאנל ההחלטה הפדגוגית */
+.decision{background:#fff;border:1px solid var(--brand-line);border-radius:16px;padding:14px;box-shadow:var(--shadow);margin-bottom:12px}
+.dec-hd{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.dec-hd svg{color:var(--brand);flex-shrink:0}
+.dec-hd h2{font-size:15.5px;color:var(--ink)}
+.dec-break{display:flex;flex-direction:column;gap:8px;margin-bottom:13px}
+.dec-row{display:flex;align-items:center;gap:10px}
+.dec-row .bar-wrap{flex:1;height:9px;border-radius:999px;background:var(--line);overflow:hidden;min-width:0}
+.dec-row .bar{height:100%;border-radius:999px;transition:width .4s ease}
+.dec-row.full .bar{background:var(--pulse-green)}
+.dec-row.core .bar{background:var(--pulse-yellow)}
+.dec-row.rescue .bar{background:var(--brand-bright)}
+.dec-row .rl{font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.dec-row .rl .cnt{font-family:'Playpen Sans Hebrew';font-weight:800;font-size:15px}
+.dec-row.full .rl .cnt{color:var(--pulse-green)}
+.dec-row.core .rl .cnt{color:var(--pulse-yellow)}
+.dec-row.rescue .rl .cnt{color:var(--brand)}
+.dec-row .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dec-row.full .dot{background:var(--pulse-green)}
+.dec-row.core .dot{background:var(--pulse-yellow)}
+.dec-row.rescue .dot{background:var(--brand-bright)}
+.dec-rec{background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:13px;padding:12px 13px}
+.dec-rec .rec-txt{font-size:13.5px;color:var(--ink);line-height:1.5;margin-bottom:11px}
+.dec-rec .rec-txt b{color:var(--brand)}
+.dec-rec .rec-btn{
+  width:100%;min-height:var(--tap);border:0;border-radius:11px;cursor:pointer;
+  font-family:'Assistant',sans-serif;font-weight:700;font-size:14.5px;
+  background:var(--brand);color:#fff;box-shadow:0 5px 14px rgba(14,124,134,.22);
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  transition:transform .12s ease;
+}
+.dec-rec .rec-btn:hover{transform:translateY(-1px)}
+.dec-rec .rec-btn:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.dec-rec .rec-btn.sent{background:var(--pulse-green);pointer-events:none}
+
 /* הערת מופע הערכה — ציון אישי */
 .assess-banner{display:flex;align-items:flex-start;gap:9px;background:var(--ai-soft);border:1px solid var(--ai-line);
   border-radius:13px;padding:11px 13px;font-size:13px;color:var(--ai-deep);margin-bottom:10px}
@@ -608,6 +645,7 @@ button{font-family:'Assistant',sans-serif}
 <div class="phone">
   <div class="board-hd">
     <h1>לוח ההגשות</h1>
+    <div class="role-tag"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6M10 18h4"/></svg>דופק למידה · מי הבין ומה הצעד הבא</div>
     <p>מי סיים, מי באמצע, מי עוד לא התחיל.</p>
   </div>
 
@@ -629,6 +667,19 @@ button{font-family:'Assistant',sans-serif}
     <div class="b-stat done"><div class="n" id="bDone">0</div><div class="l">סיימו</div></div>
     <div class="b-stat prog"><div class="n" id="bProg">0</div><div class="l">באמצע</div></div>
     <div class="b-stat none"><div class="n" id="bNone">0</div><div class="l">לא התחילו</div></div>
+  </div>
+
+  <!-- דופק הלמידה — לא "מי הגיש" אלא "מי הבין, ומה עכשיו" -->
+  <div class="decision" id="decisionCard">
+    <div class="dec-hd">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6M10 18h4"/></svg>
+      <h2>דופק הלמידה — מה עכשיו?</h2>
+    </div>
+    <div class="dec-break" id="decBreak"></div>
+    <div class="dec-rec" id="decRec">
+      <div class="rec-txt" id="decRecTxt"></div>
+      <button class="rec-btn" id="decRecBtn" type="button"></button>
+    </div>
   </div>
 
   <div class="assess-banner" id="assessBanner" style="display:none">
@@ -878,17 +929,18 @@ function showView(v){
    ============================================================ */
 var BOARD = {
   task: [
-    {n:"נועה בר-און",   g:"f", status:"done"},
-    {n:"תמר גולן",      g:"f", status:"done"},
-    {n:"ליאם פרץ",      g:"m", status:"done"},
-    {n:"אחמד זועבי",    g:"m", status:"done"},
-    {n:"מאיה אברהם",    g:"f", status:"done"},
-    {n:"דניאל רוזנברג", g:"m", status:"done"},
+    {n:"נועה בר-און",   g:"f", status:"done", learn:"full"},
+    {n:"תמר גולן",      g:"f", status:"done", learn:"full"},
+    {n:"מאיה אברהם",    g:"f", status:"done", learn:"full"},
+    {n:"דניאל רוזנברג", g:"m", status:"done", learn:"full"},
+    {n:"ליאם פרץ",      g:"m", status:"done", learn:"core"},
+    {n:"רות בן-חיים",   g:"f", status:"done", learn:"core"},
+    {n:"אחמד זועבי",    g:"m", status:"done", learn:"rescue"},
+    {n:"אליה טסמה",     g:"f", status:"done", learn:"rescue"},
     {n:"יסמין חדד",     g:"f", status:"prog"},
     {n:"עומר דהן",      g:"m", status:"prog"},
     {n:"בר סגל",        g:"f", status:"prog"},
     {n:"רון מזרחי",     g:"m", status:"none"},
-    {n:"אליה טסמה",     g:"f", status:"none"},
     {n:"יונתן לוי",     g:"m", status:"none"}
   ],
   assess: [
@@ -963,7 +1015,64 @@ function renderBoard(){
     html += boardRow(s, o.i, isAssess);
   });
   document.getElementById("boardList").innerHTML = html;
+
+  renderDecision(data, isAssess);
 }
+
+/* ------------------------------------------------------------
+   דופק הלמידה — מהסטטוס להחלטה פדגוגית.
+   לא "מי הגיש" אלא "מי הבין, ומה הצעד הבא".
+   ------------------------------------------------------------ */
+function decRow(cls, label, cnt, total){
+  var pct = total ? Math.round(cnt/total*100) : 0;
+  return '<div class="dec-row '+cls+'">'+
+    '<span class="dot"></span>'+
+    '<span class="rl"><span class="cnt">'+cnt+'</span> '+label+'</span>'+
+    '<span class="bar-wrap"><span class="bar" style="width:'+pct+'%"></span></span>'+
+  '</div>';
+}
+function renderDecision(data, isAssess){
+  var breakEl = document.getElementById("decBreak");
+  var recTxt  = document.getElementById("decRecTxt");
+  var recBtn  = document.getElementById("decRecBtn");
+  recBtn.classList.remove("sent");
+
+  if(isAssess){
+    // לפי טווחי ציון: הבינו (85+) · כמעט (70-84) · צריכים תמיכה (מתחת ל-70)
+    var graded = data.filter(function(s){return s.status==="done" && typeof s.grade==="number";});
+    var hi = graded.filter(function(s){return s.grade>=85;}).length;
+    var mid= graded.filter(function(s){return s.grade>=70 && s.grade<85;}).length;
+    var low= graded.filter(function(s){return s.grade<70;}).length;
+    var tot= graded.length || 1;
+    breakEl.innerHTML =
+      decRow("full","הבינו היטב (85+)",hi,tot)+
+      decRow("core","כמעט שם (70–84)",mid,tot)+
+      decRow("rescue","זקוקים לתמיכה (מתחת ל-70)",low,tot);
+    recTxt.innerHTML = '<b>'+low+' תלמידים</b> מתחת ל-70 בנושא <b>תקציר פסקה</b>. מומלץ לשלוח להם מחר <b>גרסת תמיכה קצרה</b> של אותה יחידה — לא את כל הכיתה.';
+    recBtn.innerHTML = decBtnIc()+'שלח תרגול תמיכה ל-'+low+' התלמידים';
+    recBtn.dataset.done = 'נשלח · '+low+' תלמידים';
+    return;
+  }
+
+  // משימת תרגול: הבינו (full) · זקוקים לדוגמה (core) · במסלול הצלה (rescue)
+  var done = data.filter(function(s){return s.status==="done";});
+  var full = done.filter(function(s){return s.learn==="full";}).length;
+  var core = done.filter(function(s){return s.learn==="core";}).length;
+  var resc = done.filter(function(s){return s.learn==="rescue";}).length;
+  var tot2 = done.length || 1;
+  breakEl.innerHTML =
+    decRow("full","הבינו את הרעיון",full,tot2)+
+    decRow("core","זקוקים לדוגמה נוספת",core,tot2)+
+    decRow("rescue","עברו למסלול הצלה",resc,tot2);
+  recTxt.innerHTML = '<b>'+(core+resc)+' תלמידים</b> עוד לא נעלו את <b>זיהוי נושא ונשוא</b> ('+core+' צריכים דוגמה, '+resc+' במסלול הצלה). מומלץ לפתוח מחר <b>תרגול כיתתי של 5 דקות</b> על הנקודה הזו.';
+  recBtn.innerHTML = decBtnIc()+'פתח תרגול כיתתי · 5 דקות';
+  recBtn.dataset.done = 'נקבע למחר · תרגול כיתתי';
+}
+function decBtnIc(){return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';}
+document.getElementById("decRecBtn").addEventListener("click", function(){
+  this.classList.add("sent");
+  this.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg>'+(this.dataset.done||'נשלח');
+});
 
 function grpSep(kind, ic, txt){ return '<div class="grp-sep '+kind+'">'+ic+txt+'</div>'; }
 function checkIc(){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';}
