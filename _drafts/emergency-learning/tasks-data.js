@@ -181,7 +181,7 @@ window.TASKS = [
     prompt:'(גל B) מסך פעילות מורים: מי שולח משימות ובאיזו תדירות, איפה שקט מתמשך. מצרפי.' },
   { id:'W3-05', world:3, title:'מסך פעילות תלמידים', desc:'השתתפות, מגמות, נעלמים.', cat:'screen', phase:'mvpB', status:'todo', file:'',
     prompt:'(גל B) מסך פעילות תלמידים: אחוזי check-in והגשה, מגמות, נעלמים. מצרפי + drill לכיתה (לא לחשיפת מב"ר).' },
-  { id:'W3-06', world:3, title:'מעקב כיתות + מרכז התראות', desc:'תמונת כיתה + אדומים עם פעולה.', cat:'screen', phase:'mvpB', status:'todo', file:'',
+  { id:'W3-06', world:3, title:'מעקב כיתות + מרכז התראות', desc:'תמונת כיתה + אדומים עם פעולה.', cat:'screen', phase:'mvpB', status:'done', file:'class-tracking.html',
     prompt:'(גל B) מעקב כיתות (פעילה/נחלשת לכל כיתה) + מרכז התראות (אדומים/מקצועות לא פעילים → כפתור פעולה).' },
   { id:'W3-07', world:3, title:'דוחות + דוח יומי לוואטסאפ', desc:'3 מספרים בשעה קבועה.', cat:'integ', phase:'mvpB', status:'done', file:'daily-report.html',
     prompt:'(גל B) בנה/י דוח יומי אוטומטי מצרפי ב-3 מספרים לוואטסאפ בשעה קבועה (daily-report-format.md). מצרפי, בלי שמות פומבי. api.whatsapp.com.' },
