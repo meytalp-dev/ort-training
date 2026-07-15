@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף · Dashboard מורה</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+  /* ============================================================
+     Dashboard מורה (W2-01) — תוכן ספציפי לתצוגה בלבד.
+     כל השלד (app-shell/sidebar/topbar/dashboard/metric-card) מגיע
+     מ-components.css. כאן: רק תוכן-הפרסונה + דונאט + בלוק "מה דורש אותי".
+     טוקנים בלבד — אין צבעים קשיחים.
+     ============================================================ */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: var(--text-body);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ---- "מה דורש אותי היום" — שני בלוקים בכרטיס אחד ---- */
+  .requires { display: flex; flex-direction: column; gap: var(--space-5); }
+  .requires__group + .requires__group { padding-top: var(--space-5); border-top: 1px solid var(--line); }
+  .requires__group-head {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin: 0 0 var(--space-3);
+  }
+  .requires__group-title {
+    font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700;
+    color: var(--ink-strong); margin: 0;
+  }
+  .requires__count {
+    font-size: var(--text-label); font-weight: 700; font-variant-numeric: tabular-nums;
+    color: var(--brand-deep); background: var(--brand-soft); border: 1px solid var(--brand-line);
+    border-radius: var(--radius-pill); padding: 1px 9px; line-height: 1.6;
+  }
+
+  /* שורת פריט (הגשה / נדרש קשר) */
+  .req-row {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) 0; border-top: 1px solid var(--line);
+  }
+  .req-row:first-of-type { border-top: 0; }
+  .req-row__avatar {
+    flex: none; width: 40px; height: 40px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--surface-muted); color: var(--ink-soft);
+    font-family: var(--font-head); font-weight: 700; font-size: var(--text-small);
+  }
+  .req-row__body { min-width: 0; flex: 1 1 auto; }
+  .req-row__name { font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+  .req-row__meta { font-size: var(--text-label); color: var(--ink-soft); margin-top: 1px; }
+  .req-row__side { margin-inline-start: auto; display: flex; align-items: center; gap: var(--space-2); }
+
+  /* מצב "נצפה" אחרי לחיצת "ראיתי" */
+  .req-row.is-seen { opacity: .62; }
+  .req-row.is-seen .req-row__name { color: var(--ink); }
+  .seen-tag {
+    display: none; align-items: center; gap: 5px;
+    font-size: var(--text-label); font-weight: 600; color: var(--status-good);
+  }
+  .seen-tag svg { width: 15px; height: 15px; }
+  .req-row.is-seen .seen-tag { display: inline-flex; }
+  .req-row.is-seen .req-row__see-btn { display: none; }
+
+  /* ---- דונאט דופק הכיתה (SVG נקי, טוקנים בלבד) ---- */
+  .donut { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+  .donut__ring { position: relative; width: 168px; height: 168px; }
+  .donut__ring svg { display: block; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .donut__center {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; pointer-events: none;
+  }
+  .donut__total { font-family: var(--font-head); font-size: 34px; font-weight: 800; color: var(--ink-strong); line-height: 1; }
+  .donut__total-label { font-size: var(--text-label); font-weight: 600; color: var(--ink-soft); margin-top: 2px; }
+  .donut-legend { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
+  .donut-legend__row {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-3);
+    font-size: var(--text-small);
+  }
+  .donut-legend__swatch { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+  .donut-legend__name { color: var(--ink); font-weight: 600; }
+  .donut-legend__val { color: var(--ink-strong); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ---- קיצורי פעולה (ActionCards) ---- */
+  .shortcut {
+    display: flex; align-items: center; gap: var(--space-4); width: 100%;
+    text-align: start; cursor: pointer;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md);
+    padding: var(--space-5); box-shadow: var(--shadow-card);
+    font-family: var(--font-body); color: var(--ink);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  }
+  .shortcut:hover { border-color: var(--brand-line); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+  .shortcut:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+  .shortcut__icon {
+    flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center;
+    background: var(--brand-soft); color: var(--brand-deep);
+  }
+  .shortcut__icon svg { width: 24px; height: 24px; }
+  .shortcut--primary .shortcut__icon { background: var(--brand); color: #fff; }
+  .shortcut__body { min-width: 0; }
+  .shortcut__title { font-family: var(--font-head); font-weight: 700; font-size: var(--text-h3); color: var(--ink-strong); }
+  .shortcut__sub { font-size: var(--text-small); color: var(--ink-soft); margin-top: 2px; }
+  .shortcut__chev { margin-inline-start: auto; color: var(--ink-faint); flex: none; }
+  .shortcut__chev svg { width: 20px; height: 20px; }
+
+  /* Toast קטן לאישור פעולה (הדגמה) */
+  .rz-toast {
+    position: fixed; inset-block-end: 20px; inset-inline-start: 50%; transform: translate(50%, 20px);
+    background: var(--ink-strong); color: #fff; font-size: var(--text-small); font-weight: 600;
+    padding: 12px 18px; border-radius: var(--radius-btn); box-shadow: var(--shadow-lg);
+    opacity: 0; pointer-events: none; transition: opacity 200ms ease, transform 200ms ease; z-index: 90;
+    display: flex; align-items: center; gap: var(--space-2);
+  }
+  .rz-toast svg { width: 18px; height: 18px; }
+  .rz-toast.is-on { opacity: 1; transform: translate(50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .shortcut, .rz-toast { transition: none; }
+    .shortcut:hover { transform: none; }
+  }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (outline, 24×24, stroke=currentColor) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-life" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="m5 5 3.5 3.5M15.5 15.5 19 19M19 5l-3.5 3.5M8.5 15.5 5 19"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-user-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="8" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/></symbol>
+  <symbol id="ic-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></symbol>
+  <symbol id="ic-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></symbol>
+  <symbol id="ic-trend-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-trend-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M17 17h4v-4"/></symbol>
+  <symbol id="ic-trend-flat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/></symbol>
+</svg>
+
+<!-- ============================================================
+     TeacherShell — Sidebar + Topbar + Main (מלא-מסך, לא ממוסגר)
+     ============================================================ -->
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הכיתה שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+        <span class="sidebar__label">הכיתה שלי</span>
+        <span class="badge badge--brand sidebar__badge" aria-hidden="true">5</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="דופק כיתתי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-activity"/></svg></span>
+        <span class="sidebar__label">דופק כיתתי</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="שליחת משימה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">שליחת משימה</span>
+      </a>
+
+      <div class="sidebar__section">תוכן</div>
+      <a class="sidebar__item" href="#" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הכיתות שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+        <span class="sidebar__label">הכיתות שלי</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רותם לוי</div>
+          <div class="sidebar__foot-role">מורה · מחנכת ט'2</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">כיתה ט'2 · לשון</div>
+        <div class="topbar__subtitle">אורט · 28 תלמידים</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" placeholder="חיפוש תלמיד, יחידה או משימה…" aria-label="חיפוש">
+      </label>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (3 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">3</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי">
+      <div class="app-main__inner">
+        <div class="dashboard">
+
+          <!-- כותרת -->
+          <div class="dashboard__head">
+            <div class="dashboard__headings">
+              <h1 class="dashboard__title">שלום רותם</h1>
+              <p class="dashboard__subtitle">תמונת מצב של כיתה ט'2 · עודכן לפני 12 דקות</p>
+            </div>
+            <div class="dashboard__actions">
+              <button class="btn btn--secondary btn--sm" type="button">
+                <svg viewBox="0 0 24 24"><use href="#ic-activity"/></svg>
+                דופק כיתתי
+              </button>
+              <button class="btn btn--primary btn--sm" type="button" data-toast="המשימה מוכנה לשליחה">
+                <svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>
+                שליחת משימה
+              </button>
+            </div>
+          </div>
+
+          <!-- שורת KPI — 4 (לפי איפיון 2.1) -->
+          <div class="dashboard__kpis">
+            <div class="metric-card">
+              <div class="metric-card__top">
+                <span class="metric-card__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+                <span class="metric-card__label">תלמידים בכיתה</span>
+              </div>
+              <div class="metric-card__value">28</div>
+              <span class="metric-card__delta metric-card__delta--flat">
+                <svg aria-hidden="true"><use href="#ic-trend-flat"/></svg>מצבת מלאה
+              </span>
+            </div>
+
+            <div class="metric-card metric-card--good">
+              <div class="metric-card__top">
+                <span class="metric-card__icon" aria-hidden="true"><svg><use href="#ic-activity"/></svg></span>
+                <span class="metric-card__label">פעילים היום</span>
+              </div>
+              <div class="metric-card__value">21<span class="metric-card__unit">/28</span></div>
+              <span class="metric-card__delta metric-card__delta--up">
+                <svg aria-hidden="true"><use href="#ic-trend-up"/></svg>3 יותר מאתמול
+              </span>
+            </div>
+
+            <div class="metric-card metric-card--attention">
+              <div class="metric-card__top">
+                <span class="metric-card__icon" aria-hidden="true"><svg><use href="#ic-life"/></svg></span>
+                <span class="metric-card__label">זקוקים לתמיכה</span>
+              </div>
+              <div class="metric-card__value">4</div>
+              <span class="metric-card__delta metric-card__delta--down">
+                <svg aria-hidden="true"><use href="#ic-trend-down"/></svg>ירדו מ-6
+              </span>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-card__top">
+                <span class="metric-card__icon" aria-hidden="true"><svg><use href="#ic-clock"/></svg></span>
+                <span class="metric-card__label">לא התחילו</span>
+              </div>
+              <div class="metric-card__value">3</div>
+              <span class="metric-card__delta metric-card__delta--flat">
+                <svg aria-hidden="true"><use href="#ic-trend-flat"/></svg>מתוך המשימה האחרונה
+              </span>
+            </div>
+          </div>
+
+          <!-- אזורים 12-עמודות -->
+          <div class="dashboard__grid">
+
+            <!-- מה דורש אותי היום (8) -->
+            <div class="card dash-col-8">
+              <h2 class="dashboard__section-title" style="font-size:var(--text-h2)">מה דורש אותי היום</h2>
+              <div class="requires">
+
+                <!-- בלוק 1 — הגשות חדשות -->
+                <div class="requires__group">
+                  <div class="requires__group-head">
+                    <span class="chip chip--good"><span class="chip__dot"></span>הגשות חדשות</span>
+                    <span class="requires__count" aria-label="שלוש הגשות ממתינות">3</span>
+                  </div>
+
+                  <div class="req-row">
+                    <span class="req-row__avatar" aria-hidden="true">דב</span>
+                    <div class="req-row__body">
+                      <div class="req-row__name">דנה בר־און</div>
+                      <div class="req-row__meta">הגישה · "שורש ומשקל" · לפני 20 דקות</div>
+                    </div>
+                    <div class="req-row__side">
+                      <span class="seen-tag"><svg aria-hidden="true"><use href="#ic-check-c"/></svg>סומן כנצפה</span>
+                      <button class="btn btn--secondary btn--sm req-row__see-btn" type="button" data-see aria-label="סימון ההגשה של דנה בר־און כנצפתה">
+                        <svg viewBox="0 0 24 24"><use href="#ic-eye"/></svg>ראיתי
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="req-row">
+                    <span class="req-row__avatar" aria-hidden="true">אל</span>
+                    <div class="req-row__body">
+                      <div class="req-row__name">אליה נסאר</div>
+                      <div class="req-row__meta">הגיש · "שורש ומשקל" · לפני 40 דקות</div>
+                    </div>
+                    <div class="req-row__side">
+                      <span class="seen-tag"><svg aria-hidden="true"><use href="#ic-check-c"/></svg>סומן כנצפה</span>
+                      <button class="btn btn--secondary btn--sm req-row__see-btn" type="button" data-see aria-label="סימון ההגשה של אליה נסאר כנצפתה">
+                        <svg viewBox="0 0 24 24"><use href="#ic-eye"/></svg>ראיתי
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="req-row">
+                    <span class="req-row__avatar" aria-hidden="true">רו</span>
+                    <div class="req-row__body">
+                      <div class="req-row__name">רון אלקבץ</div>
+                      <div class="req-row__meta">הגיש · "מילות יחס" · לפני שעה</div>
+                    </div>
+                    <div class="req-row__side">
+                      <span class="seen-tag"><svg aria-hidden="true"><use href="#ic-check-c"/></svg>סומן כנצפה</span>
+                      <button class="btn btn--secondary btn--sm req-row__see-btn" type="button" data-see aria-label="סימון ההגשה של רון אלקבץ כנצפתה">
+                        <svg viewBox="0 0 24 24"><use href="#ic-eye"/></svg>ראיתי
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- בלוק 2 — לא נראו לאחרונה (נדרש קשר) -->
+                <div class="requires__group">
+                  <div class="requires__group-head">
+                    <span class="chip chip--alert"><span class="chip__dot"></span>נדרש קשר</span>
+                    <span class="requires__count" aria-label="שני תלמידים לא נראו לאחרונה">2</span>
+                  </div>
+
+                  <div class="req-row">
+                    <span class="req-row__avatar" aria-hidden="true">מכ</span>
+                    <div class="req-row__body">
+                      <div class="req-row__name">מאיה כהן</div>
+                      <div class="req-row__meta">לא נראתה 3 ימים · אין הגשה למשימה האחרונה</div>
+                    </div>
+                    <div class="req-row__side">
+                      <button class="btn btn--primary btn--sm" type="button" data-toast="נפתחה פנייה למאיה כהן">
+                        <svg viewBox="0 0 24 24"><use href="#ic-message"/></svg>פנייה
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="req-row">
+                    <span class="req-row__avatar" aria-hidden="true">יו</span>
+                    <div class="req-row__body">
+                      <div class="req-row__name">יואב לוי</div>
+                      <div class="req-row__meta">לא נראה יומיים · נתקע ביחידה האחרונה</div>
+                    </div>
+                    <div class="req-row__side">
+                      <button class="btn btn--primary btn--sm" type="button" data-toast="נפתחה פנייה ליואב לוי">
+                        <svg viewBox="0 0 24 24"><use href="#ic-message"/></svg>פנייה
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- דופק הכיתה — דונאט נקי (4) -->
+            <div class="card dash-col-4">
+              <h2 class="dashboard__section-title">דופק הכיתה</h2>
+              <div class="donut">
+                <div class="donut__ring">
+                  <svg viewBox="0 0 128 128" role="img"
+                       aria-label="דופק הכיתה מתוך 28 תלמידים: 21 פעילים, 4 בתשומת לב, 3 שלא התחילו.">
+                    <!-- מסילת רקע -->
+                    <circle cx="64" cy="64" r="52" fill="none" stroke="var(--surface-muted)" stroke-width="16"/>
+                    <!-- פעילים 21/28 -->
+                    <circle cx="64" cy="64" r="52" fill="none" stroke="var(--status-good)" stroke-width="16"
+                            stroke-dasharray="245.04 81.69" stroke-dashoffset="0"/>
+                    <!-- תשומת לב 4/28 -->
+                    <circle cx="64" cy="64" r="52" fill="none" stroke="var(--status-attention)" stroke-width="16"
+                            stroke-dasharray="46.68 280.05" stroke-dashoffset="-245.04"/>
+                    <!-- לא התחילו 3/28 -->
+                    <circle cx="64" cy="64" r="52" fill="none" stroke="var(--status-unknown)" stroke-width="16"
+                            stroke-dasharray="35.01 291.72" stroke-dashoffset="-291.72"/>
+                  </svg>
+                  <div class="donut__center" aria-hidden="true">
+                    <span class="donut__total">28</span>
+                    <span class="donut__total-label">תלמידים</span>
+                  </div>
+                </div>
+
+                <div class="donut-legend">
+                  <div class="donut-legend__row">
+                    <span class="donut-legend__swatch" style="background:var(--status-good)"></span>
+                    <span class="donut-legend__name">פעילים</span>
+                    <span class="donut-legend__val">21</span>
+                  </div>
+                  <div class="donut-legend__row">
+                    <span class="donut-legend__swatch" style="background:var(--status-attention)"></span>
+                    <span class="donut-legend__name">תשומת לב</span>
+                    <span class="donut-legend__val">4</span>
+                  </div>
+                  <div class="donut-legend__row">
+                    <span class="donut-legend__swatch" style="background:var(--status-unknown)"></span>
+                    <span class="donut-legend__name">לא התחילו</span>
+                    <span class="donut-legend__val">3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- קיצורי פעולה — שלח משימה / דופק כיתתי (6 + 6) -->
+            <button class="shortcut shortcut--primary dash-col-6" type="button" data-toast="פותח מסך שליחת משימה">
+              <span class="shortcut__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+              <span class="shortcut__body">
+                <span class="shortcut__title">שליחת משימה</span>
+                <span class="shortcut__sub">בחירת יחידה מהספרייה ושליחה לכיתה או לתלמיד</span>
+              </span>
+              <span class="shortcut__chev" aria-hidden="true"><svg><use href="#ic-chevron"/></svg></span>
+            </button>
+
+            <button class="shortcut dash-col-6" type="button" data-toast="פותח דופק כיתתי">
+              <span class="shortcut__icon" aria-hidden="true"><svg><use href="#ic-activity"/></svg></span>
+              <span class="shortcut__body">
+                <span class="shortcut__title">דופק כיתתי</span>
+                <span class="shortcut__sub">מי הבין, מי זקוק לדוגמה, ומי במסלול הצלה — במבט אחד</span>
+              </span>
+              <span class="shortcut__chev" aria-hidden="true"><svg><use href="#ic-chevron"/></svg></span>
+            </button>
+
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast הדגמה -->
+<div class="rz-toast" id="toast" role="status" aria-live="polite">
+  <svg aria-hidden="true"><use href="#ic-check-c"/></svg>
+  <span id="toast-text"></span>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* ---------- ניווט: העברת aria-current="page" בלחיצה ---------- */
+  document.querySelectorAll('.sidebar__nav').forEach(function (nav) {
+    nav.addEventListener('click', function (e) {
+      var item = e.target.closest('.sidebar__item');
+      if (!item) return;
+      e.preventDefault();
+      nav.querySelectorAll('[aria-current="page"]').forEach(function (a) { a.removeAttribute('aria-current'); });
+      item.setAttribute('aria-current', 'page');
+      var shell = nav.closest('.app-shell');
+      if (shell) shell.classList.remove('is-nav-open');
+    });
+  });
+
+  /* ---------- "ראיתי" → מפעיל "המורה ראה" אצל התלמיד (הדגמה) ---------- */
+  document.querySelectorAll('[data-see]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var row = btn.closest('.req-row');
+      if (row) row.classList.add('is-seen');
+      showToast('סומן כנצפה — התלמיד יראה "המורה ראה"');
+    });
+  });
+
+  /* ---------- Toast הדגמה ---------- */
+  var toast = document.getElementById('toast');
+  var toastText = document.getElementById('toast-text');
+  var toastTimer = null;
+  function showToast(msg) {
+    if (!toast) return;
+    toastText.textContent = msg;
+    toast.classList.add('is-on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('is-on'); }, 2600);
+  }
+  document.querySelectorAll('[data-toast]').forEach(function (el) {
+    el.addEventListener('click', function () { showToast(el.getAttribute('data-toast')); });
+  });
+})();
+</script>
+</body>
+</html>
