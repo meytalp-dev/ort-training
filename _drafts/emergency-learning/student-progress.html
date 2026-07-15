@@ -110,6 +110,12 @@ svg{display:block}
 .route .u-subj{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;color:var(--brand-deep);background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:var(--radius-pill);padding:2px 9px}
 .route .when{font-size:12px;color:var(--ink-faint);font-weight:600}
 
+/* שורת "כבר השלמת N" בראש מסלול מקופל */
+.route-earlier{display:flex;align-items:center;gap:9px;padding:0 0 var(--space-4);margin-bottom:var(--space-2);border-bottom:1px dashed var(--line);color:var(--ink-soft);font-size:13px;font-weight:600}
+.route-earlier .rd{width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.route-earlier .rd svg{width:12px;height:12px}
+.route-earlier b{color:var(--ink-strong)}
+
 /* הבועה הפעילה — פעולה + הרגעה */
 .now-actions{margin-top:var(--space-3)}
 .now-actions .btn{margin-bottom:var(--space-2)}
@@ -225,7 +231,7 @@ svg{display:block}
           </div>
           <div class="stat">
             <div class="n"><span id="st-streak">0</span> <small id="st-streak-l">ימים</small></div>
-            <div class="l">רצף למידה</div>
+            <div class="l">של למידה לאחרונה</div>
           </div>
         </div>
 
@@ -248,6 +254,12 @@ svg{display:block}
       <section class="route">
         <ol class="sequence sequence--vertical" id="route-list" aria-label="רצף היחידות שלי"></ol>
       </section>
+
+      <!-- קיפול המסלול: ברירת מחדל = חלון ממוקד; אפשר לפתוח את הכול -->
+      <button class="ghost-btn" type="button" id="toggle-route" style="margin-top:var(--space-3)" aria-expanded="false">
+        <svg aria-hidden="true"><use href="#ic-progress"/></svg>
+        <span id="toggle-route-txt">להציג את כל המסלול</span>
+      </button>
 
       <!-- ===== לעצור ולהמשיך ===== -->
       <div class="pause-note">
@@ -333,6 +345,7 @@ svg{display:block}
   function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
 
   var state = load();
+  var expanded = false;   // קיפול המסלול: false = חלון ממוקד; true = כל המסלול
 
   /* ---------- חישובים נגזרים ---------- */
   function doneSet(){ var m={}; state.doneDates.forEach(function(d){ m[d]=true; }); return m; }
@@ -383,14 +396,14 @@ svg{display:block}
     }
     el('week-dots').innerHTML = html;
 
-    // כיתוב מעודד רגוע
+    // כיתוב מעודד רגוע — בלי "רצף שנשבר", בלי אשמה
     var cap;
     if(sk===0){
-      cap = 'רצף חדש מתחיל היום — יחידה קטנה אחת, וכבר יש רצף.';
+      cap = 'מתחילים — יחידה קטנה אחת, וכבר יש התחלה.';
     } else if(doneToday()){
-      cap = '<b>יופי — שמרת על הרצף גם היום.</b> ' + sk + ' ' + dayWord(sk) + ' ברצף.';
+      cap = '<b>יופי — למדת גם היום.</b> ' + sk + ' ' + dayWord(sk) + ' של למידה לאחרונה.';
     } else {
-      cap = 'כבר <b>' + sk + ' ' + dayWord(sk) + '</b> ברצף. עוד יחידה קטנה — והרצף ממשיך.';
+      cap = 'למדת ב־<b>' + sk + ' ' + dayWord(sk) + '</b> לאחרונה. עוד יחידה קטנה מתי שבא לך — בקצב שלך.';
     }
     if(wk>0) cap += '<br>השבוע השלמת ' + wk + ' ' + unitWord(wk) + '. כל אחת נשמרת, גם אם עצרת באמצע.';
     el('week-cap').innerHTML = cap;
@@ -436,6 +449,7 @@ svg{display:block}
 
   function renderRoute(){
     var list = el('route-list');
+    var toggle = el('toggle-route');
     if(state.cursor >= BEADS.length){
       // סיימו את כל המסלול
       list.innerHTML =
@@ -444,12 +458,33 @@ svg{display:block}
           '<h3>סיימת את כל המסלול</h3>' +
           '<p>כל היחידות הושלמו — בקצב שלך. מורה יוסיף יחידות חדשות כשיהיו.</p>' +
         '</div>';
-    } else {
-      var html = '';
-      for(var i=0;i<BEADS.length;i++){ html += stepHTML(i); }
-      list.innerHTML = html;
-      var cb = el('continue-btn');
-      if(cb) cb.addEventListener('click', completeCurrent);
+      if(toggle) toggle.style.display = 'none';
+      el('route-count').textContent = state.cursor + ' / ' + BEADS.length;
+      return;
+    }
+
+    // חלון ממוקד כברירת מחדל: יחידה אחת שהושלמה + היום + 2 קדימה. הכול — תחת "כל המסלול".
+    var start = expanded ? 0 : Math.max(0, state.cursor - 1);
+    var end   = expanded ? BEADS.length - 1 : Math.min(BEADS.length - 1, state.cursor + 2);
+
+    var html = '';
+    if(!expanded && start > 0){
+      html += '<li class="route-earlier-wrap" style="list-style:none;padding:0;margin:0">' +
+        '<div class="route-earlier"><span class="rd" aria-hidden="true"><svg><use href="#ic-check"/></svg></span>' +
+        '<span>כבר השלמת <b>' + start + '</b> ' + unitWord(start) + ' — הכול נשמר</span></div></li>';
+    }
+    for(var i=start;i<=end;i++){ html += stepHTML(i); }
+    list.innerHTML = html;
+
+    var cb = el('continue-btn');
+    if(cb) cb.addEventListener('click', completeCurrent);
+
+    if(toggle){
+      toggle.style.display = (BEADS.length > (end - start + 1) || expanded) ? '' : 'none';
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      el('toggle-route-txt').textContent = expanded
+        ? 'לצמצם למה שחשוב עכשיו'
+        : 'להציג את כל המסלול (' + BEADS.length + ')';
     }
     el('route-count').textContent = state.cursor + ' / ' + BEADS.length;
   }
@@ -471,9 +506,13 @@ svg{display:block}
     state.cursor += 1;
     save(state);
     render();
-    var sk = streakDays();
-    toast('נשמר ✓ ' + sk + ' ' + dayWord(sk) + ' ברצף. אפשר להמשיך או לעצור להיום.');
+    toast('נשמר ✓ יופי, עוד יחידה. אפשר להמשיך או לעצור להיום.');
   }
+
+  el('toggle-route').addEventListener('click', function(){
+    expanded = !expanded;
+    renderRoute();
+  });
 
   el('demo-reset').addEventListener('click', function(){
     try{ localStorage.removeItem(KEY); }catch(e){}
