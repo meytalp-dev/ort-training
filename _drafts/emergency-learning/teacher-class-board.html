@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="emergency">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הכיתה שלי · לוח הגשות — רֶצֶף (W2-02)</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="a11y.css">
+<style>
+/* ============================================================
+   W2-02 · לוח הגשות "הכיתה שלי" — תצוגת מורה (דסקטופ-first)
+   צורך: tokens.css · components.css (rz-table, chip, btn, card) · a11y.css
+   סגנון board-ייחודי בלבד כאן — הכול מטוקנים, בלי צבעים קשיחים.
+   ============================================================ */
+* { box-sizing: border-box; }
+/* ענבר כהה קריא (AA) על רקע בהיר — נגזר מטוקן הסטטוס, לא צבע קשיח */
+.rz { --amber-ink: color-mix(in srgb, var(--status-attention) 55%, var(--ink-strong)); }
+body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--ink);
+  line-height: 1.6; font-size: var(--text-body); -webkit-text-size-adjust: 100%; }
+
+/* --- כותרת המסך --- */
+.board-head { margin-bottom: var(--space-5); }
+.board-head h1 { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800;
+  color: var(--ink-strong); margin: 0 0 var(--space-1); }
+.board-head p { color: var(--ink-soft); margin: 0; font-size: var(--text-small); }
+
+/* --- בורר משימה (איזו הגשה מציגים) --- */
+.asg-switch { display: flex; flex-direction: column; gap: var(--space-2); margin: var(--space-5) 0; }
+.asg-switch__label { font-size: var(--text-label); font-weight: 700; color: var(--ink-faint); }
+.asg-seg { display: inline-flex; background: var(--surface-muted); border: 1px solid var(--line);
+  border-radius: var(--radius-md); padding: 4px; gap: 3px; flex-wrap: wrap; max-width: 100%; }
+.asg-seg button { min-height: var(--tap); padding: 0 var(--space-4); border: 0; background: transparent;
+  cursor: pointer; font-family: var(--font-body); font-size: var(--text-small); font-weight: 650;
+  color: var(--ink-soft); border-radius: var(--radius-sm); display: inline-flex; align-items: center;
+  gap: var(--space-2); transition: background 160ms ease, color 160ms ease; }
+.asg-seg button svg { width: 17px; height: 17px; flex: none; }
+.asg-seg button:hover { color: var(--ink-strong); }
+.asg-seg button[aria-pressed="true"] { background: var(--card); color: var(--brand-deep); box-shadow: var(--shadow-card); }
+.asg-seg button:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+.asg-seg button .asg-kind { font-size: var(--text-label); font-weight: 700; color: var(--ink-faint); }
+.asg-seg button[aria-pressed="true"] .asg-kind { color: var(--brand); }
+
+/* ============================================================
+   דופק הלמידה — הפאנל הפדגוגי (הלב של המסך)
+   מדידה = הקשר (מוקטן) · ההמלצה = המוצר (מודגשת)
+   ============================================================ */
+.pulse { background: var(--card); border: 1px solid var(--brand-line); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card); padding: var(--space-5); margin-bottom: var(--space-5); }
+.pulse__head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
+.pulse__head svg { width: 20px; height: 20px; color: var(--brand); flex: none; }
+.pulse__head h2 { font-family: var(--font-head); font-size: var(--text-h3); font-weight: 700; color: var(--ink-strong); margin: 0; }
+.pulse__hint { font-size: var(--text-label); color: var(--ink-soft); margin: 0 0 var(--space-4); }
+
+/* שלוש קבוצות פדגוגיות — כפתורי פילוח */
+.pulse__groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+@media (max-width: 620px) { .pulse__groups { grid-template-columns: 1fr; } }
+.pgroup { position: relative; text-align: start; background: var(--bg-soft); border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm); padding: var(--space-4); cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease; min-height: var(--tap); }
+.pgroup:hover { border-color: var(--brand-line); }
+.pgroup:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+.pgroup[aria-pressed="true"] { background: var(--card); box-shadow: 0 0 0 3px var(--brand-soft); }
+.pgroup__top { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.pgroup__ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; }
+.pgroup__ic svg { width: 17px; height: 17px; }
+.pgroup__num { font-family: var(--font-head); font-weight: 800; font-size: 26px; line-height: 1;
+  font-variant-numeric: tabular-nums; margin-inline-start: auto; }
+.pgroup__label { font-size: var(--text-small); font-weight: 700; color: var(--ink-strong); }
+.pgroup__bar { height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; margin-top: var(--space-3); }
+.pgroup__bar span { display: block; height: 100%; border-radius: var(--radius-pill); transition: width 400ms ease; }
+/* צבע לפי קבוצה — לא-רק-צבע: יש גם אייקון + מלל */
+.pgroup--understood  .pgroup__ic { background: color-mix(in srgb, var(--status-good) 14%, var(--card)); color: var(--status-good); }
+.pgroup--understood  .pgroup__num { color: var(--status-good); }
+.pgroup--understood  .pgroup__bar span { background: var(--status-good); }
+.pgroup--understood[aria-pressed="true"] { border-color: color-mix(in srgb, var(--status-good) 34%, var(--card)); }
+.pgroup--example .pgroup__ic { background: color-mix(in srgb, var(--status-attention) 16%, var(--card)); color: var(--amber-ink); }
+.pgroup--example .pgroup__num { color: var(--amber-ink); }
+.pgroup--example .pgroup__bar span { background: var(--status-attention); }
+.pgroup--example[aria-pressed="true"] { border-color: color-mix(in srgb, var(--status-attention) 38%, var(--card)); }
+.pgroup--rescue .pgroup__ic { background: var(--brand-soft); color: var(--brand-deep); }
+.pgroup--rescue .pgroup__num { color: var(--brand-deep); }
+.pgroup--rescue .pgroup__bar span { background: var(--brand); }
+.pgroup--rescue[aria-pressed="true"] { border-color: var(--brand-line); }
+
+/* המלצת הפעולה — נפתחת בלחיצה על קבוצה */
+.rec { display: none; margin-top: var(--space-4); background: var(--brand-soft); border: 1px solid var(--brand-line);
+  border-radius: var(--radius-sm); padding: var(--space-4); }
+.rec.is-open { display: block; }
+.rec__tag { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-label);
+  font-weight: 700; color: var(--brand-deep); background: var(--card); border: 1px solid var(--brand-line);
+  border-radius: var(--radius-pill); padding: 3px 10px; margin-bottom: var(--space-2); }
+.rec__tag svg { width: 13px; height: 13px; }
+.rec__reason { font-size: var(--text-h3); font-weight: 700; color: var(--ink-strong); line-height: 1.4; margin: 0 0 4px; }
+.rec__reason b { color: var(--brand-deep); }
+.rec__action { font-size: var(--text-small); color: var(--ink-soft); margin: 0 0 var(--space-4); }
+.rec__btns { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+
+/* ============================================================
+   שורת פילוח לפי סטטוס + סיכום
+   ============================================================ */
+.filters { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.fchip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 38px; padding: 0 var(--space-3);
+  border: 1.5px solid var(--line); background: var(--card); border-radius: var(--radius-pill);
+  font-family: var(--font-body); font-size: var(--text-small); font-weight: 650; color: var(--ink-soft);
+  cursor: pointer; transition: border-color 160ms ease, background 160ms ease, color 160ms ease; }
+.fchip:hover { border-color: var(--brand-line); color: var(--ink-strong); }
+.fchip:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+.fchip[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
+.fchip__count { font-weight: 800; font-variant-numeric: tabular-nums; }
+.fchip__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.fchip__dot--good { background: var(--status-good); }
+.fchip__dot--attention { background: var(--status-attention); }
+.fchip__dot--unknown { background: var(--status-unknown); }
+.fchip__dot--alert { background: var(--status-alert); }
+
+/* --- תא סטטוס בטבלה --- */
+.st { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-small);
+  font-weight: 650; padding: 5px 11px; border-radius: var(--radius-pill); white-space: nowrap; }
+.st svg { width: 14px; height: 14px; flex: none; }
+.st--good { color: var(--status-good); background: color-mix(in srgb, var(--status-good) 14%, var(--card)); border: 1px solid color-mix(in srgb, var(--status-good) 34%, var(--card)); }
+.st--attention { color: var(--amber-ink); background: color-mix(in srgb, var(--status-attention) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--status-attention) 38%, var(--card)); }
+.st--unknown { color: var(--ink-soft); background: var(--surface-muted); border: 1px solid var(--line-strong); }
+.st--alert { color: var(--status-alert); background: color-mix(in srgb, var(--status-alert) 12%, var(--card)); border: 1px solid color-mix(in srgb, var(--status-alert) 32%, var(--card)); }
+
+/* --- תא "אות למידה" --- */
+.sig { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-small); color: var(--ink); }
+.sig svg { width: 15px; height: 15px; flex: none; }
+.sig--understood svg { color: var(--status-good); }
+.sig--example svg { color: var(--status-attention); }
+.sig--rescue svg { color: var(--brand); }
+.sig--none { color: var(--ink-faint); }
+
+/* ציון (מצב הערכה) */
+.grade { display: inline-flex; align-items: baseline; gap: 2px; font-family: var(--font-head);
+  font-weight: 800; font-variant-numeric: tabular-nums; }
+.grade--hi { color: var(--status-good); }
+.grade--mid { color: var(--amber-ink); }
+.grade--low { color: var(--status-alert); }
+.grade__na { color: var(--ink-faint); font-weight: 500; font-family: var(--font-body); font-size: var(--text-small); }
+
+/* אווטאר צבעוני לפי סטטוס בשורה */
+.avatar--good { background: var(--status-good); }
+.avatar--attention { background: var(--status-attention); }
+.avatar--unknown { background: var(--status-unknown); }
+.avatar--alert { background: var(--status-alert); }
+
+/* תא פעולה בשורה */
+.row-act { display: inline-flex; gap: var(--space-2); align-items: center; }
+.seen-flag { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-label);
+  font-weight: 700; color: var(--status-good); }
+.seen-flag svg { width: 15px; height: 15px; }
+
+/* מצב-ריק לפילוח שלא מחזיר תוצאות */
+.empty { text-align: center; padding: var(--space-8) var(--space-4); color: var(--ink-soft); }
+.empty p { margin: var(--space-3) 0 0; font-size: var(--text-small); }
+
+/* התאמת שם עמודת-פעולות רחבה יותר מברירת-המחדל */
+.rz-table .col-act { width: 132px; text-align: start; }
+@media (max-width: 640px) { .rz-table .col-act { width: auto; } .rz-table td.col-act { justify-content: flex-end; } .rz-table td.col-act::before { content: none; } }
+
+/* toast קטן לאישור פעולות דמו (שם ייחודי — לא להתנגש עם .toast של components.css) */
+.board-toast { position: fixed; inset-block-end: var(--space-6); inset-inline: 0; margin-inline: auto; width: max-content;
+  max-width: calc(100% - 32px); background: var(--ink-strong); color: #fff; font-size: var(--text-small);
+  font-weight: 600; padding: 11px 18px; border-radius: var(--radius-pill); box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; gap: var(--space-2); opacity: 0; transform: translateY(8px);
+  transition: opacity 200ms ease, transform 200ms ease; pointer-events: none; z-index: 200; }
+.board-toast.is-open { opacity: 1; transform: translateY(0); }
+.board-toast svg { width: 17px; height: 17px; color: var(--brand-bright); }
+</style>
+</head>
+<body class="rz">
+
+<!-- ============ מאגר אייקונים (outline, currentColor) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2Z"/></symbol>
+  <symbol id="ic-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+  <symbol id="ic-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+  <symbol id="ic-life" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M4.9 4.9 9 9M15 15l4.1 4.1M15 9l4.1-4.1M4.9 19.1 9 15"/></symbol>
+  <symbol id="ic-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></symbol>
+  <symbol id="ic-arrow-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+</svg>
+
+<div class="app-shell app-shell--admin">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- ===== Sidebar ===== -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="#" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-current="page" aria-label="הכיתה שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+        <span class="sidebar__label">הכיתה שלי</span>
+        <span class="badge badge--brand sidebar__badge" aria-hidden="true" id="navBadge">4</span>
+      </a>
+      <a class="sidebar__item" href="educator-pulse.html" aria-label="דופק כיתתי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-activity"/></svg></span>
+        <span class="sidebar__label">דופק כיתתי</span>
+      </a>
+      <a class="sidebar__item" href="teacher-flow.html" aria-label="שליחת משימה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-send"/></svg></span>
+        <span class="sidebar__label">שליחת משימה</span>
+      </a>
+
+      <div class="sidebar__section">תוכן</div>
+      <a class="sidebar__item" href="#" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הכיתות שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+        <span class="sidebar__label">הכיתות שלי</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name">רותם לוי</div>
+          <div class="sidebar__foot-role">מורה · מחנכת ט'2</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== עמודה ראשית ===== -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">כיתה ט'2 · לשון</div>
+        <div class="topbar__subtitle">אורט בית הערבה · 24 תלמידים</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" id="studentSearch" placeholder="חיפוש תלמיד…" aria-label="חיפוש תלמיד">
+      </label>
+      <div class="topbar__actions">
+        <!-- תג מצב מערכת — משתנה עם data-mode של system-mode.js -->
+        <span class="mode-chip mode-chip--sm" data-mode="emergency" title="מצב המערכת">
+          <span class="mode-chip__mark" aria-hidden="true"><svg viewBox="0 0 20 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 7h4M9 7h2M14 7h4"/><circle cx="7.5" cy="7" r="1.6" fill="currentColor" stroke="none"/></svg></span>
+          <span data-mode-label>חירום</span>
+        </span>
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות (3 חדשות)">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" aria-hidden="true">3</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="לוח הגשות">
+      <div class="app-main__inner">
+
+        <div class="board-head">
+          <h1>הכיתה שלי</h1>
+          <p>לוח הגשות — מי סיים, מי באמצע, מי טרם נכנס. הלוח מתעדכן לבד, אין צורך לרענן.</p>
+        </div>
+
+        <!-- בורר משימה -->
+        <div class="asg-switch">
+          <span class="asg-switch__label" id="asgLabel">איזו משימה מציגים?</span>
+          <div class="asg-seg" role="group" aria-labelledby="asgLabel" id="asgSeg">
+            <button type="button" data-asg="unit" aria-pressed="true">
+              <svg aria-hidden="true"><use href="#ic-book"/></svg>
+              שם הפועל
+              <span class="asg-kind">· יחידה</span>
+            </button>
+            <button type="button" data-asg="assess" aria-pressed="false">
+              <svg aria-hidden="true"><use href="#ic-clipboard"/></svg>
+              בוחן קצר — מערכת הצורות
+              <span class="asg-kind">· הערכה</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== דופק הלמידה ===== -->
+        <section class="pulse" aria-labelledby="pulseTitle">
+          <div class="pulse__head">
+            <svg aria-hidden="true"><use href="#ic-pulse"/></svg>
+            <h2 id="pulseTitle">דופק הלמידה — מה עכשיו?</h2>
+          </div>
+          <p class="pulse__hint">מבין מי שכבר עבד על המשימה. בחרו קבוצה כדי לסנן את הרשימה ולקבל המלצת פעולה.</p>
+
+          <div class="pulse__groups" id="pulseGroups">
+            <button type="button" class="pgroup pgroup--understood" data-pulse="understood" aria-pressed="false">
+              <div class="pgroup__top">
+                <span class="pgroup__ic" aria-hidden="true"><svg><use href="#ic-check"/></svg></span>
+                <span class="pgroup__num" data-pulse-num>0</span>
+              </div>
+              <span class="pgroup__label">הבינו את הליבה</span>
+              <div class="pgroup__bar" aria-hidden="true"><span data-pulse-bar style="width:0%"></span></div>
+            </button>
+
+            <button type="button" class="pgroup pgroup--example" data-pulse="example" aria-pressed="false">
+              <div class="pgroup__top">
+                <span class="pgroup__ic" aria-hidden="true"><svg><use href="#ic-message"/></svg></span>
+                <span class="pgroup__num" data-pulse-num>0</span>
+              </div>
+              <span class="pgroup__label">זקוקים לדוגמה</span>
+              <div class="pgroup__bar" aria-hidden="true"><span data-pulse-bar style="width:0%"></span></div>
+            </button>
+
+            <button type="button" class="pgroup pgroup--rescue" data-pulse="rescue" aria-pressed="false">
+              <div class="pgroup__top">
+                <span class="pgroup__ic" aria-hidden="true"><svg><use href="#ic-life"/></svg></span>
+                <span class="pgroup__num" data-pulse-num>0</span>
+              </div>
+              <span class="pgroup__label">עברו במסלול הצלה</span>
+              <div class="pgroup__bar" aria-hidden="true"><span data-pulse-bar style="width:0%"></span></div>
+            </button>
+          </div>
+
+          <!-- המלצת פעולה — נפתחת בלחיצה -->
+          <div class="rec" id="rec" role="region" aria-live="polite" aria-label="המלצת פעולה">
+            <span class="rec__tag"><svg aria-hidden="true"><use href="#ic-pulse"/></svg>המלצה</span>
+            <p class="rec__reason" id="recReason"></p>
+            <p class="rec__action" id="recAction"></p>
+            <div class="rec__btns">
+              <button class="btn btn--primary btn--sm" type="button" id="recPrimary" data-toast=""></button>
+              <button class="btn btn--secondary btn--sm" type="button" id="recSecondary">הצג רק אותם ברשימה</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== שורת פילוח לפי סטטוס ===== -->
+        <div class="filters" id="filters" role="group" aria-label="פילוח לפי סטטוס">
+          <button class="fchip" type="button" data-filter="all" aria-pressed="true">
+            הכל <span class="fchip__count" data-count="all">0</span>
+          </button>
+          <button class="fchip" type="button" data-filter="completed" aria-pressed="false">
+            <span class="fchip__dot fchip__dot--good" aria-hidden="true"></span>
+            סיימו <span class="fchip__count" data-count="completed">0</span>
+          </button>
+          <button class="fchip" type="button" data-filter="started" aria-pressed="false">
+            <span class="fchip__dot fchip__dot--attention" aria-hidden="true"></span>
+            באמצע <span class="fchip__count" data-count="started">0</span>
+          </button>
+          <button class="fchip" type="button" data-filter="not_started" aria-pressed="false">
+            <span class="fchip__dot fchip__dot--unknown" aria-hidden="true"></span>
+            לא התחילו <span class="fchip__count" data-count="not_started">0</span>
+          </button>
+          <button class="fchip" type="button" data-filter="not_seen" aria-pressed="false">
+            <span class="fchip__dot fchip__dot--alert" aria-hidden="true"></span>
+            לא נכנסו <span class="fchip__count" data-count="not_seen">0</span>
+          </button>
+        </div>
+
+        <!-- ===== טבלת ההגשות ===== -->
+        <div class="rz-table-wrap">
+          <div class="rz-table-scroll">
+            <table class="rz-table" id="subTable">
+              <caption class="sr-only">רשימת הגשות התלמידים למשימה הנבחרת, עם סטטוס, אות למידה ופעולות</caption>
+              <thead>
+                <tr>
+                  <th scope="col">תלמיד/ה</th>
+                  <th scope="col">סטטוס</th>
+                  <th scope="col" id="thSignal">אות למידה</th>
+                  <th scope="col" class="col-act">פעולה</th>
+                </tr>
+              </thead>
+              <tbody id="subBody"><!-- מוזרק ב-JS --></tbody>
+            </table>
+          </div>
+          <div class="empty" id="emptyState" hidden>
+            <span class="sequence-empty__rail" aria-hidden="true" style="justify-content:center">
+              <span class="sequence-node"></span><span class="sequence-empty__seg"></span><span class="sequence-node is-faint"></span>
+            </span>
+            <p>אין תלמידים בפילוח הזה כרגע.</p>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="board-toast" id="toast" role="status" aria-live="polite"><svg aria-hidden="true"><use href="#ic-check"/></svg><span id="toastMsg"></span></div>
+
+<script src="system-mode.js"></script>
+<script src="seen-service.js"></script>
+<script src="a11y.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     נתוני דמו (seed) — נגזרים ממודל הנתונים (Submission + DailyPresence).
+     status: completed / started / not_started / not_seen  (סטטוס גס בלבד)
+     signal: אות למידה למי שעבד — understood / example / rescue  (מ-mastery/hint/rescue_path)
+     grade:  רק במצב הערכה (unit_type=assessment), אחרת null
+     ============================================================ */
+  var ASSIGN = {
+    unit: {
+      title: 'שם הפועל', kind: 'יחידה', assessment: false,
+      students: [
+        { n:'אביתר מזרחי',  i:'אמ', status:'completed',  signal:'understood' },
+        { n:'נועה בר-און',   i:'נב', status:'completed',  signal:'understood' },
+        { n:'יוסף אבוטבול',  i:'יא', status:'completed',  signal:'rescue' },
+        { n:'מרים דהאן',     i:'מד', status:'completed',  signal:'understood' },
+        { n:'דניאל קפלן',    i:'דק', status:'completed',  signal:'example' },
+        { n:'סתיו לביא',     i:'סל', status:'completed',  signal:'understood' },
+        { n:'רון חדד',       i:'רח', status:'completed',  signal:'rescue' },
+        { n:'ליאן עותמאן',   i:'לע', status:'completed',  signal:'understood' },
+        { n:'איתי גולן',     i:'אג', status:'started',    signal:'example' },
+        { n:'שירה פרץ',      i:'שפ', status:'started',    signal:'example' },
+        { n:'עמית ביטון',    i:'עב', status:'started',    signal:'rescue' },
+        { n:'טל אזולאי',     i:'טא', status:'started',    signal:'example' },
+        { n:'הדס נחום',      i:'הנ', status:'started',    signal:null },
+        { n:'מוחמד זועבי',   i:'מז', status:'not_started',signal:null },
+        { n:'יעל שמעוני',    i:'יש', status:'not_started',signal:null },
+        { n:'אורי מלכה',     i:'אמ', status:'not_started',signal:null },
+        { n:'לינוי סבן',     i:'לס', status:'not_seen',   signal:null, gone:'לא נכנסה יומיים' },
+        { n:'כרים חמד',      i:'כח', status:'not_seen',   signal:null, gone:'לא נכנס 3 ימים' },
+        { n:'רומי אשכנזי',   i:'רא', status:'not_seen',   signal:null, gone:'לא נכנסה יומיים' },
+        { n:'בן הרוש',       i:'בה', status:'not_started',signal:null },
+        { n:'מאיה קדוש',     i:'מק', status:'started',    signal:'understood' },
+        { n:'עדן ואקנין',    i:'עו', status:'completed',  signal:'understood' },
+        { n:'ניר צדוק',      i:'נצ', status:'completed',  signal:'example' },
+        { n:'אלמוג רחמים',   i:'אר', status:'not_seen',   signal:null, gone:'לא נכנס יומיים' }
+      ]
+    },
+    assess: {
+      title: 'בוחן קצר — מערכת הצורות', kind: 'הערכה', assessment: true,
+      students: [
+        { n:'אביתר מזרחי',  i:'אמ', status:'completed',  signal:'understood', grade:92 },
+        { n:'נועה בר-און',   i:'נב', status:'completed',  signal:'understood', grade:88 },
+        { n:'יוסף אבוטבול',  i:'יא', status:'completed',  signal:'rescue',     grade:71 },
+        { n:'מרים דהאן',     i:'מד', status:'completed',  signal:'understood', grade:95 },
+        { n:'דניאל קפלן',    i:'דק', status:'completed',  signal:'example',    grade:64 },
+        { n:'סתיו לביא',     i:'סל', status:'completed',  signal:'understood', grade:90 },
+        { n:'רון חדד',       i:'רח', status:'completed',  signal:'rescue',     grade:68 },
+        { n:'ליאן עותמאן',   i:'לע', status:'completed',  signal:'understood', grade:84 },
+        { n:'איתי גולן',     i:'אג', status:'started',    signal:'example',    grade:null },
+        { n:'שירה פרץ',      i:'שפ', status:'started',    signal:'example',    grade:null },
+        { n:'עמית ביטון',    i:'עב', status:'completed',  signal:'rescue',     grade:59 },
+        { n:'טל אזולאי',     i:'טא', status:'started',    signal:'example',    grade:null },
+        { n:'הדס נחום',      i:'הנ', status:'not_started',signal:null,         grade:null },
+        { n:'מוחמד זועבי',   i:'מז', status:'not_started',signal:null,         grade:null },
+        { n:'יעל שמעוני',    i:'יש', status:'completed',  signal:'understood', grade:78 },
+        { n:'אורי מלכה',     i:'אמ', status:'not_started',signal:null,         grade:null },
+        { n:'לינוי סבן',     i:'לס', status:'not_seen',   signal:null, gone:'לא נכנסה יומיים' },
+        { n:'כרים חמד',      i:'כח', status:'not_seen',   signal:null, gone:'לא נכנס 3 ימים' },
+        { n:'רומי אשכנזי',   i:'רא', status:'not_seen',   signal:null, gone:'לא נכנסה יומיים' },
+        { n:'בן הרוש',       i:'בה', status:'not_started',signal:null,         grade:null },
+        { n:'מאיה קדוש',     i:'מק', status:'completed',  signal:'understood', grade:81 },
+        { n:'עדן ואקנין',    i:'עו', status:'completed',  signal:'understood', grade:87 },
+        { n:'ניר צדוק',      i:'נצ', status:'completed',  signal:'example',    grade:62 },
+        { n:'אלמוג רחמים',   i:'אר', status:'not_seen',   signal:null, gone:'לא נכנס יומיים' }
+      ]
+    }
+  };
+
+  /* ---- מטא-נתונים לתצוגה ---- */
+  var STATUS_META = {
+    completed:   { label:'סיים',        cls:'good',      icon:'ic-check' },
+    started:     { label:'באמצע',       cls:'attention', icon:'ic-clock' },
+    not_started: { label:'לא התחיל',    cls:'unknown',   icon:'ic-minus' },
+    not_seen:    { label:'נדרש קשר',    cls:'alert',     icon:'ic-alert' }
+  };
+  var SIGNAL_META = {
+    understood: { label:'הבין את הליבה',  cls:'understood', icon:'ic-arrow-up' },
+    example:    { label:'זקוק לדוגמה',    cls:'example',    icon:'ic-message' },
+    rescue:     { label:'מסלול הצלה',     cls:'rescue',     icon:'ic-life' }
+  };
+  /* המלצות הפעולה לכל קבוצת דופק */
+  var REC = {
+    understood: {
+      reason: 'הבינו את הליבה — אפשר להתקדם.',
+      action: 'שווה לשלוח להם את היחידה הבאה או אתגר קצר, כדי לא לאבד את המומנטום.',
+      cta: 'שלח יחידה הבאה', toast: 'היחידה הבאה נשלחה לקבוצה' },
+    example: {
+      reason: 'זקוקים לדוגמה נוספת.',
+      action: 'שלחו גרסה קצרה עם דוגמה מהחיים — אותו רעיון, פחות עומס.',
+      cta: 'שלח גרסה עם דוגמה', toast: 'גרסה עם דוגמה נשלחה לקבוצה' },
+    rescue: {
+      reason: 'עברו במסלול ההצלה והשלימו את הליבה.',
+      action: 'הצלחה בלי בושה. שווה מילה טובה אישית ומעקב קל ביחידה הבאה.',
+      cta: 'סמן למעקב עדין', toast: 'התלמידים סומנו למעקב עדין' }
+  };
+
+  /* ---- מצב המסך ---- */
+  var state = { asg: 'unit', filter: 'all', pulse: null, query: '' };
+
+  var els = {
+    body: document.getElementById('subBody'),
+    empty: document.getElementById('emptyState'),
+    thSignal: document.getElementById('thSignal'),
+    filters: document.getElementById('filters'),
+    pulseGroups: document.getElementById('pulseGroups'),
+    rec: document.getElementById('rec'),
+    recReason: document.getElementById('recReason'),
+    recAction: document.getElementById('recAction'),
+    recPrimary: document.getElementById('recPrimary'),
+    recSecondary: document.getElementById('recSecondary'),
+    navBadge: document.getElementById('navBadge'),
+    search: document.getElementById('studentSearch'),
+    toast: document.getElementById('toast'),
+    toastMsg: document.getElementById('toastMsg')
+  };
+
+  function data() { return ASSIGN[state.asg]; }
+
+  function svg(id) { return '<svg aria-hidden="true"><use href="#' + id + '"/></svg>'; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+
+  /* מזהה יציב לתלמיד/ה — מקשר בין לוח המורה למסך התלמיד (seen-service).
+     נגזר מהשם כדי שיישאר עקבי בין המסכים בלי לשנות את נתוני-הדמו. */
+  var ID_MAP = { 'נועה בר-און':'std_noa' };
+  function sid(name) { return ID_MAP[name] || ('std_' + encodeURIComponent(name).replace(/%/g, '')); }
+  var TEACHER = { name:'רותם לוי', role:'המחנכת', verb:'ראתה' };  /* מחנכת ט'2 */
+
+  function gradeClass(g) { return g >= 85 ? 'hi' : (g >= 70 ? 'mid' : 'low'); }
+
+  /* ---- סינון השורות לפי המצב הנוכחי ---- */
+  function visibleStudents() {
+    var d = data();
+    return d.students.filter(function (s) {
+      if (state.query && s.n.indexOf(state.query) === -1) return false;
+      if (state.pulse) return s.signal === state.pulse;
+      if (state.filter === 'all') return true;
+      return s.status === state.filter;
+    });
+  }
+
+  /* ---- רינדור טבלה ---- */
+  function renderTable() {
+    var rows = visibleStudents();
+    var assessment = data().assessment;
+    els.thSignal.textContent = assessment ? 'ציון · אות למידה' : 'אות למידה';
+
+    if (!rows.length) { els.body.innerHTML = ''; els.empty.hidden = false; return; }
+    els.empty.hidden = true;
+
+    els.body.innerHTML = rows.map(function (s) {
+      var sm = STATUS_META[s.status];
+
+      /* עמודת סטטוס */
+      var statusCell = '<span class="st st--' + sm.cls + '">' + svg(sm.icon) + esc(sm.label) + '</span>';
+      if (s.status === 'not_seen' && s.gone) {
+        statusCell += '<span class="rz-table__sub">' + esc(s.gone) + '</span>';
+      }
+
+      /* עמודת אות-למידה (+ ציון במצב הערכה) */
+      var sigCell;
+      if (s.signal) {
+        var gm = SIGNAL_META[s.signal];
+        sigCell = '<span class="sig sig--' + gm.cls + '">' + svg(gm.icon) + esc(gm.label) + '</span>';
+      } else {
+        sigCell = '<span class="sig sig--none">' + svg('ic-minus') + 'טרם עבד</span>';
+      }
+      if (assessment) {
+        var gradeHtml = (s.grade != null)
+          ? '<span class="grade grade--' + gradeClass(s.grade) + '">' + s.grade + '</span>'
+          : '<span class="grade__na">—</span>';
+        sigCell = '<div style="display:flex;align-items:center;gap:var(--space-3)">' + gradeHtml + sigCell + '</div>';
+      }
+
+      /* עמודת פעולה */
+      var actCell;
+      if (s.status === 'not_seen') {
+        actCell = '<span class="row-act"><button class="btn btn--secondary btn--sm" type="button" data-contact="' + esc(s.n) + '">' + svg('ic-phone') + 'פנייה</button></span>';
+      } else if (s.status === 'completed') {
+        var already = (window.Resef && Resef.Seen) ? Resef.Seen.isSeen(sid(s.n), state.asg) : false;
+        actCell = already
+          ? '<span class="row-act"><span class="seen-flag">' + svg('ic-check') + 'נצפה</span></span>'
+          : '<span class="row-act">' +
+            '<button class="btn btn--secondary btn--sm" type="button" data-seen="' + esc(s.n) + '">' + svg('ic-eye') + 'ראיתי</button>' +
+            '</span>';
+      } else if (s.status === 'started') {
+        actCell = '<span class="sig--none" style="font-size:var(--text-label);color:var(--ink-faint)">בעבודה…</span>';
+      } else {
+        actCell = '<span class="row-act"><button class="btn btn--ghost btn--sm" type="button" data-remind="' + esc(s.n) + '">תזכורת</button></span>';
+      }
+
+      return '<tr>' +
+        '<td data-label="תלמיד/ה"><span style="display:flex;align-items:center;gap:var(--space-3)">' +
+          '<span class="avatar avatar--sm avatar--' + sm.cls + '" aria-hidden="true">' + esc(s.i) + '</span>' +
+          '<span class="rz-table__primary">' + esc(s.n) + '</span></span></td>' +
+        '<td data-label="סטטוס">' + statusCell + '</td>' +
+        '<td data-label="' + (assessment ? 'ציון · אות' : 'אות למידה') + '">' + sigCell + '</td>' +
+        '<td class="col-act" data-label="פעולה">' + actCell + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  /* ---- עדכון מוני הפילוח + הדופק ---- */
+  function renderCounts() {
+    var d = data();
+    var byStatus = { all: d.students.length, completed:0, started:0, not_started:0, not_seen:0 };
+    var byPulse = { understood:0, example:0, rescue:0 };
+    d.students.forEach(function (s) {
+      byStatus[s.status] = (byStatus[s.status] || 0) + 1;
+      if (s.signal) byPulse[s.signal] = (byPulse[s.signal] || 0) + 1;
+    });
+
+    Object.keys(byStatus).forEach(function (k) {
+      var el = els.filters.querySelector('[data-count="' + k + '"]');
+      if (el) el.textContent = byStatus[k];
+    });
+
+    var worked = byPulse.understood + byPulse.example + byPulse.rescue || 1;
+    els.pulseGroups.querySelectorAll('.pgroup').forEach(function (g) {
+      var key = g.getAttribute('data-pulse');
+      var n = byPulse[key] || 0;
+      g.querySelector('[data-pulse-num]').textContent = n;
+      g.querySelector('[data-pulse-bar]').style.width = Math.round(n / worked * 100) + '%';
+    });
+
+    /* תג ניווט = כמה דורשים תשומת לב (נעלמו) */
+    els.navBadge.textContent = byStatus.not_seen;
+  }
+
+  /* ---- פאנל ההמלצה ---- */
+  function openRec(pulseKey) {
+    var r = REC[pulseKey];
+    els.recReason.innerHTML = '<b>' + data().students.filter(function (s) { return s.signal === pulseKey; }).length +
+      ' תלמידים</b> · ' + esc(r.reason);
+    els.recAction.textContent = r.action;
+    els.recPrimary.innerHTML = svg('ic-send') + esc(r.cta);
+    els.recPrimary.setAttribute('data-toast', r.toast);
+    els.rec.classList.add('is-open');
+  }
+  function closeRec() { els.rec.classList.remove('is-open'); }
+
+  /* ---- החלת מצב פילוח על צ'יפים + קבוצות ---- */
+  function syncControls() {
+    els.filters.querySelectorAll('.fchip').forEach(function (c) {
+      c.setAttribute('aria-pressed', (!state.pulse && c.getAttribute('data-filter') === state.filter) ? 'true' : 'false');
+    });
+    els.pulseGroups.querySelectorAll('.pgroup').forEach(function (g) {
+      g.setAttribute('aria-pressed', (state.pulse && g.getAttribute('data-pulse') === state.pulse) ? 'true' : 'false');
+    });
+  }
+
+  function refresh() { renderCounts(); renderTable(); syncControls(); }
+
+  /* ---- toast ---- */
+  var toastTimer = null;
+  function toast(msg) {
+    els.toastMsg.textContent = msg;
+    els.toast.classList.add('is-open');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { els.toast.classList.remove('is-open'); }, 2600);
+  }
+
+  /* ============================================================
+     מאזינים
+     ============================================================ */
+
+  /* בורר משימה */
+  document.getElementById('asgSeg').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-asg]'); if (!btn) return;
+    this.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+    btn.setAttribute('aria-pressed', 'true');
+    state.asg = btn.getAttribute('data-asg');
+    state.filter = 'all'; state.pulse = null; closeRec();
+    refresh();
+  });
+
+  /* פילוח לפי סטטוס */
+  els.filters.addEventListener('click', function (e) {
+    var chip = e.target.closest('.fchip'); if (!chip) return;
+    state.filter = chip.getAttribute('data-filter');
+    state.pulse = null; closeRec();
+    refresh();
+  });
+
+  /* דופק — קבוצה פדגוגית: מסנן + מציג המלצה (toggle) */
+  els.pulseGroups.addEventListener('click', function (e) {
+    var g = e.target.closest('.pgroup'); if (!g) return;
+    var key = g.getAttribute('data-pulse');
+    if (state.pulse === key) {           /* לחיצה שנייה = ביטול */
+      state.pulse = null; state.filter = 'all'; closeRec();
+    } else {
+      state.pulse = key; openRec(key);
+    }
+    refresh();
+  });
+
+  /* כפתורי ההמלצה */
+  els.recPrimary.addEventListener('click', function () {
+    var t = this.getAttribute('data-toast'); if (t) toast(t);
+  });
+  els.recSecondary.addEventListener('click', function () {
+    /* הרשימה כבר מסוננת לקבוצה — גלילה אליה */
+    document.getElementById('subTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  /* פעולות שורה: ראיתי / פנייה / תזכורת (דמו מקומי) */
+  els.body.addEventListener('click', function (e) {
+    var seen = e.target.closest('[data-seen]');
+    if (seen) {
+      var name = seen.getAttribute('data-seen');
+      /* "המורה ראה" — נראות אנושית, בלי ציון.
+         משדר דרך seen-service אל מסך התלמיד (student-home.html · W1-01). */
+      if (window.Resef && Resef.Seen) {
+        Resef.Seen.markSeen({
+          studentId: sid(name), studentName: name,
+          assignmentId: state.asg, assignmentTitle: data().title,
+          teacherName: TEACHER.name, teacherRole: TEACHER.role, verb: TEACHER.verb
+        });
+      }
+      var wrap = seen.closest('.row-act');
+      wrap.innerHTML = '<span class="seen-flag">' + svg('ic-check') + 'נצפה</span>';
+      toast('סימנת "ראיתי" ל' + name + ' — מופיע אצלו/ה כ"המורה ראה"');
+      return;
+    }
+    var contact = e.target.closest('[data-contact]');
+    if (contact) { toast('נפתחה פנייה ל' + contact.getAttribute('data-contact') + ' (יומן קשר)'); return; }
+    var remind = e.target.closest('[data-remind]');
+    if (remind) { toast('תזכורת עדינה נשלחה ל' + remind.getAttribute('data-remind')); return; }
+  });
+
+  /* חיפוש תלמיד */
+  els.search.addEventListener('input', function () {
+    state.query = this.value.trim();
+    renderTable();
+  });
+
+  /* מגירת-ניווט במובייל */
+  document.querySelectorAll('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    shell.querySelectorAll('[data-nav-open]').forEach(function (b) { b.addEventListener('click', open); });
+    shell.querySelectorAll('[data-nav-close]').forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* התחלה */
+  refresh();
+})();
+</script>
+</body>
+</html>
