@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>רֶצֶף · סרטוני הסבר</title>
+<meta name="theme-color" content="#0B8F98">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- שפת העיצוב המשותפת של רֶצֶף (מקור אמת יחיד) -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+/* ============================================================
+   רֶצֶף · תצוגת תלמיד · W2 — סרטוני הסבר קצרים
+   ------------------------------------------------------------
+   • איכות משתנה לרשת חלשה: בורר איכות (חיסכון / רגיל / גבוה)
+     + זיהוי-רשת אוטומטי (Network Information API) והמלצה.
+   • חלופה טקסטואלית מלאה לכל סרטון — קריאה במקום צפייה
+     (נגישות + פתרון-אמת לרשת חלשה: הטקסט הוא תוכן ההסבר עצמו).
+   • StudentShell (Mobile First) · BottomNav · טוקנים בלבד.
+   העדפות התלמיד (איכות / טקסט-בלבד / כתוביות / נצפו) נשמרות
+   ב-localStorage אוטומטית.
+   ============================================================ */
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--surface-muted);
+  font-family:var(--font-body);color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;
+}
+svg{display:block}
+
+/* מסגרת-טלפון: הופך את ה-Shell למובייל גם על מסך רחב */
+.phone-frame{
+  width:100%;max-width:440px;height:100dvh;
+  background:var(--bg);
+  box-shadow:0 0 0 1px var(--line), var(--shadow-lg);
+}
+@media (min-width:520px){ .phone-frame{ height:min(920px,100dvh); margin-block:auto; border-radius:26px; overflow:hidden } }
+
+/* --- כותרת מסך --- */
+.screen-head{margin-bottom:var(--space-4)}
+.screen-head h1{font-family:var(--font-head);font-size:var(--text-h1);font-weight:800;color:var(--ink-strong);line-height:1.12;margin:0}
+.screen-head .sub{font-size:var(--text-small);color:var(--ink-soft);margin-top:4px;line-height:1.5}
+
+/* ============ באנר זיהוי-רשת ============ */
+.net-note{
+  display:flex;align-items:flex-start;gap:11px;
+  border-radius:var(--radius-md);padding:12px 13px;margin-bottom:var(--space-4);
+  border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow-card);
+}
+.net-note .ic{
+  width:36px;height:36px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--brand-soft);color:var(--brand-deep);border:1px solid var(--brand-line);
+}
+.net-note .ic svg{width:19px;height:19px}
+.net-note .bd{min-width:0;flex:1}
+.net-note .ttl{display:flex;align-items:center;gap:7px;font-family:var(--font-head);font-size:13.5px;font-weight:700;color:var(--ink-strong)}
+.net-note .chip{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:.01em;
+  padding:2px 8px;border-radius:var(--radius-pill);
+  background:var(--surface-muted);color:var(--ink-soft);border:1px solid var(--line);
+}
+.net-note .chip .bars{display:inline-flex;align-items:flex-end;gap:1.5px;height:11px}
+.net-note .chip .bars i{width:2.5px;border-radius:1px;background:currentColor;opacity:.28}
+.net-note .chip .bars i:nth-child(1){height:4px}
+.net-note .chip .bars i:nth-child(2){height:7px}
+.net-note .chip .bars i:nth-child(3){height:10px}
+.net-note .chip[data-sig="1"] .bars i:nth-child(-n+1),
+.net-note .chip[data-sig="2"] .bars i:nth-child(-n+2),
+.net-note .chip[data-sig="3"] .bars i:nth-child(-n+3){opacity:1}
+.net-note .msg{font-size:12.5px;color:var(--ink-soft);line-height:1.45;margin-top:3px}
+.net-note .rec-btn{
+  margin-top:9px;font-family:var(--font-body);font-weight:700;font-size:12.5px;
+  border:1px solid var(--brand-line);background:var(--brand-soft);color:var(--brand-deep);
+  border-radius:var(--radius-pill);padding:6px 13px;min-height:34px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:background .16s ease;
+}
+.net-note .rec-btn:hover{background:var(--brand-line)}
+.net-note .rec-btn:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.net-note .rec-btn svg{width:14px;height:14px}
+.net-note .rec-btn[hidden]{display:none}
+/* טון-חירום/חלש: מבטא כתום */
+.net-note.is-weak .ic{background:var(--emergency-soft);color:#B4600F;border-color:var(--emergency-line)}
+.net-note.is-weak .chip{color:#B4600F}
+.net-note.is-weak .rec-btn{background:var(--emergency-soft);border-color:var(--emergency-line);color:#B4600F}
+.net-note.is-weak .rec-btn:hover{background:var(--emergency-line)}
+
+/* ============ בורר איכות + מצב טקסט ============ */
+.controls{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-card);padding:var(--space-4);margin-bottom:var(--space-5);
+}
+.controls .row-lbl{
+  display:flex;align-items:center;gap:7px;
+  font-family:var(--font-head);font-size:12.5px;font-weight:700;color:var(--ink-strong);
+  margin-bottom:9px;
+}
+.controls .row-lbl svg{width:16px;height:16px;color:var(--brand);flex:none}
+.controls .row-lbl small{margin-inline-start:auto;font-family:var(--font-body);font-size:11.5px;font-weight:600;color:var(--ink-faint)}
+
+/* סגמנט איכות */
+.qseg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:var(--surface-muted);border:1px solid var(--line);border-radius:14px;padding:5px}
+.qseg button{
+  font-family:var(--font-body);border:0;border-radius:var(--radius-sm);cursor:pointer;
+  background:transparent;color:var(--ink-soft);padding:8px 4px;min-height:52px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  transition:background .16s ease,color .16s ease,box-shadow .16s ease;
+}
+.qseg button .qn{font-weight:800;font-size:13px;line-height:1}
+.qseg button .qm{font-size:10.5px;font-weight:600;color:var(--ink-faint)}
+.qseg button[aria-pressed="true"]{background:var(--card);color:var(--brand-deep);box-shadow:var(--shadow-card)}
+.qseg button[aria-pressed="true"] .qm{color:var(--brand)}
+.qseg button:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+/* סימון ההמלצה */
+.qseg button .rec-tag{
+  display:none;position:absolute;top:-8px;inset-inline-start:50%;transform:translateX(50%);
+  font-size:9px;font-weight:800;letter-spacing:.02em;background:var(--brand);color:#fff;
+  padding:1px 6px;border-radius:var(--radius-pill);white-space:nowrap;
+}
+[dir="rtl"] .qseg button .rec-tag{transform:translateX(50%)}
+.qseg button{position:relative}
+.qseg button.is-rec .rec-tag{display:block}
+
+/* מתג טקסט-בלבד */
+.text-toggle{
+  display:flex;align-items:center;gap:11px;margin-top:var(--space-4);
+  padding-top:var(--space-4);border-top:1px dashed var(--line);
+}
+.text-toggle .ti{width:34px;height:34px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--surface-muted);color:var(--ink-soft)}
+.text-toggle .ti svg{width:18px;height:18px}
+.text-toggle .tt{min-width:0;flex:1}
+.text-toggle .tt b{display:block;font-size:13.5px;color:var(--ink-strong);font-weight:700}
+.text-toggle .tt span{display:block;font-size:11.5px;color:var(--ink-soft);margin-top:1px;line-height:1.4}
+/* switch */
+.switch{position:relative;flex:none;width:48px;height:28px;border:0;padding:0;cursor:pointer;background:transparent}
+.switch .track{display:block;width:48px;height:28px;border-radius:var(--radius-pill);background:var(--line-strong);transition:background .18s ease}
+.switch .knob{position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.22);transition:inset-inline-start .18s ease}
+.switch[aria-checked="true"] .track{background:var(--brand)}
+.switch[aria-checked="true"] .knob{inset-inline-start:23px}
+.switch:focus-visible{outline:3px solid var(--brand-bright);outline-offset:3px;border-radius:var(--radius-pill)}
+.text-toggle.on .ti{background:var(--brand-soft);color:var(--brand-deep)}
+
+/* ============ רשימת סרטונים ============ */
+.sec-title{
+  display:flex;align-items:center;gap:var(--space-2);
+  font-family:var(--font-head);font-size:var(--text-h3);font-weight:700;color:var(--ink-strong);
+  margin:0 0 var(--space-3);
+}
+.sec-title .c{margin-inline-start:auto;font-size:12px;font-weight:700;color:var(--brand-deep);background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:var(--radius-pill);padding:3px 10px}
+
+.vlist{display:flex;flex-direction:column;gap:var(--space-4)}
+
+.vcard{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);overflow:hidden;
+}
+
+/* --- פוסטר / נגן --- */
+.poster{
+  position:relative;width:100%;aspect-ratio:16/9;
+  display:flex;align-items:center;justify-content:center;
+  border:0;padding:0;cursor:pointer;overflow:hidden;
+  font-family:var(--font-body);color:#fff;text-align:start;
+}
+.poster::before{content:"";position:absolute;inset:0;background:linear-gradient(150deg, rgba(0,0,0,.05), rgba(0,0,0,.34))}
+.poster .pmark{position:absolute;inset:0;opacity:.9}
+.poster .pmark svg{width:100%;height:100%}
+/* כפתור-נגן מרכזי */
+.poster .play{
+  position:relative;z-index:2;width:60px;height:60px;border-radius:50%;
+  background:rgba(255,255,255,.94);color:var(--brand-deep);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 20px rgba(0,0,0,.28);transition:transform .14s ease;
+}
+.poster:hover .play{transform:scale(1.06)}
+.poster .play svg{width:26px;height:26px;margin-inline-start:3px}
+.poster:focus-visible{outline:3px solid var(--brand-bright);outline-offset:-3px}
+/* תג משך */
+.poster .dur{
+  position:absolute;z-index:2;bottom:9px;inset-inline-end:9px;
+  background:rgba(15,45,58,.82);color:#fff;font-size:11.5px;font-weight:700;
+  padding:3px 8px;border-radius:var(--radius-sm);letter-spacing:.02em;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.poster .dur svg{width:12px;height:12px}
+/* תג מקצוע */
+.poster .subj{
+  position:absolute;z-index:2;top:9px;inset-inline-start:9px;
+  background:rgba(255,255,255,.92);color:var(--ink-strong);
+  font-size:11px;font-weight:800;padding:3px 9px;border-radius:var(--radius-pill);
+  display:inline-flex;align-items:center;gap:5px;
+}
+.poster .subj svg{width:13px;height:13px;color:var(--brand-deep)}
+/* סימון "נצפה" */
+.poster .seen{
+  position:absolute;z-index:2;top:9px;inset-inline-end:9px;
+  background:var(--brand);color:#fff;font-size:10.5px;font-weight:800;
+  padding:3px 9px;border-radius:var(--radius-pill);display:none;align-items:center;gap:5px;
+}
+.poster .seen svg{width:12px;height:12px}
+.vcard.is-seen .poster .seen{display:inline-flex}
+
+/* גופי הכרטיס */
+.vbody{padding:var(--space-4)}
+.vbody h2{font-family:var(--font-head);font-size:16.5px;font-weight:700;color:var(--ink-strong);line-height:1.25;margin:0}
+.vbody .vdesc{font-size:13px;color:var(--ink-soft);line-height:1.5;margin:5px 0 0}
+
+/* שורת נתוני-איכות (כמה נתונים) */
+.vmeta{
+  display:flex;align-items:center;gap:8px;margin-top:var(--space-3);
+  font-size:12px;color:var(--ink-soft);
+}
+.vmeta .qb{
+  display:inline-flex;align-items:center;gap:5px;font-weight:700;
+  background:var(--surface-muted);border:1px solid var(--line);border-radius:var(--radius-pill);
+  padding:3px 9px;color:var(--ink);
+}
+.vmeta .qb svg{width:13px;height:13px;color:var(--brand)}
+.vmeta .size{font-weight:700;color:var(--ink-soft)}
+.vmeta .size b{color:var(--ink-strong)}
+
+/* פעולות */
+.vacts{display:flex;gap:8px;margin-top:var(--space-4)}
+.vacts .btn-alt{
+  flex:1;font-family:var(--font-body);font-weight:700;font-size:13.5px;
+  min-height:var(--tap);border-radius:var(--radius-btn);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  background:var(--surface-muted);color:var(--brand-deep);border:1px solid var(--brand-line);
+  transition:background .16s ease;
+}
+.vacts .btn-alt:hover{background:var(--brand-soft)}
+.vacts .btn-alt:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.vacts .btn-alt svg{width:16px;height:16px;flex:none;transition:transform .2s ease}
+.vacts .btn-alt[aria-expanded="true"] .chev{transform:rotate(180deg)}
+
+/* --- חלופה טקסטואלית --- */
+.alt{
+  border-top:1px solid var(--line);background:var(--bg-soft);
+  padding:0 var(--space-4);max-height:0;overflow:hidden;
+  transition:max-height .28s ease,padding .28s ease;
+}
+.alt.open{max-height:2400px;padding:var(--space-4) var(--space-4) var(--space-5)}
+.alt .alt-kick{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.02em;
+  color:var(--brand-deep);background:var(--brand-soft);border:1px solid var(--brand-line);
+  border-radius:var(--radius-pill);padding:3px 9px;margin-bottom:var(--space-3);
+}
+.alt .alt-kick svg{width:13px;height:13px}
+.alt .alt-sum{font-size:13.5px;color:var(--ink);line-height:1.6;margin:0 0 var(--space-4)}
+.alt ol.steps{list-style:none;margin:0 0 var(--space-4);padding:0;display:flex;flex-direction:column;gap:var(--space-3)}
+.alt ol.steps li{display:flex;gap:11px}
+.alt ol.steps .n{
+  width:26px;height:26px;border-radius:50%;flex:none;
+  background:var(--brand-soft);color:var(--brand-deep);border:1px solid var(--brand-line);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-head);font-weight:800;font-size:12.5px;
+}
+.alt ol.steps .st{min-width:0}
+.alt ol.steps .st b{display:block;font-size:13.5px;color:var(--ink-strong);font-weight:700;margin-bottom:1px}
+.alt ol.steps .st p{margin:0;font-size:13px;color:var(--ink-soft);line-height:1.55}
+.alt .idea{
+  display:flex;gap:10px;align-items:flex-start;
+  background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:var(--radius-md);
+  padding:12px 13px;
+}
+.alt .idea .bulb{width:30px;height:30px;border-radius:50%;flex:none;background:var(--card);border:1px solid var(--brand-line);color:var(--brand-deep);display:flex;align-items:center;justify-content:center}
+.alt .idea .bulb svg{width:17px;height:17px}
+.alt .idea .it{min-width:0}
+.alt .idea .it b{display:block;font-size:11.5px;font-weight:800;letter-spacing:.02em;color:var(--brand-deep);margin-bottom:2px}
+.alt .idea .it p{margin:0;font-size:13.5px;color:var(--ink-strong);font-weight:600;line-height:1.5}
+
+/* מצב טקסט-בלבד: הפוסטר מוסתר, החלופה פתוחה תמיד, אין קיפול */
+[data-textonly="true"] .poster{display:none}
+[data-textonly="true"] .vacts .btn-alt{display:none}
+[data-textonly="true"] .alt{max-height:none;padding:var(--space-4) var(--space-4) var(--space-5);border-top:0}
+[data-textonly="true"] .vbody{padding-bottom:var(--space-2)}
+
+/* ============ נגן (Overlay מדומה) ============ */
+.player-scrim{
+  position:fixed;inset:0;z-index:90;background:var(--scrim);
+  display:none;align-items:flex-end;justify-content:center;
+  opacity:0;transition:opacity .2s ease;
+}
+.player-scrim.show{display:flex;opacity:1}
+.player{
+  width:100%;max-width:440px;background:#0F2D3A;color:#fff;
+  border-radius:22px 22px 0 0;overflow:hidden;transform:translateY(14px);transition:transform .22s ease;
+}
+.player-scrim.show .player{transform:translateY(0)}
+.player .stage{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.player .stage .pmark{position:absolute;inset:0;opacity:.55}
+.player .stage .pmark svg{width:100%;height:100%}
+.player .badge-q{
+  position:absolute;top:11px;inset-inline-start:11px;z-index:3;
+  background:rgba(0,0,0,.5);color:#fff;font-size:11px;font-weight:800;
+  padding:3px 9px;border-radius:var(--radius-pill);display:inline-flex;align-items:center;gap:5px;
+}
+.player .badge-q svg{width:12px;height:12px}
+.player .close{
+  position:absolute;top:9px;inset-inline-end:9px;z-index:3;
+  width:36px;height:36px;border-radius:50%;border:0;cursor:pointer;
+  background:rgba(0,0,0,.45);color:#fff;display:flex;align-items:center;justify-content:center;
+}
+.player .close svg{width:18px;height:18px}
+.player .close:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+/* מצב טעינה/חיץ */
+.player .buffering{position:absolute;inset:0;z-index:2;display:none;flex-direction:column;align-items:center;justify-content:center;gap:11px;background:rgba(15,45,58,.55)}
+.player .buffering.on{display:flex}
+.player .spin{width:38px;height:38px;border-radius:50%;border:3.5px solid rgba(255,255,255,.25);border-top-color:#fff;animation:spin 900ms linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.player .buffering .bt{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.92)}
+/* כתובית (== חלופה טקסטואלית מסונכרנת) */
+.player .cc{
+  position:absolute;z-index:2;bottom:10px;inset-inline:12px;
+  background:rgba(0,0,0,.68);border-radius:10px;padding:8px 11px;
+  font-size:13.5px;font-weight:600;line-height:1.4;text-align:center;
+  min-height:20px;transition:opacity .2s ease;
+}
+.player.cc-off .cc{display:none}
+/* פס-התקדמות + בקרות */
+.player .ctrl{padding:12px 14px 16px}
+.player .bar{position:relative;height:6px;border-radius:var(--radius-pill);background:rgba(255,255,255,.22);overflow:hidden;cursor:pointer}
+.player .bar .fill{position:absolute;inset-block:0;inset-inline-start:0;width:0;background:var(--brand-bright);border-radius:var(--radius-pill)}
+.player .bar .buf{position:absolute;inset-block:0;inset-inline-start:0;width:0;background:rgba(255,255,255,.28)}
+.player .times{display:flex;justify-content:space-between;margin-top:7px;font-size:11.5px;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.8)}
+.player .prow{display:flex;align-items:center;gap:12px;margin-top:11px}
+.player .pbtn{
+  width:44px;height:44px;border-radius:50%;border:0;cursor:pointer;flex:none;
+  background:#fff;color:#0F2D3A;display:flex;align-items:center;justify-content:center;
+}
+.player .pbtn svg{width:22px;height:22px}
+.player .pbtn.play svg{margin-inline-start:2px}
+.player .pbtn:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.player .used{margin-inline-start:auto;font-size:11.5px;font-weight:700;color:rgba(255,255,255,.85);display:inline-flex;align-items:center;gap:6px}
+.player .used svg{width:14px;height:14px;opacity:.8}
+.player .ccbtn{
+  border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;cursor:pointer;
+  border-radius:var(--radius-pill);padding:6px 11px;font-family:var(--font-body);font-size:12px;font-weight:700;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.player .ccbtn svg{width:14px;height:14px}
+.player.cc-off .ccbtn{opacity:.55}
+.player .ccbtn:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+/* שורת "קרא במקום" בתוך הנגן — לרשת שנתקעת */
+.player .to-text{
+  display:flex;align-items:center;gap:9px;margin-top:12px;padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.14);
+}
+.player .to-text p{margin:0;font-size:11.5px;color:rgba(255,255,255,.72);line-height:1.4;flex:1}
+.player .to-text button{
+  border:0;background:var(--brand);color:#fff;cursor:pointer;flex:none;
+  border-radius:var(--radius-pill);padding:8px 13px;font-family:var(--font-body);font-size:12px;font-weight:700;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.player .to-text button svg{width:14px;height:14px}
+.player .to-text button:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.demo-flag{font-size:10.5px;color:rgba(255,255,255,.5);text-align:center;padding:0 14px 12px;margin:0}
+
+/* טוסט */
+.toast{
+  position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom,0px));
+  display:flex;justify-content:center;pointer-events:none;z-index:100;
+  opacity:0;transform:translateY(8px);transition:opacity .25s ease,transform .25s ease;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast span{
+  background:var(--ink-strong);color:#fff;font-size:13px;font-weight:600;
+  border-radius:var(--radius-pill);padding:10px 18px;box-shadow:var(--shadow-lg);
+  max-width:88%;text-align:center;
+}
+
+/* שורת דמו (איפוס) */
+.demo-reset{margin:var(--space-6) 0 var(--space-2);text-align:center}
+.demo-reset button{background:none;border:0;color:var(--ink-faint);font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.demo-reset button:hover{color:var(--ink-soft)}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition:none!important}
+  .player .spin{animation:none!important;border-top-color:rgba(255,255,255,.6)}
+}
+</style>
+</head>
+<body>
+
+<!-- ספריית אייקונים (סמלים משותפים) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/><circle cx="19" cy="18" r="2.4"/></symbol>
+  <symbol id="ic-tasks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2.5 2.5L16 8"/><rect x="4" y="4" width="16" height="16" rx="3"/></symbol>
+  <symbol id="ic-progress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"/></symbol>
+  <symbol id="ic-pause" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 10h16"/><path d="M4 14h10"/><path d="M4 18h13"/></symbol>
+  <symbol id="ic-cc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 10.5a2 2 0 1 0 0 3"/><path d="M16 10.5a2 2 0 1 0 0 3"/></symbol>
+  <symbol id="ic-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13l4-4"/><path d="M4.5 18a9 9 0 1 1 15 0"/></symbol>
+  <symbol id="ic-data" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-4 0-7-2-7-4V7c0-2 3-4 7-4s7 2 7 4v10c0 2-3 4-7 4z"/><path d="M5 12c0 2 3 4 7 4s7-2 7-4"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.6.5 1 1.3 1 2.1V16h6v-.4c0-.8.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="ic-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><path d="M12 19h.01"/></symbol>
+  <symbol id="ic-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/></symbol>
+</svg>
+
+<div class="phone-frame">
+  <div class="app-shell app-shell--student app-shell--framed">
+
+    <!-- ===== TopBar ===== -->
+    <header class="topbar-m">
+      <div class="topbar-m__brand">
+        <svg style="height:24px;width:auto" viewBox="0 0 118 30" role="img" aria-label="רֶצֶף">
+          <text x="74" y="22" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="21" style="fill:var(--ink-strong)">רצף</text>
+          <g transform="translate(85 3)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+            <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+            <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+            <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+          </g>
+        </svg>
+      </div>
+      <div class="topbar-m__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar avatar--sm" aria-hidden="true">י</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== תוכן נגלל ===== -->
+    <main class="app-main-m" aria-label="סרטוני הסבר">
+
+      <div class="screen-head">
+        <h1>סרטוני הסבר</h1>
+        <p class="sub">סרטונים קצרים — עד 3 דקות. אפשר לבחור איכות שמתאימה לחיבור, ולכל סרטון יש גם טקסט לקריאה.</p>
+      </div>
+
+      <!-- באנר זיהוי-רשת -->
+      <div class="net-note" id="net-note">
+        <span class="ic" aria-hidden="true"><svg><use href="#ic-wifi"/></svg></span>
+        <div class="bd">
+          <div class="ttl">
+            החיבור שלך
+            <span class="chip" id="net-chip" data-sig="3" aria-hidden="true"><span class="bars"><i></i><i></i><i></i></span><span id="net-label">בודק…</span></span>
+          </div>
+          <div class="msg" id="net-msg">נבדוק את מהירות החיבור וניתן המלצה מתאימה.</div>
+          <button class="rec-btn" type="button" id="rec-btn" hidden>
+            <svg aria-hidden="true"><use href="#ic-spark"/></svg><span id="rec-btn-txt">החל המלצה</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- בורר איכות + מצב טקסט -->
+      <div class="controls">
+        <div class="row-lbl">
+          <svg aria-hidden="true"><use href="#ic-gauge"/></svg>
+          איכות הצפייה
+          <small>נשמר אוטומטית</small>
+        </div>
+        <div class="qseg" role="group" aria-label="בחירת איכות וידאו">
+          <button type="button" data-q="saver" aria-pressed="false">
+            <span class="rec-tag">מומלץ</span>
+            <span class="qn">חיסכון</span><span class="qm">240p · הכי קל</span>
+          </button>
+          <button type="button" data-q="normal" aria-pressed="true">
+            <span class="rec-tag">מומלץ</span>
+            <span class="qn">רגיל</span><span class="qm">480p</span>
+          </button>
+          <button type="button" data-q="high" aria-pressed="false">
+            <span class="rec-tag">מומלץ</span>
+            <span class="qn">גבוה</span><span class="qm">720p · חד</span>
+          </button>
+        </div>
+
+        <div class="text-toggle" id="text-toggle">
+          <span class="ti" aria-hidden="true"><svg><use href="#ic-text"/></svg></span>
+          <div class="tt">
+            <b>קריאה בלבד — בלי וידאו</b>
+            <span>לרשת חלשה מאוד: מציג את ההסבר כטקסט, בלי לטעון סרטונים.</span>
+          </div>
+          <button class="switch" id="text-switch" role="switch" aria-checked="false" aria-label="מצב קריאה בלבד">
+            <span class="track" aria-hidden="true"></span><span class="knob" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- רשימת סרטונים -->
+      <div class="sec-title">
+        כל הסרטונים
+        <span class="c" id="v-count">0</span>
+      </div>
+      <div class="vlist" id="vlist"></div>
+
+      <div class="demo-reset">
+        <button type="button" id="demo-reset">איפוס נתוני דמו</button>
+      </div>
+
+    </main>
+
+    <!-- ===== BottomNavigation ===== -->
+    <nav class="bottom-nav" aria-label="ניווט ראשי">
+      <a class="bottom-nav__item" href="student-home.html">
+        <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-home"/></svg></span>
+        <span class="bottom-nav__label">בית</span>
+      </a>
+      <a class="bottom-nav__item is-active" href="student-subjects.html" aria-current="page">
+        <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="bottom-nav__label">מקצועות</span>
+      </a>
+      <a class="bottom-nav__item" href="student-tasks.html">
+        <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-tasks"/></svg></span>
+        <span class="bottom-nav__label">משימות</span>
+      </a>
+      <a class="bottom-nav__item" href="student-progress.html">
+        <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-progress"/></svg></span>
+        <span class="bottom-nav__label">התקדמות</span>
+      </a>
+    </nav>
+
+  </div>
+</div>
+
+<!-- ===== נגן (Overlay מדומה) ===== -->
+<div class="player-scrim" id="player-scrim" role="dialog" aria-modal="true" aria-label="נגן וידאו">
+  <div class="player" id="player">
+    <div class="stage">
+      <div class="pmark" id="pl-mark" aria-hidden="true"></div>
+      <span class="badge-q" id="pl-q"><svg aria-hidden="true"><use href="#ic-gauge"/></svg><span id="pl-q-txt">רגיל · 480p</span></span>
+      <button class="close" type="button" id="pl-close" aria-label="סגירת הנגן"><svg aria-hidden="true"><use href="#ic-close"/></svg></button>
+      <div class="buffering" id="pl-buf"><span class="spin" aria-hidden="true"></span><span class="bt" id="pl-buf-txt">טוען…</span></div>
+      <div class="cc" id="pl-cc" role="status" aria-live="polite"></div>
+    </div>
+    <div class="ctrl">
+      <div class="bar" id="pl-bar" role="slider" aria-label="מיקום בסרטון" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span class="buf" id="pl-buffill"></span>
+        <span class="fill" id="pl-fill"></span>
+      </div>
+      <div class="times"><span id="pl-cur">0:00</span><span id="pl-dur">0:00</span></div>
+      <div class="prow">
+        <button class="pbtn play" type="button" id="pl-toggle" aria-label="הפעלה / השהיה"><svg aria-hidden="true"><use href="#ic-pause"/></svg></button>
+        <button class="ccbtn" type="button" id="pl-ccbtn" aria-pressed="true"><svg aria-hidden="true"><use href="#ic-cc"/></svg>כתוביות</button>
+        <span class="used"><svg aria-hidden="true"><use href="#ic-data"/></svg><span id="pl-used">0.0 MB</span></span>
+      </div>
+      <div class="to-text">
+        <p>החיבור נתקע? אפשר לקרוא את כל ההסבר כטקסט במקום.</p>
+        <button type="button" id="pl-totext"><svg aria-hidden="true"><use href="#ic-text"/></svg>קרא במקום</button>
+      </div>
+    </div>
+    <p class="demo-flag">הדגמה — הנגן מדמה צפייה ומראה את ניצול הנתונים לפי האיכות שנבחרה.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-txt"></span></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = 'resef.videos.demo.v1';
+
+  /* ---------- נתוני איכות ---------- */
+  // MB לכל דקת וידאו (הערכה) — משמש לחישוב "כמה נתונים" לכל סרטון.
+  var QUALITY = {
+    saver:  { label:'חיסכון', res:'240p', mbPerMin:0.35 },
+    normal: { label:'רגיל',   res:'480p', mbPerMin:0.90 },
+    high:   { label:'גבוה',   res:'720p', mbPerMin:2.00 }
+  };
+  var Q_ORDER = ['saver','normal','high'];
+
+  /* ---------- רקעי-פוסטר (SVG, לא תמונות — נטענים מיידית ברשת חלשה) ---------- */
+  function posterSVG(c1,c2,glyph){
+    return '<svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">'+
+      '<defs><linearGradient id="g'+glyph.id+'" x1="0" y1="0" x2="1" y2="1">'+
+      '<stop offset="0" stop-color="'+c1+'"/><stop offset="1" stop-color="'+c2+'"/></linearGradient></defs>'+
+      '<rect width="320" height="180" fill="url(#g'+glyph.id+')"/>'+
+      '<g fill="none" stroke="#fff" stroke-opacity="0.16" stroke-width="6" stroke-linecap="round">'+glyph.path+'</g>'+
+      '</svg>';
+  }
+
+  /* ---------- הסרטונים: התוכן הטקסטואלי הוא ההסבר עצמו ----------
+     chapters[].at = שנייה שבה מתחילה הכתובית (סנכרון לנגן + חלופת-טקסט). */
+  var VIDEOS = [
+    {
+      id:'v-lashon-subject', subject:'לשון', icon:'ic-book', dur:160,
+      c1:'#0B8F98', c2:'#08666D', glyph:{id:1, path:'<path d="M60 120c25-40 60-40 90 0s70 40 100 0"/><path d="M40 60h240"/>'},
+      title:'נושא ונשוא — מי עושה ומה עושים',
+      desc:'שני החלקים שבונים כל משפט, ואיך מוצאים אותם בשלב אחד פשוט.',
+      summary:'כמעט כל משפט בעברית בנוי סביב שני חלקים: מי שעושה את הפעולה (נושא) והפעולה עצמה (נשוא). כשמזהים אותם — קל להבין מה המשפט אומר.',
+      steps:[
+        { at:0,   t:'מה נלמד', p:'בכל משפט מסתתרים שני תפקידים: מי עושה, ומה נעשה. נלמד למצוא את שניהם.' },
+        { at:24,  t:'הנשוא — הפעולה', p:'הנשוא הוא הפועל של המשפט. הוא אומר מה קורה. השאלה שמוצאת אותו: "מה עושים?"' },
+        { at:70,  t:'הנושא — מי עושה', p:'הנושא הוא מי (או מה) שעושה את הפעולה. אחרי שמצאנו את הפועל, שואלים "מי?"' },
+        { at:112, t:'דוגמה', p:'"הַיֶּלֶד רָץ בַּגִּינָה." רץ = נשוא (מה עושים?). הילד = נושא (מי רץ?).' }
+      ],
+      idea:'קודם מוצאים את הפועל (נשוא), ואז שואלים "מי?" — וכך מגיעים לנושא.'
+    },
+    {
+      id:'v-math-equation', subject:'מתמטיקה', icon:'ic-progress', dur:190,
+      c1:'#2D8CFF', c2:'#1657A8', glyph:{id:2, path:'<path d="M50 130L130 60"/><path d="M170 60l90 70"/><path d="M60 95h60"/>'},
+      title:'לפתור משוואה פשוטה בשלושה צעדים',
+      desc:'מציאת ה-x בלי להתבלבל — שיטה קבועה שעובדת כל פעם.',
+      summary:'משוואה היא שני צדדים ששווים זה לזה, עם נעלם אחד (x). המטרה תמיד אותה מטרה: להשאיר את x לבד בצד אחד. עושים את זה בשלושה צעדים.',
+      steps:[
+        { at:0,   t:'מה זה משוואה', p:'סימן ה"=" אומר ששני הצדדים שווים. איפשהו מסתתר x, ואנחנו רוצים לגלות כמה הוא.' },
+        { at:30,  t:'צעד 1 — לסדר', p:'מעבירים את המספרים לצד אחד ואת ה-x לצד השני. מעבר אגף הופך את הסימן: פלוס נעשה מינוס.' },
+        { at:85,  t:'צעד 2 — לכנס', p:'מחברים יחד את מה שדומה: את כל ה-x בצד אחד, את כל המספרים בצד השני.' },
+        { at:130, t:'צעד 3 — לבודד', p:'מחלקים את שני הצדדים במספר שלפני ה-x. דוגמה: 2x+3=11 ⟵ 2x=8 ⟵ x=4.' }
+      ],
+      idea:'המטרה קבועה בכל משוואה — להשאיר את x לבד בצד אחד.'
+    },
+    {
+      id:'v-electric-series', subject:'מגמת חשמל', icon:'ic-spark', dur:135,
+      c1:'#F28A2E', c2:'#B4600F', glyph:{id:3, path:'<path d="M40 90h60l20-30 20 60 20-30h100"/><circle cx="260" cy="90" r="14"/>'},
+      title:'מעגל טורי — למה נורה אחת מכבה את כולן',
+      desc:'איך זרם עובר במעגל טורי, ואיפה נקודת החולשה שלו.',
+      summary:'במעגל טורי כל הרכיבים מחוברים בזה אחר זה על אותו חוט — נתיב אחד בלבד. לזה יש יתרון אחד גדול וחיסרון אחד גדול.',
+      steps:[
+        { at:0,  t:'מה זה מעגל טורי', p:'כל הרכיבים יושבים על חוט אחד, אחד אחרי השני — כמו חוליות בשרשרת.' },
+        { at:32, t:'זרם אחד לכולם', p:'מכיוון שיש נתיב יחיד, אותו זרם בדיוק עובר בכל הרכיבים לפי הסדר.' },
+        { at:74, t:'נקודת החולשה', p:'אם רכיב אחד מתנתק או נשרף — הנתיב נקטע, ואין דרך אחרת לזרם. הכל נכבה.' },
+        { at:104,t:'דוגמה מהחיים', p:'בשרשרת נורות ישנה, נורה אחת שרופה מכבה את כל השרשרת — כי כולן על מעגל טורי אחד.' }
+      ],
+      idea:'במעגל טורי יש נתיב אחד בלבד לזרם — לכן חוליה אחת שנשברת עוצרת את כולן.'
+    },
+    {
+      id:'v-english-present', subject:'אנגלית', icon:'ic-book', dur:150,
+      c1:'#0B8F98', c2:'#24B8C2', glyph:{id:4, path:'<path d="M60 60v60M60 60h50M60 90h40"/><path d="M150 120V60l40 60V60"/><path d="M230 60v60h40"/>'},
+      title:'Present Simple — פעולות שקורות תמיד',
+      desc:'מתי משתמשים בזמן הזה, ומה קורה בגוף שלישי יחיד.',
+      summary:'זמן Present Simple מתאר דברים שנכונים תמיד או שקורים כהרגל — לא בהכרח ממש עכשיו. זה אחד הזמנים הכי שימושיים באנגלית.',
+      steps:[
+        { at:0,  t:'When to use', p:'משתמשים בו להרגלים ולעובדות קבועות: דברים שקורים כל יום, כל שבוע, תמיד.' },
+        { at:34, t:'The form', p:'משתמשים בפועל בצורתו הבסיסית. שימו לב: לגוף שלישי יחיד (he/she/it) מוסיפים s לפועל.' },
+        { at:82, t:'Signal words', p:'מילים שמסגירות את הזמן הזה: always, usually, every day, sometimes.' },
+        { at:118,t:'Examples', p:'"She works every day." (עם s) · "They play football." (בלי s, כי זה רבים).' }
+      ],
+      idea:'Present Simple = שגרה וקבוע — לא מה שקורה ברגע זה ממש.'
+    },
+    {
+      id:'v-science-cell', subject:'מדעים', icon:'ic-spark', dur:125,
+      c1:'#4CAF6A', c2:'#2E8049', glyph:{id:5, path:'<circle cx="160" cy="90" r="60"/><circle cx="160" cy="90" r="22"/><circle cx="120" cy="70" r="6"/><circle cx="200" cy="110" r="6"/>'},
+      title:'התא — שלושת החלקים שחייבים לזכור',
+      desc:'קרום, גרעין וציטופלזמה — מה כל אחד עושה.',
+      summary:'התא הוא היחידה הבסיסית של כל יצור חי. יש בו הרבה חלקים, אבל שלושה מהם חשוב במיוחד לזכור — ולכל אחד תפקיד ברור.',
+      steps:[
+        { at:0,  t:'קרום התא', p:'עוטף את התא ושומר עליו. הוא קובע מה נכנס פנימה ומה יוצא החוצה — כמו שוער.' },
+        { at:34, t:'הגרעין', p:'מרכז הבקרה של התא. בתוכו נמצא המידע התורשתי (DNA) שמנהל את פעולות התא.' },
+        { at:74, t:'הציטופלזמה', p:'הנוזל הממלא את התא. בתוכו מתרחשות הפעולות היומיומיות של התא.' }
+      ],
+      idea:'קרום שומר · גרעין מנהל · ציטופלזמה מבצעת.'
+    }
+  ];
+
+  /* ---------- מצב ---------- */
+  var state = { quality:'normal', textOnly:false, captions:true, seen:{} };
+  var recommended = null;   // איכות מומלצת לפי הרשת
+
+  function load(){
+    try{ var s = JSON.parse(localStorage.getItem(KEY)); if(s && typeof s==='object'){
+      if(QUALITY[s.quality]) state.quality = s.quality;
+      state.textOnly = !!s.textOnly;
+      state.captions = s.captions!==false;
+      state.seen = s.seen || {};
+      state._hasStored = true;
+    }}catch(e){}
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  /* ---------- עזרים ---------- */
+  function esc(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+  function mmss(sec){ sec=Math.max(0,Math.round(sec)); var m=Math.floor(sec/60), s=sec%60; return m+':' + (s<10?'0':'')+s; }
+  function videoMB(dur, q){ return (dur/60) * QUALITY[q].mbPerMin; }
+  function fmtMB(mb){ return (mb<1 ? mb.toFixed(1) : mb.toFixed(mb<10?1:0)) + ' MB'; }
+
+  var toastT;
+  function toast(msg){
+    var el=document.getElementById('toast'); document.getElementById('toast-txt').textContent=msg;
+    el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){ el.classList.remove('show'); }, 2600);
+  }
+
+  /* ---------- זיהוי רשת ---------- */
+  function detectNetwork(){
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    var out = { rec:'high', sig:3, label:'מהיר', weak:false, known:false, msg:'' };
+    if(conn){
+      out.known = true;
+      var et = conn.effectiveType || '';
+      if(conn.saveData){
+        out.rec='saver'; out.sig=1; out.label='חיסכון בנתונים'; out.weak=true;
+        out.msg='הפעלת "חיסכון בנתונים" במכשיר. כדאי איכות חיסכון או קריאה בטקסט.';
+      } else if(et==='slow-2g' || et==='2g'){
+        out.rec='saver'; out.sig=1; out.label='חלש (2G)'; out.weak=true;
+        out.msg='החיבור איטי. מומלץ מצב חיסכון — או לקרוא את ההסבר כטקסט.';
+      } else if(et==='3g'){
+        out.rec='normal'; out.sig=2; out.label='בינוני (3G)'; out.weak=false;
+        out.msg='חיבור בינוני. איכות "רגיל" תיטען חלק.';
+      } else if(et==='4g'){
+        out.rec='high'; out.sig=3; out.label='מהיר (4G)'; out.weak=false;
+        out.msg='החיבור טוב — כל האיכויות זמינות.';
+      } else {
+        out.rec='normal'; out.sig=2; out.label='לא ידוע'; out.weak=false;
+        out.msg='לא הצלחנו לזהות מהירות. אפשר לבחור איכות ידנית.';
+      }
+    } else {
+      // אין API — לא מניחים כלום; המלצה שמרנית ל"רגיל"
+      out.rec='normal'; out.sig=2; out.label='לא נמדד'; out.weak=false; out.known=false;
+      out.msg='הדפדפן לא חושף את מהירות החיבור. בחרו איכות שמתאימה לכם.';
+    }
+    return out;
+  }
+
+  function renderNet(){
+    var n = detectNetwork(); recommended = n.rec;
+    var note=document.getElementById('net-note');
+    note.classList.toggle('is-weak', n.weak);
+    document.getElementById('net-label').textContent = n.label;
+    var chip=document.getElementById('net-chip'); chip.setAttribute('data-sig', String(n.sig));
+    document.getElementById('net-msg').textContent = n.msg;
+
+    // כפתור "החל המלצה" — רק אם ההמלצה שונה מהבחירה הנוכחית
+    var rb=document.getElementById('rec-btn');
+    if(recommended && recommended!==state.quality){
+      rb.hidden=false;
+      document.getElementById('rec-btn-txt').textContent = 'עבור לאיכות "'+QUALITY[recommended].label+'"';
+    } else { rb.hidden=true; }
+
+    // סימון תג "מומלץ" על הסגמנט
+    document.querySelectorAll('.qseg button').forEach(function(b){
+      b.classList.toggle('is-rec', b.getAttribute('data-q')===recommended);
+    });
+  }
+
+  /* ---------- בורר איכות ---------- */
+  function applyQuality(q, announce){
+    state.quality=q; save();
+    document.querySelectorAll('.qseg button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-q')===q ? 'true':'false');
+    });
+    updateSizes();
+    renderNet();
+    if(announce) toast('איכות: '+QUALITY[q].label+' · '+QUALITY[q].res);
+  }
+
+  function updateSizes(){
+    var q=state.quality;
+    document.querySelectorAll('.vcard').forEach(function(card){
+      var dur=+card.getAttribute('data-dur');
+      card.querySelector('.q-res').textContent = QUALITY[q].label+' · '+QUALITY[q].res;
+      card.querySelector('.q-size b').textContent = fmtMB(videoMB(dur,q));
+    });
+  }
+
+  /* ---------- מצב טקסט-בלבד ---------- */
+  function applyTextOnly(v, announce){
+    state.textOnly=v; save();
+    document.documentElement.setAttribute('data-textonly', v?'true':'false');
+    var sw=document.getElementById('text-switch');
+    sw.setAttribute('aria-checked', v?'true':'false');
+    document.getElementById('text-toggle').classList.toggle('on', v);
+    if(v){ closePlayer(); }
+    if(announce) toast(v ? 'מצב קריאה בלבד — הסרטונים לא נטענים' : 'חזרה לצפייה בווידאו');
+  }
+
+  /* ---------- רינדור רשימה ---------- */
+  function render(){
+    var host=document.getElementById('vlist');
+    host.innerHTML = VIDEOS.map(function(v){
+      var seen = !!state.seen[v.id];
+      var stepsHTML = v.steps.map(function(s,i){
+        return '<li><span class="n">'+(i+1)+'</span><span class="st"><b>'+esc(s.t)+'</b><p>'+esc(s.p)+'</p></span></li>';
+      }).join('');
+      return '<article class="vcard'+(seen?' is-seen':'')+'" data-id="'+v.id+'" data-dur="'+v.dur+'">'+
+        '<button class="poster" type="button" data-play="'+v.id+'" aria-label="הפעלת הסרטון: '+esc(v.title)+'">'+
+          '<span class="pmark" aria-hidden="true">'+posterSVG(v.c1,v.c2,v.glyph)+'</span>'+
+          '<span class="subj"><svg aria-hidden="true"><use href="#'+v.icon+'"/></svg>'+esc(v.subject)+'</span>'+
+          '<span class="seen" aria-hidden="true"><svg><use href="#ic-check"/></svg>נצפה</span>'+
+          '<span class="play" aria-hidden="true"><svg><use href="#ic-play"/></svg></span>'+
+          '<span class="dur" aria-hidden="true"><svg><use href="#ic-clock"/></svg>'+mmss(v.dur)+'</span>'+
+        '</button>'+
+        '<div class="vbody">'+
+          '<h2>'+esc(v.title)+'</h2>'+
+          '<p class="vdesc">'+esc(v.desc)+'</p>'+
+          '<div class="vmeta">'+
+            '<span class="qb"><svg aria-hidden="true"><use href="#ic-gauge"/></svg><span class="q-res"></span></span>'+
+            '<span class="size q-size">בערך <b></b> לצפייה</span>'+
+          '</div>'+
+          '<div class="vacts">'+
+            '<button class="btn-alt" type="button" data-alt="'+v.id+'" aria-expanded="false" aria-controls="alt-'+v.id+'">'+
+              '<svg aria-hidden="true"><use href="#ic-text"/></svg>קריאת ההסבר'+
+              '<svg class="chev" aria-hidden="true"><use href="#ic-progress"/></svg>'+
+            '</button>'+
+          '</div>'+
+        '</div>'+
+        '<div class="alt" id="alt-'+v.id+'">'+
+          '<span class="alt-kick"><svg aria-hidden="true"><use href="#ic-text"/></svg>חלופה טקסטואלית — כל ההסבר לקריאה</span>'+
+          '<p class="alt-sum">'+esc(v.summary)+'</p>'+
+          '<ol class="steps">'+stepsHTML+'</ol>'+
+          '<div class="idea"><span class="bulb" aria-hidden="true"><svg><use href="#ic-bulb"/></svg></span>'+
+            '<span class="it"><b>הרעיון המרכזי</b><p>'+esc(v.idea)+'</p></span></div>'+
+        '</div>'+
+      '</article>';
+    }).join('');
+
+    document.getElementById('v-count').textContent = VIDEOS.length + ' סרטונים';
+    updateSizes();
+
+    // חיבור אירועים
+    host.querySelectorAll('[data-play]').forEach(function(btn){
+      btn.addEventListener('click', function(){ openPlayer(btn.getAttribute('data-play')); });
+    });
+    host.querySelectorAll('[data-alt]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var panel=document.getElementById('alt-'+btn.getAttribute('data-alt'));
+        var open=panel.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open?'true':'false');
+        setBtnAltLabel(btn, open);
+      });
+    });
+  }
+
+  function setBtnAltLabel(btn, open){
+    // בונה מחדש את תוכן הכפתור עם הטקסט הנכון
+    btn.innerHTML = '<svg aria-hidden="true"><use href="#ic-text"/></svg>'+(open?'הסתרת ההסבר':'קריאת ההסבר')+
+      '<svg class="chev" aria-hidden="true"><use href="#ic-progress"/></svg>';
+  }
+
+  /* ---------- נגן מדומה ---------- */
+  var player = {
+    open:false, vid:null, dur:0, t:0, playing:false, raf:null, last:0, buffering:false, bufT:null
+  };
+  var DEMO_SECONDS = 20; // משך הדגמת הנגן בפועל (זמן-אמת), ללא תלות באורך ה"סרטון"
+
+  function plEls(){
+    return {
+      scrim:document.getElementById('player-scrim'),
+      mark:document.getElementById('pl-mark'),
+      q:document.getElementById('pl-q-txt'),
+      buf:document.getElementById('pl-buf'), bufTxt:document.getElementById('pl-buf-txt'),
+      cc:document.getElementById('pl-cc'),
+      bar:document.getElementById('pl-bar'), fill:document.getElementById('pl-fill'), buffill:document.getElementById('pl-buffill'),
+      cur:document.getElementById('pl-cur'), durL:document.getElementById('pl-dur'),
+      toggle:document.getElementById('pl-toggle'), used:document.getElementById('pl-used'),
+      ccbtn:document.getElementById('pl-ccbtn'), root:document.getElementById('player')
+    };
+  }
+
+  function currentCaption(v, t){
+    var cap='';
+    for(var i=0;i<v.steps.length;i++){ if(t>=v.steps[i].at) cap=v.steps[i].p; }
+    return cap;
+  }
+
+  function openPlayer(id){
+    if(state.textOnly) return;
+    var v=VIDEOS.filter(function(x){return x.id===id;})[0]; if(!v) return;
+    var e=plEls();
+    player.open=true; player.vid=v; player.dur=v.dur; player.t=0; player.playing=false;
+
+    e.mark.innerHTML = posterSVG(v.c1,v.c2,v.glyph);
+    e.q.textContent = QUALITY[state.quality].label+' · '+QUALITY[state.quality].res;
+    e.durL.textContent = mmss(v.dur); e.cur.textContent='0:00';
+    e.fill.style.width='0%'; e.buffill.style.width='0%'; e.used.textContent='0.0 MB';
+    e.root.classList.toggle('cc-off', !state.captions);
+    e.ccbtn.setAttribute('aria-pressed', state.captions?'true':'false');
+    e.cc.textContent='';
+
+    e.scrim.classList.add('show');
+    document.getElementById('player-scrim').setAttribute('aria-label','נגן: '+v.title);
+
+    // חיץ ראשוני — ארוך יותר באיכות גבוהה / רשת חלשה (הדגמת "רשת חלשה")
+    startBuffer(function(){ setPlaying(true); }, true);
+  }
+
+  function startBuffer(done, initial){
+    var e=plEls();
+    player.buffering=true;
+    e.buf.classList.add('on');
+    // זמן-חיץ פרופורציוני לאיכות
+    var base = state.quality==='high' ? 1600 : state.quality==='normal' ? 900 : 450;
+    if(recommended==='saver' && state.quality!=='saver') base += 900; // רשת חלשה + איכות גבוהה = יותר תקיעות
+    e.bufTxt.textContent = initial ? 'טוען באיכות '+QUALITY[state.quality].label+'…' : 'ממתין לחיבור…';
+    // אנימציית "buffered" מתקדמת
+    animateBuffer();
+    clearTimeout(player.bufT);
+    player.bufT=setTimeout(function(){
+      player.buffering=false; e.buf.classList.remove('on'); if(done) done();
+    }, base);
+  }
+
+  function animateBuffer(){
+    var e=plEls();
+    var target = Math.min(100, (player.t/player.dur*100) + (state.quality==='saver'?45:state.quality==='normal'?28:16));
+    e.buffill.style.width = target+'%';
+  }
+
+  function setPlaying(on){
+    player.playing=on;
+    var e=plEls();
+    e.toggle.querySelector('use').setAttribute('href', on ? '#ic-pause' : '#ic-play');
+    e.toggle.classList.toggle('play', !on);
+    if(on){ player.last=Date.now(); tick(); }
+    else if(player.raf){ cancelAnimationFrame(player.raf); player.raf=null; }
+  }
+
+  function tick(){
+    if(!player.playing) return;
+    var now=Date.now();
+    var dt=(now-player.last)/1000; player.last=now;
+    // קצב: כל ה"סרטון" מתנגן ב-DEMO_SECONDS שניות אמת
+    player.t += dt * (player.dur/DEMO_SECONDS);
+    if(player.t>=player.dur){ player.t=player.dur; renderPlayback(); return finishPlayback(); }
+    renderPlayback();
+    player.raf=requestAnimationFrame(tick);
+  }
+
+  function renderPlayback(){
+    var e=plEls(), v=player.vid, frac=player.t/player.dur;
+    e.fill.style.width=(frac*100)+'%';
+    e.cur.textContent=mmss(player.t);
+    e.bar.setAttribute('aria-valuenow', Math.round(frac*100));
+    e.used.textContent=fmtMB(videoMB(player.t, state.quality));
+    if(e.buffill.offsetWidth/e.bar.offsetWidth < frac+0.02) animateBuffer();
+    var cap=currentCaption(v, player.t);
+    if(e.cc.textContent!==cap) e.cc.textContent=cap;
+  }
+
+  function finishPlayback(){
+    setPlaying(false);
+    var v=player.vid;
+    if(v && !state.seen[v.id]){ state.seen[v.id]=true; save();
+      var card=document.querySelector('.vcard[data-id="'+v.id+'"]'); if(card) card.classList.add('is-seen');
+    }
+    var e=plEls(); e.cc.textContent='הסתיים — כל הכבוד. אפשר לקרוא את ההסבר שוב בכרטיס.';
+  }
+
+  function togglePlay(){
+    if(!player.open) return;
+    if(player.buffering) return;
+    if(player.t>=player.dur){ player.t=0; renderPlayback(); }
+    if(player.playing){ setPlaying(false); }
+    else {
+      // חידוש אחרי השהיה — חיץ קצר לרשת חלשה
+      if(state.quality==='high' && recommended==='saver'){ startBuffer(function(){ setPlaying(true); }, false); }
+      else { setPlaying(true); }
+    }
+  }
+
+  function closePlayer(){
+    if(!player.open) return;
+    player.open=false; setPlaying(false);
+    clearTimeout(player.bufT); player.buffering=false;
+    var e=plEls(); e.buf.classList.remove('on'); e.scrim.classList.remove('show');
+  }
+
+  function toggleCaptions(){
+    state.captions=!state.captions; save();
+    var e=plEls();
+    e.root.classList.toggle('cc-off', !state.captions);
+    e.ccbtn.setAttribute('aria-pressed', state.captions?'true':'false');
+  }
+
+  function seekTo(clientX){
+    var e=plEls(), r=e.bar.getBoundingClientRect();
+    // RTL: הקצה הימני = 0
+    var frac=(r.right-clientX)/r.width; frac=Math.max(0,Math.min(1,frac));
+    player.t=frac*player.dur; renderPlayback();
+  }
+
+  /* ---------- אתחול אירועים ---------- */
+  function bind(){
+    // איכות
+    document.querySelectorAll('.qseg button').forEach(function(b){
+      b.addEventListener('click', function(){ applyQuality(b.getAttribute('data-q'), true); });
+    });
+    // המלצת רשת
+    document.getElementById('rec-btn').addEventListener('click', function(){
+      if(recommended){ applyQuality(recommended, true);
+        if(recommended==='saver') toast('עברת למצב חיסכון — נתונים מינימליים'); }
+    });
+    // טקסט-בלבד
+    var ts=document.getElementById('text-switch');
+    ts.addEventListener('click', function(){ applyTextOnly(!state.textOnly, true); });
+    document.getElementById('text-toggle').addEventListener('click', function(ev){
+      if(ev.target.closest('.switch')) return; // הכפתור מטפל בעצמו
+      applyTextOnly(!state.textOnly, true);
+    });
+
+    // נגן
+    document.getElementById('pl-close').addEventListener('click', closePlayer);
+    document.getElementById('pl-toggle').addEventListener('click', togglePlay);
+    document.getElementById('pl-ccbtn').addEventListener('click', toggleCaptions);
+    document.getElementById('pl-totext').addEventListener('click', function(){
+      var v=player.vid; closePlayer();
+      if(v){ var panel=document.getElementById('alt-'+v.id);
+        var btn=document.querySelector('[data-alt="'+v.id+'"]');
+        if(panel && !panel.classList.contains('open')){ panel.classList.add('open'); if(btn){btn.setAttribute('aria-expanded','true'); setBtnAltLabel(btn,true);} }
+        panel.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    });
+    document.getElementById('player-scrim').addEventListener('click', function(ev){
+      if(ev.target===ev.currentTarget) closePlayer();
+    });
+    // פס-התקדמות
+    var bar=document.getElementById('pl-bar');
+    bar.addEventListener('click', function(ev){ seekTo(ev.clientX); });
+    bar.addEventListener('keydown', function(ev){
+      var step=player.dur*0.05;
+      if(ev.key==='ArrowLeft'){ player.t=Math.min(player.dur, player.t+step); renderPlayback(); ev.preventDefault(); } // שמאל = קדימה בזמן
+      else if(ev.key==='ArrowRight'){ player.t=Math.max(0, player.t-step); renderPlayback(); ev.preventDefault(); }
+    });
+    // ESC לסגירה
+    document.addEventListener('keydown', function(ev){ if(ev.key==='Escape') closePlayer(); });
+
+    // איפוס דמו
+    document.getElementById('demo-reset').addEventListener('click', function(){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      state={ quality:'normal', textOnly:false, captions:true, seen:{} };
+      applyTextOnly(false,false); applyQuality('normal',false);
+      document.querySelectorAll('.vcard').forEach(function(c){ c.classList.remove('is-seen'); });
+      // המלצה מחדש
+      if(!state._hasStored && recommended){ /* ישאיר רגיל */ }
+      toast('נתוני הדמו אופסו');
+    });
+
+    // עדכון חי אם מהירות הרשת משתנה
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if(conn && conn.addEventListener){ conn.addEventListener('change', renderNet); }
+  }
+
+  /* ---------- Boot ---------- */
+  load();
+  render();
+  bind();
+  renderNet();
+  // אם אין העדפה שמורה — אמץ את המלצת הרשת כברירת-מחדל חכמה
+  if(!state._hasStored && recommended){ state.quality=recommended; }
+  applyQuality(state.quality, false);
+  applyTextOnly(state.textOnly, false);
+
+})();
+</script>
+</body>
+</html>
