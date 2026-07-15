@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>אישור תוכן · טיוטה → אישור → פרסום — רֶצֶף (W4-02)</title>
+<!-- favicon: סמל רֶצֶף -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="a11y.css">
+<style>
+/* ============================================================
+   W4-02 · אישור תוכן — טיוטה → ממתין → מאושר → פורסם
+   צורך: tokens.css · components.css (chip/btn/card/rz-table/modal/toast/
+   sidebar/topbar/app-shell) · a11y.css · מקור יחידות: unit-editor.html (W4-01)
+   כלל: הכול מטוקנים — בלי צבעים קשיחים. סגנון ייחודי-למסך בלבד כאן.
+   ============================================================ */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font-body); background: var(--bg); color: var(--ink);
+  line-height: 1.6; font-size: var(--text-body); -webkit-text-size-adjust: 100%; }
+
+/* --- כותרת המסך --- */
+.ca-head { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-5); }
+.ca-head h1 { font-family: var(--font-head); font-size: var(--text-h1); font-weight: 800;
+  color: var(--ink-strong); margin: 0 0 var(--space-1); }
+.ca-head p { color: var(--ink-soft); margin: 0; font-size: var(--text-small); }
+
+/* --- בורר-תפקיד (מורה / מפקח) — מחליף את שלד היישום סביב המסך --- */
+.role-switch { display: inline-flex; align-items: center; gap: var(--space-2);
+  background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 4px; flex-wrap: wrap; }
+.role-switch__label { font-size: var(--text-label); font-weight: 700; color: var(--ink-faint);
+  padding-inline-start: var(--space-2); }
+.role-switch button { min-height: 36px; padding: 0 var(--space-3); border: 0; background: transparent;
+  cursor: pointer; font-family: var(--font-body); font-size: var(--text-small); font-weight: 650;
+  color: var(--ink-soft); border-radius: var(--radius-sm); display: inline-flex; align-items: center;
+  gap: var(--space-2); transition: background 160ms ease, color 160ms ease; }
+.role-switch button svg { width: 17px; height: 17px; flex: none; }
+.role-switch button:hover { color: var(--ink-strong); }
+.role-switch button[aria-pressed="true"] { background: var(--card); color: var(--brand-deep); box-shadow: var(--shadow-card); }
+.role-switch button:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+
+/* ============================================================
+   שרשרת התהליך — טיוטה → ממתין → מאושר → פורסם
+   ============================================================ */
+.flow { display: flex; align-items: stretch; gap: 0; background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+  padding: var(--space-4) var(--space-5); margin-bottom: var(--space-5); overflow-x: auto; }
+.flow__step { display: flex; align-items: center; gap: var(--space-3); flex: 1; min-width: 140px; }
+.flow__node { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  border: 2px solid var(--line-strong); background: var(--surface-muted); color: var(--ink-soft); }
+.flow__node svg { width: 20px; height: 20px; }
+.flow__step[data-tone="draft"]     .flow__node { border-color: var(--line-strong); background: var(--surface-muted); color: var(--ink-soft); }
+.flow__step[data-tone="pending"]   .flow__node { border-color: #EAD9A8; background: #FBF3E0; color: #9A6E12; }
+.flow__step[data-tone="approved"]  .flow__node { border-color: #C4E9CE; background: #EAF7EE; color: var(--status-good); }
+.flow__step[data-tone="published"] .flow__node { border-color: var(--brand-line); background: var(--brand-soft); color: var(--brand-deep); }
+.flow__txt { line-height: 1.35; }
+.flow__t { font-family: var(--font-head); font-weight: 700; color: var(--ink-strong); font-size: var(--text-small); }
+.flow__c { font-size: var(--text-label); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.flow__arrow { display: grid; place-items: center; color: var(--ink-faint); padding: 0 var(--space-2); flex: none; }
+.flow__arrow svg { width: 18px; height: 18px; transform: scaleX(-1); }
+.flow__step:last-child .flow__arrow { display: none; }
+
+/* ============================================================
+   פס-אחריות — אישור אנושי חובה (שער ה-AI)
+   ============================================================ */
+.gate { display: flex; align-items: flex-start; gap: var(--space-3); background: var(--brand-soft);
+  border: 1px solid var(--brand-line); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5); }
+.gate__ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--card); color: var(--brand-deep); border: 1px solid var(--brand-line); }
+.gate__ico svg { width: 19px; height: 19px; }
+.gate__txt { font-size: var(--text-small); color: var(--ink); }
+.gate__txt b { color: var(--brand-dark); }
+
+/* ============================================================
+   מסנני-מצב + מוני-מצב
+   ============================================================ */
+.ca-filters { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.fchip { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 40px;
+  padding: 0 var(--space-4); border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  background: var(--card); color: var(--ink-soft); font-family: var(--font-body); font-size: var(--text-small);
+  font-weight: 650; cursor: pointer; transition: background 160ms ease, border-color 160ms ease, color 160ms ease; }
+.fchip:hover { border-color: var(--brand-line); color: var(--ink-strong); }
+.fchip[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-deep); }
+.fchip:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 2px; }
+.fchip .fchip__n { font-variant-numeric: tabular-nums; background: var(--surface-muted); color: var(--ink-soft);
+  border-radius: var(--radius-pill); min-width: 22px; height: 20px; padding: 0 6px; display: inline-grid;
+  place-items: center; font-size: var(--text-label); font-weight: 700; }
+.fchip[aria-pressed="true"] .fchip__n { background: var(--card); color: var(--brand-deep); }
+
+/* ============================================================
+   StatusChip — וריאנט "פורסם" (מותג). שאר המצבים מ-components.css.
+   ============================================================ */
+.chip--published { color: var(--brand-deep); background: var(--brand-soft); border-color: var(--brand-line); }
+
+/* --- תג-מקור: נוצר ב-AI / נכתב אנושית --- */
+.src { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 10px;
+  border-radius: var(--radius-pill); font-size: var(--text-label); font-weight: 700; white-space: nowrap;
+  border: 1px solid transparent; }
+.src svg { width: 14px; height: 14px; flex: none; }
+.src--ai { color: #7A3EA6; background: #F5EDFB; border-color: #E3CFF2; }
+.src--human { color: var(--ink-soft); background: var(--surface-muted); border-color: var(--line-strong); }
+
+/* --- טבלה: תאים ייחודיים --- */
+.ca-actions-col { text-align: end; white-space: nowrap; }
+.rz-table td:last-child { text-align: end; }
+.rz-table__actions-cell { display: inline-flex; gap: var(--space-2); align-items: center;
+  justify-content: flex-end; flex-wrap: nowrap; }
+.rz-table__actions-cell .btn { white-space: nowrap; }
+.u-ver { font-size: var(--text-label); color: var(--ink-soft); line-height: 1.3; }
+.u-ver b { color: var(--ink-strong); font-weight: 650; display: block; }
+.u-ver--none { color: var(--status-alert); font-weight: 650; display: inline-flex; align-items: center; gap: 4px; }
+.u-ver--none svg { width: 14px; height: 14px; }
+.empty { text-align: center; padding: var(--space-10) var(--space-4); color: var(--ink-soft); }
+.empty svg { width: 40px; height: 40px; color: var(--ink-faint); margin-bottom: var(--space-3); }
+.empty p { margin: 0; }
+
+/* ============================================================
+   מגירת בדיקה — תצוגת התוכן + אישור/דחייה
+   ============================================================ */
+.rev { display: flex; flex-direction: column; gap: var(--space-4); }
+.rev__tags { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.rev__meta { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4);
+  background: var(--surface-muted); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); }
+.rev__meta div { font-size: var(--text-small); }
+.rev__meta dt { font-size: var(--text-label); color: var(--ink-soft); font-weight: 600; margin: 0; }
+.rev__meta dd { margin: 2px 0 0; color: var(--ink-strong); font-weight: 650; }
+.rev__sec-t { font-family: var(--font-head); font-size: var(--text-label); font-weight: 700;
+  color: var(--ink-faint); text-transform: none; margin: var(--space-2) 0 var(--space-1); letter-spacing: .01em; }
+.rev__relev { background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: var(--radius-sm);
+  padding: var(--space-3); font-size: var(--text-small); color: var(--brand-dark); font-weight: 600; }
+.rev__chunk { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: var(--space-3); }
+.rev__chunk h4 { margin: 0 0 4px; font-family: var(--font-head); font-size: var(--text-small); color: var(--ink-strong); }
+.rev__chunk p { margin: 0; font-size: var(--text-small); color: var(--ink); }
+.rev__chunk mark { background: #FFF3C4; color: inherit; padding: 0 3px; border-radius: 4px; }
+.rev__example { border-inline-start: 3px solid var(--brand); background: var(--bg-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: var(--space-3); font-size: var(--text-small); }
+.rev__ai-note { display: flex; gap: var(--space-3); background: #F5EDFB; border: 1px solid #E3CFF2;
+  border-radius: var(--radius-sm); padding: var(--space-3); }
+.rev__ai-note svg { width: 20px; height: 20px; color: #7A3EA6; flex: none; }
+.rev__ai-note p { margin: 0; font-size: var(--text-small); color: #5A2E7A; }
+.rev__ai-note b { color: #4A2266; }
+
+/* צ'קליסט קבלה (מפקח) */
+.acc { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.acc li { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-small); color: var(--ink); }
+.acc li svg { width: 17px; height: 17px; color: var(--status-good); flex: none; }
+
+/* אישור-אחריות — חובה לפני "אשר" */
+.accountability { display: flex; gap: var(--space-2); align-items: flex-start;
+  border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); padding: var(--space-3);
+  background: var(--bg-soft); cursor: pointer; }
+.accountability input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--brand); cursor: pointer; }
+.accountability span { font-size: var(--text-small); color: var(--ink); }
+.accountability b { color: var(--ink-strong); }
+
+/* שדה הערת-דחייה */
+.rej-field { display: none; }
+.rej-field.is-on { display: block; }
+.rej-field label { display: block; font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; }
+.rej-field textarea { width: 100%; min-height: 70px; resize: vertical; font-family: var(--font-body);
+  font-size: var(--text-small); color: var(--ink); border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm); padding: var(--space-3); background: var(--card); }
+.rej-field textarea:focus-visible { outline: 3px solid var(--brand-bright); outline-offset: 1px; border-color: var(--brand); }
+
+.drawer__foot-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; padding-top: var(--space-3);
+  border-top: 1px solid var(--line); }
+
+/* היסטוריה — פס-זמן קצר */
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.timeline li { display: flex; gap: var(--space-3); align-items: flex-start; font-size: var(--text-label); }
+.timeline__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--brand); margin-top: 5px; flex: none; }
+.timeline__body b { color: var(--ink-strong); font-weight: 650; }
+.timeline__body span { color: var(--ink-soft); display: block; }
+
+.ai-only { display: none; }
+
+/* מובייל — כפתורי-פעולה נערמים לרוחב מלא בכרטיס */
+@media (max-width: 640px) {
+  .rz-table td[data-label="פעולות"] { flex-direction: column; align-items: stretch; }
+  .rz-table__actions-cell { flex-wrap: wrap; justify-content: stretch; width: 100%; }
+  .rz-table__actions-cell .btn { flex: 1 1 auto; justify-content: center; }
+  .ca-head { flex-direction: column; }
+  .role-switch { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">דלג/י לתוכן</a>
+
+<!-- ============================================================
+     ספריית אייקונים (subset) — כולם currentColor
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M8 11h8M8 15h5"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-check-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="ic-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="ic-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="ic-check-c" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="ic-x-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></symbol>
+  <symbol id="ic-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="M5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16Z"/><path d="M19 14l.6 1.6L21 16l-1.4.4L19 18l-.6-1.6L17 16l1.4-.4L19 14Z"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="ic-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="ic-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></symbol>
+  <symbol id="ic-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="ic-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+  <symbol id="ic-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1Z"/></symbol>
+</svg>
+
+<!-- ============================================================
+     TeacherShell / InspectorShell — Sidebar + Topbar + Main
+     data-role על ה-app-shell מחליף את הזהות (מורה/מפקח)
+     ============================================================ -->
+<div class="app-shell app-shell--admin" id="shell" data-role="teacher">
+  <div class="app-shell__scrim" data-nav-close hidden></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <svg class="logo-full" style="height:30px;width:auto" viewBox="0 0 150 40" role="img" aria-label="רֶצֶף">
+        <text x="98" y="28.5" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="27" style="fill:var(--ink-strong)">רֶצֶף</text>
+        <g transform="translate(112 8)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+      <svg class="sidebar__brand-symbol logo-symbol" style="width:30px;height:22px" viewBox="0 0 34 24" role="img" aria-label="רֶצֶף">
+        <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+          <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+          <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+          <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+        </g>
+      </svg>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="ניווט ראשי">
+      <a class="sidebar__item" href="teacher-dashboard.html" aria-label="לוח בקרה">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-dashboard"/></svg></span>
+        <span class="sidebar__label">לוח בקרה</span>
+      </a>
+      <a class="sidebar__item" href="library.html" aria-label="ספריית התוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="sidebar__label">ספריית התוכן</span>
+      </a>
+      <a class="sidebar__item" href="unit-editor.html" aria-label="עורך היחידות">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-edit"/></svg></span>
+        <span class="sidebar__label">עורך היחידות</span>
+      </a>
+      <a class="sidebar__item" href="content-approval.html" aria-current="page" aria-label="אישור תוכן">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-check-square"/></svg></span>
+        <span class="sidebar__label">אישור תוכן</span>
+        <span class="badge badge--brand sidebar__badge" id="nav-badge" aria-hidden="true">0</span>
+      </a>
+
+      <div class="sidebar__section">כיתה</div>
+      <a class="sidebar__item" href="teacher-class-board.html" aria-label="הכיתה שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-clipboard"/></svg></span>
+        <span class="sidebar__label">הכיתה שלי</span>
+      </a>
+      <a class="sidebar__item" href="#" aria-label="הכיתות שלי">
+        <span class="sidebar__icon" aria-hidden="true"><svg><use href="#ic-users"/></svg></span>
+        <span class="sidebar__label">הכיתות שלי</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="sidebar__user">
+        <span class="avatar avatar--sm" aria-hidden="true" id="side-avatar">רל</span>
+        <div class="sidebar__foot-text">
+          <div class="sidebar__foot-name" id="side-name">רותם לוי</div>
+          <div class="sidebar__foot-role" id="side-role">מורה · מחנכת ט'2</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- עמודה ראשית -->
+  <div class="app-shell__col">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu-btn" type="button" aria-label="פתיחת תפריט" data-nav-open>
+        <svg aria-hidden="true"><use href="#ic-menu"/></svg>
+      </button>
+      <div class="topbar__titles">
+        <div class="topbar__title">אישור תוכן</div>
+        <div class="topbar__subtitle" id="topbar-sub">אורט · אוצרוּת יחידות</div>
+      </div>
+      <div class="topbar__spacer"></div>
+      <label class="topbar__search">
+        <svg aria-hidden="true"><use href="#ic-search"/></svg>
+        <input type="search" id="q" placeholder="חיפוש יחידה, מקצוע או שכבה…" aria-label="חיפוש יחידה">
+      </label>
+      <div class="topbar__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+          <span class="badge" id="top-badge" aria-hidden="true">0</span>
+        </button>
+        <button class="icon-btn" type="button" aria-label="עזרה">
+          <svg aria-hidden="true"><use href="#ic-help"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar" aria-hidden="true" id="top-avatar">רל</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-main" aria-label="תוכן ראשי" id="main-content">
+      <div class="app-main__inner">
+
+        <!-- כותרת + בורר תפקיד -->
+        <div class="ca-head">
+          <div>
+            <h1>אישור תוכן</h1>
+            <p>כל יחידה עוברת מסלול אחד: <b>טיוטה → ממתין לאישור → מאושר → פורסם</b>. יחידה עולה למדף רק אחרי אישור אנושי.</p>
+          </div>
+          <div class="role-switch" role="group" aria-label="בחירת תצוגת תפקיד">
+            <span class="role-switch__label">תצוגה:</span>
+            <button type="button" id="role-teacher" aria-pressed="true">
+              <svg aria-hidden="true"><use href="#ic-user"/></svg>מורה / אוצר
+            </button>
+            <button type="button" id="role-inspector" aria-pressed="false">
+              <svg aria-hidden="true"><use href="#ic-shield"/></svg>מפקח מקצועי
+            </button>
+          </div>
+        </div>
+
+        <!-- שרשרת התהליך -->
+        <div class="flow" id="flow" aria-label="שלבי התהליך ומונה יחידות בכל שלב">
+          <div class="flow__step" data-tone="draft">
+            <div class="flow__node"><svg aria-hidden="true"><use href="#ic-file"/></svg></div>
+            <div class="flow__txt"><div class="flow__t">טיוטה</div><div class="flow__c"><span data-flow="draft">0</span> יחידות · בעריכה</div></div>
+            <div class="flow__arrow"><svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
+          </div>
+          <div class="flow__step" data-tone="pending">
+            <div class="flow__node"><svg aria-hidden="true"><use href="#ic-clock"/></svg></div>
+            <div class="flow__txt"><div class="flow__t">ממתין לאישור</div><div class="flow__c"><span data-flow="pending">0</span> יחידות · אצל המפקח</div></div>
+            <div class="flow__arrow"><svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
+          </div>
+          <div class="flow__step" data-tone="approved">
+            <div class="flow__node"><svg aria-hidden="true"><use href="#ic-check-c"/></svg></div>
+            <div class="flow__txt"><div class="flow__t">מאושר</div><div class="flow__c"><span data-flow="approved">0</span> יחידות · מוכן לפרסום</div></div>
+            <div class="flow__arrow"><svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
+          </div>
+          <div class="flow__step" data-tone="published">
+            <div class="flow__node"><svg aria-hidden="true"><use href="#ic-globe"/></svg></div>
+            <div class="flow__txt"><div class="flow__t">פורסם</div><div class="flow__c"><span data-flow="published">0</span> יחידות · במדף</div></div>
+            <div class="flow__arrow"><svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
+          </div>
+        </div>
+
+        <!-- שער האחריות -->
+        <div class="gate" role="note">
+          <div class="gate__ico" aria-hidden="true"><svg><use href="#ic-shield"/></svg></div>
+          <div class="gate__txt">
+            <b>אישור אנושי חובה לפני פרסום.</b> תוכן שנוצר עם AI מסומן בתג סגול ולא עולה למדף בעצמו —
+            מפקח/ת מקצועי/ת קורא/ת, מאמת/ת ומאשר/ת אחריות פדגוגית. AI מכין טיוטה; אדם מאשר.
+          </div>
+        </div>
+
+        <!-- מסננים -->
+        <div class="ca-filters" role="group" aria-label="סינון לפי מצב">
+          <button class="fchip" type="button" data-filter="all" aria-pressed="true">הכול <span class="fchip__n" data-count="all">0</span></button>
+          <button class="fchip" type="button" data-filter="draft" aria-pressed="false">טיוטה <span class="fchip__n" data-count="draft">0</span></button>
+          <button class="fchip" type="button" data-filter="pending" aria-pressed="false">ממתין לאישור <span class="fchip__n" data-count="pending">0</span></button>
+          <button class="fchip" type="button" data-filter="approved" aria-pressed="false">מאושר <span class="fchip__n" data-count="approved">0</span></button>
+          <button class="fchip" type="button" data-filter="published" aria-pressed="false">פורסם <span class="fchip__n" data-count="published">0</span></button>
+          <button class="fchip" type="button" data-filter="rejected" aria-pressed="false">נדחה <span class="fchip__n" data-count="rejected">0</span></button>
+        </div>
+
+        <!-- הטבלה -->
+        <div class="rz-table-wrap">
+          <div class="rz-table-scroll">
+            <table class="rz-table" id="tbl">
+              <thead>
+                <tr>
+                  <th scope="col">יחידה</th>
+                  <th scope="col">מקור</th>
+                  <th scope="col">מצב</th>
+                  <th scope="col">אימות פדגוגי</th>
+                  <th scope="col" class="rz-table__num">משך</th>
+                  <th scope="col" class="ca-actions-col">פעולות</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"><!-- מוזרק ב-JS --></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty" id="empty" hidden>
+          <svg aria-hidden="true"><use href="#ic-inbox"/></svg>
+          <p>אין יחידות במצב זה.</p>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     מגירת בדיקה / תצוגה
+     ============================================================ -->
+<div class="scrim scrim--drawer" id="rev-scrim" hidden>
+  <div class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="rev-title">
+    <div class="drawer__head">
+      <h2 class="drawer__title" id="rev-title">בדיקת יחידה</h2>
+      <button class="icon-btn" type="button" id="rev-close" aria-label="סגירה"><svg aria-hidden="true"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="drawer__body">
+      <div class="rev" id="rev-body"><!-- מוזרק ב-JS --></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     מודל אישור-פרסום (חסימת דילוג על אישור אנושי)
+     ============================================================ -->
+<div class="scrim" id="pub-scrim" hidden>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="pub-title">
+    <div class="modal__head">
+      <h2 class="modal__title" id="pub-title">פרסום יחידה למדף</h2>
+      <button class="icon-btn modal__close" type="button" id="pub-close" aria-label="סגירה"><svg aria-hidden="true"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="modal__body" id="pub-body"></div>
+    <div class="modal__foot">
+      <button class="btn btn--primary" type="button" id="pub-confirm"><svg viewBox="0 0 24 24"><use href="#ic-globe"/></svg>פרסם למדף</button>
+      <button class="btn btn--ghost" type="button" id="pub-cancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(function () {
+  'use strict';
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+
+  var STORE = 'retzef_content_approval_v1';
+  var EDITOR_KEY = 'retzef_unit_draft_v1';   // מקור: unit-editor.html (W4-01)
+
+  /* ---------- מיפוי מצבים ל-StatusChip ---------- */
+  var STATUS = {
+    draft:     { label: 'טיוטה',            chip: 'chip--unknown'   },
+    pending:   { label: 'ממתין לאישור',      chip: 'chip--attention' },
+    approved:  { label: 'מאושר',            chip: 'chip--good'      },
+    published: { label: 'פורסם',            chip: 'chip--published' },
+    rejected:  { label: 'נדחה — לתיקון',     chip: 'chip--alert'     }
+  };
+
+  /* ---------- זהויות ---------- */
+  var ROLES = {
+    teacher:   { name: 'רותם לוי',   initials: 'רל', role: 'מורה · מחנכת ט\'2', sub: 'אורט · אוצרוּת יחידות' },
+    inspector: { name: 'ד"ר יעל בר', initials: 'יב', role: 'מפקחת מקצועית · לשון', sub: 'אורט · פיקוח ואישור תוכן' }
+  };
+
+  /* ---------- נתוני-זרע ---------- */
+  var SEED = [
+    { id:'u-supply', title:'למה המחיר משתנה?', subject:'כלכלה', grade:'י', minutes:10, type:'task',
+      source:'human', status:'published', owner:'רותם לוי',
+      verifier:'רכז מקצוע — ר. לוי', verifiedOn:'2026-07-08', approvedBy:'ד"ר יעל בר', approvedOn:'2026-07-09',
+      preview:{ relev:'כל פעם שאתה קונה משהו — מישהו החליט את המחיר. איך זה עובד?',
+        chunks:[{h:'היצע וביקוש', t:'כשהרבה אנשים רוצים דבר אחד — המחיר עולה. כשאף אחד לא רוצה — המחיר יורד.', hl:'הרבה רוצים = מחיר עולה'}],
+        example:'נועה קנתה נעליים ב-₪200. שבוע אחרי — אותן נעליים ב-₪140. פחות אנשים קנו, אז המחיר ירד.',
+        remember:'הרבה רוצים = מחיר עולה. מעט רוצים = מחיר יורד.' } },
+
+    { id:'u-branches', title:'שלוש רשויות השלטון', subject:'אזרחות', grade:'יא', minutes:10, type:'task',
+      source:'ai', status:'pending', owner:'רותם לוי',
+      verifier:'', verifiedOn:'', approvedBy:'', approvedOn:'',
+      preview:{ relev:'מי מחליט את החוקים במדינה? ומי בודק שלא ירכזו יותר מדי כוח ביד אחת?',
+        chunks:[{h:'הפרדת רשויות', t:'הכוח מחולק לשלוש רשויות — מחוקקת, מבצעת ושופטת. כל אחת מפקחת על השנייה.', hl:'כל רשות מפקחת על השנייה'}],
+        example:'הכנסת מחוקקת, הממשלה מבצעת, בית המשפט שופט. ככה אף גורם לא שולט בהכול.',
+        remember:'שלוש רשויות = איזונים ובלמים.' } },
+
+    { id:'u-fractions', title:'שברים בחיי היום-יום', subject:'מתמטיקה', grade:'ט', minutes:10, type:'task',
+      source:'ai', status:'draft', owner:'רותם לוי',
+      verifier:'', verifiedOn:'', approvedBy:'', approvedOn:'',
+      preview:{ relev:'חצי פיצה, רבע שעה, שליש הנחה — שברים נמצאים בכל מקום.',
+        chunks:[{h:'מה זה שבר', t:'שבר מתאר חלק מתוך שלם. המכנה אומר לכמה חלקים חילקנו, המונה כמה לקחנו.', hl:'מכנה = לכמה חילקנו'}],
+        example:'פיצה חתוכה ל-8. אכלת 3 משולשים — אכלת 3 חלקי 8 מהפיצה.',
+        remember:'מונה למעלה, מכנה למטה.' } },
+
+    { id:'u-entre', title:'רעיון עסקי ראשון', subject:'יזמות (העשרה)', grade:'י', minutes:10, type:'task',
+      source:'ai', status:'approved', owner:'רותם לוי',
+      verifier:'רכזת יזמות — א. כהן', verifiedOn:'2026-07-11', approvedBy:'ד"ר יעל בר', approvedOn:'2026-07-12',
+      preview:{ relev:'לכל עסק גדול היה יום ראשון עם רעיון קטן. איך יודעים אם רעיון שווה?',
+        chunks:[{h:'בעיה לפני פתרון', t:'רעיון טוב מתחיל מבעיה אמיתית של אנשים. קודם מוצאים את הכאב — אחר כך את הפתרון.', hl:'קודם הבעיה, אחר כך המוצר'}],
+        example:'מיטל ראתה שתלמידים שוכחים משימות. הרעיון: תזכורת אוטומטית בוואטסאפ. הבעיה קדמה למוצר.',
+        remember:'עסק פותר בעיה של מישהו.' } },
+
+    { id:'u-holocaust', title:'עדות אישית — לזכור', subject:'היסטוריה', grade:'יב', minutes:10, type:'reference',
+      source:'human', status:'pending', owner:'רותם לוי',
+      verifier:'', verifiedOn:'', approvedBy:'', approvedOn:'',
+      preview:{ relev:'סיפור של אדם אחד עוזר להבין תקופה שלמה.',
+        chunks:[{h:'למה עדות', t:'מספרים הם גדולים מדי לתפוס. עדות אישית נותנת פנים וקול לאירוע היסטורי.', hl:'עדות = פנים לאירוע'}],
+        example:'קטע קצר מיומן — לא מספרים, אלא יום אחד בחיים של נערה.',
+        remember:'זיכרון נשמר דרך סיפורים אישיים.' } },
+
+    { id:'u-time', title:'ניהול זמן לשבוע לימודים', subject:'כישורי חיים (העשרה)', grade:'ט', minutes:10, type:'task',
+      source:'ai', status:'rejected', owner:'רותם לוי',
+      verifier:'', verifiedOn:'', approvedBy:'ד"ר יעל בר', approvedOn:'2026-07-10',
+      rejectNote:'הדוגמה מניחה יום לימודים של 8 שעות — לא מתאים לשכבה. לפצל את שלב "תעדוף" לשני מסכים.',
+      preview:{ relev:'המון מטלות, מעט זמן. איך בוחרים במה להתחיל?',
+        chunks:[{h:'דחוף מול חשוב', t:'לא כל מה שדחוף באמת חשוב. קודם עושים את מה שחשוב — גם אם לא צועק.', hl:'חשוב ≠ דחוף'}],
+        example:'מבחן בעוד שבוע (חשוב, לא דחוף) מול הודעה בקבוצה (דחוף, לא חשוב). מתחילים במבחן.',
+        remember:'חשוב קודם — לא הרועש ביותר.' } },
+
+    { id:'u-photo', title:'אור בצילום — כלל שלישים', subject:'צילום (העשרה)', grade:'יא', minutes:10, type:'task',
+      source:'human', status:'draft', owner:'רותם לוי',
+      verifier:'', verifiedOn:'', approvedBy:'', approvedOn:'',
+      preview:{ relev:'למה תמונה אחת נראית מקצועית והשנייה "סתם"? הרבה פעמים זה מיקום הנושא.',
+        chunks:[{h:'כלל השלישים', t:'מדמיינים רשת של 3 על 3. שמים את הנושא על אחד מקווי הרשת — לא במרכז.', hl:'הנושא על הקו, לא במרכז'}],
+        example:'צילום של חבר: העין שלו על קו הרשת העליון — התמונה נראית מאוזנת ומקצועית.',
+        remember:'רשת 3×3 — נושא על הקו.' } }
+  ];
+
+  /* ---------- מצב ---------- */
+  var state = { role:'teacher', filter:'all', q:'', units:[] };
+
+  function load() {
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) {}
+    if (saved && saved.units && saved.units.length) {
+      state.units = saved.units;
+    } else {
+      // עותק עמוק של הזרע
+      state.units = SEED.map(function (u) { return JSON.parse(JSON.stringify(u)); });
+    }
+    mergeEditorDraft();
+  }
+
+  /* צריכת unit-editor.html — הטיוטה החיה מהעורך נכנסת כיחידה במצב "טיוטה" */
+  function mergeEditorDraft() {
+    var raw; try { raw = localStorage.getItem(EDITOR_KEY); } catch (e) { return; }
+    if (!raw) return;
+    var d; try { d = JSON.parse(raw); } catch (e) { return; }
+    var m = (d && d.meta) || {};
+    if (!m.title) return;
+    var chunks = (d.chunks || []).filter(function (c) { return c.heading || c.text; })
+      .map(function (c) { return { h:c.heading, t:c.text, hl:c.highlight }; });
+    var unit = {
+      id: 'editor-draft', fromEditor: true,
+      title: m.title, subject: m.subject || '—', grade: m.grade || '—',
+      minutes: parseInt(m.minutes, 10) || 10, type: m.type || 'task',
+      source: 'human',   // העורך אנושי; AI מסומן בנפרד
+      status: 'draft', owner: 'רותם לוי',
+      verifier: m.verby || '', verifiedOn: m.veron || '', approvedBy: '', approvedOn: '',
+      preview: { relev: m.relev || '', chunks: chunks, example: m.example || '', remember: m.remember || '' }
+    };
+    // מחליף/מוסיף בראש הרשימה
+    var i = state.units.findIndex(function (u) { return u.id === 'editor-draft'; });
+    if (i >= 0) state.units[i] = unit; else state.units.unshift(unit);
+  }
+
+  function save() {
+    try { localStorage.setItem(STORE, JSON.stringify({ units: state.units })); } catch (e) {}
+  }
+  function findUnit(id) { return state.units.find(function (u) { return u.id === id; }); }
+
+  /* ---------- זהות/שלד לפי תפקיד ---------- */
+  function applyRole() {
+    var r = ROLES[state.role];
+    $('#shell').setAttribute('data-role', state.role);
+    $('#side-name').textContent = r.name;
+    $('#side-role').textContent = r.role;
+    $('#side-avatar').textContent = r.initials;
+    $('#top-avatar').textContent = r.initials;
+    $('#topbar-sub').textContent = r.sub;
+    $('#role-teacher').setAttribute('aria-pressed', state.role === 'teacher');
+    $('#role-inspector').setAttribute('aria-pressed', state.role === 'inspector');
+  }
+
+  /* ---------- ספירות ---------- */
+  function counts() {
+    var c = { all:0, draft:0, pending:0, approved:0, published:0, rejected:0 };
+    state.units.forEach(function (u) { c.all++; if (c[u.status] != null) c[u.status]++; });
+    return c;
+  }
+
+  /* ---------- כפתורי-פעולה לפי תפקיד+מצב ---------- */
+  function actionsFor(u) {
+    var a = [];
+    var review = { key:'review', label: state.role === 'inspector' && u.status === 'pending' ? 'בדיקה' : 'הצג',
+      icon:'#ic-eye', cls:'btn--secondary' };
+    if (state.role === 'teacher') {
+      if (u.status === 'draft' || u.status === 'rejected') {
+        a.push({ key:'edit', label:'עריכה', icon:'#ic-edit', cls:'btn--secondary',
+          href: u.fromEditor ? 'unit-editor.html' : null });
+        a.push({ key:'submit', label:'שליחה לאישור', icon:'#ic-send', cls:'btn--primary' });
+      } else if (u.status === 'pending') {
+        a.push(review);
+        a.push({ key:'recall', label:'משיכה בחזרה', icon:'#ic-x-circle', cls:'btn--ghost' });
+      } else if (u.status === 'approved') {
+        a.push(review);
+        a.push({ key:'publish', label:'פרסום', icon:'#ic-globe', cls:'btn--primary' });
+      } else if (u.status === 'published') {
+        a.push(review);
+        a.push({ key:'unpublish', label:'הסרה מהמדף', icon:'#ic-x-circle', cls:'btn--ghost' });
+      }
+    } else { // inspector
+      if (u.status === 'pending') {
+        a.push({ key:'review', label:'בדיקה ואישור', icon:'#ic-shield', cls:'btn--primary' });
+      } else {
+        a.push(review);
+      }
+    }
+    return a;
+  }
+
+  /* ---------- תג-מקור ---------- */
+  function srcTag(u) {
+    if (u.source === 'ai') {
+      return '<span class="src src--ai"><svg aria-hidden="true"><use href="#ic-sparkles"/></svg>נוצר ב-AI · דורש בדיקה</span>';
+    }
+    return '<span class="src src--human"><svg aria-hidden="true"><use href="#ic-user"/></svg>נכתב אנושית</span>';
+  }
+
+  /* ---------- תא אימות ---------- */
+  function verCell(u) {
+    if (u.approvedBy && (u.status === 'approved' || u.status === 'published')) {
+      return '<div class="u-ver"><b>אושר: ' + esc(u.approvedBy) + '</b>' +
+        (u.verifier ? esc(u.verifier) : 'אימות פדגוגי') + (u.approvedOn ? ' · ' + esc(fmt(u.approvedOn)) : '') + '</div>';
+    }
+    if (u.verifier) {
+      return '<div class="u-ver"><b>' + esc(u.verifier) + '</b>' + (u.verifiedOn ? esc(fmt(u.verifiedOn)) : 'ממתין לאישור סופי') + '</div>';
+    }
+    return '<span class="u-ver--none"><svg aria-hidden="true"><use href="#ic-alert"/></svg>טרם אומת</span>';
+  }
+
+  function fmt(iso) {
+    if (!iso) return '';
+    var p = String(iso).split('-'); if (p.length !== 3) return iso;
+    return p[2] + '.' + p[1] + '.' + p[0].slice(2);
+  }
+
+  /* ---------- רינדור ---------- */
+  function render() {
+    var c = counts();
+    // מסננים
+    $$('.fchip').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.getAttribute('data-filter') === state.filter);
+    });
+    $$('[data-count]').forEach(function (n) { n.textContent = c[n.getAttribute('data-count')] || 0; });
+    // שרשרת
+    $$('[data-flow]').forEach(function (n) { n.textContent = c[n.getAttribute('data-flow')] || 0; });
+    // תגי-התראה: כמה ממתינים
+    $('#nav-badge').textContent = c.pending;
+    $('#top-badge').textContent = c.pending;
+    $('#nav-badge').style.display = c.pending ? '' : 'none';
+    $('#top-badge').style.display = c.pending ? '' : 'none';
+
+    // סינון + חיפוש
+    var q = state.q.trim();
+    var rows = state.units.filter(function (u) {
+      if (state.filter !== 'all' && u.status !== state.filter) return false;
+      if (q) {
+        var hay = (u.title + ' ' + u.subject + ' ' + u.grade).toLowerCase();
+        if (hay.indexOf(q.toLowerCase()) === -1) return false;
+      }
+      return true;
+    });
+
+    var tb = $('#tbody');
+    tb.innerHTML = rows.map(rowHTML).join('');
+    $('#empty').hidden = rows.length > 0;
+    $('.rz-table-wrap').style.display = rows.length > 0 ? '' : 'none';
+
+    bindRows();
+  }
+
+  function rowHTML(u) {
+    var st = STATUS[u.status];
+    var acts = actionsFor(u).map(function (a) {
+      if (a.href) {
+        return '<a class="btn ' + a.cls + ' btn--sm" href="' + a.href + '"><svg viewBox="0 0 24 24"><use href="' + a.icon + '"/></svg>' + a.label + '</a>';
+      }
+      return '<button class="btn ' + a.cls + ' btn--sm" type="button" data-act="' + a.key + '" data-id="' + u.id + '">' +
+        '<svg viewBox="0 0 24 24"><use href="' + a.icon + '"/></svg>' + a.label + '</button>';
+    }).join('');
+
+    var fromEditor = u.fromEditor ? '<span class="rz-table__sub"><svg viewBox="0 0 24 24" width="12" height="12" style="vertical-align:-1px" fill="none" stroke="currentColor" stroke-width="2"><use href="#ic-edit"/></svg> מתוך עורך היחידות (W4-01)</span>' : '';
+
+    return '<tr>' +
+      '<td data-label="יחידה"><span class="rz-table__primary">' + esc(u.title) + '</span>' +
+        '<span class="rz-table__sub">' + esc(u.subject) + ' · שכבה ' + esc(u.grade) + ' · ' + typeLabel(u.type) + '</span>' + fromEditor + '</td>' +
+      '<td data-label="מקור">' + srcTag(u) + '</td>' +
+      '<td data-label="מצב"><span class="chip ' + st.chip + '"><span class="chip__dot"></span>' + st.label + '</span></td>' +
+      '<td data-label="אימות פדגוגי">' + verCell(u) + '</td>' +
+      '<td data-label="משך" class="rz-table__num">' + esc(u.minutes) + ' דק\'</td>' +
+      '<td data-label="פעולות"><div class="rz-table__actions-cell">' + acts + '</div></td>' +
+      '</tr>';
+  }
+
+  function typeLabel(t) {
+    return ({ task:'משימה', assessment:'הערכה (ציון)', reference:'תוכן חיצוני' })[t] || 'משימה';
+  }
+
+  function bindRows() {
+    $$('#tbody [data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        onAction(b.getAttribute('data-act'), b.getAttribute('data-id'));
+      });
+    });
+  }
+
+  /* ---------- פעולות ---------- */
+  function onAction(act, id) {
+    var u = findUnit(id); if (!u) return;
+    switch (act) {
+      case 'edit':      window.location.href = 'unit-editor.html'; break;
+      case 'submit':    submitForApproval(u); break;
+      case 'recall':    setStatus(u, 'draft'); log(u, 'המורה משך/ה את היחידה בחזרה לטיוטה'); toast('היחידה חזרה לטיוטה', 'info'); commit(); break;
+      case 'review':    openReview(u); break;
+      case 'publish':   openPublish(u); break;
+      case 'unpublish': setStatus(u, 'approved'); log(u, 'הוסר מהמדף — חזרה למצב "מאושר"'); toast('היחידה הוסרה מהמדף', 'info'); commit(); break;
+    }
+  }
+
+  function submitForApproval(u) {
+    if (u.source === 'ai' && !hasContent(u)) { toast('אין תוכן לשלוח — מלא/י את היחידה בעורך', 'warn'); return; }
+    setStatus(u, 'pending');
+    u.rejectNote = '';
+    log(u, 'נשלח/ה לאישור המפקח');
+    toast('נשלח לאישור · המפקח קיבל/ה התראה', 'success');
+    commit();
+  }
+  function hasContent(u) {
+    return u.preview && (u.preview.relev || (u.preview.chunks && u.preview.chunks.length));
+  }
+
+  function setStatus(u, s) { u.status = s; }
+  function log(u, text) {
+    u.history = u.history || [];
+    u.history.unshift({ by: ROLES[state.role].name, role: state.role, text: text });
+  }
+  function commit() { save(); render(); }
+
+  /* ---------- מגירת בדיקה ---------- */
+  var revScrim = $('#rev-scrim'), reviewingId = null;
+  function openReview(u) {
+    reviewingId = u.id;
+    var p = u.preview || {};
+    var st = STATUS[u.status];
+    var isInspectorApproving = state.role === 'inspector' && u.status === 'pending';
+
+    var chunks = (p.chunks || []).map(function (c) {
+      var t = esc(c.t);
+      if (c.hl) t = t.replace(esc(c.hl), '<mark>' + esc(c.hl) + '</mark>');
+      return '<div class="rev__chunk"><h4>' + esc(c.h) + '</h4><p>' + t + '</p></div>';
+    }).join('');
+
+    var aiNote = u.source === 'ai' ?
+      '<div class="rev__ai-note"><svg aria-hidden="true"><use href="#ic-sparkles"/></svg>' +
+      '<p><b>תוכן שנוצר עם AI.</b> ה-AI יכול להישמע משכנע אבל לטעות מול מקור סמכותי. ' +
+      'יש לוודא כל קביעה פדגוגית לפני אישור — האישור הוא לקיחת אחריות אנושית על התוכן.</p></div>' : '';
+
+    var hist = (u.history || []).slice(0, 4).map(function (h) {
+      return '<li><span class="timeline__dot"></span><div class="timeline__body"><b>' + esc(h.by) + '</b><span>' + esc(h.text) + '</span></div></li>';
+    }).join('');
+
+    var rej = u.status === 'rejected' && u.rejectNote ?
+      '<div class="rev__ai-note" style="background:var(--surface-muted);border-color:var(--line-strong)">' +
+      '<svg aria-hidden="true" style="color:var(--status-alert)"><use href="#ic-x-circle"/></svg>' +
+      '<p style="color:var(--ink)"><b style="color:var(--status-alert)">הוחזר לתיקון:</b> ' + esc(u.rejectNote) + '</p></div>' : '';
+
+    var html = '' +
+      '<div class="rev__tags">' + srcTag(u) +
+        '<span class="chip ' + st.chip + '"><span class="chip__dot"></span>' + st.label + '</span></div>' +
+      '<h3 style="margin:0;font-family:var(--font-head);font-size:var(--text-h2);color:var(--ink-strong)">' + esc(u.title) + '</h3>' +
+      rej + aiNote +
+      '<dl class="rev__meta">' +
+        '<div><dt>מקצוע</dt><dd>' + esc(u.subject) + '</dd></div>' +
+        '<div><dt>שכבה</dt><dd>' + esc(u.grade) + '</dd></div>' +
+        '<div><dt>סוג יחידה</dt><dd>' + typeLabel(u.type) + '</dd></div>' +
+        '<div><dt>משך</dt><dd>' + esc(u.minutes) + ' דקות</dd></div>' +
+        '<div><dt>אוצר/ת</dt><dd>' + esc(u.owner || '—') + '</dd></div>' +
+        '<div><dt>אימות פדגוגי</dt><dd>' + (u.verifier ? esc(u.verifier) : 'טרם') + '</dd></div>' +
+      '</dl>';
+
+    if (p.relev)   html += '<div class="rev__sec-t">פתיח רלוונטיות</div><div class="rev__relev">' + esc(p.relev) + '</div>';
+    if (chunks)    html += '<div class="rev__sec-t">ההסבר</div>' + chunks;
+    if (p.example) html += '<div class="rev__sec-t">דוגמה</div><div class="rev__example">' + esc(p.example) + '</div>';
+    if (p.remember)html += '<div class="rev__sec-t">רעיון מרכזי</div><div class="rev__chunk" style="border-color:var(--brand-line);background:var(--brand-soft)"><p style="font-weight:650;color:var(--brand-dark)">' + esc(p.remember) + '</p></div>';
+
+    if (hist) html += '<div class="rev__sec-t">היסטוריה</div><ul class="timeline">' + hist + '</ul>';
+
+    // ---- אזור החלטת המפקח ----
+    if (isInspectorApproving) {
+      html += '<div class="rev__sec-t">צ\'קליסט קבלה</div>' +
+        '<ul class="acc">' +
+          '<li><svg aria-hidden="true"><use href="#ic-check-c"/></svg>מבנה תקין: פתיח → הסבר → דוגמה → רעיון מרכזי</li>' +
+          '<li><svg aria-hidden="true"><use href="#ic-check-c"/></svg>שפה פשוטה, משפטים קצרים — מתאים לקהל היעד</li>' +
+          '<li><svg aria-hidden="true"><use href="#ic-check-c"/></svg>אין תוכן מעורר חרדה (רגישות לזמן חירום)</li>' +
+        '</ul>' +
+        '<label class="accountability"><input type="checkbox" id="acc-check">' +
+          '<span><b>בדקתי את התוכן ואני מאשר/ת אחריות פדגוגית.</b> ' +
+          (u.source === 'ai' ? 'אימתתי את הקביעות מול מקור סמכותי.' : 'התוכן מדויק ומתאים לשכבה.') + '</span></label>' +
+        '<div class="rej-field" id="rej-field"><label for="rej-note">סיבת ההחזרה לתיקון (חובה בדחייה)</label>' +
+          '<textarea id="rej-note" placeholder="מה צריך לתקן לפני אישור?"></textarea></div>' +
+        '<div class="drawer__foot-actions">' +
+          '<button class="btn btn--primary" type="button" id="rev-approve" disabled><svg viewBox="0 0 24 24"><use href="#ic-check"/></svg>אישור התוכן</button>' +
+          '<button class="btn btn--danger" type="button" id="rev-reject"><svg viewBox="0 0 24 24"><use href="#ic-x-circle"/></svg>החזרה לתיקון</button>' +
+        '</div>';
+    } else {
+      html += '<div class="drawer__foot-actions">';
+      if (state.role === 'teacher' && (u.status === 'draft' || u.status === 'rejected')) {
+        html += '<a class="btn btn--secondary" href="unit-editor.html"><svg viewBox="0 0 24 24"><use href="#ic-edit"/></svg>עריכה בעורך</a>';
+        html += '<button class="btn btn--primary" type="button" id="rev-submit"><svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>שליחה לאישור</button>';
+      } else if (state.role === 'teacher' && u.status === 'approved') {
+        html += '<button class="btn btn--primary" type="button" id="rev-publish"><svg viewBox="0 0 24 24"><use href="#ic-globe"/></svg>פרסום למדף</button>';
+      } else {
+        html += '<button class="btn btn--ghost" type="button" id="rev-dismiss">סגירה</button>';
+      }
+      html += '</div>';
+    }
+
+    $('#rev-body').innerHTML = html;
+    $('#rev-title').textContent = isInspectorApproving ? 'בדיקה ואישור' : 'תצוגת יחידה';
+    openScrim(revScrim);
+
+    // חיווט אזור-החלטה
+    var accChk = $('#acc-check'), approveBtn = $('#rev-approve');
+    if (accChk) accChk.addEventListener('change', function () { approveBtn.disabled = !accChk.checked; });
+    if (approveBtn) approveBtn.addEventListener('click', function () { doApprove(u); });
+    var rejBtn = $('#rev-reject');
+    if (rejBtn) rejBtn.addEventListener('click', function () { doReject(u); });
+    var subBtn = $('#rev-submit'); if (subBtn) subBtn.addEventListener('click', function () { closeScrim(revScrim); submitForApproval(u); });
+    var pubBtn = $('#rev-publish'); if (pubBtn) pubBtn.addEventListener('click', function () { closeScrim(revScrim); openPublish(u); });
+    var disB = $('#rev-dismiss'); if (disB) disB.addEventListener('click', function () { closeScrim(revScrim); });
+  }
+
+  function doApprove(u) {
+    u.approvedBy = ROLES.inspector.name;
+    u.approvedOn = todayISO();
+    if (!u.verifier) u.verifier = ROLES.inspector.name + ' — מפקחת';
+    if (!u.verifiedOn) u.verifiedOn = todayISO();
+    u.rejectNote = '';
+    setStatus(u, 'approved');
+    log(u, 'המפקח/ת אישר/ה את התוכן ולקח/ה אחריות פדגוגית');
+    closeScrim(revScrim);
+    toast('אושר · היחידה מוכנה לפרסום', 'success');
+    commit();
+  }
+
+  function doReject(u) {
+    var field = $('#rej-field');
+    var note = $('#rej-note');
+    if (!field.classList.contains('is-on')) {
+      field.classList.add('is-on');
+      note.focus();
+      toast('כתוב/כתבי מה צריך לתקן, ואז אשר/י דחייה', 'info');
+      return;
+    }
+    if (!note.value.trim()) { note.focus(); toast('חובה לכתוב סיבת החזרה', 'warn'); return; }
+    u.rejectNote = note.value.trim();
+    setStatus(u, 'rejected');
+    log(u, 'הוחזר/ה לתיקון: ' + u.rejectNote);
+    closeScrim(revScrim);
+    toast('הוחזר לתיקון · המורה קיבל/ה הערה', 'info');
+    commit();
+  }
+
+  function todayISO() { return '2026-07-15'; } // תאריך המערכת (דמו קבוע)
+
+  /* ---------- מודל פרסום — חוסם דילוג על אישור אנושי ---------- */
+  var pubScrim = $('#pub-scrim'), publishingId = null;
+  function openPublish(u) {
+    // שער קשיח: פרסום רק אחרי אישור אנושי
+    if (u.status !== 'approved') {
+      toast('אי אפשר לפרסם — נדרש קודם אישור מפקח', 'warn');
+      return;
+    }
+    publishingId = u.id;
+    var aiLine = u.source === 'ai'
+      ? '<p style="margin:var(--space-2) 0 0;color:var(--ink-soft);font-size:var(--text-small)"><svg viewBox="0 0 24 24" width="15" height="15" style="vertical-align:-2px;color:#7A3EA6" fill="none" stroke="currentColor" stroke-width="2"><use href="#ic-sparkles"/></svg> תוכן זה נוצר ב-AI ואומת ידנית — הפרסום מתעד את שרשרת האחריות.</p>'
+      : '';
+    $('#pub-body').innerHTML =
+      '<p>היחידה <b>"' + esc(u.title) + '"</b> תעלה למדף התוכן ותהיה זמינה לשיבוץ בכיתות.</p>' +
+      '<div class="rev__meta" style="margin-top:var(--space-3)">' +
+        '<div><dt>אושר על ידי</dt><dd>' + esc(u.approvedBy || '—') + '</dd></div>' +
+        '<div><dt>תאריך אישור</dt><dd>' + esc(fmt(u.approvedOn) || '—') + '</dd></div>' +
+      '</div>' + aiLine;
+    openScrim(pubScrim);
+  }
+  $('#pub-confirm').addEventListener('click', function () {
+    var u = findUnit(publishingId); if (!u) return;
+    setStatus(u, 'published');
+    u.publishedOn = todayISO();
+    log(u, 'פורסם/ה למדף על ידי ' + ROLES[state.role].name);
+    closeScrim(pubScrim);
+    toast('פורסם למדף · היחידה זמינה לשיבוץ', 'success');
+    commit();
+  });
+
+  /* ---------- Scrim helpers ---------- */
+  var lastFocus = null;
+  function openScrim(s) {
+    lastFocus = document.activeElement;
+    s.hidden = false;
+    requestAnimationFrame(function () { s.setAttribute('data-open', 'true'); });
+    var f = s.querySelector('button, a, input, textarea'); if (f) setTimeout(function(){ f.focus(); }, 60);
+    document.body.style.overflow = 'hidden';
+  }
+  function closeScrim(s) {
+    s.removeAttribute('data-open');
+    setTimeout(function () { s.hidden = true; }, 200);
+    document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  $('#rev-close').addEventListener('click', function () { closeScrim(revScrim); });
+  $('#pub-close').addEventListener('click', function () { closeScrim(pubScrim); });
+  $('#pub-cancel').addEventListener('click', function () { closeScrim(pubScrim); });
+  [revScrim, pubScrim].forEach(function (s) {
+    s.addEventListener('click', function (e) { if (e.target === s) closeScrim(s); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (!revScrim.hidden) closeScrim(revScrim);
+      if (!pubScrim.hidden) closeScrim(pubScrim);
+    }
+  });
+
+  /* ---------- Toast ---------- */
+  var TOAST_ICON = { success:'#ic-check-c', info:'#ic-info', warn:'#ic-alert', error:'#ic-x-circle' };
+  function toast(msg, kind) {
+    kind = kind || 'info';
+    var region = $('#toast-region');
+    var el = document.createElement('div');
+    el.className = 'toast toast--' + kind;
+    el.setAttribute('role', 'status');
+    el.innerHTML = '<span class="toast__icon"><svg aria-hidden="true"><use href="' + (TOAST_ICON[kind] || '#ic-info') + '"/></svg></span>' +
+      '<span class="toast__msg">' + esc(msg) + '</span>' +
+      '<button class="icon-btn toast__close" type="button" aria-label="סגירה"><svg aria-hidden="true"><use href="#ic-x"/></svg></button>';
+    region.appendChild(el);
+    var close = function () { el.setAttribute('data-leaving', 'true'); setTimeout(function () { el.remove(); }, 200); };
+    el.querySelector('.toast__close').addEventListener('click', close);
+    setTimeout(close, 3200);
+  }
+
+  /* ---------- בורר תפקיד ---------- */
+  $('#role-teacher').addEventListener('click', function () { if (state.role !== 'teacher') { state.role = 'teacher'; applyRole(); render(); } });
+  $('#role-inspector').addEventListener('click', function () {
+    if (state.role !== 'inspector') {
+      state.role = 'inspector';
+      // המפקח נכנס ישר ל"ממתין לאישור" — התור שלו
+      state.filter = 'pending';
+      applyRole(); render();
+    }
+  });
+
+  /* ---------- מסננים + חיפוש ---------- */
+  $$('.fchip').forEach(function (b) {
+    b.addEventListener('click', function () { state.filter = b.getAttribute('data-filter'); render(); });
+  });
+  $('#q').addEventListener('input', function () { state.q = this.value; render(); });
+
+  /* ---------- מגירת-ניווט במובייל ---------- */
+  $$('.app-shell').forEach(function (shell) {
+    var scrim = shell.querySelector('.app-shell__scrim');
+    function open() { shell.classList.add('is-nav-open'); if (scrim) scrim.hidden = false; }
+    function close() { shell.classList.remove('is-nav-open'); }
+    $$('[data-nav-open]', shell).forEach(function (b) { b.addEventListener('click', open); });
+    $$('[data-nav-close]', shell).forEach(function (b) { b.addEventListener('click', close); });
+    shell.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  });
+
+  /* ---------- אתחול ---------- */
+  load();
+  applyRole();
+  render();
+})();
+</script>
+</body>
+</html>
