@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>רֶצֶף · המסלול שלי</title>
+<meta name="theme-color" content="#0B8F98">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B8F98'/%3E%3Cg fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M8 11h12'/%3E%3Cpath d='M8 16h16'/%3E%3Cpath d='M12 21h12'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Heebo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- שפת העיצוב המשותפת של רֶצֶף (מקור אמת יחיד) -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="components.css">
+<style>
+/* ============================================================
+   רֶצֶף · תצוגת תלמיד · W1-04 — המסלול שלי
+   מסלול beads (סיימתי/היום/הבא) כקו-רצף רציף שנשמר בין ימים,
+   + סיכום שבועי (יחידות · רצף ימים) בטון מעודד רגוע.
+   StudentShell (Mobile First) · BottomNav · טוקנים בלבד.
+   הרכיבים: SequenceLine מ-components.css (.sequence--vertical).
+   ============================================================ */
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:var(--surface-muted);
+  font-family:var(--font-body);color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;
+}
+svg{display:block}
+
+/* מסגרת-טלפון: הופך את ה-Shell למובייל גם על מסך רחב */
+.phone-frame{
+  width:100%;max-width:440px;height:100dvh;
+  background:var(--bg);
+  box-shadow:0 0 0 1px var(--line), var(--shadow-lg);
+}
+@media (min-width:520px){ .phone-frame{ height:min(920px,100dvh); margin-block:auto; border-radius:26px; overflow:hidden } }
+
+/* --- כותרת מסך --- */
+.screen-head{margin-bottom:var(--space-4)}
+.screen-head h1{font-family:var(--font-head);font-size:var(--text-h1);font-weight:800;color:var(--ink-strong);line-height:1.12;margin:0}
+.screen-head .sub{font-size:var(--text-small);color:var(--ink-soft);margin-top:4px}
+
+.sec-title{
+  display:flex;align-items:center;gap:var(--space-2);
+  font-family:var(--font-head);font-size:var(--text-h3);font-weight:700;color:var(--ink-strong);
+  margin:var(--space-6) 0 var(--space-3);
+}
+.sec-title .c{margin-inline-start:auto;font-size:12px;font-weight:700;color:var(--brand-deep);background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:var(--radius-pill);padding:3px 10px}
+
+/* ============ סיכום שבועי ============ */
+.summary{
+  background:linear-gradient(160deg, var(--mode-soft) 0%, var(--card) 60%);
+  border:1px solid var(--mode-line);border-radius:var(--radius-lg);
+  padding:var(--space-5) var(--space-4);box-shadow:var(--shadow-card);
+}
+.summary__kicker{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-head);font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--brand-deep)}
+.summary__kicker .d{width:8px;height:8px;border-radius:50%;background:var(--mode);flex:none}
+
+/* שני מדדים גדולים */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin:var(--space-4) 0}
+.stat{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);
+  padding:var(--space-3) var(--space-4);
+}
+.stat .n{font-family:var(--font-head);font-size:32px;font-weight:800;color:var(--ink-strong);line-height:1;display:flex;align-items:baseline;gap:6px}
+.stat .n small{font-size:14px;font-weight:700;color:var(--ink-soft)}
+.stat .l{font-size:13px;color:var(--ink-soft);margin-top:5px;font-weight:600}
+
+/* רצף ימי השבוע — נקודות א–ש (נגזרת קטנה של הנקודה מקו-הרצף) */
+.week-dots{display:flex;justify-content:space-between;gap:6px;margin-top:var(--space-2)}
+.wd{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1 1 0}
+.wd .dot{
+  box-sizing:border-box;width:22px;height:22px;border-radius:50%;
+  background:var(--card);border:2.5px solid var(--line-strong);
+  display:flex;align-items:center;justify-content:center;color:#fff;
+}
+.wd .dot svg{width:11px;height:11px}
+.wd.done .dot{background:var(--brand);border-color:var(--brand)}
+.wd.today .dot{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.wd.today.done .dot{box-shadow:0 0 0 3px var(--brand-soft)}
+.wd .lab{font-size:11.5px;font-weight:700;color:var(--ink-faint)}
+.wd.done .lab{color:var(--ink-soft)}
+.wd.today .lab{color:var(--brand-deep)}
+.week-cap{font-size:13.5px;color:var(--ink);line-height:1.5;margin-top:var(--space-4)}
+.week-cap b{color:var(--ink-strong)}
+
+/* ============ מקרא מצבי המסלול ============ */
+.legend{display:flex;flex-wrap:wrap;gap:var(--space-4);margin-bottom:var(--space-4)}
+.legend .li{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.legend .nd{box-sizing:border-box;width:15px;height:15px;border-radius:50%;background:var(--card);border:3px solid var(--line-strong);flex:none}
+.legend .nd.done{background:var(--brand);border-color:var(--brand)}
+.legend .nd.now{border-color:var(--brand);position:relative}
+.legend .nd.now::after{content:"";position:absolute;inset:0;margin:auto;width:5px;height:5px;border-radius:50%;background:var(--brand)}
+
+/* ============ מסלול (SequenceLine) ============ */
+.route{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);
+  padding:var(--space-5) var(--space-5) var(--space-4);box-shadow:var(--shadow-card);
+}
+/* התאמות קלות לרכיב .sequence--vertical בתוך כרטיס תלמיד */
+.route .sequence-date{display:inline-flex;align-items:center;gap:6px;text-transform:none}
+.route .status-tag{font-size:11px;font-weight:800;letter-spacing:.02em;padding:2px 8px;border-radius:var(--radius-pill);border:1px solid transparent}
+.route .status-tag--done{color:var(--brand-deep);background:var(--brand-soft);border-color:var(--brand-line)}
+.route .status-tag--now{color:#fff;background:var(--brand);border-color:var(--brand)}
+.route .status-tag--next{color:var(--ink-soft);background:var(--surface-muted);border-color:var(--line)}
+.route .u-subj{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;color:var(--brand-deep);background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:var(--radius-pill);padding:2px 9px}
+.route .when{font-size:12px;color:var(--ink-faint);font-weight:600}
+
+/* הבועה הפעילה — פעולה + הרגעה */
+.now-actions{margin-top:var(--space-3)}
+.now-actions .btn{margin-bottom:var(--space-2)}
+.now-hint{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--ink-soft);line-height:1.45}
+.now-hint svg{width:15px;height:15px;color:var(--brand);flex:none;margin-top:2px}
+
+/* מצב-סיום המסלול */
+.route-done{text-align:center;padding:var(--space-4) 0 var(--space-2)}
+.route-done .mk{width:44px;height:44px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-3)}
+.route-done .mk svg{width:22px;height:22px}
+.route-done h3{font-family:var(--font-head);font-size:var(--text-h3);color:var(--ink-strong);margin:0 0 4px}
+.route-done p{font-size:13.5px;color:var(--ink-soft);margin:0}
+
+/* ============ הרגעת "לעצור ולהמשיך" ============ */
+.pause-note{
+  display:flex;gap:11px;align-items:flex-start;margin-top:var(--space-4);
+  background:var(--brand-soft);border:1px solid var(--brand-line);border-radius:var(--radius-md);
+  padding:13px 14px;
+}
+.pause-note .ic{width:34px;height:34px;border-radius:50%;background:var(--card);border:1px solid var(--brand-line);color:var(--brand-deep);display:flex;align-items:center;justify-content:center;flex:none}
+.pause-note .ic svg{width:18px;height:18px}
+.pause-note .t{font-size:13.5px;color:var(--ink);line-height:1.5}
+.pause-note .t b{color:var(--ink-strong)}
+
+/* פעולות משניות */
+.ghost-btn{
+  font-family:var(--font-body);font-weight:700;font-size:14px;
+  width:100%;min-height:var(--tap);border-radius:var(--radius-btn);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--surface-muted);color:var(--brand-deep);border:1px solid var(--brand-line);
+  transition:background .16s ease;
+}
+.ghost-btn:hover{background:var(--brand-soft)}
+.ghost-btn:focus-visible{outline:3px solid var(--brand-bright);outline-offset:2px}
+.ghost-btn svg{width:16px;height:16px;flex:none}
+
+/* טוסט הרגעה */
+.toast{
+  position:fixed;inset-inline:0;bottom:calc(74px + env(safe-area-inset-bottom,0px));
+  display:flex;justify-content:center;pointer-events:none;z-index:80;
+  opacity:0;transform:translateY(8px);transition:opacity .25s ease,transform .25s ease;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast span{
+  background:var(--ink-strong);color:#fff;font-size:13.5px;font-weight:600;
+  border-radius:var(--radius-pill);padding:10px 18px;box-shadow:var(--shadow-lg);
+  max-width:88%;text-align:center;
+}
+
+/* שורת דמו קטנה (איפוס persistence) */
+.demo-reset{margin:var(--space-6) 0 var(--space-2);text-align:center}
+.demo-reset button{background:none;border:0;color:var(--ink-faint);font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.demo-reset button:hover{color:var(--ink-soft)}
+
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+
+<!-- ספריית אייקונים (סמלים משותפים מ-design-system) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/><circle cx="19" cy="18" r="2.4"/></symbol>
+  <symbol id="ic-tasks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2.5 2.5L16 8"/><rect x="4" y="4" width="16" height="16" rx="3"/></symbol>
+  <symbol id="ic-progress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></symbol>
+  <symbol id="ic-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5v14l11-7z"/></symbol>
+  <symbol id="ic-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-1.5 3.5L16 11H5"/></symbol>
+</svg>
+
+<div class="phone-frame">
+  <div class="app-shell app-shell--student app-shell--framed">
+
+    <!-- ===== TopBar ===== -->
+    <header class="topbar-m">
+      <div class="topbar-m__brand">
+        <svg style="height:24px;width:auto" viewBox="0 0 118 30" role="img" aria-label="רֶצֶף">
+          <text x="74" y="22" text-anchor="end" font-family="Heebo, Assistant, sans-serif" font-weight="700" font-size="21" style="fill:var(--ink-strong)">רצף</text>
+          <g transform="translate(85 3)" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand)">
+            <path d="M10 6 C12.5 8.26 14.5 8.26 17 6 C19.5 3.74 21.5 3.74 24 6"/>
+            <path d="M3 12 C5.5 9.74 7.5 9.74 10 12 C12.5 14.26 14.5 14.26 17 12 C19.5 9.74 21.5 9.74 24 12 C26.5 14.26 28.5 14.26 31 12"/>
+            <path d="M10 18 C12.5 20.26 14.5 20.26 17 18 C19.5 15.74 21.5 15.74 24 18"/>
+          </g>
+        </svg>
+      </div>
+      <div class="topbar-m__actions">
+        <button class="icon-btn topbar__notif" type="button" aria-label="התראות">
+          <svg aria-hidden="true"><use href="#ic-bell"/></svg>
+        </button>
+        <button class="avatar-btn" type="button" aria-label="הפרופיל שלי">
+          <span class="avatar avatar--sm" aria-hidden="true">י</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== תוכן נגלל ===== -->
+    <main class="app-main-m" aria-label="המסלול שלי">
+
+      <div class="screen-head">
+        <h1>המסלול שלי</h1>
+        <p class="sub" id="head-sub">כל צעד נשמר — גם אם עוצרים באמצע.</p>
+      </div>
+
+      <!-- ===== סיכום שבועי ===== -->
+      <section class="summary" aria-labelledby="sum-h">
+        <span class="summary__kicker" id="sum-h"><span class="d"></span>השבוע שלך</span>
+        <div class="stats">
+          <div class="stat">
+            <div class="n"><span id="st-week">0</span> <small id="st-week-l">יחידות</small></div>
+            <div class="l">השלמת השבוע</div>
+          </div>
+          <div class="stat">
+            <div class="n"><span id="st-streak">0</span> <small id="st-streak-l">ימים</small></div>
+            <div class="l">רצף למידה</div>
+          </div>
+        </div>
+
+        <div class="week-dots" id="week-dots" aria-hidden="true"></div>
+        <p class="week-cap" id="week-cap"></p>
+      </section>
+
+      <!-- ===== המסלול (beads) ===== -->
+      <div class="sec-title">
+        המסלול שלי
+        <span class="c" id="route-count">0 / 0</span>
+      </div>
+
+      <div class="legend" aria-hidden="true">
+        <span class="li"><span class="nd done"></span> סיימתי</span>
+        <span class="li"><span class="nd now"></span> היום</span>
+        <span class="li"><span class="nd"></span> הבא</span>
+      </div>
+
+      <section class="route">
+        <ol class="sequence sequence--vertical" id="route-list" aria-label="רצף היחידות שלי"></ol>
+      </section>
+
+      <!-- ===== לעצור ולהמשיך ===== -->
+      <div class="pause-note">
+        <span class="ic" aria-hidden="true"><svg><use href="#ic-pause"/></svg></span>
+        <div class="t"><b>אפשר לעצור ולהמשיך.</b> המסלול שלך נשמר במכשיר — מחר נמשיך בדיוק מהמקום שבו עצרת. אין רצף שנשבר בגלל הפסקה.</div>
+      </div>
+
+      <div class="demo-reset">
+        <button type="button" id="demo-reset">איפוס נתוני דמו</button>
+      </div>
+
+    </main>
+
+    <!-- ===== BottomNavigation ===== -->
+    <nav class="bottom-nav" aria-label="ניווט ראשי">
+      <a class="bottom-nav__item" href="student-home.html">
+        <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-home"/></svg></span>
+        <span class="bottom-nav__label">בית</span>
+      </a>
+      <a class="bottom-nav__item" href="student-subjects.html">
+        <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-book"/></svg></span>
+        <span class="bottom-nav__label">מקצועות</span>
+      </a>
+      <a class="bottom-nav__item" href="student-tasks.html">
+        <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-tasks"/></svg></span>
+        <span class="bottom-nav__label">משימות</span>
+      </a>
+      <a class="bottom-nav__item" href="student-progress.html" aria-current="page">
+        <span class="bottom-nav__icon" aria-hidden="true"><svg><use href="#ic-progress"/></svg></span>
+        <span class="bottom-nav__label">התקדמות</span>
+      </a>
+    </nav>
+
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="toast-txt"></span></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = 'resef.progress.demo.v1';
+
+  /* ---------- עזרי תאריך ---------- */
+  function pad(n){ return (n<10?'0':'')+n; }
+  function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function parseYMD(s){ var p=s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function addDays(d,n){ var x=new Date(d.getTime()); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x; }
+  function today(){ var d=new Date(); d.setHours(0,0,0,0); return d; }
+
+  var HE_DAY_SHORT = ['א','ב','ג','ד','ה','ו','ש'];              // ראשון..שבת
+  var HE_DAY_FULL  = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  function heDate(s){ var d=parseYMD(s); return 'יום '+HE_DAY_FULL[d.getDay()]+' · '+d.getDate()+'.'+(d.getMonth()+1); }
+
+  /* ---------- רשימת היחידות (מסלול קבוע) ---------- */
+  var BEADS = [
+    {subj:'לשון',     title:'סוגי משפט'},
+    {subj:'לשון',     title:'נושא ונשוא'},
+    {subj:'מתמטיקה',  title:'שברים — חזרה'},
+    {subj:'אנגלית',   title:'Reading קצר'},
+    {subj:'לשון',     title:'משפט פשוט ומורכב'},
+    {subj:'מתמטיקה',  title:'אחוזים — יסודות'},
+    {subj:'מדעים',    title:'מחזור המים'},
+    {subj:'לשון',     title:'דרכי תצורה'},
+    {subj:'היסטוריה', title:'קריאה בקטע מקור'}
+  ];
+
+  /* ---------- מצב + persistence ---------- */
+  function seed(){
+    // זריעה חד-פעמית: 4 יחידות הושלמו ב-4 הימים שקדמו להיום → רצף חי שמזמין להמשיך.
+    var t = today(), dates = [];
+    for(var i=4;i>=1;i--){ dates.push(ymd(addDays(t,-i))); }
+    return { cursor: dates.length, doneDates: dates };
+  }
+  function load(){
+    var s=null;
+    try{ s = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
+    if(!s || typeof s.cursor!=='number' || !Array.isArray(s.doneDates)) s = seed();
+    // גבולות בטיחות
+    s.cursor = Math.max(0, Math.min(s.cursor, BEADS.length));
+    return s;
+  }
+  function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
+
+  var state = load();
+
+  /* ---------- חישובים נגזרים ---------- */
+  function doneSet(){ var m={}; state.doneDates.forEach(function(d){ m[d]=true; }); return m; }
+
+  function streakDays(){
+    var set = doneSet(), d = today();
+    if(!set[ymd(d)]){ d = addDays(d,-1); if(!set[ymd(d)]) return 0; } // אתמול עדיין "חי"
+    var n=0;
+    while(set[ymd(d)]){ n++; d = addDays(d,-1); }
+    return n;
+  }
+  function weekUnits(){
+    var t = today(), sun = addDays(t, -t.getDay());  // ראשון של השבוע הנוכחי
+    var c=0;
+    state.doneDates.forEach(function(s){
+      var d = parseYMD(s);
+      if(d.getTime() >= sun.getTime() && d.getTime() <= t.getTime()) c++;
+    });
+    return c;
+  }
+  function doneToday(){ return !!doneSet()[ymd(today())]; }
+
+  /* ---------- דקדוק עברי ---------- */
+  function unitWord(n){ return n===1 ? 'יחידה' : 'יחידות'; }
+  function dayWord(n){ return n===1 ? 'יום' : 'ימים'; }
+
+  /* ---------- רינדור ---------- */
+  var CHECK = '<svg aria-hidden="true"><use href="#ic-check"/></svg>';
+
+  function el(id){ return document.getElementById(id); }
+
+  function renderSummary(){
+    var wk = weekUnits(), sk = streakDays();
+    el('st-week').textContent = wk;
+    el('st-week-l').textContent = unitWord(wk);
+    el('st-streak').textContent = sk;
+    el('st-streak-l').textContent = dayWord(sk);
+
+    // נקודות א–ש
+    var set = doneSet(), t = today(), sun = addDays(t, -t.getDay());
+    var html = '';
+    for(var i=0;i<7;i++){
+      var d = addDays(sun, i), s = ymd(d);
+      var isDone = !!set[s], isToday = s===ymd(t), isFuture = d.getTime() > t.getTime();
+      var cls = 'wd' + (isDone?' done':'') + (isToday?' today':'');
+      var mark = isDone ? CHECK : '';
+      html += '<div class="'+cls+'"><span class="dot">'+mark+'</span><span class="lab">'+HE_DAY_SHORT[i]+'</span></div>';
+    }
+    el('week-dots').innerHTML = html;
+
+    // כיתוב מעודד רגוע
+    var cap;
+    if(sk===0){
+      cap = 'רצף חדש מתחיל היום — יחידה קטנה אחת, וכבר יש רצף.';
+    } else if(doneToday()){
+      cap = '<b>יופי — שמרת על הרצף גם היום.</b> ' + sk + ' ' + dayWord(sk) + ' ברצף.';
+    } else {
+      cap = 'כבר <b>' + sk + ' ' + dayWord(sk) + '</b> ברצף. עוד יחידה קטנה — והרצף ממשיך.';
+    }
+    if(wk>0) cap += '<br>השבוע השלמת ' + wk + ' ' + unitWord(wk) + '. כל אחת נשמרת, גם אם עצרת באמצע.';
+    el('week-cap').innerHTML = cap;
+  }
+
+  function stepHTML(i){
+    var b = BEADS[i], cursor = state.cursor;
+    var status = i < cursor ? 'done' : (i === cursor ? 'now' : 'next');
+    var cls = status==='done' ? 'is-done' : (status==='now' ? 'is-current' : 'is-upcoming');
+
+    var node = '<span class="sequence-node" aria-hidden="true">' + (status==='done'?CHECK:'') + '</span>';
+
+    var tag, when='';
+    if(status==='done'){
+      tag = '<span class="status-tag status-tag--done">הושלם</span>';
+      var dt = state.doneDates[i];
+      if(dt) when = '<span class="when">' + heDate(dt) + '</span>';
+    } else if(status==='now'){
+      tag = '<span class="status-tag status-tag--now">היום</span>';
+    } else {
+      tag = '<span class="status-tag status-tag--next">הבא</span>';
+    }
+
+    var meta = '<p class="sequence-date">' + tag + (when || '') + '</p>';
+    var head = '<h3 class="sequence-title">' + b.title + '</h3>';
+    var subj = '<span class="u-subj">' + b.subj + '</span>';
+
+    var extra = '';
+    if(status==='now'){
+      extra =
+        '<div class="now-actions">' +
+          '<button class="btn btn--primary btn--block" type="button" id="continue-btn">' +
+            '<svg width="18" height="18" aria-hidden="true"><use href="#ic-play"/></svg> ממשיכים מכאן' +
+          '</button>' +
+          '<div class="now-hint"><svg aria-hidden="true"><use href="#ic-pause"/></svg>' +
+            '<span>אפשר לעצור באמצע — נמשיך מחר מכאן בדיוק.</span></div>' +
+        '</div>';
+    }
+
+    return '<li class="sequence-step '+cls+'">' + node +
+      '<div class="sequence-content">' + meta + head + subj + extra + '</div></li>';
+  }
+
+  function renderRoute(){
+    var list = el('route-list');
+    if(state.cursor >= BEADS.length){
+      // סיימו את כל המסלול
+      list.innerHTML =
+        '<div class="route-done">' +
+          '<span class="mk"><svg aria-hidden="true"><use href="#ic-flag"/></svg></span>' +
+          '<h3>סיימת את כל המסלול</h3>' +
+          '<p>כל היחידות הושלמו — בקצב שלך. מורה יוסיף יחידות חדשות כשיהיו.</p>' +
+        '</div>';
+    } else {
+      var html = '';
+      for(var i=0;i<BEADS.length;i++){ html += stepHTML(i); }
+      list.innerHTML = html;
+      var cb = el('continue-btn');
+      if(cb) cb.addEventListener('click', completeCurrent);
+    }
+    el('route-count').textContent = state.cursor + ' / ' + BEADS.length;
+  }
+
+  function render(){ renderSummary(); renderRoute(); }
+
+  /* ---------- פעולות ---------- */
+  var toastTimer=null;
+  function toast(msg){
+    el('toast-txt').textContent = msg;
+    var t = el('toast'); t.classList.add('show');
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+  }
+
+  function completeCurrent(){
+    if(state.cursor >= BEADS.length) return;
+    state.doneDates.push(ymd(today()));  // השלמה נרשמת לתאריך היום → מזין רצף ושבוע
+    state.cursor += 1;
+    save(state);
+    render();
+    var sk = streakDays();
+    toast('נשמר ✓ ' + sk + ' ' + dayWord(sk) + ' ברצף. אפשר להמשיך או לעצור להיום.');
+  }
+
+  el('demo-reset').addEventListener('click', function(){
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    state = load();
+    render();
+    toast('נתוני הדמו אופסו.');
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
