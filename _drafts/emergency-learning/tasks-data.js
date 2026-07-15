@@ -217,7 +217,7 @@ window.TASKS = [
     prompt:'בנה/י עמוד משאב: תצוגה מקדימה לפי סוג + פעולת "שבץ לכיתה" (למורה) + מטא (יוצר/תאריך אישור/שימושים).' },
   { id:'W6-04', world:6, title:'מועדפים + שיתוף', desc:'אוסף אישי ושיתוף.', cat:'flow', phase:'mvpB', status:'done', file:'favorites.js + favorites.html',
     prompt:'(גל B) מועדפים (אוסף אישי לכל משתמש) + שיתוף משאב.' },
-  { id:'W6-05', world:6, title:'דיווח + הצעת תוכן', desc:'דגל + תור אישור מפקח.', cat:'flow', phase:'later', status:'todo', file:'',
+  { id:'W6-05', world:6, title:'דיווח + הצעת תוכן', desc:'דגל + תור אישור מפקח.', cat:'flow', phase:'later', status:'done', file:'content-reports.html',
     prompt:'(דחוי) דיווח על תוכן בעייתי (דגל→מפקח) + מורה מציע תוכן→תור אישור.' },
 
   /* ===== תצוגה 7 — קורסי העשרה ===== */
@@ -243,10 +243,10 @@ window.TASKS = [
   /* ===== תצוגה 9 — ניהול מערכת (דחוי) ===== */
   { id:'W9-01', world:9, title:'ניהול משתמשים ובתי ספר', desc:'חשבונות + הקמת בתי ספר.', cat:'flow', phase:'later', status:'done', file:'admin-users-schools.html',
     prompt:'(דחוי) ניהול משתמשים (חשבונות/איפוסים/חסימות) + בתי ספר (הקמה/עדכון/שיוך).' },
-  { id:'W9-02', world:9, title:'הרשאות/תפקידים + הגדרות', desc:'מטריצת הרשאות + קונפיג.', cat:'flow', phase:'later', status:'todo', file:'',
+  { id:'W9-02', world:9, title:'הרשאות/תפקידים + הגדרות', desc:'מטריצת הרשאות + קונפיג.', cat:'flow', phase:'later', status:'done', file:'admin-roles-settings.html',
     prompt:'(דחוי) מטריצת הרשאות/תפקידים + הגדרות מערכת גלובליות.' },
-  { id:'W9-03', world:9, title:'אינטגרציות + גיבויים', desc:'זום/וואטסאפ/משרד + גיבוי.', cat:'integ', phase:'later', status:'todo', file:'',
-    prompt:'(דחוי) אינטגרציות (זום/וואטסאפ/מערכות משרד) + גיבוי ושחזור.' },
+  { id:'W9-03', world:9, title:'אינטגרציות + גיבויים', desc:'זום/וואטסאפ/משרד + גיבוי.', cat:'integ', phase:'later', status:'done', file:'admin-integrations.html',
+    prompt:'(דחוי) אינטגרציות (זום/וואטסאפ/מערכות משרד) + גיבוי ושחזור — ברמת קונפיג בלבד. בלי הקלטת קטינים.' },
 ];
 
 /* ---------- עזרי חישוב ---------- */
