@@ -99,7 +99,7 @@ window.TASKS = [
     prompt:'בנה/י Table (שורה 52px, עד 6 עמודות, במובייל→כרטיסים, status-chip, תפריט 3-נקודות), EmptyState (קו רצף קצר + נקודות, בלי דמויות), ורכיב גרף קווי נקי (טורקיז ראשי, grid בהיר, בלי 3D/גרדיאנט/קפיצות; קו הרצף יכול לשמש כגרף התקדמות).' },
   { id:'W0-D9', world:0, title:'נגישות WCAG AA (רוחבי)', desc:'focus, מקלדת, aria, ניגודיות, reduced-motion.', cat:'design', phase:'mvpA', status:'done', file:'a11y.css · a11y.js · a11y-checklist.md · accessibility.html',
     prompt:'הגדר/י שכבת נגישות משותפת ובדוק/י אותה על הרכיבים: מגע 44px, focus-visible ברור, ניווט מקלדת מלא, aria-label, אין הסתמכות על צבע בלבד (טקסט+אייקון), ניגודיות AA, הגדלת טקסט, prefers-reduced-motion, טקסט חלופי לגרפים, תיאור סטטוס מילולי. ספק/י צ\'קליסט לשאר הסוכנים.' },
-  { id:'W0-D10', world:0, title:'סבב האחדה — כל המסכים לספרייה המשותפת', desc:'סבב אחרון: כל מסך צורך את components.css, בלי כפילות רכיבים ובלי צבעים קשיחים.', cat:'design', phase:'mvpA', status:'todo', file:'',
+  { id:'W0-D10', world:0, title:'סבב האחדה — כל המסכים לספרייה המשותפת', desc:'סבב אחרון: כל מסך צורך את components.css, בלי כפילות רכיבים ובלי צבעים קשיחים.', cat:'design', phase:'mvpA', status:'done', file:'practice-engine.html, checkin-panel.html, messages-center.html, demo-unit-hebrew.html, student-subjects.html (קישור components.css + פתרון התנגשויות class)',
     prompt:'סבב האחדה חוצה-מסכים (עיצוב בלבד, בלי שינוי תוכן/התנהגות). עבור/י על כל מסכי גל A ואַחֵד אותם לספרייה המשותפת: (1) כל מסך חייב לקשר גם ל-components.css (לא רק tokens.css) ולצרוך את הרכיבים המשותפים (Button, Card, StatusChip, ProgressBar, SequenceLine/Step, MetricCard, ModeChip, CheckInPanel וכו\') במקום להעתיק סגנונות מקומית. (2) הסר/י צבעים קשיחים והחלף/י בטוקנים מ-tokens.css (fallback בתוך var() מותר רק אם הטוקן לא זמין ב-SVG). (3) ודא/י שקו-הרצף מופיע היכן שרלוונטי (מסלול/התקדמות) מהרכיב המשותף, לא כהעתק. אתרים ידועים לתיקון: student-subjects.html (6 hex, בלי components.css), practice-engine.html/checkin-panel.html/messages-center.html/demo-unit-hebrew.html (בלי components.css), student-tasks.html (2 hex). אל תשבור/י פריסה/RTL/נגישות AA — רק להאחיד. סרוק/י את כל קבצי ה-*.html של המסכים ותקן/י כל חריגה. בסיום — דווח/י רשימת מסכים שאוחדו ומה שונה.' },
 
   /* --- מינימיזציה ואבטחה --- */
@@ -163,7 +163,7 @@ window.TASKS = [
     prompt:'(גל B) בנה/י בונה בוחנים: שאלות (אמריקאי/פתוח קצר) + מפתח, תוצאות לכיתה ומעקב לאורך זמן. פרטי לכיתה.' },
   { id:'W2-09', world:2, title:'העלאת קבצי מורה + 3 רמות תמיכה', desc:'דף עבודה/מצגת → יחידה.', cat:'flow', phase:'mvpB', status:'done', file:'file-to-unit.html',
     prompt:'(גל B) בנה/י FileUploader למורה (דף עבודה/מצגת/קישור/טקסט/תוכנית לימודים) שהופך לחומר יחידה + יצירת 3 רמות תמיכה (תמיכה/ליבה/אתגר). 〰️ קו הרצף לתהליך "העלאה→ניתוח→התאמה→אישור→הקצאה". לפי content-standard.md.' },
-  { id:'W2-10', world:2, title:'מסך דוחות + ייצוא', desc:'התקדמות כיתה לאורך זמן.', cat:'screen', phase:'mvpB', status:'todo', file:'',
+  { id:'W2-10', world:2, title:'מסך דוחות + ייצוא', desc:'התקדמות כיתה לאורך זמן.', cat:'screen', phase:'mvpB', status:'done', file:'reports.html',
     prompt:'(גל B) בנה/י מסך דוחות מורה: התקדמות כיתה לאורך זמן (גרף קווי נקי) + ייצוא. פרטי לכיתה.' },
   { id:'W2-11', world:2, title:'ניהול שיעורי זום', desc:'תזמון, קישור, נוכחות.', cat:'integ', phase:'later', status:'todo', file:'',
     prompt:'(דחוי) ניהול שיעורי זום: תזמון/קישור/נוכחות. לא ב-MVP.' },
@@ -179,7 +179,7 @@ window.TASKS = [
     prompt:'(גל B) בנה/י פונקציית יידוע הורים: הודעה שבועית רגועה על פעילות הילד, יוצאת מהמחנך/מנהל. בלי לוגין הורה, בלי גישה ל-check-in/יומן קשר. דגל parentMessaging. לפי parent-weekly.md.' },
   { id:'W3-04', world:3, title:'מסך פעילות מורים', desc:'מי מלמד, איפה שקט.', cat:'screen', phase:'mvpB', status:'done', file:'teacher-activity.html',
     prompt:'(גל B) מסך פעילות מורים: מי שולח משימות ובאיזו תדירות, איפה שקט מתמשך. מצרפי.' },
-  { id:'W3-05', world:3, title:'מסך פעילות תלמידים', desc:'השתתפות, מגמות, נעלמים.', cat:'screen', phase:'mvpB', status:'todo', file:'',
+  { id:'W3-05', world:3, title:'מסך פעילות תלמידים', desc:'השתתפות, מגמות, נעלמים.', cat:'screen', phase:'mvpB', status:'done', file:'student-activity.html',
     prompt:'(גל B) מסך פעילות תלמידים: אחוזי check-in והגשה, מגמות, נעלמים. מצרפי + drill לכיתה (לא לחשיפת מב"ר).' },
   { id:'W3-06', world:3, title:'מעקב כיתות + מרכז התראות', desc:'תמונת כיתה + אדומים עם פעולה.', cat:'screen', phase:'mvpB', status:'done', file:'class-tracking.html',
     prompt:'(גל B) מעקב כיתות (פעילה/נחלשת לכל כיתה) + מרכז התראות (אדומים/מקצועות לא פעילים → כפתור פעולה).' },
@@ -187,25 +187,25 @@ window.TASKS = [
     prompt:'(גל B) בנה/י דוח יומי אוטומטי מצרפי ב-3 מספרים לוואטסאפ בשעה קבועה (daily-report-format.md). מצרפי, בלי שמות פומבי. api.whatsapp.com.' },
 
   /* ===== תצוגה 4 — מפקח מקצועי (גל B) ===== */
-  { id:'W4-01', world:4, title:'עורך יחידות לימוד', desc:'טופס מובנה לפי סטנדרט תוכן.', cat:'flow', phase:'mvpB', status:'todo', file:'content-standard.md',
+  { id:'W4-01', world:4, title:'עורך יחידות לימוד', desc:'טופס מובנה לפי סטנדרט תוכן.', cat:'flow', phase:'mvpB', status:'done', file:'unit-editor.html',
     prompt:'(גל B) בנה/י עורך יחידות בטופס מובנה לפי content-standard.md (פתיח, מנות קצרות, דוגמה, תרגול, רמות תמיכה). לא WYSIWYG מלא בשלב זה.' },
-  { id:'W4-02', world:4, title:'תהליך אישור תכנים', desc:'טיוטה → אישור → פרסום.', cat:'flow', phase:'mvpB', status:'todo', file:'',
+  { id:'W4-02', world:4, title:'תהליך אישור תכנים', desc:'טיוטה → אישור → פרסום.', cat:'flow', phase:'mvpB', status:'done', file:'content-approval.html',
     prompt:'(גל B) ממש/י workflow אישור: טיוטה→אישור→פרסום, סטטוס לכל יחידה. תוכן AI מסומן, אישור אנושי חובה לפני פרסום.' },
-  { id:'W4-03', world:4, title:'פרסום לספרייה', desc:'מאושר → אוטומטית לספרייה.', cat:'integ', phase:'mvpB', status:'todo', file:'',
+  { id:'W4-03', world:4, title:'פרסום לספרייה', desc:'מאושר → אוטומטית לספרייה.', cat:'integ', phase:'mvpB', status:'done', file:'publish-service.js + publish-flow.html',
     prompt:'(גל B) חבר/י פרסום: יחידה מאושרת מופיעה אוטומטית בספריית התוכן (תצוגה 6).' },
-  { id:'W4-04', world:4, title:'Dashboard מקצועי + אנליטיקה', desc:'אילו יחידות עובדות (מצרפי).', cat:'data', phase:'later', status:'todo', file:'',
+  { id:'W4-04', world:4, title:'Dashboard מקצועי + אנליטיקה', desc:'אילו יחידות עובדות (מצרפי).', cat:'data', phase:'later', status:'done', file:'subject-analytics.html',
     prompt:'(דחוי) Dashboard מקצועי: מצב תחום הדעת, יחידות מצליחות מול ננטשות. מצרפי, בלי נתוני קטין אישיים.' },
-  { id:'W4-05', world:4, title:'זיהוי פערים מקצועיים', desc:'איפה חסר תוכן.', cat:'data', phase:'later', status:'todo', file:'',
+  { id:'W4-05', world:4, title:'זיהוי פערים מקצועיים', desc:'איפה חסר תוכן.', cat:'data', phase:'later', status:'done', file:'gap-detection.html',
     prompt:'(דחוי) זיהוי פערים: איפה חסר תוכן / איפה תלמידים נתקעים. מצרפי.' },
 
   /* ===== תצוגה 5 — פיקוח ארצי (רובו דחוי) ===== */
-  { id:'W5-01', world:5, title:'Dashboard ארצי — מצרפי', desc:'מספרים בלבד, בלי drill לתלמיד.', cat:'screen', phase:'later', status:'todo', file:'national-map.html',
+  { id:'W5-01', world:5, title:'Dashboard ארצי — מצרפי', desc:'מספרים בלבד, בלי drill לתלמיד.', cat:'screen', phase:'later', status:'done', file:'national-map.html',
     prompt:'(דחוי) עדכן/י את national-map.html: תמונה ארצית מצרפית (מספרים), איפה מחזיק/נחלש. אין drill לתלמיד בודד (W0-S6). סימון מצוקה/תמיכה, לא דירוג פומבי.' },
-  { id:'W5-02', world:5, title:'מפת בתי הספר', desc:'מצב כל ביה"ס (מצרפי).', cat:'screen', phase:'later', status:'todo', file:'national-map.html',
+  { id:'W5-02', world:5, title:'מפת בתי הספר', desc:'מצב כל ביה"ס (מצרפי).', cat:'screen', phase:'later', status:'done', file:'national-map.html',
     prompt:'(דחוי) מפת בתי ספר עם מצב מצרפי לכל ביה"ס. בלי דירוג פומבי.' },
-  { id:'W5-03', world:5, title:'דוחות + הודעות ארציות', desc:'דוחות מצרפיים + הודעה ארצית.', cat:'screen', phase:'later', status:'todo', file:'',
+  { id:'W5-03', world:5, title:'דוחות + הודעות ארציות', desc:'דוחות מצרפיים + הודעה ארצית.', cat:'screen', phase:'later', status:'done', file:'national-reports.html',
     prompt:'(דחוי) הפקת דוחות מצרפיים (מחוז/מקצוע/זמן) + פרסום הודעה ארצית.' },
-  { id:'W5-04', world:5, title:'הרשאות + ניהול משתמשים ארצי', desc:'מטריצת תפקידים ארצית.', cat:'flow', phase:'later', status:'todo', file:'',
+  { id:'W5-04', world:5, title:'הרשאות + ניהול משתמשים ארצי', desc:'מטריצת תפקידים ארצית.', cat:'flow', phase:'later', status:'done', file:'national-roles.html',
     prompt:'(דחוי) ניהול תפקידים והרשאות ומשתמשים ברמה ארצית.' },
 
   /* ===== תצוגה 6 — ספריית התוכן ===== */
@@ -215,7 +215,7 @@ window.TASKS = [
     prompt:'בנה/י מנוע סינון (מקצוע/שכבה/רמה/סוג לפי taxonomy.md) + סכימת סוגי תוכן אחידה (יחידה/מצגת/סרטון/בוחן/דף עבודה/סימולציה/קישור). שילוב מסננים.' },
   { id:'W6-03', world:6, title:'עמוד משאב', desc:'תצוגה מקדימה + שבץ לכיתה.', cat:'screen', phase:'mvpA', status:'done', file:'resource-page.html',
     prompt:'בנה/י עמוד משאב: תצוגה מקדימה לפי סוג + פעולת "שבץ לכיתה" (למורה) + מטא (יוצר/תאריך אישור/שימושים).' },
-  { id:'W6-04', world:6, title:'מועדפים + שיתוף', desc:'אוסף אישי ושיתוף.', cat:'flow', phase:'mvpB', status:'todo', file:'',
+  { id:'W6-04', world:6, title:'מועדפים + שיתוף', desc:'אוסף אישי ושיתוף.', cat:'flow', phase:'mvpB', status:'done', file:'favorites.js + favorites.html',
     prompt:'(גל B) מועדפים (אוסף אישי לכל משתמש) + שיתוף משאב.' },
   { id:'W6-05', world:6, title:'דיווח + הצעת תוכן', desc:'דגל + תור אישור מפקח.', cat:'flow', phase:'later', status:'todo', file:'',
     prompt:'(דחוי) דיווח על תוכן בעייתי (דגל→מפקח) + מורה מציע תוכן→תור אישור.' },
@@ -223,15 +223,15 @@ window.TASKS = [
   /* ===== תצוגה 7 — קורסי העשרה ===== */
   { id:'W7-01', world:7, title:'קורס העשרה אחד (מקצה לקצה)', desc:'עמוד קורס → שיעור → מעקב.', cat:'screen', phase:'mvpA', status:'done', file:'enrichment-course.html',
     prompt:'בנה/י קורס העשרה יחיד מקצה-לקצה על מנוע היחידות: עמוד קורס (תיאור/יעדים/רשימת שיעורים), מסך שיעור (מבנה מנה קצרה כמו תצוגה 1), מעקב התקדמות. CourseCard לפי הבריף.' },
-  { id:'W7-02', world:7, title:'קטלוג קורסים', desc:'קטגוריות מרובות.', cat:'screen', phase:'later', status:'todo', file:'',
+  { id:'W7-02', world:7, title:'קטלוג קורסים', desc:'קטגוריות מרובות.', cat:'screen', phase:'later', status:'done', file:'course-catalog.html',
     prompt:'(דחוי) קטלוג קורסים (AI/יזמות/פיננסים/אנגלית/עיצוב…) עם סינון תחום/רמה.' },
   { id:'W7-03', world:7, title:'תעודת סיום', desc:'דגל certificates.', cat:'screen', phase:'later', status:'todo', file:'',
     prompt:'(דחוי) תעודת סיום קורס (דגל certificates). לא ב-MVP.' },
-  { id:'W7-04', world:7, title:'שילוב קורסים קיימים', desc:'קורס AI לתלמידים, פיננסקלאס.', cat:'integ', phase:'later', status:'todo', file:'',
+  { id:'W7-04', world:7, title:'שילוב קורסים קיימים', desc:'קורס AI לתלמידים, פיננסקלאס.', cat:'integ', phase:'later', status:'done', file:'course-integration.md',
     prompt:'(דחוי) לבדוק שילוב קורס-AI-לתלמידים ופיננסקלאס במקום כפילות.' },
 
   /* ===== תצוגה 8 — שירות AI (צד מורה ב-MVP) ===== */
-  { id:'W8-01', world:8, title:'AI למורה — חומר לימוד בלבד', desc:'חילוץ מטרות, פירוק מצגת, שאלות.', cat:'ai', phase:'mvpB', status:'todo', file:'ai-teacher-prompts.md',
+  { id:'W8-01', world:8, title:'AI למורה — חומר לימוד בלבד', desc:'חילוץ מטרות, פירוק מצגת, שאלות.', cat:'ai', phase:'mvpB', status:'done', file:'ai-teacher.html',
     prompt:'(גל B) בנה/י פאנל AI למורה על חומר לימוד בלבד: חילוץ מטרות ממסמך, פירוק מצגת ליחידה, יצירת שאלות/משוב, קיצור/התאמת שפה, 3 רמות תמיכה, כרטיס יציאה. אף פעם על נתוני תלמיד (W0-S4). לפי ai-teacher-prompts.md + ai-redlines.md.' },
   { id:'W8-02', world:8, title:'AI למנהל/מפקח — מצרפי', desc:'זיהוי מגמות על מצרפי.', cat:'ai', phase:'later', status:'todo', file:'',
     prompt:'(דחוי) AI על נתונים מצרפיים בלבד: זיהוי מגמות והמלצות. לא על קטין בודד.' },
@@ -241,7 +241,7 @@ window.TASKS = [
     prompt:'(דחוי) מסך ניהול redlines/prompts למנהל מערכת (ai-redlines.md).' },
 
   /* ===== תצוגה 9 — ניהול מערכת (דחוי) ===== */
-  { id:'W9-01', world:9, title:'ניהול משתמשים ובתי ספר', desc:'חשבונות + הקמת בתי ספר.', cat:'flow', phase:'later', status:'todo', file:'',
+  { id:'W9-01', world:9, title:'ניהול משתמשים ובתי ספר', desc:'חשבונות + הקמת בתי ספר.', cat:'flow', phase:'later', status:'done', file:'admin-users-schools.html',
     prompt:'(דחוי) ניהול משתמשים (חשבונות/איפוסים/חסימות) + בתי ספר (הקמה/עדכון/שיוך).' },
   { id:'W9-02', world:9, title:'הרשאות/תפקידים + הגדרות', desc:'מטריצת הרשאות + קונפיג.', cat:'flow', phase:'later', status:'todo', file:'',
     prompt:'(דחוי) מטריצת הרשאות/תפקידים + הגדרות מערכת גלובליות.' },
