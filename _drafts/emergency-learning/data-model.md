@@ -1,7 +1,8 @@
 # מערכת רציפות למידה — מודל הנתונים המשותף
 
-**גרסה:** 1.2 · **תאריך:** 9.7.2026 · **סטטוס:** טיוטה לאישור
+**גרסה:** 1.3 · **תאריך:** 15.7.2026 · **סטטוס:** טיוטה לאישור
 **מזהה משימה:** T0.2 · **מסמך-אב:** `spec.md`
+**עדכון 1.3 (15.7):** הסטת מרכז כובד ללמידה — נוספו `LearningSequence` (§2.4א, מסלול הלמידה), `SupportProfile` (§2.13, מנוע 3 רמות התמיכה), שדות רצף על `ContentUnit`, ומדדי למידה אמיתיים על `Submission` (`support_level`/`mastery`/`hint_used`/`recovered_after_error`/`rescue_path`).
 **עדכון 1.1:** יושר לאפיון המעודכן — נוספו ציונים (`Submission.grade` על `unit_type=assessment`), הרשמה (`Student.registered`), קבצים (`Attachment`), מסלולי העשרה (`EnrichmentTrack`), פריטי הפניה חיצוניים, והערת מחנך (`StudentNote`).
 **עדכון 1.2 (9.7):** נוסף תפקיד **יועצת** — `role` פוצל מ-`StaffMember` לטבלת `StaffRole` (כמה תפקידים לאדם), נוסף `role=counselor`, ונוספה ישות `FlagEvent` (מטא-דאטה של דגלים, נשמרת לשנה) שמאפשרת ליועצת לראות דפוס ארוך בלי התוכן הרגשי שנמחק ב-30 יום.
 **מיקום:** `_drafts/emergency-learning/`
@@ -15,7 +16,7 @@
 1. **`mode` על כל אירוע.** כל רשומה שמתעדת *התרחשות* (check-in, שליחת משימה, הגשה, פנייה, הודעה, מעבר מצב) נושאת שדה `mode` בערך `routine` / `remote` / `emergency`. זהו **ציר הניתוח המרכזי** של המערכת — כל דוח, כל מגמה וכל השוואה נחתכים לפיו. ישויות *סטטיות* (תלמיד, כיתה, איש צוות, בית ספר) אינן אירועים ולכן אין להן `mode`.
 2. **מקור אמת יחיד — אפס שכפול.** התוכן נכתב פעם אחת ב-`ContentUnit`. משימה שנשלחת (`Assignment`) *מפנה* אליו ב-FK, לא מעתיקה אותו. הסטטוס האישי (`Submission`) מפנה ל-`Assignment`. הדשבורדים (מחנך / מנהל / פיקוח) הם **שאילתות מסננות על אותן שורות** — לא טבלאות סיכום נפרדות. הזרימה פיקוח←ספרייה←מורה←תלמיד←דשבורדים כולה קוראת מאותו גרף נתונים.
 3. **מזעור ומחיקה מובנים (תיקון 13).** אוספים מינימום שדות (§7.2). ה-check-in הרגשי במצב חירום מסומן `is_sensitive` ותוכנו הרגשי נמחק אוטומטית **30 יום** מיצירתו. הפרדת הגישה נאכפת במבנה, לא בהצהרה: פיקוח שואב אגרגטים בלבד — אין נתיב שאילתה שמחזיר שם תלמיד לרמת הפיקוח.
-4. **שתי שכבות — קשר ולמידה.** שכבת הקשר (`CheckIn`, "המורה ראה") היא הליבה ונכנסת **בלי הרשמה**. שכבת הלמידה (`Assignment`/`Submission`, מופעי הערכה) דורשת תלמיד רשום (`Student.registered`). **ציון קיים רק על מופע הערכה** (`ContentUnit.unit_type='assessment'`) ונשמר ב-`Submission.grade` — אישי, בלי ממוצע פומבי ובלי השוואה. בחירום ההערכה זמינה אך רשות; הקשר תמיד קודם וההרשמה לעולם לא חוסמת check-in.
+4. **שתי שכבות — הלמידה מובילה, הקשר מפעיל.** שכבת הקשר (`CheckIn`, "המורה ראה") היא **מנגנון ההפעלה** ונכנסת בלי הרשמה. שכבת הלמידה — היעד — היא הרחבה יותר: `LearningSequence`+`ContentUnit.sequence_order` נותנים את **מסלול הלמידה** ("איפה אני / הבא"); `SupportProfile` הוא **מנוע ההתאמה** (3 רמות תמיכה, פר-מקצוע, לא תווית); ו-`Submission` נושא לא רק סטטוס אלא **מדדי למידה אמיתיים** (`support_level`/`mastery`/`hint_used`/`recovered_after_error`). **ציון קיים רק על מופע הערכה** ונשמר ב-`Submission.grade` — אישי, בלי ממוצע פומבי. בחירום ההערכה רשות; ההרשמה לעולם לא חוסמת check-in.
 
 ---
 
@@ -42,6 +43,8 @@ erDiagram
     STUDENT ||--o{ SUBMISSION : "מגיש"
 
     ENRICHMENT_TRACK ||--o{ CONTENT_UNIT : "מסלול העשרה (5-6 יחידות)"
+    LEARNING_SEQUENCE ||--o{ CONTENT_UNIT : "מסלול למידה מסודר (יחידה N מ-M)"
+    STUDENT ||--o{ SUPPORT_PROFILE : "רמת תמיכה פר-מקצוע"
     ASSIGNMENT ||--o{ ATTACHMENT : "חומר שהמורה צירף"
     STAFF_MEMBER ||--o{ ATTACHMENT : "העלה"
 
@@ -117,6 +120,8 @@ erDiagram
         string body "פתיח + מטלה (צעד 10 דק')"
         string unit_type "task/assessment/reference"
         string track_id FK "מסלול העשרה (nullable)"
+        string sequence_id FK "מסלול הלמידה (nullable)"
+        int sequence_order "מיקום ברצף — יחידה N מתוך M"
         string content_source "internal/external"
         string external_ref "קמפוס IL/מטח — לפריט הפניה"
         int est_minutes "צעד=10; משימה=שרשרת צעדים"
@@ -131,6 +136,23 @@ erDiagram
         string title "מסלול צילום / פיננסי / יזמות"
         string theme
         string description
+    }
+    LEARNING_SEQUENCE {
+        string id PK
+        string subject "מקצוע"
+        string grade "שכבה"
+        string title "מסלול אזרחות י׳ / לשון י׳"
+        int unit_count "כמה יחידות ברצף (M)"
+    }
+    SUPPORT_PROFILE {
+        string id PK
+        string student_id FK
+        string subject "פר-מקצוע — לא תווית קבועה"
+        string level "with_you/on_own/ahead"
+        string set_by "self/system — בחירת תלמיד או סימן מערכת"
+        int rescue_entries "כמה פעמים נכנס למסלול הצלה"
+        int rescue_recoveries "כמה יצא ממנו עם הצלחה"
+        datetime updated_at
     }
     ATTACHMENT {
         string id PK
@@ -166,6 +188,11 @@ erDiagram
         string status "not_started/started/completed"
         string feedback "משוב מילולי רשות"
         string grade "ציון — רק על unit_type=assessment (nullable)"
+        string support_level "with_you/on_own/ahead — באיזו רמה נעשתה"
+        string mastery "core/full — הבין ליבה או ליבה+הרחבות"
+        bool hint_used "נעזר ברמז"
+        bool recovered_after_error "טעה ואז הצליח"
+        bool rescue_path "נעשתה בגרסת מסלול ההצלה"
         bool seen_by_teacher "ראיתי → מפעיל המורה ראה"
         string mode "מוטבע לניתוח"
         datetime completed_at
@@ -294,6 +321,8 @@ erDiagram
 | body | text | פתיח שורה + מטלה ברורה |
 | **unit_type** | enum | `task` (משימת קשר/תרגול) / `assessment` (מופע הערכה — נושא ציון) / `reference` (פריט הפניה לתוכן חיצוני) |
 | **track_id** | FK→EnrichmentTrack? | שייכות למסלול העשרה (צילום/פיננסי/יזמות). `null` = תוכן ליבה |
+| **sequence_id** | FK→LearningSequence? | שייכות ל**מסלול למידה** מסודר. `null` = יחידה עצמאית |
+| **sequence_order** | int? | מיקום ברצף — הבסיס ל"יחידה N מתוך M" במסך התלמיד |
 | **content_source** | enum | `internal` (נכתב אצלנו) / `external` (עטיפת תוכן חיצוני) |
 | **external_ref** | string? | קישור לקמפוס IL/מטח/משה"ח — כשזה `reference`. המערכת מפנה, לא מחזיקה |
 | est_minutes | int | תקן ה**צעד** = 10. משימה משמעותית = כמה צעדים; מספר הצעדים לפי מצב |
@@ -304,6 +333,18 @@ erDiagram
 | active | bool | |
 
 **אין:** מחסן גולמי (המערכת מפנה למאגרים חיצוניים דרך `reference`, לא מחליפה אותם); תלות בספק חיצוני יחיד. **קבצים של המורה** נשמרים ב-`Attachment` (§2.11), לא בגוף היחידה.
+
+### 2.4א LearningSequence — מסלול למידה מסודר
+מגדיר את הרצף הלימודי שהופך יחידות בודדות ל**מסלול** ("איפה אני / מה הבא"). זהו המבנה שמחבר את מסך התלמיד (5.1.1) לתוכנית הלימודים.
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id | PK | |
+| subject | string | מקצוע (אזרחות / לשון) |
+| grade | enum | שכבה |
+| title | string | "מסלול אזרחות י׳" |
+| unit_count | int | כמה יחידות ברצף (ה-M ב"יחידה N מתוך M") |
+
+> ה"מסלול" נגזר בשאילתה: יחידות עם אותו `sequence_id`, ממוינות לפי `sequence_order`. מיקום התלמיד = ה-`sequence_order` המקסימלי שהושלם ב-`Submission`. אין טבלת-סיכום נפרדת — עקרון מקור-אמת-יחיד.
 
 ### 2.5 Assignment — שליחת משימה לכיתה
 | שדה | טיפוס | תיאור |
@@ -328,9 +369,16 @@ erDiagram
 | status | enum | `not_started` / `started` / `completed` |
 | feedback | text? | משוב מילולי-רשות מהמורה |
 | **grade** | string? | ציון — **רק** כאשר `ContentUnit.unit_type='assessment'`. אישי (תלמיד+מורה), בלי ממוצע פומבי. `null` על משימת קשר רגילה |
+| **support_level** | enum? | באיזו רמת תמיכה נעשתה: `with_you`/`on_own`/`ahead`. מזין את מנוע ההתאמה (5.1.2) |
+| **mastery** | enum? | `core` (הבין ליבה) / `full` (ליבה+הרחבות). "הבין ברמת ליבה" הוא מידע פדגוגי למורה, לא כישלון |
+| **hint_used** | bool | נעזר ברמז לפני התשובה — מזין את "שיעור הצלחה אחרי רמז" |
+| **recovered_after_error** | bool | טעה ואז הצליח — מזין את "אחוז ההתאוששות מטעות" |
+| **rescue_path** | bool | היחידה נעשתה בגרסת מסלול ההצלה (קצרה) |
 | seen_by_teacher | bool | לחיצת "ראיתי" → מפעילה "המורה ראה" אצל התלמיד |
 | mode | enum | מוטבע מה-Assignment לניתוח לפי מצב |
 | completed_at | datetime? | |
+
+> חמשת השדות `support_level`/`mastery`/`hint_used`/`recovered_after_error`/`rescue_path` הם **מדדי הלמידה האמיתיים** — הם מבדילים בין "לחץ עד הסוף" ל"הבין". מהם נגזרים מדדי-העל הלימודיים (spec §1) ודשבורד ההחלטה של המורה (5.3).
 
 ### 2.7 CheckIn — צ'ק-אין יומי
 | שדה | טיפוס | תיאור | פרטיות |
@@ -412,6 +460,23 @@ erDiagram
 | description | string | |
 
 > מסלול = אוסף של 5-6 `ContentUnit` (עם `track_id` זהה) שאפשר לעשות בכל סדר. **לא קורס רב-מפגשים ולא עץ תוכן** — אין נעילה בין יחידות.
+>
+> **הבחנה חשובה:** `EnrichmentTrack` = אוסף חופשי בלי סדר (העשרה). `LearningSequence` (§2.4א) = רצף ליבה מסודר עם מיקום. שניהם לא "קורס כבד".
+
+### 2.13 SupportProfile — רמת התמיכה של התלמיד (פר-מקצוע)
+מנוע ההתאמה (spec §5.1.2). **לא תווית קבועה על התלמיד** — רשומה פר-מקצוע שזזה לפי בחירתו וסימני המערכת.
+| שדה | טיפוס | תיאור | פרטיות |
+|------|-------|--------|---------|
+| id | PK | | |
+| student_id | FK→Student | | |
+| subject | string | פר-מקצוע — "רץ קדימה" בלשון ו"אני איתך" במתמטיקה באותו יום | |
+| level | enum | `with_you` (אני איתך) / `on_own` (מנסה לבד — ברירת מחדל) / `ahead` (רץ קדימה) | **בין תלמיד למורה בלבד** — לא פומבי, לא משווה |
+| set_by | enum | `self` (התלמיד בחר "איך בא לך") / `system` (2 טעויות → הצעת הצלה; רצף הצלחות → קדימה) | |
+| rescue_entries | int | כמה פעמים נכנס למסלול הצלה | |
+| rescue_recoveries | int | כמה יצא ממנו עם הצלחה — מזין "אחוז התאוששות" | |
+| updated_at | datetime | | |
+
+> **הכבוד לתלמיד נאכף במבנה:** אין נתיב שאילתה שמחזיר `level` לתצוגה פומבית או להשוואה בין תלמידים. המורה רואה **פילוח מצרפי** לכיתה שלו (כמה בכל רמה, מי במסלול הצלה) — לא "דירוג" תלמידים. התלמיד עצמו רואה בחירה ידידותית, לא תווית.
 
 ### 2.13 StudentNote — הערת מחנך
 | שדה | טיפוס | תיאור | פרטיות |
