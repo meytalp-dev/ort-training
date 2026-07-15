@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף — שער כניסה למערכת</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: var(--font-body);
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, var(--brand-soft) 0%, transparent 55%),
+      radial-gradient(900px 500px at 5% 110%, #EEF7F5 0%, transparent 55%),
+      var(--bg);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: clamp(20px, 4vw, 44px) 20px 60px; }
+
+  /* --- כותרת עליונה --- */
+  .top { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom: clamp(26px, 4vw, 44px); }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand .mark {
+    width:52px; height:52px; border-radius:15px;
+    background: linear-gradient(150deg, var(--brand-bright), var(--brand-deep));
+    display:grid; place-items:center; box-shadow: var(--shadow-brand); flex-shrink:0;
+  }
+  .brand .name { display:flex; flex-direction:column; line-height:1.15; }
+  .brand .name b { font-family:var(--font-head); font-weight:800; font-size:24px; color:var(--ink-strong); letter-spacing:.5px; }
+  .brand .name span { font-size:13px; color:var(--ink-soft); font-weight:600; }
+
+  .modes { display:flex; gap:6px; background:var(--card); padding:6px; border-radius:var(--radius-pill); box-shadow:var(--shadow-card); border:1px solid var(--line); }
+  .modes button {
+    font-family:var(--font-body); font-size:13.5px; font-weight:700; color:var(--ink-soft);
+    border:none; background:transparent; padding:8px 15px; border-radius:var(--radius-pill);
+    cursor:pointer; display:flex; align-items:center; gap:7px; transition:.16s;
+  }
+  .modes button .dot { width:9px; height:9px; border-radius:50%; background:currentColor; opacity:.5; }
+  .modes button[data-m="routine"]   { --c:var(--routine); }
+  .modes button[data-m="remote"]    { --c:var(--remote); }
+  .modes button[data-m="emergency"] { --c:var(--emergency); }
+  .modes button[aria-pressed="true"] { color:#fff; background:var(--c); box-shadow:0 2px 8px color-mix(in srgb, var(--c) 40%, transparent); }
+  .modes button[aria-pressed="true"] .dot { opacity:1; background:#fff; }
+
+  /* --- Hero --- */
+  .hero { margin-bottom: clamp(24px, 3vw, 34px); }
+  .hero .kicker {
+    display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:700;
+    color:var(--mode); background:var(--mode-soft); border:1px solid var(--mode-line);
+    padding:6px 14px; border-radius:var(--radius-pill); margin-bottom:16px;
+  }
+  .hero .kicker .pulse { width:8px; height:8px; border-radius:50%; background:var(--mode); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--mode) 60%,transparent);} 70%{box-shadow:0 0 0 9px transparent;} 100%{box-shadow:0 0 0 0 transparent;} }
+  .hero h1 { font-family:var(--font-head); font-size:clamp(28px,5vw,42px); font-weight:800; color:var(--ink-strong); line-height:1.15; margin-bottom:12px; }
+  .hero p { font-size:clamp(16px,2.2vw,19px); color:var(--ink-soft); max-width:58ch; line-height:1.55; }
+
+  /* --- חיפוש --- */
+  .searchbar { position:sticky; top:12px; z-index:20; margin: 20px 0 8px; }
+  .searchbar .box { display:flex; align-items:center; gap:10px; background:var(--card); border:1.5px solid var(--line-strong); border-radius:var(--radius-pill); padding:12px 18px; box-shadow:var(--shadow-card); }
+  .searchbar .box:focus-within { border-color:var(--brand); box-shadow:var(--shadow-brand); }
+  .searchbar svg { width:20px; height:20px; color:var(--ink-faint); flex-shrink:0; }
+  .searchbar input { flex:1; border:none; outline:none; background:transparent; font-family:var(--font-body); font-size:16px; color:var(--ink); }
+  .searchbar input::placeholder { color:var(--ink-faint); }
+  .searchbar .count { font-size:12.5px; font-weight:700; color:var(--ink-faint); white-space:nowrap; }
+
+  /* --- כרטיסי תפקיד --- */
+  h2.section { font-family:var(--font-head); font-size:15px; font-weight:800; color:var(--ink-soft); letter-spacing:.4px; margin:30px 4px 15px; display:flex; align-items:center; gap:10px; }
+  h2.section .tag { font-size:11.5px; font-weight:700; color:var(--ink-faint); background:var(--surface-muted); padding:2px 9px; border-radius:var(--radius-pill); }
+  h2.section::after { content:""; flex:1; height:1px; background:var(--line); }
+
+  .grid { display:grid; gap:15px; grid-template-columns:repeat(auto-fill, minmax(224px, 1fr)); }
+  .card {
+    display:flex; flex-direction:column; gap:11px; text-decoration:none;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius-lg);
+    padding:20px; box-shadow:var(--shadow-card); transition:.18s ease; position:relative; overflow:hidden;
+  }
+  .card::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--accent, var(--brand)); opacity:.85; }
+  .card:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); border-color:var(--line-strong); }
+  .card:focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
+  .card .ic { width:44px; height:44px; border-radius:13px; display:grid; place-items:center; background:var(--accent-soft, var(--brand-soft)); color:var(--accent, var(--brand)); }
+  .card .ic svg { width:23px; height:23px; }
+  .card h3 { font-family:var(--font-head); font-size:18px; font-weight:800; color:var(--ink-strong); }
+  .card p { font-size:13.5px; color:var(--ink-soft); line-height:1.5; flex:1; }
+  .card .go { font-size:13px; font-weight:700; color:var(--accent, var(--brand)); display:flex; align-items:center; gap:6px; }
+  .card .go svg { width:15px; height:15px; transition:.18s; }
+  .card:hover .go svg { transform:translateX(-4px); }
+
+  .card.student   { --accent:#7A3EA6; --accent-soft:#F5EDFB; }
+  .card.teacher   { --accent:var(--brand-deep); --accent-soft:var(--brand-soft); }
+  .card.educator  { --accent:#2D8CFF; --accent-soft:#EDF5FF; }
+  .card.principal { --accent:#C77817; --accent-soft:#FBF3DE; }
+  .card.national  { --accent:#3AA65A; --accent-soft:#E8F6EC; }
+  .card.parent    { --accent:#D9574F; --accent-soft:#FBEBEA; }
+
+  /* --- ספריית מסכים מלאה (chips) --- */
+  .dir { margin-top:10px; }
+  .group { margin-bottom:6px; }
+  .group > h3 { font-family:var(--font-head); font-size:14.5px; font-weight:800; color:var(--ink-strong); margin:22px 4px 12px; display:flex; align-items:center; gap:9px; }
+  .group > h3 .gi { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; background:var(--g,var(--brand-soft)); color:var(--gc,var(--brand)); flex-shrink:0; }
+  .group > h3 .gi svg { width:15px; height:15px; }
+  .chips { display:grid; gap:9px; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); }
+  .chip { display:flex; align-items:center; gap:10px; text-decoration:none; background:var(--card); border:1px solid var(--line); border-radius:var(--radius-md); padding:11px 13px; transition:.14s; color:var(--ink); }
+  .chip:hover { border-color:var(--brand-line); background:var(--brand-soft); transform:translateX(-2px); }
+  .chip:focus-visible { outline:2.5px solid var(--brand); outline-offset:1px; }
+  .chip .dotc { width:8px; height:8px; border-radius:50%; background:var(--gc,var(--brand)); flex-shrink:0; opacity:.7; }
+  .chip b { font-size:14px; font-weight:600; color:var(--ink-strong); line-height:1.25; }
+  .chip.hidden { display:none; }
+  .group.hidden { display:none; }
+
+  .empty { display:none; text-align:center; padding:40px 20px; color:var(--ink-faint); font-size:15px; }
+  .empty.show { display:block; }
+
+  footer { margin-top:44px; text-align:center; font-size:12.5px; color:var(--ink-faint); line-height:1.7; }
+  footer b { color:var(--ink-soft); }
+
+  @media (max-width:520px){
+    .top { flex-direction:column; align-items:stretch; }
+    .modes { justify-content:center; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 34 34" width="30" height="30" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 8 C9.5 10.3 11.5 10.3 14 8 C16.5 5.7 18.5 5.7 21 8 C23.5 10.3 25.5 10.3 28 8"/>
+          <path d="M4 17 C6.5 14.7 8.5 14.7 11 17 C13.5 19.3 15.5 19.3 18 17 C20.5 14.7 22.5 14.7 25 17 C27.5 19.3 28.5 19.3 30 17"/>
+          <path d="M7 26 C9.5 28.3 11.5 28.3 14 26 C16.5 23.7 18.5 23.7 21 26 C23.5 28.3 25.5 28.3 28 26"/>
+        </svg>
+      </div>
+      <div class="name">
+        <b>רֶצֶף</b>
+        <span>רציפות למידה — בכל מצב</span>
+      </div>
+    </div>
+
+    <div class="modes" role="group" aria-label="מצב המערכת">
+      <button data-m="routine"   aria-pressed="true"><span class="dot"></span>שגרה</button>
+      <button data-m="remote"    aria-pressed="false"><span class="dot"></span>מרחוק</button>
+      <button data-m="emergency" aria-pressed="false"><span class="dot"></span>חירום</button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <span class="kicker"><span class="pulse"></span><span id="modeLabel">המערכת פועלת במצב שגרה</span></span>
+    <h1>שער הכניסה לרֶצֶף</h1>
+    <p>מערכת אחת שמלווה את הלמידה בכל מצב — שגרה, למידה מרחוק וחירום. בחרו תפקיד למעלה, או חפשו כל מסך במערכת.</p>
+  </section>
+
+  <!-- חיפוש -->
+  <div class="searchbar">
+    <div class="box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="חיפוש מסך… (למשל: בוחן, דוח, הורים, תרגול)" aria-label="חיפוש מסך במערכת">
+      <span class="count" id="count"></span>
+    </div>
+  </div>
+
+  <!-- כרטיסי תפקיד ראשיים -->
+  <h2 class="section">כניסה מהירה לפי תפקיד</h2>
+  <div class="grid" id="roleGrid">
+    <a class="card student" href="student-home.html" data-k="תלמיד בית שלי משימות מקצועות התקדמות">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1 2.7 3 6 3s6-2 6-3v-5.5"/></svg></div>
+      <h3>תלמיד/ה</h3><p>המשימות, המקצועות, ההתקדמות והסרטונים — במקום אחד.</p>
+      <span class="go">כניסה <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+    </a>
+    <a class="card teacher" href="teacher-dashboard.html" data-k="מורה לוח כיתה שיעור משימה">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H4z"/><path d="M4 20h16"/><path d="M9 9h6M9 12.5h4"/></svg></div>
+      <h3>מורה</h3><p>לוח הכיתה, בניית שיעורים ומשימות, מעקב תלמידים.</p>
+      <span class="go">כניסה <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+    </a>
+    <a class="card educator" href="educator-pulse.html" data-k="מחנך דופק כיתה הורים קשר">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg></div>
+      <h3>מחנך/ת</h3><p>דופק הכיתה, קשרי הורים ומעקב רצף.</p>
+      <span class="go">כניסה <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+    </a>
+    <a class="card principal" href="principal-pulse.html" data-k="מנהל בית ספר ניהול הרשאות">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg></div>
+      <h3>מנהל/ת</h3><p>דופק בית הספר, ניהול משתמשים, הרשאות ומערכות.</p>
+      <span class="go">כניסה <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+    </a>
+    <a class="card national" href="national-map.html" data-k="מטה ארצי פיקוח מפה דוחות">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/></svg></div>
+      <h3>מטה ארצי</h3><p>מפה ארצית, דוחות רשת ותמונת מצב כלל־ארצית.</p>
+      <span class="go">כניסה <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+    </a>
+    <a class="card parent" href="parent-weekly.html" data-k="הורה יידוע שבועי סיכום">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3-5 7-5s7 1.7 7 5"/><circle cx="18" cy="9" r="2.2"/><path d="M16 20c0-2.2 1-3.6 4-3.6 1 0 1.7.2 2 .4"/></svg></div>
+      <h3>הורה</h3><p>הסיכום השבועי — מה נלמד, מה הוגש ואיך לעזור.</p>
+      <span class="go">כניסה <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+    </a>
+  </div>
+
+  <!-- ספריית מסכים מלאה -->
+  <h2 class="section">כל המסכים במערכת <span class="tag" id="totalTag"></span></h2>
+  <div class="dir" id="dir">
+
+    <div class="group" style="--g:#F5EDFB;--gc:#7A3EA6">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1 2.7 3 6 3s6-2 6-3v-5.5"/></svg></span>מרחב התלמיד</h3>
+      <div class="chips">
+        <a class="chip" href="student-home.html"><span class="dotc"></span><b>הבית שלי</b></a>
+        <a class="chip" href="student-tasks.html"><span class="dotc"></span><b>המשימות שלי</b></a>
+        <a class="chip" href="student-subjects.html"><span class="dotc"></span><b>המקצועות שלי</b></a>
+        <a class="chip" href="student-progress.html"><span class="dotc"></span><b>המסלול שלי</b></a>
+        <a class="chip" href="student-videos.html"><span class="dotc"></span><b>סרטוני הסבר</b></a>
+        <a class="chip" href="worlds-hub.html"><span class="dotc"></span><b>מרכז העולמות</b></a>
+        <a class="chip" href="messages-center.html"><span class="dotc"></span><b>מרכז ההודעות שלי</b></a>
+        <a class="chip" href="favorites.html"><span class="dotc"></span><b>המועדפים שלי</b></a>
+        <a class="chip" href="checkin-panel.html"><span class="dotc"></span><b>צ׳ק-אין יומי</b></a>
+        <a class="chip" href="demo-unit-hebrew.html"><span class="dotc"></span><b>דמו · יחידת עברית</b></a>
+        <a class="chip" href="demo-lashon-3levels.html"><span class="dotc"></span><b>דמו · לשון ב-3 רמות</b></a>
+        <a class="chip" href="mission-demo.html"><span class="dotc"></span><b>דמו · יחידת 10 דקות</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:var(--brand-soft);--gc:var(--brand-deep)">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H4z"/><path d="M4 20h16"/></svg></span>מרחב המורה</h3>
+      <div class="chips">
+        <a class="chip" href="teacher-dashboard.html"><span class="dotc"></span><b>Dashboard מורה</b></a>
+        <a class="chip" href="teacher-class-board.html"><span class="dotc"></span><b>הכיתה שלי · לוח הגשות</b></a>
+        <a class="chip" href="teacher-flow.html"><span class="dotc"></span><b>שליחת משימה</b></a>
+        <a class="chip" href="lesson-create.html"><span class="dotc"></span><b>יצירת שיעור</b></a>
+        <a class="chip" href="quiz-builder.html"><span class="dotc"></span><b>בונה בוחנים</b></a>
+        <a class="chip" href="unit-editor.html"><span class="dotc"></span><b>עורך יחידות לימוד</b></a>
+        <a class="chip" href="file-to-unit.html"><span class="dotc"></span><b>מחומר ליחידה</b></a>
+        <a class="chip" href="practice-engine.html"><span class="dotc"></span><b>מנוע תרגול ובוחן</b></a>
+        <a class="chip" href="learning-games.html"><span class="dotc"></span><b>משחקי תרגול לחיזוק</b></a>
+        <a class="chip" href="reports.html"><span class="dotc"></span><b>דוחות מורה</b></a>
+        <a class="chip" href="contact-log-teacher.html"><span class="dotc"></span><b>יומן קשר · מחנך</b></a>
+        <a class="chip" href="content-sharing.html"><span class="dotc"></span><b>שיתוף עם מורה עמית</b></a>
+        <a class="chip" href="seen-flow.html"><span class="dotc"></span><b>״ראיתי״ · נראות תלמיד</b></a>
+        <a class="chip" href="ai-teacher.html"><span class="dotc"></span><b>עוזר AI לתוכן</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:#EDF5FF;--gc:#2D8CFF">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg></span>מרחב המחנך</h3>
+      <div class="chips">
+        <a class="chip" href="educator-pulse.html"><span class="dotc"></span><b>רצף הקשר · דופק</b></a>
+        <a class="chip" href="contact-log.html"><span class="dotc"></span><b>יומן קשר</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:#FBF3DE;--gc:#C77817">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/></svg></span>ניהול בית ספר</h3>
+      <div class="chips">
+        <a class="chip" href="principal-pulse.html"><span class="dotc"></span><b>דופק בית הספר</b></a>
+        <a class="chip" href="class-tracking.html"><span class="dotc"></span><b>מעקב כיתות והתראות</b></a>
+        <a class="chip" href="student-activity.html"><span class="dotc"></span><b>פעילות תלמידים</b></a>
+        <a class="chip" href="teacher-activity.html"><span class="dotc"></span><b>פעילות מורים</b></a>
+        <a class="chip" href="subject-analytics.html"><span class="dotc"></span><b>לוח מקצועי · תחום דעת</b></a>
+        <a class="chip" href="gap-detection.html"><span class="dotc"></span><b>זיהוי פערים מקצועיים</b></a>
+        <a class="chip" href="daily-report.html"><span class="dotc"></span><b>הדוח היומי לוואטסאפ</b></a>
+        <a class="chip" href="mode-switch.html"><span class="dotc"></span><b>החלפת מצב מערכת</b></a>
+        <a class="chip" href="admin-users-schools.html"><span class="dotc"></span><b>ניהול משתמשים ובתי ספר</b></a>
+        <a class="chip" href="admin-roles-settings.html"><span class="dotc"></span><b>הרשאות והגדרות</b></a>
+        <a class="chip" href="admin-integrations.html"><span class="dotc"></span><b>אינטגרציות וגיבוי</b></a>
+        <a class="chip" href="ai-admin-insights.html"><span class="dotc"></span><b>תובנות AI מצרפיות</b></a>
+        <a class="chip" href="ai-redlines-admin.html"><span class="dotc"></span><b>גבולות AI ופרומפטים</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:#E8F6EC;--gc:#3AA65A">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg></span>מטה ארצי · פיקוח</h3>
+      <div class="chips">
+        <a class="chip" href="national-map.html"><span class="dotc"></span><b>תמונה ארצית · מפה</b></a>
+        <a class="chip" href="national-reports.html"><span class="dotc"></span><b>דוחות והודעות ארציות</b></a>
+        <a class="chip" href="national-roles.html"><span class="dotc"></span><b>הרשאות וניהול תפקידים</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:#FBEBEA;--gc:#D9574F">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3-5 7-5s7 1.7 7 5"/></svg></span>הורים</h3>
+      <div class="chips">
+        <a class="chip" href="parent-weekly.html"><span class="dotc"></span><b>יידוע הורים · שבועי</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:var(--brand-soft);--gc:var(--brand)">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v14M8 5v14M13 6l5 13M4 19h16"/></svg></span>תוכן, ספרייה וקורסים</h3>
+      <div class="chips">
+        <a class="chip" href="library.html"><span class="dotc"></span><b>ספריית התוכן</b></a>
+        <a class="chip" href="library-filters.html"><span class="dotc"></span><b>מסנני ספרייה</b></a>
+        <a class="chip" href="course-catalog.html"><span class="dotc"></span><b>קטלוג הקורסים</b></a>
+        <a class="chip" href="enrichment-course.html"><span class="dotc"></span><b>קורס העשרה · צילום</b></a>
+        <a class="chip" href="content/annual-plan.html"><span class="dotc"></span><b>תוכנית שנתית · 22 מקצועות</b></a>
+        <a class="chip" href="content-approval.html"><span class="dotc"></span><b>אישור תוכן</b></a>
+        <a class="chip" href="content-production-board.html"><span class="dotc"></span><b>לוח ייצור תוכן</b></a>
+        <a class="chip" href="content-reports.html"><span class="dotc"></span><b>דיווח והצעות תוכן</b></a>
+        <a class="chip" href="publish-flow.html"><span class="dotc"></span><b>פרסום · אישור→מדף</b></a>
+        <a class="chip" href="resource-page.html"><span class="dotc"></span><b>עמוד משאב</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:var(--surface-muted);--gc:var(--ink-soft)">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M3 9h6"/></svg></span>מסכים משותפים ומצבי מערכת</h3>
+      <div class="chips">
+        <a class="chip" href="alert-center.html"><span class="dotc"></span><b>מרכז התראות משותף</b></a>
+        <a class="chip" href="search-field.html"><span class="dotc"></span><b>חיפוש חכם משותף</b></a>
+        <a class="chip" href="system-modes.html"><span class="dotc"></span><b>מצבי מערכת</b></a>
+        <a class="chip" href="feature-flags.html"><span class="dotc"></span><b>Feature Flags · יכולות</b></a>
+        <a class="chip" href="checkin-service.html"><span class="dotc"></span><b>שירות צ׳ק-אין</b></a>
+        <a class="chip" href="app-shells.html"><span class="dotc"></span><b>App Shells + ניווט</b></a>
+        <a class="chip" href="dashboard-template.html"><span class="dotc"></span><b>תבנית Dashboard</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:#F5EDFB;--gc:#7A3EA6">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>שפת עיצוב ורכיבים</h3>
+      <div class="chips">
+        <a class="chip" href="design-system.html"><span class="dotc"></span><b>שפה עיצובית חיה</b></a>
+        <a class="chip" href="ui-components.html"><span class="dotc"></span><b>רכיבי UI בסיס</b></a>
+        <a class="chip" href="data-components.html"><span class="dotc"></span><b>טבלאות · גרפים · מצבי-ריק</b></a>
+        <a class="chip" href="sequence-line.html"><span class="dotc"></span><b>קו הרצף · SequenceLine</b></a>
+        <a class="chip" href="duration-picker.html"><span class="dotc"></span><b>מודל משך + DurationPicker</b></a>
+        <a class="chip" href="accessibility.html"><span class="dotc"></span><b>שכבת נגישות WCAG AA</b></a>
+        <a class="chip" href="logo.html"><span class="dotc"></span><b>לוגו ווריאציות</b></a>
+      </div>
+    </div>
+
+    <div class="group" style="--g:var(--surface-muted);--gc:var(--ink-soft)">
+      <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span>אפיון, ניהול ומסמכים</h3>
+      <div class="chips">
+        <a class="chip" href="management.html"><span class="dotc"></span><b>לוח ניהול הפרויקט</b></a>
+        <a class="chip" href="world-board.html"><span class="dotc"></span><b>לוח משימות · עולמות</b></a>
+        <a class="chip" href="spec.html"><span class="dotc"></span><b>מסמך אפיון</b></a>
+        <a class="chip" href="roles.html"><span class="dotc"></span><b>הגדרות תפקידים</b></a>
+        <a class="chip" href="decisions.html"><span class="dotc"></span><b>החלטות ממתינות</b></a>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="empty" id="empty">לא נמצא מסך שמתאים לחיפוש.</div>
+
+  <footer>
+    <b>רֶצֶף</b> — מערכת רציפות למידה · אורט בית הערבה<br>
+    שער כניסה מאוחד · טיוטת עבודה
+  </footer>
+
+</div>
+
+<script>
+  // --- מצב מערכת ---
+  const labels = { routine:'המערכת פועלת במצב שגרה', remote:'המערכת פועלת במצב למידה מרחוק', emergency:'המערכת פועלת במצב חירום' };
+  const html = document.documentElement, modeLabel = document.getElementById('modeLabel');
+  document.querySelectorAll('.modes button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const m = btn.dataset.m;
+      html.setAttribute('data-mode', m);
+      document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-pressed', b === btn));
+      modeLabel.textContent = labels[m];
+      try { localStorage.setItem('retzef-mode', m); } catch(e){}
+    });
+  });
+  try { const s = localStorage.getItem('retzef-mode'); if (s && labels[s]) document.querySelector('.modes button[data-m="'+s+'"]').click(); } catch(e){}
+
+  // --- ספירת מסכים + חיפוש ---
+  const chips = Array.from(document.querySelectorAll('.dir .chip'));
+  document.getElementById('totalTag').textContent = chips.length + ' מסכים';
+  const q = document.getElementById('q'), count = document.getElementById('count'), empty = document.getElementById('empty');
+  const groups = Array.from(document.querySelectorAll('.dir .group'));
+  const roleCards = Array.from(document.querySelectorAll('#roleGrid .card'));
+
+  function norm(s){ return s.replace(/[־–]/g,' ').toLowerCase(); }
+  function filter(){
+    const term = norm(q.value.trim());
+    let shown = 0;
+    chips.forEach(c => {
+      const hit = !term || norm(c.textContent + ' ' + c.getAttribute('href')).includes(term);
+      c.classList.toggle('hidden', !hit);
+      if (hit) shown++;
+    });
+    groups.forEach(g => g.classList.toggle('hidden', !g.querySelector('.chip:not(.hidden)')));
+    roleCards.forEach(rc => rc.style.display = (!term || norm(rc.textContent + ' ' + rc.dataset.k).includes(term)) ? '' : 'none');
+    count.textContent = term ? shown + ' תוצאות' : '';
+    empty.classList.toggle('show', shown === 0 && term);
+  }
+  q.addEventListener('input', filter);
+</script>
+</body>
+</html>
