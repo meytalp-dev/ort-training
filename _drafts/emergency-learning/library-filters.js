@@ -84,10 +84,12 @@
     { id: 'יב', label: 'יב׳' }
   ];
 
-  // רמת קושי (content-standard.md §171): basic / advanced.
+  // 3 רמות קנוניות (content-standard.md §183 · data-model.md v4 §3.4).
+  // standard = ברירת המחדל. התלמיד לא רואה את שם הרמה — זה סינון למורה.
   var LEVELS = [
-    { id: 'basic',    label: 'בסיס' },
-    { id: 'advanced', label: 'מתקדם' }
+    { id: 'basic',    label: 'נגישה' },
+    { id: 'standard', label: 'רגילה' },
+    { id: 'advanced', label: 'מתקדמת' }
   ];
 
   // סכימת סוגי-התוכן האחידה (7 סוגים).

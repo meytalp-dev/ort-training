@@ -85,7 +85,10 @@
     other:   'כללי'
   };
   var GRADES = { t: "ט'", y: "י'", ya: "י\"א", yb: "י\"ב" };
-  var LEVELS = { basic: 'בסיסי', regular: 'רגיל', advanced: 'מתקדם' };
+  /* 3 רמות קנוניות (content-standard.md §183 · data-model.md v4 §3.4).
+   * התוויות נמנעות במכוון מהמילה "בסיס" — היא דו-משמעית: בתקן היא התווית של
+   * standard ("מנסה לבד"), ובקוד הישן שימשה ל-basic. המפתח הוא החוזה, לא התווית. */
+  var LEVELS = { basic: 'נגישה', standard: 'רגילה', advanced: 'מתקדמת' };
   var TYPES  = {
     unit:  'יחידה',   deck: 'מצגת',   video: 'סרטון', quiz: 'בוחן',
     work:  'דף עבודה', sim:  'סימולציה', link: 'קישור'
@@ -143,12 +146,24 @@
     return '';
   }
 
+  /* מקפל אותיות סופיות (ך ם ן ף ץ → כ מ נ פ צ).
+   * חובה: "מתקדם" (ם סופית) אינו תת-מחרוזת של "מתקדמת" (מ רגילה) — בלי הקיפול,
+   * התווית "מתקדמת" נופלת בשקט ל-standard. */
+  function foldFinals(s) {
+    return s.replace(/ך/g, 'כ').replace(/ם/g, 'מ').replace(/ן/g, 'נ')
+            .replace(/ף/g, 'פ').replace(/ץ/g, 'צ');
+  }
+
   function levelKey(raw) {
     if (LEVELS[raw]) return raw;                 // כבר מפתח קנוני
-    var he = heLettersOnly(raw);
-    if (he.indexOf('בסיס') !== -1) return 'basic';
-    if (he.indexOf('מתקדם') !== -1) return 'advanced';
-    return 'regular';                            // ברירת-מחדל: רגיל
+    if (raw === 'regular') return 'standard';    // מפתח ישן שהוצא משימוש
+    var he = foldFinals(heLettersOnly(raw));
+    /* הצורות מקופלות — חייבות להתאים ל-foldFinals ("איתך"→"איתכ", "רץ"→"רצ").
+     * basic נבדק ראשון כי "נגיש" חד-משמעי.
+     * "בסיס" → standard לפי התקן §183 ("standard = בסיס · מנסה לבד"). */
+    if (he.indexOf('נגיש') !== -1 || he.indexOf('איתכ') !== -1 || he.indexOf('לאטובטוח') !== -1) return 'basic';
+    if (he.indexOf('מתקדמ') !== -1 || he.indexOf('אתגר') !== -1 || he.indexOf('רצקדימה') !== -1) return 'advanced';
+    return 'standard';                           // ברירת-מחדל: רגילה (כולל "בסיס"/"מנסה לבד")
   }
 
   function typeKey(raw) {
