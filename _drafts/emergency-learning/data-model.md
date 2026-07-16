@@ -16,6 +16,7 @@
 | 2 | **check-in רגשי = מתריע ונמחק** (סטטוס חד-פעמי, בלי היסטוריה). `FlagEvent` (מטא לשנה) + תפקיד `counselor` **הועברו לנספח "מורחב — לא ב-MVP-A"** (§10). | prd §10 + `security-minimization.md` §3 שורה 3: "מתריע ונמחק… **לא נבנית היסטוריה רגשית.** סטטוס חד-פעמי, לא לוג". שמירת מטא-דגלים לשנה סותרת את גרסת "בטוחה-לביקורת". |
 | 3 | **יומן קשר + הערת מחנך = שדות מובנים בלבד** — הוסר שדה טקסט חופשי מ-MVP. | `security-minimization.md` §3 שורה 4: "שדה חופשי הוא הכי מסוכן… שדות מובנים בלבד (ערוץ / תוצאה / משימת המשך)". |
 | 4 (15.7.2026) | **`ContentUnit.level` נוסף — 3 רמות** (`basic`/`standard`/`advanced`), מתלכד עם `support_level` (`with_you`/`on_own`/`ahead`). §3.4. | הכרעת מיטל 15.7 + הדמו הדיפרנציאלי. יישור מול `content-standard.md` §2 ותמיכה במגמות המקצועיות (`taxonomy.md` §8). התלמיד לא רואה את שם הרמה. |
+| 5 (16.7.2026) | **מודל שני-צירים** — נוספו `LearningGroup` (קבוצת לימוד אקדמית) + `Enrollment` (שיוך רב-רבים). `Assignment` עבר ל**יעד פולימורפי** (`target_type`/`target_id`). `StaffRole.role` קיבל `substitute`. `Class` קיבל `school_year`/`archived`. §3.3b. | `operational-envelope.md` §1. `Student.class_id` הבודד = "כיתה אחת לתלמיד" — שבור לתיכון מקצועי-מגמתי (תלמיד עם מורה שונה לכל מקצוע) ולסקייל. `Class` נשאר **הציר הפסטורלי** (check-in/דופק — לא זז); `LearningGroup` = **ציר אקדמי** נפרד. |
 
 **עקרון "לא מוחקים עבודה":** מה שהוסר מ-MVP-A לא נמחק — הוא יושב ב-§10 (נספח מורחב/דחוי) עם תנאי החזרה (בדיקת פרטיות נפרדת). הסכימה של MVP-A היא **תת-קבוצה בטוחה-לביקורת** של החזון הרחב.
 
@@ -40,7 +41,7 @@
 | קבוצה | ישויות |
 |-------|--------|
 | **משתמשים** (זהות + הרשאה) | `Student` · `StaffMember` · `StaffRole` |
-| **ארגון** | `School` · `Class` |
+| **ארגון** | `School` · `Class` (כיתת אם — ציר פסטורלי) · `LearningGroup` (קבוצת לימוד — ציר אקדמי) · `Enrollment` (שיוך תלמיד↔קבוצה, רב-רבים) |
 | **יחידות ותוכן** | `ContentUnit` (עם `LearningDuration` מוטבע) · `Topic` · `Skill` · `LearningSequence` · `EnrichmentTrack` |
 | **הקצאות והגשות** | `Assignment` · `Submission` (נושאת **ציון**) · `Attachment` · `StudentProgress` · `SupportProfile` |
 | **check-in וניטור** | `CheckIn` · `DailyPresence` (מצב יומי גס) · `SystemMode` |
@@ -48,6 +49,8 @@
 | **אירועים (מערכת)** | `AuditEvent` (לוג ביקורת מינימלי) |
 
 > **הערה:** "משתמשים" = `Student` **או** `StaffMember`; אין טבלת-על אחת כי הפרדת התלמיד מהצוות היא עצמה בקרת פרטיות (תלמיד לא נכנס לטבלת הצוות ולהפך). התפקיד תמיד ב-`StaffRole` — כך אדם אחד מחזיק כמה תפקידים (מורה מקצועי שהוא גם מחנך) בלי שכפול רשומה.
+
+> **שני צירים (16.7):** לתלמיד שני שיוכים נפרדים — `Class` (**כיתת אם**, ציר פסטורלי: check-in רגשי, דופק מחנך, "מי לא נראה"; FK בודד `Student.class_id`) ו-`LearningGroup` (**קבוצת לימוד**, ציר אקדמי: הקצאות, ציונים, דיפרנציאציה; רב-רבים דרך `Enrollment`). המורה המקצועי יושב על הקבוצה, לא על הכיתה. `Assignment` מכוון ל-class / group / student. **שכבת החירום נשארת על `Class` בלבד — היא לא נגעה בשינוי.**
 
 ### דיאגרמת ישויות (Mermaid erDiagram)
 
@@ -58,11 +61,17 @@ erDiagram
     STAFF_MEMBER ||--o{ STAFF_ROLE : "מחזיק תפקידים (כמה)"
     SCHOOL ||--o{ STAFF_ROLE : "היקף (null לפיקוח ארצי)"
 
-    CLASS ||--o{ STUDENT : "משבץ תלמידים"
+    CLASS ||--o{ STUDENT : "משבץ תלמידים (כיתת אם)"
     CLASS }o--|| STAFF_MEMBER : "מחנך"
 
+    SCHOOL ||--o{ LEARNING_GROUP : "קבוצות לימוד (ציר אקדמי)"
+    LEARNING_GROUP }o--|| STAFF_MEMBER : "מורה מקצועי"
+    STUDENT ||--o{ ENROLLMENT : "משובץ בקבוצות (רב-רבים)"
+    LEARNING_GROUP ||--o{ ENROLLMENT : "חברי הקבוצה"
+
     STAFF_MEMBER ||--o{ ASSIGNMENT : "שולח"
-    CLASS ||--o{ ASSIGNMENT : "יעד"
+    CLASS ||--o{ ASSIGNMENT : "יעד (target_type=class)"
+    LEARNING_GROUP ||--o{ ASSIGNMENT : "יעד (target_type=group)"
     CONTENT_UNIT ||--o{ ASSIGNMENT : "מופנה מ (ללא העתקה)"
     CONTENT_UNIT ||--o{ CONTENT_UNIT : "גרסה נגישה של"
 
@@ -99,6 +108,23 @@ erDiagram
         string name "י'3"
         string grade "ט/י/יא/יב"
         string homeroom_teacher_id FK "מחנך"
+        string school_year "תשפז — למעבר-שנה"
+        bool archived "ארכוב בסוף שנה"
+    }
+    LEARNING_GROUP {
+        string id PK
+        string school_id FK
+        string name "עברית י'1 / מגמת חשמל / תגבור לשון"
+        string subject "תחום הלימוד"
+        string teacher_id FK "מורה מקצועי"
+        string grade "שכבה"
+        string school_year "למעבר-שנה"
+        bool archived
+    }
+    ENROLLMENT {
+        string id PK
+        string student_id FK
+        string learning_group_id FK
     }
     STUDENT {
         string id PK
@@ -122,9 +148,11 @@ erDiagram
     STAFF_ROLE {
         string id PK
         string staff_id FK
-        string role "homeroom/subject/principal/supervisor"
+        string role "homeroom/subject/principal/coordinator/supervisor/substitute"
         string school_id FK "היקף (null לפיקוח)"
         string subject "למפקח מקצועי (nullable)"
+        string scope_ref FK "היקף למחליף — class/group (nullable)"
+        datetime expires_at "תוקף למחליף (nullable)"
         bool active
     }
     CONTENT_UNIT {
@@ -181,7 +209,8 @@ erDiagram
     ASSIGNMENT {
         string id PK
         string content_unit_id FK "הפניה — לא העתקה"
-        string class_id FK
+        string target_type "class/group/student"
+        string target_id FK "לפי target_type"
         string assigned_by FK
         string mode "מוטבע מ-SystemMode"
         date scheduled_for "יכול להיות עתידי"
@@ -363,12 +392,39 @@ interface LearningDuration {
 |------|-------|--------|
 | id | PK | |
 | staff_id | FK→StaffMember | אותו אדם — כמה שורות |
-| role | enum | `homeroom` (מחנך) / `subject` (מורה מקצועי) / `principal` (מנהל) / `supervisor` (מפקח) |
+| role | enum | `homeroom` (מחנך) / `subject` (מורה מקצועי) / `principal` (מנהל) / `coordinator` (רכז תקשוב / מנהל-מערכת בית-ספרי — בעל החשבון: ניהול משתמשים, איפוס גישה, שיבוץ מורה מחליף) / `supervisor` (מפקח) / `substitute` (מורה מחליף — §3.3b) |
+| scope_ref | FK? | למחליף בלבד: הכיתה/קבוצה שקיבל זמנית |
+| expires_at | datetime? | למחליף בלבד: פקיעת ההרשאה הזמנית |
 | school_id | FK→School? | היקף התפקיד; `null` לפיקוח ארצי |
 | subject | string? | תחום הדעת (למפקח מקצועי) |
 | active | bool | |
 
 > הגישה בפועל = **איחוד** הרשאות התפקידים הפעילים. הרזולוציה יורדת ככל שעולים בהיררכיה (מחנך=פרטני בכיתתו → מנהל=מצרפי בית-ספרי → פיקוח=מצרפי ארצי). המטריצה המלאה = **W0-02** (`roles.html`). `role=counselor` — ראו §10 (מורחב).
+
+### 3.3b LearningGroup + Enrollment — הציר האקדמי (שני-צירים · 16.7)
+
+הישות שמאפשרת "תלמיד עם מורה שונה לכל מקצוע". **מנותקת לגמרי משכבת החירום** — היא נוגעת רק בהקצאות ובציונים.
+
+**`LearningGroup` — קבוצת לימוד:**
+| שדה | טיפוס | תיאור | מינימיזציה |
+|------|-------|--------|-------------|
+| id | PK | | 🟢 |
+| school_id | FK→School | | 🟢 |
+| name | string | "עברית י'1" / "מגמת חשמל ואלקטרוניקה" / "תגבור לשון" | 🟢 |
+| subject | string | תחום הלימוד (מתלכד עם `SupportProfile.subject`) | 🟢 |
+| teacher_id | FK→StaffMember | המורה המקצועי של הקבוצה | 🟢 |
+| grade | string | שכבה | 🟢 |
+| school_year | string | למעבר-שנה וארכוב | 🟢 |
+| archived | bool | ברירת מחדל `false` | 🟢 |
+
+**`Enrollment` — שיוך רב-רבים (תלמיד ↔ קבוצה):**
+| שדה | טיפוס | תיאור | מינימיזציה |
+|------|-------|--------|-------------|
+| id | PK | | 🟢 |
+| student_id | FK→Student | | 🟢 שיוך תפעולי |
+| learning_group_id | FK→LearningGroup | | 🟢 |
+
+> **חפיפה חלקית = הלב.** תלמיד רשום לכמה קבוצות; קבוצת התגבור מכילה **רק חלק** מהכיתה — זה מה ששובר את מודל "כיתה אחת" ומצדיק את הציר הנפרד. **אין** ב-`Enrollment` שום שדה רמה/דירוג — ההתאמה היא פר-רגע ב-`Submission` (`support_level`/`mastery`), **לא תווית קבועה על התלמיד** (עיקרון §3.1).
 
 ### 3.4 ContentUnit — יחידת ספרייה
 | שדה | טיפוס | תיאור |
@@ -394,11 +450,12 @@ interface LearningDuration {
 ### 3.5 Topic / Skill / LearningSequence / EnrichmentTrack
 `Topic` (נושא בתכל: subject/grade/title/curriculum_ref/display_order) · `Skill` (מיומנות: subject/title/topic_id) · `LearningSequence` (רצף מסודר: subject/grade/topic_id/title/unit_count/curriculum_ref/authored_by) · `EnrichmentTrack` (אוסף 5-6 יחידות בכל סדר: title/theme/description). *מבנה זהה ל-1.3 — לא השתנה.* המסלול נגזר בשאילתה: יחידות עם אותו `sequence_id`, ממוינות לפי `sequence_order`.
 
-### 3.6 Assignment — שליחת משימה לכיתה
+### 3.6 Assignment — שליחת משימה (יעד פולימורפי · 16.7)
 | שדה | טיפוס | תיאור |
 |------|-------|--------|
 | content_unit_id | FK→ContentUnit | **הפניה** — מקור אמת יחיד |
-| class_id | FK→Class | כיתת יעד |
+| target_type | enum | `class` (כל כיתת האם — לרוב חירום/פסטורלי) / `group` (קבוצת לימוד — הקצאה אקדמית רגילה) / `student` (יחיד) |
+| target_id | FK | לפי `target_type`: →Class / →LearningGroup / →Student |
 | assigned_by | FK→StaffMember | |
 | mode | enum | מוטבע מ-`SystemMode` הנוכחי בעת השליחה |
 | scheduled_for | date | יכול להיות עתידי |
@@ -495,7 +552,18 @@ interface LearningDuration {
     { "id": "sch_01", "name": "אורט בית הערבה", "network": "אורט", "district": "מחוז דרום" }
   ],
   "classes": [
-    { "id": "cls_i2", "school_id": "sch_01", "name": "י'2", "grade": "י", "homeroom_teacher_id": "stf_dana" }
+    { "id": "cls_i2", "school_id": "sch_01", "name": "י'2", "grade": "י", "homeroom_teacher_id": "stf_dana",
+      "school_year": "תשפ\"ז", "archived": false }
+  ],
+  "learning_groups": [
+    { "id": "grp_lashon", "school_id": "sch_01", "name": "לשון י'2", "subject": "לשון",
+      "teacher_id": "stf_dana", "grade": "י", "school_year": "תשפ\"ז", "archived": false },
+    { "id": "grp_tigbur", "school_id": "sch_01", "name": "תגבור לשון", "subject": "לשון",
+      "teacher_id": "stf_noa", "grade": "י", "school_year": "תשפ\"ז", "archived": false }
+  ],
+  "enrollments": [
+    { "id": "enr_01", "student_id": "std_yuval", "learning_group_id": "grp_lashon" },
+    { "id": "enr_02", "student_id": "std_yuval", "learning_group_id": "grp_tigbur" }
   ],
   "students": [
     { "id": "std_yuval", "first_name": "יובל", "class_id": "cls_i2", "phone": "0500000001",
@@ -539,9 +607,12 @@ interface LearningDuration {
       "parent_unit_id": null, "curated_by": "stf_dana", "active": true }
   ],
   "assignments": [
-    { "id": "asg_01", "content_unit_id": "unt_mishpat_1", "class_id": "cls_i2", "assigned_by": "stf_dana",
-      "mode": "emergency", "scheduled_for": "2026-11-12", "override_body": null,
-      "duration_override": { "mode": "self_paced", "allowExtension": true }, "created_at": "2026-11-12T07:30:00+03:00" }
+    { "id": "asg_01", "content_unit_id": "unt_mishpat_1", "target_type": "group", "target_id": "grp_lashon",
+      "assigned_by": "stf_dana", "mode": "routine", "scheduled_for": "2026-11-12", "override_body": null,
+      "duration_override": { "mode": "self_paced", "allowExtension": true }, "created_at": "2026-11-12T07:30:00+03:00" },
+    { "id": "asg_emrg", "content_unit_id": "unt_mishpat_1", "target_type": "class", "target_id": "cls_i2",
+      "assigned_by": "stf_dana", "mode": "emergency", "scheduled_for": "2026-11-12", "override_body": null,
+      "duration_override": { "mode": "self_paced", "allowExtension": true }, "created_at": "2026-11-12T06:10:00+03:00" }
   ],
   "submissions": [
     { "id": "sub_01", "assignment_id": "asg_01", "student_id": "std_yuval", "status": "completed",
