@@ -309,8 +309,14 @@ function cardHTML(it,lane){
   else if(nc>0)      prog=' <span class="tagRG part">0/'+nc+'</span>';
   var cp=copiedRec(it);
   if(cp) prog+=' <span class="tagRG copied">הועתק · '+agoTxt(cp.at)+' · ממתין ל-GPT</span>';
+  /* כפתור ההעתקה זמין בכל עמודה כל עוד המודולה לא מלאה.
+   * באג 16.7: הוא הופיע רק ב"ממתין ליצור" — מודולה שנדחפה בטעות לעמודה אחרת
+   * (override ב-localStorage) ננעלה בלי דרך להעתיק לה פרומפט. */
+  var incomplete=!isComplete(it);
   var acts='';
-  if(st==='todo') acts+='<button class="cp" data-cp="'+it.subj.id+'|'+mi+'">'+ICON.copy+(cp?'להעתיק שוב':(pc>0?'המשך מיחידה '+(pc+1):'פרומפט ל-GPT'))+'</button>';
+  if(st==='todo'||incomplete) acts+='<button class="cp" data-cp="'+it.subj.id+'|'+mi+'">'+ICON.copy+(cp?'להעתיק שוב':(pc>0?'המשך מיחידה '+(pc+1):'פרומפט ל-GPT'))+'</button>';
+  /* מודולה לא-מלאה שיושבת בעמודה מתקדמת = סתירה מול המציאות. כפתור חזרה בקליק אחד. */
+  if(st!=='todo' && incomplete) acts+='<button class="bk" data-home="'+it.subj.id+'|'+it.pm.n+'" title="החזר ל־ממתין ליצור">↩ ממתין ליצור</button>';
   if(cp) acts+='<button class="bk" data-uncp="'+it.subj.id+'|'+it.pm.n+'" title="סמן כלא-הועתק">לא העתקתי</button>';
   if(lane.id!=='done') acts+='<button class="go" data-go="'+it.subj.id+'|'+it.pm.n+'">'+nextLabel(st)+ICON.fwd+'</button>';
   if(li>0) acts+='<button class="bk" data-bk="'+it.subj.id+'|'+it.pm.n+'" title="החזר שלב">'+ICON.back+'</button>';
@@ -335,6 +341,14 @@ function bind(){
     navigator.clipboard.writeText(p).then(done,function(){ prompt('העתקה ידנית:',p); done(); });
   }); });
   document.querySelectorAll('[data-uncp]').forEach(function(b){ b.addEventListener('click',function(){ var it=find(b.getAttribute('data-uncp')); if(it){ clearCopied(it); render(); toast('הסימון הוסר'); } }); });
+  /* החזרה ל"ממתין ליצור" בקליק אחד — מוחק את ה-override המקומי */
+  document.querySelectorAll('[data-home]').forEach(function(b){ b.addEventListener('click',function(){
+    var it=find(b.getAttribute('data-home'));
+    if(!it) return;
+    delete overrides[moduleKey(it.subj.id,it.pm.n)];
+    saveOverrides(); render();
+    toast('הוחזר ל"ממתין ליצור"');
+  }); });
 }
 function find(key){ var pr=key.split('|'); return ITEMS.find(function(it){ return it.subj.id===pr[0] && String(it.pm.n)===pr[1]; }); }
 
