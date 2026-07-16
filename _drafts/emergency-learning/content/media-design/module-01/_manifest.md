@@ -30,17 +30,17 @@
 |---|---|---|---|---|---|---|
 | 1 | `unit-01-point.md` | נקודה: היסוד החזותי הקטן | task | בחירה מרובה | GREEN | טיוטה `[לאימות]` |
 | 2 | `unit-02-shape.md` | צורה בשפה החזותית | task | השלמת מונח | GREEN | טיוטה `[לאימות]` |
-| 3 | `unit-03-composition.md` | קומפוזיציה | task | הסבר ודוגמה | GREEN | מתוכננת |
-| 4 | `unit-04-vector-vs-pixel.md` | וקטור מול פיקסל | task | טבלת השוואה | GREEN | מתוכננת |
-| 5 | `unit-05-resolution-color-profile.md` | רזולוציה ופרופיל צבע | task | נכון או לא נכון והצדקה | GREEN | מתוכננת |
-| 6 | `unit-06-file-structure.md` | מבנה קובץ | task | זיהוי ותיוג | GREEN | מתוכננת |
+| 3 | `unit-03-composition.md` | קומפוזיציה | task | הסבר ודוגמה | GREEN | טיוטה `[לאימות]` |
+| 4 | `unit-04-vector-vs-pixel.md` | וקטור מול פיקסל | task | טבלת השוואה | GREEN | טיוטה `[לאימות]` |
+| 5 | `unit-05-resolution-color-profile.md` | רזולוציה ופרופיל צבע | task | נכון או לא נכון והצדקה | GREEN | טיוטה `[לאימות]` |
+| 6 | `unit-06-file-structure.md` | מבנה קובץ | task | זיהוי ותיוג | GREEN | טיוטה `[לאימות]` |
 | 7 | `unit-07-copyright-licensing.md` | זכויות יוצרים ורישוי תוכנה | task | השלמת מונח | RED | שלד `[לאימות—מומחה]` |
-| 8 | `unit-08-design-history.md` | תולדות העיצוב | task | הסבר ודוגמה | GREEN | מתוכננת |
-| 9 | `unit-09-file-management.md` | ניהול קבצים ותיקיות | task | ביצוע ורשימת תיוג | GREEN | מתוכננת |
-| 10 | `unit-10-format-classification.md` | זיהוי וסיווג פורמטים | task | הדגמה מצולמת | GREEN | מתוכננת |
-| 11 | `unit-11-basic-compositions.md` | יצירת קומפוזיציות בסיסיות | task | תרגול מודרך | GREEN | מתוכננת |
-| 12 | `unit-12-visual-analysis.md` | ניתוח חזותי של תוצר קיים | task | ביצוע ורשימת תיוג | GREEN | מתוכננת |
-| 13 | `unit-13-visual-diagnosis-assessment.md` | תיק אבחון חזותי | assessment | מחוון מעצב | GREEN | מתוכננת |
+| 8 | `unit-08-design-history.md` | תולדות העיצוב | task | הסבר ודוגמה | GREEN | טיוטה `[לאימות]` |
+| 9 | `unit-09-file-management.md` | ניהול קבצים ותיקיות | task | ביצוע ורשימת תיוג | GREEN | טיוטה `[לאימות]` |
+| 10 | `unit-10-format-classification.md` | זיהוי וסיווג פורמטים | task | הדגמה מצולמת | GREEN | טיוטה `[לאימות]` |
+| 11 | `unit-11-basic-compositions.md` | יצירת קומפוזיציות בסיסיות | task | תרגול מודרך | GREEN | טיוטה `[לאימות]` |
+| 12 | `unit-12-visual-analysis.md` | ניתוח חזותי של תוצר קיים | task | ביצוע ורשימת תיוג | GREEN | טיוטה `[לאימות]` |
+| 13 | `unit-13-visual-diagnosis-assessment.md` | תיק אבחון חזותי | assessment | מחוון מעצב | GREEN | טיוטה `[לאימות]` |
 
 ---
 
