@@ -13,7 +13,7 @@ final_approval: "[לאימות — רכז מגמה]"
 
 ## יחידות
 
-1. [מותג וזהות חזותית](unit-01-brand-and-visual-identity.md) — task — ידע
+1. [מהו מותג ומהי זהות חזותית](unit-01-brand-visual-identity.md) — task — ידע
 2. [לוגו](unit-02-logo.md) — task — ידע
 3. [צבעוניות במותג](unit-03-color-palette.md) — task — ידע
 4. [טיפוגרפיה במותג](unit-04-typography.md) — task — ידע
