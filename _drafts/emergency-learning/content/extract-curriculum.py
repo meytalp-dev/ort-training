@@ -38,8 +38,8 @@ import zipfile, re, io, html, json, sys, os
 ZIP = r'C:/Users/meyta/Downloads/תוכניות לימודים-20260715T185021Z-1-001.zip'
 HERE = os.path.dirname(os.path.abspath(__file__))
 WRITE = '--write' in sys.argv
-# ראה split_items — הכלל "לעולם לא פסיק" מתפרק ב-3 מסמכים. כבוי כברירת מחדל.
-COMMA_FALLBACK = '--comma-fallback' in sys.argv
+# ראה split_items. החריג פעיל — החלטת מיטל 17.7.2026, אחרי דיף מודולה-מודולה.
+COMMA_FALLBACK = '--no-comma-fallback' not in sys.argv
 
 
 def docx_lines(zf, name):
@@ -75,7 +75,7 @@ def split_items(text):
     מפצל טקסט-כשירויות לפריטים.
     מפריד על ';' ועל סוף-משפט ('. ') — **לעולם לא על פסיק**.
 
-    חריג (--comma-fallback, כבוי כברירת מחדל):
+    חריג (פעיל · לביטול: --no-comma-fallback):
       הכלל "לעולם לא פסיק" נכון כשהמחבר השתמש ב-';'. שלושה מסמכים כמעט
       ואינם משתמשים בו, ובהם הפסיק *הוא* המפריד בין פריטים:
         תקשוב (';' ב-18% מהשדות) · מתמטיקה (24%) · הוראת-נהיגה (38%)
