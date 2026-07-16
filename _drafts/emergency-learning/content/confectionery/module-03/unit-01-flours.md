@@ -7,7 +7,7 @@ unit_type: task
 grade: ט–יב
 track_id: 2
 content_source: curriculum
- duration_mode: estimated
+duration_mode: estimated
 skill: ידע — תכונות קמחים וסיווג לפי סוג ואחוז חלבון
 pedagogy_verified: [לאימות — רכז מגמה]
 source: תוכנית לימודים — קונדיטאות ואפייה לנוער.docx · סעיף 8 · מודולה מ3
