@@ -12,6 +12,10 @@ window.PRODUCED = {
   "confectionery|2": { n: 10, stage: "reviewed" },
   "media-design|5": { n: 1,  stage: "reviewed" },
   "media-design|6": { n: 1,  stage: "reviewed" },
+  "textile-design|5": { n: 1,  stage: "reviewed" },
+  "ict-systems|7": { n: 1,  stage: "reviewed" },
+  "ict-systems|9": { n: 1,  stage: "reviewed" },
+  "football|4":    { n: 1,  stage: "reviewed" },
   "hebrew|5":      { n: 1,  stage: "built" },
   "media-design|1":{ n: 3,  stage: "built" },
   "welding|1":     { n: 3,  stage: "built" }
