@@ -55,12 +55,17 @@ done
 
 echo
 echo "── ⚠ קישורים שבורים במניפסטים ──"
+# מדלגים על שורות "מתוכנן" — מניפסט תקין מפרט גם יחידות עתידיות שטרם הופקו.
+# זה לא שבר: GPT כותב "— קיים —" למה שהפיק ו"— מתוכנן —" לשאר.
 bad=0
 for m in $(find "$C" -name "_manifest.md"); do
   dir=$(dirname "$m")
-  for f in $(grep -o "unit-[a-z0-9-]*\.md" "$m" 2>/dev/null | sort -u); do
-    if [ ! -f "$dir/$f" ]; then echo "  🔴 ${m#$C/} → $f"; bad=1; fi
-  done
+  while IFS= read -r line; do
+    case "$line" in *מתוכנן*) continue ;; esac
+    f=$(printf '%s' "$line" | grep -o "unit-[a-z0-9-]*\.md" | head -1)
+    [ -z "$f" ] && continue
+    if [ ! -f "$dir/$f" ]; then echo "  🔴 ${m#$C/} → $f (מוצהר כקיים, חסר בדיסק)"; bad=1; fi
+  done < "$m"
 done
 [ "$bad" -eq 0 ] && echo "  ✅ אין."
 
