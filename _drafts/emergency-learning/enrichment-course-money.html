@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he" data-mode="routine">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>קורס העשרה — כסף חכם · קורס מלא (5 שיעורים) · רֶצֶף</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   רֶצֶף · מוצר C — קורס העשרה מלא: "כסף חכם" (5 שיעורים)
+   enrichment-course-money.html
+   Data-driven: מנוע אחד + renderer לכל סוג-מסך, התוכן כ-DATA.
+   סוגי-מסך: hook · scenario · artifact · simulator · decide · ai-hands · mission
+   Mobile First · RTL · בלי אימוג'י · בנקים פיקטיביים · ג'מיני.
+   ============================================================ */
+:root{
+  --brand:#0B8F98; --brand-deep:#08666D; --brand-dark:#073D4A; --brand-bright:#24B8C2;
+  --brand-soft:#E8F8F9; --brand-line:#B8E7EA;
+  --ink:#173A4A; --ink-strong:#0F2D3A; --ink-soft:#607984; --ink-faint:#91A5AE;
+  --bg:#F6FAFB; --card:#FFFFFF; --surface-muted:#EEF5F6; --line:#E2ECEF; --line-strong:#CDDDE1;
+  --routine:#4CAF6A; --routine-soft:#EBF8EF; --routine-line:#B9E4C4;
+  --remote:#2D8CFF; --remote-soft:#EDF5FF; --remote-line:#BCD9FF;
+  --emergency:#F28A2E; --emergency-soft:#FFF4E8; --emergency-line:#FFD3A8;
+  --good:#3AA65A; --good-soft:#E8F6EC; --good-line:#BCE3C6;
+  --warn:#D99A18; --warn-soft:#FBF3DE;
+  --joy:#7A3EA6; --joy-soft:#F5EDFB; --joy-line:#E3CFF2;
+  --ai:#7A3EA6; --ai-soft:#F5EDFB; --ai-line:#E3CFF2;
+  --on-brand:#FFFFFF; --shadow-brand:0 2px 8px rgba(11,143,152,.22);
+  --font-head:"Heebo","Assistant",sans-serif; --font-body:"Assistant","Heebo",sans-serif;
+  --radius-sm:10px; --radius-md:16px; --radius-lg:22px; --radius-btn:12px; --radius-pill:999px;
+  --shadow-card:0 6px 22px rgba(23,58,74,.06); --shadow-lg:0 12px 34px rgba(23,58,74,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--font-body);
+  background:radial-gradient(900px 500px at 80% -10%,#EAF7F8 0%,transparent 60%),
+             radial-gradient(700px 460px at -10% 110%,#F0EAF8 0%,transparent 55%),var(--bg);
+  color:var(--ink);line-height:1.6;font-size:16px;min-height:100vh;
+  display:flex;align-items:flex-start;justify-content:center;padding:22px 12px;
+}
+h1,h2,h3,h4{font-family:var(--font-head);line-height:1.28;font-weight:700;color:var(--ink-strong)}
+svg{display:block}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+
+.app{max-width:432px;width:100%;background:var(--bg);border-radius:30px;overflow:hidden;
+  box-shadow:var(--shadow-lg),0 0 0 1px var(--line);display:flex;flex-direction:column;min-height:780px;position:relative}
+
+/* ---------- פס עליון ---------- */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(246,250,251,.92);
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);border-bottom:1px solid var(--line);padding:12px 18px 11px}
+.tb-row{display:flex;align-items:center;gap:11px}
+.tb-back{width:34px;height:34px;border-radius:var(--radius-pill);display:grid;place-items:center;
+  background:var(--card);box-shadow:0 1px 3px rgba(23,58,74,.08);color:var(--ink-soft);flex:0 0 auto}
+.tb-back svg{width:17px;height:17px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.tb-back.hidden{visibility:hidden}
+.tb-meta{flex:1;min-width:0}
+.tb-kicker{font-size:11.5px;font-weight:700;color:var(--brand-deep);letter-spacing:.02em;display:flex;align-items:center;gap:5px}
+.tb-kicker svg{width:13px;height:13px;stroke:currentColor;stroke-width:1.7;fill:none}
+.tb-title{font-size:14.5px;font-weight:700;color:var(--ink-strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-step{font-size:11px;font-weight:700;color:var(--ink-faint);flex:0 0 auto}
+.seq{display:flex;align-items:center;gap:0;margin-top:11px;padding:0 2px}
+.seq-node{flex:0 0 auto;width:11px;height:11px;border-radius:50%;background:var(--surface-muted);
+  border:2px solid var(--line-strong);z-index:2;transition:.35s}
+.seq-link{flex:1;height:3px;background:var(--line);border-radius:2px;position:relative;overflow:hidden}
+.seq-link::after{content:"";position:absolute;inset:0;background:var(--brand);transform:scaleX(0);transform-origin:right;transition:transform .5s}
+.seq-node.done{background:var(--brand);border-color:var(--brand)}
+.seq-node.now{background:var(--card);border-color:var(--brand);box-shadow:0 0 0 4px var(--brand-soft)}
+.seq-link.filled::after{transform:scaleX(1)}
+
+.stage{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.screen{padding:20px 18px 26px;display:flex;flex-direction:column;gap:16px;animation:slideIn .34s cubic-bezier(.22,.61,.36,1)}
+@keyframes slideIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.kind{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-size:12px;font-weight:800;padding:6px 12px;border-radius:var(--radius-pill)}
+.kind svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.k-scenario{background:var(--remote-soft);color:var(--remote)}
+.k-artifact{background:var(--warn-soft);color:#B47B10}
+.k-simulator{background:var(--brand-soft);color:var(--brand-deep)}
+.k-decide{background:var(--joy-soft);color:var(--joy)}
+.k-aihands{background:var(--ai-soft);color:var(--ai)}
+.k-mission{background:var(--emergency-soft);color:#C56A16}
+.lead{font-size:15px;color:var(--ink-soft);line-height:1.62}
+h2.q{font-size:22px;line-height:1.32}
+h2.q b{color:var(--brand-deep)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-card)}
+
+.cta-bar{padding:14px 18px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line);
+  background:rgba(255,255,255,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.btn{width:100%;min-height:52px;border-radius:var(--radius-btn);font-family:var(--font-head);font-weight:800;font-size:16.5px;
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .12s,box-shadow .2s,opacity .2s}
+.btn svg{width:19px;height:19px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.btn-primary{background:var(--brand-deep);color:var(--on-brand);box-shadow:var(--shadow-brand)}
+.btn-primary:active{transform:translateY(1px) scale(.995)}
+.btn-ghost{background:transparent;color:var(--brand-deep);min-height:44px;font-size:15px}
+
+/* ---------- עמוד קורס (home) ---------- */
+.hero{padding:26px 20px 22px;border-radius:var(--radius-lg);color:var(--on-brand);position:relative;overflow:hidden;
+  background:linear-gradient(150deg,var(--brand) 0%,var(--brand-deep) 62%,var(--brand-dark) 100%)}
+.hero::after{content:"";position:absolute;inset:0;opacity:.5;background:radial-gradient(300px 200px at 88% 8%,rgba(255,255,255,.22),transparent 70%)}
+.hero-badge{position:relative;z-index:1;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);
+  padding:5px 12px;border-radius:var(--radius-pill);font-size:12px;font-weight:800;margin-bottom:14px}
+.hero-badge svg{width:14px;height:14px;stroke:currentColor;stroke-width:1.8;fill:none}
+.hero h1{position:relative;z-index:1;color:#fff;font-size:30px;line-height:1.18;margin-bottom:9px}
+.hero p{position:relative;z-index:1;color:rgba(255,255,255,.92);font-size:15px}
+.hero-facts{position:relative;z-index:1;display:flex;gap:8px;margin-top:18px}
+.hero-fact{flex:1;background:rgba(255,255,255,.13);border-radius:var(--radius-sm);padding:10px 8px;text-align:center}
+.hero-fact b{display:block;font-family:var(--font-head);font-size:16px;color:#fff}
+.hero-fact span{font-size:10.5px;color:rgba(255,255,255,.82)}
+.create-box{padding:15px 16px;border-radius:var(--radius-md);background:var(--good-soft);border:1.5px solid var(--good-line);display:flex;gap:11px;align-items:flex-start}
+.create-box svg{width:22px;height:22px;flex:0 0 auto;stroke:var(--good);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.create-box b{color:#217A3B;font-family:var(--font-head)}
+.create-box p{font-size:13.5px;color:var(--ink)}
+.les-title{font-size:13px;font-weight:800;color:var(--ink-soft);margin:4px 2px -4px}
+.les{width:100%;text-align:right;padding:14px 15px;border-radius:var(--radius-md);background:var(--card);
+  border:1.5px solid var(--line);display:flex;align-items:center;gap:13px;box-shadow:var(--shadow-card);transition:.16s}
+.les:active{transform:scale(.99)}
+.les .num{width:38px;height:38px;border-radius:11px;background:var(--brand-soft);color:var(--brand-deep);
+  display:grid;place-items:center;font-family:var(--font-head);font-weight:800;font-size:17px;flex:0 0 auto}
+.les.done .num{background:var(--good-soft);color:var(--good)}
+.les.done .num svg{width:20px;height:20px;stroke:var(--good);stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.les .tx{flex:1}
+.les .tx b{display:block;font-family:var(--font-head);font-size:15.5px;color:var(--ink-strong)}
+.les .tx span{font-size:12.5px;color:var(--ink-soft)}
+.les .go{flex:0 0 auto;color:var(--ink-faint)}
+.les .go svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- scenario ---------- */
+.choices{display:flex;flex-direction:column;gap:11px}
+.choice{width:100%;text-align:right;padding:15px 16px;border-radius:var(--radius-md);background:var(--card);
+  border:1.5px solid var(--line);display:flex;align-items:center;gap:13px;transition:.18s;box-shadow:var(--shadow-card)}
+.choice:active{transform:scale(.99)}
+.choice .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;flex:0 0 auto}
+.choice .ic svg{width:22px;height:22px;stroke:var(--brand-deep);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.choice .tx b{display:block;font-family:var(--font-head);font-size:15.5px;color:var(--ink-strong)}
+.choice .tx span{font-size:12.5px;color:var(--ink-soft)}
+.choice.sel{border-color:var(--brand);background:var(--brand-soft)}
+.result{display:none;padding:15px;border-radius:var(--radius-md);animation:slideIn .3s}
+.result.show{display:block}
+.result.win{background:var(--good-soft);border:1.5px solid var(--good-line)}
+.result.meh{background:var(--warn-soft);border:1.5px solid #EBD59A}
+.result.bad{background:#FBEBEA;border:1.5px solid #F0C3BF}
+.result h4{font-size:15px;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.result h4 svg{width:18px;height:18px;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.result.win h4{color:var(--good)}.result.win h4 svg{stroke:var(--good)}
+.result.meh h4{color:#B47B10}.result.meh h4 svg{stroke:#B47B10}
+.result.bad h4{color:#C0392B}.result.bad h4 svg{stroke:#C0392B}
+.result p{font-size:14px;color:var(--ink)}
+
+/* ---------- artifact: categorize ---------- */
+.statement{padding:0;overflow:hidden}
+.st-head{padding:13px 15px;background:var(--brand-dark);color:#fff;display:flex;align-items:center;justify-content:space-between}
+.st-head b{font-family:var(--font-head);font-size:14px}.st-head span{font-size:11px;color:rgba(255,255,255,.75)}
+.st-note{font-size:11px;color:var(--ink-faint);padding:7px 15px 3px;font-style:italic}
+.st-row{display:flex;align-items:center;gap:10px;padding:11px 15px;border-top:1px solid var(--line)}
+.st-row .amt{font-family:var(--font-head);font-weight:800;font-size:15px;color:var(--ink-strong);min-width:56px;text-align:left;direction:ltr;flex:0 0 auto}
+.st-row .desc{flex:1}.st-row .desc b{display:block;font-size:13.5px}.st-row .desc span{font-size:11px;color:var(--ink-faint)}
+.tagbtn{flex:0 0 auto;border:1.4px dashed var(--line-strong);border-radius:var(--radius-pill);padding:6px 10px;font-size:11.5px;font-weight:700;color:var(--ink-soft);display:flex;align-items:center;gap:4px}
+.tagbtn svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round}
+.tagbtn.t-need{border-style:solid;border-color:var(--remote);color:var(--remote);background:var(--remote-soft)}
+.tagbtn.t-want{border-style:solid;border-color:var(--joy);color:var(--joy);background:var(--joy-soft)}
+.tagbtn.t-save{border-style:solid;border-color:var(--good);color:var(--good);background:var(--good-soft)}
+.picker{display:none;gap:7px;padding:0 15px 13px}
+.picker.open{display:flex;animation:slideIn .2s}
+.pick{flex:1;border-radius:var(--radius-sm);padding:9px 4px;font-size:12px;font-weight:800;border:1.5px solid var(--line);background:var(--card)}
+.pick[data-t="need"]{border-color:var(--remote);color:var(--remote)}
+.pick[data-t="want"]{border-color:var(--joy);color:var(--joy)}
+.pick[data-t="save"]{border-color:var(--good);color:var(--good)}
+.st-tally{display:flex;gap:8px;padding:13px 15px;border-top:2px solid var(--line)}
+.tally{flex:1;text-align:center;border-radius:var(--radius-sm);padding:9px 4px;background:var(--surface-muted)}
+.tally b{display:block;font-family:var(--font-head);font-size:15px}.tally span{font-size:10px;color:var(--ink-soft)}
+.tally.need b{color:var(--remote)}.tally.want b{color:var(--joy)}.tally.save b{color:var(--good)}
+
+/* ---------- simulator ---------- */
+.sim-income{text-align:center;padding:14px}.sim-income span{font-size:12px;color:var(--ink-soft)}
+.sim-income b{display:block;font-family:var(--font-head);font-size:28px;color:var(--brand-deep)}
+.bar{height:24px;border-radius:var(--radius-pill);overflow:hidden;display:flex;background:var(--surface-muted);margin:2px 0 4px}
+.bar i{display:block;height:100%;transition:width .25s}
+.bar .b-save{background:var(--good)}.bar .b-need{background:var(--remote)}.bar .b-want{background:var(--joy)}
+.slider{padding:12px 15px;border-top:1px solid var(--line)}
+.slider .lab{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.slider .lab .n{display:flex;align-items:center;gap:8px;font-family:var(--font-head);font-weight:700;font-size:14px}
+.slider .lab .n i{width:12px;height:12px;border-radius:4px;flex:0 0 auto}
+.slider .lab .v{font-family:var(--font-head);font-weight:800;font-size:14.5px;direction:ltr}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:var(--surface-muted);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--card);border:3px solid var(--brand);box-shadow:0 2px 6px rgba(23,58,74,.2)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--card);border:3px solid var(--brand)}
+.sim-fb{margin:0 15px 15px;padding:12px 13px;border-radius:var(--radius-sm);font-size:13px;display:flex;gap:9px;align-items:flex-start;transition:.25s}
+.sim-fb svg{width:17px;height:17px;flex:0 0 auto;margin-top:1px;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.sim-fb.good{background:var(--good-soft);color:#217A3B}.sim-fb.good svg{stroke:var(--good)}
+.sim-fb.warn{background:var(--warn-soft);color:#8A6410}.sim-fb.warn svg{stroke:var(--warn)}
+
+/* ---------- decide ---------- */
+.method{padding:14px;border-radius:var(--radius-md);border:1.5px solid var(--line);background:var(--card);box-shadow:var(--shadow-card);transition:.18s;text-align:right;width:100%;display:block}
+.method+.method{margin-top:11px}
+.method.sel{border-color:var(--joy);background:var(--joy-soft);box-shadow:0 0 0 3px var(--joy-line)}
+.method-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.method-top .ic{width:38px;height:38px;border-radius:11px;background:var(--joy-soft);display:grid;place-items:center;flex:0 0 auto}
+.method-top .ic svg{width:20px;height:20px;stroke:var(--joy);stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.method-top b{font-family:var(--font-head);font-size:16px;color:var(--ink-strong)}
+.method-top span{font-size:11.5px;color:var(--ink-soft);display:block}
+.method p{font-size:13px;color:var(--ink);margin-bottom:8px}
+.pros{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.pro{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--ink-soft)}
+.pro svg{width:13px;height:13px;flex:0 0 auto;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pro.y svg{stroke:var(--good)}.pro.n svg{stroke:var(--ink-faint)}
+.fit{font-size:12px;font-weight:800;color:var(--joy);background:var(--joy-soft);border-radius:var(--radius-sm);padding:8px 10px;display:flex;align-items:center;gap:6px}
+.fit svg{width:14px;height:14px;stroke:var(--joy);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- ai-hands ---------- */
+.ai-safe{padding:12px 14px;border-radius:var(--radius-sm);background:var(--ai-soft);border:1px solid var(--ai-line);font-size:12.5px;color:#5B2E7E;display:flex;gap:8px;align-items:flex-start}
+.ai-safe svg{width:17px;height:17px;flex:0 0 auto;stroke:var(--ai);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.steps{counter-reset:st;display:flex;flex-direction:column;gap:9px}
+.steps .s{display:flex;gap:10px;align-items:flex-start;font-size:13.5px}
+.steps .s::before{counter-increment:st;content:counter(st);flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--brand-soft);color:var(--brand-deep);font-family:var(--font-head);font-weight:800;font-size:13px;display:grid;place-items:center}
+.prompt-box{background:#0F2D3A;border-radius:var(--radius-md);padding:14px;color:#DCEBEE;position:relative;font-size:13px;line-height:1.7;white-space:pre-wrap;direction:rtl}
+.prompt-box .copy{position:absolute;top:10px;left:10px;background:rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:6px 11px;font-size:11.5px;font-weight:800;display:flex;align-items:center;gap:5px}
+.prompt-box .copy svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;fill:none}
+.reflect{padding:13px 15px;border-radius:var(--radius-md);background:var(--surface-muted)}
+.reflect b{font-size:13.5px;color:var(--ink-strong);display:block;margin-bottom:4px}
+.reflect p{font-size:12.5px;color:var(--ink-soft)}
+
+/* ---------- budget-card builder (שיעור 5) ---------- */
+.bc-preview{padding:18px;border-radius:var(--radius-lg);background:linear-gradient(150deg,var(--brand) 0%,var(--brand-deep) 100%);color:#fff;position:relative;overflow:hidden}
+.bc-preview .lbl{font-size:11px;color:rgba(255,255,255,.8);font-weight:700}
+.bc-preview .amt{font-family:var(--font-head);font-size:26px;font-weight:800;margin:2px 0 12px}
+.bc-preview .bcbar{height:14px;border-radius:var(--radius-pill);overflow:hidden;display:flex;background:rgba(255,255,255,.2)}
+.bc-preview .bcbar i{height:100%;transition:width .25s}
+.bc-legend{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:rgba(255,255,255,.9)}
+.bc-legend span{display:flex;align-items:center;gap:4px}.bc-legend i{width:9px;height:9px;border-radius:3px}
+.bc-check{margin-top:11px;font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+.bc-check svg{width:15px;height:15px;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.field{padding:12px 15px;border-top:1px solid var(--line)}
+.field:first-child{border-top:none}
+.field .fl{font-family:var(--font-head);font-weight:700;font-size:13.5px;margin-bottom:6px;display:flex;justify-content:space-between}
+.field .fl .fv{direction:ltr;color:var(--brand-deep);font-weight:800}
+.field input[type=text]{width:100%;border:1.5px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;font-family:inherit;font-size:14px;color:var(--ink)}
+.field input[type=text]:focus{outline:none;border-color:var(--brand)}
+
+/* ---------- mission + summary ---------- */
+.mission{padding:16px;border-radius:var(--radius-md);background:var(--emergency-soft);border:1.5px solid var(--emergency-line)}
+.mission h3{color:#C56A16;font-size:16.5px;display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.mission h3 svg{width:19px;height:19px;stroke:#C56A16;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mission ol{margin:0 18px;font-size:13.5px;color:var(--ink);display:flex;flex-direction:column;gap:6px}
+.mission .when{font-size:12px;color:#B47B10;font-weight:700;margin-top:9px;display:flex;align-items:center;gap:6px}
+.mission .when svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;fill:none}
+.remember{padding:16px;border-radius:var(--radius-md);background:var(--brand-soft);border:1.5px solid var(--brand-line)}
+.remember .rl{font-size:12px;font-weight:800;color:var(--brand-deep);display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.remember .rl svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.remember p{font-size:15px;color:var(--ink-strong);font-weight:600;line-height:1.5}
+.done-wrap{text-align:center;padding:14px 8px}
+.done-ring{width:76px;height:76px;margin:0 auto 12px;border-radius:50%;background:var(--good-soft);display:grid;place-items:center;animation:pop .4s cubic-bezier(.22,1.4,.5,1)}
+.done-ring svg{width:38px;height:38px;stroke:var(--good);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.done-wrap h2{font-size:22px;margin-bottom:5px}.done-wrap p{font-size:14px;color:var(--ink-soft)}
+.done-list{text-align:right;padding:15px;border-radius:var(--radius-md);background:var(--good-soft);border:1.5px solid var(--good-line)}
+.done-list b{color:#217A3B;font-family:var(--font-head);font-size:14px}
+.done-list ul{list-style:none;margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.done-list li{font-size:13.5px;color:var(--ink);display:flex;gap:8px;align-items:center}
+.done-list li svg{width:15px;height:15px;flex:0 0 auto;stroke:var(--good);stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.proto-note{margin-top:4px;padding:10px 13px;border-radius:var(--radius-sm);background:#fff;border:1px dashed var(--line-strong);font-size:11.5px;color:var(--ink-faint);line-height:1.5}
+.proto-note b{color:var(--brand-deep)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="tb-row">
+      <button class="tb-back hidden" id="back" onclick="goBack()" aria-label="חזרה"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="tb-meta">
+        <div class="tb-kicker"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/></svg><span id="kicker">קורס העשרה · פיננסים</span></div>
+        <div class="tb-title" id="crumb">כסף חכם</div>
+      </div>
+      <div class="tb-step" id="step"></div>
+    </div>
+    <div class="seq" id="seq"></div>
+  </div>
+  <div class="stage" id="stage"></div>
+  <div class="cta-bar">
+    <button class="btn btn-primary" id="cta" onclick="cta()"><span id="ctaTx">התחל</span></button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1. תוכן הקורס — DATA בלבד (זה מה שמייבאים/מנסחים)
+   ============================================================ */
+var COURSE = {
+  title:"כסף חכם", sub:"לשלוט בכסף שלך — לא הפוך",
+  create:"בסוף הקורס: כרטיס תקציב אישי משלך, שאתה יודע להפעיל.",
+  facts:[["5","שיעורים קצרים"],["0","נוסחאות"],["1","כרטיס תקציב שלך"]],
+  lessons:[
+    /* ===== שיעור 1 ===== */
+    { id:1, title:"לאן הכסף הולך?", sub:"לגלות את מה שכולם מפספסים", screens:[
+      { type:"hook", title:"כל שקל שנכנס לך — לאן הוא נעלם?", lead:"רובנו באמת לא יודעים. הכסף לא נגמר על דבר אחד גדול — הוא מתאדה בקטן.", why:"בשיעור הזה תגלה את זה בעצמך, ותצא עם שליטה." },
+      { type:"scenario", q:"קיבלת <b>300 ₪</b> מתנה. מה תעשה?",
+        choices:[
+          {ic:'<path d="M6 2l1.5 3.5M18 2l-1.5 3.5"/><path d="M4 7h16l-1.5 12a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7z"/>', b:"הכל בכיס", s:"נצא לבלות, נראה מה נשאר", r:"meh"},
+          {ic:'<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="14" r="1.6"/>', b:"קודם מפריש, אז מוציא", s:"קצת בצד, קצת לבילוי", r:"win"}
+        ],
+        results:{ meh:{tone:"meh",title:"סוף החודש: נשארו 0 ₪",text:"בלי החלטה מראש, הכסף מתאדה בקטן: שתייה פה, חטיף שם. לא בזבזת על שטות אחת — הכל פשוט הלך."},
+                  win:{tone:"win",title:"סוף החודש: נשארו 90 ₪",text:"הפרשת 90 ₪ ברגע שהכסף נכנס — ובזבזת בראש שקט את השאר. זה כל הסוד: מחליטים מראש, פעם אחת."} } },
+      { type:"artifact", mode:"categorize", instruction:"הנה דף חשבון של חודש. הקש על כל שורה וקבע: <b>הכרחי</b>, <b>כיף</b> או <b>חיסכון</b>.",
+        header:"בנק אופק לצעירים", sub:"יולי · תנועות", note:"(דף חשבון לדוגמה — בנק פיקטיבי)",
+        rows:[ {desc:"קיוסק בית ספר",sub:"שתייה + חטיף · 4 פעמים",amt:38},
+               {desc:"כרטיסייה לאוטובוס",sub:"נסיעות",amt:64},
+               {desc:"משחק בטלפון",sub:"קנייה באפליקציה",amt:29},
+               {desc:"הפקדה לחיסכון",sub:"העברה קבועה",amt:50} ],
+        insight:"עכשיו יש לך תמונה: 38 ₪ על קיוסק זה יותר מכל החיסכון החודשי. זה מה שדף חשבון מגלה." },
+      { type:"mission", title:"משימת השבוע", steps:["פתח פתק בטלפון בשם \"לאן הכסף הולך\".","כל הוצאה — גם 6 ₪ על שתייה — רשום שם מיד.","בסוף השבוע חזור עם מספר אחד: כמה יצא."],
+        when:"7 ימים · 10 שניות בכל פעם", remember:"כסף לא נעלם — הוא הולך למקומות שלא החלטת עליהם." }
+    ]},
+    /* ===== שיעור 2 ===== */
+    { id:2, title:"תקציב בלי כאב ראש", sub:"לחלק את הכסף לפני שהוא נגמר", screens:[
+      { type:"hook", title:"תקציב זה לא קמצנות. זו שליטה.", lead:"תקציב = פשוט להחליט מראש לאן ילך הכסף. פעם אחת, בתחילת החודש.", why:"נבנה לך דרך לחלק כסף שתתאים דווקא לך." },
+      { type:"simulator", q:"נכנסו לך <b>4,000 ₪</b> החודש. חלק אותם.", total:4000,
+        controls:[ {key:"save",label:"חיסכון",color:"var(--good)",init:400},
+                   {key:"need",label:"הכרחי (אוכל, נסיעות)",color:"var(--remote)",init:2400},
+                   {key:"want",label:"כיף (בילוי, קניות)",color:"var(--joy)",init:1200} ] },
+      { type:"decide", q:"3 דרכים לנהל תקציב. איזו <b>מתאימה לך?</b>",
+        options:[
+          {ic:'<rect x="3" y="7" width="18" height="12" rx="2"/><path d="M3 11h18M8 7V5h8v2"/>', b:"שיטת המעטפות", s:"מעטפה לכל קטגוריה",
+            p:"מחלקים מזומן למעטפות — אוכל, בילוי, חיסכון. נגמרה המעטפה? נגמר הכסף לתחום הזה החודש.",
+            pros:["הכי מוחשי — רואים את הכסף"], cons:["פחות נוח עם כרטיס/אפליקציה"], fit:"למי שמתפזר ורוצה גבול פיזי ברור"},
+          {ic:'<circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20V2z"/>', b:"חוק 50-30-20", s:"חצי הכרחי, שליש כיף, חמישית חיסכון",
+            p:"לא סופרים כל שקל — רק שומרים על שלוש פרופורציות מכל סכום שנכנס.",
+            pros:["פשוט לזכור, גמיש"], cons:["פחות מדויק בחודש לחוץ"], fit:"למי שרוצה כלל אחד קל בלי טבלאות"},
+          {ic:'<path d="M12 2v20M5 7h9a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h9"/>', b:"תקציב אפס", s:"לכל שקל יש תפקיד",
+            p:"לפני החודש נותנים לכל שקל \"עבודה\", עד שנשאר אפס לא-מוקצה. הכי שולט, הכי מדויק.",
+            pros:["שליטה מלאה, אפס \"נעלם\""], cons:["דורש כמה דקות תכנון בחודש"], fit:"למי שאוהב סדר ורוצה למקסם חיסכון"}
+        ], reflect:"השלם: בחרתי ב______, כי חשוב לי ש______." },
+      { type:"mission", title:"משימת השבוע", steps:["בחר אחת מ-3 השיטות.","כתוב על דף איך אתה מחלק את הכסף החודש.","נסה להיצמד לזה שבוע אחד."],
+        when:"7 ימים", remember:"אין שיטה \"נכונה\" — יש שיטה שמתאימה לך. העיקר שתחליט מראש." }
+    ]},
+    /* ===== שיעור 3 ===== */
+    { id:3, title:"לחסוך בלי להרגיש", sub:"איך סכום קטן נהיה גדול", screens:[
+      { type:"hook", title:"חיסכון קטן היום = הרבה כסף מחר.", lead:"לא צריך להיות עשיר כדי לחסוך. צריך להתחיל קטן — וקבוע.", why:"נראה לך איך 20 ₪ בשבוע הופכים לסכום שיפתיע אותך." },
+      { type:"scenario", q:"ראית נעליים ב-<b>250 ₪</b>. בעוד שבועיים יש מבצע.",
+        choices:[
+          {ic:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>', b:"קונה עכשיו", s:"רוצה אותן היום", r:"meh"},
+          {ic:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', b:"מחכה שבועיים", s:"אני יכול לחכות", r:"win"}
+        ],
+        results:{ meh:{tone:"meh",title:"שילמת 250 ₪ מלא",text:"הרצון עכשיו עלה לך 60 ₪. זה בסדר לפעמים — אבל טוב לדעת שזה מה שקרה."},
+                  win:{tone:"win",title:"שילמת 190 ₪ במבצע",text:"אותן נעליים, 60 ₪ בכיס. להמתין קצת = הכוח-על הכי פשוט בכסף."} } },
+      { type:"simulator", mode:"grow", q:"כמה תחסוך אם תפריש <b>קצת בשבוע</b>?", weekLabel:"לשבוע",
+        note:"גרור וראה כמה זה נהיה בשנה." },
+      { type:"mission", title:"משימת השבוע", steps:["בחר יעד קטן שאתה רוצה (משחק, בגד, טיול).","כתוב כמה הוא עולה.","החלט כמה תפריש כל שבוע — גם 10 ₪.","שים את הפתק במקום שאתה רואה."],
+        when:"5 דקות עכשיו", remember:"מטרה שרואים — קל יותר לחסוך בשבילה." }
+    ]},
+    /* ===== שיעור 4 ===== */
+    { id:4, title:"המלכודות", sub:"\"קנה עכשיו, שלם אחר כך\"", screens:[
+      { type:"hook", title:"הכסף שנראה חינם — ולא.", lead:"יש הצעות שנראות מעולה: תשלומים, אשראי, \"בלי ריבית\". חלקן מלכודת.", why:"נלמד לזהות את הקאץ' לפני שנופלים בו." },
+      { type:"scenario", q:"אתה רוצה טלפון ב-<b>3,000 ₪</b>. איך תשלם?",
+        choices:[
+          {ic:'<rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/>', b:"מזומן, עכשיו", s:"יש לי את הסכום", r:"win"},
+          {ic:'<path d="M3 10h18M7 15h2M3 6h18v12H3z"/>', b:"12 תשלומים \"בלי ריבית\"", s:"250 ₪ בחודש", r:"meh"},
+          {ic:'<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/>', b:"אשראי / \"קנה עכשיו שלם אח\"כ\"", s:"אקח עכשיו, אדאג אחר כך", r:"bad"}
+        ],
+        results:{ win:{tone:"win",title:"שילמת 3,000 ₪. וזהו.",text:"מזומן = אתה רואה בדיוק כמה זה עולה, ואין הפתעות. הכי שקט."},
+                  meh:{tone:"meh",title:"3,000 ₪ — אבל שים לב",text:"\"בלי ריבית\" יכול להיות אמיתי, אבל 250 ₪ בחודש נעולים לך לשנה. אם יבוא חודש לחוץ — זה כואב."},
+                  bad:{tone:"bad",title:"עלול לעלות 3,600 ₪+",text:"אשראי ו\"שלם אח\"כ\" מוסיפים ריבית וקנסות אם מאחרים. הטלפון נשאר אותו טלפון — אתה סתם שילמת יותר."} } },
+      { type:"aihands", title:"תבדוק עסקה עם ג'מיני", safe:"אל תכתוב שם, טלפון, מספר כרטיס או פרטים אישיים. רק את פרטי העסקה.",
+        steps:["פתח דפדפן והיכנס לחשבון בית הספר.","גלוש ל-Gemini ופתח שיחה חדשה.","הדבק את ההודעה למטה.","קרא את התשובה — וחשוב אם היא הגיונית."],
+        prompt:"ראיתי הצעה: אוזניות ב-600 ₪, בתשלום של 12 חודשים \"בלי ריבית\".\nמה כדאי שאבדוק לפני שאני מסכים?\nמה יכול להיות ה\"קאץ'\"?\nענה בעברית פשוטה, בקצרה.",
+        reflect:{b:"מה עשית עכשיו:",p:"ביקשת מ-AI לבדוק בשבילך עסקה — בלי לחשוף שום דבר עליך. זה כלי שמגן עליך, לא מחליף אותך."} },
+      { type:"mission", title:"משימת השבוע", steps:["חפש בבית או ברשת הצעה עם \"תשלומים\" או \"בלי ריבית\".","מצא את האותיות הקטנות.","כתוב: מה המחיר האמיתי אם משלמים הכל?"],
+        when:"10 דקות", remember:"אם משהו נראה חינם — חפש איפה משלמים עליו. תמיד יש איפה." }
+    ]},
+    /* ===== שיעור 5 ===== */
+    { id:5, title:"הכסף שלי, ההחלטות שלי", sub:"בונים כרטיס תקציב אישי", screens:[
+      { type:"hook", title:"עכשיו אתה מחליט. לא הכסף.", lead:"למדנו לאן הכסף הולך, איך לחלק, לחסוך ולזהות מלכודות. הגיע הזמן לחבר הכל.", why:"בשיעור הזה תבנה כרטיס תקציב אישי — משהו שלך, שאפשר להראות ולהפעיל." },
+      { type:"artifact", mode:"budget", instruction:"מלא את הפרטים. הכרטיס מתעדכן בזמן אמת. זה התוצר שלך." },
+      { type:"scenario", q:"נכנסו לך <b>500 ₪</b> שלא ציפית להם. מה עכשיו?",
+        choices:[
+          {ic:'<path d="M6 2l1.5 3.5M18 2l-1.5 3.5"/><path d="M4 7h16l-1.5 12a2 2 0 0 1-2 1.7H7.5a2 2 0 0 1-2-1.7z"/>', b:"הכל על משהו כיף", s:"מגיע לי", r:"meh"},
+          {ic:'<path d="M12 2v20M5 7h9a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h9"/>', b:"חצי לכיף, חצי לחיסכון", s:"גם ליהנות וגם לצבור", r:"win"}
+        ],
+        results:{ meh:{tone:"meh",title:"נהנית — והכל נעלם",text:"כיף לרגע, אבל בפעם הבאה שתצטרך כסף פתאום, לא יהיה. מותר ליהנות — עדיף לא הכל."},
+                  win:{tone:"win",title:"נהנית וגם התקדמת",text:"250 ₪ עשו לך טוב עכשיו, 250 ₪ מקרבים אותך למטרה. ככה נראית החלטה חכמה."} } },
+      { type:"mission", title:"המשימה האחרונה", steps:["צלם או שמור את כרטיס התקציב שבנית.","נסה להפעיל אותו על שבוע אמיתי אחד.","בסוף השבוע בדוק: הצלחת להיצמד? איפה קשה?"],
+        when:"שבוע אחד אמיתי", remember:"תקציב לא נגמר בכרטיס. הוא מתחזק בכל פעם שאתה מחליט מראש." }
+    ]}
+  ]
+};
+
+/* ============================================================
+   2. מצב + ניווט
+   ============================================================ */
+var view="home", li=0, si=0, done={};
+
+function totalScreens(l){ return COURSE.lessons[l].screens.length; }
+function stage(){ return document.getElementById('stage'); }
+
+function render(){
+  var back=document.getElementById('back');
+  if(view==="home"){ back.classList.add('hidden'); document.getElementById('kicker').textContent="קורס העשרה · פיננסים";
+    document.getElementById('crumb').textContent=COURSE.title; document.getElementById('step').textContent="";
+    buildSeq(COURSE.lessons.length, doneCount()); renderHome(); setCta(doneCount()>0?"המשך ללמוד":"התחל שיעור 1"); }
+  else if(view==="lesson"){ back.classList.remove('hidden');
+    var L=COURSE.lessons[li]; document.getElementById('kicker').textContent="שיעור "+L.id+" · "+L.title;
+    document.getElementById('crumb').textContent=L.sub; document.getElementById('step').textContent=(si+1)+" / "+totalScreens(li);
+    buildSeq(totalScreens(li), si, true); renderScreen(L.screens[si]);
+    var last=si===totalScreens(li)-1; setCta(last?"סיימתי את השיעור":"הלאה"); }
+  else if(view==="done"){ back.classList.add('hidden'); document.getElementById('step').textContent="";
+    document.getElementById('crumb').textContent=COURSE.title+" — הושלם"; buildSeq(COURSE.lessons.length, COURSE.lessons.length);
+    renderDone(); setCta(null); }
+  stage().scrollTop=0;
+}
+function setCta(txt){ var b=document.getElementById('cta'); if(txt===null){b.style.display='none';return;} b.style.display='flex'; document.getElementById('ctaTx').textContent=txt; }
+function doneCount(){ return Object.keys(done).length; }
+
+function buildSeq(n, filled, within){
+  var seq=document.getElementById('seq'); seq.innerHTML='';
+  for(var i=0;i<n;i++){
+    var nd=document.createElement('div'); nd.className='seq-node'+(i<filled?' done':(within&&i===filled)?' now':(!within&&i===filled?' now':''));
+    seq.appendChild(nd);
+    if(i<n-1){ var lk=document.createElement('div'); lk.className='seq-link'+(i<filled?' filled':''); seq.appendChild(lk); }
+  }
+}
+
+/* CTA / back */
+function cta(){
+  if(view==="home"){ var start=firstUndone(); li=start; si=0; view="lesson"; render(); }
+  else if(view==="lesson"){
+    if(si<totalScreens(li)-1){ si++; render(); }
+    else { done[li]=true; if(doneCount()>=COURSE.lessons.length){ view="done"; } else { view="home"; } render(); }
+  }
+}
+function goBack(){ if(view==="lesson"){ if(si>0){si--;render();} else {view="home";render();} } }
+function firstUndone(){ for(var i=0;i<COURSE.lessons.length;i++) if(!done[i]) return i; return 0; }
+function openLesson(i){ li=i; si=0; view="lesson"; render(); }
+function restart(){ done={}; view="home"; li=0; si=0; render(); }
+
+/* ============================================================
+   3. Renderers
+   ============================================================ */
+function renderHome(){
+  var f=COURSE.facts.map(function(x){return '<div class="hero-fact"><b>'+x[0]+'</b><span>'+x[1]+'</span></div>';}).join('');
+  var les=COURSE.lessons.map(function(L,i){
+    var d=done[i];
+    return '<button class="les'+(d?' done':'')+'" onclick="openLesson('+i+')">'+
+      '<span class="num">'+(d?'<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>':L.id)+'</span>'+
+      '<span class="tx"><b>'+L.title+'</b><span>'+L.sub+'</span></span>'+
+      '<span class="go"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></span></button>';
+  }).join('');
+  stage().innerHTML='<div class="screen">'+
+    '<div class="hero"><div class="hero-badge"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>קורס העשרה</div>'+
+      '<h1>'+COURSE.title+'</h1><p>'+COURSE.sub+'</p><div class="hero-facts">'+f+'</div></div>'+
+    '<div class="create-box"><svg viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z"/></svg><div><b>מה תצא איתו</b><p>'+COURSE.create+'</p></div></div>'+
+    '<div class="les-title">השיעורים</div>'+les+
+    '<div class="proto-note"><b>הערה למיטל:</b> אותו מנוע יחידות של רצף — קורס שלם (5 שיעורים) שנבנה כ-DATA. כל שיעור מגוון בסוגי-מסך. לחצי על שיעור כדי להיכנס.</div>'+
+  '</div>';
+}
+
+function chip(type){
+  var m={scenario:['k-scenario','תרחיש · תבחר, ותראה','<path d="M9 18l6-6-6-6"/><circle cx="12" cy="12" r="10"/>'],
+    artifact:['k-artifact','חפץ · עבוד עליו בעצמך','<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'],
+    simulator:['k-simulator','סימולטור · הזז וראה','<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>'],
+    decide:['k-decide','השווה והחלט','<path d="M12 3v18M3 8l9-5 9 5M5 10v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>'],
+    aihands:['k-aihands','AI בידיים · אתה מפעיל','<rect x="4" y="7" width="16" height="12" rx="2"/><path d="M9 7V4h6v3M9 13h.01M15 13h.01"/>']};
+  var c=m[type]; if(!c) return '';
+  return '<span class="kind '+c[0]+'"><svg viewBox="0 0 24 24">'+c[2]+'</svg>'+c[1]+'</span>';
+}
+
+function renderScreen(s){
+  var h='<div class="screen">';
+  if(s.type==="hook") h+=renderHook(s);
+  else if(s.type==="scenario") h+=chip('scenario')+renderScenario(s);
+  else if(s.type==="artifact" && s.mode==="categorize") h+=chip('artifact')+renderCategorize(s);
+  else if(s.type==="artifact" && s.mode==="budget") h+=chip('artifact')+renderBudget(s);
+  else if(s.type==="simulator" && s.mode==="grow") h+=chip('simulator')+renderGrow(s);
+  else if(s.type==="simulator") h+=chip('simulator')+renderSim(s);
+  else if(s.type==="decide") h+=chip('decide')+renderDecide(s);
+  else if(s.type==="aihands") h+=chip('aihands')+renderAi(s);
+  else if(s.type==="mission") h+=renderMission(s);
+  h+='</div>';
+  stage().innerHTML=h;
+  if(s.type==="simulator" && s.mode!=="grow") sim();
+  if(s.type==="simulator" && s.mode==="grow") grow();
+  if(s.type==="artifact" && s.mode==="budget") bc();
+}
+
+function renderHook(s){
+  return '<div class="hero"><div class="hero-badge"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/></svg>נקודת פתיחה</div>'+
+    '<h1>'+s.title+'</h1><p>'+s.lead+'</p></div>'+
+    '<div class="remember"><div class="rl"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12c1 1 1 2 1 3h6c0-1 0-2 1-3a7 7 0 0 0-4-12z"/></svg>למה זה שלך</div><p>'+s.why+'</p></div>';
+}
+
+function renderScenario(s){
+  var ch=s.choices.map(function(c,i){
+    return '<button class="choice" data-r="'+c.r+'" onclick="pickSc(this)"><span class="ic"><svg viewBox="0 0 24 24">'+c.ic+'</svg></span>'+
+      '<span class="tx"><b>'+c.b+'</b><span>'+c.s+'</span></span></button>';
+  }).join('');
+  var res=Object.keys(s.results).map(function(k){ var r=s.results[k];
+    return '<div class="result '+r.tone+'" id="res-'+k+'"><h4><svg viewBox="0 0 24 24">'+(r.tone==="win"?'<path d="M20 6L9 17l-5-5"/>':'<circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>')+'</svg>'+r.title+'</h4><p>'+r.text+'</p></div>';
+  }).join('');
+  return '<h2 class="q">'+s.q+'</h2><div class="choices">'+ch+'</div>'+res;
+}
+function pickSc(btn){
+  var scr=btn.closest('.screen');
+  scr.querySelectorAll('.choice').forEach(function(c){c.classList.remove('sel');}); btn.classList.add('sel');
+  scr.querySelectorAll('.result').forEach(function(r){r.classList.remove('show');});
+  var el=scr.querySelector('#res-'+btn.getAttribute('data-r')); if(el) el.classList.add('show');
+}
+
+/* --- artifact: categorize --- */
+var CAT={need:'הכרחי',want:'כיף',save:'חיסכון'};
+function renderCategorize(s){
+  window._rows=s.rows.map(function(r){return {desc:r.desc,sub:r.sub,amt:r.amt,def:null};});
+  window._insight=s.insight;
+  var rows=s.rows.map(function(r,i){
+    return '<div class="st-row"><span class="amt">'+r.amt+'₪</span><span class="desc"><b>'+r.desc+'</b><span>'+r.sub+'</span></span>'+
+      '<button class="tagbtn" id="tag'+i+'" onclick="togP('+i+')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>סמן</button></div>'+
+      '<div class="picker" id="pk'+i+'">'+
+        ['need','want','save'].map(function(t){return '<button class="pick" data-t="'+t+'" onclick="setCat('+i+',\''+t+'\')">'+CAT[t]+'</button>';}).join('')+
+      '</div>';
+  }).join('');
+  return '<p class="lead">'+s.instruction+'</p>'+
+    '<div class="card statement"><div class="st-head"><b>'+s.header+'</b><span>'+s.sub+'</span></div>'+
+    '<div class="st-note">'+s.note+'</div>'+rows+
+    '<div class="st-tally"><div class="tally need"><b id="tNeed">0₪</b><span>הכרחי</span></div>'+
+    '<div class="tally want"><b id="tWant">0₪</b><span>כיף</span></div>'+
+    '<div class="tally save"><b id="tSave">0₪</b><span>חיסכון</span></div></div></div>'+
+    '<div class="proto-note" id="artHint">קבע קטגוריה לכל השורות.</div>';
+}
+function togP(i){ var p=document.getElementById('pk'+i); document.querySelectorAll('.picker').forEach(function(x){if(x!==p)x.classList.remove('open');}); p.classList.toggle('open'); }
+function setCat(i,t){ window._rows[i].def=t; var b=document.getElementById('tag'+i); b.className='tagbtn t-'+t;
+  b.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>'+CAT[t]; document.getElementById('pk'+i).classList.remove('open');
+  var s={need:0,want:0,save:0},all=true; window._rows.forEach(function(r){if(r.def)s[r.def]+=r.amt;else all=false;});
+  document.getElementById('tNeed').textContent=s.need+'₪'; document.getElementById('tWant').textContent=s.want+'₪'; document.getElementById('tSave').textContent=s.save+'₪';
+  if(all) document.getElementById('artHint').innerHTML='<b>יפה.</b> '+window._insight; }
+
+/* --- simulator: split --- */
+function renderSim(s){
+  window._ctrls=s.controls; window._total=s.total;
+  var sliders=s.controls.map(function(c){
+    return '<div class="slider"><div class="lab"><span class="n"><i style="background:'+c.color+'"></i>'+c.label+'</span><span class="v" id="v_'+c.key+'">'+c.init+' ₪</span></div>'+
+      '<input type="range" id="s_'+c.key+'" min="0" max="'+s.total+'" step="50" value="'+c.init+'" oninput="sim()"></div>';
+  }).join('');
+  return '<h2 class="q">'+s.q+'</h2><div class="card"><div class="sim-income"><span>מתחלק בין שלושה</span><b id="simT">'+s.total+' ₪</b></div>'+
+    '<div class="bar"><i class="b-save" id="bar_save"></i><i class="b-need" id="bar_need"></i><i class="b-want" id="bar_want"></i></div>'+
+    '<div style="padding:0 15px 8px;display:flex;justify-content:space-between;font-size:11px;color:var(--ink-faint)"><span>חיסכון</span><span>הכרחי</span><span>כיף</span></div>'+
+    sliders+'<div class="sim-fb good" id="simFb"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span id="simTx">איזון יפה.</span></div></div>';
+}
+function sim(){
+  if(!window._ctrls) return; var vals={},sum=0;
+  window._ctrls.forEach(function(c){var v=+document.getElementById('s_'+c.key).value; vals[c.key]=v; sum+=v; document.getElementById('v_'+c.key).textContent=v+' ₪';});
+  var d=sum||1; ['save','need','want'].forEach(function(k){var el=document.getElementById('bar_'+k); if(el)el.style.width=((vals[k]||0)/d*100)+'%';});
+  document.getElementById('simT').textContent=sum.toLocaleString('he-IL')+' ₪';
+  var fb=document.getElementById('simFb'),tx=document.getElementById('simTx'),sr=(vals.save||0)/d;
+  if(sum>window._total){fb.className='sim-fb warn';tx.textContent='חרגת מ-'+window._total.toLocaleString('he-IL')+' ₪ — הוצאת יותר ממה שנכנס.';}
+  else if(sr<0.05){fb.className='sim-fb warn';tx.textContent='כמעט בלי חיסכון. גם 5% קבוע נהיה סכום רציני.';}
+  else if((vals.want||0)>(vals.need||0)){fb.className='sim-fb warn';tx.textContent='הכיף גדול מההכרחי — כיף עכשיו, לחוץ בסוף.';}
+  else{fb.className='sim-fb good';tx.textContent='איזון יפה. חיסכון קטן וקבוע = הרבה כסף מחר.';}
+}
+
+/* --- simulator: grow (חיסכון לאורך שנה) --- */
+function renderGrow(s){
+  return '<h2 class="q">'+s.q+'</h2><div class="card"><div class="sim-income"><span>בשנה תחסוך</span><b id="growT">1,040 ₪</b></div>'+
+    '<div class="slider"><div class="lab"><span class="n"><i style="background:var(--good)"></i>כמה בשבוע?</span><span class="v" id="growW">20 ₪</span></div>'+
+    '<input type="range" id="s_grow" min="5" max="100" step="5" value="20" oninput="grow()"></div>'+
+    '<div class="sim-fb good" id="growFb"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg><span id="growTx">20 ₪ בשבוע = 1,040 ₪ בשנה. בלי להרגיש.</span></div></div>';
+}
+function grow(){
+  var w=+document.getElementById('s_grow').value, y=w*52;
+  document.getElementById('growW').textContent=w+' ₪'; document.getElementById('growT').textContent=y.toLocaleString('he-IL')+' ₪';
+  document.getElementById('growTx').textContent=w+' ₪ בשבוע = '+y.toLocaleString('he-IL')+' ₪ בשנה. בלי להרגיש.';
+}
+
+/* --- decide --- */
+function renderDecide(s){
+  var op=s.options.map(function(o,i){
+    var pros=o.pros.map(function(p){return '<span class="pro y"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>'+p+'</span>';}).join('');
+    var cons=o.cons.map(function(c){return '<span class="pro n"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>'+c+'</span>';}).join('');
+    return '<button class="method" onclick="pickM(this)"><div class="method-top"><span class="ic"><svg viewBox="0 0 24 24">'+o.ic+'</svg></span>'+
+      '<div><b>'+o.b+'</b><span>'+o.s+'</span></div></div><p>'+o.p+'</p><div class="pros">'+pros+cons+'</div>'+
+      '<div class="fit"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>'+o.fit+'</div></button>';
+  }).join('');
+  var refl=s.reflect?'<div class="reflect"><b>לחשוב לרגע</b><p>'+s.reflect+'</p></div>':'';
+  return '<h2 class="q">'+s.q+'</h2>'+op+refl;
+}
+function pickM(btn){ var scr=btn.closest('.screen'); scr.querySelectorAll('.method').forEach(function(m){m.classList.remove('sel');}); btn.classList.add('sel'); }
+
+/* --- ai-hands --- */
+function renderAi(s){
+  var steps=s.steps.map(function(x){return '<div class="s">'+x+'</div>';}).join('');
+  return '<h2 class="q">'+s.title+'</h2>'+
+    '<div class="ai-safe"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'+s.safe+'</div>'+
+    '<div class="steps">'+steps+'</div>'+
+    '<div class="prompt-box"><button class="copy" onclick="copyP(this)"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>העתק</button><span id="promptTxt">'+s.prompt+'</span></div>'+
+    '<div class="reflect"><b>'+s.reflect.b+'</b><p>'+s.reflect.p+'</p></div>';
+}
+function copyP(btn){ var t=document.getElementById('promptTxt').innerText;
+  if(navigator.clipboard) navigator.clipboard.writeText(t);
+  btn.innerHTML='<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>הועתק'; setTimeout(function(){ if(btn) btn.innerHTML='<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>העתק'; },1600); }
+
+/* --- artifact: budget card builder --- */
+function renderBudget(s){
+  return '<p class="lead">'+s.instruction+'</p>'+
+    '<div class="bc-preview"><div class="lbl">כרטיס התקציב של</div><div class="amt" id="bcName">— השם שלי —</div>'+
+      '<div class="lbl">הכנסה חודשית: <b id="bcInc">0 ₪</b></div>'+
+      '<div class="bcbar" style="margin-top:8px"><i class="b-save" id="bc_save" style="background:var(--good)"></i><i id="bc_need" style="background:#7FC4FF"></i><i id="bc_want" style="background:#C79BE8"></i></div>'+
+      '<div class="bc-legend"><span><i style="background:var(--good)"></i>חיסכון <b id="bcS">0</b></span><span><i style="background:#7FC4FF"></i>הכרחי <b id="bcN">0</b></span><span><i style="background:#C79BE8"></i>כיף <b id="bcW">0</b></span></div>'+
+      '<div class="bc-check" id="bcChk"></div></div>'+
+    '<div class="card">'+
+      '<div class="field"><div class="fl">השם / הכינוי שלי</div><input type="text" id="f_name" placeholder="למשל: דני" oninput="bc()" maxlength="16"></div>'+
+      '<div class="field"><div class="fl">כמה נכנס לי בחודש? <span class="fv" id="fv_inc">0 ₪</span></div><input type="range" id="f_inc" min="0" max="5000" step="100" value="2000" oninput="bc()"></div>'+
+      '<div class="field"><div class="fl">חיסכון <span class="fv" id="fv_save">0 ₪</span></div><input type="range" id="f_save" min="0" max="5000" step="50" value="300" oninput="bc()"></div>'+
+      '<div class="field"><div class="fl">הכרחי (אוכל, נסיעות) <span class="fv" id="fv_need">0 ₪</span></div><input type="range" id="f_need" min="0" max="5000" step="50" value="1200" oninput="bc()"></div>'+
+      '<div class="field"><div class="fl">כיף (בילוי, קניות) <span class="fv" id="fv_want">0 ₪</span></div><input type="range" id="f_want" min="0" max="5000" step="50" value="500" oninput="bc()"></div>'+
+    '</div>';
+}
+function bc(){
+  var name=(document.getElementById('f_name').value||'').trim();
+  var inc=+document.getElementById('f_inc').value, sv=+document.getElementById('f_save').value, nd=+document.getElementById('f_need').value, wt=+document.getElementById('f_want').value;
+  document.getElementById('fv_inc').textContent=inc+' ₪'; document.getElementById('fv_save').textContent=sv+' ₪';
+  document.getElementById('fv_need').textContent=nd+' ₪'; document.getElementById('fv_want').textContent=wt+' ₪';
+  document.getElementById('bcName').textContent=name?name:'— השם שלי —';
+  document.getElementById('bcInc').textContent=inc.toLocaleString('he-IL')+' ₪';
+  document.getElementById('bcS').textContent=sv; document.getElementById('bcN').textContent=nd; document.getElementById('bcW').textContent=wt;
+  var alloc=sv+nd+wt, d=alloc||1;
+  document.getElementById('bc_save').style.width=(sv/d*100)+'%'; document.getElementById('bc_need').style.width=(nd/d*100)+'%'; document.getElementById('bc_want').style.width=(wt/d*100)+'%';
+  var chk=document.getElementById('bcChk');
+  if(alloc>inc) chk.innerHTML='<svg viewBox="0 0 24 24" style="stroke:#FFD3A8"><circle cx="12" cy="12" r="10"/><path d="M12 8v5"/></svg><span style="color:#FFE7CC">חילקת יותר ממה שנכנס — הורד משהו.</span>';
+  else if(sv<=0) chk.innerHTML='<svg viewBox="0 0 24 24" style="stroke:#FFD3A8"><circle cx="12" cy="12" r="10"/><path d="M12 8v5"/></svg><span style="color:#FFE7CC">אין חיסכון — נסה להשאיר קצת בצד.</span>';
+  else chk.innerHTML='<svg viewBox="0 0 24 24" style="stroke:#BCE3C6"><path d="M20 6L9 17l-5-5"/></svg><span style="color:#DFF6E6">כרטיס מאוזן. זה שלך!</span>';
+}
+
+/* --- mission --- */
+function renderMission(s){
+  var steps=s.steps.map(function(x){return '<li>'+x+'</li>';}).join('');
+  return '<div class="mission"><h3><svg viewBox="0 0 24 24"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></svg>'+s.title+'</h3><ol>'+steps+'</ol>'+
+    '<div class="when"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'+s.when+'</div></div>'+
+    '<div class="remember"><div class="rl"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12c1 1 1 2 1 3h6c0-1 0-2 1-3a7 7 0 0 0-4-12z"/></svg>מה לזכור</div><p>'+s.remember+'</p></div>';
+}
+
+/* --- course done --- */
+function renderDone(){
+  stage().innerHTML='<div class="screen"><div class="done-wrap"><div class="done-ring"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>'+
+    '<h2>סיימת את כסף חכם</h2><p>5 שיעורים, וכרטיס תקציב משלך.</p></div>'+
+    '<div class="done-list"><b>מה יש לך עכשיו</b><ul>'+
+      ['לזהות לאן הכסף הולך','שיטת תקציב שמתאימה לך','דרך לחסוך בלי להרגיש','לזהות מלכודות אשראי','כרטיס תקציב אישי'].map(function(x){return '<li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>'+x+'</li>';}).join('')+
+    '</ul></div>'+
+    '<button class="btn btn-ghost" onclick="restart()">להתחיל מחדש</button>'+
+    '<div class="proto-note"><b>סוף הקורס.</b> 5 שיעורים · 6 סוגי-מסך (כולל AI-בידיים החדש) · הכל DATA על מנוע אחד.</div></div>';
+}
+
+render();
+</script>
+</body>
+</html>
