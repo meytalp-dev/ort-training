@@ -82,7 +82,7 @@ window.RETZEF=(function(){
     {rx:/רפוא|תרופ|אנטומי|פיזיולוג|מדעי גוף|פציע/, why:'רפואה/אנטומיה'},
     {rx:/נהיגה|תעבורה|לנהוג|תמרור|תאונ|הנדסת תנועה|בטיחות בדרכים|כביש/, why:'בטיחות בדרכים'}
   ];
-  var SOFT_RX=/שירות|לקוח|תקשורת|אתיק|יזמות|שיווק|ניהול|מכיר|תמחור|מצג|פורטפוליו|תיעוד|רפלקצ|צוות|מנהיג|דיגיטל|ענן|נתונים|היסטורי|קונספט|השראה/;
+  var SOFT_RX=/שירות|לקוח|תקשורת|אתיק|יזמות|שיווק|ניהול|מכיר|תמחור|מצג|פורטפוליו|תיעוד|רפלקצ|צוות|מנהיג|דיגיטל|ענן|נתונים|היסטורי|קונספט|השראה|פרסום|קמפיין|קופי|מותג|קריאייטיב|סיעור|קהל יעד/;
   function classifySub(text, subj){
     // ליבה הומנית (טיר 4/5): GREEN דרך verify-pedagogy (Perplexity+מקור סמכותי מחליפים מומחה תחום — החלטת מיטל)
     if(subj.cat==='ליבה'||subj.tier===4||subj.tier===5) return null;
@@ -113,6 +113,15 @@ window.RETZEF=(function(){
       });
     });
     return out;
+  }
+
+  /* סוג GREEN: core (ליבה·verify-pedagogy) · soft (GPT מפיק מצוין) · technique (יוצא חלול בלי DOCX) */
+  function greenType(subj,c){
+    if(subj.cat==='ליבה'||subj.tier===4||subj.tier===5) return 'core';
+    var ks=[].concat((c&&c.knowledge)||[],(c&&c.skills)||[]);
+    if(!ks.length) return 'soft';
+    var soft=0; ks.forEach(function(t){ if(SOFT_RX.test(t)) soft++; });
+    return soft/ks.length>=0.4 ? 'soft' : 'technique';
   }
 
   function comp(id){ return (window.CURRICULUM[id]||{}).mods||[]; }
@@ -186,5 +195,5 @@ window.RETZEF=(function(){
     MODELS:MODELS,producerOf:producerOf,PALETTES:PALETTES,PAL_DEFAULT:PAL_DEFAULT,palOf:palOf,
     HAZARD_DOMAINS:HAZARD_DOMAINS,classifySub:classifySub,classifyModule:classifyModule,subjRG:subjRG,
     greenQueue:greenQueue,comp:comp,modNum:modNum,compFor:compFor,subtopics:subtopics,subjStats:subjStats,
-    buildPrompt:buildPrompt};
+    greenType:greenType,buildPrompt:buildPrompt};
 })();

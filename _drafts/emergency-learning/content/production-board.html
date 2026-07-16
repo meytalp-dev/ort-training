@@ -68,8 +68,11 @@ button{font-family:inherit;cursor:pointer}
 .tagRG{font-size:9.5px;font-weight:800;border-radius:99px;padding:1px 7px;display:inline-flex;align-items:center;gap:4px}
 .tagRG .d{width:6px;height:6px;border-radius:99px}
 .tagRG.green{background:#EBF8EF;color:#2A7B4A}.tagRG.green .d{background:#3AA65A}
+.tagRG.soft{background:#EBF8EF;color:#2A7B4A}.tagRG.soft .d{background:#3AA65A}
+.tagRG.tech{background:#F4EEE2;color:#8a6a2a}.tagRG.tech .d{background:#C6A24E}
 .tagRG.mixed{background:#FFF3E0;color:#A96B12}.tagRG.mixed .d{background:#E39A2B}
-.tagRG.core{background:#FDEEEC;color:#B23}.tagRG.core .d{background:#D9574F}
+.tagRG.core{background:#EEF0FB;color:#4B54B8}.tagRG.core .d{background:#6E77D8}
+.tagRG.done{background:#E4F3EC;color:#1f7a4d}.tagRG.done .d{display:none}
 .prodchip{font-size:9.5px;font-weight:800;border-radius:6px;padding:1px 6px}
 .card .acts{display:flex;gap:6px;flex-wrap:wrap}
 .card .acts button{font-size:11px;font-weight:700;border-radius:8px;padding:6px 9px;border:1px solid var(--line);background:#fff;color:var(--ink-strong);display:inline-flex;align-items:center;gap:5px}
@@ -128,6 +131,13 @@ button{font-family:inherit;cursor:pointer}
     <button class="mini" id="resetBtn">אפס למקור</button>
   </div>
   <div class="savebar" id="savebar"><b id="saveCount"></b><span>שינויים מקומיים שעדיין לא קובעו בקובץ.</span></div>
+  <div class="orch" style="margin-top:12px">
+    <b>מה מעתיקים:</b>
+    <span class="tagRG soft"><span class="d"></span>רך · מומלץ להעתיק</span> GPT מפיק מצוין
+    <span class="tagRG tech"><span class="d"></span>טכני · עדיף להמתין</span> יוצא חלול בלי DOCX
+    <span class="tagRG core"><span class="d"></span>ליבה</span> דרך verify-pedagogy
+    <span class="tagRG done"><span class="d"></span>✓ יוצר</span> כבר בריפו — לא להעתיק שוב
+  </div>
 
   <div class="board" id="board"></div>
 
@@ -145,6 +155,7 @@ button{font-family:inherit;cursor:pointer}
 <script src="production-plan.js"></script>
 <script src="curriculum-data.js"></script>
 <script src="retzef-core.js"></script>
+<script src="produced.js"></script>
 <script>
 var LS_KEY='retzef_pipe_v1';
 var LANES=[
@@ -164,7 +175,9 @@ var R=window.RETZEF, ITEMS=[], overrides={};
 function moduleKey(subjId,pmN){ return subjId+'|'+pmN; }
 function loadOverrides(){ try{ overrides=JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ overrides={}; } }
 function saveOverrides(){ localStorage.setItem(LS_KEY, JSON.stringify(overrides)); }
-function stageOf(it){ var k=moduleKey(it.subj.id,it.pm.n); return overrides[k] || it.pm.pipe || 'todo'; }
+function producedCount(it){ var P=window.PRODUCED||{}; return P[it.subj.id+'|'+R.modNum(it.pm.n)]||0; }
+/* מודולה שכבר הופקה עוברת אוטומטית ל"בבדיקת Claude" — יוצאת מתור ההעתקה (אלא אם קידמתָ ידנית) */
+function stageOf(it){ var k=moduleKey(it.subj.id,it.pm.n); return overrides[k] || it.pm.pipe || (producedCount(it)>0?'review':'todo'); }
 function setStage(it,stage){
   var k=moduleKey(it.subj.id,it.pm.n), base=it.pm.pipe||'todo';
   if(stage===base){ delete overrides[k]; } else { overrides[k]=stage; }
@@ -233,9 +246,15 @@ function render(){
 }
 function kpi(v,l,cls){ return '<div class="kpi '+(cls||'')+'"><b>'+v+'</b><span>'+l+'</span></div>'; }
 
+function recTag(it){
+  var k=rgKind(it);
+  if(k==='core') return {cls:'core', t:'ליבה · verify-pedagogy'};
+  if(k==='mixed') return {cls:'mixed', t:'מעורב '+it.cl.green+'/'+(it.cl.green+it.cl.red)};
+  return R.greenType(it.subj,it.c)==='soft' ? {cls:'soft', t:'רך · מומלץ להעתיק'} : {cls:'tech', t:'טכני · עדיף להמתין'};
+}
 function cardHTML(it,lane){
-  var pal=R.palOf(it.subj), k=rgKind(it), prod=R.MODELS[R.producerOf(it.subj)], st=stageOf(it), li=LANEIDX[st];
-  var mi=it.subj.modules.indexOf(it.pm);
+  var pal=R.palOf(it.subj), prod=R.MODELS[R.producerOf(it.subj)], st=stageOf(it), li=LANEIDX[st];
+  var mi=it.subj.modules.indexOf(it.pm), rec=recTag(it), pc=producedCount(it);
   var acts='';
   if(st==='todo') acts+='<button class="cp" data-cp="'+it.subj.id+'|'+mi+'">'+ICON.copy+'פרומפט ל-GPT</button>';
   if(lane.id!=='done') acts+='<button class="go" data-go="'+it.subj.id+'|'+it.pm.n+'">'+nextLabel(st)+ICON.fwd+'</button>';
@@ -243,7 +262,8 @@ function cardHTML(it,lane){
   return '<div class="card" style="--pal:'+pal.p+'">'+
     '<div class="ct">'+(it.pm.t||it.c.title||'')+'</div>'+
     '<div class="cm">'+it.subj.name+' · '+it.pm.n+
-      ' <span class="tagRG '+k+'"><span class="d"></span>'+rgLabel(k)+(k==='mixed'?' '+it.cl.green+'/'+(it.cl.green+it.cl.red):'')+'</span>'+
+      ' <span class="tagRG '+rec.cls+'"><span class="d"></span>'+rec.t+'</span>'+
+      (pc>0?' <span class="tagRG done">✓ יוצר · '+pc+' יח\'</span>':'')+
       ' <span class="prodchip" style="background:'+prod.bg+';color:'+prod.c+'">'+prod.name+'</span></div>'+
     '<div class="acts">'+acts+'</div></div>';
 }
