@@ -12,6 +12,14 @@ source: תפעול מערכות תקשוב · מ9
 
 1. [תהליך ניהול תקלה](unit-01-ticket-lifecycle.md) — ידע — task — [לאימות]
 2. [רמות תמיכה](unit-02-support-levels.md) — ידע — task — [לאימות]
+3. [שירות ותקשורת עם משתמש](unit-03-service-communication.md) — ידע — task — [לאימות]
+4. [תיעוד ובסיס ידע](unit-04-documentation-knowledge-base.md) — ידע — task — [לאימות]
+5. [קבלת פנייה](unit-05-intake.md) — מיומנות — task — [לאימות]
+6. [סיווג ותיעדוף תקלה](unit-06-classify-prioritize.md) — מיומנות — task — [לאימות]
+7. [ניהול במערכת טיקטים](unit-07-ticket-system-management.md) — מיומנות — task — [לאימות]
+8. [תקשורת ברורה עם המשתמש](unit-08-clear-user-communication.md) — מיומנות — task — [לאימות]
+9. [סגירה ותיעוד](unit-09-close-document.md) — מיומנות — task — [לאימות]
+10. [יומן טיקטים ואיכות השירות](unit-10-ticket-journal-assessment.md) — מיומנות — assessment — [לאימות]
 
 ## תוצר מודולה
 
