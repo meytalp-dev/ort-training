@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף — סיור מודרך פר-תפקיד</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#0B8F98; --teal-deep:#086b72; --teal-soft:#e6f4f5;
+    --ink:#1a2b2d; --muted:#5b7377; --line:#d9e6e7; --bg:#f4f9f9; --card:#fff;
+    --amber:#E8722C; --green:#1a9e6a;
+    --shadow:0 2px 8px rgba(11,143,152,.07), 0 10px 30px rgba(11,143,152,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  .wrap{max-width:920px;margin:0 auto;padding:24px 20px 80px}
+  .retzef-line{height:3px;background:linear-gradient(90deg,var(--teal),transparent);border-radius:2px}
+  h1{font-size:23px;font-weight:800;margin:12px 0 2px}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:15px}
+
+  .roles{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .role{border:1.5px solid var(--line);border-radius:12px;padding:11px 18px;cursor:pointer;font-weight:700;
+    background:#fff;transition:.13s;font-size:15px}
+  .role:hover{border-color:var(--teal)}
+  .role.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .role small{display:block;font-weight:400;font-size:11px;opacity:.85}
+  .startbtn{margin:14px 0 0;background:var(--teal);color:#fff;border:none;border-radius:11px;padding:11px 22px;
+    font-weight:700;cursor:pointer;font-family:inherit;font-size:15px}
+  .startbtn:hover{background:var(--teal-deep)}
+
+  /* מוקאפ דשבורד לפי תפקיד */
+  .board{display:grid;gap:14px;margin-top:20px}
+  .board.admin{grid-template-columns:repeat(3,1fr)}
+  .board.teacher{grid-template-columns:repeat(2,1fr)}
+  .board.student{grid-template-columns:1fr}
+  @media(max-width:640px){.board{grid-template-columns:1fr!important}}
+  .tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);position:relative}
+  .tile h3{margin:0 0 6px;font-size:16px}
+  .tile p{margin:0;color:var(--muted);font-size:13px}
+  .tile .big{font-size:28px;font-weight:800;color:var(--teal-deep)}
+  .tile.wide{grid-column:1/-1}
+  .fakebtn{display:inline-block;background:var(--teal-soft);color:var(--teal-deep);border-radius:9px;padding:7px 13px;font-size:13px;font-weight:700;margin-top:10px}
+
+  /* overlay של הסיור */
+  .tour-mask{position:fixed;inset:0;background:rgba(16,32,34,.55);z-index:50;display:none}
+  .tour-mask.on{display:block}
+  .spot{position:absolute;border-radius:14px;box-shadow:0 0 0 4px var(--teal),0 0 0 9999px rgba(16,32,34,.55);
+    transition:.25s;pointer-events:none}
+  .bubble{position:absolute;z-index:60;background:#fff;border-radius:14px;padding:16px 18px;max-width:290px;
+    box-shadow:0 12px 40px rgba(0,0,0,.25);transition:.25s}
+  .bubble .bt{font-weight:800;font-size:15px;margin-bottom:4px}
+  .bubble .bd{color:var(--muted);font-size:13.5px}
+  .bubble .brow{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+  .bubble .prog{font-size:12px;color:var(--muted)}
+  .bubble .bbtns{display:flex;gap:8px}
+  .bubble button{font-family:inherit;font-weight:700;font-size:13px;border-radius:9px;padding:7px 14px;cursor:pointer;border:none}
+  .bubble .skip{background:#fff;color:var(--muted);border:1px solid var(--line)}
+  .bubble .nextb{background:var(--teal);color:#fff}
+  .done{background:var(--green)!important}
+  .hint{font-size:13px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="retzef-line"></div>
+  <h1>סיור מודרך</h1>
+  <p class="sub">קצר, בתוך הפעולה, <b>מותאם לתפקיד</b> — לא סיור-על שמציג את כל המערכת.</p>
+
+  <div class="roles" id="roles"></div>
+  <p class="hint" id="roleHint"></p>
+  <button class="startbtn" onclick="startTour()">▶ התחל סיור</button>
+
+  <div class="board" id="board"></div>
+</div>
+
+<div class="tour-mask" id="mask"></div>
+<div class="spot" id="spot" style="display:none"></div>
+<div class="bubble" id="bubble" style="display:none">
+  <div class="bt" id="bTitle"></div>
+  <div class="bd" id="bText"></div>
+  <div class="brow"><span class="prog" id="bProg"></span>
+    <div class="bbtns"><button class="skip" onclick="endTour()">דלג</button>
+      <button class="nextb" id="bNext" onclick="nextStep()">הבא</button></div></div>
+</div>
+
+<script>
+// ---- מוקאפ דשבורד + מסלול סיור לכל תפקיד ----
+const ROLES = {
+  admin:{ label:'מנהל / רכז', tag:'תמונת-מצב בית-ספרית',
+    tiles:[
+      {id:'a1',h:'מצב כניסה',b:'18/22',p:'תלמידים שנכנסו היום'},
+      {id:'a2',h:'כיתות פעילות',b:'1',p:'מתוך 1 שהופעלו'},
+      {id:'a3',h:'טעונים טיפול',b:'2',p:'טרם נכנסו למערכת'},
+      {id:'a4',h:'הוספת משתמשים',p:'העלאת קובץ או קישור הזמנה',btn:'הוסף'},
+      {id:'a5',h:'הרשאות',p:'מי רואה מה — לפי תפקיד',btn:'נהל'},
+      {id:'a6',h:'בריאות מערכת',p:'מי נתקע בכניסה',btn:'בדוק'},
+    ],
+    steps:[
+      {t:'a1',ti:'תמונת מצב במבט',tx:'כמה תלמידים נכנסו היום — לא מאגר נתונים, מספר אחד ברור.'},
+      {t:'a4',ti:'הוספת משתמשים',tx:'קובץ Excel או קישור הזמנה. שתי לחיצות והכיתה בפנים.'},
+      {t:'a3',ti:'מי לא נכנס',tx:'המערכת מסמנת מי טרם נכנס — כדי שתשלח לו קישור מחדש.'},
+      {t:'a5',ti:'הרשאות',tx:'כל תפקיד רואה בדיוק מה שצריך. תלמיד לא רואה מסכי צוות.'},
+    ]},
+  teacher:{ label:'מורה', tag:'ניהול הכיתה שלי',
+    tiles:[
+      {id:'t1',h:'הכיתות שלי',p:'לשון י\'1 · תגבור לשון',btn:'פתח'},
+      {id:'t2',h:'פתחי שיעור',p:'קוד הצטרפות + ניטור חי',btn:'פתחי'},
+      {id:'t3',h:'הקצאת תרגול',p:'אוטומטי · קבוצתי · ידני',btn:'הקצה'},
+      {id:'t4',h:'מי צריך עזרה',b:'3',p:'תלמידים שתקועים היום'},
+    ],
+    steps:[
+      {t:'t1',ti:'הכיתות שלך',tx:'הקבוצות שאת מלמדת — הציר האקדמי. כל קבוצה בנפרד.'},
+      {t:'t2',ti:'פתיחת שיעור',tx:'כפתור אחד → קוד לתלמידים → את רואה מי נכנס ומי תקוע, חי.'},
+      {t:'t3',ti:'הקצאת תרגול',tx:'המערכת מציעה רמה מתאימה לכל תלמיד — את מאשרת.'},
+      {t:'t4',ti:'מי צריך עזרה',tx:'לא צריך לחפש — המערכת מציפה מי תקוע כרגע.'},
+    ]},
+  student:{ label:'תלמיד', tag:'המסלול שלי (< דקה)',
+    tiles:[
+      {id:'s1',h:'המשימה שלי עכשיו',p:'משפט פשוט מול מורכב · 10 דק\'',btn:'התחל'},
+      {id:'s2',h:'המשך מאיפה שעצרתי',p:'לא מתחילים מהתחלה'},
+      {id:'s3',h:'בקשת עזרה',p:'כפתור אחד — המורה יודעת',btn:'עזרה'},
+    ],
+    steps:[
+      {t:'s1',ti:'כאן מתחילים',tx:'המשימה שלך להיום. לוחצים "התחל" וזהו.'},
+      {t:'s3',ti:'ככה מבקשים עזרה',tx:'תקוע? לחיצה אחת והמורה יודעת. בלי בושה.'},
+      {t:'s2',ti:'ככה יודעים שסיימת',tx:'תמיד ממשיכים מאיפה שעצרת — לא מתחילים מחדש.'},
+    ]},
+};
+
+let current='admin', stepIdx=0;
+
+function renderRoles(){
+  document.getElementById('roles').innerHTML=Object.entries(ROLES).map(([k,r])=>
+    `<div class="role ${k===current?'on':''}" onclick="pickRole('${k}')">${r.label}<small>${r.tag}</small></div>`).join('');
+  document.getElementById('roleHint').textContent = current==='student'
+    ? 'סיור התלמיד קצר במיוחד — פחות מדקה, 3 עצירות.' : `${ROLES[current].steps.length} עצירות, בתוך הדשבורד עצמו.`;
+}
+function renderBoard(){
+  const r=ROLES[current];
+  const b=document.getElementById('board'); b.className='board '+current;
+  b.innerHTML=r.tiles.map(t=>`<div class="tile" id="${t.id}"><h3>${t.h}</h3>
+    ${t.b?`<div class="big">${t.b}</div>`:''}<p>${t.p||''}</p>${t.btn?`<span class="fakebtn">${t.btn}</span>`:''}</div>`).join('');
+}
+function pickRole(k){ endTour(); current=k; stepIdx=0; renderRoles(); renderBoard(); }
+
+// ---- מנוע הסיור ----
+function startTour(){ stepIdx=0; document.getElementById('mask').classList.add('on');
+  document.getElementById('spot').style.display='block'; document.getElementById('bubble').style.display='block'; showStep(); }
+function showStep(){
+  const st=ROLES[current].steps[stepIdx];
+  const el=document.getElementById(st.t); if(!el) return;
+  const r=el.getBoundingClientRect();
+  const pad=8;
+  const spot=document.getElementById('spot');
+  spot.style.top=(r.top-pad+window.scrollY)+'px'; spot.style.left=(r.left-pad)+'px';
+  spot.style.width=(r.width+pad*2)+'px'; spot.style.height=(r.height+pad*2)+'px';
+  const bub=document.getElementById('bubble');
+  document.getElementById('bTitle').textContent=st.ti;
+  document.getElementById('bText').textContent=st.tx;
+  document.getElementById('bProg').textContent=`${stepIdx+1} / ${ROLES[current].steps.length}`;
+  const last=stepIdx===ROLES[current].steps.length-1;
+  const nx=document.getElementById('bNext'); nx.textContent=last?'סיום ✓':'הבא'; nx.className='nextb'+(last?' done':'');
+  // מיקום הבועה מתחת לאלמנט (או מעל אם אין מקום)
+  let top=r.bottom+12+window.scrollY;
+  if(top+160>window.scrollY+window.innerHeight) top=r.top-172+window.scrollY;
+  bub.style.top=Math.max(12+window.scrollY,top)+'px';
+  bub.style.left=Math.min(r.left, window.innerWidth-310)+'px';
+  el.scrollIntoView({block:'center',behavior:'smooth'});
+}
+function nextStep(){ if(stepIdx<ROLES[current].steps.length-1){stepIdx++;showStep();} else endTour(); }
+function endTour(){ document.getElementById('mask').classList.remove('on');
+  document.getElementById('spot').style.display='none'; document.getElementById('bubble').style.display='none'; }
+window.addEventListener('resize',()=>{ if(document.getElementById('mask').classList.contains('on')) showStep(); });
+
+renderRoles(); renderBoard();
+</script>
+</body>
+</html>

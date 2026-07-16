@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף — בריאות מערכת (רכז תקשוב)</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal:#0B8F98; --teal-deep:#086b72; --teal-soft:#e6f4f5;
+    --ink:#1a2b2d; --muted:#5b7377; --line:#d9e6e7; --bg:#f4f9f9; --card:#fff;
+    --green:#1a9e6a; --green-soft:#e5f6ee; --amber:#E8722C; --amber-soft:#fdeee3; --red:#d5453f;
+    --shadow:0 2px 8px rgba(11,143,152,.07), 0 10px 30px rgba(11,143,152,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  .wrap{max-width:900px;margin:0 auto;padding:24px 20px 80px}
+  .retzef-line{height:3px;background:linear-gradient(90deg,var(--teal),transparent);border-radius:2px}
+  h1{font-size:23px;font-weight:800;margin:12px 0 2px}
+  .sub{color:var(--muted);margin:0 0 4px;font-size:15px}
+  .who{display:inline-block;background:var(--teal-soft);color:var(--teal-deep);font-weight:700;font-size:12.5px;padding:4px 12px;border-radius:999px;margin-top:8px}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+  .stat .n{font-size:30px;font-weight:800;line-height:1}
+  .stat small{color:var(--muted);font-size:12.5px}
+  .stat .bar{height:6px;border-radius:3px;background:var(--line);margin-top:9px;overflow:hidden}
+  .stat .bar i{display:block;height:100%;background:var(--teal)}
+  .stat.good .n{color:var(--green)} .stat.warn .n{color:var(--amber)} .stat.bad .n{color:var(--red)}
+
+  h2{font-size:17px;font-weight:800;margin:28px 0 12px;display:flex;align-items:center;gap:8px}
+  h2 .c{width:9px;height:9px;border-radius:50%;background:var(--teal)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);font-size:14px}
+  .row:last-child{border-bottom:none}
+  .row .av{width:30px;height:30px;border-radius:50%;background:var(--teal-soft);color:var(--teal-deep);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
+  .row .meta{color:var(--muted);font-size:12.5px}
+  .row .status{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
+  .tagx{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .tagx.ok{background:var(--green-soft);color:var(--green)}
+  .tagx.wait{background:var(--amber-soft);color:#a8501a}
+  .tagx.err{background:#fce9e8;color:var(--red)}
+  .act{background:var(--teal);color:#fff;border:none;border-radius:9px;padding:7px 13px;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .act:hover{background:var(--teal-deep)}
+  .act.sent{background:var(--green);pointer-events:none}
+  .classcard{display:flex;align-items:center;gap:12px;padding:14px 16px}
+  .classcard .dot{width:10px;height:10px;border-radius:50%}
+  .empty{padding:16px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="retzef-line"></div>
+  <h1>בריאות מערכת</h1>
+  <p class="sub">תצוגה תפעולית — לא פדגוגית. מי הצליח להיכנס, מי נתקע, מה לא הופעל.</p>
+  <span class="who">👤 דוד · רכז תקשוב</span>
+
+  <div class="stats" id="stats"></div>
+
+  <h2><span class="c"></span>טרם נכנסו למערכת</h2>
+  <div class="panel" id="notJoined"></div>
+
+  <h2><span class="c"></span>נתקעו בשלב הכניסה</h2>
+  <div class="panel" id="stuck"></div>
+
+  <h2><span class="c"></span>הפעלת כיתות</h2>
+  <div class="panel" id="classes"></div>
+</div>
+
+<script src="seed-pilot.js"></script>
+<script>
+const SEED=window.PILOT_SEED;
+const initials=n=>(n||'?').trim().charAt(0);
+const students=SEED.students;
+const total=students.length;
+
+// מדמים מצב כניסה: רוב נכנסו, כמה טרם, כמה נתקעו
+const notJoined = students.slice(0,3);                 // טרם נכנסו
+const stuck     = students.slice(3,5);                 // נתקעו (קוד/מכשיר)
+const joined    = total - notJoined.length;            // נכנסו בהצלחה
+const stuckReasons=['קוד כיתה שגוי','מכשיר משותף — זיהוי'];
+
+// ---- מדדים ----
+const stats=[
+  {cls:'good', n:`${joined}/${total}`, s:'נכנסו בהצלחה', pct:Math.round(joined/total*100)},
+  {cls:'', n:'1/1', s:'כיתות שהופעלו', pct:100},
+  {cls:'warn', n:notJoined.length, s:'טרם נכנסו', pct:Math.round(notJoined.length/total*100)},
+  {cls:'bad', n:stuck.length, s:'נתקעו בכניסה', pct:Math.round(stuck.length/total*100)},
+];
+document.getElementById('stats').innerHTML=stats.map(x=>
+  `<div class="stat ${x.cls}"><div class="n">${x.n}</div><small>${x.s}</small>
+   <div class="bar"><i style="width:${x.pct}%"></i></div></div>`).join('');
+
+// ---- טרם נכנסו ----
+document.getElementById('notJoined').innerHTML = notJoined.length? notJoined.map(s=>
+  `<div class="row"><span class="av">${initials(s.first_name)}</span>
+    <div><div>${s.first_name}</div><div class="meta">קישור נשלח, לא נפתח</div></div>
+    <div class="status"><span class="tagx wait">ממתין</span>
+      <button class="act" onclick="this.textContent='נשלח ✓';this.classList.add('sent')">שלח קישור מחדש</button></div></div>`
+  ).join('') : '<div class="empty">כולם נכנסו 🎉</div>';
+
+// ---- נתקעו ----
+document.getElementById('stuck').innerHTML = stuck.length? stuck.map((s,i)=>
+  `<div class="row"><span class="av">${initials(s.first_name)}</span>
+    <div><div>${s.first_name}</div><div class="meta">${stuckReasons[i]||'תקלת כניסה'}</div></div>
+    <div class="status"><span class="tagx err">תקוע</span>
+      <button class="act" onclick="this.textContent='אופס ✓';this.classList.add('sent')">אפס גישה</button></div></div>`
+  ).join('') : '<div class="empty">אין תקיעות</div>';
+
+// ---- כיתות ----
+document.getElementById('classes').innerHTML = SEED.classes.map(c=>
+  `<div class="classcard"><span class="dot" style="background:var(--green)"></span>
+    <div><div style="font-weight:700">${c.name}</div><div class="meta">${SEED.students.length} תלמידים · מצב: שגרה</div></div>
+    <span class="tagx ok" style="margin-inline-start:auto">פעילה</span></div>`
+  ).join('');
+</script>
+</body>
+</html>
