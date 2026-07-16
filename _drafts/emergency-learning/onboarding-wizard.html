@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>רֶצֶף — אשף הקמת בית ספר</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --teal:#0B8F98; --teal-deep:#086b72; --teal-soft:#e6f4f5;
@@ -20,34 +21,64 @@
   header h1{font-size:25px;font-weight:800;margin:10px 0 2px}
   header p{color:var(--muted);margin:0;font-size:15px}
 
-  /* Stepper */
   .stepper{display:flex;gap:6px;margin:22px 0 10px}
-  .stepper .st{flex:1;text-align:center;font-size:12px;color:var(--muted);position:relative}
+  .stepper .st{flex:1;text-align:center;font-size:12px;color:var(--muted)}
   .stepper .bar{height:6px;border-radius:4px;background:var(--line);margin-bottom:7px;transition:.25s}
   .stepper .st.done .bar,.stepper .st.active .bar{background:var(--teal)}
   .stepper .st.active{color:var(--teal-deep);font-weight:700}
 
   .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
-    padding:26px;margin-top:14px;min-height:320px}
+    padding:26px;margin-top:14px;min-height:340px}
   .step-tag{font-size:12px;font-weight:700;color:var(--teal-deep);text-transform:uppercase;letter-spacing:.5px}
   .card h2{font-size:21px;margin:6px 0 4px;font-weight:800}
-  .card .hint{color:var(--muted);font-size:14px;margin:0 0 20px}
+  .card .hint{color:var(--muted);font-size:14px;margin:0 0 18px}
 
   label.f{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
-  input,select,textarea{width:100%;font-family:inherit;font-size:15px;padding:11px 13px;border-radius:11px;
-    border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+  input[type=text],input:not([type]),select,textarea{width:100%;font-family:inherit;font-size:15px;padding:11px 13px;
+    border-radius:11px;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal)}
-  textarea{min-height:120px;resize:vertical;font-family:'Assistant',monospace;font-size:13px;direction:ltr;text-align:left}
+  textarea{min-height:110px;resize:vertical;font-family:'Assistant',monospace;font-size:13px;direction:ltr;text-align:left}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media(max-width:560px){.grid2{grid-template-columns:1fr}}
 
-  .rowlist{margin-top:8px}
+  /* שיטות הוספה — טאבים */
+  .methods{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .method{flex:1;min-width:150px;border:1.5px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;
+    text-align:center;transition:.14s;background:#fff}
+  .method:hover{border-color:var(--teal)}
+  .method.on{border-color:var(--teal);background:var(--teal-soft)}
+  .method .mi{font-size:20px;line-height:1}
+  .method .mt{font-weight:700;font-size:14px;margin-top:5px}
+  .method .md{font-size:11px;color:var(--muted)}
+  .method .rec{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--teal);
+    border-radius:999px;padding:1px 7px;margin-top:5px}
+  .pane{display:none}
+  .pane.on{display:block}
+
+  /* dropzone */
+  .drop{border:2px dashed var(--line);border-radius:14px;padding:26px;text-align:center;cursor:pointer;
+    transition:.15s;background:#fbfdfd}
+  .drop:hover,.drop.hot{border-color:var(--teal);background:var(--teal-soft)}
+  .drop .di{font-size:30px}
+  .drop b{display:block;margin-top:6px}
+  .drop small{color:var(--muted)}
+  .fmt{font-size:12px;color:var(--muted);margin-top:8px}
+
+  /* link box */
+  .linkcard{background:#fbfdfd;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+  .linkcard .lh{font-weight:700;font-size:14px;margin-bottom:8px}
+  .linkrow{display:flex;gap:8px}
+  .linkrow input{background:#fff;direction:ltr;text-align:left;font-family:'Assistant',monospace;font-size:13px}
+  .copybtn{background:var(--teal);color:#fff;border:none;border-radius:10px;padding:0 16px;font-weight:700;
+    cursor:pointer;font-family:inherit;font-size:13px;white-space:nowrap}
+  .copybtn:hover{background:var(--teal-deep)}
+
+  .rowlist{margin-top:12px}
   .rowitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);
     border-radius:10px;margin-bottom:7px;font-size:14px;background:#fbfdfd}
   .rowitem .av{width:28px;height:28px;border-radius:50%;background:var(--teal);color:#fff;display:flex;
     align-items:center;justify-content:center;font-weight:700;font-size:12px}
-  .rowitem .role{margin-inline-start:auto;font-size:12px;color:var(--muted);background:var(--teal-soft);
-    padding:3px 9px;border-radius:999px}
+  .rowitem .role{margin-inline-start:auto;font-size:12px;color:var(--muted);background:var(--teal-soft);padding:3px 9px;border-radius:999px}
 
   .gbox{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
   .gbox .gh{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -58,14 +89,6 @@
     user-select:none;background:#fff;transition:.12s}
   .chk.on{background:var(--teal);color:#fff;border-color:var(--teal)}
 
-  .contentgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media(max-width:560px){.contentgrid{grid-template-columns:1fr}}
-  .cunit{border:1.5px solid var(--line);border-radius:11px;padding:12px;cursor:pointer;transition:.12s}
-  .cunit.on{border-color:var(--teal);background:var(--teal-soft)}
-  .cunit b{font-size:14px}
-  .cunit small{color:var(--muted);display:block;font-size:12px}
-
-  /* readiness */
   .ready{display:flex;flex-direction:column;gap:10px}
   .check{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:11px;font-size:15px;
     background:var(--green-soft);border:1px solid #c6ead9}
@@ -77,14 +100,13 @@
     border-radius:16px;padding:22px;text-align:center}
   .summary .big{font-size:19px;font-weight:800}
   .summary .stats{display:flex;justify-content:center;gap:26px;margin-top:14px;flex-wrap:wrap}
-  .summary .stats div{text-align:center}
   .summary .stats b{display:block;font-size:30px;font-weight:800;line-height:1}
   .summary .stats small{font-size:12px;opacity:.85}
+  .infonote{background:var(--teal-soft);border:1px solid #cfe8ea;border-radius:11px;padding:12px 14px;
+    font-size:13px;color:var(--teal-deep);margin-top:14px}
 
-  /* nav */
   .nav{display:flex;justify-content:space-between;gap:12px;margin-top:22px}
-  button.nav-btn{font-family:inherit;font-size:15px;font-weight:700;padding:12px 26px;border-radius:12px;
-    border:none;cursor:pointer;transition:.15s}
+  button.nav-btn{font-family:inherit;font-size:15px;font-weight:700;padding:12px 26px;border-radius:12px;border:none;cursor:pointer;transition:.15s}
   .prev{background:#fff;border:1.5px solid var(--line);color:var(--muted)}
   .prev:hover{border-color:var(--muted)}
   .next{background:var(--teal);color:#fff}
@@ -99,7 +121,7 @@
   <header>
     <div class="retzef-line"></div>
     <h1>אשף הקמת בית ספר</h1>
-    <p>שישה צעדים מ"בית ספר חדש" ל"מוכן להפעלה". <b>מודל שני-צירים.</b></p>
+    <p>חמישה צעדים מ"בית ספר חדש" ל"מוכן להפעלה". <b>מודל שני-צירים.</b></p>
   </header>
 
   <div class="stepper" id="stepper"></div>
@@ -116,201 +138,278 @@
 <script>
 const SEED = window.PILOT_SEED;
 const initials = n => (n||'?').trim().charAt(0);
+const roleMapHeb = {homeroom:'מחנך/ת',subject:'מורה מקצועי',principal:'מנהל/ת',coordinator:'רכז תקשוב',supervisor:'מפקח/ת',substitute:'מורה מחליף/ה'};
 
-// ---- מצב האשף (מתחיל ריק, נטען מהדמה לנוחות הדגמה) --------------------------
 const state = {
-  school:  { name:'', network:'אורט', district:'' },
-  cls:     { name:'', grade:'י' },
-  staff:   [],       // {id,name,roleLabel}
-  students:[],       // {id,name}
-  groups:  [],       // {id,name,subject,teacherId,members:Set}
-  content: new Set(),// content unit ids פעילים
+  school:{name:'',network:'אורט',district:''},
+  cls:{name:'',grade:'י'},
+  staff:[], students:[],
+  groups:[],
+  userMethod:'file', groupMethod:'file',
 };
 
-const STEPS = ['בית ספר','כיתה','משתמשים','קבוצות ושיוך','תכנים','מוכנות'];
+const STEPS = ['בית ספר','כיתה','משתמשים','קבוצות ושיוך','מוכנות'];
 let step = 0;
 
-// ---- טעינה מהירה מהפיילוט (כדי שמייטל תראה אשף מלא) -------------------------
 function loadPilot(){
-  state.school = { name:SEED.schools[0].name, network:SEED.schools[0].network, district:SEED.schools[0].district };
-  const c = SEED.classes[0];
-  state.cls = { name:c.name, grade:c.grade };
-  state.staff = SEED.staffMembers.map(m=>{
-    const r = SEED.staffRoles.find(x=>x.staff_id===m.id);
-    const map={homeroom:'מחנך/ת',subject:'מורה מקצועי',principal:'מנהל/ת',coordinator:'רכז תקשוב',supervisor:'מפקח/ת',substitute:'מורה מחליף/ה'};
-    return { id:m.id, name:m.first_name, roleLabel:map[r?.role]||'צוות' };
-  });
-  state.students = SEED.students.map(s=>({id:s.id,name:s.first_name}));
-  state.groups = SEED.learningGroups.map(g=>({
-    id:g.id, name:g.name, subject:g.subject, teacherId:g.teacher_id,
-    members:new Set(SEED.helpers.studentsOfGroup(g.id).map(s=>s.id)),
-  }));
-  state.content = new Set(SEED.contentUnits.map(u=>u.id));
+  const s=SEED.schools[0]; state.school={name:s.name,network:s.network,district:s.district};
+  const c=SEED.classes[0]; state.cls={name:c.name,grade:c.grade};
+  state.staff=SEED.staffMembers.map(m=>{const r=SEED.staffRoles.find(x=>x.staff_id===m.id);return{id:m.id,name:m.first_name,roleLabel:roleMapHeb[r?.role]||'צוות'};});
+  state.students=SEED.students.map(s=>({id:s.id,name:s.first_name}));
+  state.groups=SEED.learningGroups.map(g=>({id:g.id,name:g.name,subject:g.subject,teacherId:g.teacher_id,members:new Set(SEED.helpers.studentsOfGroup(g.id).map(s=>s.id))}));
   render();
 }
 
-// ---- רינדור צעדים -----------------------------------------------------------
 function stepper(){
   document.getElementById('stepper').innerHTML = STEPS.map((s,i)=>
     `<div class="st ${i<step?'done':''} ${i===step?'active':''}"><div class="bar"></div>${s}</div>`).join('');
 }
-
 function render(){
   stepper();
-  const c = document.getElementById('card');
-  const R = renderers[step]();
-  c.innerHTML = `<div class="step-tag">צעד ${step+1} מתוך 6</div>${R}`;
+  document.getElementById('card').innerHTML = `<div class="step-tag">צעד ${step+1} מתוך 5</div>${renderers[step]()}`;
   document.getElementById('prev').disabled = step===0;
-  document.getElementById('next').textContent = step===5 ? 'סיום ✓' : 'הבא ←';
-  document.getElementById('next').style.display = step===5 ? 'none':'block';
+  const nx=document.getElementById('next');
+  nx.style.display = step===4?'none':'block'; nx.textContent = step===3?'לבדיקת מוכנות ←':'הבא ←';
   document.getElementById('mini').innerHTML = step===0
-    ? 'טיפ: <button class="linkbtn" onclick="loadPilot()">טען את נתוני הפיילוט (אורט בית הערבה)</button> כדי לראות אשף מלא.'
-    : '';
-  if(renderers['after'+step]) renderers['after'+step]();
+    ? 'טיפ: <button class="linkbtn" onclick="loadPilot()">טען את נתוני הפיילוט (אורט בית הערבה)</button> כדי לראות אשף מלא.' : '';
+  const a=renderers['after'+step]; if(a) a();
 }
 
 const renderers = {
   0:()=>`<h2>פתיחת בית ספר</h2><p class="hint">הישות הראשונה שנוצרת — לא מורה בודד, אלא בית הספר.</p>
     <label class="f">שם בית הספר</label><input id="i-name" value="${state.school.name}" placeholder="למשל: אורט בית הערבה">
-    <div class="grid2">
-      <div><label class="f">רשת</label><input id="i-net" value="${state.school.network}"></div>
-      <div><label class="f">מחוז / רשות</label><input id="i-dist" value="${state.school.district}" placeholder="מחוז דרום"></div>
-    </div>`,
-  after0:()=>{
-    bind('i-name',v=>state.school.name=v); bind('i-net',v=>state.school.network=v); bind('i-dist',v=>state.school.district=v);
-  },
+    <div class="grid2"><div><label class="f">רשת</label><input id="i-net" value="${state.school.network}"></div>
+    <div><label class="f">מחוז / רשות</label><input id="i-dist" value="${state.school.district}" placeholder="מחוז דרום"></div></div>`,
+  after0(){bind('i-name',v=>state.school.name=v);bind('i-net',v=>state.school.network=v);bind('i-dist',v=>state.school.district=v);},
 
-  1:()=>`<h2>שכבה וכיתת אם</h2><p class="hint">כיתת האם = הציר הפסטורלי. עליה יושבים צ'ק-אין ודופק המחנך. (בפיילוט: כיתה אחת.)</p>
-    <div class="grid2">
-      <div><label class="f">שם הכיתה</label><input id="i-cls" value="${state.cls.name}" placeholder="י'1"></div>
-      <div><label class="f">שכבה</label>
-        <select id="i-grade">${['ט','י','יא','יב'].map(g=>`<option ${g===state.cls.grade?'selected':''}>${g}</option>`).join('')}</select></div>
-    </div>`,
-  after1:()=>{ bind('i-cls',v=>state.cls.name=v); bind('i-grade',v=>state.cls.grade=v); },
+  1:()=>`<h2>שכבה וכיתת אם</h2><p class="hint">כיתת האם = הציר הפסטורלי. עליה יושבים צ'ק-אין ודופק המחנך.</p>
+    <div class="grid2"><div><label class="f">שם הכיתה</label><input id="i-cls" value="${state.cls.name}" placeholder="י'1"></div>
+    <div><label class="f">שכבה</label><select id="i-grade">${['ט','י','יא','יב'].map(g=>`<option ${g===state.cls.grade?'selected':''}>${g}</option>`).join('')}</select></div></div>`,
+  after1(){bind('i-cls',v=>state.cls.name=v);bind('i-grade',v=>state.cls.grade=v);},
 
-  2:()=>`<h2>הוספת משתמשים</h2><p class="hint">הדרך הפשוטה להתחיל: הדבקת CSV. עמודות: <code>שם,טלפון,תפקיד</code> (תפקיד ריק = תלמיד).</p>
-    <textarea id="i-csv" placeholder="דני,0501112000\nמיכל,0500000101,מחנך"></textarea>
-    <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
-      <button class="nav-btn next" style="padding:9px 18px;font-size:14px" onclick="importCsv()">ייבוא</button>
-      <button class="linkbtn" onclick="fillSampleCsv()">טען CSV לדוגמה (22 תלמידים + 5 צוות)</button>
+  2:()=>`<h2>הוספת משתמשים</h2><p class="hint">שלוש דרכים — לפי בשלות בית הספר. העלאת קובץ וקישור הן העיקריות.</p>
+    ${methodTabs('user',[
+      {k:'file',i:'📄',t:'העלאת קובץ',d:'Excel / CSV',rec:true},
+      {k:'link',i:'🔗',t:'קישור הזמנה',d:'המשתמש מצטרף לבד',rec:true},
+      {k:'manual',i:'✍️',t:'הדבקה ידנית',d:'למקרים קטנים'},
+    ])}
+    <div class="pane ${state.userMethod==='file'?'on':''}" data-pane="file">
+      <div class="drop" id="userDrop"><div class="di">⬆️</div><b>גררו קובץ לכאן, או לחצו לבחירה</b>
+        <small>עמודות: שם · טלפון · תפקיד (ריק = תלמיד)</small></div>
+      <input type="file" id="userFile" accept=".csv,.xlsx,.xls,.txt" hidden>
+      <div class="fmt">נתמך: .xlsx · .csv · <button class="linkbtn" onclick="fillSampleUsers()">או טען דוגמה (22 תלמידים + 5 צוות)</button></div>
+    </div>
+    <div class="pane ${state.userMethod==='link'?'on':''}" data-pane="link">
+      <div class="linkcard"><div class="lh">🔗 קישור הצטרפות לבית הספר</div>
+        <div class="linkrow"><input readonly value="https://retzef.app/join/${schoolCode()}"><button class="copybtn" onclick="copyLink(this)">העתק</button></div>
+        <div class="mini">שלחו למורים/תלמידים בוואטסאפ. מי שנכנס מצטרף לבית הספר ומזין את שמו. הקוד: <b>${schoolCode()}</b></div></div>
+    </div>
+    <div class="pane ${state.userMethod==='manual'?'on':''}" data-pane="manual">
+      <textarea id="i-csv" placeholder="דני,0501112000&#10;מיכל,0500000101,מחנך"></textarea>
+      <button class="nav-btn next" style="padding:9px 18px;font-size:14px;margin-top:10px" onclick="importPaste()">ייבוא</button>
     </div>
     <div id="importResult" class="mini"></div>
     <div class="rowlist" id="userList"></div>`,
-  after2:()=>renderUserList(),
+  after2(){ setupUserStep(); renderUserList(); },
 
-  3:()=>{
-    return `<h2>קבוצות לימוד ושיוך</h2><p class="hint">הציר האקדמי. סמנו מי בכל קבוצה. <b>שימו לב לתגבור — רק חלק מהתלמידים (חפיפה חלקית).</b></p>
-    <div id="groupBox"></div>`;
-  },
-  after3:()=>renderGroups(),
+  3:()=>`<h2>קבוצות לימוד ושיוך</h2><p class="hint">הציר האקדמי. גם כאן — קובץ, קישור למורים, או ידני. <b>שימו לב לתגבור: רק חלק מהתלמידים.</b></p>
+    ${methodTabs('group',[
+      {k:'file',i:'📄',t:'העלאת קובץ',d:'שם תלמיד · קבוצה',rec:true},
+      {k:'link',i:'🔗',t:'קישור למורים',d:'כל מורה משבץ את קבוצתו',rec:true},
+      {k:'manual',i:'✍️',t:'שיוך ידני',d:'סימון בצ׳קבוקס'},
+    ])}
+    <div class="pane ${state.groupMethod==='file'?'on':''}" data-pane="file">
+      <div class="drop" id="grpDrop"><div class="di">⬆️</div><b>גררו קובץ שיוך לכאן</b>
+        <small>כל שורה: שם תלמיד · שם קבוצה</small></div>
+      <input type="file" id="grpFile" accept=".csv,.xlsx,.xls,.txt" hidden>
+      <div class="fmt">נתמך: .xlsx · .csv · <button class="linkbtn" onclick="fillSampleGroups()">או טען שיוך לדוגמה</button></div>
+    </div>
+    <div class="pane ${state.groupMethod==='link'?'on':''}" data-pane="link">
+      <div id="teacherLinks"></div>
+      <div class="mini">כל מורה מקבל קישור לקבוצה שלו, נכנס ומסמן מי חבר בה. המנהל לא צריך לשבץ הכול לבד.</div>
+    </div>
+    <div class="pane ${state.groupMethod==='manual'?'on':''}" data-pane="manual"><div id="groupBox"></div></div>
+    <div class="rowlist" id="grpSummary"></div>`,
+  after3(){ setupGroupStep(); },
 
-  4:()=>`<h2>תכנים פעילים</h2><p class="hint">אילו יחידות מהספרייה נדליק לבית הספר. (AI לא מפרסם לבד — הכל מאושר.)</p>
-    <div class="contentgrid" id="contentGrid"></div>`,
-  after4:()=>renderContent(),
-
-  5:()=>`<h2>בדיקת מוכנות</h2><p class="hint">האם המסלול הזהוב סגור — אפשר להפעיל?</p>
-    <div class="ready" id="readyList"></div><div id="summaryBox"></div>`,
-  afterafter:()=>{},
+  4:()=>`<h2>בדיקת מוכנות</h2><p class="hint">האם המסלול הזהוב סגור — אפשר להפעיל?</p>
+    <div class="ready" id="readyList"></div><div id="summaryBox"></div>
+    <div class="infonote">📚 <b>תכנים פעילים נקבעים בהקמת המורה</b>, לא כאן. כל מורה בוחר אילו יחידות להדליק לקבוצה שלו — החלטה פדגוגית שלו, לא של המנהל.</div>`,
+  after4(){ renderReadiness(); },
 };
 
-// ---- helpers ----------------------------------------------------------------
-function bind(id,fn){ const el=document.getElementById(id); if(el) el.addEventListener('input',e=>fn(e.target.value)); }
-
-function fillSampleCsv(){
-  const staffRows = SEED.staffMembers.map(m=>{
-    const r=SEED.staffRoles.find(x=>x.staff_id===m.id);
-    const map={homeroom:'מחנך',subject:'מורה',principal:'מנהל',coordinator:'רכז תקשוב',supervisor:'מפקח',substitute:'מחליף'};
-    return `${m.first_name},${m.phone},${map[r?.role]||'מורה'}`;
-  });
-  const stuRows = SEED.students.map(s=>`${s.first_name},${s.phone}`);
-  document.getElementById('i-csv').value = staffRows.concat(stuRows).join('\n');
+// ---- שיטות (טאבים) ----------------------------------------------------------
+function methodTabs(kind,opts){
+  const cur = kind==='user'?state.userMethod:state.groupMethod;
+  return `<div class="methods">`+opts.map(o=>
+    `<div class="method ${o.k===cur?'on':''}" onclick="setMethod('${kind}','${o.k}')">
+      <div class="mi">${o.i}</div><div class="mt">${o.t}</div><div class="md">${o.d}</div>
+      ${o.rec?'<div class="rec">מומלץ</div>':''}</div>`).join('')+`</div>`;
 }
-function importCsv(){
-  const lines = (document.getElementById('i-csv').value||'').split('\n').map(l=>l.trim()).filter(Boolean);
-  state.staff=[]; state.students=[]; let si=0, ti=0;
-  lines.forEach(line=>{
-    const [name,phone,role] = line.split(',').map(x=>(x||'').trim());
-    if(!name) return;
+function setMethod(kind,k){ if(kind==='user')state.userMethod=k; else state.groupMethod=k; render(); }
+
+// ---- קוד/קישור --------------------------------------------------------------
+function schoolCode(){ if(!state._code) state._code='BH-'+String(1000+Math.floor(Math.random()*9000)); return state._code; }
+function copyLink(btn){ const inp=btn.previousElementSibling; navigator.clipboard?.writeText(inp.value); const o=btn.textContent; btn.textContent='הועתק ✓'; setTimeout(()=>btn.textContent=o,1400); }
+
+// ---- קלט קבצים --------------------------------------------------------------
+function readFile(file, cb){
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  const reader=new FileReader();
+  if(ext==='xlsx'||ext==='xls'){
+    reader.onload=e=>{ try{
+      if(typeof XLSX==='undefined'){ cb(null,'ספריית האקסל לא נטענה (אין רשת?). נסו CSV.'); return; }
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,blankrows:false});
+      cb(rows.map(r=>r.map(c=>String(c==null?'':c).trim())));
+    }catch(err){ cb(null,'שגיאה בקריאת הקובץ'); } };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload=e=>{ const rows=String(e.target.result).split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>l.split(',').map(c=>c.trim())); cb(rows); };
+    reader.readAsText(file,'UTF-8');
+  }
+}
+function wireDrop(dropId,inputId,handler){
+  const drop=document.getElementById(dropId), input=document.getElementById(inputId);
+  if(!drop||!input) return;
+  drop.onclick=()=>input.click();
+  input.onchange=e=>{ if(e.target.files[0]) handler(e.target.files[0]); };
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+  drop.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]); });
+}
+
+// ---- שלב משתמשים ------------------------------------------------------------
+function setupUserStep(){
+  if(state.userMethod==='file') wireDrop('userDrop','userFile',f=>readFile(f,(rows,err)=>{
+    if(err){ document.getElementById('importResult').innerHTML=`<b style="color:var(--amber)">${err}</b>`; return; }
+    ingestUsers(rows);
+  }));
+}
+function ingestUsers(rows){
+  state.staff=[]; state.students=[]; let si=0,ti=0;
+  rows.forEach(r=>{ const name=r[0], role=r[2];
+    if(!name||/שם/.test(name)) return; // דלג כותרת
     if(role){ state.staff.push({id:'stf_'+(++si),name,roleLabel:role}); }
-    else { state.students.push({id:'std_new_'+(++ti),name}); }
+    else { state.students.push({id:'std_'+(++ti),name}); }
   });
-  document.getElementById('importResult').innerHTML =
-    `<b style="color:var(--teal-deep)">יובאו ${state.staff.length} צוות ו-${state.students.length} תלמידים.</b>`;
+  document.getElementById('importResult').innerHTML=`<b style="color:var(--teal-deep)">יובאו ${state.staff.length} צוות ו-${state.students.length} תלמידים.</b>`;
+  // אפס חברות קבוצה שנשענת על תלמידים ישנים
+  state.groups.forEach(g=>g.members&&g.members.clear&&g.members.clear());
   renderUserList();
+}
+function importPaste(){ const t=document.getElementById('i-csv').value||''; ingestUsers(t.split(/\r?\n/).map(l=>l.split(',').map(c=>c.trim()))); }
+function fillSampleUsers(){
+  const staff=SEED.staffMembers.map(m=>{const r=SEED.staffRoles.find(x=>x.staff_id===m.id);return[m.first_name,m.phone,roleMapHeb[r?.role]||'מורה'];});
+  const stu=SEED.students.map(s=>[s.first_name,s.phone]);
+  ingestUsers(staff.concat(stu));
 }
 function renderUserList(){
   const el=document.getElementById('userList'); if(!el) return;
   const all=[...state.staff.map(s=>({...s,staff:true})),...state.students.map(s=>({...s,staff:false}))];
-  el.innerHTML = all.slice(0,30).map(u=>
-    `<div class="rowitem"><span class="av">${initials(u.name)}</span>${u.name}
-     <span class="role">${u.staff?u.roleLabel:'תלמיד/ה'}</span></div>`).join('')
-    + (all.length>30?`<div class="mini">…ועוד ${all.length-30}</div>`:'');
+  el.innerHTML=all.slice(0,30).map(u=>`<div class="rowitem"><span class="av">${initials(u.name)}</span>${u.name}<span class="role">${u.staff?u.roleLabel:'תלמיד/ה'}</span></div>`).join('')
+    +(all.length>30?`<div class="mini">…ועוד ${all.length-30}</div>`:'');
 }
 
-function renderGroups(){
-  const box=document.getElementById('groupBox'); if(!box) return;
+// ---- שלב קבוצות -------------------------------------------------------------
+function ensureGroups(){
   if(!state.groups.length){
-    // צור קבוצות ברירת מחדל מהדמה אם עוד לא קיימות
-    state.groups = SEED.learningGroups.map(g=>({id:g.id,name:g.name,subject:g.subject,teacherId:g.teacher_id,members:new Set()}));
+    state.groups=SEED.learningGroups.map(g=>({id:g.id,name:g.name,subject:g.subject,teacherId:g.teacher_id,members:new Set()}));
   }
-  box.innerHTML = state.groups.map((g,gi)=>{
-    const t=state.staff.find(s=>s.id===g.teacherId) || SEED.staffMembers.find(m=>m.id===g.teacherId);
-    const tname = t? (t.name||t.first_name):'—';
-    const chips = state.students.map(s=>
-      `<span class="chk ${g.members.has(s.id)?'on':''}" onclick="toggleMember(${gi},'${s.id}')">${s.name}</span>`).join('');
-    return `<div class="gbox"><div class="gh"><b>${g.name}</b>
-      <span class="gt">${g.subject} · ${tname} · <b id="gc-${gi}">${g.members.size}</b> תלמידים</span></div>
-      <div class="chips">${chips}</div></div>`;
+  state.groups.forEach(g=>{ if(!(g.members instanceof Set)) g.members=new Set(g.members||[]); });
+}
+function setupGroupStep(){
+  ensureGroups();
+  if(state.groupMethod==='file') wireDrop('grpDrop','grpFile',f=>readFile(f,(rows,err)=>{
+    if(err){ document.getElementById('grpSummary').innerHTML=`<b style="color:var(--amber)">${err}</b>`; return; }
+    ingestGroupFile(rows);
+  }));
+  if(state.groupMethod==='link') renderTeacherLinks();
+  if(state.groupMethod==='manual') renderGroupBox();
+  renderGrpSummary();
+}
+function ingestGroupFile(rows){
+  state.groups.forEach(g=>g.members.clear());
+  let matched=0;
+  rows.forEach(r=>{ const sName=r[0], gName=r[1];
+    if(!sName||!gName||/שם/.test(sName)) return;
+    const stu=state.students.find(s=>s.name===sName);
+    const grp=state.groups.find(g=>g.name===gName || g.name.includes(gName) || gName.includes(g.name));
+    if(stu&&grp){ grp.members.add(stu.id); matched++; }
+  });
+  document.getElementById('grpSummary').__msg=`שויכו ${matched} שיוכים מהקובץ.`;
+  renderGrpSummary();
+}
+function fillSampleGroups(){
+  // כל הכיתה ללשון+מגמה, שליש לתגבור (חפיפה חלקית)
+  ensureGroups();
+  state.groups.forEach(g=>g.members.clear());
+  state.students.forEach((s,i)=>{
+    state.groups.forEach(g=>{
+      if(g.name.includes('תגבור')){ if(i%3===0) g.members.add(s.id); }
+      else g.members.add(s.id);
+    });
+  });
+  renderGrpSummary();
+}
+function renderTeacherLinks(){
+  const box=document.getElementById('teacherLinks'); if(!box) return;
+  box.innerHTML=state.groups.map(g=>{
+    const t=state.staff.find(s=>s.id===g.teacherId)||SEED.staffMembers.find(m=>m.id===g.teacherId);
+    const tn=t?(t.name||t.first_name):'מורה';
+    const code=(g.id||'g').replace(/[^a-z0-9]/gi,'').slice(-4).toUpperCase()||'GRP';
+    return `<div class="linkcard"><div class="lh">🔗 ${g.name} · ${tn}</div>
+      <div class="linkrow"><input readonly value="https://retzef.app/g/${code}"><button class="copybtn" onclick="copyLink(this)">העתק</button></div></div>`;
   }).join('');
 }
-function toggleMember(gi,sid){
-  const g=state.groups[gi];
-  if(g.members.has(sid)) g.members.delete(sid); else g.members.add(sid);
-  renderGroups();
+function renderGroupBox(){
+  const box=document.getElementById('groupBox'); if(!box) return;
+  box.innerHTML=state.groups.map((g,gi)=>{
+    const t=state.staff.find(s=>s.id===g.teacherId)||SEED.staffMembers.find(m=>m.id===g.teacherId);
+    const tn=t?(t.name||t.first_name):'—';
+    const chips=state.students.map(s=>`<span class="chk ${g.members.has(s.id)?'on':''}" onclick="toggleMember(${gi},'${s.id}')">${s.name}</span>`).join('');
+    return `<div class="gbox"><div class="gh"><b>${g.name}</b><span class="gt">${g.subject} · ${tn} · <b>${g.members.size}</b> תלמידים</span></div><div class="chips">${chips}</div></div>`;
+  }).join('') || '<div class="mini">אין עדיין תלמידים — חזרו לצעד המשתמשים.</div>';
+}
+function toggleMember(gi,sid){ const g=state.groups[gi]; g.members.has(sid)?g.members.delete(sid):g.members.add(sid); renderGroupBox(); renderGrpSummary(); }
+function renderGrpSummary(){
+  const el=document.getElementById('grpSummary'); if(!el) return;
+  const msg=el.__msg?`<div class="mini" style="color:var(--teal-deep);font-weight:700">${el.__msg}</div>`:'';
+  el.innerHTML=msg+state.groups.map(g=>{
+    const partial=g.members.size>0&&g.members.size<state.students.length;
+    return `<div class="rowitem"><b>${g.name}</b><span class="role">${g.members.size} תלמידים${partial?' · חפיפה חלקית':''}</span></div>`;
+  }).join('');
 }
 
-function renderContent(){
-  const grid=document.getElementById('contentGrid'); if(!grid) return;
-  grid.innerHTML = SEED.contentUnits.map(u=>
-    `<div class="cunit ${state.content.has(u.id)?'on':''}" onclick="toggleContent('${u.id}')">
-      <b>${u.title}</b><small>${u.subject} · ${u.unit_type==='assessment'?'מופע הערכה':'תרגול'}</small></div>`).join('');
-}
-function toggleContent(id){ state.content.has(id)?state.content.delete(id):state.content.add(id); renderContent(); }
-
+// ---- מוכנות -----------------------------------------------------------------
 function renderReadiness(){
-  const enrolledIds = new Set();
-  state.groups.forEach(g=>g.members.forEach(id=>enrolledIds.add(id)));
-  const orphans = state.students.filter(s=>!enrolledIds.has(s.id));
-  const hasTigburPartial = state.groups.some(g=>g.members.size>0 && g.members.size<state.students.length);
-  const checks = [
-    { ok:!!state.school.name, t:`בית ספר: ${state.school.name||'— חסר שם'}` },
-    { ok:!!state.cls.name, t:`כיתת אם: ${state.cls.name||'— חסרה'}` },
-    { ok:state.students.length>0, t:`${state.students.length} תלמידים יובאו` },
-    { ok:state.staff.length>0, t:`${state.staff.length} אנשי צוות` },
-    { ok:state.groups.length>=2, t:`${state.groups.length} קבוצות לימוד (ציר אקדמי)` },
-    { ok:orphans.length===0 && state.students.length>0,
-      t: orphans.length? `${orphans.length} תלמידים לא שובצו לאף קבוצה` : 'כל תלמיד משובץ לפחות לקבוצה אחת' },
-    { ok:hasTigburPartial, t: hasTigburPartial? 'יש קבוצה עם חפיפה חלקית — שני-צירים פעיל' : 'אין חפיפה חלקית (כל הקבוצות מלאות)' },
-    { ok:state.content.size>0, t:`${state.content.size} יחידות תוכן פעילות` },
+  ensureGroups();
+  const enrolled=new Set(); state.groups.forEach(g=>g.members.forEach(id=>enrolled.add(id)));
+  const orphans=state.students.filter(s=>!enrolled.has(s.id));
+  const partial=state.groups.some(g=>g.members.size>0&&g.members.size<state.students.length);
+  const checks=[
+    {ok:!!state.school.name,t:`בית ספר: ${state.school.name||'— חסר שם'}`},
+    {ok:!!state.cls.name,t:`כיתת אם: ${state.cls.name||'— חסרה'}`},
+    {ok:state.students.length>0,t:`${state.students.length} תלמידים`},
+    {ok:state.staff.length>0,t:`${state.staff.length} אנשי צוות`},
+    {ok:state.groups.length>=2,t:`${state.groups.length} קבוצות לימוד (ציר אקדמי)`},
+    {ok:orphans.length===0&&state.students.length>0,t:orphans.length?`${orphans.length} תלמידים לא שובצו לאף קבוצה`:'כל תלמיד משובץ לפחות לקבוצה אחת'},
+    {ok:partial,t:partial?'יש קבוצה עם חפיפה חלקית — שני-צירים פעיל':'אין חפיפה חלקית (כל הקבוצות מלאות)'},
   ];
-  document.getElementById('readyList').innerHTML = checks.map(c=>
-    `<div class="check ${c.ok?'':'fail'}"><span class="ic">${c.ok?'✓':'!'}</span>${c.t}</div>`).join('');
-  const allOk = checks.every(c=>c.ok);
-  document.getElementById('summaryBox').innerHTML = allOk
-    ? `<div class="summary"><div class="big">בית הספר מוכן להפעלה ✓</div>
-        <div class="stats">
-          <div><b>1</b><small>כיתת אם</small></div>
-          <div><b>${state.staff.length}</b><small>מורים</small></div>
-          <div><b>${state.students.length}</b><small>תלמידים</small></div>
-          <div><b>${state.groups.length}</b><small>קבוצות</small></div>
-        </div></div>`
-    : `<div class="mini" style="margin-top:16px">יש סעיפים שדורשים השלמה (בכתום) לפני הפעלה.</div>`;
+  document.getElementById('readyList').innerHTML=checks.map(c=>`<div class="check ${c.ok?'':'fail'}"><span class="ic">${c.ok?'✓':'!'}</span>${c.t}</div>`).join('');
+  const allOk=checks.every(c=>c.ok);
+  document.getElementById('summaryBox').innerHTML=allOk
+    ?`<div class="summary"><div class="big">בית הספר מוכן להפעלה ✓</div><div class="stats">
+        <div><b>1</b><small>כיתת אם</small></div><div><b>${state.staff.length}</b><small>מורים</small></div>
+        <div><b>${state.students.length}</b><small>תלמידים</small></div><div><b>${state.groups.length}</b><small>קבוצות</small></div>
+      </div></div>`
+    :`<div class="mini" style="margin-top:16px">יש סעיפים שדורשים השלמה (בכתום) לפני הפעלה.</div>`;
 }
 
-// ---- ניווט ------------------------------------------------------------------
-document.getElementById('next').addEventListener('click',()=>{ if(step<5){step++;render(); if(step===5)renderReadiness();} });
+// ---- helpers/ניווט ----------------------------------------------------------
+function bind(id,fn){ const el=document.getElementById(id); if(el) el.addEventListener('input',e=>fn(e.target.value)); }
+document.getElementById('next').addEventListener('click',()=>{ if(step<4){step++;render();} });
 document.getElementById('prev').addEventListener('click',()=>{ if(step>0){step--;render();} });
-
 render();
 </script>
 </body>
