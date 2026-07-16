@@ -8,13 +8,10 @@ pedagogy_verified: "[לאימות — רכז מגמה]"
 
 # manifest — מודולה 06: השקעות
 
-- unit_id: financial-module-06-unit-01
-  file: unit-01-missing-competency.md
-  title: "[לאימות — תת־הנושא לא צורף]"
-  type: task
-  status: "[לאימות]"
-  source: "חינוך פיננסי (פיננסקלאס) · י6"
-  verification_required: "רכז מגמה"
+## יחידות
+
+אין יחידות. היחידה שהופקה בריצה המקורית הייתה placeholder ריק ונמחקה (קומיט 50771e2).
+הסיבה: הפרומפט שלח רשימת כשירויות ריקה — financial הוא נכס-קציר ואינו ב-curriculum-data.js.
 
 ## הערת אימות
 

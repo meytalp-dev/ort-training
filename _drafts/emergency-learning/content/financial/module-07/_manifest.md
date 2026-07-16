@@ -8,12 +8,8 @@ verification_required: רכז מגמה
 
 ## יחידות
 
-- id: financial-module-07-unit-01
-  file: unit-01-missing-subtopic.md
-  title: "[לאימות — תת־הנושא לא סופק]"
-  type: task
-  status: "[לאימות]"
-  skill: "[לאימות — הכשירות חסרה ברשימה שהודבקה]"
+אין יחידות. היחידות שהופקו בריצה המקורית היו placeholders ריקים ונמחקו (קומיט 50771e2).
+הסיבה: הפרומפט שלח רשימת כשירויות ריקה — financial הוא נכס-קציר ואינו ב-curriculum-data.js.
 
 ## חסרים להמשך
 
