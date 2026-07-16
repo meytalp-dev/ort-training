@@ -10,6 +10,8 @@ window.PRODUCED = {
   "hair-design|8": { n: 9,  stage: "reviewed" },
   "hair-design|9": { n: 3,  stage: "built" },
   "confectionery|2": { n: 10, stage: "reviewed" },
+  "media-design|5": { n: 1,  stage: "reviewed" },
+  "media-design|6": { n: 1,  stage: "reviewed" },
   "hebrew|5":      { n: 1,  stage: "built" },
   "media-design|1":{ n: 3,  stage: "built" },
   "welding|1":     { n: 3,  stage: "built" }
