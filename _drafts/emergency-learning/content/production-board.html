@@ -54,7 +54,7 @@ button{font-family:inherit;cursor:pointer}
 .savebar b{color:#6d5310}
 
 /* Board */
-.board{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}
 .lane{background:#F0F4F6;border:1px solid var(--line);border-radius:15px;padding:12px;min-height:200px;max-height:76vh;overflow-y:auto}
 .lane-h{display:flex;align-items:center;gap:8px;padding:6px 6px 12px;position:sticky;top:0;background:#F0F4F6;z-index:2;margin:-12px -12px 0;padding-inline:12px;border-radius:15px 15px 0 0}
 .lane-h .dot{width:10px;height:10px;border-radius:99px;flex:none}
@@ -95,8 +95,9 @@ button{font-family:inherit;cursor:pointer}
 .modal textarea{width:100%;height:280px;border:1px solid var(--line);border-radius:10px;padding:11px;font-family:ui-monospace,monospace;font-size:11.5px;direction:ltr;resize:vertical}
 .modal .mbtns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
 
-@media(max-width:1000px){ .board{grid-template-columns:repeat(2,1fr)} }
-@media(max-width:640px){ .board{grid-template-columns:1fr} .wrap{padding:16px 14px 60px} }
+@media(max-width:1180px){ .board{grid-template-columns:repeat(3,1fr)} }
+@media(max-width:760px){ .board{grid-template-columns:repeat(2,1fr)} }
+@media(max-width:520px){ .board{grid-template-columns:1fr} .wrap{padding:16px 14px 60px} }
 </style>
 </head>
 <body>
@@ -104,6 +105,7 @@ button{font-family:inherit;cursor:pointer}
   <div class="top">
     <div class="brand"><div class="logo">ר</div><div><b>רֶצֶף · לוח ניהול ייצור</b><span>מדף הרציפות · פס-ייצור 140 מודולות</span></div></div>
     <div class="links">
+      <a class="lnk" href="refutation-log.md">לוג הפרכה (הערות לסבב שיפורים)</a>
       <a class="lnk" href="annual-plan.html">← תוכנית שנתית (עיון DNA)</a>
     </div>
   </div>
@@ -157,12 +159,13 @@ button{font-family:inherit;cursor:pointer}
 <script src="retzef-core.js"></script>
 <script src="produced.js"></script>
 <script>
-var LS_KEY='retzef_pipe_v1';
+var LS_KEY='retzef_pipe_v2';
 var LANES=[
-  {id:'todo',    t:'ממתין ליצור',   who:'מיטל → GPT',            c:'#0A7C6B'},
-  {id:'review',  t:'בבדיקת Claude',  who:'הפרכה 6-צירית',         c:'#C96442'},
-  {id:'signing', t:'תיקון + חתימה',  who:'רכז / verify-pedagogy', c:'#D99A18'},
-  {id:'done',    t:'הומר ל-JSON',    who:'סגור',                  c:'#2A8'}
+  {id:'todo',     t:'ממתין ליצור',       who:'מיטל → GPT',            c:'#0A7C6B'},
+  {id:'built',    t:'הושלם ייצור (GPT)',  who:'טיוטה בריפו',           c:'#3B72E0'},
+  {id:'reviewed', t:'נבדק — הערות בלוג',  who:'Claude · refutation-log', c:'#C96442'},
+  {id:'signing',  t:'תיקון + חתימה',      who:'רכז / verify-pedagogy', c:'#D99A18'},
+  {id:'done',     t:'הומר ל-JSON',        who:'סגור',                  c:'#2A8'}
 ];
 var LANEIDX={}; LANES.forEach(function(l,i){LANEIDX[l.id]=i;});
 var ICON={
@@ -175,9 +178,11 @@ var R=window.RETZEF, ITEMS=[], overrides={};
 function moduleKey(subjId,pmN){ return subjId+'|'+pmN; }
 function loadOverrides(){ try{ overrides=JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){ overrides={}; } }
 function saveOverrides(){ localStorage.setItem(LS_KEY, JSON.stringify(overrides)); }
-function producedCount(it){ var P=window.PRODUCED||{}; return P[it.subj.id+'|'+R.modNum(it.pm.n)]||0; }
-/* מודולה שכבר הופקה עוברת אוטומטית ל"בבדיקת Claude" — יוצאת מתור ההעתקה (אלא אם קידמתָ ידנית) */
-function stageOf(it){ var k=moduleKey(it.subj.id,it.pm.n); return overrides[k] || it.pm.pipe || (producedCount(it)>0?'review':'todo'); }
+function producedRec(it){ var P=window.PRODUCED||{}; return P[it.subj.id+'|'+R.modNum(it.pm.n)]||null; }
+function producedCount(it){ var r=producedRec(it); return r?r.n:0; }
+/* מודולה שהופקה נוחתת אוטומטית בעמודה לפי השלב שרשם Claude (built/reviewed) — יוצאת מתור ההעתקה */
+function stageOf(it){ var k=moduleKey(it.subj.id,it.pm.n), r=producedRec(it);
+  return overrides[k] || it.pm.pipe || (r ? (r.stage||'built') : 'todo'); }
 function setStage(it,stage){
   var k=moduleKey(it.subj.id,it.pm.n), base=it.pm.pipe||'todo';
   if(stage===base){ delete overrides[k]; } else { overrides[k]=stage; }
@@ -215,20 +220,20 @@ function filtered(){
 }
 
 function render(){
-  var items=filtered(), counts={todo:0,review:0,signing:0,done:0};
+  var items=filtered(), counts={todo:0,built:0,reviewed:0,signing:0,done:0};
   ITEMS.forEach(function(it){ counts[stageOf(it)]++; });
-  // KPIs
-  var total=ITEMS.length, done=counts.done, pct=total?Math.round(done/total*100):0;
+  // KPIs — "הושלם ייצור" = כל מה שכבר לא ב-todo
+  var total=ITEMS.length, builtPlus=total-counts.todo, pct=total?Math.round(builtPlus/total*100):0;
   document.getElementById('kpis').innerHTML=
-    kpi(total,'מודולות בתור','')+kpi(counts.todo,'ממתינות ליצור','now')+
-    kpi(counts.review,'בבדיקת Claude','')+kpi(counts.signing,'בחתימה','')+kpi(done,'הומרו (סגור)','done')+kpi(pct+'%','הושלם','done');
+    kpi(counts.todo,'ממתינות ליצור','now')+kpi(counts.built,'הושלם ייצור','')+
+    kpi(counts.reviewed,'נבדק (הערות)','')+kpi(counts.signing,'בחתימה','')+kpi(counts.done,'הומר','done')+kpi(pct+'%','יצא מהתור','done');
   document.getElementById('pbar').style.width=pct+'%';
   // savebar
   var ov=Object.keys(overrides).length;
   var sb=document.getElementById('savebar'); sb.classList.toggle('show',ov>0);
   document.getElementById('saveCount').textContent=ov+' שינויים מקומיים';
   // lanes
-  var laneCounts={todo:0,review:0,signing:0,done:0};
+  var laneCounts={todo:0,built:0,reviewed:0,signing:0,done:0};
   items.forEach(function(it){ laneCounts[stageOf(it)]++; });
   var html='';
   LANES.forEach(function(lane){
@@ -267,7 +272,7 @@ function cardHTML(it,lane){
       ' <span class="prodchip" style="background:'+prod.bg+';color:'+prod.c+'">'+prod.name+'</span></div>'+
     '<div class="acts">'+acts+'</div></div>';
 }
-function nextLabel(st){ return {todo:'חזר טיוטה ',review:'הפרכה עברה ',signing:'נחתם '}[st]||''; }
+function nextLabel(st){ return {todo:'חזר טיוטה ',built:'נבדק ',reviewed:'לחתימה ',signing:'נחתם '}[st]||''; }
 
 function bind(){
   document.querySelectorAll('[data-go]').forEach(function(b){ b.addEventListener('click',function(){ var it=find(b.getAttribute('data-go')); if(it){ setStage(it,LANES[LANEIDX[stageOf(it)]+1].id); toast('הועבר → '+LANES[LANEIDX[stageOf(it)]].t); } }); });

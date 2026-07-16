@@ -1,11 +1,12 @@
-/* רֶצֶף — מודולות שכבר הופקו (יש להן יחידות בריפו). מפתח: subjId|מספר-מודולה → מס' יחידות.
- * מתעדכן ע"י Claude אחרי כל git pull (סריקת content/). הלוח מסמן אותן "כבר יוצר" ומוציא מתור-ההעתקה. */
+/* רֶצֶף — מודולות שכבר הופקו + שלב בפס. מפתח: subjId|מספר-מודולה → {n: מס' יחידות, stage}.
+ * stage: "built" = GPT סיים ייצור (טיוטה בריפו) · "reviewed" = Claude בדק (הערות ב-refutation-log.md).
+ * מתעדכן ע"י Claude אחרי git pull. הלוח מסמן ומציב בעמודה הנכונה. */
 window.PRODUCED = {
-  "hair-design|1": 15,
-  "hair-design|4": 9,
-  "hair-design|5": 11,
-  "hair-design|7": 11,
-  "hebrew|5": 1,
-  "media-design|1": 3,
-  "welding|1": 3
+  "hair-design|1": { n: 15, stage: "reviewed" },
+  "hair-design|4": { n: 9,  stage: "reviewed" },
+  "hair-design|5": { n: 11, stage: "reviewed" },
+  "hair-design|7": { n: 11, stage: "reviewed" },
+  "hebrew|5":      { n: 1,  stage: "built" },
+  "media-design|1":{ n: 3,  stage: "built" },
+  "welding|1":     { n: 3,  stage: "built" }
 };
