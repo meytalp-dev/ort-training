@@ -228,6 +228,19 @@ function pickMethod(text, trait, subj, rot){
 }
 function tierColor(t){return getComputedStyle(document.documentElement).getPropertyValue('--t'+t).trim();}
 
+/* חלוקת מודלים — מי כותב. GPT = שכבת הפרכה על כל יחידה (לא מיוחס כיצרן). */
+var MODELS={
+  claude:{name:'Claude', c:'#C96442', bg:'#FBEEE9'},
+  gemini:{name:'Gemini', c:'#3B72E0', bg:'#EAF1FD'}
+};
+/* טיר-2 שנשאר ל-Claude: שיער (התחלנו) + מדיה (רובד AI עדין). השאר → Gemini לאיזון תפוקה. */
+var CLAUDE_TIER2=['hair-design','media-design'];
+function producerOf(subj){
+  if(subj.tier===4||subj.tier===5) return 'claude';   // אזור-סכנה + מתמטיקה → לולאת Perplexity/verify של Claude
+  if(subj.tier===3) return 'gemini';                   // קציר
+  return CLAUDE_TIER2.indexOf(subj.id)>-1 ? 'claude' : 'gemini'; // טיר 2 מתחלק
+}
+
 function comp(id){ return (window.CURRICULUM[id]||{}).mods||[]; }
 function modNum(pmN){ var m=String(pmN).match(/\d+/); return m?parseInt(m[0]):null; }
 function compFor(id,pmN){ var n=modNum(pmN); return comp(id).find(function(m){return m.n===n;})||{knowledge:[],skills:[]}; }
@@ -278,9 +291,10 @@ function renderSidebar(){
     html+='<div class="tier-group"><div class="tier-lbl"><span class="tdot" style="background:'+ti.color+'"></span>'+ti.name+'<span class="tc">'+subs.length+'</span></div>';
     subs.forEach(function(s){
       var st=subjStats(s);
+      var pm=MODELS[producerOf(s)];
       html+='<button class="subj" data-id="'+s.id+'"><span class="sn">'+s.name+'</span>'+
-            (s.danger?'<span class="sbadge" style="background:var(--t4)">סכנה</span>':'')+
-            '<span class="prog">'+st.topics+' נושאים</span></button>';
+            '<span class="sbadge" style="background:'+pm.bg+';color:'+pm.c+'" title="כותב: '+pm.name+'">'+pm.name[0]+'</span>'+
+            '<span class="prog">'+st.topics+'</span></button>';
     });
     html+='</div>';
   });
@@ -356,6 +370,7 @@ function renderSubject(subj){
        '<span class="chip nqf">'+nqf+'</span>'+
        '<span class="chip">'+(subj.cert||'')+'</span>'+
        (subj.danger?'<span class="chip danger">אזור-סכנה</span>':'')+
+       modelChip(subj)+
      '</div></div>'+
      '<div class="kpis">'+kpi(st.topics,'נושאים')+kpi(st.subs,'תתי-נושאים')+kpi('~'+st.units,'יחידות')+'</div>'+
    '</div>';
@@ -389,6 +404,7 @@ function renderSubject(subj){
   m.querySelectorAll('[data-copy]').forEach(function(b){ b.addEventListener('click',function(e){ e.stopPropagation(); copyPrompt(subj, parseInt(b.getAttribute('data-copy'))); }); });
 }
 function kpi(v,l){ return '<div class="kpi"><b>'+v+'</b><span>'+l+'</span></div>'; }
+function modelChip(subj){ var m=MODELS[producerOf(subj)]; return '<span class="chip" style="background:'+m.bg+';color:'+m.c+'">✍ '+m.name+'</span>'; }
 
 function modBody(subj,pm,c,subs){
   if(!subs.length){
@@ -419,8 +435,11 @@ function copyPrompt(subj,mi){
     ('5. אזור-סכנה: כל קביעה פדגוגית עוברת Perplexity + מקור סמכותי ('+(subj.verify||'משה"ח / אקדמיה ללשון')+'). הרץ verify-pedagogy לפני מסירה.') :
     '5. מגמה מקצועית: נגזר ממסמך המקור בלבד — בלי המצאות. תייג מקור לכל קביעה.';
   var nn = String(mi+1).padStart(2,'0');
+  var prod=MODELS[producerOf(subj)];
   var p =
 'צור יחידות תוכן ל"מדף הרציפות" (רֶצֶף · _drafts/emergency-learning).\n\n'+
+'‼ קרא/י קודם את **content/unit-dna.md** — זה ה-DNA המחייב של כל יחידה (מבנה, אורך, 3 רמות, תיוג מקור, צ\'ק-DNA). כל יחידה חייבת לצאת זהה לו.\n'+
+'מודל כותב: '+prod.name+'. אחרי הכתיבה — יחידה עוברת הפרכה עצמאית ב-GPT ("נבדקה-GPT") לפני אימות אנושי.\n\n'+
 'מקצוע: '+subj.name+' ('+subj.cat+') · נושא '+pm.n+' — '+(pm.t||c.title)+'\n'+
 'טיר: '+subj.tier+' ('+window.PRODUCTION_PLAN.tiers[subj.tier].name+')'+(subj.danger?' · אזור-סכנה':'')+'\n'+
 'מקור (docx · ZIP סל תשפ"ז · פרטי, לא לפרסם): '+ (subj.src||'') +'\n'+
