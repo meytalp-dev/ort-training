@@ -20,6 +20,14 @@ git fetch --all --prune --quiet 2>/dev/null
 git pull --quiet --no-rebase origin main 2>/dev/null && echo "main מעודכן" || echo "⚠ pull נכשל — בדוק ידנית"
 
 echo
+echo "── מסנכרן את הלוח למציאות (produced.js) ──"
+if command -v node >/dev/null 2>&1; then
+  node "$C/gen-produced.js" || echo "⚠ gen-produced נכשל — הלוח עלול להציג מספרים ישנים"
+else
+  echo "⚠ node לא נמצא — produced.js לא סונכרן"
+fi
+
+echo
 echo "── יחידות ב-main, לפי מודולה ──"
 total=0
 for d in $(find "$C" -mindepth 2 -maxdepth 2 -type d -name "module-*" | sort); do
