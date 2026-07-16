@@ -156,6 +156,17 @@ body { margin: 0; font-family: var(--font-body); background: var(--bg); color: v
   font-weight: 700; color: var(--status-good); }
 .seen-flag svg { width: 15px; height: 15px; }
 
+/* שורת כותרת-קבוצה בטבלה (קיבוץ לפי עדיפות פעולה בתצוגת "הכל") */
+.grp-row td { background: var(--surface-muted); padding: var(--space-2) var(--space-4); border-top: 1px solid var(--line); }
+.grp-row .grp-lbl { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-head); font-weight: 800; font-size: var(--text-small); color: var(--ink-strong); }
+.grp-row .grp-lbl svg { width: 15px; height: 15px; flex: none; }
+.grp-row .grp-n { color: var(--ink-soft); font-weight: 700; font-variant-numeric: tabular-nums; }
+.grp-row.grp--alert .grp-lbl svg { color: var(--status-alert); }
+.grp-row.grp--unknown .grp-lbl svg { color: var(--ink-faint); }
+.grp-row.grp--attention .grp-lbl svg { color: var(--status-attention); }
+.grp-row.grp--good .grp-lbl svg { color: var(--status-good); }
+@media (max-width: 640px) { .grp-row td::before { content: none; } .grp-row td { display: block; } }
+
 /* מצב-ריק לפילוח שלא מחזיר תוצאות */
 .empty { text-align: center; padding: var(--space-8) var(--space-4); color: var(--ink-soft); }
 .empty p { margin: var(--space-3) 0 0; font-size: var(--text-small); }
@@ -574,17 +585,17 @@ body { margin: 0; font-family: var(--font-body); background: var(--bg); color: v
     });
   }
 
-  /* ---- רינדור טבלה ---- */
-  function renderTable() {
-    var rows = visibleStudents();
-    var assessment = data().assessment;
-    els.thSignal.textContent = assessment ? 'ציון · אות למידה' : 'אות למידה';
+  /* קבוצות ברירת-המחדל — לפי עדיפות פעולה (לא רשימה שטוחה). ממצא 22. */
+  var GROUP_ORDER = [
+    { status:'not_seen',    label:'נדרש קשר עכשיו', cls:'alert',     icon:'ic-alert' },
+    { status:'not_started', label:'עוד לא התחילו',  cls:'unknown',   icon:'ic-minus' },
+    { status:'started',     label:'בתהליך',         cls:'attention', icon:'ic-clock' },
+    { status:'completed',   label:'סיימו',          cls:'good',      icon:'ic-check' }
+  ];
 
-    if (!rows.length) { els.body.innerHTML = ''; els.empty.hidden = false; return; }
-    els.empty.hidden = true;
-
-    els.body.innerHTML = rows.map(function (s) {
+  function rowHTML(s) {
       var sm = STATUS_META[s.status];
+      var assessment = data().assessment;
 
       /* עמודת סטטוס */
       var statusCell = '<span class="st st--' + sm.cls + '">' + svg(sm.icon) + esc(sm.label) + '</span>';
@@ -632,7 +643,33 @@ body { margin: 0; font-family: var(--font-body); background: var(--bg); color: v
         '<td data-label="' + (assessment ? 'ציון · אות' : 'אות למידה') + '">' + sigCell + '</td>' +
         '<td class="col-act" data-label="פעולה">' + actCell + '</td>' +
       '</tr>';
-    }).join('');
+  }
+
+  function groupRowHTML(g, n) {
+    return '<tr class="grp-row grp--' + g.cls + '"><td colspan="4">' +
+      '<span class="grp-lbl">' + svg(g.icon) + esc(g.label) + ' <span class="grp-n">· ' + n + '</span></span>' +
+      '</td></tr>';
+  }
+
+  /* ---- רינדור טבלה ---- */
+  function renderTable() {
+    var rows = visibleStudents();
+    els.thSignal.textContent = data().assessment ? 'ציון · אות למידה' : 'אות למידה';
+
+    if (!rows.length) { els.body.innerHTML = ''; els.empty.hidden = false; return; }
+    els.empty.hidden = true;
+
+    /* תצוגת "הכל" ללא חיפוש/דופק → מקובץ לפי עדיפות פעולה. אחרת → שטוח. */
+    var grouped = (state.filter === 'all' && !state.pulse && !state.query);
+    if (!grouped) { els.body.innerHTML = rows.map(rowHTML).join(''); return; }
+
+    var html = '';
+    GROUP_ORDER.forEach(function (g) {
+      var inGroup = rows.filter(function (s) { return s.status === g.status; });
+      if (!inGroup.length) return;
+      html += groupRowHTML(g, inGroup.length) + inGroup.map(rowHTML).join('');
+    });
+    els.body.innerHTML = html;
   }
 
   /* ---- עדכון מוני הפילוח + הדופק ---- */
