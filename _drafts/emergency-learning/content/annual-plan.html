@@ -265,15 +265,14 @@ function tierColor(t){return getComputedStyle(document.documentElement).getPrope
 
 /* חלוקת מודלים — מי כותב. GPT = שכבת הפרכה על כל יחידה (לא מיוחס כיצרן). */
 var MODELS={
-  claude:{name:'Claude', c:'#C96442', bg:'#FBEEE9'},
-  gemini:{name:'Gemini', c:'#3B72E0', bg:'#EAF1FD'}
+  gpt:{name:'GPT', c:'#0A7C6B', bg:'#E4F5F1'},
+  gemini:{name:'Gemini', c:'#3B72E0', bg:'#EAF1FD'},
+  claude:{name:'Claude', c:'#C96442', bg:'#FBEEE9'}   // מתכלל + בודק/מאמת — לא יצרן
 };
-/* טיר-2 שנשאר ל-Claude: שיער (התחלנו) + מדיה (רובד AI עדין). השאר → Gemini לאיזון תפוקה. */
-var CLAUDE_TIER2=['hair-design','media-design'];
+/* יצרן=GPT (יצרן קפדני, ליבה+מגמות) · Gemini=קציר (טיר 3) · Claude=בודק/מאמת (יצרן≠בודק). */
 function producerOf(subj){
-  if(subj.tier===4||subj.tier===5) return 'claude';   // אזור-סכנה + מתמטיקה → לולאת Perplexity/verify של Claude
-  if(subj.tier===3) return 'gemini';                   // קציר
-  return CLAUDE_TIER2.indexOf(subj.id)>-1 ? 'claude' : 'gemini'; // טיר 2 מתחלק
+  if(subj.tier===3) return 'gemini';   // קציר — המרת נכסים קיימים
+  return 'gpt';                        // יצרן קפדני. Claude מוודא (הפרכה 6-צירית + verify-pedagogy לליבה).
 }
 
 /* ===== שכבת גיוון — פלטה + עוגן-תוכן ילידי למקצוע (DNA §4a) =====
@@ -314,7 +313,8 @@ var RED_RULES=[
 var SOFT_RX=/שירות|לקוח|תקשורת|אתיק|יזמות|שיווק|ניהול|מכיר|תמחור|מצג|פורטפוליו|תיעוד|רפלקצ|צוות|מנהיג|דיגיטל|ענן|נתונים|היסטורי|קונספט|השראה/;
 /* מסווג תת-נושא בודד → why (RED) או null (GREEN) */
 function classifySub(text, subj){
-  if(subj.cat==='ליבה'||subj.tier===4||subj.tier===5) return 'ליבה הומנית';
+  // ליבה הומנית (טיר 4/5): GREEN דרך verify-pedagogy — Perplexity+מקור סמכותי מחליפים מומחה תחום (החלטת מיטל).
+  if(subj.cat==='ליבה'||subj.tier===4||subj.tier===5) return null;
   for(var i=0;i<RED_RULES.length;i++){ if(RED_RULES[i].rx.test(text)) return RED_RULES[i].why; }
   if(HAZARD_DOMAINS.indexOf(subj.id)>-1 && !SOFT_RX.test(text)) return 'תחום מסוכן-מיסודו';
   return null;
@@ -579,7 +579,9 @@ function copyPrompt(subj,mi){
     '5. מגמה מקצועית: נגזר ממסמך המקור בלבד — בלי המצאות. תייג מקור לכל קביעה.';
   // שער סיווג 3-מצבי
   var gate;
-  if(cl.rg==='green')
+  if(cl.rg==='green' && subj.danger)
+    gate='🟢 סיווג: GREEN דרך אימות פדגוגי (ליבה הומנית). ניתן לייצור עכשיו — אך כל קביעה עוברת Perplexity + מקור סמכותי ('+(subj.verify||'אקדמיה ללשון/משה"ח')+') + הסקיל verify-pedagogy לפני חתימה. verify-pedagogy מחליף כאן מומחה תחום (החלטת מיטל). אל תמסור לתלמיד לפני אימות.';
+  else if(cl.rg==='green')
     gate='🟢 סיווג: GREEN ('+cl.why+'). ניתן לייצור מלא. חתימה סופית: רכז מגמה (מורה המקצוע). כל קביעה מתויגת [מקור: '+subj.name+' · '+pm.n+'].';
   else if(cl.rg==='mixed')
     gate='🟠 סיווג: מעורב — '+cl.green+' תתי-נושאים GREEN (ייצור מלא) · '+cl.red+' RED ('+cl.why+'). ייצר במלואם רק את ה-🟢. את ה-🔴 הפק כשלד + [לאימות—מומחה] בלבד, אל תמסור לתלמיד לפני חתימת מומחה תחום.';
@@ -591,7 +593,7 @@ function copyPrompt(subj,mi){
 'צור יחידות תוכן ל"מדף הרציפות" (רֶצֶף · _drafts/emergency-learning).\n\n'+
 gate+'\n\n'+
 '‼ קרא/י קודם את **content/unit-dna.md** — זה ה-DNA המחייב של כל יחידה (מבנה, אורך, 3 רמות, תיוג מקור, צ\'ק-DNA). כל יחידה חייבת לצאת זהה לו.\n'+
-'מודל כותב: '+prod.name+'. אחרי הכתיבה — יחידה עוברת הפרכה עצמאית ב-GPT ("נבדקה-GPT") לפני אימות אנושי.\n\n'+
+'מודל יצרן: '+prod.name+'. בודק/מאמת: Claude — הפרכה 6-צירית'+(subj.danger?' + verify-pedagogy (Perplexity+מקור סמכותי)':'')+'. יצרן≠בודק. חתימה סופית: '+(subj.danger?'אימות פדגוגי':'רכז מגמה')+'.\n\n'+
 'שכבת גיוון (DNA §4a) — היחידות של מקצוע זה לא זהות לאחרים:\n'+
 '   · פלטת מקצוע: '+pal.name+' (צבע ראשי '+pal.p+', רך '+pal.s+') — השתמש/י בה בכל היחידות של המקצוע.\n'+
 '   · עוגן-תוכן ילידי: '+pal.hook+' — בנה/י את הדוגמאות והאינטראקציות סביבו.\n'+
