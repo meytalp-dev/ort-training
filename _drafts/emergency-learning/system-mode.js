@@ -96,7 +96,7 @@
         options: [
           { id: 'ready',   label: 'מוכן/ה' },
           { id: 'slow',    label: 'להתחיל לאט' },
-          { id: 'help',    label: 'צריך/ה עזרה' },
+          { id: 'help',    label: 'אשמח לעזרה' },
           { id: 'notnow',  label: 'לא יכול/ה עכשיו' }
         ]
       },

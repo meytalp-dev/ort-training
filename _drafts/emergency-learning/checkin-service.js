@@ -61,7 +61,7 @@
     /* --- חירום: 4 אפשרויות (מוכן/להתחיל לאט/צריך עזרה/לא יכול עכשיו) --- */
     ready:  { raiseAlert:false, urgency:'calm',      signal:null },
     slow:   { raiseAlert:false, urgency:'calm',      signal:null },
-    help:   { raiseAlert:true,  urgency:'attention', signal:'ביקש/ה עזרה' },
+    help:   { raiseAlert:true,  urgency:'attention', signal:'אשמח לעזרה' },
     notnow: { raiseAlert:true,  urgency:'reach',     signal:'סימן/ה שלא יכול/ה עכשיו — כדאי ליצור קשר' },
 
     /* --- מצבי-רוח (check-in רגשי במסך התלמיד) --- */
@@ -75,7 +75,7 @@
   /* מילים-נרדפות מהמסכים הקיימים (עברית) → מזהה תקני */
   var ALIASES = {
     'מוכן':'ready', 'מתחיל ללמוד':'start', 'מתחילים':'start',
-    'להתחיל לאט':'slow', 'צריך עזרה':'help', 'לא יכול עכשיו':'notnow',
+    'להתחיל לאט':'slow', 'אשמח לעזרה':'help', 'צריך עזרה':'help', 'לא יכול עכשיו':'notnow',
     'טוב':'good', 'בסדר':'ok', 'קשה לי':'hard', 'רוצה לדבר':'talk'
   };
 
@@ -174,10 +174,18 @@
       notify();
     }
 
-    /* 4ד. סטטוס חד-פעמי לתלמיד (להצגה עכשיו, לא לוג). */
-    out.studentStatus = sig.raiseAlert
-      ? { kind:'alerted', text:'המחנכת יודעת — היא תיצור קשר בקרוב.' }
-      : { kind:'present', text:'רשום/ה כאן היום. אפשר להתחיל בקצב שלך.' };
+    /* 4ד. סטטוס חד-פעמי לתלמיד (להצגה עכשיו, לא לוג).
+       אישור רגוע, בלי שאלות המשך ובלי לבקש סיבה:
+         'notnow' — הכי רך: "תודה שאמרת" (לא מבטיח פנייה דחופה, לא לוחץ).
+         שאר הבחירות שמתריעות ('help') — "המחנכת יודעת".
+         בלי התראה — עובדת נוכחות בלבד. */
+    if (responseKey === 'notnow') {
+      out.studentStatus = { kind:'noted', text:'תודה שאמרת. המחנכת תראה שצריך לבדוק איתך.' };
+    } else if (sig.raiseAlert) {
+      out.studentStatus = { kind:'alerted', text:'המחנכת יודעת — היא תיצור קשר בקרוב.' };
+    } else {
+      out.studentStatus = { kind:'present', text:'רשום/ה כאן היום. אפשר להתחיל בקצב שלך.' };
+    }
 
     return out;
   };
