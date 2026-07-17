@@ -17,6 +17,7 @@
 | 3 | **יומן קשר + הערת מחנך = שדות מובנים בלבד** — הוסר שדה טקסט חופשי מ-MVP. | `security-minimization.md` §3 שורה 4: "שדה חופשי הוא הכי מסוכן… שדות מובנים בלבד (ערוץ / תוצאה / משימת המשך)". |
 | 4 (15.7.2026) | **`ContentUnit.level` נוסף — 3 רמות** (`basic`/`standard`/`advanced`), מתלכד עם `support_level` (`with_you`/`on_own`/`ahead`). §3.4. | הכרעת מיטל 15.7 + הדמו הדיפרנציאלי. יישור מול `content-standard.md` §2 ותמיכה במגמות המקצועיות (`taxonomy.md` §8). התלמיד לא רואה את שם הרמה. |
 | 5 (16.7.2026) | **מודל שני-צירים** — נוספו `LearningGroup` (קבוצת לימוד אקדמית) + `Enrollment` (שיוך רב-רבים). `Assignment` עבר ל**יעד פולימורפי** (`target_type`/`target_id`). `StaffRole.role` קיבל `substitute`. `Class` קיבל `school_year`/`archived`. §3.3b. | `operational-envelope.md` §1. `Student.class_id` הבודד = "כיתה אחת לתלמיד" — שבור לתיכון מקצועי-מגמתי (תלמיד עם מורה שונה לכל מקצוע) ולסקייל. `Class` נשאר **הציר הפסטורלי** (check-in/דופק — לא זז); `LearningGroup` = **ציר אקדמי** נפרד. |
+| **6 (17.7.2026)** | **המודל הרב-בית-ספרי.** `ContentUnit` קיבל `owner_school_id` (`null` = ספרייה ארצית משותפת) + `track_ref_id` + `sector_scope`. נוספו **`Track`** (מגמה) + **`SchoolTrack`** (שיוך). `School` קיבל `sector`. §3.3c + §3.4 + §5.1. | **`multi-school-model.md`** (הנימוק המלא + seed). המערכת הניחה בית ספר אחד; בפועל 47 בת"ס, שכל אחד רואה **רק את המגמות שלו** ומחזיק מאגר תוכן משלו לצד ספרייה משותפת. `ContentUnit` היה **הישות היחידה בלי `school_id`**. "מגמה" לא הייתה ישות אלא מחרוזת ב-`LearningGroup.name` — ולכן 47 בת"ס כתבו אותה מגמה ב-95 שמות שונים ולא יכלו לחלוק שורת תוכן אחת. |
 
 **עקרון "לא מוחקים עבודה":** מה שהוסר מ-MVP-A לא נמחק — הוא יושב ב-§10 (נספח מורחב/דחוי) עם תנאי החזרה (בדיקת פרטיות נפרדת). הסכימה של MVP-A היא **תת-קבוצה בטוחה-לביקורת** של החזון הרחב.
 
@@ -41,7 +42,7 @@
 | קבוצה | ישויות |
 |-------|--------|
 | **משתמשים** (זהות + הרשאה) | `Student` · `StaffMember` · `StaffRole` |
-| **ארגון** | `School` · `Class` (כיתת אם — ציר פסטורלי) · `LearningGroup` (קבוצת לימוד — ציר אקדמי) · `Enrollment` (שיוך תלמיד↔קבוצה, רב-רבים) |
+| **ארגון** | `School` · `Class` (כיתת אם — ציר פסטורלי) · `LearningGroup` (קבוצת לימוד — ציר אקדמי) · `Enrollment` (שיוך תלמיד↔קבוצה, רב-רבים) · **`Track`** (מגמה — קטלוג ארצי) · **`SchoolTrack`** (מה כל בי"ס מלמד) |
 | **יחידות ותוכן** | `ContentUnit` (עם `LearningDuration` מוטבע) · `Topic` · `Skill` · `LearningSequence` · `EnrichmentTrack` |
 | **הקצאות והגשות** | `Assignment` · `Submission` (נושאת **ציון**) · `Attachment` · `StudentProgress` · `SupportProfile` |
 | **check-in וניטור** | `CheckIn` · `DailyPresence` (מצב יומי גס) · `SystemMode` |
@@ -60,6 +61,11 @@ erDiagram
     SCHOOL ||--o{ SYSTEM_MODE : "יומן מצבים"
     STAFF_MEMBER ||--o{ STAFF_ROLE : "מחזיק תפקידים (כמה)"
     SCHOOL ||--o{ STAFF_ROLE : "היקף (null לפיקוח ארצי)"
+
+    SCHOOL ||--o{ SCHOOL_TRACK : "המגמות שהוא מלמד"
+    TRACK ||--o{ SCHOOL_TRACK : "נלמדת בבתי ספר (רב-רבים)"
+    TRACK ||--o{ CONTENT_UNIT : "תוכן מגמתי (null = לא-מגמתי)"
+    SCHOOL ||--o{ CONTENT_UNIT : "בעלות (null = ספרייה ארצית)"
 
     CLASS ||--o{ STUDENT : "משבץ תלמידים (כיתת אם)"
     CLASS }o--|| STAFF_MEMBER : "מחנך"
@@ -101,6 +107,21 @@ erDiagram
         string name
         string network "רשת"
         string district "מחוז"
+        string sector "מגזר — משפיע על ליבה עיונית בלבד"
+    }
+    TRACK {
+        string id PK
+        string code "קוד קנוני — auto/elec/hair"
+        string name "השם התקני"
+        string domain "תחום — רכב/חשמל/עיצוב ומדיה"
+        bool active
+    }
+    SCHOOL_TRACK {
+        string id PK
+        string school_id FK
+        string track_id FK
+        string school_year
+        bool active
     }
     CLASS {
         string id PK
@@ -432,7 +453,10 @@ interface LearningDuration {
 | id / title / subject / grade | | |
 | body | text | פתיח + מטלה ברורה |
 | unit_type | enum | `task` / `assessment` (נושא ציון) / `reference` (הפניה חיצונית) |
-| track_id | FK→EnrichmentTrack? | `null` = תוכן ליבה |
+| **owner_school_id** | FK→School? | **🆕 17.7 — בעלות. `null` = הספרייה הארצית המשותפת (ברירת מחדל); ערך = תוכן פרטי של בית ספר.** §5.1 |
+| **track_ref_id** | FK→Track? | **🆕 17.7 — המגמה שהיחידה שייכת לה. `null` = תוכן לא-מגמתי (ליבה עיונית).** ⚠️ **לא** `track_id` — ראו השורה הבאה |
+| **sector_scope** | enum? | **🆕 17.7 — `null` = חוצה-מגזר (ברירת מחדל).** ערך = ליבה עיונית ייעודית למגזר. `[לאימות]` — `multi-school-model.md` §6 |
+| track_id | FK→EnrichmentTrack? | `null` = תוכן ליבה. ⚠️ **זה מסלול העשרה — לא מגמה.** מגמה = `track_ref_id` |
 | sequence_id | FK→LearningSequence? | `null` = יחידה עצמאית |
 | topic_id | FK→Topic? | מחבר מקצוע→נושא→יחידה |
 | skill_ids | array | מיומנויות שהיחידה בונה |
@@ -446,6 +470,36 @@ interface LearningDuration {
 | parent_unit_id | FK→ContentUnit? | גרסה נגישה — מפנה למקור, לא מעתיקה. יחד עם `level` מקשר את שלושת הווריאנטים של אותה מנה |
 | curated_by | FK→StaffMember | אוצרות אנושית |
 | active | bool | |
+
+### 3.4b Track / SchoolTrack — המגמה כישות (🆕 17.7)
+
+**הנימוק המלא + ה-seed: `multi-school-model.md`.** כאן הסכימה בלבד.
+
+**`Track` — קטלוג המגמות הארצי (41 מגמות):**
+
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id | PK | |
+| **code** | string | **הקוד הקנוני** — `auto` · `elec` · `hair`. **זה מקור האמת, לא השם** |
+| name | string | השם התקני להצגה |
+| domain | string | תחום-על — רכב · חשמל · עיצוב ומדיה · קולינריה |
+| active | bool | |
+
+**`SchoolTrack` — מה כל בית ספר מלמד:**
+
+| שדה | טיפוס | תיאור |
+|------|-------|--------|
+| id | PK | |
+| school_id | FK→School | |
+| track_id | FK→Track | ⚠️ כאן `track_id` תקין — ההקשר הוא `SchoolTrack`, אין התנגשות |
+| school_year | string | למעבר-שנה |
+| active | bool | |
+
+> **למה `code` ולא שם.** 47 בתי הספר כתבו 41 מגמות ב-**95 שמות שונים**: `אוטוטרוניקה`/`אוטו` · `חשמלאי מוסמך`/`חשמל מוסמך`/`חשמל`/`מוסמך` · `עיצוב שיער`/`שיער`/`טיפוח חן`. כל עוד המגמה היא מחרוזת ב-`LearningGroup.name`, אורט כרמל ואכסאל מלמדים חשמלאות ולעולם לא יחלקו יחידת תוכן — כי אחד כתב "חשמלאי מוסמך" והשני "מוסמך". **השם הוא תווית מעל הקוד, לא הזהות.**
+
+> ⚠️ **התנגשות שמות — קריטי.** `track_id` על `ContentUnit` **תפוס** ל-`EnrichmentTrack` (מסלול העשרה). לפי `taxonomy.md` §3, מגמה מקצועית היא **ליבה** ו-`track_id` שלה **ריק**. שימוש ב-`track_id` למגמה ידרוס משמעות קיימת וישבור את ההפרדה ליבה/העשרה. לכן **`track_ref_id`**.
+
+> **`Track` אינו `LearningGroup`.** `Track` = המגמה כמושג ארצי ("אוטוטרוניקה קיימת ב-22 בת"ס"). `LearningGroup` = מופע כיתתי קונקרטי ("אוטוטרוניקה י'2 של מורה דנה"). בהמשך `LearningGroup` יקבל `track_ref_id` אופציונלי — **לא בגרסה זו**.
 
 ### 3.5 Topic / Skill / LearningSequence / EnrichmentTrack
 `Topic` (נושא בתכל: subject/grade/title/curriculum_ref/display_order) · `Skill` (מיומנות: subject/title/topic_id) · `LearningSequence` (רצף מסודר: subject/grade/topic_id/title/unit_count/curriculum_ref/authored_by) · `EnrichmentTrack` (אוסף 5-6 יחידות בכל סדר: title/theme/description). *מבנה זהה ל-1.3 — לא השתנה.* המסלול נגזר בשאילתה: יחידות עם אותו `sequence_id`, ממוינות לפי `sequence_order`.
@@ -678,6 +732,32 @@ ContentUnit  ──►  Assignment    ──►  Submission   ──►  מחנ�
 - **התוכן חי במקום אחד** (`ContentUnit`); כל השרשרת מפנה אליו ב-FK. שינוי ניסוח = שורה אחת.
 - **הדשבורדים הם שאילתות מסננות** על אותן שורות `Submission`/`CheckIn`/`DailyPresence`/`ContactLog`, ברזולוציות שונות לפי `StaffRole`. ההפרדה נאכפת בהיקף השאילתה — לא בהעתקת נתונים.
 - **`mode` מוטבע** על כל אירוע → כל דוח נחתך לפי מצב בלי טבלה נפרדת.
+
+### 5.1 נראות תוכן — מה בית ספר רואה בספרייה (🆕 17.7)
+
+**שלוש שכבות סינון, כולן על `ContentUnit`. כולן `null`-סובלניות: `null` = "שייך לכולם".**
+
+```sql
+-- הספרייה של בית ספר S
+SELECT * FROM ContentUnit
+WHERE active
+  AND (owner_school_id IS NULL OR owner_school_id = :S)          -- בעלות
+  AND (track_ref_id   IS NULL OR track_ref_id IN                 -- רק המגמות שלו
+        (SELECT track_id FROM SchoolTrack WHERE school_id = :S AND active))
+  AND (sector_scope   IS NULL OR sector_scope = (SELECT sector FROM School WHERE id = :S))
+```
+
+| השכבה | `null` פירושו | הדוגמה |
+|---|---|---|
+| `owner_school_id` | ספרייה ארצית משותפת | יחידת לשון שכולם רואים |
+| `track_ref_id` | לא-מגמתי (ליבה עיונית) | מתמטיקה — לא שייכת למגמה |
+| `sector_scope` | חוצה-מגזר | אוטוטרוניקה — **זהה באכסאל ובפלמחים** |
+
+**יחידה עם שלושה `null` = נראית לכולם.** זו ברירת המחדל הנכונה: תוכן נולד משותף, ומצטמצם רק כשיש סיבה.
+
+**זה תואם את עקרון §0.2 ("מקור אמת יחיד — אפס שכפול"):** הספרייה המשותפת והבית-ספרית הן **אותה טבלה בשתי שאילתות** — לא שני מאגרים. בית ספר עם "בדק כלי טיס" (מגמה יחידנית, בת"ס אחד) כותב לעצמו עם `owner_school_id` מלא; אף אחד אחר לא רואה. אותה שורה, אותו מנגנון.
+
+> **פתוח:** ברירת המחדל ליחידה שמורה כותבת — `owner_school_id = בית הספר שלה` או `null`? `multi-school-model.md` §2. עד להכרעה הפרוטוטייפ מניח **בית-ספרי** (השמרני — קידום לארצי הוא פעולה מפורשת ב-`publish-flow.html`).
 
 ---
 
