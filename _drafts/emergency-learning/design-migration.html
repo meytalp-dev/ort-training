@@ -38,6 +38,8 @@
 
   .grp{margin-top:22px}
   .grp h2{font-family:var(--font-head);font-size:15px;font-weight:800;color:var(--ink-strong);display:flex;align-items:center;gap:9px;margin-bottom:10px}
+  .batch{margin-inline-start:auto;font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--on-shell,#fff);background:var(--shell,#A61E64);border:none;border-radius:var(--radius-pill);padding:5px 13px;cursor:pointer;transition:background .15s}
+  .batch:hover{background:var(--shell-deep,#8A1852)}
   .grp h2 .cnt{font-size:12px;font-weight:700;color:var(--ink-soft);background:var(--surface-muted);padding:1px 8px;border-radius:var(--radius-pill)}
 
   .list{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -161,6 +163,32 @@ function buildPrompt(x){
 אם נדרש צבע/החלטה שאין לו כלל — עצור ושאל, אל תמציא.`;
 }
 
+/* ---------- פרומפט-תזמורת: קבוצה שלמה בפרומפט אחד ---------- */
+function buildBatch(items, title){
+  const list = items.map((x,i)=>{
+    const flags=[]; if(!x.tok)flags.push('ללא-טוקנים'); if(x.loc)flags.push('פלטה-מקומית'); if(x.grad)flags.push(x.grad+'-גרדיאנט'); if(x.register==='ops')flags.push('תפעול'); if(x.flag)flags.push('⚠גבולי');
+    return `${i+1}. ${x.f}  [${HE[x.layer]}${flags.length?' · '+flags.join(', '):''}]`;
+  }).join('\n');
+  return `אתה מבצע מיגרציית-עיצוב על קבוצת מסכים ברֶצֶף — ${title} (${items.length} מסכים). אל תמציא כללים.
+
+קרא קודם, פעם אחת: MIGRATION-RULEBOOK.md — §1 (10 הכללים), §3 (פלטת פטל), §3.5 (טבלת מיפוי legacy→טוקן), §4 (תפעול), §5 (הסימן), §6 (בדיקה), §7 (הפרומפט).
+תבניות: מעטפת=onboarding-wizard.html · תפעול=system-health.html · למידה=demo-unit-hebrew.html.
+
+עבור על המסכים **אחד-אחד לפי הסדר**. לכל מסך:
+· בצע את כל §1 + הבדיקה §6. ⚠ טורקיז דקורטיבי (כלל 4) — לא רק כפתורים: הערות→--action-soft, סרגל/טאב פעיל→--action, אווטארים→ניטרלי, קו-רצף(rz-ambient)→הסר, צ'יפ-תפקיד→אפור+נקודה.
+· שכבה "מעטפת" → data-layer="shell" ב-<html>, פעולות בפטל. "למידה" → בלי data-layer (דיו).
+· מסך "פלטה-מקומית" → מחק את :root המקומי, החלף לפי §3.5 עם fallback. "ללא-טוקנים" → הוסף tokens.css?v=2 + components.css.
+· מסך "תפעול" → יישם §4 (צפוף, מספר-בדיו, כפתור-אחד, נורת-מצב).
+· ⚠גבולי → עצור, שאל את מיטל על השכבה לפני שממשיך.
+· אל תיגע ב-JS/תוכן/מבנה-נתונים — רק className, CSS, ותגית <html>.
+· בסוף כל מסך: הרץ grep -E '(background|color):#[0-9a-fA-F]{3,6}' — אמור להיות ריק (hex רק כ-fallback ב-var() וב-SVG).
+
+הרשימה (בצע לפי הסדר):
+${list}
+
+בסיום: טבלת סיכום — לכל מסך, מה שונה + תוצאת ה-grep. אם מסך דורש החלטה שאין לה כלל — דלג עליו, המשך לבא, וסמן אותו לשאלה. אל תמציא.`;
+}
+
 /* ---------- רינדור ---------- */
 let filter = 'all';
 const FILTERS = [
@@ -194,7 +222,9 @@ function render(){
   $('#groups').innerHTML = GROUPS.map(g=>{
     const items = S.filter(g.test).filter(match);
     if(!items.length) return '';
-    return `<div class="grp"><h2>${g.t}<span class="cnt">${items.length}</span></h2><div class="list">${
+    const todo = items.filter(x=>x.status!=='done');
+    const batchBtn = todo.length>1 ? `<button class="batch" data-grp="${g.k}">תזמורת · ${todo.length} ⧉</button>` : '';
+    return `<div class="grp"><h2>${g.t}<span class="cnt">${items.length}</span>${batchBtn}</h2><div class="list">${
       items.map(x=>{
         const tags = [
           `<span class="tag ${x.register==='ops'?'ops':x.layer}">${HE[x.layer]}${x.register==='ops'?' · תפעול':''}</span>`,
@@ -220,11 +250,22 @@ $('#filters').addEventListener('click', e=>{
   render();
 });
 document.addEventListener('click', e=>{
-  const c=e.target.closest('.copy'); if(!c)return;
-  const x=S.find(s=>s.f===c.dataset.f);
-  $('#dlgTitle').textContent='פרומפט · '+x.f;
-  $('#dlgText').value=buildPrompt(x);
-  $('#promptDlg').showModal();
+  const c=e.target.closest('.copy');
+  if(c){
+    const x=S.find(s=>s.f===c.dataset.f);
+    $('#dlgTitle').textContent='פרומפט · '+x.f;
+    $('#dlgText').value=buildPrompt(x);
+    $('#promptDlg').showModal();
+    return;
+  }
+  const b=e.target.closest('.batch');
+  if(b){
+    const g=GROUPS.find(x=>x.k===b.dataset.grp);
+    const items=S.filter(g.test).filter(x=>x.status!=='done');
+    $('#dlgTitle').textContent='תזמורת · '+g.t+' ('+items.length+' מסכים)';
+    $('#dlgText').value=buildBatch(items, g.t);
+    $('#promptDlg').showModal();
+  }
 });
 $('#dlgCopy').addEventListener('click', ()=>{
   const t=$('#dlgText'); t.select();
