@@ -28,6 +28,8 @@
   .prog .top{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
   .prog .pct{font-family:var(--font-head);font-size:26px;font-weight:900;color:var(--ink-strong);font-variant-numeric:tabular-nums}
   .prog .lbl{font-size:13px;color:var(--ink-soft)}
+  #resetSent{margin-inline-start:auto;font-family:var(--font-body);font-size:12px;font-weight:600;color:var(--ink-faint);background:none;border:1px solid var(--line);border-radius:var(--radius-pill);padding:4px 11px;cursor:pointer;transition:.14s}
+  #resetSent:hover{color:var(--ink-soft);border-color:var(--line-strong)}
   .track{height:9px;border-radius:5px;background:var(--surface-muted);overflow:hidden}
   .track i{display:block;height:100%;background:var(--shell,#A61E64);transition:width .5s cubic-bezier(.22,1,.36,1)}
 
@@ -61,6 +63,10 @@
   .copy{font-family:var(--font-body);font-size:12px;font-weight:700;color:var(--shell,#A61E64);background:none;border:1px solid transparent;border-radius:6px;padding:5px 10px;cursor:pointer;transition:.14s;white-space:nowrap}
   .row:hover .copy{border-color:var(--shell-line,#F3C6DA);background:var(--shell-soft,#FDEDF4)}
   .copy.ok{color:var(--status-good)}
+  /* הועתק כבר — מעומעם, שפה ניטרלית, נפרד מ"בוצע" */
+  .row.sent{opacity:.5}
+  .copy.sent{color:var(--ink-faint);pointer-events:auto;background:none !important;border-color:transparent !important}
+  .row.sent:hover{opacity:.72}
 
   dialog{border:none;border-radius:12px;padding:0;max-width:720px;width:calc(100% - 40px);box-shadow:var(--shadow-lg);margin:auto}
   dialog::backdrop{background:var(--scrim);backdrop-filter:blur(3px)}
@@ -92,7 +98,7 @@
   <p class="rule">ספר הכללים: <a href="MIGRATION-RULEBOOK.md">MIGRATION-RULEBOOK.md</a> · תבניות: <a href="index.html">שער</a> · <a href="onboarding-wizard.html">מעטפת</a> · <a href="system-health.html">תפעול</a> · מקור: <a href="design-system.html">design-system</a></p>
 
   <div class="prog">
-    <div class="top"><span class="pct" id="pct">0%</span><span class="lbl" id="progLbl"></span></div>
+    <div class="top"><span class="pct" id="pct">0%</span><span class="lbl" id="progLbl"></span><button id="resetSent" title="נקה את כל סימוני 'נשלח'">אפס סימוני נשלח</button></div>
     <div class="track"><i id="bar"></i></div>
   </div>
 
@@ -116,6 +122,23 @@
 const M = window.MIGRATION, S = M.screens;
 const $ = s => document.querySelector(s);
 const HE = { shell:'מעטפת', learning:'למידה', ops:'תפעול', form:'טופס', content:'תוכן', meta:'מסמך-פיתוח', marketing:'שיווקי' };
+
+/* --- מעקב "כבר נשלח לסוכן" — נשמר בין רענונים --- */
+const SENT_KEY = 'mig-sent-v1';
+let sent = new Set(JSON.parse(localStorage.getItem(SENT_KEY) || '[]'));
+function markSent(f){ sent.add(f); localStorage.setItem(SENT_KEY, JSON.stringify([...sent])); }
+function unmarkSent(f){ sent.delete(f); localStorage.setItem(SENT_KEY, JSON.stringify([...sent])); }
+/* העתקה ללוח — עם נפילה חלופה אם ה-API חסום */
+function copyText(t){
+  if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).catch(()=>fallbackCopy(t));
+  return Promise.resolve(fallbackCopy(t));
+}
+function fallbackCopy(t){
+  const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+}
 
 /* ---------- התקדמות ---------- */
 function progress(){
@@ -232,10 +255,14 @@ function render(){
           x.grad>0?`<span class="tag warn">${x.grad} גרדיאנט</span>`:'',
           x.flag?'<span class="tag flag">⚠ גבולי</span>':'',
         ].filter(Boolean).join('');
-        return `<div class="row ${x.status==='done'?'done':''}">
+        const isSent = sent.has(x.f) && x.status!=='done';
+        const copyBtn = x.status==='done'
+          ? '<span class="tag learning">בוצע</span>'
+          : `<button class="copy ${isSent?'sent':''}" data-f="${x.f}">${isSent?'נשלח ✓ · העתק שוב':'העתק פרומפט ⧉'}</button>`;
+        return `<div class="row ${x.status==='done'?'done':''} ${isSent?'sent':''}">
           <span class="st ${x.status==='done'?'done':''}"></span>
           <span class="fn"><a href="${x.f}" target="_blank">${x.f}</a></span>
-          <div class="tags">${tags}${x.status!=='done'?`<button class="copy" data-f="${x.f}">פרומפט ⧉</button>`:'<span class="tag learning">בוצע</span>'}</div>
+          <div class="tags">${tags}${copyBtn}</div>
         </div>`;
       }).join('')
     }</div></div>`;
@@ -253,26 +280,40 @@ document.addEventListener('click', e=>{
   const c=e.target.closest('.copy');
   if(c){
     const x=S.find(s=>s.f===c.dataset.f);
-    $('#dlgTitle').textContent='פרומפט · '+x.f;
-    $('#dlgText').value=buildPrompt(x);
-    $('#promptDlg').showModal();
+    copyText(buildPrompt(x)).then(()=>{
+      const first=!sent.has(x.f);
+      c.textContent='הועתק ✓';
+      markSent(x.f);
+      // אחרי רגע — מציג את מצב "נשלח" הקבוע ומעמעם את השורה
+      setTimeout(()=>{ render(); }, first?650:200);
+    });
     return;
   }
   const b=e.target.closest('.batch');
   if(b){
     const g=GROUPS.find(x=>x.k===b.dataset.grp);
     const items=S.filter(g.test).filter(x=>x.status!=='done');
+    batchFiles=items.map(x=>x.f);
     $('#dlgTitle').textContent='תזמורת · '+g.t+' ('+items.length+' מסכים)';
     $('#dlgText').value=buildBatch(items, g.t);
     $('#promptDlg').showModal();
   }
 });
+let batchFiles=[];
 $('#dlgCopy').addEventListener('click', ()=>{
-  const t=$('#dlgText'); t.select();
-  navigator.clipboard.writeText(t.value).then(()=>{$('#dlgCopy').textContent='הועתק ✓';setTimeout(()=>$('#dlgCopy').textContent='העתק פרומפט',1500);});
+  copyText($('#dlgText').value).then(()=>{
+    $('#dlgCopy').textContent='הועתק ✓';
+    if(batchFiles.length){ batchFiles.forEach(markSent); }   // תזמורת → כל הקבוצה מסומנת נשלח
+    setTimeout(()=>{ $('#dlgCopy').textContent='העתק פרומפט'; $('#promptDlg').close(); render(); },900);
+  });
 });
 $('#dlgClose').addEventListener('click', ()=>$('#promptDlg').close());
 $('#promptDlg').addEventListener('click', e=>{if(e.target.id==='promptDlg')$('#promptDlg').close();});
+
+$('#resetSent').addEventListener('click', ()=>{
+  if(!sent.size) return;
+  sent.clear(); localStorage.removeItem(SENT_KEY); render();
+});
 
 progress(); render();
 </script>
