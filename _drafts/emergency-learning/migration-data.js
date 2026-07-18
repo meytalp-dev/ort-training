@@ -68,7 +68,7 @@ window.MIGRATION = {
     { f:'publish-flow.html',        layer:'shell', register:'form',    status:'todo', tok:1,comp:0,loc:0,grad:0,btn:0 },
     { f:'gap-detection.html',       layer:'shell', register:'ops',     status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'feature-flags.html',       layer:'shell', register:'form',    status:'todo', tok:1,comp:0,loc:0,grad:0,btn:0 },
-    { f:'mode-switch.html',         layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
+    { f:'mode-switch.html',         layer:'shell', register:'form',    status:'done', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'system-modes.html',        layer:'shell', register:'content', status:'todo', tok:1,comp:0,loc:0,grad:0,btn:0 },
     { f:'roles.html',               layer:'shell', register:'meta',    status:'todo', tok:1,comp:0,loc:0,grad:1,btn:0 },
     { f:'national-roles.html',      layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:0 },
