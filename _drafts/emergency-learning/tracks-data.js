@@ -1,10 +1,10 @@
 /* רֶצֶף — קטלוג המגמות + שיוך בתי ספר + מגזר (seed)
-   נוצר מ-multi-school-model.md §9-§10 · נתוני מיטל 17.7.2026
-   sector: he/ar — הציר הרלוונטי לתוכן ליבה. רק ודאות גבוהה מולא;
-   השאר null + sector_confidence/sector_suggested. ראו multi-school-sectors.md */
+   מגמות/שיוך: multi-school-model.md §9-§10 · נתוני מיטל 17.7
+   מגזר: multi-school-sectors.md · כל 48 מאושרים ע"י מיטל 18.7
+   sector = he/ar — הציר לתוכן ליבה עיונית */
 window.RETZEF_TRACKS = {
   "_source": "multi-school-model.md §9-§10 · נתוני מיטל 17.7.2026",
-  "_note": "sector: he/ar (ציר התוכן) — רק ודאות גבוהה. medium/low → null + sector_suggested/confidence. מקור: פרפלקסיטי 18.7 (multi-school-sectors.md), טעון אישור מיטל למסומנים.",
+  "_note": "sector: he/ar (ציר התוכן ליבה). כל 48 מסווגים ומאושרים ע\"י מיטל 18.7. high=לפי יישוב הומוגני · confirmed=אישור מיטל. ראו multi-school-sectors.md",
   "tracks": [
     {
       "id": "trk_auto",
@@ -372,28 +372,27 @@ window.RETZEF_TRACKS = {
       "name": "בת עמי",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "יהודי? (ספק)",
-      "sector_confidence": "medium",
-      "sector_suggested": "he"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_10",
       "name": "דרור נווה מדבר",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "בדואי? או יהודי-אזורי?",
-      "sector_confidence": "low"
+      "sector": "ar",
+      "sector_detail": "בדואי (נווה מדבר · אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_11",
       "name": "הדר",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "לא זוהה",
-      "sector_confidence": "low"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_12",
@@ -409,29 +408,27 @@ window.RETZEF_TRACKS = {
       "name": "זוקו",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "לא זוהה",
-      "sector_confidence": "low"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_14",
       "name": "חושן",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "יהודי? (ספק)",
-      "sector_confidence": "medium",
-      "sector_suggested": "he"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_15",
       "name": "חנוך לנער צפת",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "דתי?",
-      "sector_confidence": "medium",
-      "sector_suggested": "he"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_16",
@@ -447,10 +444,9 @@ window.RETZEF_TRACKS = {
       "name": "טל חרמון",
       "network": null,
       "district": null,
-      "sector": null,
+      "sector": "he",
       "sector_detail": "יהודי (צפון)",
-      "sector_confidence": "medium",
-      "sector_suggested": "he"
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_18",
@@ -493,10 +489,9 @@ window.RETZEF_TRACKS = {
       "name": "מעיינות צפת",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "דתי/חרדי?",
-      "sector_confidence": "medium",
-      "sector_suggested": "he"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_23",
@@ -512,10 +507,9 @@ window.RETZEF_TRACKS = {
       "name": "עמל אנרגיטק",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "יהודי? (ספק)",
-      "sector_confidence": "medium",
-      "sector_suggested": "he"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_25",
@@ -540,9 +534,9 @@ window.RETZEF_TRACKS = {
       "name": "עמל טק אין",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "לא זוהה",
-      "sector_confidence": "low"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_28",
@@ -576,10 +570,9 @@ window.RETZEF_TRACKS = {
       "name": "עתיד באר שבע",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "יהודי (חוצה?)",
-      "sector_confidence": "medium",
-      "sector_suggested": "he"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_32",
@@ -595,9 +588,9 @@ window.RETZEF_TRACKS = {
       "name": "עתיד בית דוד",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "לא זוהה",
-      "sector_confidence": "low"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_34",
@@ -649,19 +642,18 @@ window.RETZEF_TRACKS = {
       "name": "עתיד צור ים",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "יהודי? (ספק)",
-      "sector_confidence": "medium",
-      "sector_suggested": "he"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_40",
       "name": "עתיד קמ\"ג",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "לא זוהה",
-      "sector_confidence": "low"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_41",
@@ -677,9 +669,9 @@ window.RETZEF_TRACKS = {
       "name": "צור ברק",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "לא זוהה (קיים בהופה)",
-      "sector_confidence": "low"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_43",
@@ -704,18 +696,18 @@ window.RETZEF_TRACKS = {
       "name": "תיכון החממה",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "לא זוהה",
-      "sector_confidence": "low"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_46",
       "name": "תיכון שיח",
       "network": null,
       "district": null,
-      "sector": null,
-      "sector_detail": "לא זוהה",
-      "sector_confidence": "low"
+      "sector": "he",
+      "sector_detail": "יהודי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_47",
