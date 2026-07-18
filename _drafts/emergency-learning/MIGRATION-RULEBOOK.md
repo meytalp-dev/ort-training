@@ -59,6 +59,34 @@
 
 ---
 
+## 3.5 · טבלת המיפוי — פלטה מקומית → טוקן (מחייבת · 18 מסכים חולקים אותה)
+
+מסך עם פלטה מקומית (`loc=1`): **מחק את כל בלוק ה-`:root { --teal… }`** — הוא מתנגש בשמות הטוקנים (`--ink`/`--bg`/`--line`/`--card`/`--muted` מוגדרים גם ב-`tokens.css`; השארתו מחזירה את הצבעים הישנים). אחר-כך החלף לפי הטבלה, **תמיד עם fallback**:
+
+| legacy | → טוקן | fallback |
+|---|---|---|
+| `--teal` | `--brand` | `#0B8F98` |
+| `--teal-deep` | `--brand-deep` | `#08666D` |
+| `--teal-soft` | `--brand-soft` | `#E8F8F9` |
+| `--ink` | `--ink` (מ-tokens) | — |
+| `--muted` | `--ink-soft` | `#607984` |
+| `--line` | `--line` (מ-tokens) | — |
+| `--bg` | `--bg` (מ-tokens) | — |
+| `--card` | `--card` (מ-tokens) | — |
+| `--green` | `--status-good` | `#3AA65A` |
+| `--green-soft` | `--status-good-soft` | `#E8F6EC` |
+| `--amber` | `--status-attention` | `#D99A18` |
+| `--amber-soft` | `--status-attention-soft` | `#FBF3DE` |
+| `--gray` | `--status-unknown` | `#98AAB2` |
+| `--shadow` | `--shadow-card` | — |
+| `--red` | `--status-alert` | `#D9574F` |
+
+**כפתור פעולה מותאם** (לא `.btn`, למשל `.runbtn`) שהיה `--teal` → `--action` (לא `--brand`). כך הוא מקבל צבע-שכבה. פקדים (טוגל, טאב פעיל) שהיו `--teal` → `--action` גם הם. הסימן/החוט בלבד נשארים `--brand`.
+
+**חץ:** `←`/`→`/`‹`/`›` **בתוך משפט** = תוכן, לא לגעת. **עומד לבד** ב-`<div>`/`<span>` כקישוט ניווט = SVG (§5 של הצ'קליסט). ה-SVG לחץ-שמאלה: `<path d="M15 5l-7 7 7 7"/>`.
+
+---
+
 ## 4 · מסכי `register:ops` — טיפול צפיפות (התבנית: system-health.html)
 
 הרפרנס כאן **אינו** השער — הוא כלי. אסור: hero, `clamp()`/`vw` בכותרת, צללים, כרטיסים מקוננים, רקע דקורטיבי.

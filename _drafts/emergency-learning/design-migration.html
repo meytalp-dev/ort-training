@@ -135,7 +135,14 @@ function buildPrompt(x){
     ? '\nזהו מסך תפעול — יישם §4 במלואו: כותרת 22px קבועה, שורות ~46px, קווי-שיער, המספר בדיו והצבע יורד לנקודת-סטטוס, כפתור מלא אחד למסך (הפעולה הקבוצתית), פעולת-שורה שקטה, נקודת-מצב חיה בכותרת.'
     : '';
   const opsHint = x.register==='ops' ? ', §4 תפעול' : '';
+  const locHint = x.loc ? ', §3.5 טבלת המיפוי' : '';
   const flagLine = x.flag ? '\n⚠ סיווג-שכבה גבולי — ודא עם מיטל שהשכבה נכונה לפני ריצה.' : '';
+  const locInstr = x.loc
+    ? `\n\n⚠ למסך פלטה מקומית (loc=1). חובה §3.5:\n· מחק את כל בלוק ה-:root{ --teal… } המקומי — הוא מתנגש בשמות הטוקנים.\n· החלף כל --teal/--muted/--green/--amber… לפי טבלת המיפוי, תמיד עם fallback: var(--brand, #0B8F98).\n· --amber → --status-attention (לא emergency). --teal → --brand.\n· כפתור פעולה מותאם (כמו .runbtn) ופקדים (טוגל/טאב) שהיו --teal → --action, לא --brand.\n· חץ עומד-לבד (בתוך div/span) → SVG. חץ בתוך משפט → תוכן, לא לגעת.`
+    : '';
+  const noTokInstr = !x.tok
+    ? `\n· המסך אינו טוען tokens.css — הוסף <link rel="stylesheet" href="tokens.css?v=2"> ואחריו components.css, לפני ה-<style> המקומי.`
+    : '';
   return `אתה מבצע מיגרציית-עיצוב על מסך יחיד ברֶצֶף. אל תמציא כללים — בצע רק את הרשימה.
 
 קובץ: ${x.f}
@@ -144,12 +151,12 @@ function buildPrompt(x){
 מצב טכני: tokens=${x.tok} components=${x.comp} פלטה-מקומית=${x.loc} גרדיאנטים=${x.grad}
 הערה: ${x.note||'—'}${flagLine}
 
-קרא קודם: MIGRATION-RULEBOOK.md (§1 הכללים, §5 הסימן${opsHint}).
+קרא קודם: MIGRATION-RULEBOOK.md (§1 הכללים, §5 הסימן${locHint}${opsHint}).
 התבנית לשכבה שלך: ${tmpl}.
 
-בצע את §1 (כל 10 הכללים) + §6 (בדיקה). ${layerInstr}${opsInstr}
+בצע את §1 (כל 10 הכללים) + §6 (בדיקה). ${layerInstr}${noTokInstr}${locInstr}${opsInstr}
 אל תיגע בלוגיקת JS, בטקסט תוכן, או במבנה הנתונים — רק className, CSS, ותגית <html>.
-בסיום: דווח מה שונה בכל כלל, והדבק פלט של grep '#[0-9a-fA-F]\\{6\\}' על הקובץ.
+בסיום: דווח מה שונה בכל כלל, והדבק פלט של grep -E '(background|color):#[0-9a-fA-F]{3,6}' על הקובץ (אמור להיות ריק — hex מותר רק כ-fallback ב-var() וב-SVG).
 אם נדרש צבע/החלטה שאין לו כלל — עצור ושאל, אל תמציא.`;
 }
 

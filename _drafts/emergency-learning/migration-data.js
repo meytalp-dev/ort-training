@@ -74,7 +74,7 @@ window.MIGRATION = {
     { f:'national-roles.html',      layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:0 },
     { f:'search-field.html',        layer:'shell', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:0 },
     { f:'duration-picker.html',     layer:'shell', register:'form',    status:'todo', tok:1,comp:0,loc:0,grad:0,btn:0 },
-    { f:'year-rollover.html',       layer:'shell', register:'form',    status:'todo', tok:0,comp:0,loc:1,grad:1,btn:0, note:'ללא טוקנים + פלטה מקומית' },
+    { f:'year-rollover.html',       layer:'shell', register:'form',    status:'done', tok:1,comp:1,loc:0,grad:0,btn:0, note:'הומר — התבנית לפלטה-מקומית' },
 
     /* ---------- תפעול (פטל + register:ops · התבנית: system-health) ---------- */
     { f:'system-health.html',       layer:'shell', register:'ops', status:'done', tok:1,comp:0,loc:0,grad:0,btn:0, note:'נבנה מחדש — התבנית לתפעול' },
