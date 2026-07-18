@@ -43,18 +43,18 @@ window.MIGRATION = {
     { f:'learning-games.html',      layer:'learning', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'teacher-flow.html',        layer:'learning', register:'form',    status:'todo', tok:1,comp:0,loc:0,grad:2,btn:0 },
     { f:'teacher-class-board.html', layer:'learning', register:'ops',     status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
-    { f:'teacher-dashboard.html',   layer:'learning', register:'ops',     status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1, flag:1, note:'⚠ בית של מורה — למידה או תפעול? סיווגתי למידה' },
+    { f:'teacher-dashboard.html',   layer:'learning', register:'ops',     status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1, note:'מאושר: למידה — בית של מורה — למידה או תפעול? סיווגתי למידה' },
     { f:'seen-flow.html',           layer:'learning', register:'content', status:'todo', tok:1,comp:0,loc:0,grad:0,btn:0 },
     { f:'assign-practice.html',     layer:'learning', register:'form',    status:'todo', tok:0,comp:0,loc:1,grad:1,btn:0, note:'ללא טוקנים + פלטה מקומית' },
     { f:'ai-teacher.html',          layer:'learning', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'live-lesson.html',         layer:'learning', register:'content', status:'todo', tok:0,comp:0,loc:1,grad:2,btn:0, note:'ללא טוקנים + פלטה מקומית' },
     { f:'substitute-mode.html',     layer:'learning', register:'content', status:'todo', tok:0,comp:0,loc:1,grad:2,btn:0, note:'ללא טוקנים + פלטה מקומית' },
     { f:'resource-page.html',       layer:'learning', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:2,btn:1 },
-    { f:'parent-weekly.html',       layer:'learning', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1, flag:1, note:'⚠ תצוגת הורה על למידת הילד — סיווגתי למידה' },
+    { f:'parent-weekly.html',       layer:'learning', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1, note:'מאושר: למידה — תצוגת הורה על למידת הילד — סיווגתי למידה' },
 
     /* ---------- מעטפת (פטל · data-layer="shell") ---------- */
     { f:'onboarding-wizard.html',   layer:'shell', register:'form',    status:'done', tok:1,comp:0,loc:0,grad:0,btn:0, note:'הומר ידנית — התבנית למעטפת' },
-    { f:'admin-users-schools.html', layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
+    { f:'admin-users-schools.html', layer:'shell', register:'form',    status:'done', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'admin-roles-settings.html',layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'admin-integrations.html',  layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'ai-redlines-admin.html',   layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
@@ -92,7 +92,7 @@ window.MIGRATION = {
     { f:'contact-log.html',         layer:'shell', register:'ops', status:'todo', tok:1,comp:0,loc:0,grad:0,btn:0 },
     { f:'contact-log-teacher.html', layer:'shell', register:'ops', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'checkin-service.html',     layer:'shell', register:'ops', status:'todo', tok:1,comp:0,loc:0,grad:0,btn:0 },
-    { f:'educator-pulse.html',      layer:'shell', register:'ops', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1, flag:1, note:'⚠ דופק-קשר של מחנך — תפעול או למידה? סיווגתי תפעול' },
+    { f:'educator-pulse.html',      layer:'shell', register:'ops', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1, note:'מאושר: תפעול — דופק-קשר של מחנך — תפעול או למידה? סיווגתי תפעול' },
 
     /* ---------- מטא/פיתוח (שער-פנימי · עדיפות נמוכה) ---------- */
     { f:'index.html',           layer:'shell', register:'marketing', status:'done', tok:1,comp:0,loc:0,grad:2,btn:0, note:'השער — התבנית לשיווקי' },

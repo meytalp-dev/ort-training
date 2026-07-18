@@ -52,7 +52,10 @@
 ## 3 · פלטת המעטפת (פטל) — לשימוש ידני רק בצבע לא-כפתורי
 
 `--shell #A61E64` · `--shell-deep #8A1852` · `--shell-soft #FDEDF4` · `--shell-line #F3C6DA` · `--on-shell #FFF`.
-תמיד עם fallback: `var(--shell, #A61E64)`.
+תמיד עם fallback: `var(--shell, #A61E64)`. **גרסת טוקנים אחת קבועה: `tokens.css?v=2`. לא לבמפ — ה-fallback מכסה מטמון ישן.**
+
+**טוקני תפקיד/סטטוס (קוננו מ-admin — השתמש בהם במקום לעצור):**
+`--role-teacher` (מותג) · `--role-coord #1E5FA8` · `--role-principal #7A4E12` (+`-soft #FBF3E0`/`-line #EAD9A8`) · `--status-attention-ink #9A6E12` · `--status-warn-ink #B5651A`. תמיד עם fallback.
 
 ---
 
