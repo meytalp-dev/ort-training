@@ -1,9 +1,10 @@
-/* רֶצֶף — קטלוג המגמות + שיוך בתי ספר (seed)
+/* רֶצֶף — קטלוג המגמות + שיוך בתי ספר + מגזר (seed)
    נוצר מ-multi-school-model.md §9-§10 · נתוני מיטל 17.7.2026
-   sector = null בכל השורות — [לאימות] */
+   sector: he/ar — הציר הרלוונטי לתוכן ליבה. רק ודאות גבוהה מולא;
+   השאר null + sector_confidence/sector_suggested. ראו multi-school-sectors.md */
 window.RETZEF_TRACKS = {
   "_source": "multi-school-model.md §9-§10 · נתוני מיטל 17.7.2026",
-  "_note": "sector=null בכל השורות — [לאימות], לא לנחש לפי שם בית הספר",
+  "_note": "sector: he/ar (ציר התוכן) — רק ודאות גבוהה. medium/low → null + sector_suggested/confidence. מקור: פרפלקסיטי 18.7 (multi-school-sectors.md), טעון אישור מיטל למסומנים.",
   "tracks": [
     {
       "id": "trk_auto",
@@ -299,336 +300,440 @@ window.RETZEF_TRACKS = {
       "name": "אום אל פחם בנות",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_02",
       "name": "אור העתיד תורני גן יבנה",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "ממלכתי-דתי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_03",
       "name": "אורט בית הערבה",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_04",
       "name": "אורט כרמל",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_05",
       "name": "אורט תל נוף",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_06",
       "name": "אכסאל",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_07",
       "name": "בית אל",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "ממלכתי-דתי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_08",
       "name": "בית חנינה בנות",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי (מזרח י-ם)",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_09",
       "name": "בת עמי",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "יהודי? (ספק)",
+      "sector_confidence": "medium",
+      "sector_suggested": "he"
     },
     {
       "id": "sch_10",
       "name": "דרור נווה מדבר",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "בדואי? או יהודי-אזורי?",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_11",
       "name": "הדר",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "לא זוהה",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_12",
       "name": "התיכון החברתי חיפה",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_13",
       "name": "זוקו",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "לא זוהה",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_14",
       "name": "חושן",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "יהודי? (ספק)",
+      "sector_confidence": "medium",
+      "sector_suggested": "he"
     },
     {
       "id": "sch_15",
       "name": "חנוך לנער צפת",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "דתי?",
+      "sector_confidence": "medium",
+      "sector_suggested": "he"
     },
     {
       "id": "sch_16",
       "name": "טורען",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_17",
       "name": "טל חרמון",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "יהודי (צפון)",
+      "sector_confidence": "medium",
+      "sector_suggested": "he"
     },
     {
       "id": "sch_18",
       "name": "ירכא אבו סנאן",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "דרוזי/ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_19",
       "name": "כסרא סמיע",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "דרוזי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_20",
       "name": "כפר זיתים",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_21",
       "name": "כפר יאסיף",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_22",
       "name": "מעיינות צפת",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "דתי/חרדי?",
+      "sector_confidence": "medium",
+      "sector_suggested": "he"
     },
     {
       "id": "sch_23",
       "name": "נחלים",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "ממלכתי-דתי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_24",
       "name": "עמל אנרגיטק",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "יהודי? (ספק)",
+      "sector_confidence": "medium",
+      "sector_suggested": "he"
     },
     {
       "id": "sch_25",
       "name": "עמל אשדוד",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_26",
       "name": "עמל טייבה",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_27",
       "name": "עמל טק אין",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "לא זוהה",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_28",
       "name": "עמל נצרת",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_29",
       "name": "עמל רהט בנות",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "בדואי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_30",
       "name": "ערערה",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_31",
       "name": "עתיד באר שבע",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "יהודי (חוצה?)",
+      "sector_confidence": "medium",
+      "sector_suggested": "he"
     },
     {
       "id": "sch_32",
       "name": "עתיד ביר אל מכסור",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_33",
       "name": "עתיד בית דוד",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "לא זוהה",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_34",
       "name": "עתיד גוליס בנות – ירכא",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "דרוזי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_35",
       "name": "עתיד ירכא בנים",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "דרוזי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_36",
       "name": "עתיד כפר חב\"ד אוהלי תמימים",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "חרדי (חב\"ד)",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_37",
       "name": "עתיד כרמיאל",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_38",
       "name": "עתיד מסעדה",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "דרוזי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_39",
       "name": "עתיד צור ים",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "יהודי? (ספק)",
+      "sector_confidence": "medium",
+      "sector_suggested": "he"
     },
     {
       "id": "sch_40",
       "name": "עתיד קמ\"ג",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "לא זוהה",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_41",
       "name": "פלמחים",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_42",
       "name": "צור ברק",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "לא זוהה (קיים בהופה)",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_43",
       "name": "שגב שלום",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "בדואי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_44",
       "name": "תיכון בקהילה מהאראת שפרעם",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_45",
       "name": "תיכון החממה",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "לא זוהה",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_46",
       "name": "תיכון שיח",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": null,
+      "sector_detail": "לא זוהה",
+      "sector_confidence": "low"
     },
     {
       "id": "sch_47",
       "name": "תל שבע",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "בדואי",
+      "sector_confidence": "high"
     },
     {
       "id": "sch_48",
       "name": "בית חנינה בנים",
       "network": null,
       "district": null,
-      "sector": null
+      "sector": "ar",
+      "sector_detail": "ערבי (מזרח י-ם)",
+      "sector_confidence": "high"
     }
   ],
   "schoolTracks": [
