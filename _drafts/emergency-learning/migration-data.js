@@ -57,7 +57,7 @@ window.MIGRATION = {
     { f:'admin-users-schools.html', layer:'shell', register:'form',    status:'done', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'admin-roles-settings.html',layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'admin-integrations.html',  layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
-    { f:'ai-redlines-admin.html',   layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
+    { f:'ai-redlines-admin.html',   layer:'shell', register:'form',    status:'done', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'library.html',             layer:'shell', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:0 },
     { f:'library-filters.html',     layer:'shell', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:0 },
     { f:'course-catalog.html',      layer:'shell', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:0 },
