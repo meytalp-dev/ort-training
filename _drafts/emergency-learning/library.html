@@ -503,6 +503,7 @@
 <script src="favorites.js"></script>
 <script src="publish-service.js"></script>
 <script src="tracks-data.js"></script>
+<script src="school-context.js"></script>
 <script>
 (function () {
   'use strict';
@@ -539,53 +540,11 @@
   var LEVELS = { basic: 'נגישה', standard: 'רגילה', advanced: 'מתקדמת' };
 
   /* ============================================================
-     הקשר בית-ספרי (data-model §5.1 · multi-school-model.md)
-     ------------------------------------------------------------
-     במסך אמיתי בית הספר מגיע מהזהות בשרת. כאן — בורר, כדי להוכיח
-     שהפילטר עובד. השאלה שהמסך הזה עונה עליה:
-     "מה בית ספר X רואה בספרייה, ולמה?"
+     הקשר בית-ספרי — צריכת השירות המשותף (Resef.School · school-context.js)
+     data-model §5.1 · multi-school-model.md. הלוגיקה חיה בשירות, לא כאן.
      ============================================================ */
-  var TD = window.RETZEF_TRACKS || { tracks: [], schools: [], schoolTracks: [] };
-  var TRACK_BY_ID = {};
-  TD.tracks.forEach(function (t) { TRACK_BY_ID[t.id] = t; });
-
-  var SchoolCtx = {
-    id: null,
-    get school() { return TD.schools.filter(function (s) { return s.id === SchoolCtx.id; })[0] || null; },
-    // המגמות של בית הספר הנוכחי — Set של track_id
-    trackIds: function () {
-      var out = {};
-      TD.schoolTracks.forEach(function (st) {
-        if (st.school_id === SchoolCtx.id && st.active) out[st.track_id] = true;
-      });
-      return out;
-    },
-    set: function (id) {
-      SchoolCtx.id = id;
-      try { localStorage.setItem('retzef-school', id); } catch (e) {}
-    },
-    init: function () {
-      var saved = null;
-      try { saved = localStorage.getItem('retzef-school'); } catch (e) {}
-      var ok = TD.schools.some(function (s) { return s.id === saved; });
-      SchoolCtx.id = ok ? saved : (TD.schools[0] ? TD.schools[0].id : null);
-    }
-  };
-  SchoolCtx.init();
-
-  /* שלוש שכבות הנראות — data-model.md §5.1.
-     כולן null-סובלניות: null = "שייך לכולם". */
-  function visibleToSchool(r) {
-    if (!SchoolCtx.id) return true;
-    // 1. בעלות — null = ספרייה ארצית משותפת
-    if (r.owner_school_id && r.owner_school_id !== SchoolCtx.id) return false;
-    // 2. מגמה — null = תוכן לא-מגמתי (ליבה עיונית)
-    if (r.track_ref_id && !SchoolCtx.trackIds()[r.track_ref_id]) return false;
-    // 3. מגזר — null = חוצה-מגזר. [לאימות] — אין נתוני sector עדיין
-    var sec = SchoolCtx.school && SchoolCtx.school.sector;
-    if (r.sector_scope && sec && r.sector_scope !== sec) return false;
-    return true;
-  }
+  var SchoolCtx = window.Resef.School;
+  function visibleToSchool(r) { return SchoolCtx.visible(r); }
 
   /* ============================================================
      גשר-פרסום (W4-02 → W6) — הספרייה *צורכת* את המדף המשותף.
@@ -821,7 +780,7 @@
       : '<span class="res-chip res-chip--shared"><svg aria-hidden="true"><use href="#ic-globe"/></svg>ספרייה משותפת</span>';
   }
   function trackChip(r) {
-    var t = r.track_ref_id && TRACK_BY_ID[r.track_ref_id];
+    var t = r.track_ref_id && SchoolCtx.track(r.track_ref_id);
     return t ? '<span class="res-chip res-chip--track">' + esc(t.name) + '</span>' : '';
   }
 
@@ -846,25 +805,16 @@
   var ctxNote = document.getElementById('ctxNote');
 
   if (schoolPick) {
-    schoolPick.innerHTML = TD.schools.map(function (s) {
-      return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>';
-    }).join('');
-    schoolPick.value = SchoolCtx.id;
-    schoolPick.addEventListener('change', function () {
-      SchoolCtx.set(schoolPick.value);
-      applyAndRender();
-    });
+    SchoolCtx.mountPicker(schoolPick);            // מילוי + חיבור דו-כיווני מהשירות
+    SchoolCtx.onChange(function () { applyAndRender(); });
   }
 
   /* מסביר *למה* הרשימה נראית ככה — הופך את §5.1 לניתן-לבדיקה בעין */
   function renderCtxNote() {
     if (!ctxNote) return;
-    var s = SchoolCtx.school;
+    var s = SchoolCtx.school();
     if (!s) { ctxNote.hidden = true; return; }
-    var ids = SchoolCtx.trackIds();
-    var names = Object.keys(ids).map(function (id) {
-      return TRACK_BY_ID[id] ? TRACK_BY_ID[id].name : id;
-    });
+    var names = SchoolCtx.trackNames();
     ctxNote.hidden = false;
     ctxNote.innerHTML = names.length
       ? '<b>' + esc(s.name) + '</b> רואה את הספרייה המשותפת, את התוכן של עצמו, ותוכן מגמתי רק ב־' +
