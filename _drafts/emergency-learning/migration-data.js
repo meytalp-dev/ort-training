@@ -55,8 +55,8 @@ window.MIGRATION = {
     /* ---------- מעטפת (פטל · data-layer="shell") ---------- */
     { f:'onboarding-wizard.html',   layer:'shell', register:'form',    status:'done', tok:1,comp:0,loc:0,grad:0,btn:0, note:'הומר ידנית — התבנית למעטפת' },
     { f:'admin-users-schools.html', layer:'shell', register:'form',    status:'done', tok:1,comp:1,loc:0,grad:0,btn:1 },
-    { f:'admin-roles-settings.html',layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
-    { f:'admin-integrations.html',  layer:'shell', register:'form',    status:'todo', tok:1,comp:1,loc:0,grad:0,btn:1 },
+    { f:'admin-roles-settings.html',layer:'shell', register:'form',    status:'fail', tok:1,comp:1,loc:0,grad:0,btn:1, failNote:'§4 טורקיז דקורטיבי על אייקונים/שבבים — המר ל־--action/ניטרלי: .scard__ic ו-.val-static → --action-soft/--action-deep/--action-line · .pmatrix__roleic ו-.legend__swatch--lock → color:var(--ink-soft). אל תיגע בסימן ובהילות-פוקוס. (הטוקן --status-good-ink כבר תוקן ב-tokens.css)' },
+    { f:'admin-integrations.html',  layer:'shell', register:'form',    status:'fail', tok:1,comp:1,loc:0,grad:0,btn:1, failNote:'§1.2 hex חשוף ב-.redline__text (שורות 107-108): color:#8A5A12 ו-color:#7A4E10 → שניהם ל-var(--role-principal, #7A4E12). ה-strong כבר נבדל ב-font-weight. שאר המסך נקי.' },
     { f:'ai-redlines-admin.html',   layer:'shell', register:'form',    status:'done', tok:1,comp:1,loc:0,grad:0,btn:1 },
     { f:'library.html',             layer:'shell', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:0 },
     { f:'library-filters.html',     layer:'shell', register:'content', status:'todo', tok:1,comp:1,loc:0,grad:0,btn:0 },

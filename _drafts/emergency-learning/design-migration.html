@@ -49,9 +49,18 @@
   .row:first-child{border-top:none}
   .row:hover{background:var(--bg-soft)}
   .row.done{opacity:.55}
+  /* נכשל בבדיקה — בולט, לא מעומעם. דורש עוד עבודה מהיצרן */
+  .row.fail{background:var(--status-alert-soft,#FBEBEA);border-inline-start:3px solid var(--status-alert,#D9574F)}
+  .row.fail:hover{background:var(--status-alert-soft,#FBEBEA)}
   .st{width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--status-unknown)}
   .st.done{background:var(--status-good)}
+  .st.fail{background:var(--status-alert,#D9574F)}
   .fn{font-weight:600;color:var(--ink-strong);font-variant-numeric:tabular-nums}
+  .faildetail{font-family:var(--font-body);font-size:11.5px;font-weight:500;color:var(--status-alert,#D9574F);margin-top:3px;line-height:1.45;max-width:640px;font-variant-numeric:normal}
+  .tag.done{color:var(--status-good);background:var(--status-good-soft)}
+  .tag.fail{color:var(--status-alert,#D9574F);background:var(--status-alert-soft,#FBEBEA)}
+  .copy.fix{color:var(--status-alert,#D9574F)}
+  .row.fail:hover .copy.fix{border-color:var(--status-alert-line,#F0C3BF);background:var(--status-alert-soft,#FBEBEA)}
   .fn a{color:inherit;text-decoration:none;border-bottom:1px dashed var(--line-strong)}
   .tags{display:flex;gap:5px;margin-inline-start:auto;flex-wrap:wrap;align-items:center}
   .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--radius-pill);white-space:nowrap}
@@ -143,10 +152,11 @@ function fallbackCopy(t){
 /* ---------- התקדמות ---------- */
 function progress(){
   const done = S.filter(x=>x.status==='done').length;
+  const fail = S.filter(x=>x.status==='fail').length;
   const pct = Math.round(done/S.length*100);
   $('#pct').textContent = pct+'%';
   $('#bar').style.width = pct+'%';
-  $('#progLbl').textContent = `${done} מתוך ${S.length} מסכים · ${S.length-done} נותרו`;
+  $('#progLbl').textContent = `${done}/${S.length} בוצע${fail?` · ${fail} נכשל — צריך עוד`:''} · ${S.length-done-fail} ממתינים`;
 }
 
 /* ---------- פרומפט לסוכן ---------- */
@@ -186,6 +196,23 @@ function buildPrompt(x){
 אם נדרש צבע/החלטה שאין לו כלל — עצור ושאל, אל תמציא.`;
 }
 
+/* ---------- פרומפט-תיקון: מסך שנכשל בבדיקה, חוזר ליצרן עם הסיבה ---------- */
+function buildFix(x){
+  return `תיקון-מיגרציה על מסך יחיד ברֶצֶף — נכשל בבדיקת הבודק. בצע רק את התיקון, אל תמציא כללים.
+
+קובץ: ${x.f}
+קרא: MIGRATION-RULEBOOK.md (§1 הכללים, §4 טורקיז-דקורטיבי).
+
+מה נכשל בבדיקה — תקן בדיוק את זה:
+${x.failNote||'—'}
+
+אל תיגע בלוגיקת JS, בטקסט תוכן, או במבנה — רק CSS/className. אל תבמפ את tokens.css (נשאר v=2).
+בסיום הרץ ודווח:
+· grep -nE '(background|color):[[:space:]]*#[0-9a-fA-F]{3,6}' ${x.f}   → חייב ריק
+· grep -nE 'var\\(--brand' ${x.f}                                     → רק הסימן (SVG) + הילות-פוקוס
+אם צריך צבע/החלטה שאין לו כלל — עצור ושאל, אל תמציא.`;
+}
+
 /* ---------- פרומפט-תזמורת: קבוצה שלמה בפרומפט אחד ---------- */
 function buildBatch(items, title){
   const list = items.map((x,i)=>{
@@ -217,6 +244,7 @@ let filter = 'all';
 const FILTERS = [
   {k:'all',      l:'הכל'},
   {k:'todo',     l:'ממתין'},
+  {k:'fail',     l:'נכשל ✗'},
   {k:'shell',    l:'מעטפת'},
   {k:'learning', l:'למידה'},
   {k:'ops',      l:'תפעול'},
@@ -228,6 +256,7 @@ $('#filters').innerHTML = FILTERS.map(f=>`<button data-k="${f.k}" aria-pressed="
 function match(x){
   if(filter==='all')return true;
   if(filter==='todo')return x.status!=='done';
+  if(filter==='fail')return x.status==='fail';
   if(filter==='notok')return !x.tok;
   if(filter==='flag')return x.flag;
   if(filter==='ops')return x.register==='ops';
@@ -245,7 +274,7 @@ function render(){
   $('#groups').innerHTML = GROUPS.map(g=>{
     const items = S.filter(g.test).filter(match);
     if(!items.length) return '';
-    const todo = items.filter(x=>x.status!=='done');
+    const todo = items.filter(x=>x.status!=='done'&&x.status!=='fail');
     const batchBtn = todo.length>1 ? `<button class="batch" data-grp="${g.k}">תזמורת · ${todo.length} ⧉</button>` : '';
     return `<div class="grp"><h2>${g.t}<span class="cnt">${items.length}</span>${batchBtn}</h2><div class="list">${
       items.map(x=>{
@@ -255,14 +284,17 @@ function render(){
           x.grad>0?`<span class="tag warn">${x.grad} גרדיאנט</span>`:'',
           x.flag?'<span class="tag flag">⚠ גבולי</span>':'',
         ].filter(Boolean).join('');
-        const isSent = sent.has(x.f) && x.status!=='done';
-        const copyBtn = x.status==='done'
-          ? '<span class="tag learning">בוצע</span>'
-          : `<button class="copy ${isSent?'sent':''}" data-f="${x.f}">${isSent?'נשלח ✓ · העתק שוב':'העתק פרומפט ⧉'}</button>`;
-        return `<div class="row ${x.status==='done'?'done':''} ${isSent?'sent':''}">
-          <span class="st ${x.status==='done'?'done':''}"></span>
-          <span class="fn"><a href="${x.f}" target="_blank">${x.f}</a></span>
-          <div class="tags">${tags}${copyBtn}</div>
+        const st = x.status;
+        const isSent = sent.has(x.f) && st!=='done' && st!=='fail';
+        let actionEl;
+        if(st==='done')      actionEl = '<span class="tag done">בוצע ✓</span>';
+        else if(st==='fail') actionEl = `<span class="tag fail">נכשל</span><button class="copy fix" data-f="${x.f}">העתק תיקון ⧉</button>`;
+        else                 actionEl = `<button class="copy ${isSent?'sent':''}" data-f="${x.f}">${isSent?'נשלח ✓ · העתק שוב':'העתק פרומפט ⧉'}</button>`;
+        const failLine = st==='fail' && x.failNote ? `<div class="faildetail">✗ ${x.failNote}</div>` : '';
+        return `<div class="row ${st==='done'?'done':''} ${st==='fail'?'fail':''} ${isSent?'sent':''}">
+          <span class="st ${st==='done'?'done':st==='fail'?'fail':''}"></span>
+          <span class="fn"><a href="${x.f}" target="_blank">${x.f}</a>${failLine}</span>
+          <div class="tags">${tags}${actionEl}</div>
         </div>`;
       }).join('')
     }</div></div>`;
@@ -280,6 +312,11 @@ document.addEventListener('click', e=>{
   const c=e.target.closest('.copy');
   if(c){
     const x=S.find(s=>s.f===c.dataset.f);
+    // מסך שנכשל → פרומפט-תיקון ממוקד (לא הגנרי), ובלי לסמן "נשלח"
+    if(c.classList.contains('fix')){
+      copyText(buildFix(x)).then(()=>{ c.textContent='הועתק תיקון ✓'; setTimeout(()=>{ c.textContent='העתק תיקון ⧉'; }, 1400); });
+      return;
+    }
     copyText(buildPrompt(x)).then(()=>{
       const first=!sent.has(x.f);
       c.textContent='הועתק ✓';
@@ -292,7 +329,7 @@ document.addEventListener('click', e=>{
   const b=e.target.closest('.batch');
   if(b){
     const g=GROUPS.find(x=>x.k===b.dataset.grp);
-    const items=S.filter(g.test).filter(x=>x.status!=='done');
+    const items=S.filter(g.test).filter(x=>x.status!=='done'&&x.status!=='fail');
     batchFiles=items.map(x=>x.f);
     $('#dlgTitle').textContent='תזמורת · '+g.t+' ('+items.length+' מסכים)';
     $('#dlgText').value=buildBatch(items, g.t);
