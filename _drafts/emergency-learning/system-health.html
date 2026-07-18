@@ -42,6 +42,18 @@
 
   /* ---------- כותרת — גודל קבוע. בלי clamp, בלי vw. ---------- */
   h1{font-family:var(--font-head);font-size:22px;font-weight:800;color:var(--ink-strong);letter-spacing:-.01em}
+  /* נקודת-מצב בכותרת — לא עיטור. נורת-מצב: צבע = בריאות המסך, נשימה = חי.
+     ירוקה כשהכל רץ · אדומה כשמישהו תקוע. אותה שפה כמו הנקודות באריג. */
+  .h1dot{
+    display:inline-block;vertical-align:.1em;margin-inline-start:11px;
+    width:13px;height:13px;border-radius:50%;
+    background:var(--card);border:3.5px solid var(--h,var(--status-good));
+    animation:h1breathe var(--pulse,3.6s) ease-out infinite;
+  }
+  @keyframes h1breathe{
+    0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--h,var(--status-good)) 34%,transparent)}
+    55%,100%{box-shadow:0 0 0 7px color-mix(in srgb,var(--h,var(--status-good)) 0%,transparent)}
+  }
   .sub{color:var(--ink-soft);font-size:14px;margin-top:2px}
 
   /* ---------- מדדים — לוח אחד, לא ארבעה כרטיסים ---------- */
@@ -143,8 +155,8 @@
     </span>
   </div>
 
-  <h1>בריאות מערכת</h1>
-  <p class="sub">מי נכנס, מי נתקע, מה לא הופעל. תצוגה תפעולית — לא פדגוגית.</p>
+  <h1>בריאות מערכת<span class="h1dot" id="h1dot" aria-hidden="true"></span></h1>
+  <p class="sub" id="sub">מי נכנס, מי נתקע, מה לא הופעל. תצוגה תפעולית — לא פדגוגית.</p>
 
   <div class="kpi" id="kpi"></div>
 
@@ -231,6 +243,20 @@ document.getElementById('cStuck').textContent = stuck.length;
 document.getElementById('cCls').textContent   = SEED.classes.length;
 document.getElementById('bulkNot').textContent = `שלח קישור לכל ה-${notJoined.length}`;
 
+/* --- נורת-המצב בכותרת: אדומה אם יש תקועים, כתומה אם רק ממתינים, ירוקה אם הכל רץ --- */
+function setHealth(){
+  const openStuck = document.querySelectorAll('#stuck .rowact:not(.done)').length;
+  const openWait  = document.querySelectorAll('#notJoined .rowact:not(.done)').length;
+  const dot = document.getElementById('h1dot');
+  let color, note;
+  if (openStuck){ color = 'var(--status-alert)';     note = `${openStuck} תקועים דורשים טיפול`; }
+  else if (openWait){ color = 'var(--status-attention)'; note = `${openWait} ממתינים להתחברות`; }
+  else { color = 'var(--status-good)'; note = 'הכל רץ — אין תקיעות פתוחות'; }
+  dot.style.setProperty('--h', color);
+  dot.title = note;
+}
+setHealth();
+
 /* --- פעולות --- */
 document.addEventListener('click', e => {
   const b = e.target.closest('.rowact');
@@ -241,6 +267,7 @@ document.addEventListener('click', e => {
     document.querySelectorAll(list + ' .rowact').forEach(r => { r.textContent = r.dataset.done; r.classList.add('done'); });
     bulk.textContent = 'נשלח לכולם'; bulk.disabled = true;
   }
+  if (b || bulk) setHealth();   /* טיפול בתקיעה → נורת-המצב מתעדכנת חיה */
 });
 </script>
 </body>
