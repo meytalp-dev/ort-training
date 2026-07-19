@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>רֶצֶף — הרשמת מורה / מחנך</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css?v=2">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  /* ============================================================
+     הרשמת מורה / מחנך — מסך *מעטפת*.
+     כל פעולה = --shell (פטל). לא מסך למידה. טורקיז שמור לחוט הלמידה.
+     המנהלת מקימה את בית הספר (onboarding-wizard). המורה/המחנך
+     מזהה כאן *מה הוא מלמד* ו*את מי* — הנתונים לא נופלים מהשמיים.
+     כל הערכים מ-tokens.css.
+     ============================================================ */
+  :root{ --muted: var(--ink-soft); --shadow: var(--shadow-card); }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--ink);line-height:1.55}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 20px 90px}
+  .brandbar{display:inline-flex;align-items:center;gap:10px;text-decoration:none;margin-bottom:4px}
+  .brandbar b{font-family:var(--font-head);font-weight:900;font-size:19px;color:var(--ink-strong);letter-spacing:.3px}
+  .brandbar .layer{font-size:12px;font-weight:700;color:var(--shell, #A61E64);
+    background:var(--shell-soft, #FDEDF4);border:1px solid var(--shell-line, #F3C6DA);padding:3px 10px;border-radius:var(--radius-pill)}
+  .mark{display:block;width:64px;height:17px;flex-shrink:0}
+  .mark .past{stroke:var(--ink-faint);stroke-linecap:round}
+  .mark .next{stroke:var(--brand);stroke-width:3.6;stroke-linecap:round}
+  .mark .node{fill:var(--card);stroke:var(--brand);stroke-width:3.6}
+  header{margin:14px 0 8px}
+  header h1{font-family:var(--font-head);font-size:29px;font-weight:900;letter-spacing:-.02em;margin:12px 0 2px}
+  header p{color:var(--muted);margin:0;font-size:15px}
+
+  .stepper{display:flex;gap:6px;margin:22px 0 10px}
+  .stepper .st{flex:1;text-align:center;font-size:12px;color:var(--muted)}
+  .stepper .bar{height:6px;border-radius:4px;background:var(--line);margin-bottom:7px;transition:.25s}
+  .stepper .st.done .bar,.stepper .st.active .bar{background:var(--shell, #A61E64)}
+  .stepper .st.active{color:var(--shell-deep, #8A1852);font-weight:700}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+    padding:26px;margin-top:14px;min-height:340px}
+  .step-tag{font-size:12px;font-weight:700;color:var(--shell-deep, #8A1852);text-transform:uppercase;letter-spacing:.5px}
+  .card h2{font-family:var(--font-head);font-size:22px;margin:6px 0 4px;font-weight:800;letter-spacing:-.015em}
+  .card .hint{color:var(--muted);font-size:14px;margin:0 0 18px}
+
+  label.f{display:block;font-weight:600;font-size:14px;margin:14px 0 6px}
+  input[type=text],input[type=tel],input:not([type]),select,textarea{width:100%;font-family:inherit;font-size:15px;padding:11px 13px;
+    border-radius:11px;border:1.5px solid var(--line);background:#fff;color:var(--ink)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--shell, #A61E64)}
+  textarea{min-height:96px;resize:vertical;font-family:'Assistant',monospace;font-size:13px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1.4fr .8fr 1fr;gap:10px}
+  @media(max-width:560px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  /* בורר תפקיד — מורה מקצועי / מחנך */
+  .roles{display:flex;gap:10px;margin:4px 0 6px;flex-wrap:wrap}
+  .role-opt{flex:1;min-width:200px;border:1.5px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;
+    text-align:right;transition:.14s;background:#fff}
+  .role-opt:hover{border-color:var(--shell, #A61E64)}
+  .role-opt.on{border-color:var(--shell, #A61E64);background:var(--shell-soft, #FDEDF4)}
+  .role-opt b{display:block;font-size:16px;font-family:var(--font-head)}
+  .role-opt small{color:var(--muted);font-size:12.5px}
+
+  /* שורות הוראה (מקצוע · שכבה · כיתה) */
+  .teachrow{display:grid;grid-template-columns:1.4fr .8fr 1fr auto;gap:10px;align-items:end;margin-bottom:10px}
+  @media(max-width:560px){.teachrow{grid-template-columns:1fr 1fr;position:relative}}
+  .teachrow .del{width:42px;height:44px;border:1.5px solid var(--line);border-radius:11px;background:#fff;color:var(--ink-faint);
+    cursor:pointer;font-size:20px;line-height:1;flex-shrink:0}
+  .teachrow .del:hover{border-color:var(--status-attention);color:var(--status-attention)}
+  .addbtn{display:inline-flex;align-items:center;gap:7px;background:var(--shell-soft, #FDEDF4);color:var(--shell-deep, #8A1852);
+    border:1.5px dashed var(--shell-line, #F3C6DA);border-radius:11px;padding:11px 16px;font-family:inherit;font-weight:700;
+    font-size:14px;cursor:pointer;margin-top:4px}
+  .addbtn:hover{background:#fff;border-style:solid}
+  .homeroom-box{background:var(--shell-soft, #FDEDF4);border:1px solid var(--shell-line, #F3C6DA);border-radius:13px;padding:14px 16px;margin-bottom:6px}
+  .homeroom-box .hl{font-weight:700;font-size:14px;color:var(--shell-deep, #8A1852);margin-bottom:4px;display:flex;align-items:center;gap:7px}
+
+  /* שיטות הוספה — טאבים */
+  .methods{display:flex;gap:8px;margin:14px 0 16px;flex-wrap:wrap}
+  .method{flex:1;min-width:150px;border:1.5px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;
+    text-align:center;transition:.14s;background:#fff}
+  .method:hover{border-color:var(--shell, #A61E64)}
+  .method.on{border-color:var(--shell, #A61E64);background:var(--shell-soft, #FDEDF4)}
+  .method .mi{font-size:20px;line-height:1}
+  .method .mt{font-weight:700;font-size:14px;margin-top:5px}
+  .method .md{font-size:11px;color:var(--muted)}
+  .method .rec{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--shell, #A61E64);
+    border-radius:999px;padding:1px 7px;margin-top:5px}
+  .pane{display:none}
+  .pane.on{display:block}
+
+  /* בורר כיתה לשיוך תלמידים */
+  .classpick{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+  .cpk{font-size:13px;padding:7px 13px;border-radius:999px;border:1.5px solid var(--line);cursor:pointer;
+    user-select:none;background:#fff;transition:.12s;font-weight:600}
+  .cpk .n{font-size:11px;color:var(--muted);margin-inline-start:5px}
+  .cpk.on{background:var(--shell, #A61E64);color:#fff;border-color:var(--shell, #A61E64)}
+  .cpk.on .n{color:#fff;opacity:.85}
+
+  .drop{border:2px dashed var(--line);border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:.15s;background:#fbfdfd}
+  .drop:hover,.drop.hot{border-color:var(--shell, #A61E64);background:var(--shell-soft, #FDEDF4)}
+  .drop .di{font-size:28px}
+  .drop b{display:block;margin-top:6px}
+  .drop small{color:var(--muted)}
+  .fmt{font-size:12px;color:var(--muted);margin-top:8px}
+  .linkcard{background:#fbfdfd;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+  .linkcard .lh{font-weight:700;font-size:14px;margin-bottom:8px}
+  .linkrow{display:flex;gap:8px}
+  .linkrow input{background:#fff;direction:ltr;text-align:left;font-family:'Assistant',monospace;font-size:13px}
+  .copybtn{background:var(--shell, #A61E64);color:#fff;border:none;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px;white-space:nowrap}
+  .copybtn:hover{background:var(--shell-deep, #8A1852)}
+
+  .rowlist{margin-top:12px}
+  .rowitem{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;font-size:14px;background:#fbfdfd}
+  .rowitem .av{width:28px;height:28px;border-radius:50%;background:var(--shell, #A61E64);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+  .rowitem .role{margin-inline-start:auto;font-size:12px;color:var(--muted);background:var(--shell-soft, #FDEDF4);padding:3px 9px;border-radius:999px}
+  .rowitem .x{border:none;background:none;color:var(--ink-faint);cursor:pointer;font-size:18px;padding:0 4px}
+  .rowitem .x:hover{color:var(--status-attention)}
+
+  .ready{display:flex;flex-direction:column;gap:10px}
+  .check{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:11px;font-size:15px;background:var(--status-good-soft);border:1px solid #c6ead9}
+  .check.fail{background:var(--status-attention-soft);border-color:#f4cdb2}
+  .check .ic{width:24px;height:24px;border-radius:50%;background:var(--status-good);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
+  .check.fail .ic{background:var(--status-attention)}
+  .summary{margin-top:18px;background:var(--shell-deep, #8A1852);color:var(--on-shell, #FFFFFF);border-radius:16px;padding:22px;text-align:center}
+  .summary .big{font-size:19px;font-weight:800}
+  .summary .stats{display:flex;justify-content:center;gap:26px;margin-top:14px;flex-wrap:wrap}
+  .summary .stats b{display:block;font-size:30px;font-weight:800;line-height:1}
+  .summary .stats small{font-size:12px;opacity:.85}
+  .summary .go{display:inline-block;margin-top:18px;background:#fff;color:var(--shell-deep, #8A1852);text-decoration:none;font-weight:800;padding:11px 26px;border-radius:12px;font-size:15px}
+  .infonote{background:var(--shell-soft, #FDEDF4);border:1px solid var(--shell-line, #F3C6DA);border-radius:11px;padding:12px 14px;font-size:13px;color:var(--shell-deep, #8A1852);margin-top:14px}
+
+  .nav{display:flex;justify-content:space-between;gap:12px;margin-top:22px}
+  button.nav-btn{font-family:inherit;font-size:15px;font-weight:700;padding:12px 26px;border-radius:12px;border:none;cursor:pointer;transition:.15s}
+  .prev{background:#fff;border:1.5px solid var(--line);color:var(--muted)}
+  .prev:hover{border-color:var(--muted)}
+  .next{background:var(--shell, #A61E64);color:#fff}
+  .next:hover{background:var(--shell-deep, #8A1852)}
+  .prev:disabled{opacity:.4;cursor:default}
+  .mini{font-size:13px;color:var(--muted);margin-top:10px}
+  .linkbtn{background:none;border:none;color:var(--shell-deep, #8A1852);font-weight:700;cursor:pointer;font-size:13px;text-decoration:underline;font-family:inherit;padding:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brandbar" href="index.html">
+      <svg class="mark" viewBox="0 0 76 20" aria-hidden="true" fill="none">
+        <path class="past" d="M73 10h-6"   stroke-width="3.6"/>
+        <path class="past" d="M60 10h-4.5" stroke-width="3.1"/>
+        <path class="past" d="M49 10h-2.5" stroke-width="2.6"/>
+        <circle class="node" cx="35" cy="10" r="6"/>
+        <path class="next" d="M28 10H3"/>
+      </svg>
+      <b>רֶצֶף</b>
+      <span class="layer">הרשמת מורה</span>
+    </a>
+    <h1 id="hTitle">הרשמת מורה / מחנך</h1>
+    <p>ארבעה צעדים — מ"מי אני" ל"מוכן ללמד". <b>אתם מזינים את מה שאתם מלמדים ואת מי.</b></p>
+  </header>
+
+  <div class="stepper" id="stepper"></div>
+  <div class="card" id="card"></div>
+
+  <div class="nav">
+    <button class="nav-btn prev" id="prev">חזרה</button>
+    <button class="nav-btn next" id="next">הבא ←</button>
+  </div>
+  <p class="mini" id="mini"></p>
+</div>
+
+<script src="seed-pilot.js"></script>
+<script>
+const SEED = window.PILOT_SEED || {students:[]};
+const initials = n => (n||'?').trim().charAt(0);
+
+/* מקצועות מתוך קטלוג רצף (admin-data) + כללי */
+const SUBJECTS = ['לשון','עברית','ספרות','אנגלית','מתמטיקה','היסטוריה','אזרחות','תנ״ך',
+  'ערבית','עיצוב מדיה','עיצוב שיער','עיצוב טקסטיל','מערכות ICT','חשמל ואלקטרוניקה',
+  'קירור ומיזוג','ריתוך','אוטוטרוניקה','קונדיטוריה','לוגיסטיקה','ניהול פיננסי','בנייה ירוקה','חינוך גופני'];
+const GRADES = ['ט','י','יא','יב'];
+
+let _sid = 0;
+const uid = () => 'x' + (++_sid);
+
+const state = {
+  role: 'subject',                 // 'subject' = מורה מקצועי · 'homeroom' = מחנך/ת
+  teacher: { name:'', phone:'', school:'אורט בית הערבה' },
+  homeroom: { grade:'י', cls:'' }, // רק למחנך/ת
+  teachings: [ {id:uid(), subject:'', grade:'י', cls:''} ],
+  students: [],                    // {id, name, classKey}
+  activeClass: null,               // classKey שנבחר בשלב התלמידים
+  method: 'file',
+};
+
+const STEPS = ['מי אני','מה אני מלמד/ת','התלמידים שלי','מוכנות'];
+let step = 0;
+
+/* ---- מפתחות כיתה (איחוד כיתת-אם + שורות הוראה) ---- */
+function classList(){
+  const list = [];
+  if (state.role === 'homeroom' && (state.homeroom.cls || state.homeroom.grade))
+    list.push({ key:'hr', label:'כיתת אם · ' + (state.homeroom.cls || ('כיתה ' + state.homeroom.grade)), homeroom:true });
+  state.teachings.forEach(t=>{
+    if (t.subject || t.cls)
+      list.push({ key:t.id, label:(t.subject||'מקצוע') + ' · ' + (t.cls || ('כיתה '+t.grade)) });
+  });
+  return list;
+}
+function studentsOf(key){ return state.students.filter(s=>s.classKey===key); }
+
+/* ---- stepper + render ---- */
+function stepper(){
+  document.getElementById('stepper').innerHTML = STEPS.map((s,i)=>
+    `<div class="st ${i<step?'done':''} ${i===step?'active':''}"><div class="bar"></div>${s}</div>`).join('');
+}
+function render(){
+  stepper();
+  document.getElementById('card').innerHTML = `<div class="step-tag">צעד ${step+1} מתוך 4</div>${renderers[step]()}`;
+  document.getElementById('prev').disabled = step===0;
+  const nx = document.getElementById('next');
+  nx.style.display = step===3 ? 'none':'block';
+  nx.textContent = step===2 ? 'לבדיקת מוכנות ←' : 'הבא ←';
+  document.getElementById('hTitle').textContent = state.role==='homeroom' ? 'הרשמת מחנך/ת' : 'הרשמת מורה מקצועי';
+  document.getElementById('mini').innerHTML = step===0
+    ? 'טיפ: <button class="linkbtn" onclick="loadDemo()">מלא דוגמה (יוסי · מתמטיקה · י״א)</button> כדי לראות אשף מלא.' : '';
+  const a = renderers['after'+step]; if(a) a();
+}
+
+const renderers = {
+  /* ---- צעד 0: זהות + תפקיד ---- */
+  0:()=>`<h2>מי אני</h2><p class="hint">הפרטים האלה לא נופלים מהשמיים — אתם מזינים אותם. כך המערכת יודעת מי אתם ומה אתם מלמדים.</p>
+    <label class="f">אני…</label>
+    <div class="roles">
+      <div class="role-opt ${state.role==='subject'?'on':''}" onclick="setRole('subject')">
+        <b>מורה מקצועי/ת</b><small>מלמד/ת מקצוע אחד או יותר, בכיתה אחת או כמה</small></div>
+      <div class="role-opt ${state.role==='homeroom'?'on':''}" onclick="setRole('homeroom')">
+        <b>מחנך/ת</b><small>כיתת אם + לרוב גם מקצוע אחד או יותר</small></div>
+    </div>
+    <label class="f">שם מלא</label><input id="i-name" value="${state.teacher.name}" placeholder="למשל: יוסי אבו־קף">
+    <div class="grid2">
+      <div><label class="f">טלפון (לא חובה)</label><input type="tel" id="i-phone" value="${state.teacher.phone}" placeholder="050…"></div>
+      <div><label class="f">בית ספר</label><input id="i-school" value="${state.teacher.school}"></div>
+    </div>`,
+  after0(){ bind('i-name',v=>state.teacher.name=v); bind('i-phone',v=>state.teacher.phone=v); bind('i-school',v=>state.teacher.school=v); },
+
+  /* ---- צעד 1: מה אני מלמד/ת ---- */
+  1:()=>`<h2>מה אני מלמד/ת</h2><p class="hint">מקצוע · שכבה · כיתה — לכל צירוף שורה. אפשר כמה מקצועות וכמה כיתות ושכבות.</p>
+    ${state.role==='homeroom' ? `
+      <div class="homeroom-box">
+        <div class="hl">🏠 כיתת האם שלי</div>
+        <div class="grid2">
+          <div><label class="f">שם הכיתה</label><input id="hr-cls" value="${state.homeroom.cls}" placeholder="י׳2"></div>
+          <div><label class="f">שכבה</label>${gradeSelect('hr-grade',state.homeroom.grade)}</div>
+        </div>
+      </div>` : ''}
+    <label class="f">${state.role==='homeroom'?'מקצועות שאני מלמד/ת (אם יש)':'מקצוע · שכבה · כיתה'}</label>
+    <div id="teachList"></div>
+    <button class="addbtn" onclick="addTeaching()"><span>＋</span> הוספת מקצוע / כיתה</button>`,
+  after1(){
+    if(state.role==='homeroom'){ bind('hr-cls',v=>state.homeroom.cls=v); bindSel('hr-grade',v=>state.homeroom.grade=v); }
+    renderTeachList();
+  },
+
+  /* ---- צעד 2: התלמידים שלי ---- */
+  2:()=>{
+    const cls = classList();
+    if(!cls.length) return `<h2>התלמידים שלי</h2><p class="hint">קודם הוסיפו מקצוע/כיתה בצעד הקודם — ואז נשייך אליהם תלמידים.</p>
+      <div class="infonote">אין עדיין אף כיתה. חזרו צעד אחורה ↩</div>`;
+    if(!state.activeClass || !cls.find(c=>c.key===state.activeClass)) state.activeClass = cls[0].key;
+    return `<h2>התלמידים שלי</h2><p class="hint">בחרו כיתה, והוסיפו אליה את התלמידים. כל כיתה — הרשימה שלה.</p>
+      <div class="classpick" id="classPick">${cls.map(c=>
+        `<span class="cpk ${c.key===state.activeClass?'on':''}" onclick="pickClass('${c.key}')">${c.label}<span class="n">${studentsOf(c.key).length}</span></span>`).join('')}</div>
+      ${methodTabs()}
+      <div class="pane ${state.method==='file'?'on':''}" data-pane="file">
+        <div class="drop" id="stuDrop"><div class="di">⬆️</div><b>גררו קובץ לכאן, או לחצו לבחירה</b>
+          <small>עמודה אחת: שם התלמיד/ה (אפשר גם שם,טלפון)</small></div>
+        <input type="file" id="stuFile" accept=".csv,.xlsx,.xls,.txt" hidden>
+        <div class="fmt">נתמך: .xlsx · .csv · <button class="linkbtn" onclick="fillSampleStudents()">או טען 22 תלמידים לדוגמה</button></div>
+      </div>
+      <div class="pane ${state.method==='link'?'on':''}" data-pane="link">
+        <div class="linkcard"><div class="lh">🔗 קישור הצטרפות לכיתה</div>
+          <div class="linkrow"><input readonly value="https://retzef.app/join/${classCode()}"><button class="copybtn" onclick="copyLink(this)">העתק</button></div>
+          <div class="mini">שלחו בוואטסאפ לכיתה. כל תלמיד/ה שנכנס/ת מזין/ה את שמו/ה ומצטרף/ת. הקוד: <b>${classCode()}</b></div></div>
+      </div>
+      <div class="pane ${state.method==='manual'?'on':''}" data-pane="manual">
+        <textarea id="i-paste" placeholder="דנה כהן&#10;רון אלמוג&#10;מיכל לוי"></textarea>
+        <button class="nav-btn next" style="padding:9px 18px;font-size:14px;margin-top:10px" onclick="importPaste()">הוספה לכיתה</button>
+      </div>
+      <div id="importResult" class="mini"></div>
+      <div class="rowlist" id="stuList"></div>`;
+  },
+  after2(){ setupStudentStep(); },
+
+  /* ---- צעד 3: מוכנות ---- */
+  3:()=>`<h2>מוכנות</h2><p class="hint">הכל מוגדר? אפשר להיכנס למערכת.</p>
+    <div class="ready" id="readyList"></div><div id="summaryBox"></div>
+    <div class="infonote">📚 <b>אילו יחידות להדליק — זו החלטה שלכם בתוך המערכת</b>, לא כאן. כאן רק הגדרנו מי אתם, מה אתם מלמדים, ואת מי.</div>`,
+  after3(){ renderReadiness(); },
+};
+
+/* ---------- צעד 0 ---------- */
+function setRole(r){ state.role=r; render(); }
+
+/* ---------- צעד 1: שורות הוראה ---------- */
+function gradeSelect(id,val){ return `<select id="${id}">${GRADES.map(g=>`<option ${g===val?'selected':''}>${g}</option>`).join('')}</select>`; }
+function subjectSelect(id,val){
+  return `<select id="${id}"><option value="" ${!val?'selected':''} disabled hidden>בחר מקצוע…</option>${
+    SUBJECTS.map(s=>`<option ${s===val?'selected':''}>${s}</option>`).join('')}</select>`;
+}
+function renderTeachList(){
+  const el = document.getElementById('teachList'); if(!el) return;
+  el.innerHTML = state.teachings.map((t,i)=>`
+    <div class="teachrow" data-i="${i}">
+      <div><label class="f" style="margin-top:0">מקצוע</label>${subjectSelect('t-sub-'+i,t.subject)}</div>
+      <div><label class="f" style="margin-top:0">שכבה</label>${gradeSelect('t-grade-'+i,t.grade)}</div>
+      <div><label class="f" style="margin-top:0">כיתה</label><input id="t-cls-${i}" value="${t.cls}" placeholder="י״א2"></div>
+      <button class="del" title="הסרה" onclick="delTeaching(${i})" ${state.teachings.length<=1&&state.role==='subject'?'style="visibility:hidden"':''}>×</button>
+    </div>`).join('');
+  state.teachings.forEach((t,i)=>{
+    bindSel('t-sub-'+i, v=>t.subject=v);
+    bindSel('t-grade-'+i, v=>t.grade=v);
+    bind('t-cls-'+i, v=>t.cls=v);
+  });
+}
+function addTeaching(){ syncTeachInputs(); state.teachings.push({id:uid(),subject:'',grade:'י',cls:''}); renderTeachList(); }
+function delTeaching(i){ syncTeachInputs(); state.teachings.splice(i,1); if(!state.teachings.length) state.teachings.push({id:uid(),subject:'',grade:'י',cls:''}); renderTeachList(); }
+function syncTeachInputs(){
+  state.teachings.forEach((t,i)=>{
+    const s=document.getElementById('t-sub-'+i); if(s) t.subject=s.value;
+    const g=document.getElementById('t-grade-'+i); if(g) t.grade=g.value;
+    const c=document.getElementById('t-cls-'+i); if(c) t.cls=c.value;
+  });
+  const hc=document.getElementById('hr-cls'); if(hc) state.homeroom.cls=hc.value;
+}
+
+/* ---------- צעד 2: תלמידים ---------- */
+function methodTabs(){
+  const opts=[
+    {k:'file',i:'📄',t:'העלאת קובץ',d:'Excel / CSV',rec:true},
+    {k:'link',i:'🔗',t:'קישור לכיתה',d:'התלמידים מצטרפים לבד',rec:true},
+    {k:'manual',i:'✍️',t:'הקלדה ידנית',d:'שם בכל שורה'},
+  ];
+  return `<div class="methods">`+opts.map(o=>
+    `<div class="method ${o.k===state.method?'on':''}" onclick="setMethod('${o.k}')">
+      <div class="mi">${o.i}</div><div class="mt">${o.t}</div><div class="md">${o.d}</div>
+      ${o.rec?'<div class="rec">מומלץ</div>':''}</div>`).join('')+`</div>`;
+}
+function setMethod(k){ state.method=k; render(); }
+function pickClass(k){ state.activeClass=k; render(); }
+function classCode(){ const m=state._codes||(state._codes={}); if(!m[state.activeClass]) m[state.activeClass]='BH-'+(1000+Object.keys(m).length*137%9000); return m[state.activeClass]; }
+
+function setupStudentStep(){
+  if(state.method==='file') wireDrop('stuDrop','stuFile',f=>readFile(f,(rows,err)=>{
+    if(err){ document.getElementById('importResult').innerHTML=`<b style="color:var(--status-attention)">${err}</b>`; return; }
+    ingestStudents(rows.map(r=>r[0]));
+  }));
+  renderStuList();
+}
+function ingestStudents(names){
+  let added=0;
+  names.forEach(n=>{ n=(n||'').trim(); if(!n||/^שם/.test(n)) return;
+    if(studentsOf(state.activeClass).some(s=>s.name===n)) return;
+    state.students.push({id:uid(),name:n,classKey:state.activeClass}); added++; });
+  const r=document.getElementById('importResult'); if(r) r.innerHTML=`<b style="color:var(--shell-deep, #8A1852)">נוספו ${added} תלמידים לכיתה.</b>`;
+  renderStuList(); refreshClassPick();
+}
+function importPaste(){ const t=document.getElementById('i-paste'); if(t) ingestStudents(t.value.split(/\r?\n/).map(l=>l.split(',')[0])); }
+function fillSampleStudents(){ ingestStudents((SEED.students||[]).map(s=>s.first_name)); }
+function removeStudent(id){ state.students=state.students.filter(s=>s.id!==id); renderStuList(); refreshClassPick(); }
+function refreshClassPick(){
+  const cp=document.getElementById('classPick'); if(!cp) return;
+  classList().forEach(c=>{ const el=cp.querySelector(`[onclick="pickClass('${c.key}')"] .n`); if(el) el.textContent=studentsOf(c.key).length; });
+}
+function renderStuList(){
+  const el=document.getElementById('stuList'); if(!el) return;
+  const list=studentsOf(state.activeClass);
+  el.innerHTML=list.length ? list.map(s=>`<div class="rowitem"><span class="av">${initials(s.name)}</span>${s.name}
+      <button class="x" title="הסרה" onclick="removeStudent('${s.id}')">×</button></div>`).join('')
+    : `<div class="mini">עוד אין תלמידים בכיתה הזו.</div>`;
+}
+
+/* ---------- צעד 3: מוכנות ---------- */
+function renderReadiness(){
+  syncTeachInputs();
+  const cls=classList();
+  const validT=state.teachings.filter(t=>t.subject&&t.cls);
+  const emptyClasses=cls.filter(c=>studentsOf(c.key).length===0);
+  const checks=[
+    {ok:!!state.teacher.name, t:`שם: ${state.teacher.name||'— חסר'}`},
+    {ok:!!state.teacher.school, t:`בית ספר: ${state.teacher.school||'— חסר'}`},
+    state.role==='homeroom'
+      ? {ok:!!(state.homeroom.cls||state.homeroom.grade), t:`כיתת אם: ${state.homeroom.cls||('כיתה '+state.homeroom.grade)}`}
+      : {ok:validT.length>0, t:`${validT.length} צירופי מקצוע·כיתה`},
+    {ok:cls.length>0, t:`${cls.length} כיתות בסך הכל`},
+    {ok:state.students.length>0, t:`${state.students.length} תלמידים`},
+    {ok:emptyClasses.length===0&&cls.length>0, t:emptyClasses.length?`${emptyClasses.length} כיתות עדיין בלי תלמידים`:'לכל כיתה יש תלמידים'},
+  ];
+  document.getElementById('readyList').innerHTML=checks.map(c=>`<div class="check ${c.ok?'':'fail'}"><span class="ic">${c.ok?'✓':'!'}</span>${c.t}</div>`).join('');
+  const allOk=checks.every(c=>c.ok);
+  const roleLabel=state.role==='homeroom'?'מחנך/ת':'מורה מקצועי/ת';
+  document.getElementById('summaryBox').innerHTML=allOk
+    ?`<div class="summary"><div class="big">${state.teacher.name} — מוכן/ה ללמד ✓</div><div class="stats">
+        <div><b>${cls.length}</b><small>כיתות</small></div>
+        <div><b>${state.role==='homeroom'?state.teachings.filter(t=>t.subject).length:validT.length}</b><small>מקצועות</small></div>
+        <div><b>${state.students.length}</b><small>תלמידים</small></div>
+      </div><a class="go" href="index.html?role=${state.role==='homeroom'?'educator':'teacher'}">כניסה למערכת ←</a></div>`
+    :`<div class="mini" style="margin-top:16px">יש סעיפים בכתום שכדאי להשלים לפני כניסה — אבל אפשר גם להיכנס ולהשלים בהמשך.</div>
+      <div style="text-align:center;margin-top:12px"><a class="go" style="background:var(--shell);color:#fff" href="index.html?role=${state.role==='homeroom'?'educator':'teacher'}">כניסה בכל זאת ←</a></div>`;
+}
+
+/* ---------- דוגמה מלאה ---------- */
+function loadDemo(){
+  state.role='subject';
+  state.teacher={name:'יוסי אבו־קף',phone:'0501234567',school:'אורט בית הערבה'};
+  state.teachings=[
+    {id:uid(),subject:'מתמטיקה',grade:'יא',cls:'י״א2'},
+    {id:uid(),subject:'מתמטיקה',grade:'יא',cls:'י״א1'},
+    {id:uid(),subject:'מתמטיקה',grade:'י',cls:'י׳4'},
+  ];
+  state.students=[]; state.activeClass=state.teachings[0].id;
+  const names=(SEED.students||[]).map(s=>s.first_name);
+  state.teachings.forEach((t,ti)=>{ names.slice(ti*7,ti*7+7).forEach(n=>state.students.push({id:uid(),name:n,classKey:t.id})); });
+  step=1; render();
+}
+
+/* ---------- קבצים / helpers ---------- */
+function readFile(file, cb){
+  const ext=(file.name.split('.').pop()||'').toLowerCase();
+  const reader=new FileReader();
+  if(ext==='xlsx'||ext==='xls'){
+    reader.onload=e=>{ try{
+      if(typeof XLSX==='undefined'){ cb(null,'ספריית האקסל לא נטענה (אין רשת?). נסו CSV.'); return; }
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,blankrows:false});
+      cb(rows.map(r=>r.map(c=>String(c==null?'':c).trim())));
+    }catch(err){ cb(null,'שגיאה בקריאת הקובץ'); } };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload=e=>{ const rows=String(e.target.result).split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(l=>l.split(',').map(c=>c.trim())); cb(rows); };
+    reader.readAsText(file,'UTF-8');
+  }
+}
+function wireDrop(dropId,inputId,handler){
+  const drop=document.getElementById(dropId), input=document.getElementById(inputId);
+  if(!drop||!input) return;
+  drop.onclick=()=>input.click();
+  input.onchange=e=>{ if(e.target.files[0]) handler(e.target.files[0]); };
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+  drop.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) handler(e.dataTransfer.files[0]); });
+}
+function copyLink(btn){ const inp=btn.previousElementSibling; navigator.clipboard?.writeText(inp.value); const o=btn.textContent; btn.textContent='הועתק ✓'; setTimeout(()=>btn.textContent=o,1400); }
+function bind(id,fn){ const el=document.getElementById(id); if(el) el.addEventListener('input',e=>fn(e.target.value)); }
+function bindSel(id,fn){ const el=document.getElementById(id); if(el) el.addEventListener('change',e=>fn(e.target.value)); }
+
+/* ---------- ניווט ---------- */
+document.getElementById('next').addEventListener('click',()=>{ if(step<3){ if(step===1) syncTeachInputs(); step++; render(); } });
+document.getElementById('prev').addEventListener('click',()=>{ if(step>0){ if(step===1) syncTeachInputs(); step--; render(); } });
+render();
+</script>
+</body>
+</html>
