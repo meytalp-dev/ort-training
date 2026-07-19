@@ -318,7 +318,8 @@
   .drill-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; }
   .school-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 15px; transition:.15s; }
   .school-card:hover{ border-color:var(--brand-line); box-shadow:var(--shadow-card); }
-  .school-card b{ font-size:14.5px; font-weight:700; color:var(--ink-strong); display:flex; align-items:center; gap:7px; margin-bottom:10px; }
+  .school-card b{ font-size:14.5px; font-weight:700; color:var(--ink-strong); display:flex; align-items:center; gap:7px; margin-bottom:4px; }
+  .school-card .sc-city{ display:block; font-size:12px; color:var(--ink-faint); margin:0 16px 9px; }
   .school-card .sc-dot{ width:9px; height:9px; border-radius:50%; background:var(--status-good); flex-shrink:0; }
   .school-card.cut .sc-dot{ background:var(--status-alert); }
   .school-card .sc-bar{ display:block; height:5px; border-radius:3px; background:var(--surface-muted); overflow:hidden; margin-bottom:6px; }
@@ -711,10 +712,11 @@ $$('.modes button').forEach(b => b.addEventListener('click', () => setMode(b.dat
    ו"כניסה" מובילה למסך-התפקיד (index.html?role=…) עם בורר-המצב.
    ============================================================ */
 const ROLES = [
-  { id:'teacher',   nm:'מורה או מחנך',  zoom:'educator', scope:'הכיתה שלי', href:'teacher-dashboard.html' },
-  { id:'principal', nm:'הנהלת בית ספר', zoom:'school',   scope:'בית הספר',  href:'principal-pulse.html' },
-  { id:'subject',   nm:'פיקוח מקצועי',  zoom:'subject',  scope:'תחום דעת',  href:'subject-analytics.html' },
-  { id:'national',  nm:'פיקוח ארצי',    zoom:'national', scope:'כל הארץ',   href:'national-map.html' },
+  { id:'teacher',   nm:'מורה',         zoom:'teacher',  scope:'המקצוע שלי', href:'teacher-dashboard.html' },
+  { id:'educator',  nm:'מחנך/ת',       zoom:'educator', scope:'הכיתה שלי',  href:'teacher-dashboard.html' },
+  { id:'principal', nm:'הנהלת בית ספר', zoom:'school',   scope:'בית הספר',   href:'principal-pulse.html' },
+  { id:'subject',   nm:'פיקוח מקצועי',  zoom:'subject',  scope:'תחום דעת',   href:'subject-analytics.html' },
+  { id:'national',  nm:'פיקוח ארצי',    zoom:'national', scope:'כל הארץ',    href:'national-map.html' },
 ];
 const roleById = id => ROLES.find(r => r.id === id);
 let picked = 'teacher';
@@ -773,6 +775,14 @@ const PEOPLE = {
       mods:[ {b:'משוואות ריבועיות', s:'מתמטיקה · כיתה י״א2'},
              {b:'גיאומטריה אנליטית', s:'מתמטיקה · כיתה י״א1'},
              {b:'פונקציות — שיפוע', s:'מתמטיקה · כיתה י׳4'} ] },
+  ],
+  educator: [
+    { id:'noa', first:'נועה', name:'נועה ברק', sub:'מחנכת · כיתה י׳2 · אורט בית הערבה',
+      line:'נועה ברק · מחנכת כיתה י׳2 · אורט בית הערבה',
+      stats:[[31,'תלמידים'],[9,'מקצועות'],[8,'מורים']],
+      mods:[ {b:'יוסף אבו־קף — היעדרויות', s:'כיתה י׳2 · מעקב'},
+             {b:'שיחת הורים — רון אלמוג', s:'כיתה י׳2 · השבוע'},
+             {b:'דוח כיתה שבועי', s:'כיתה י׳2 · מוכן'} ] },
   ],
   principal: [
     { id:'ronit', first:'רונית', name:'רונית שר', sub:'מנהלת · אורט בית הערבה',
@@ -853,25 +863,50 @@ function renderMods(mods){
 /* הנקודה על סולם-הזום זזה לרמת התפקיד */
 function syncLadder(){ $$('.zn').forEach(x => x.setAttribute('aria-pressed', x.dataset.z === zoom)); }
 
-/* ---- מחוזות → בתי ספר (פיקוח ארצי: לחיצה על מחוז פותחת את בתי-הספר שבו) ---- */
-const DISTRICTS = {
-  'דרום':    [ {n:'אורט בית הערבה',p:74}, {n:'אורט אשקלון',p:91}, {n:'אורט ערד',p:58,cut:true}, {n:'אורט נתיבות',p:88} ],
-  'ירושלים': [ {n:'אורט ספרא',p:100}, {n:'אורט מבשרת',p:96}, {n:'אורט גבעת רם',p:83} ],
-  'מרכז':    [ {n:'אורט רחובות',p:100}, {n:'אורט לוד',p:92}, {n:'אורט ראשון לציון',p:97}, {n:'אורט מוצקין',p:88} ],
-  'תל אביב': [ {n:'אורט סינגלובסקי',p:100}, {n:'אורט יד גיורא',p:95}, {n:'אורט אבן חן',p:66,cut:true} ],
-  'חיפה':    [ {n:'אורט קריית ביאליק',p:41,cut:true}, {n:'אורט רוגוזין',p:100}, {n:'אורט חיפה',p:91} ],
-  'צפון':    [ {n:'אורט כרמיאל',p:58,cut:true}, {n:'אורט מעלות',p:79}, {n:'אורט נהריה',p:88} ],
-};
+/* ---- מחוזות → בתי ספר (פיקוח ארצי) ----
+   נתונים קיימים מ-national-map.html (25 בתי"ס דמו · מחוז + מדד רציפות idx).
+   לא ממציאים — משתמשים במה שכבר בפרויקט. */
+const SCHOOLS = [
+  {nm:"אורט קריית שמונה",city:"קריית שמונה",dist:"צפון",idx:41},
+  {nm:"מקיף שדרות",city:"שדרות",dist:"דרום",idx:38},
+  {nm:"תיכון ירוחם",city:"ירוחם",dist:"דרום",idx:52},
+  {nm:"אורט נהריה",city:"נהריה",dist:"צפון",idx:68},
+  {nm:"עמל אופקים",city:"אופקים",dist:"דרום",idx:63},
+  {nm:"מקיף רהט",city:"רהט",dist:"דרום",idx:59},
+  {nm:"תיכון בית שאן",city:"בית שאן",dist:"צפון",idx:66},
+  {nm:"אורט מגדל העמק",city:"מגדל העמק",dist:"צפון",idx:71},
+  {nm:"מקיף אום אל-פחם",city:"אום אל-פחם",dist:"חיפה",idx:64},
+  {nm:"אולפנת כרמיאל",city:"כרמיאל",dist:"צפון",idx:78},
+  {nm:"אורט נוף הגליל",city:"נוף הגליל",dist:"צפון",idx:82},
+  {nm:"עמל דימונה",city:"דימונה",dist:"דרום",idx:74},
+  {nm:"תיכון ערד",city:"ערד",dist:"דרום",idx:80},
+  {nm:"מקיף נתיבות",city:"נתיבות",dist:"דרום",idx:69},
+  {nm:"אורט אשקלון",city:"אשקלון",dist:"דרום",idx:85},
+  {nm:"תיכון טבריה",city:"טבריה",dist:"צפון",idx:72},
+  {nm:"אורט מעלות",city:"מעלות-תרשיחא",dist:"צפון",idx:79},
+  {nm:"ברנקו וייס יקנעם",city:"יקנעם עילית",dist:"צפון",idx:83},
+  {nm:"תיכון קצרין",city:"קצרין",dist:"צפון",idx:76},
+  {nm:"מקיף כפר קאסם",city:"כפר קאסם",dist:"מרכז",idx:67},
+  {nm:"אורט בית שמש",city:"בית שמש",dist:"ירושלים",idx:81},
+  {nm:"עמל אילת",city:"אילת",dist:"דרום",idx:70},
+  {nm:"תיכון מצפה רמון",city:"מצפה רמון",dist:"דרום",idx:62},
+  {nm:"אורט עראבה",city:"עראבה",dist:"צפון",idx:84},
+  {nm:"מקיף תל אביב-יפו",city:"תל אביב-יפו",dist:"תל אביב",idx:88},
+];
+const DISTRICTS = {};
+SCHOOLS.forEach(s => { (DISTRICTS[s.dist] = DISTRICTS[s.dist] || []).push(s); });
+
 function showDistrict(label){
   const drill = $('#drill'); if (!drill) return;
-  const schools = DISTRICTS[label] || [];
+  const schools = (DISTRICTS[label] || []).slice().sort((a, b) => a.idx - b.idx);
   drill.innerHTML =
     '<div class="drill-head"><b>בתי ספר · מחוז ' + label + '</b><span>' + schools.length + ' בתי ספר</span></div>' +
     '<div class="drill-grid">' + schools.map(s =>
-      '<div class="school-card' + (s.cut ? ' cut' : '') + '">' +
-        '<b><span class="sc-dot"></span>' + s.n + '</b>' +
-        '<span class="sc-bar"><i style="width:' + s.p + '%"></i></span>' +
-        '<span class="sc-pct">' + s.p + '% רציפות</span>' +
+      '<div class="school-card' + (s.idx < 60 ? ' cut' : '') + '">' +
+        '<b><span class="sc-dot"></span>' + s.nm + '</b>' +
+        '<span class="sc-city">' + s.city + '</span>' +
+        '<span class="sc-bar"><i style="width:' + s.idx + '%"></i></span>' +
+        '<span class="sc-pct">' + s.idx + '% רציפות</span>' +
       '</div>').join('') + '</div>';
   drill.hidden = false;
   $$('.board .row').forEach(r => r.classList.toggle('active', r.dataset.d === label));
