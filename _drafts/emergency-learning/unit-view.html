@@ -48,24 +48,27 @@
   <div class="top">
     <a class="back" href="catalog-preview.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>חזרה לקטלוג</a>
   </div>
-  <div class="note">פרוטוטייפ-בדיקה של <b>מנוע-התצוגה</b>: מרנדר יחידת <code>.md</code> אמיתית לתצוגת-תלמיד. בהפקה — כל 444 היחידות ירונדרו כך.</div>
+  <div class="note">מנוע-התצוגה מרנדר את יחידת ה-<code>.md</code> האמיתית לתצוגת-תלמיד — כל 444 היחידות.</div>
   <div id="app"></div>
 </div>
 
 <script src="units-data.js"></script>
+<script src="units-content.js"></script>
 <script>
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function qs(k){return new URLSearchParams(location.search).get(k);}
   var U = (window.RETZEF_UNITS||[]);
   var SAMPLES = window.RETZEF_SAMPLES||{};
+  var CONTENT = window.RETZEF_CONTENT||{};
   var id = qs('u');
   var meta = U.find(function(u){return u.id===id;});
   var sample = null;
   Object.keys(SAMPLES).forEach(function(k){ if(SAMPLES[k].id===id) sample=SAMPLES[k]; });
+  var raw = CONTENT[id] || (sample && sample.raw);
 
   var app = document.getElementById('app');
   if(!meta){ app.innerHTML='<div class="meta-only"><p>יחידה לא נמצאה.</p></div>'; }
-  else if(!sample){
+  else if(!raw){
     // מטא בלבד — אין raw מוטמע לבדיקה
     app.innerHTML =
       '<div class="hero" style="--_p:'+esc(meta.palette)+'">'+
@@ -77,7 +80,7 @@
         '<p>בבדיקה הזו רק 3 יחידות-דוגמה מרונדרות חיות. היחידה הזו קיימת כ-Markdown אמיתי:</p>'+
         '<p><a href="'+esc(meta.file)+'" target="_blank">'+esc(meta.file)+'</a></p></div>';
   } else {
-    renderUnit(sample.raw, meta);
+    renderUnit(raw, meta);
   }
 
   /* --- פרסר-בדיקה: md-יחידה → מבנה רמות/מקטעים --- */
@@ -98,18 +101,31 @@
       if(key) levels[key]=p.slice(head.length);
     });
 
-    var seg = LV.filter(function(l){return levels[l.k];}).map(function(l,i){
-      return '<button data-lv="'+l.k+'" aria-pressed="'+(i===0?'true':'false')+'"><i style="background:'+l.c+'"></i>'+l.he+'</button>';
-    }).join('');
-
-    app.innerHTML =
+    var hero =
       '<div class="hero" style="--_p:'+esc(meta.palette)+';--_ps:'+esc(meta.palette)+'18">'+
         '<div class="crumbs"><span class="chip subj">'+esc(meta.subjectHe)+'</span><span class="chip mod">'+esc(meta.moduleHe)+'</span></div>'+
         '<h1>'+esc(h1)+'</h1>'+
         (idea?'<div class="idea"><b>רעיון מרכזי:</b> '+esc(idea)+'</div>':'')+
-      '</div>'+
-      '<div class="seg">'+seg+'</div>'+
-      '<div id="lvbody"></div>';
+      '</div>';
+
+    // אין 3 רמות (יחידת-הערכה/מבנה שטוח) → רנדר את מקטעי ה-## ישירות
+    if(!Object.keys(levels).length){
+      var flat = parts.map(function(p){
+        var t=p.split('\n')[0].replace(/`[^`]*`/g,'').trim();
+        var b=p.slice(p.indexOf('\n')+1);
+        var isQ=/שאל/.test(t);
+        return '<div class="sec"><h3>'+iconFor(t)+esc(t)+'</h3>'+(isQ?renderQuestions(b):renderProse(b))+'</div>';
+      }).join('');
+      app.innerHTML = hero + flat;
+      document.querySelector('.hero').style.setProperty('--_ps', hexSoft(meta.palette));
+      return;
+    }
+
+    var seg = LV.filter(function(l){return levels[l.k];}).map(function(l,i){
+      return '<button data-lv="'+l.k+'" aria-pressed="'+(i===0?'true':'false')+'"><i style="background:'+l.c+'"></i>'+l.he+'</button>';
+    }).join('');
+
+    app.innerHTML = hero + '<div class="seg">'+seg+'</div><div id="lvbody"></div>';
 
     // רקע רך לפי פלטת-היחידה
     document.querySelector('.hero').style.setProperty('--_ps', hexSoft(meta.palette));
@@ -134,7 +150,12 @@
 
   function stripMeta(s){
     // מסיר תגי-מקור/מטא-מחבר שאסור שיגיעו לתלמיד
-    return String(s).replace(/`\[[^\]]*\]`/g,'').replace(/\{error_type[^}]*\}/g,'').replace(/`[^`]*`/g,'');
+    return String(s)
+      .replace(/`\[[^\]]*\]`/g,'')
+      .replace(/\[(מקור|לאימות|source)[^\]]*\]/g,'')
+      .replace(/\{error_type[^}]*\}/g,'')
+      .replace(/`[^`]*`/g,'')
+      .replace(/[ \t]{2,}/g,' ');
   }
   function inline(s){ // **מודגש** ו-*נטוי* → HTML
     return esc(stripMeta(s)).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*]+)\*/g,'<i>$1</i>');

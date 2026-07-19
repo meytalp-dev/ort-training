@@ -43,7 +43,7 @@ function levels(txt){
 }
 function clean(s){ return (s||'').replace(/\[לאימות[^\]]*\]/g,'').replace(/["`]/g,'').trim(); }
 
-const units=[]; const samples={}; const perSubject={};
+const units=[]; const samples={}; const perSubject={}; const allRaw={};
 for(const subj of Object.keys(SUBJECTS_HE)){
   const sdir = path.join(ROOT, subj);
   if(!fs.existsSync(sdir)) continue;
@@ -69,6 +69,7 @@ for(const subj of Object.keys(SUBJECTS_HE)){
         palette: fm.palette_primary || '#0B8F98'
       };
       units.push(u);
+      allRaw[id]=txt;
       perSubject[subj]=(perSubject[subj]||0)+1;
       // דגימת raw ליחידה הראשונה בכל מקצוע-דוגמה
       if(SAMPLE_SUBJECTS.includes(subj) && !samples[subj]){
@@ -85,5 +86,14 @@ window.RETZEF_UNITS_BY_SUBJECT = ${JSON.stringify(perSubject)};
 window.RETZEF_SAMPLES = ${JSON.stringify(samples)};
 `;
 fs.writeFileSync(path.join(ROOT,'..','units-data.js'), out, 'utf8');
+
+/* קובץ-תוכן נפרד: raw md לכל 444 היחידות — כדי ש-unit-view ירנדר כל יחידה אופליין */
+const contentOut =
+`/* 🤖 נוצר אוטומטית ע"י content/gen-units.js — raw md לכל היחידות (לרינדור אופליין). אל תערוך ידנית. */
+window.RETZEF_CONTENT = ${JSON.stringify(allRaw)};
+`;
+fs.writeFileSync(path.join(ROOT,'..','units-content.js'), contentOut, 'utf8');
+
 console.log(`נכתב units-data.js — ${units.length} יחידות, ${Object.keys(samples).length} דוגמאות מרונדרות.`);
+console.log(`נכתב units-content.js — raw של ${Object.keys(allRaw).length} יחידות.`);
 console.log('לפי מקצוע:', perSubject);
