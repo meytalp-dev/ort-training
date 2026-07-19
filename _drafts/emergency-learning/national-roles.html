@@ -315,7 +315,7 @@ th[scope="row"]{font-weight:700;color:var(--ink-strong)}
     <div class="kpis">
       <div class="kpi">
         <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span>
-        <div class="cap">אנשי צוות פעילים</div><div class="big">1,284</div><div class="sub">ב-96 בתי ספר · 4 מחוזות</div>
+        <div class="cap">אנשי צוות פעילים</div><div class="big">1,284</div><div class="sub">ב-63 בתי ספר · 4 מחוזות</div>
       </div>
       <div class="kpi">
         <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20V4a2 2 0 00-2-2H6.5A2.5 2.5 0 004 4.5v15z"/><path d="M9 8l2 2 4-4"/></svg></span>
@@ -323,7 +323,7 @@ th[scope="row"]{font-weight:700;color:var(--ink-strong)}
       </div>
       <div class="kpi">
         <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></span>
-        <div class="cap">מנהלי בתי ספר</div><div class="big">96</div><div class="sub">אחד לכל בית ספר פעיל</div>
+        <div class="cap">מנהלי בתי ספר</div><div class="big">63</div><div class="sub">אחד לכל בית ספר פעיל</div>
       </div>
       <div class="kpi warn">
         <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></span>
@@ -368,7 +368,7 @@ th[scope="row"]{font-weight:700;color:var(--ink-strong)}
               <td class="scope-cell">בית ספר<span class="res">כל הכיתות שלו</span></td>
               <td class="scope-cell">פיקוח ארצי / מחוז</td>
               <td><span class="vis person">פרט · בי"ס</span></td>
-              <td><span class="cnt">96</span></td>
+              <td><span class="cnt">63</span></td>
             </tr>
             <tr>
               <th scope="row">מחנך</th>
@@ -436,6 +436,8 @@ th[scope="row"]{font-weight:700;color:var(--ink-strong)}
   <section aria-labelledby="ro-h">
     <div class="sec-head"><span class="n" aria-hidden="true">4</span><h2 id="ro-h">ניהול משתמשי צוות</h2><span class="hint">חיפוש · סינון · שינוי תפקיד</span></div>
 
+    <p class="note" style="margin:0 0 14px">שמות אנשי הצוות להדגמה בלבד. <b>בתי הספר והמחוזות אמיתיים</b> — מתוך <code>admin-data.js</code> (אותו מקור של טאב "בתי-ספר" באדמין).</p>
+
     <div class="toolbar">
       <div class="fld search">
         <label for="q">חיפוש</label>
@@ -449,7 +451,7 @@ th[scope="row"]{font-weight:700;color:var(--ink-strong)}
         <select id="f-district" aria-label="סינון לפי מחוז">
           <option value="">כל המחוזות</option>
           <option value="צפון">צפון</option>
-          <option value="חיפה">חיפה</option>
+          <option value="ירושלים">ירושלים</option>
           <option value="מרכז">מרכז</option>
           <option value="דרום">דרום</option>
         </select>
@@ -557,25 +559,53 @@ th[scope="row"]{font-weight:700;color:var(--ink-strong)}
 
 <span class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span>
 
+<script src="admin-data.js"></script>
 <script>
 /* ============================================================
-   W5-04 — נתוני דמו + סינון + שינוי תפקיד. ללא רשת. נתוני צוות בלבד.
+   W5-04 — סינון + שינוי תפקיד. ללא רשת.
+   שמות אנשי הצוות = הדגמה. בתי הספר והמחוזות = אמיתיים (admin-data.js).
    ============================================================ */
 const ROLE_LABELS = { national:'פיקוח ארצי', supervisor:'מפקח מקצועי', principal:'מנהל', admin:'Admin' };
 const STATUS_LABELS = { active:'פעיל', pending:'ממתין', suspended:'מושהה' };
 
+const A = window.ADMIN || { schools:[], subjects:[] };
+function hash(str){ var h=0; str=String(str); for(var i=0;i<str.length;i++){ h=(Math.imul(h,31)+str.charCodeAt(i))>>>0; } return h; }
+
+/* מפקחי מקצוע — מקצוע אמיתי (admin-data.subjects), שם להדגמה */
+const SUP_META = [
+  { name:'נעמה גולן', mail:'naama.g@edu.gov.il', status:'active'  },
+  { name:'איתי דהן',  mail:'itay.d@edu.gov.il',  status:'active'  },
+  { name:'שירה הראל', mail:'shira.h@edu.gov.il', status:'pending' },
+];
+const builtSubjects = (A.subjects||[]).filter(s=>s.built).map(s=>s.he);
+const SUPERVISORS = SUP_META.map((p,i)=>({
+  name:p.name, mail:p.mail, role:'supervisor',
+  scope: builtSubjects[i] || 'מקצוע', scopeSub:'על פני בתי ספר',
+  district: ['צפון','דרום','ירושלים'][i]||'מרכז', status:p.status
+}));
+
+/* מנהלי בתי ספר — בית ספר ומחוז אמיתיים (admin-data.schools), שם להדגמה */
+const PRIN_META = [
+  { name:'מוחמד ותד', mail:'m.watad@edu.gov.il', status:'active'    },
+  { name:'אורלי זיו', mail:'orly.z@edu.gov.il',  status:'active'    },
+  { name:'תמר חזן',   mail:'tamar.h@edu.gov.il', status:'active'    },
+  { name:'גדעון טל',  mail:'gideon.t@edu.gov.il', status:'suspended' },
+  { name:'לינה יוסף', mail:'lina.y@edu.gov.il',  status:'pending'   },
+];
+const PRINCIPALS = PRIN_META.map((p,i)=>{
+  const sch = (A.schools||[])[i] || { name:'—', district:'—' };
+  const st  = 80 + (hash(sch.name)%260);
+  return { name:p.name, mail:p.mail, role:'principal',
+    scope: sch.name, scopeSub: p.status==='pending' ? '—' : (st+' תלמידים'),
+    district: sch.district || '—', status:p.status };
+});
+
 const STAFF = [
-  { name:'ד״ר יעל אבידן',    mail:'yael.a@edu.gov.il',   role:'national',   scope:'ארצי',            scopeSub:'כל הרשת',           district:'מרכז', status:'active' },
-  { name:'רון בן-שמעון',      mail:'ron.bs@edu.gov.il',   role:'national',   scope:'ארצי',            scopeSub:'כל הרשת',           district:'מרכז', status:'active' },
-  { name:'נעמה גולן',         mail:'naama.g@edu.gov.il',  role:'supervisor', scope:'הנדסת תוכנה',      scopeSub:'על פני בתי ספר',    district:'צפון', status:'active' },
-  { name:'איתי דהן',          mail:'itay.d@edu.gov.il',   role:'supervisor', scope:'חשמל ואלקטרוניקה', scopeSub:'על פני בתי ספר',    district:'דרום', status:'active' },
-  { name:'שירה הראל',         mail:'shira.h@edu.gov.il',  role:'supervisor', scope:'עיצוב ותקשורת',    scopeSub:'על פני בתי ספר',    district:'חיפה', status:'pending' },
-  { name:'מוחמד ותד',         mail:'m.watad@edu.gov.il',  role:'principal',  scope:'אורט כפר קרע',     scopeSub:'96 תלמידים',        district:'חיפה', status:'active' },
-  { name:'אורלי זיו',         mail:'orly.z@edu.gov.il',   role:'principal',  scope:'אורט בית הערבה',   scopeSub:'214 תלמידים',       district:'דרום', status:'active' },
-  { name:'תמר חזן',           mail:'tamar.h@edu.gov.il',  role:'principal',  scope:'עמל טבריה',        scopeSub:'178 תלמידים',       district:'צפון', status:'active' },
-  { name:'גדעון טל',          mail:'gideon.t@edu.gov.il', role:'principal',  scope:'אורט רחובות',      scopeSub:'260 תלמידים',       district:'מרכז', status:'suspended' },
-  { name:'לינה יוסף',         mail:'lina.y@edu.gov.il',   role:'principal',  scope:'עמל נצרת',         scopeSub:'—',                 district:'צפון', status:'pending' },
-  { name:'עומר כהן',          mail:'omer.k@edu.gov.il',   role:'admin',      scope:'מערכת',            scopeSub:'תפעול טכני',        district:'מרכז', status:'active' },
+  { name:'ד״ר יעל אבידן', mail:'yael.a@edu.gov.il', role:'national', scope:'ארצי', scopeSub:'כל הרשת', district:'מרכז', status:'active' },
+  { name:'רון בן-שמעון',  mail:'ron.bs@edu.gov.il', role:'national', scope:'ארצי', scopeSub:'כל הרשת', district:'מרכז', status:'active' },
+  ...SUPERVISORS,
+  ...PRINCIPALS,
+  { name:'עומר כהן', mail:'omer.k@edu.gov.il', role:'admin', scope:'מערכת', scopeSub:'תפעול טכני', district:'מרכז', status:'active' },
 ];
 
 const rowsEl = document.getElementById('rows');

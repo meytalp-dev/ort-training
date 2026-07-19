@@ -529,7 +529,7 @@ section{margin:26px 0}
               <div class="announce__text empty" id="pvBody">תוכן ההודעה יופיע כאן תוך כדי הקלדה.</div>
               <div class="announce__foot">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                <span id="pvReach">מגיע לכ־25 בתי ספר</span>
+                <span id="pvReach">מגיע לכ־63 בתי ספר</span>
               </div>
             </div>
           </div>
@@ -573,38 +573,54 @@ section{margin:26px 0}
   <span id="toastText">בוצע</span>
 </div>
 
+<script src="admin-data.js"></script>
 <script>
 (function(){
   'use strict';
   var root = document.documentElement;
+  var ADMIN = window.ADMIN || { schools:[], meta:{districts:{}} };
+  function hash(str){ var h=0; str=String(str); for(var i=0;i<str.length;i++){ h=(Math.imul(h,31)+str.charCodeAt(i))>>>0; } return h; }
+  /* רשת בית ספר לפי שם (אותה היוריסטיקה כמו national-map) */
+  function netOf(n){ n=n||''; if(n.indexOf('אורט')===0) return 'אורט'; if(n.indexOf('עמל')===0) return 'עמל'; return 'מקומי'; }
 
   /* ============================================================
      נתוני-דוגמה מצרפיים (עקביים עם national-map.html: אותם מחוזות,
      רשתות ומקצועות). ברמת מחוז/רשת/מקצוע בלבד — בלי בית ספר בודד
      בשמו בטבלה, ובוודאי בלי תלמיד.
      ============================================================ */
-  var DISTRICTS = ['צפון','חיפה','מרכז','תל אביב','ירושלים','דרום'];
-  var NETS = ['אורט','עמל','דרכא','אמית','ברנקו וייס','מקומי'];
   var SUBJECTS = [
     {nm:'לשון', a:94},{nm:'מתמטיקה', a:90},{nm:'אנגלית', a:88},
     {nm:'אזרחות', a:76},{nm:'תנ״ך', a:63},{nm:'היסטוריה', a:58},
     {nm:'ספרות', a:44},{nm:'ביולוגיה', a:37},{nm:'גיאוגרפיה', a:24},
     {nm:'פיזיקה', a:19},{nm:'מקצועות טכנולוגיים', a:16}
   ];
-  /* בסיס מצרפי לכל מחוז: מדד רציפות, מס' בתי ספר, מגמה */
-  var DIST_BASE = {
-    'צפון':    {idx:74, schools:9, seen:68, tr:1},
-    'חיפה':    {idx:64, schools:3, seen:59, tr:-2},
-    'מרכז':    {idx:71, schools:2, seen:64, tr:0},
-    'תל אביב': {idx:85, schools:2, seen:80, tr:2},
-    'ירושלים': {idx:81, schools:1, seen:75, tr:0},
-    'דרום':    {idx:60, schools:8, seen:55, tr:-3}
-  };
-  var NET_BASE = {
-    'אורט':{idx:77,schools:8,seen:71}, 'עמל':{idx:66,schools:5,seen:60},
-    'דרכא':{idx:68,schools:4,seen:62}, 'אמית':{idx:78,schools:1,seen:72},
-    'ברנקו וייס':{idx:83,schools:1,seen:77}, 'מקומי':{idx:63,schools:6,seen:57}
-  };
+
+  /* ---------- מחוזות + רשתות: מספרי בתי הספר אמיתיים (admin-data), מדדים = הדגמה ----------
+     שם · מחוז · רשת נגזרים מ-admin-data.js. מדדי הרציפות (idx/seen/tr) דטרמיניסטיים לפי שם המחוז/רשת. */
+  var DIST_ORDER = ['צפון','ירושלים','מרכז','דרום'];
+  function demoMetric(key){
+    var h=hash(key);
+    var idx  = 58 + (h % 32);            // 58..89
+    var seen = Math.max(45, idx - 4 - ((h>>>7)%7));
+    var tr   = ((h>>>4) % 9) - 4;        // -4..+4
+    return {idx:idx, seen:seen, tr:tr};
+  }
+  /* ספירת בתי ספר אמיתית לכל מחוז */
+  var distCount = {};
+  (ADMIN.schools||[]).forEach(function(s){ var d=s.district||'—'; distCount[d]=(distCount[d]||0)+1; });
+  var DISTRICTS = DIST_ORDER.filter(function(d){ return distCount[d]; });
+  if(!DISTRICTS.length){ DISTRICTS = Object.keys(distCount); }
+  var DIST_BASE = {};
+  DISTRICTS.forEach(function(d){ var m=demoMetric('dist|'+d); DIST_BASE[d]={idx:m.idx, schools:distCount[d], seen:m.seen, tr:m.tr}; });
+
+  /* ספירת בתי ספר אמיתית לכל רשת (לפי שם) */
+  var netCount = {};
+  (ADMIN.schools||[]).forEach(function(s){ var n=netOf(s.name); netCount[n]=(netCount[n]||0)+1; });
+  var NET_ORDER = ['אורט','עמל','מקומי'];
+  var NETS = NET_ORDER.filter(function(n){ return netCount[n]; });
+  if(!NETS.length){ NETS = Object.keys(netCount); }
+  var NET_BASE = {};
+  NETS.forEach(function(n){ var m=demoMetric('net|'+n); NET_BASE[n]={idx:m.idx, schools:netCount[n], seen:m.seen}; });
 
   var MODE_HE = {routine:'שגרה', remote:'מרחוק', emergency:'חירום'};
   /* מקדם מצב על ההשתתפות המצרפית + סדרת מגמה + מסגור */
@@ -825,7 +841,7 @@ section{margin:26px 0}
      2 · הודעה ארצית
      ============================================================ */
   var aud='all', pri='info';
-  var TOTAL_SCHOOLS=25;
+  var TOTAL_SCHOOLS=(ADMIN.schools||[]).length || 63;
 
   function audText(){
     if(aud==='all') return {lbl:'כל בתי הספר', reach:'מגיע לכ־'+TOTAL_SCHOOLS+' בתי ספר', n:TOTAL_SCHOOLS, unit:'בתי ספר'};
@@ -894,8 +910,8 @@ section{margin:26px 0}
 
   /* ---------- הודעות אחרונות ---------- */
   var RECENTS=[
-    {title:'סיכום שבועי — הרציפות הארצית מתייצבת', aud:'כל בתי הספר', date:'8.7', pri:'info', reach:'25 בתי ספר'},
-    {title:'היערכות ליום למידה מרחוק — יום ה׳', aud:'מחוז דרום', date:'6.7', pri:'action', reach:'8 בתי ספר'},
+    {title:'סיכום שבועי — הרציפות הארצית מתייצבת', aud:'כל בתי הספר', date:'8.7', pri:'info', reach:'63 בתי ספר'},
+    {title:'היערכות ליום למידה מרחוק — יום ה׳', aud:'מחוז דרום', date:'6.7', pri:'action', reach:'10 בתי ספר'},
     {title:'מדף התוכן במקצועות העיוניים — עדכון', aud:'מפקחים מקצועיים', date:'2.7', pri:'info', reach:'כלל המפקחים'}
   ];
   function priBadgeIcon(p){
