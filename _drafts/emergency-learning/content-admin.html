@@ -118,8 +118,10 @@
 </div>
 
 <script src="admin-data.js"></script>
+<script src="qa-report.js"></script>
 <script>
   var A = window.ADMIN || {meta:{},subjects:[],schools:[],tracks:[]};
+  var QA = window.RETZEF_QA || null;
   var $ = function(s,r){return (r||document).querySelector(s);};
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function el(h){var d=document.createElement('div');d.innerHTML=h;return d.firstElementChild;}
@@ -330,12 +332,67 @@
       out.push({subj:s.he,col:subjColor(s.he),mod:m.n,modt:m.title,stage:m.stage,u:u});
     });});}); return out;
   }
+  /* --- פאנל בדיקות-מנוע (שכבה 1 דטרמיניסטית · qa-report.js) --- */
+  var SEVC={high:'#C2374B',med:'#C98A1E',low:'#8A9AA0'};
+  var qaCheck=null;
+  function engineIndex(){ var m={}; allUnits().forEach(function(x){ m[x.u.id]=x; }); return m; }
+  function viewQAEngine(){
+    if(!QA) return el('<div class="note">מנוע-ה-QA טרם הורץ. הריצי <b>node qa-engine.js</b> ליצירת <b>qa-report.js</b>.</div>');
+    var idx=engineIndex();
+    var box=el('<div style="margin:14px 0 22px">'+
+      '<div class="bar">'+
+        kpi(QA.totals.findings,'ממצאי-מנוע')+
+        '<div class="kpi"><div class="n" style="color:'+SEVC.high+'">'+QA.bySeverity.high+'</div><div class="k">גבוה</div></div>'+
+        '<div class="kpi"><div class="n" style="color:'+SEVC.med+'">'+QA.bySeverity.med+'</div><div class="k">בינוני</div></div>'+
+        '<div class="kpi"><div class="n" style="color:'+SEVC.low+'">'+QA.bySeverity.low+'</div><div class="k">נמוך</div></div>'+
+      '</div>'+
+      '<div class="note"><b>בדיקות אוטומטיות:</b> רצות על כל '+QA.totals.units+' היחידות + '+QA.totals.screens+' המסכים. '+
+        '<b>render</b>=תיקון-מנוע (מתקן מאות) · <b>content</b>=הפקה-מחדש · <b>design</b>=מיגרציה. לחצי בדיקה לרשימת-הכשל.</div>'+
+      '<div class="toolbar" id="qaChecks">'+
+        QA.summary.map(function(s){
+          return '<button class="fbtn" data-check="'+esc(s.check)+'" aria-pressed="false" style="border-right:3px solid '+SEVC[s.severity]+'">'+
+            esc(s.check)+' <b>'+s.count+'</b> <small style="opacity:.6">'+s.category+'</small></button>';
+        }).join('')+
+      '</div><div id="qaFind"></div></div>');
+    function drawFind(){
+      var host=$('#qaFind',box);
+      if(!qaCheck){ host.innerHTML='<p class="sub" style="margin-top:6px">בחרי בדיקה למעלה כדי לראות את היחידות/המסכים שנכשלו.</p>'; return; }
+      var rows=QA.findings.filter(function(f){return f.check===qaCheck;});
+      var meta=QA.summary.filter(function(s){return s.check===qaCheck;})[0]||{};
+      var body=rows.slice(0,300).map(function(f){
+        if(f.scope==='unit'){
+          var x=idx[f.id];
+          var title=x?x.u.title:f.id;
+          var subj=x?('<span class="dot" style="display:inline-block;background:'+x.col+'"></span> '+esc(x.subj)):'';
+          var link=x?('<a class="open" href="unit-view.html?u='+encodeURIComponent(f.id)+'" target="_blank">פתיחה ›</a>'):'';
+          return '<tr><td><b>'+esc(title)+'</b><div class="sub" style="font-size:11px;direction:rtl">'+esc(f.id)+'</div></td>'+
+            '<td>'+subj+'</td><td style="font-size:12px">'+esc(f.detail||'')+'</td><td>'+link+'</td></tr>';
+        }
+        return '<tr><td><b>'+esc(f.id)+'</b></td><td><span class="chip">מסך</span></td>'+
+          '<td style="font-size:12px">'+esc(f.detail||'')+'</td><td><a class="open" href="'+esc(f.id)+'" target="_blank">פתיחה ›</a></td></tr>';
+      }).join('');
+      host.innerHTML='<div class="scroll"><table><thead><tr><th>יחידה / מסך</th><th>מקצוע</th><th>פירוט הכשל</th><th></th></tr></thead><tbody>'+
+        body+'</tbody></table></div><p class="sub" style="margin-top:8px">'+
+        '['+ (meta.severity||'') +' · '+ (meta.category||'') +'] '+rows.length+' ממצאים'+(rows.length>300?' (מוצגים 300 ראשונים)':'')+'</p>';
+    }
+    box.querySelectorAll('[data-check]').forEach(function(b){b.addEventListener('click',function(){
+      qaCheck = (qaCheck===b.dataset.check)?null:b.dataset.check;
+      box.querySelectorAll('[data-check]').forEach(function(x){x.setAttribute('aria-pressed', x.dataset.check===qaCheck);});
+      drawFind();
+    });});
+    drawFind();
+    return box;
+  }
+
   function viewQA(){
     var units=allUnits();
     var unv=units.filter(function(x){return x.u.pedagogy==='unverified';}).length;
     var badfmt=units.filter(function(x){return x.u.format==='check';}).length;
     var reviewed=units.filter(function(x){return x.stage==='reviewed';}).length;
     var wrap=el('<div>'+
+      '<h2 style="font-family:var(--font-head,\'Heebo\',sans-serif);font-size:16px;margin:6px 0 2px">בדיקות-מנוע אוטומטיות</h2>'+
+      '<div id="qaEngineMount"></div>'+
+      '<h2 style="font-family:var(--font-head,\'Heebo\',sans-serif);font-size:16px;margin:18px 0 2px">מצב-אימות ידני (מטא-נתונים)</h2>'+
       '<div class="bar">'+kpi(units.length,'יחידות')+kpi(unv,'טרם אומתו פדגוגית')+kpi(reviewed,'עברו בדיקת-קלוד')+kpi(badfmt,'פורמט חורג')+'</div>'+
       '<div class="note"><b>גשר-פרסום:</b> טיוטה → נבדק (קלוד) → אומת פדגוגית (verify-pedagogy → רכז) → פורסם לאתר-המורה. יחידה עולה לאתר רק בסוף המסלול.</div>'+
       '<div class="toolbar">'+
@@ -366,6 +423,7 @@
       draw();
     });});
     draw();
+    $('#qaEngineMount',wrap).appendChild(viewQAEngine());
     return wrap;
   }
 

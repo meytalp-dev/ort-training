@@ -9,12 +9,13 @@
    הרצה:  node qa-engine.js
    ------------------------------------------------------------
    שכבות 2-3 (LLM-שופט + פרפלקסיטי) — לא כאן. ראו QA-KICKOFF.md.
-   TODO ארכיטקטורה: לאחד את הפרסר עם unit-view.html דרך unit-parser.js
-                     כדי שה-QA יבדוק את הרינדור המדויק (עקרון 1 במפרט).
+   ✅ ארכיטקטורה: הפרסר אוחד ל-unit-parser.js — גם unit-view וגם qa-engine
+                  צורכים אותו, כך שה-QA בודק את הרינדור המדויק (עקרון 1).
    ============================================================ */
 const fs = require('fs');
 const path = require('path');
 const ROOT = __dirname;
+const P = require('./unit-parser.js');   // מקור-אמת יחיד לפירוש-שאלות
 
 function loadWindow(rel){
   const w = {};
@@ -31,35 +32,12 @@ function flag(scope, id, check, severity, category, detail){
   findings.push({ scope, id, check, severity, category, detail });
 }
 
-/* ---------- עזרי-פרסור (מראה מקורב ל-unit-view; יוחלף ב-unit-parser.js) ---------- */
-function levelsOf(raw){
-  const body = raw.replace(/^---[\s\S]*?---\s*/,'');
-  const parts = body.split(/\n##\s+/).slice(1);
-  const lv = parts.filter(p => /basic|standard|advanced/i.test(p.split('\n')[0]));
-  return { body, levelChunks: lv, hasLevels: lv.length>0, parts };
-}
-function questionBlocks(chunk){
-  return chunk.split(/\n(?=\d+\.\s)/).filter(b => /^\s*\d+\.\s/.test(b));
-}
-function classifyQuestion(b){
-  const first = b.split('\n')[0];
-  const inlineOpts = (first.match(/\([א-ת]\)/g) || []).length >= 2;       // (א) .. (ב) .. בשורה
-  const lineOpts   = /\n\s*[-*]?\s*[א-ת]\.\s/.test(b);                     // א. .. \n ב. ..
-  const hasCorrect = /\*\*נכון\*\*|נכון\s*$/m.test(b) || /[✅✓].*[א-ת].*נכון/.test(b) || /[✅✓]/.test(b);
-  const hasRubric  = /מחוון|תשובה צפויה|תשובה נכונה|תשובה אפשרית|משוב\s*:/.test(b);
-  let type;
-  if (lineOpts) type = 'mcq';
-  else if (inlineOpts) type = 'mcq-inline';   // אמריקאית אבל בשורה — המנוע מפספס
-  else type = 'open';                         // מיון/התאמה/הסבר/ביצוע/פתוחה
-  return { type, inlineOpts, lineOpts, hasCorrect, hasRubric };
-}
-
 /* ============================================================
    בטרייה A + B — יחידות
    ============================================================ */
 for (const id of Object.keys(CONTENT)){
   const raw = CONTENT[id];
-  const { body, levelChunks, hasLevels } = levelsOf(raw);
+  const { body, hasLevels } = P.splitLevels(raw);
   const meta = UMETA[id] || {};
 
   // A1 — מבנה
@@ -69,24 +47,27 @@ for (const id of Object.keys(CONTENT)){
   // A2 — רעיון מרכזי
   if (!/^>\s*רעיון מרכזי/m.test(body) && !(meta.idea)) flag('unit', id, 'no-central-idea', 'med', 'content', 'חסר "רעיון מרכזי"');
 
-  // שאלות — על כל היחידה
-  const allQ = questionBlocks(body);
+  // שאלות — על כל היחידה. הפירוש זהה למנוע-התצוגה (unit-parser.parseQuestion).
+  const allQ = P.questionBlocks(body);
   // A3 — מיעוט שאלות (מפרט: 2/3/3 ≈ 8; דגל אם < 4 בסה"כ)
   if (allQ.length < 4) flag('unit', id, 'few-questions', 'med', 'content',
     `${allQ.length} שאלות בלבד (מפרט unit-dna: 2/3/3 ≈ 8)`);
 
   const types = {};
   allQ.forEach((b, i) => {
-    const q = classifyQuestion(b);
+    const q = P.parseQuestion(b);
+    const hasRubric = /מחוון|תשובה צפויה|תשובה נכונה|תשובה אפשרית|משוב\s*:/.test(b);
+    const inlineMarkers = (b.split('\n')[0].match(/\([א-ת]\)/g) || []).length >= 2;
     types[q.type] = (types[q.type]||0)+1;
-    // A4 — אמריקאית-בשורה שהמנוע מפספס
-    if (q.type === 'mcq-inline') flag('unit', id, 'inline-mcq-undetected', 'high', 'render',
+    // A4 — כשל-רינדור: אפשרויות (א)(ב) בשורה שהמנוע *עדיין* מציג כפתוחה.
+    //      אחרי איחוד-הפרסר וזיהוי-inline — אמור להיות 0. נשמר כשומר לפורמט-כשל חדש.
+    if (inlineMarkers && q.type === 'open') flag('unit', id, 'inline-mcq-undetected', 'high', 'render',
       `שאלה ${i+1}: אפשרויות (א)(ב)(ג) בשורה אחת — המנוע מציג כפתוחה`);
-    // A5 — אמריקאית בלי תשובה נכונה מזוהה
-    if (q.type === 'mcq' && !q.hasCorrect) flag('unit', id, 'mcq-no-correct', 'high', 'content',
+    // A5 — אמריקאית בלי תשובה נכונה מזוהה (המנוע לא יידע לסמן נכון)
+    if (q.type === 'mcq' && q.correctIndex < 0) flag('unit', id, 'mcq-no-correct', 'high', 'content',
       `שאלה ${i+1}: אמריקאית בלי סימון תשובה נכונה`);
     // A6 — שאלה לא-אמריקאית בלי מחוון/תשובה-צפויה (הפרת מפרט)
-    if (q.type === 'open' && !q.hasRubric) flag('unit', id, 'open-without-rubric', 'high', 'content',
+    if (q.type === 'open' && !hasRubric) flag('unit', id, 'open-without-rubric', 'high', 'content',
       `שאלה ${i+1}: פתוחה/מובנית בלי מחוון/תשובה-צפויה (unit-dna דורש)`);
   });
   // A7 — כל השאלות מאותה שיטה (מפרט אוסר "הכול MC")
@@ -162,6 +143,9 @@ const report = {
   findings
 };
 fs.writeFileSync(path.join(ROOT, 'qa-report.json'), JSON.stringify(report, null, 2), 'utf8');
+// גרסת-דפדפן: נטענת ב-content-admin (טאב 5) דרך <script>. file:// חוסם fetch(json).
+fs.writeFileSync(path.join(ROOT, 'qa-report.js'),
+  'window.RETZEF_QA = ' + JSON.stringify(report) + ';\n', 'utf8');
 
 console.log('=== רֶצֶף QA — שכבה 1 (דטרמיניסטית) ===');
 console.log(`יחידות: ${report.totals.units} · מסכים: ${report.totals.screens} · ממצאים: ${report.totals.findings}`);

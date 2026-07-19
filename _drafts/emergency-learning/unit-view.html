@@ -126,10 +126,12 @@
   <div id="app"></div>
 </div>
 
+<script src="unit-parser.js"></script>
 <script src="units-data.js"></script>
 <script src="units-content.js"></script>
 <script>
-  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var P = window.RetzefParser;
+  function esc(s){return P.esc(s);}
   function qs(k){return new URLSearchParams(location.search).get(k);}
   var CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   var BULB='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>';
@@ -172,15 +174,8 @@
     app.style.setProperty('--_p',pal);
     app.style.setProperty('--_ps',hexSoft(pal));
 
-    var parts = body.split(/\n##\s+/).slice(1);
-    var levels={};
-    parts.forEach(function(p){
-      var head=p.split('\n')[0];
-      var k=/basic/i.test(head)?'basic':/standard/i.test(head)?'standard':/advanced/i.test(head)?'advanced':null;
-      if(k) levels[k]=p.slice(head.length);
-    });
-    var levelKeys=['basic','standard','advanced'].filter(function(k){return levels[k];});
-    var flatChunk = levelKeys.length ? null : parts.map(function(p){return '\n### '+p;}).join('');
+    var _lv = P.splitLevels(raw);
+    var levels=_lv.levels, levelKeys=_lv.levelKeys, flatChunk=_lv.flatChunk;
 
     app.innerHTML =
       '<div class="uhead"><div class="crumbs"><span class="chip subj" style="background:'+pal+'">'+esc(meta.subjectHe)+'</span><span class="chip mod">'+esc(meta.moduleHe)+'</span></div><h1>'+esc(h1)+'</h1></div>'+
@@ -234,31 +229,11 @@
     });
     renderScreens();
   }
-  function phaseOf(t){
-    if(/פתיח/.test(t)) return 1;
-    if(/סיכום/.test(t)) return 4;
-    if(/שאל|תיוג|ביצוע|סימולצי|תרגול|משימ|מחוון|תשוב|^משוב|בדיקה/.test(t)) return 3;
-    return 2;
-  }
-
-  function hexSoft(hex){ // פלטה רכה מאוד לרקע הרעיון
-    var m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m) return '#FBF3DE';
-    var n=parseInt(m[1],16),r=(n>>16)&255,g=(n>>8)&255,b=n&255;
-    return 'rgba('+r+','+g+','+b+',.10)';
-  }
-
-  function stripMeta(s){
-    // מסיר תגי-מקור/מטא-מחבר שאסור שיגיעו לתלמיד
-    return String(s)
-      .replace(/`\[[^\]]*\]`/g,'')
-      .replace(/\[(מקור|לאימות|source)[^\]]*\]/g,'')
-      .replace(/\{error_type[^}]*\}/g,'')
-      .replace(/`[^`]*`/g,'')
-      .replace(/[ \t]{2,}/g,' ');
-  }
-  function inline(s){ // **מודגש** ו-*נטוי* → HTML
-    return esc(stripMeta(s)).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*]+)\*/g,'<i>$1</i>');
-  }
+  /* עזרים משותפים — מ-unit-parser.js (מקור-אמת יחיד) */
+  function phaseOf(t){ return P.phaseOf(t); }
+  function hexSoft(hex){ return P.hexSoft(hex); }
+  function stripMeta(s){ return P.stripMeta(s); }
+  function inline(s){ return P.inline(s); }
   function parseSections(chunk){
     // אוסף סמני-מקטע משני הפורמטים בו-זמנית: ### כותרת  וגם  **תווית:**
     var marks=[], m;
@@ -319,41 +294,23 @@
     return out.join('');
   }
   function renderQuestions(txt){
-    var blocks=txt.split(/\n(?=\d+\.\s)/).filter(function(b){return /\d+\.\s/.test(b);});
+    var blocks=P.questionBlocks(txt);
     return blocks.map(function(b,qi){
-      var lines=b.split('\n');
-      var head=inline(lines[0].replace(/^\d+\.\s*/,'').replace(/\*/g,'').trim());
-      var opts=[],fb='',hint='',fbLetter=null;
-      lines.slice(1).forEach(function(l){
-        var raw=l.trim(); if(!raw) return;
-        var lm=stripMeta(raw).trim();
-        if(/[✅✓]/.test(raw)){
-          fb=lm.replace(/^[-*]\s*/,'').replace(/^משוב:\s*/,'').replace(/[✅✓]\s*/,'').trim();
-          var mm=fb.match(/^([א-ת])[\s.]*נכון/)||fb.match(/^([א-ת])\b/);
-          if(mm){ fbLetter=mm[1]; fb=fb.replace(/^[א-ת][\s.]*נכון[.:]?\s*/,'').trim(); }
-        } else if(/💡/.test(raw)){ if(!/error_type/.test(raw)) hint=lm.replace(/^[-*]\s*/,'').replace(/💡\s*/,'').trim(); }
-        else if(/^[-*]?\s*[א-ת]\.\s/.test(lm)){
-          var letter=(lm.match(/^[-*]?\s*([א-ת])\.\s/)||[])[1];
-          var ok=/\*\*נכון\*\*|—\s*\*\*נכון|נכון\s*$/.test(raw);
-          var clean=lm.replace(/^[-*]\s*/,'').replace(/\s*[—-]?\s*\*\*נכון\*\*/,'').replace(/\s*[—-]?\s*נכון\s*$/,'');
-          opts.push({t:clean,letter:letter,ok:ok});
-        }
-      });
-      var ci=opts.map(function(o){return o.ok;}).indexOf(true);
-      if(ci<0 && fbLetter){ ci=opts.map(function(o){return o.letter;}).indexOf(fbLetter); }
+      var q=P.parseQuestion(b);
       var num='<div class="num">שאלה '+(qi+1)+'</div>';
+      var head='<div class="qh">'+inline(q.stem)+'</div>';
       // שאלה פתוחה — אין ברירות
-      if(!opts.length){
-        return '<div class="q">'+num+'<div class="qh">'+head+'</div><div class="open-q">שאלה פתוחה — כתבו תשובה.</div>'+
-          (fb?'<details class="reveal"><summary>'+BULB+'הצג כיוון לתשובה</summary><div class="fb good">'+CHECK+'<span>'+inline(fb)+'</span></div></details>':'')+'</div>';
+      if(!q.options.length){
+        return '<div class="q">'+num+head+'<div class="open-q">שאלה פתוחה — כתבו תשובה.</div>'+
+          (q.feedback?'<details class="reveal"><summary>'+BULB+'הצג כיוון לתשובה</summary><div class="fb good">'+CHECK+'<span>'+inline(q.feedback)+'</span></div></details>':'')+'</div>';
       }
-      var optHtml=opts.map(function(o,i){
-        return '<button class="opt" data-i="'+i+'"><span class="mark">'+CHECK+'</span><span>'+inline(o.t)+'</span></button>';
+      var optHtml=q.options.map(function(o,i){
+        return '<button class="opt" data-i="'+i+'"><span class="mark">'+CHECK+'</span><span>'+inline(o.text)+'</span></button>';
       }).join('');
-      return '<div class="q" data-correct="'+ci+'">'+num+'<div class="qh">'+head+'</div>'+
+      return '<div class="q" data-correct="'+q.correctIndex+'">'+num+head+
         '<div class="opts">'+optHtml+'</div>'+
-        '<div class="fb good">'+CHECK+'<span><b>נכון!</b> '+inline(fb||'')+'</span></div>'+
-        (hint?'<div class="fb hint">'+BULB+'<span><b>רמז:</b> '+inline(hint)+'</span></div>':'')+
+        '<div class="fb good">'+CHECK+'<span><b>נכון!</b> '+inline(q.feedback||'')+'</span></div>'+
+        (q.hint?'<div class="fb hint">'+BULB+'<span><b>רמז:</b> '+inline(q.hint)+'</span></div>':'')+
         '</div>';
     }).join('');
   }
