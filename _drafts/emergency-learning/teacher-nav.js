@@ -34,7 +34,6 @@
     { s: 'הוראה ויצירה' },
     { t: 'שליחת משימה', h: 'teacher-flow.html', i: 'send' },
     { t: 'יצירת שיעור', h: 'lesson-create.html', i: 'plus' },
-    { t: 'עורך יחידות', h: 'unit-editor.html', i: 'edit' },
     { t: 'מחומר ליחידה', h: 'file-to-unit.html', i: 'upload' },
     { t: 'בונה בוחנים', h: 'quiz-builder.html', i: 'checkc' },
     { t: 'עוזר AI', h: 'ai-teacher.html', i: 'spark' },
