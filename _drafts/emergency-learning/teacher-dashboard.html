@@ -270,9 +270,10 @@
   .class-hero__pick svg { width: 15px; height: 15px; }
   .class-hero__caret { width: 14px !important; height: 14px !important; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform 140ms ease; }
   .class-hero__pick[aria-expanded="true"] .class-hero__caret { transform: rotate(180deg); }
+  /* מיקום fixed — כדי לא להיחתך ע"י overflow:hidden של כרטיס ה-Hero. הקואורדינטות נקבעות ב-JS. */
   .topic-menu {
-    position: absolute; inset-block-start: calc(100% + 6px); inset-inline-start: 0; z-index: 40;
-    width: min(440px, 92vw); max-height: 340px; overflow: auto;
+    position: fixed; z-index: 120;
+    max-height: 44vh; overflow-y: auto;
     background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius-md);
     box-shadow: var(--shadow-lg); padding: var(--space-2);
   }
@@ -968,10 +969,26 @@
       btn.addEventListener('click', function () { chooseTopic(btn.getAttribute('data-title')); });
     });
   }
-  function openTopicMenu() {
+  /* ממקם את התפריט (fixed) מתחת לשורת-הנושא, מיושר לימין (RTL), עם קלמפ לגבולות המסך */
+  function positionTopicMenu() {
+    var menu = topicMenuEl(); if (!menu || menu.hidden) return;
+    var wrap = document.querySelector('.class-hero__topicwrap'); if (!wrap) return;
+    var r = wrap.getBoundingClientRect();
+    var vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    var width = Math.min(440, Math.max(300, r.width), vw - 16);
+    var left = r.right - width;                 // יישור לקצה הימני (RTL)
+    left = Math.max(8, Math.min(left, vw - width - 8));
+    var top = r.bottom + 6;
+    menu.style.width = width + 'px';
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    menu.style.maxHeight = Math.max(140, vh - top - 16) + 'px';
+  }
+  function openTopicMenu(showAll) {
     var menu = topicMenuEl(), tog = document.getElementById('clsTopicToggle'); if (!menu) return;
-    renderTopicMenu(document.getElementById('clsTopic').value);
+    renderTopicMenu(showAll ? '' : document.getElementById('clsTopic').value);
     menu.hidden = false;
+    positionTopicMenu();
     if (tog) tog.setAttribute('aria-expanded', 'true');
     var inp = document.getElementById('clsTopic'); if (inp) inp.setAttribute('aria-expanded', 'true');
   }
@@ -1011,19 +1028,23 @@
   if (topicEl) {
     topicEl.addEventListener('input', function () {
       var c = S.activeClass(); if (c) S.updateClass(c.key, { topic: topicEl.value });
-      if (UNITS.length) { if (topicMenuEl().hidden) openTopicMenu(); else renderTopicMenu(topicEl.value); }
+      // סינון רק אם התפריט כבר פתוח — לא קופץ מעצמו בזמן הקלדת נושא חופשי
+      if (!topicMenuEl().hidden) { renderTopicMenu(topicEl.value); positionTopicMenu(); }
     });
     topicEl.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeTopicMenu(); });
   }
   var topicToggle = document.getElementById('clsTopicToggle');
   if (topicToggle) topicToggle.addEventListener('click', function () {
-    if (topicMenuEl().hidden) openTopicMenu(); else closeTopicMenu();
+    if (topicMenuEl().hidden) openTopicMenu(true); else closeTopicMenu();
   });
   // סגירה בלחיצה מחוץ לתפריט
   document.addEventListener('click', function (e) {
-    var wrap = e.target.closest && e.target.closest('.class-hero__topicwrap');
-    if (!wrap) closeTopicMenu();
+    var inMenu = e.target.closest && (e.target.closest('.class-hero__topicwrap') || e.target.closest('.topic-menu'));
+    if (!inMenu) closeTopicMenu();
   });
+  // התפריט fixed — לעדכן מיקום בגלילה/שינוי-גודל (או לסגור אם ננעל)
+  window.addEventListener('resize', function () { var m = topicMenuEl(); if (m && !m.hidden) positionTopicMenu(); });
+  window.addEventListener('scroll', function () { var m = topicMenuEl(); if (m && !m.hidden) positionTopicMenu(); }, true);
 
   // תמונת הכיתה — נשמרת כ-dataURL ב-localStorage
   var photoInput = document.getElementById('clsPhotoInput');
