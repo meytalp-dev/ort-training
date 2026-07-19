@@ -63,6 +63,9 @@ header.hero h1{font-size:var(--text-h1);color:var(--ink-strong);line-height:1.2}
 .mode-chip .d{width:9px;height:9px;border-radius:50%;background:var(--mode)}
 header.hero .date{margin-inline-start:auto;font-size:13px;font-weight:700;color:var(--ink-faint)}
 header.hero .lead{color:var(--ink-soft);font-size:15.5px;margin-top:10px;max-width:620px}
+header.hero .src-note{display:flex;align-items:flex-start;gap:8px;margin-top:12px;max-width:640px;font-size:12.5px;color:var(--ink-soft);background:var(--brand-soft,#eef6f7);border:1px solid var(--brand-line,#cfe6e9);border-radius:var(--radius-md,10px);padding:9px 12px}
+header.hero .src-note svg{flex-shrink:0;color:var(--brand-deep,#0B8F98);margin-top:1px}
+header.hero .src-note b{color:var(--ink-strong)}
 header.hero .lead b{color:var(--ink)}
 
 /* ---------- קו הרצף הארצי — מגמת "נראו היום" (בריף §3, §8) ---------- */
@@ -371,6 +374,7 @@ section{margin:26px 0}
       <span class="date">היום · ה׳, 9 ביולי</span>
     </div>
     <p class="lead" id="lead"></p>
+    <p class="src-note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg><span><b>אמת:</b> בתי הספר — שם · מחוז · מגזר · מגמות — מתוך <b>admin-data.js</b> (אותו מקור של טאב "בתי-ספר" באדמין). <b>הדגמה:</b> מדדי הרציפות (%). מצרפי בלבד.</span></p>
 
     <!-- קו הרצף הארצי — מגמת "נראו היום" ב-6 שבועות -->
     <div class="natline">
@@ -419,8 +423,8 @@ section{margin:26px 0}
         <select id="fDist"><option value="">כל המחוזות</option></select>
       </div>
       <div class="fld">
-        <label for="fNet">רשת</label>
-        <select id="fNet"><option value="">כל הרשתות</option></select>
+        <label for="fNet">מגזר</label>
+        <select id="fNet"><option value="">כל המגזרים</option><option value="he">עברי</option><option value="ar">ערבי</option></select>
       </div>
       <div class="fld" id="sortFld">
         <label for="fSort">מיון</label>
@@ -496,7 +500,7 @@ section{margin:26px 0}
       </div>
       <div class="mgrid" id="shMetrics"></div>
       <div class="quiet-box">
-        <h4>מקצועות בבית הספר</h4>
+        <h4>מגמות בבית הספר</h4>
         <div class="quiet-chips" id="shSubjects"></div>
       </div>
 
@@ -528,39 +532,45 @@ section{margin:26px 0}
   </div><!-- /.app-shell__col -->
 </div><!-- /.app-shell -->
 
+<!-- מקור האמת: אותו קובץ נתונים של content-admin (טאב "בתי-ספר") -->
+<script src="admin-data.js"></script>
 <script>
 (function(){
   var root = document.documentElement;
 
-  /* ---------- נתונים: 25 בתי ספר פיקטיביים, מגוונים כולל פריפריה ---------- */
-  /* idx = מדד רציפות % · tr = מגמה שבועית (נק') · seen = % נראו היום · st = תלמידים · cl = כיתות פעילות */
-  var SCHOOLS = [
-    {nm:"אורט קריית שמונה", city:"קריית שמונה", net:"אורט",       dist:"צפון",   idx:41, tr:-6, seen:38, st:410, cl:11, quiet:["מתמטיקה","אנגלית","היסטוריה","פיזיקה"], why:"ירד <b>3 שבועות ברצף</b> · אזור פינוי, חלק מהצוות מפונה"},
-    {nm:"מקיף שדרות",        city:"שדרות",        net:"עמל",        dist:"דרום",   idx:38, tr:-5, seen:35, st:520, cl:14, quiet:["לשון","היסטוריה","ספרות","ביולוגיה"], why:"<b>המדד הנמוך במחוז דרום</b> · צוות שחוק אחרי שבוע כבד"},
-    {nm:"תיכון ירוחם",       city:"ירוחם",        net:"דרכא",       dist:"דרום",   idx:52, tr:-9, seen:47, st:300, cl:9,  quiet:["אנגלית","אזרחות","ספרות"], why:"<b>צנח 9 נק' השבוע</b> · מורים מדווחים עומס, מעט משימות נשלחו"},
-    {nm:"אורט נהריה",        city:"נהריה",        net:"אורט",       dist:"צפון",   idx:68, tr:-4, seen:61, st:640, cl:18, quiet:["היסטוריה","גיאוגרפיה"], why:"מגמה יורדת קלה · שווה מבט לפני שממשיך"},
-    {nm:"עמל אופקים",        city:"אופקים",       net:"עמל",        dist:"דרום",   idx:63, tr:0,  seen:58, st:360, cl:10, quiet:["ספרות","ביולוגיה","גיאוגרפיה"], why:"יציב-נמוך · מדף התוכן דליל במקצועות מסוימים"},
-    {nm:"מקיף רהט",          city:"רהט",          net:"מקומי",      dist:"דרום",   idx:59, tr:-3, seen:54, st:700, cl:20, quiet:["אנגלית","ביולוגיה","פיזיקה"], why:"ירידה מתונה · כיתות רבות, קשר לא אחיד"},
-    {nm:"תיכון בית שאן",     city:"בית שאן",      net:"דרכא",       dist:"צפון",   idx:66, tr:5,  seen:63, st:390, cl:11, quiet:["גיאוגרפיה"], why:"<b>בעלייה</b> · תמיכה קודמת עובדת, כדאי לעודד"},
-    {nm:"אורט מגדל העמק",    city:"מגדל העמק",    net:"אורט",       dist:"צפון",   idx:71, tr:0,  seen:66, st:480, cl:13, quiet:["פיזיקה"], why:"יציב · אפשר להעמיק במקצועות עיוניים"},
-    {nm:"מקיף אום אל-פחם",   city:"אום אל-פחם",   net:"מקומי",      dist:"חיפה",   idx:64, tr:-2, seen:59, st:820, cl:23, quiet:["אנגלית","ספרות"], why:"בית ספר גדול · ירידה קלה, שווה מעקב"},
-    {nm:"אולפנת כרמיאל",     city:"כרמיאל",       net:"אמית",       dist:"צפון",   idx:78, tr:3,  seen:72, st:340, cl:10, quiet:[], why:"מחזיק יפה"},
-    {nm:"אורט נוף הגליל",    city:"נוף הגליל",    net:"אורט",       dist:"צפון",   idx:82, tr:0,  seen:76, st:560, cl:16, quiet:[], why:"יציב וחזק"},
-    {nm:"עמל דימונה",        city:"דימונה",       net:"עמל",        dist:"דרום",   idx:74, tr:4,  seen:69, st:420, cl:12, quiet:["פיזיקה"], why:"<b>בעלייה יפה</b>"},
-    {nm:"תיכון ערד",         city:"ערד",          net:"דרכא",       dist:"דרום",   idx:80, tr:0,  seen:74, st:330, cl:9,  quiet:[], why:"יציב"},
-    {nm:"מקיף נתיבות",       city:"נתיבות",       net:"מקומי",      dist:"דרום",   idx:69, tr:-3, seen:62, st:600, cl:17, quiet:["היסטוריה","ביולוגיה"], why:"ירידה מתונה · שווה מבט"},
-    {nm:"אורט אשקלון",       city:"אשקלון",       net:"אורט",       dist:"דרום",   idx:85, tr:5,  seen:79, st:720, cl:20, quiet:[], why:"מצוין · דוגמה טובה"},
-    {nm:"תיכון טבריה",       city:"טבריה",        net:"עמל",        dist:"צפון",   idx:72, tr:0,  seen:66, st:450, cl:13, quiet:["גיאוגרפיה"], why:"יציב · אפשר לחזק"},
-    {nm:"אורט מעלות",        city:"מעלות-תרשיחא", net:"אורט",       dist:"צפון",   idx:79, tr:2,  seen:73, st:380, cl:11, quiet:[], why:"מחזיק יפה"},
-    {nm:"ברנקו וייס יקנעם",  city:"יקנעם עילית",  net:"ברנקו וייס", dist:"צפון",   idx:83, tr:0,  seen:77, st:290, cl:8,  quiet:[], why:"יציב וחזק"},
-    {nm:"תיכון קצרין",       city:"קצרין",        net:"דרכא",       dist:"צפון",   idx:76, tr:3,  seen:70, st:260, cl:7,  quiet:["פיזיקה"], why:"בעלייה"},
-    {nm:"מקיף כפר קאסם",     city:"כפר קאסם",     net:"מקומי",      dist:"מרכז",   idx:67, tr:-3, seen:60, st:540, cl:15, quiet:["אנגלית","ספרות"], why:"ירידה מתונה · שווה מבט"},
-    {nm:"אורט בית שמש",      city:"בית שמש",      net:"אורט",       dist:"ירושלים",idx:81, tr:0,  seen:75, st:500, cl:14, quiet:[], why:"יציב"},
-    {nm:"עמל אילת",          city:"אילת",         net:"עמל",        dist:"דרום",   idx:70, tr:0,  seen:64, st:410, cl:12, quiet:["ביולוגיה"], why:"יציב · מרוחק גאוגרפית"},
-    {nm:"תיכון מצפה רמון",   city:"מצפה רמון",    net:"דרכא",       dist:"דרום",   idx:62, tr:-3, seen:56, st:180, cl:6,  quiet:["אנגלית","היסטוריה"], why:"בית ספר קטן · ירידה מתונה"},
-    {nm:"אורט עראבה",        city:"עראבה",        net:"אורט",       dist:"צפון",   idx:84, tr:4,  seen:78, st:470, cl:13, quiet:[], why:"מצוין"},
-    {nm:"מקיף תל אביב-יפו",  city:"תל אביב-יפו",  net:"עמל",        dist:"תל אביב", idx:88, tr:0,  seen:81, st:680, cl:19, quiet:[], why:"חזק ויציב"}
-  ];
+  /* ---------- נתוני בתי הספר — מ-admin-data.js (63 בתי"ס אמיתיים) ----------
+     אמת: שם · מחוז · מגזר · מגמות (אותו מקור של טאב "בתי-ספר" באדמין).
+     הדגמה (דטרמיניסטית, יציבה לפי שם): idx=מדד רציפות % · tr=מגמה שבועית · seen=% נראו היום · st=תלמידים · cl=כיתות. */
+  var A = window.ADMIN || {schools:[]};
+
+  /* מגמה מעשית (סדנה, לא מהבית) מול דיגיטלית — היוריסטיקה לפי מילות-מפתח, מדד-עזר */
+  var WORK_KEYS = ["אוטוטרוני","אופטיק","אנרגיה","בדק כלי טיס","בישול","קולינר","חשמל","טכנאות שיניים","ימיות","מבנא",
+    "מכטרוני","מסגר","ריתוך","נגר","טכנולוגיות עץ","cnc","שבבי","טקסטיל","שיער","איפור","קונדיטא","אפייה","קוסמטיק","קוסמט",
+    "קירור","מיזוג","תפיר","אופנה","ספורט","מחנכות","סיעוד","קולינריה","תיכון וייצור","ייצור","יוצרות","אקו",
+    "טבח","מלאכ","רהיט"];
+  function isWork(t){ var s=(t||'').toLowerCase(); for(var i=0;i<WORK_KEYS.length;i++){ if(s.indexOf(WORK_KEYS[i])>-1) return true; } return false; }
+
+  /* מדדי הדגמה דטרמיניסטיים — יציבים לפי שם, ללא Math.random */
+  function hash(str){ var h=0; str=String(str); for(var i=0;i<str.length;i++){ h=(Math.imul(h,31)+str.charCodeAt(i))>>>0; } return h; }
+  function demo(name){
+    var h=hash(name);
+    var idx  = 52 + (h % 40);                       // 52..91
+    var tr   = ((h>>>5) % 12) - 6;                  // -6..+5
+    var seen = Math.max(30, idx - 5 - ((h>>>9)%6));
+    var cl   = 5 + ((h>>>3) % 16);                  // 5..20
+    var st   = cl*22 + ((h>>>7) % 40);
+    return {idx:idx, tr:tr, seen:seen, cl:cl, st:st};
+  }
+
+  var SCHOOLS = (A.schools||[]).map(function(r){
+    var d=demo(r.name||r.id||'');
+    return {
+      nm:r.name, dist:r.district||'—', sector:r.sector||'', secHe:r.sectorDetail||'',
+      tracks:r.tracks||[], idx:d.idx, tr:d.tr, seen:d.seen, st:d.st, cl:d.cl
+    };
+  });
+  var N = SCHOOLS.length;
+  function secName(s){ return s.sector==='ar' ? 'ערבי' : s.sector==='he' ? 'עברי' : (s.secHe||''); }
 
   /* ---------- מקצועות ארצי (base = שגרה) ---------- */
   var SUBJECTS = [
@@ -570,20 +580,23 @@ section{margin:26px 0}
     {nm:"פיזיקה", a:19},{nm:"מקצועות טכנולוגיים", a:16}
   ];
 
-  /* ---------- מיקום סכמטי על המפה (viewBox 260×440, צפון למעלה) ---------- */
-  /* מקורב לפי עיר — לצורך תמונה מצרפית, לא מדידה גאוגרפית מדויקת */
-  var MAPXY = {
-    "אורט קריית שמונה":[150,42],"תיכון קצרין":[178,55],"אורט מעלות":[120,60],
-    "אורט נהריה":[95,66],"אורט עראבה":[135,76],"אולפנת כרמיאל":[148,80],
-    "אורט נוף הגליל":[140,100],"תיכון טבריה":[166,100],"אורט מגדל העמק":[120,108],
-    "ברנקו וייס יקנעם":[106,110],"תיכון בית שאן":[165,132],"מקיף אום אל-פחם":[108,138],
-    "מקיף כפר קאסם":[95,186],"מקיף תל אביב-יפו":[62,176],"אורט בית שמש":[106,236],
-    "אורט אשקלון":[60,236],"מקיף שדרות":[72,258],"מקיף נתיבות":[78,276],
-    "עמל אופקים":[92,278],"מקיף רהט":[112,268],"עמל דימונה":[136,300],
-    "תיכון ירוחם":[120,316],"תיכון ערד":[152,290],"תיכון מצפה רמון":[118,352],
-    "עמל אילת":[116,406]
+  /* ---------- מיקום סכמטי על המפה (viewBox 260×440, צפון למעלה) ----------
+     אין קואורדינטות עיר אמיתיות ב-admin-data → מיקום סכמטי לפי אֵזור-המחוז בלבד,
+     עם פיזור דטרמיניסטי (לפי שם) בתוך האזור. לא מדידה גאוגרפית, לא דירוג. */
+  var ZONES = {
+    'צפון':   {x:[80,200], y:[38,168]},
+    'מרכז':   {x:[50,122], y:[176,238]},
+    'ירושלים':{x:[104,154],y:[222,274]},
+    'דרום':   {x:[56,168], y:[280,420]}
   };
-  var DIST_ORDER = ["צפון","חיפה","מרכז","תל אביב","ירושלים"]; // דרום מתווסף בסוף אם קיים
+  function mapPos(s){
+    var z=ZONES[s.dist]; if(!z) return null;
+    var h=hash(s.nm+'|xy');
+    var x=z.x[0] + ((h%1000)/1000)*(z.x[1]-z.x[0]);
+    var y=z.y[0] + (((h>>>10)%1000)/1000)*(z.y[1]-z.y[0]);
+    return [x,y];
+  }
+  var DIST_ORDER = ["צפון","מרכז","ירושלים","דרום"];
 
   var MODE_HE = {routine:'שגרה', remote:'מרחוק', emergency:'חירום'};
 
@@ -592,7 +605,7 @@ section{margin:26px 0}
     routine: {
       lead:'איפה המערכת מחזיקה קשר ולמידה, ואיפה נחלשת — <b>כדי לשלוח עזרה, לא ציון</b>. אתם מזהים בדקה מי צריך אתכם השבוע.',
       seen:73, seenCap:'תלמידים שנראו היום · ארצית', seenSub:'check-in או משימה שהושלמה',
-      schoolsCap:'בתי ספר פעילים', schoolsVal:'25', schoolsSub:'שולחים משימות ומחזיקים קשר',
+      schoolsCap:'בתי ספר בפיקוח', schoolsVal:String(N), schoolsSub:'שולחים משימות ומחזיקים קשר',
       subjNote:'המקצועות ה<b>שותקים</b> הם משימה למפקח המקצועי — לבדוק אם חסר תוכן במדף, חסרה הכשרה, או שהמורים עמוסים. שתיקה = הזדמנות לעזור, לא כשל.',
       subjFactor:1,
       trend:[64,67,69,71,72,73], trendTxt:'המגמה הארצית <b>עולה בהדרגה</b> — הרציפות מתייצבת שבוע-שבוע.'
@@ -600,7 +613,7 @@ section{margin:26px 0}
     remote: {
       lead:'יום למידה מרחוק מתוכנן. בודקים <b>מי מחזיק את הקשר גם מהבית</b> ואילו בתי ספר צריכים ליווי לפני היום הבא.',
       seen:69, seenCap:'תלמידים שנראו היום · מרחוק', seenSub:'נכנסו ליום המקוון',
-      schoolsCap:'בתי ספר ביום מרחוק', schoolsVal:'25', schoolsSub:'הפעילו יום למידה מתוכנן',
+      schoolsCap:'בתי ספר ביום מרחוק', schoolsVal:String(N), schoolsSub:'הפעילו יום למידה מתוכנן',
       subjNote:'ביום מרחוק חלק מהמקצועות שקטים כי קשה מהבית. ה<b>שותקים</b> — לוודא שיש להם גרסה שעובדת ברשת חלשה, לא סתם נעלמו.',
       subjFactor:0.85,
       trend:[73,72,71,70,69,69], trendTxt:'ירידה קלה ורגועה — <b>טבעי בימי מרחוק</b>. שווה לוודא רשת חלשה נתמכת.'
@@ -608,7 +621,7 @@ section{margin:26px 0}
     emergency: {
       lead:'הפעלה ארצית. <b>הקשר קודם לכול</b> — כמה תלמידים ראינו היום, ואילו בתי ספר צריכים גיבוי מיידי. הלמידה זמינה כרשות, לא חובה.',
       seen:61, seenCap:'תלמידים שנראו היום · ארצית', seenSub:'check-in רגשי — העוגן של החירום',
-      schoolsCap:'בתי ספר במצב חירום', schoolsVal:'25', schoolsSub:'22 מתוך 25 דיווחו היום',
+      schoolsCap:'בתי ספר במצב חירום', schoolsVal:String(N), schoolsSub:'רוב בתי הספר דיווחו היום',
       subjNote:'בחירום טבעי שמקצועות עיוניים <b>שותקים</b> — זו לא בעיה, זו הליבה עובדת. ודאו שהמקצועות הפעילים קצרים, מרגיעים ולא דורשים רשת חזקה.',
       subjFactor:0.62,
       trend:[71,68,52,55,58,61], trendTxt:'ירידה חדה עם ההפעלה ואז <b>התאוששות הקשר</b> — הכיוון נכון, ממשיכים לתמוך.'
@@ -640,8 +653,8 @@ section{margin:26px 0}
     values.sort(function(a,b){return a.localeCompare(b,'he');});
     values.forEach(function(v){ var op=document.createElement('option'); op.value=v; op.textContent=v; sel.appendChild(op); });
   }
-  fillSelect('fDist', uniq('dist'));
-  fillSelect('fNet', uniq('net'));
+  fillSelect('fDist', uniq('dist').filter(function(d){return d && d!=='—';}));
+  /* מגזר: אפשרויות קבועות (he/ar) מוגדרות ב-HTML */
 
   /* ---------- רינדור ---------- */
   var elStats=document.getElementById('stats'),
@@ -692,6 +705,12 @@ section{margin:26px 0}
       '<div class="cap">'+cap+'</div><div class="big">'+big+'</div><div class="sub">'+sub+'</div></div>';
   }
 
+  /* נימוק תמיכה — נגזר מהמדדים (הדגמה), לא טענה על בי"ס אמיתי */
+  function whyText(s){
+    var a = s.idx<55 ? 'מדד רציפות נמוך יחסית' : 'מדד רציפות גבולי';
+    var b = s.tr<=-4 ? ' ו<b>מגמה יורדת חדות</b>' : s.tr<0 ? ' ומגמה יורדת קלה' : '';
+    return a+b+' — שווה יד מלווה, לא ביקורת.';
+  }
   function renderNeed(mode){
     var help=SCHOOLS.filter(function(s){return tier(s,mode)==='help';})
       .sort(function(a,b){ return (a.idx-b.idx) || (a.tr-b.tr); });
@@ -699,8 +718,8 @@ section{margin:26px 0}
     elNeed.innerHTML=top.map(function(s){
       return '<div class="ncard">'+
         '<div class="top"><span class="nm">'+s.nm+'</span><span class="pct">'+s.idx+'%</span></div>'+
-        '<div class="why">'+s.why+'</div>'+
-        '<div class="meta"><span class="tag net">'+s.net+'</span><span class="tag dist">מחוז '+s.dist+'</span></div>'+
+        '<div class="why">'+whyText(s)+'</div>'+
+        '<div class="meta"><span class="tag net">'+secName(s)+'</span><span class="tag dist">מחוז '+s.dist+'</span></div>'+
       '</div>';
     }).join('');
     if(help.length>3){
@@ -715,7 +734,7 @@ section{margin:26px 0}
         n=document.getElementById('fNet').value,
         so=document.getElementById('fSort').value;
     var rows=SCHOOLS.filter(function(s){
-      return (!d || s.dist===d) && (!n || s.net===n);
+      return (!d || s.dist===d) && (!n || s.sector===n);
     });
     var rank={help:0,watch:1,ok:2};
     rows.sort(function(a,b){
@@ -725,18 +744,18 @@ section{margin:26px 0}
       if(so==='high') return b.idx-a.idx;
       return a.nm.localeCompare(b.nm,'he');
     });
-    elCount.textContent=rows.length+' מתוך 25 בתי ספר';
+    elCount.textContent=rows.length+' מתוך '+N+' בתי ספר';
     elList.innerHTML=rows.map(function(s){
       var t=tier(s,mode);
       return '<button class="srow" data-nm="'+s.nm+'">'+
         '<span class="tierdot '+t+'" aria-hidden="true"></span>'+
         '<span class="main">'+
-          '<span class="l1"><span class="nm">'+s.nm+'</span><span class="city">'+s.city+'</span>'+
+          '<span class="l1"><span class="nm">'+s.nm+'</span><span class="city">'+(s.secHe||'')+'</span>'+
             '<span class="pct '+t+'">'+s.idx+'%</span></span>'+
           '<span class="l2">'+
             '<span class="bar" aria-hidden="true"><span class="'+t+'" style="width:'+s.idx+'%"></span></span>'+
             trendHTML(s.tr)+
-            '<span class="tag net">'+s.net+'</span>'+
+            '<span class="tag net">'+secName(s)+'</span>'+
             '<span class="tag dist">מחוז '+s.dist+'</span>'+
             '<span class="tierlbl '+t+'">'+TIER_LBL[t]+'</span>'+
           '</span>'+
@@ -762,7 +781,7 @@ section{margin:26px 0}
   function buildMarkers(){
     // בונה פעם אחת את כפתורי הסיכות; הצבע/הסטטוס מתעדכן בכל renderMap
     SCHOOLS.forEach(function(s){
-      var xy=MAPXY[s.nm]; if(!xy) return;
+      var xy=mapPos(s); if(!xy) return;
       var b=document.createElement('button');
       b.className='mk';
       // מיקום: RTL — נשתמש ב-right ‏(translate(50%,-50%)); left נמדד מימין
@@ -785,7 +804,7 @@ section{margin:26px 0}
     elMapTip.style.right=b.style.right;
     elMapTip.style.top=b.style.top;
     elMapTip.innerHTML='<span class="tn">'+s.nm+'</span><br>'+
-      '<span class="ts">'+s.city+' · מדד '+s.idx+'%</span> · '+
+      '<span class="ts">'+secName(s)+' · מדד '+s.idx+'%</span> · '+
       '<span class="tp '+t+'">'+TIER_LBL[t]+'</span>';
     elMapTip.classList.add('on');
   }
@@ -799,10 +818,10 @@ section{margin:26px 0}
       var s=SCHOOLS.filter(function(x){return x.nm===b.getAttribute('data-nm');})[0];
       var t=tier(s,mode);
       var distOk=(!flt.d || s.dist===flt.d);   // מחוז = גאוגרפי → מסתיר לא-תואם
-      var netOk =(!flt.n || s.net===flt.n);    // רשת = קטגורי → מעמעם בתוך המחוז
+      var netOk =(!flt.n || s.sector===flt.n);  // מגזר = קטגורי → מעמעם בתוך המחוז
       b.setAttribute('data-t',t);
       b.querySelector('.dot').className='dot '+t;
-      b.setAttribute('aria-label', s.nm+' · '+s.city+' · מדד רציפות '+s.idx+'% · '+TIER_LBL[t]+' · פתיחת כרטיס מצרפי');
+      b.setAttribute('aria-label', s.nm+' · '+secName(s)+' · מדד רציפות '+s.idx+'% · '+TIER_LBL[t]+' · פתיחת כרטיס מצרפי');
       b.classList.toggle('gone', !distOk);
       b.classList.toggle('dim', distOk && !netOk);
     });
@@ -811,7 +830,7 @@ section{margin:26px 0}
     var dists={};
     SCHOOLS.forEach(function(s){
       if(flt.d && s.dist!==flt.d) return;
-      if(flt.n && s.net!==flt.n) return;
+      if(flt.n && s.sector!==flt.n) return;
       var t=tier(s,mode);
       if(!dists[s.dist]) dists[s.dist]={ok:0,watch:0,help:0,total:0};
       dists[s.dist][t]++; dists[s.dist].total++;
@@ -888,7 +907,7 @@ section{margin:26px 0}
     lastFocus=document.activeElement;
     var m=currentMode(), t=tier(s,m);
     document.getElementById('shName').textContent=s.nm;
-    document.getElementById('shLoc').textContent=s.city+' · '+s.net+' · מחוז '+s.dist;
+    document.getElementById('shLoc').textContent='מגזר '+secName(s)+' · מחוז '+s.dist;
     var tl=document.getElementById('shTier');
     tl.textContent=TIER_LBL[t]; tl.className='tierlbl '+t;
 
@@ -898,13 +917,16 @@ section{margin:26px 0}
       mtile(false,'נראו היום', s.seen+'<small>%</small>')+
       mtile(false,'כיתות פעילות', s.cl+'<small> / '+s.st+' תלמידים</small>');
 
-    // מקצועות: הפעילים כירוק, השותקים בבית הספר בכתום — מצרפי בלבד
-    var allSubj=['לשון','מתמטיקה','אנגלית','אזרחות','היסטוריה','ספרות','ביולוגיה'];
-    var chips=allSubj.map(function(name){
-      var quiet=s.quiet.indexOf(name)!==-1;
-      return '<span class="qchip'+(quiet?'':' on')+'">'+name+(quiet?' · שותק':'')+'</span>';
-    }).join('');
-    if(s.quiet.length===0) chips='<span class="qchip on">כל מקצועות הליבה פעילים</span>'+chips;
+    // מגמות אמיתיות (admin-data): דיגיטלית=ירוק (עובדת מרחוק) · מעשית/סדנה=כתום (מושהית בחירום/מרחוק)
+    var chips;
+    if(!s.tracks.length){
+      chips='<span class="qchip on">מגמות טרם מופו לבית ספר זה</span>';
+    } else {
+      chips=s.tracks.map(function(tk){
+        var work=isWork(tk);
+        return '<span class="qchip'+(work?'':' on')+'">'+tk+(work?' · סדנה':'')+'</span>';
+      }).join('');
+    }
     document.getElementById('shSubjects').innerHTML=chips;
 
     resetCta();
