@@ -55,14 +55,13 @@
      שליחת משימה/תרגול) — אלו של המורה המקצועי. הדשבורד הראשי = דופק הכיתה. */
   var EDU_ITEMS = [
     { t: 'דופק הכיתה', h: 'educator-pulse.html', i: 'heart' },
-    { t: 'יומן קשר', h: 'contact-log-teacher.html', i: 'message' },
-    { t: 'הודעות', h: 'messages-center.html', i: 'send' },
-    { s: 'כיתה' },
     { t: 'הכיתה שלי', h: 'teacher-class-board.html', i: 'clipboard' },
-    { t: 'תלמידים', h: 'student-activity.html', i: 'users' },
-    { s: 'דוחות' },
-    { t: 'הדוח היומי', h: 'daily-report.html', i: 'filetext' }
+    { s: 'קשר' },
+    { t: 'יומן קשר', h: 'contact-log-teacher.html', i: 'message' },
+    { t: 'הודעות', h: 'messages-center.html', i: 'send' }
   ];
+  /* הושמטו בכוונה: "תלמידים" (student-activity = דשבורד ניהול בית-ספרי) ו"הדוח
+     היומי" (daily-report = דוח בית-ספרי בזהות מנהל) — לא ברמת המחנך/ת. */
 
   /* תפקיד הניווט: דף מסומן במפורש (<html data-role="educator"|"teacher">) קובע
      *ומעדכן* את הזיכרון; דף משותף בלי סימון יורש את התפקיד האחרון. כך המחנך/ת
