@@ -312,6 +312,43 @@
     .class-hero__photo { min-height: 150px; }
     .class-hero__body { padding: var(--space-5); }
   }
+
+  /* ---- שליחה מהירה (inline, בלי לעזוב את הדשבורד) ---- */
+  .quick-send {
+    position: relative; margin-top: var(--space-4);
+    background: var(--action-soft); border: 1px solid var(--action-line);
+    border-radius: var(--radius-md); padding: var(--space-4) var(--space-5);
+    display: flex; flex-direction: column; gap: var(--space-3);
+    animation: qs-in 160ms ease;
+  }
+  @keyframes qs-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .quick-send { animation: none; } }
+  .qs-arrow { position: absolute; inset-block-start: -7px; inset-inline-start: 30px; width: 13px; height: 13px;
+    background: var(--action-soft); border-inline-start: 1px solid var(--action-line); border-block-start: 1px solid var(--action-line);
+    transform: rotate(45deg); }
+  .qs-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+  .qs-lbl { flex: none; width: 54px; font-size: var(--text-label); font-weight: 700; color: var(--ink-soft); }
+  .qs-unit { flex: 1 1 auto; min-width: 0; font-family: var(--font-head); font-weight: 700; font-size: var(--text-small); color: var(--ink-strong);
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 7px 11px; }
+  .qs-unit.is-empty { color: var(--ink-faint); font-weight: 600; font-family: var(--font-body); }
+  .qs-change { flex: none; cursor: pointer; background: var(--card); color: var(--action-deep, #8A1852);
+    border: 1px solid var(--action-line); border-radius: var(--radius-pill); padding: 6px 12px;
+    font-family: var(--font-body); font-size: var(--text-label); font-weight: 700; }
+  .qs-change:hover { background: var(--action); color: var(--on-action); border-color: var(--action); }
+  .qs-recip { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+  .qs-radio { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-small); font-weight: 600; color: var(--ink); cursor: pointer; }
+  .qs-radio input { accent-color: var(--action); width: 16px; height: 16px; }
+  .qs-students { display: flex; flex-wrap: wrap; gap: 6px; background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: var(--space-3); max-height: 130px; overflow-y: auto; }
+  .qs-chip { font-size: var(--text-label); padding: 4px 10px; border-radius: var(--radius-pill); cursor: pointer;
+    user-select: none; background: var(--surface-muted); border: 1.5px solid transparent; color: var(--ink); }
+  .qs-chip.on { background: var(--action); color: var(--on-action); border-color: var(--action); }
+  .qs-actions { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; padding-top: 2px; }
+  .qs-more { font-size: var(--text-label); font-weight: 700; color: var(--action-deep, #8A1852); text-decoration: none; }
+  .qs-more:hover { text-decoration: underline; }
+  #qsSend:disabled { opacity: .5; cursor: not-allowed; }
+  /* מאפיין hidden חייב לגבור על display:flex המפורש */
+  .quick-send[hidden], .qs-students[hidden] { display: none !important; }
 </style>
 </head>
 <body class="rz">
@@ -558,9 +595,31 @@
               </div>
               <div class="class-hero__meta" id="clsMeta"></div>
               <div class="class-hero__cta">
-                <a class="btn btn--primary btn--sm" href="teacher-class-board.html"><svg viewBox="0 0 24 24"><use href="#ic-clipboard"/></svg>לוח הכיתה</a>
+                <button class="btn btn--primary btn--sm" type="button" id="quickSendBtn"><svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>שליחת משימה לכיתה</button>
+                <a class="btn btn--secondary btn--sm" href="teacher-class-board.html"><svg viewBox="0 0 24 24"><use href="#ic-clipboard"/></svg>לוח הכיתה</a>
                 <a class="btn btn--secondary btn--sm" href="lesson-create.html"><svg viewBox="0 0 24 24"><use href="#ic-plus"/></svg>בניית שיעור</a>
-                <a class="btn btn--secondary btn--sm" href="teacher-flow.html"><svg viewBox="0 0 24 24"><use href="#ic-send"/></svg>שליחת משימה</a>
+              </div>
+
+              <!-- שליחה מהירה: הכיתה כבר נבחרה בטאב, היחידה = נושא היום → קליק ושולחים -->
+              <div class="quick-send" id="quickSend" hidden>
+                <div class="qs-arrow" aria-hidden="true"></div>
+                <div class="qs-row">
+                  <span class="qs-lbl">המשימה</span>
+                  <div class="qs-unit" id="qsUnit"></div>
+                  <button class="qs-change" type="button" id="qsPickUnit">בחירה מהמקצוע</button>
+                </div>
+                <div class="qs-row">
+                  <span class="qs-lbl">אל</span>
+                  <div class="qs-recip">
+                    <label class="qs-radio"><input type="radio" name="qsRecip" value="all" checked><span id="qsAllLbl">כל הכיתה</span></label>
+                    <label class="qs-radio"><input type="radio" name="qsRecip" value="some"><span>בחירת תלמידים</span></label>
+                  </div>
+                </div>
+                <div class="qs-students" id="qsStudents" hidden></div>
+                <div class="qs-actions">
+                  <button class="btn btn--primary btn--sm" type="button" id="qsSend"><svg viewBox="0 0 24 24"><use href="#ic-send"/></svg><span id="qsSendTxt">שליחה</span></button>
+                  <a class="qs-more" href="teacher-flow.html">עוד אפשרויות — תזמון · ניסוח ב-AI</a>
+                </div>
               </div>
             </div>
           </section>
@@ -948,6 +1007,8 @@
     var toggle = document.getElementById('clsTopicToggle');
     if (toggle) toggle.hidden = UNITS.length === 0;
     closeTopicMenu();
+    // מעבר כיתה → סגירת שליחה-מהירה (מתאפסת לכיתה החדשה)
+    var qs = document.getElementById('quickSend'); if (qs) { qs.hidden = true; var qb = document.getElementById('quickSendBtn'); if (qb) qb.setAttribute('aria-expanded', 'false'); }
   }
 
   /* --- תפריט יחידות המקצוע לנושא-היום --- */
@@ -1002,6 +1063,74 @@
     var inp = document.getElementById('clsTopic'); if (inp) inp.value = title;
     var c = S.activeClass(); if (c) S.updateClass(c.key, { topic: title });
     closeTopicMenu();
+    if (!document.getElementById('quickSend').hidden) renderQuickSend();
+  }
+
+  /* ============================================================
+     שליחה מהירה — הכיתה נבחרה בטאב, היחידה = נושא-היום → קליק ושולחים.
+     ============================================================ */
+  var qsSelected = new Set();
+  function qsMode() { var r = document.querySelector('input[name=qsRecip]:checked'); return r ? r.value : 'all'; }
+  function qsRecipCount() { var c = S.activeClass(); return qsMode() === 'all' ? (c && c.students ? c.students.length : 0) : qsSelected.size; }
+  function updateSendState() {
+    var topic = (document.getElementById('clsTopic').value || '').trim();
+    var cnt = qsRecipCount();
+    var btn = document.getElementById('qsSend'), txt = document.getElementById('qsSendTxt');
+    if (btn) btn.disabled = !topic || cnt === 0;
+    if (txt) txt.textContent = (topic && cnt) ? ('שליחה ל־' + cnt + ' תלמידים') : 'שליחה';
+  }
+  function renderQuickSend() {
+    var c = S.activeClass(); if (!c) return;
+    var topic = (document.getElementById('clsTopic').value || '').trim();
+    var unitEl = document.getElementById('qsUnit');
+    if (unitEl) {
+      unitEl.textContent = topic || 'עדיין לא נבחר נושא — בחרו למעלה';
+      unitEl.classList.toggle('is-empty', !topic);
+    }
+    var pick = document.getElementById('qsPickUnit'); if (pick) pick.hidden = UNITS.length === 0;
+    var n = c.students ? c.students.length : 0;
+    var allLbl = document.getElementById('qsAllLbl'); if (allLbl) allLbl.textContent = 'כל הכיתה (' + n + ')';
+    var box = document.getElementById('qsStudents');
+    if (box) {
+      var some = qsMode() === 'some';
+      box.hidden = !some;
+      if (some) {
+        box.innerHTML = (c.students || []).map(function (s) {
+          return '<span class="qs-chip' + (qsSelected.has(s) ? ' on' : '') + '" data-s="' + s.replace(/"/g, '&quot;') + '">' + s + '</span>';
+        }).join('') || '<span class="qs-chip">אין תלמידים בכיתה</span>';
+        box.querySelectorAll('.qs-chip[data-s]').forEach(function (ch) {
+          ch.addEventListener('click', function () {
+            var nm = ch.getAttribute('data-s');
+            if (qsSelected.has(nm)) qsSelected.delete(nm); else qsSelected.add(nm);
+            ch.classList.toggle('on'); updateSendState();
+          });
+        });
+      }
+    }
+    updateSendState();
+  }
+  function toggleQuickSend(force) {
+    var p = document.getElementById('quickSend'); if (!p) return;
+    var show = (force !== undefined) ? force : p.hidden;
+    p.hidden = !show;
+    var btn = document.getElementById('quickSendBtn'); if (btn) btn.setAttribute('aria-expanded', show ? 'true' : 'false');
+    if (show) {
+      qsSelected = new Set();
+      var r = document.querySelector('input[name=qsRecip][value=all]'); if (r) r.checked = true;
+      renderQuickSend();
+    } else { closeTopicMenu(); }
+  }
+  function qsToast(msg) {
+    var t = document.getElementById('toast'), tt = document.getElementById('toast-text');
+    if (!t || !tt) return;
+    tt.textContent = msg; t.classList.add('is-on');
+    clearTimeout(qsToast._t); qsToast._t = setTimeout(function () { t.classList.remove('is-on'); }, 3000);
+  }
+  function sendTask() {
+    var c = S.activeClass(); var topic = (document.getElementById('clsTopic').value || '').trim(); var cnt = qsRecipCount();
+    if (!c || !topic || !cnt) return;
+    qsToast('נשלח ✓  "' + topic + '"  ל־' + cnt + ' תלמידים · ' + (c.cls || ''));
+    toggleQuickSend(false);
   }
 
   function renderHeader() {
@@ -1030,6 +1159,7 @@
       var c = S.activeClass(); if (c) S.updateClass(c.key, { topic: topicEl.value });
       // סינון רק אם התפריט כבר פתוח — לא קופץ מעצמו בזמן הקלדת נושא חופשי
       if (!topicMenuEl().hidden) { renderTopicMenu(topicEl.value); positionTopicMenu(); }
+      if (!document.getElementById('quickSend').hidden) renderQuickSend();
     });
     topicEl.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeTopicMenu(); });
   }
@@ -1037,6 +1167,15 @@
   if (topicToggle) topicToggle.addEventListener('click', function () {
     if (topicMenuEl().hidden) openTopicMenu(true); else closeTopicMenu();
   });
+
+  // --- שליחה מהירה ---
+  var qsBtn = document.getElementById('quickSendBtn');
+  if (qsBtn) qsBtn.addEventListener('click', function () { toggleQuickSend(); });
+  var qsPick = document.getElementById('qsPickUnit');
+  if (qsPick) qsPick.addEventListener('click', function () { if (topicMenuEl().hidden) openTopicMenu(true); else closeTopicMenu(); });
+  document.querySelectorAll('input[name=qsRecip]').forEach(function (r) { r.addEventListener('change', renderQuickSend); });
+  var qsSendBtn = document.getElementById('qsSend');
+  if (qsSendBtn) qsSendBtn.addEventListener('click', sendTask);
   // סגירה בלחיצה מחוץ לתפריט
   document.addEventListener('click', function (e) {
     var inMenu = e.target.closest && (e.target.closest('.class-hero__topicwrap') || e.target.closest('.topic-menu'));
