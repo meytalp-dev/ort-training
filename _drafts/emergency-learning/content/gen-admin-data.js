@@ -101,7 +101,8 @@ const schoolTrackMap = {};
   if(st.active!==false){ (schoolTrackMap[st.school_id]=schoolTrackMap[st.school_id]||[]).push(st.track_id); }
 });
 const schools = (TRACKS.schools||[]).map(s=>({
-  id:s.id, name:s.name, sector:s.sector, sectorDetail:s.sector_detail||'',
+  id:s.id, name:s.name, district:s.district||'', code:s.code||'',
+  sector:s.sector, sectorDetail:s.sector_detail||'',
   confidence:s.sector_confidence||'',
   tracks: (schoolTrackMap[s.id]||[]).map(id=> (trackById[id]||{}).name || id)
 })).sort((a,b)=>a.name.localeCompare(b.name,'he'));
@@ -117,7 +118,8 @@ const meta = {
   schools: schools.length,
   tracks: tracks.length,
   sectorHe: schools.filter(s=>s.sector==='he').length,
-  sectorAr: schools.filter(s=>s.sector==='ar').length
+  sectorAr: schools.filter(s=>s.sector==='ar').length,
+  districts: schools.reduce((m,s)=>{ if(s.district){m[s.district]=(m[s.district]||0)+1;} return m; },{})
 };
 
 const out =

@@ -1,10 +1,10 @@
-/* רֶצֶף — קטלוג המגמות + שיוך בתי ספר + מגזר (seed)
-   מגמות/שיוך: multi-school-model.md §9-§10 · נתוני מיטל 17.7
-   מגזר: multi-school-sectors.md · כל 48 מאושרים ע"י מיטל 18.7
-   sector = he/ar — הציר לתוכן ליבה עיונית */
+/* רֶצֶף — קטלוג המגמות + שיוך בתי ספר + מגזר + מחוז
+   63 בתי-ספר. מחוז(district)+סמל-מוסד(code)+שם-רשמי(official) מ-yotzer.education/ourschools (19.7.2026)
+   מגמות/שיוך: multi-school-model.md §9-§10 · מגזר 48 הראשונים אושרו ע"י מיטל 18.7
+   sector = he/ar — הציר לתוכן ליבה עיונית (חרדי/דתי = he) */
 window.RETZEF_TRACKS = {
-  "_source": "multi-school-model.md §9-§10 · נתוני מיטל 17.7.2026",
-  "_note": "sector: he/ar (ציר התוכן ליבה). כל 48 מסווגים ומאושרים ע\"י מיטל 18.7. high=לפי יישוב הומוגני · confirmed=אישור מיטל. ראו multi-school-sectors.md",
+  "_source": "yotzer.education/ourschools (רשמי) + multi-school-model.md §9-§10 (מגמות/מיטל 17.7)",
+  "_note": "sector: he/ar (ציר התוכן ליבה). 63 בתי-ספר. מחוז+סמל-מוסד מ-yotzer.education/ourschools (המקור הרשמי, 19.7). 48 הראשונים שיוכי-מגזר אושרו ע\"י מיטל 18.7; 15 האחרונים (sch_49+) מהמקור הרשמי — טרם שויכו מגמות.",
   "tracks": [
     {
       "id": "trk_auto",
@@ -298,8 +298,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_01",
       "name": "אום אל פחם בנות",
+      "official": "בדאיאת (אום אל פחם בנות)",
+      "code": "46101",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -307,8 +309,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_02",
       "name": "אור העתיד תורני גן יבנה",
+      "official": "אור העתיד - תורני מקצועי",
+      "code": "44008",
       "network": null,
-      "district": null,
+      "district": "ירושלים",
       "sector": "he",
       "sector_detail": "ממלכתי-דתי",
       "sector_confidence": "high"
@@ -316,8 +320,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_03",
       "name": "אורט בית הערבה",
+      "official": "אורט בית הערבה",
+      "code": "45005",
       "network": null,
-      "district": null,
+      "district": "ירושלים",
       "sector": "he",
       "sector_detail": "יהודי",
       "sector_confidence": "high"
@@ -325,8 +331,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_04",
       "name": "אורט כרמל",
+      "official": "אורט כרמל",
+      "code": "54107",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי",
       "sector_confidence": "high"
@@ -334,8 +342,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_05",
       "name": "אורט תל נוף",
+      "official": "אורט תל-נוף",
+      "code": "51511",
       "network": null,
-      "district": null,
+      "district": "מרכז",
       "sector": "he",
       "sector_detail": "יהודי",
       "sector_confidence": "high"
@@ -343,8 +353,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_06",
       "name": "אכסאל",
+      "official": "טכנולוגי אכסאל",
+      "code": "54106",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -352,8 +364,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_07",
       "name": "בית אל",
+      "official": "טכנולוגי בית-אל",
+      "code": "65079",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "ממלכתי-דתי",
       "sector_confidence": "high"
@@ -361,8 +375,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_08",
       "name": "בית חנינה בנות",
+      "official": "בי\"ס טכנו' לבנות ב. חנינה",
+      "code": "63401",
       "network": null,
-      "district": null,
+      "district": "ירושלים",
       "sector": "ar",
       "sector_detail": "ערבי (מזרח י-ם)",
       "sector_confidence": "high"
@@ -370,8 +386,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_09",
       "name": "בת עמי",
+      "official": "עתיד בת עמי",
+      "code": "52916",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -379,8 +397,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_10",
       "name": "דרור נווה מדבר",
+      "official": "דרור נווה מדבר",
+      "code": "82922",
       "network": null,
-      "district": null,
+      "district": "דרום",
       "sector": "ar",
       "sector_detail": "בדואי (נווה מדבר · אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -388,8 +408,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_11",
       "name": "הדר",
+      "official": "תיכון הדר",
+      "code": "52919",
       "network": null,
-      "district": null,
+      "district": "ירושלים",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -397,8 +419,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_12",
       "name": "התיכון החברתי חיפה",
+      "official": "התיכון החברתי- חיפה",
+      "code": "62301",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי",
       "sector_confidence": "high"
@@ -406,8 +430,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_13",
       "name": "זוקו",
+      "official": "תיכון עוצמ\"ה עתיד זוקו",
+      "code": "53808",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -415,8 +441,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_14",
       "name": "חושן",
+      "official": "חוש\"ן",
+      "code": "65007",
       "network": null,
-      "district": null,
+      "district": "ירושלים",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -424,8 +452,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_15",
       "name": "חנוך לנער צפת",
+      "official": "ישיבת חנוך לנער",
+      "code": "64102",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -433,8 +463,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_16",
       "name": "טורען",
+      "official": "תיכון מנאראת טורען",
+      "code": "84102",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -442,8 +474,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_17",
       "name": "טל חרמון",
+      "official": "טל חרמון",
+      "code": "52923",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי (צפון)",
       "sector_confidence": "confirmed"
@@ -451,8 +485,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_18",
       "name": "ירכא אבו סנאן",
+      "official": "תיכון ח'טאוות (אבו סנאן)",
+      "code": "55621",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "דרוזי/ערבי",
       "sector_confidence": "high"
@@ -460,8 +496,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_19",
       "name": "כסרא סמיע",
+      "official": "תיכון טכנולוגי אלחכמה (כסרע-סמיע)",
+      "code": "84003",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "דרוזי",
       "sector_confidence": "high"
@@ -469,8 +507,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_20",
       "name": "כפר זיתים",
+      "official": "ימנו כקדם כפר זיתים",
+      "code": "58801",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי",
       "sector_confidence": "high"
@@ -478,8 +518,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_21",
       "name": "כפר יאסיף",
+      "official": "תיכון אלמאנארה כפר יסיף",
+      "code": "82921",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -487,8 +529,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_22",
       "name": "מעיינות צפת",
+      "official": "עמל צפת- מעיינות/מרחביה",
+      "code": "53403",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -496,8 +540,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_23",
       "name": "נחלים",
+      "official": "נחלים",
+      "code": "52918",
       "network": null,
-      "district": null,
+      "district": "מרכז",
       "sector": "he",
       "sector_detail": "ממלכתי-דתי",
       "sector_confidence": "high"
@@ -505,8 +551,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_24",
       "name": "עמל אנרגיטק",
+      "official": "אנרג'י טק - עמל",
+      "code": "54102",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -514,8 +562,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_25",
       "name": "עמל אשדוד",
+      "official": "עמל אשדוד",
+      "code": "45013",
       "network": null,
-      "district": null,
+      "district": "ירושלים",
       "sector": "he",
       "sector_detail": "יהודי",
       "sector_confidence": "high"
@@ -523,8 +573,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_26",
       "name": "עמל טייבה",
+      "official": "עמל טייבה",
+      "code": "52921",
       "network": null,
-      "district": null,
+      "district": "מרכז",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -532,8 +584,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_27",
       "name": "עמל טק אין",
+      "official": "עמל TECHin",
+      "code": "52920",
       "network": null,
-      "district": null,
+      "district": "מרכז",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -541,8 +595,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_28",
       "name": "עמל נצרת",
+      "official": "עמל נצרת",
+      "code": "54008",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -550,8 +606,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_29",
       "name": "עמל רהט בנות",
+      "official": "עמל רהט",
+      "code": "44050",
       "network": null,
-      "district": null,
+      "district": "דרום",
       "sector": "ar",
       "sector_detail": "בדואי",
       "sector_confidence": "high"
@@ -559,8 +617,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_30",
       "name": "ערערה",
+      "official": "תיכון מסאראת ערערה",
+      "code": "45001",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -568,8 +628,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_31",
       "name": "עתיד באר שבע",
+      "official": "תיכון עתיד באר-שבע",
+      "code": "44011",
       "network": null,
-      "district": null,
+      "district": "דרום",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -577,8 +639,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_32",
       "name": "עתיד ביר אל מכסור",
+      "official": "עתיד טק ביר אל מכסור",
+      "code": "54105",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -586,8 +650,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_33",
       "name": "עתיד בית דוד",
+      "official": "עתיד בית דוד",
+      "code": "45007",
       "network": null,
-      "district": null,
+      "district": "דרום",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -595,8 +661,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_34",
       "name": "עתיד גוליס בנות – ירכא",
+      "official": "עתיד ג'וליס בנות",
+      "code": "62903",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "דרוזי",
       "sector_confidence": "high"
@@ -604,8 +672,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_35",
       "name": "עתיד ירכא בנים",
+      "official": "עתיד גליל מערבי ירכא בנים",
+      "code": "52909",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "דרוזי",
       "sector_confidence": "high"
@@ -613,8 +683,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_36",
       "name": "עתיד כפר חב\"ד אוהלי תמימים",
+      "official": "עתיד כפר חב\"ד",
+      "code": "54100",
       "network": null,
-      "district": null,
+      "district": "מרכז",
       "sector": "he",
       "sector_detail": "חרדי (חב\"ד)",
       "sector_confidence": "high"
@@ -622,8 +694,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_37",
       "name": "עתיד כרמיאל",
+      "official": "עתיד כרמיאל",
+      "code": "64100",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי",
       "sector_confidence": "high"
@@ -631,8 +705,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_38",
       "name": "עתיד מסעדה",
+      "official": "תיכון טכנולוגי אי טק סקול (מסעדה)",
+      "code": "54112",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "דרוזי",
       "sector_confidence": "high"
@@ -640,8 +716,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_39",
       "name": "עתיד צור ים",
+      "official": "עתיד צור ים",
+      "code": "45002",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -649,8 +727,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_40",
       "name": "עתיד קמ\"ג",
+      "official": "עתיד קמ\"ג",
+      "code": "53405",
       "network": null,
-      "district": null,
+      "district": "דרום",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -658,8 +738,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_41",
       "name": "פלמחים",
+      "official": "עתיד פלמחים",
+      "code": "54108",
       "network": null,
-      "district": null,
+      "district": "מרכז",
       "sector": "he",
       "sector_detail": "יהודי",
       "sector_confidence": "high"
@@ -667,8 +749,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_42",
       "name": "צור ברק",
+      "official": "תיכון אורט צור ברק",
+      "code": "82918",
       "network": null,
-      "district": null,
+      "district": "ירושלים",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -676,8 +760,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_43",
       "name": "שגב שלום",
+      "official": "סכנין -שגב שלום",
+      "code": "43403",
       "network": null,
-      "district": null,
+      "district": "דרום",
       "sector": "ar",
       "sector_detail": "בדואי",
       "sector_confidence": "high"
@@ -685,8 +771,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_44",
       "name": "תיכון בקהילה מהאראת שפרעם",
+      "official": "תיכון מהאראת (שפרעם)",
+      "code": "54109",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "ar",
       "sector_detail": "ערבי",
       "sector_confidence": "high"
@@ -694,8 +782,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_45",
       "name": "תיכון החממה",
+      "official": "תיכון החממה",
+      "code": "52922",
       "network": null,
-      "district": null,
+      "district": "מרכז",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -703,8 +793,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_46",
       "name": "תיכון שיח",
+      "official": "תיכון שיח",
+      "code": "54040",
       "network": null,
-      "district": null,
+      "district": "צפון",
       "sector": "he",
       "sector_detail": "יהודי (אישור מיטל)",
       "sector_confidence": "confirmed"
@@ -712,8 +804,10 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_47",
       "name": "תל שבע",
+      "official": "סכנין תל שבע",
+      "code": "54009",
       "network": null,
-      "district": null,
+      "district": "דרום",
       "sector": "ar",
       "sector_detail": "בדואי",
       "sector_confidence": "high"
@@ -721,11 +815,178 @@ window.RETZEF_TRACKS = {
     {
       "id": "sch_48",
       "name": "בית חנינה בנים",
+      "official": "טכנולוגי לבנים בית חנינה",
+      "code": "54113",
       "network": null,
-      "district": null,
+      "district": "ירושלים",
       "sector": "ar",
       "sector_detail": "ערבי (מזרח י-ם)",
       "sector_confidence": "high"
+    },
+    {
+      "id": "sch_49",
+      "name": "אורט אורמת",
+      "official": null,
+      "code": "61902",
+      "network": null,
+      "district": "מרכז",
+      "sector": "he",
+      "sector_detail": "יהודי · צמוד מפעל",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_50",
+      "name": "אורט דן גורמה - יד שפירא",
+      "official": null,
+      "code": "42924",
+      "network": null,
+      "district": "מרכז",
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_51",
+      "name": "אורט מצל\"ח צריפין",
+      "official": null,
+      "code": "55003",
+      "network": null,
+      "district": "מרכז",
+      "sector": "he",
+      "sector_detail": "יהודי · צמוד בסיס",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_52",
+      "name": "אורט תעשיה אוירית",
+      "official": null,
+      "code": "83425",
+      "network": null,
+      "district": "מרכז",
+      "sector": "he",
+      "sector_detail": "יהודי · צמוד מפעל",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_53",
+      "name": "אלאופוק (אום אל פחם בנים)",
+      "official": null,
+      "code": "54017",
+      "network": null,
+      "district": "צפון",
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_54",
+      "name": "בית ספר לנוער ג'לג'וליה",
+      "official": null,
+      "code": "64001",
+      "network": null,
+      "district": "מרכז",
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_55",
+      "name": "דרור הגליל",
+      "official": null,
+      "code": "55400",
+      "network": null,
+      "district": "צפון",
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_56",
+      "name": "הקמפוס התורני עתיד",
+      "official": null,
+      "code": "54008",
+      "network": null,
+      "district": "דרום",
+      "sector": "he",
+      "sector_detail": "חרדי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_57",
+      "name": "התיכון החברתי מצפה רמון",
+      "official": null,
+      "code": "54101",
+      "network": null,
+      "district": "דרום",
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_58",
+      "name": "סכנין - לקייה",
+      "official": null,
+      "code": "84101",
+      "network": null,
+      "district": "דרום",
+      "sector": "ar",
+      "sector_detail": "בדואי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_59",
+      "name": "עמל רמת דוד",
+      "official": null,
+      "code": "55501",
+      "network": null,
+      "district": "צפון",
+      "sector": "he",
+      "sector_detail": "יהודי · צמוד בסיס",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_60",
+      "name": "רימונים",
+      "official": null,
+      "code": "54021",
+      "network": null,
+      "district": "צפון",
+      "sector": "he",
+      "sector_detail": "יהודי · צמוד מפעל",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_61",
+      "name": "תיכון אל - אמאני סכנין",
+      "official": null,
+      "code": "44101",
+      "network": null,
+      "district": "צפון",
+      "sector": "ar",
+      "sector_detail": "ערבי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_62",
+      "name": "תיכון חברתי ת\"א",
+      "official": null,
+      "code": "52901",
+      "network": null,
+      "district": "מרכז",
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "source:yotzer"
+    },
+    {
+      "id": "sch_63",
+      "name": "תיכון עתיד תפן ליזמות",
+      "official": null,
+      "code": "42919",
+      "network": null,
+      "district": "צפון",
+      "sector": "he",
+      "sector_detail": "יהודי",
+      "sector_confidence": "source:yotzer"
     }
   ],
   "schoolTracks": [

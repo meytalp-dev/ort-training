@@ -46,6 +46,7 @@
   .chip.ok{color:#2E7D46;background:#E8F6EC}.chip.warn{color:#8a5a00;background:#FBF3DE}
   .chip.wait{color:#5A6B72;background:#EDF1F2}.chip.rev{color:#0B7A84;background:#E1F4F5}
   .chip.sector-he{color:#1F5FB0;background:#E8F0FC}.chip.sector-ar{color:#8A4B12;background:#FBF0E5}
+  .chip.dist{color:#0B6E5F;background:#E4F3EF}
   /* ---- מבט-מקצוע ---- */
   .back{font-family:inherit;font-size:13px;font-weight:700;color:var(--brand,#0B8F98);background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:6px 0;margin-bottom:6px}
   .modhead{display:flex;align-items:center;gap:11px;margin:16px 0 12px}
@@ -234,27 +235,37 @@
   }
 
   /* ============ טאב 3 — בתי-ספר ============ */
-  var schoolFilter={sector:'all', q:''};
+  var schoolFilter={sector:'all', district:'all', q:''};
+  var DIST_ORDER=['צפון','חיפה','מרכז','ירושלים','דרום'];
   function viewSchools(){
-    var m=A.meta;
+    var m=A.meta, dc=m.districts||{};
+    var distKpis=DIST_ORDER.filter(function(d){return dc[d];}).map(function(d){return kpi(dc[d],'מחוז '+d);}).join('');
+    var distBtns=DIST_ORDER.filter(function(d){return dc[d];}).map(function(d){
+      return '<button class="fbtn" data-dist="'+d+'" aria-pressed="false">'+d+' ('+dc[d]+')</button>';
+    }).join('');
     var wrap=el('<div>'+
-      '<div class="bar">'+kpi(m.schools,'בתי-ספר')+kpi(m.sectorHe,'מגזר עברי')+kpi(m.sectorAr,'מגזר ערבי')+kpi(m.tracks,'מגמות בקטלוג')+'</div>'+
+      '<div class="bar">'+kpi(m.schools,'בתי-ספר')+kpi(m.sectorHe,'מגזר עברי')+kpi(m.sectorAr,'מגזר ערבי')+distKpis+'</div>'+
       '<div class="toolbar">'+
-        '<input id="sq" type="search" placeholder="חיפוש בית-ספר או מגמה…" style="min-width:220px">'+
+        '<input id="sq" type="search" placeholder="חיפוש בית-ספר / מחוז / מגמה…" style="min-width:220px">'+
         '<button class="fbtn" data-sec="all" aria-pressed="true">הכל</button>'+
         '<button class="fbtn" data-sec="he" aria-pressed="false">עברי</button>'+
         '<button class="fbtn" data-sec="ar" aria-pressed="false">ערבי</button>'+
+      '</div>'+
+      '<div class="toolbar"><span class="sub" style="align-self:center;margin-inline-end:4px">מחוז:</span>'+
+        '<button class="fbtn" data-dist="all" aria-pressed="true">כל המחוזות</button>'+distBtns+
       '</div><div id="stbl"></div></div>');
     function draw(){
       var q=schoolFilter.q.trim();
       var rows=A.schools.filter(function(s){
         if(schoolFilter.sector!=='all'&&s.sector!==schoolFilter.sector)return false;
-        if(q){var hay=s.name+' '+s.tracks.join(' ');if(hay.indexOf(q)<0)return false;}
+        if(schoolFilter.district!=='all'&&s.district!==schoolFilter.district)return false;
+        if(q){var hay=s.name+' '+(s.district||'')+' '+s.tracks.join(' ');if(hay.indexOf(q)<0)return false;}
         return true;
       });
-      var html='<div class="scroll"><table><thead><tr><th>בית-ספר</th><th>מגזר</th><th>מגמות</th></tr></thead><tbody>'+
+      var html='<div class="scroll"><table><thead><tr><th>בית-ספר</th><th>מחוז</th><th>מגזר</th><th>מגמות</th></tr></thead><tbody>'+
         rows.map(function(s){
-          return '<tr><td><b>'+esc(s.name)+'</b></td>'+
+          return '<tr><td><b>'+esc(s.name)+'</b>'+(s.code?'<br><span class="sub" style="font-size:11px">סמל '+esc(s.code)+'</span>':'')+'</td>'+
+            '<td>'+(s.district?'<span class="chip dist">'+esc(s.district)+'</span>':'<span style="color:#8A9AA0">—</span>')+'</td>'+
             '<td><span class="chip sector-'+s.sector+'">'+(s.sector==='he'?'עברי':'ערבי')+(s.sectorDetail?' · '+esc(s.sectorDetail):'')+'</span></td>'+
             '<td>'+(s.tracks.length?s.tracks.map(esc).join(' · '):'<span style="color:#8A9AA0">—</span>')+'</td></tr>';
         }).join('')+'</tbody></table></div><p class="sub" style="margin-top:8px">'+rows.length+' בתי-ספר</p>';
@@ -264,6 +275,11 @@
     wrap.querySelectorAll('[data-sec]').forEach(function(b){b.addEventListener('click',function(){
       schoolFilter.sector=b.dataset.sec;
       wrap.querySelectorAll('[data-sec]').forEach(function(x){x.setAttribute('aria-pressed',x===b);});
+      draw();
+    });});
+    wrap.querySelectorAll('[data-dist]').forEach(function(b){b.addEventListener('click',function(){
+      schoolFilter.district=b.dataset.dist;
+      wrap.querySelectorAll('[data-dist]').forEach(function(x){x.setAttribute('aria-pressed',x===b);});
       draw();
     });});
     draw();
