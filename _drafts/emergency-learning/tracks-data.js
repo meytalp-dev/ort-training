@@ -335,9 +335,9 @@ window.RETZEF_TRACKS = {
       "code": "54107",
       "network": null,
       "district": "צפון",
-      "sector": "he",
-      "sector_detail": "יהודי",
-      "sector_confidence": "high"
+      "sector": "ar",
+      "sector_detail": "ערבי (אישור מיטל)",
+      "sector_confidence": "confirmed"
     },
     {
       "id": "sch_05",
