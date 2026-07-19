@@ -96,6 +96,25 @@
     if (hits.length === 1) return hits[0];
     return -1;
   }
+  /* זיהוי שאלת נכון/לא-נכון שנכתבה כפרוזה + משוב ✅.
+     מומרת ל-2 אפשרויות (נכון/לא-נכון) → משתמשת בכל תשתית-ה-MCQ הקיימת.
+     ה"נכון" נגזר מהמשוב: "לא נכון"/"שגוי" → הקביעה שגויה. */
+  function detectTrueFalse(stem, feedback) {
+    if (!feedback || !feedback.trim()) return null;
+    if (!/נכון\s*או\s*לא\s*נכון|נכון\s*\/\s*לא.?נכון|נכון\s*או\s*שגוי|האם\s[\s\S]*\bנכון\b/.test(stem)) return null;
+    var isFalse = /לא\s*נכון|שגוי|לא\s*מדויק|לא\s*תמיד|לא\s*בהכרח/.test(feedback);
+    var isTrue = !isFalse && /נכון|מדויק|אכן|בהחלט/.test(feedback);
+    if (!isFalse && !isTrue) return null;
+    var correctVal = !isFalse;
+    return {
+      options: [
+        { letter: 'נ', text: 'נכון', correct: correctVal },
+        { letter: 'ל', text: 'לא נכון', correct: !correctVal }
+      ],
+      correctIndex: correctVal ? 0 : 1
+    };
+  }
+
   function parseQuestion(block) {
     var lines = String(block).split('\n');
     var firstRaw = lines[0].replace(/^\s*\d+[.)]\s*/, '');
@@ -125,11 +144,14 @@
     }
     stem = stem.replace(/\*/g, '').trim();
 
-    // (2) שורות-המשך: אפשרויות-בשורה · משוב (✅) · רמז (💡)
+    // (2) שורות-המשך: אפשרויות-בשורה · משוב (✅) · רמז (💡) · המשך-שאלה (פרוזה לפני האפשרויות)
+    var stemExtra = '', sawOptOrFb = false;
     lines.slice(1).forEach(function (l) {
       var raw = l.trim(); if (!raw) return;
+      if (/^#/.test(raw)) { sawOptOrFb = true; return; }           // גבול-מקטע — עוצר צבירת-גזע
       var lm = stripMeta(raw).trim();
       if (/[✅✓]/.test(raw)) {
+        sawOptOrFb = true;
         feedback = lm.replace(/^[-*]\s*/, '').replace(/^משוב:\s*/, '').replace(/[✅✓]\s*/, '').trim();
         var fm = feedback.match(/^([א-ת])[\s.]*נכון/) || feedback.match(/^([א-ת])\b/);
         if (fm) { fbLetter = fm[1]; feedback = feedback.replace(/^[א-ת][\s.]*נכון[.:]?\s*/, '').trim(); }
@@ -137,19 +159,34 @@
       } else if (/💡/.test(raw)) {
         if (!/error_type/.test(raw)) hint = lm.replace(/^[-*]\s*/, '').replace(/💡\s*/, '').trim();
       } else if (sourceForm !== 'inline' && /^[-*]?\s*[א-ת]\.\s/.test(lm)) {
+        sawOptOrFb = true;
         sourceForm = 'line';
         var letter = (lm.match(/^[-*]?\s*([א-ת])\.\s/) || [])[1];
         var ok = /\*\*נכון\*\*|—\s*\*\*נכון|נכון\s*$/.test(raw);
         var clean = lm.replace(/^[-*]\s*/, '').replace(/\s*[—-]?\s*\*\*נכון\*\*/, '').replace(/\s*[—-]?\s*נכון\s*$/, '');
         options.push({ letter: letter, text: clean, correct: ok });
+      } else if (!sawOptOrFb && lm && !/^error_type\s*:|^\[מקור|^\*?\*?מסיחים/.test(lm)) {
+        // המשך-שאלה (למשל משפט-ההיגד ב"נכון או לא נכון") — נצבר לגזע לפני האפשרויות.
+        stemExtra += (stemExtra ? ' ' : '') + lm.replace(/\*/g, '').trim();
       }
     });
+    if (stemExtra) stem = (stem ? stem + ' ' : '') + stemExtra;
 
     var correctIndex = options.map(function (o) { return o.correct; }).indexOf(true);
     if (correctIndex < 0 && fbLetter) correctIndex = options.map(function (o) { return o.letter; }).indexOf(fbLetter);
     // כשאין סימון-נכון מפורש — משחזרים מהמשוב עצמו:
     //  (א) "תשובה: משפט ג" → אות · (ב) "תשובה: <שם-אפשרות מדויק>" → התאמת-טקסט ייחודית.
     if (correctIndex < 0 && options.length) correctIndex = resolveFromFeedback(feedback, options);
+
+    // אין אפשרויות מפורשות → נסה נכון/לא-נכון (פרוזה + משוב).
+    var method = options.length ? (sourceForm === 'inline' ? 'mcq' : 'mcq') : 'open';
+    if (!options.length) {
+      var tf = detectTrueFalse(stem, feedback);
+      if (tf) {
+        options = tf.options; correctIndex = tf.correctIndex; method = 'truefalse';
+        stem = stem.replace(/^נכון\s*או\s*לא\s*נכון\s*[:—.-]?\s*/, '').trim() || stem;
+      }
+    }
 
     return {
       stem: stem,
@@ -158,6 +195,7 @@
       feedback: feedback,
       hint: hint,
       type: options.length ? 'mcq' : 'open',
+      method: method,
       sourceForm: sourceForm
     };
   }
