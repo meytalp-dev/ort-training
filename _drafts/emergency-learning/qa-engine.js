@@ -45,7 +45,7 @@ for (const id of Object.keys(CONTENT)){
   if (!hasLevels && !assessmentUnit) flag('unit', id, 'no-levels', 'high', 'render', 'אין 3 רמות ולא יחידת-הערכה');
 
   // A2 — רעיון מרכזי
-  if (!/^>\s*רעיון מרכזי/m.test(body) && !(meta.idea)) flag('unit', id, 'no-central-idea', 'med', 'content', 'חסר "רעיון מרכזי"');
+  if (!/^>\s*\*{0,2}\s*רעיון מרכזי/m.test(body) && !(meta.idea)) flag('unit', id, 'no-central-idea', 'med', 'content', 'חסר "רעיון מרכזי"');
 
   // שאלות — על כל היחידה. הפירוש זהה למנוע-התצוגה (unit-parser.parseQuestion).
   const allQ = P.questionBlocks(body);
