@@ -306,6 +306,26 @@
   @keyframes draw{ from{ clip-path:inset(0 0 0 100%); } to{ clip-path:inset(0 0 0 0); } }
   .row.cut .row-label{ color:var(--ink-faint); }
 
+  /* ---------- מחוז → בתי ספר (drill-down פיקוח ארצי) ---------- */
+  .board .row.clickable{ cursor:pointer; border-radius:10px; padding:5px 7px; margin:-5px -7px; transition:background .15s; }
+  .board .row.clickable:hover{ background:var(--surface-muted); }
+  .board .row.clickable.active{ background:var(--brand-soft); }
+  .board .row.clickable:focus-visible{ outline:2px solid var(--brand); outline-offset:2px; }
+  .drill{ margin-top:20px; padding-top:18px; border-top:1px solid var(--line); }
+  .drill-head{ display:flex; align-items:baseline; gap:10px; margin:0 0 13px; }
+  .drill-head b{ font-family:var(--font-head); font-size:15px; font-weight:800; color:var(--ink-strong); }
+  .drill-head span{ font-size:13px; color:var(--ink-soft); }
+  .drill-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; }
+  .school-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius-md); padding:14px 15px; transition:.15s; }
+  .school-card:hover{ border-color:var(--brand-line); box-shadow:var(--shadow-card); }
+  .school-card b{ font-size:14.5px; font-weight:700; color:var(--ink-strong); display:flex; align-items:center; gap:7px; margin-bottom:10px; }
+  .school-card .sc-dot{ width:9px; height:9px; border-radius:50%; background:var(--status-good); flex-shrink:0; }
+  .school-card.cut .sc-dot{ background:var(--status-alert); }
+  .school-card .sc-bar{ display:block; height:5px; border-radius:3px; background:var(--surface-muted); overflow:hidden; margin-bottom:6px; }
+  .school-card .sc-bar i{ display:block; height:100%; background:var(--brand); border-radius:3px; }
+  .school-card.cut .sc-bar i{ background:var(--status-alert); }
+  .school-card .sc-pct{ font-size:12px; font-weight:700; color:var(--ink-soft); }
+
   /* ---------- סולם הזום ---------- */
   .zoom{ padding:clamp(40px,6vw,68px) 0 clamp(30px,4vw,40px); }
   .zoom h2{
@@ -464,6 +484,7 @@
           <span class="demo">נתוני הדגמה</span>
         </div>
         <div class="board" id="board" aria-live="polite"></div>
+        <div class="drill" id="drill" hidden></div>
       </div>
     </section>
 
@@ -613,10 +634,17 @@ function paint(animate){
   const board = $('#board');
   $('#zoomLabel').textContent = z.label;
   board.innerHTML = '';
+  const drill = $('#drill'); if (drill && zoom !== 'national') drill.hidden = true;
 
   z.rows.forEach((r, i) => {
     const row = document.createElement('div');
     row.className = 'row' + (r.cut ? ' cut' : '');
+    if (zoom === 'national'){
+      row.classList.add('clickable'); row.dataset.d = r.l;
+      row.setAttribute('role', 'button'); row.tabIndex = 0;
+      row.addEventListener('click', () => showDistrict(r.l));
+      row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); showDistrict(r.l); } });
+    }
 
     const lab = document.createElement('span');
     lab.className = 'row-label';
@@ -735,25 +763,40 @@ const PEOPLE = {
   teacher: [
     { id:'meytal', first:'מיטל', name:'מיטל פלג', sub:'מורה ללשון · אורט בית הערבה',
       line:'מיטל פלג · מורה ללשון · אורט בית הערבה · כיתה י׳',
-      stats:[[3,'כיתות'],[20,'שיעורים'],[40,'תלמידים']] },
+      stats:[[3,'כיתות'],[20,'שיעורים'],[40,'תלמידים']],
+      mods:[ {b:'הבנת הנקרא — טקסט טיעון', s:'לשון · כיתה י׳3'},
+             {b:'תחביר — הפְּסוקית', s:'לשון · כיתה י׳1'},
+             {b:'אוצר מילים אקדמי', s:'לשון · כיתה י׳2'} ] },
     { id:'yossi', first:'יוסי', name:'יוסי אבו־קף', sub:'מורה למתמטיקה · אורט בית הערבה',
       line:'יוסי אבו־קף · מורה למתמטיקה · אורט בית הערבה · כיתה י״א',
-      stats:[[4,'כיתות'],[24,'שיעורים'],[52,'תלמידים']] },
+      stats:[[4,'כיתות'],[24,'שיעורים'],[52,'תלמידים']],
+      mods:[ {b:'משוואות ריבועיות', s:'מתמטיקה · כיתה י״א2'},
+             {b:'גיאומטריה אנליטית', s:'מתמטיקה · כיתה י״א1'},
+             {b:'פונקציות — שיפוע', s:'מתמטיקה · כיתה י׳4'} ] },
   ],
   principal: [
     { id:'ronit', first:'רונית', name:'רונית שר', sub:'מנהלת · אורט בית הערבה',
       line:'רונית שר · מנהלת · אורט בית הערבה',
-      stats:[[24,'כיתות'],[512,'תלמידים'],[41,'מורים']] },
+      stats:[[24,'כיתות'],[512,'תלמידים'],[41,'מורים']],
+      mods:[ {b:'רציפות למידה — כיתות י׳', s:'מעקב בית-ספרי'},
+             {b:'תלמידים בסיכון נשירה', s:'12 תלמידים · טיפול'},
+             {b:'עומס מורים — התראה', s:'3 מורים · השבוע'} ] },
   ],
   subject: [
     { id:'avi', first:'אבי', name:'אבי נחמיאס', sub:'פיקוח עיצוב מדיה · משרד העבודה',
       line:'אבי נחמיאס · פיקוח מקצועי · עיצוב מדיה · 6 בתי ספר',
-      stats:[[6,'בתי ספר'],[38,'כיתות'],[720,'תלמידים']] },
+      stats:[[6,'בתי ספר'],[38,'כיתות'],[720,'תלמידים']],
+      mods:[ {b:'גרפיקה וקטורית — מודולה 2', s:'עיצוב מדיה · 6 בתי ספר'},
+             {b:'פער — קריית ביאליק', s:'עיצוב מדיה · דורש טיפול'},
+             {b:'התקדמות ממוצעת', s:'עיצוב מדיה · 74%'} ] },
   ],
   national: [
     { id:'roytal', first:'רויטל', name:'רויטל אמיר', sub:'פיקוח ארצי · משרד העבודה',
       line:'רויטל אמיר · פיקוח ארצי · משרד העבודה',
-      stats:[[6,'מחוזות'],[142,'בתי ספר'],[18400,'תלמידים']] },
+      stats:[[6,'מחוזות'],[142,'בתי ספר'],[18400,'תלמידים']],
+      mods:[ {b:'מחוז דרום — פער רציפות', s:'ארצי · דורש התייחסות'},
+             {b:'עמידה בסל תשפ״ז', s:'142 בתי ספר · 88%'},
+             {b:'דוח רבעוני — משרד העבודה', s:'ארצי · הוגש'} ] },
   ],
 };
 
@@ -784,8 +827,10 @@ function enterAsPerson(r, p){
   v.innerHTML = '<span class="tag"><span class="pt"></span>' + p.name + '</span><a href="index.html">התנתקות</a>';
   $('#entryCta').innerHTML = '';   /* בלי "כניסה למערכת המלאה" */
   renderStats(p.stats);
+  renderMods(p.mods);
   setMode(mode);
   paint(true);
+  syncLadder();
 }
 
 /* סטטיסטיקות אישיות במקום הגנריות */
@@ -795,6 +840,41 @@ function renderStats(stats){
   wrap.innerHTML = stats.map(([n, l]) =>
     '<div class="stat"><b data-to="' + n + '">0</b><span>' + l + '</span></div>').join('');
   wrap.querySelectorAll('.stat b').forEach(el => countUp(el));
+}
+
+/* כרטיסי "נתונים רלוונטיים" מותאמים לתפקיד */
+function renderMods(mods){
+  const wrap = document.querySelector('.real .mods');
+  if (!wrap || !mods) return;
+  wrap.innerHTML = mods.map(m =>
+    '<div class="mod"><span class="pt"></span><div><b>' + m.b + '</b><span>' + m.s + '</span></div></div>').join('');
+}
+
+/* הנקודה על סולם-הזום זזה לרמת התפקיד */
+function syncLadder(){ $$('.zn').forEach(x => x.setAttribute('aria-pressed', x.dataset.z === zoom)); }
+
+/* ---- מחוזות → בתי ספר (פיקוח ארצי: לחיצה על מחוז פותחת את בתי-הספר שבו) ---- */
+const DISTRICTS = {
+  'דרום':    [ {n:'אורט בית הערבה',p:74}, {n:'אורט אשקלון',p:91}, {n:'אורט ערד',p:58,cut:true}, {n:'אורט נתיבות',p:88} ],
+  'ירושלים': [ {n:'אורט ספרא',p:100}, {n:'אורט מבשרת',p:96}, {n:'אורט גבעת רם',p:83} ],
+  'מרכז':    [ {n:'אורט רחובות',p:100}, {n:'אורט לוד',p:92}, {n:'אורט ראשון לציון',p:97}, {n:'אורט מוצקין',p:88} ],
+  'תל אביב': [ {n:'אורט סינגלובסקי',p:100}, {n:'אורט יד גיורא',p:95}, {n:'אורט אבן חן',p:66,cut:true} ],
+  'חיפה':    [ {n:'אורט קריית ביאליק',p:41,cut:true}, {n:'אורט רוגוזין',p:100}, {n:'אורט חיפה',p:91} ],
+  'צפון':    [ {n:'אורט כרמיאל',p:58,cut:true}, {n:'אורט מעלות',p:79}, {n:'אורט נהריה',p:88} ],
+};
+function showDistrict(label){
+  const drill = $('#drill'); if (!drill) return;
+  const schools = DISTRICTS[label] || [];
+  drill.innerHTML =
+    '<div class="drill-head"><b>בתי ספר · מחוז ' + label + '</b><span>' + schools.length + ' בתי ספר</span></div>' +
+    '<div class="drill-grid">' + schools.map(s =>
+      '<div class="school-card' + (s.cut ? ' cut' : '') + '">' +
+        '<b><span class="sc-dot"></span>' + s.n + '</b>' +
+        '<span class="sc-bar"><i style="width:' + s.p + '%"></i></span>' +
+        '<span class="sc-pct">' + s.p + '% רציפות</span>' +
+      '</div>').join('') + '</div>';
+  drill.hidden = false;
+  $$('.board .row').forEach(r => r.classList.toggle('active', r.dataset.d === label));
 }
 
 /* ---------- מונים ---------- */
