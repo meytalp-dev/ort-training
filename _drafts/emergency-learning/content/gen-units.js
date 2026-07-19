@@ -54,7 +54,7 @@ for(const subj of Object.keys(SUBJECTS_HE)){
     const modNum = (mod.match(/module-(\d+)/)||[])[1] || '?';
     for(const f of files){
       const fp = path.join(mdir, f);
-      const txt = fs.readFileSync(fp,'utf8');
+      const txt = fs.readFileSync(fp,'utf8').replace(/\r\n/g,'\n');
       const fm = parseFront(txt);
       const rel = ['content',subj,mod,f].join('/');
       const id = `${subj}/m${modNum}/${f.replace(/^unit-|\.md$/g,'')}`;
@@ -64,7 +64,8 @@ for(const subj of Object.keys(SUBJECTS_HE)){
         module: modNum, moduleHe: clean(fm.module) || ('מ'+modNum),
         title: title(txt), idea: idea(txt), skill: clean(fm.skill),
         levels: lv, status: clean(fm.status)||'טיוטה',
-        pedagogy: /לאימות/.test(fm.pedagogy_verified||'') ? 'unverified' : 'ok',
+        // ברירת-מחדל: לא-מאומת (שדה חסר/פורמט-חורג = לא אומת). 'ok' רק אם צוין מפורש שאומת.
+        pedagogy: /מאומת|אושר|verified/.test(fm.pedagogy_verified||'') && !/לאימות/.test(fm.pedagogy_verified||'') ? 'ok' : 'unverified',
         palette: fm.palette_primary || '#0B8F98'
       };
       units.push(u);
