@@ -1,114 +1,330 @@
 /* רֶצֶף — קטלוג המגמות + שיוך בתי ספר + מגזר + מחוז
-   63 בתי-ספר. מחוז(district)+סמל-מוסד(code)+שם-רשמי(official) מ-yotzer.education/ourschools (19.7.2026)
-   מגמות/שיוך: multi-school-model.md §9-§10 · מגזר 48 הראשונים אושרו ע"י מיטל 18.7
-   sector = he/ar — הציר לתוכן ליבה עיונית (חרדי/דתי = he) */
+   63 בתי-ספר · מגמות/מחוז/סמל-מוסד/שם-רשמי מ-yotzer.education/ourschools (19.7.2026)
+   מזהי auto/elec/hair/pastry נשמרים (מקושרים בקבצי דמו) · sector he/ar = ציר תוכן-ליבה */
 window.RETZEF_TRACKS = {
-  "_source": "yotzer.education/ourschools (רשמי) + multi-school-model.md §9-§10 (מגמות/מיטל 17.7)",
-  "_note": "sector: he/ar (ציר התוכן ליבה). 63 בתי-ספר. מחוז+סמל-מוסד מ-yotzer.education/ourschools (המקור הרשמי, 19.7). 48 הראשונים שיוכי-מגזר אושרו ע\"י מיטל 18.7; 15 האחרונים (sch_49+) מהמקור הרשמי — טרם שויכו מגמות.",
+  "_source": "yotzer.education/ourschools (רשמי — בתי-ספר, מחוז, מגמות, מגזר, סמל-מוסד)",
+  "_note": "sector: he/ar (ציר התוכן ליבה). 63 בתי-ספר. מחוז+סמל-מוסד+מגמות מ-yotzer.education/ourschools (רשמי, 19.7). מגזר: 48 הראשונים+כרמל אושרו ע\"י מיטל.",
   "tracks": [
     {
       "id": "trk_auto",
       "code": "auto",
       "name": "אוטוטרוניקה",
-      "domain": "רכב",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y01",
+      "code": "y01",
+      "name": "אוטוטרוניקה - צמ\"ה",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y02",
+      "code": "y02",
+      "name": "אופטיקאות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y03",
+      "code": "y03",
+      "name": "אנרגיה ומערכות הנדסיות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y04",
+      "code": "y04",
+      "name": "אקו-חקלאות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y05",
+      "code": "y05",
+      "name": "אקו-ים",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y06",
+      "code": "y06",
+      "name": "בדק כלי טיס",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y07",
+      "code": "y07",
+      "name": "בניית אתרים ושיווק",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y08",
+      "code": "y08",
+      "name": "הייטק - סייבר ותכנות",
+      "domain": "",
       "active": true
     },
     {
       "id": "trk_elec",
       "code": "elec",
-      "name": "חשמלאות",
-      "domain": "חשמל",
+      "name": "חשמל",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y09",
+      "code": "y09",
+      "name": "חשמל - מערכות כלי טיס",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y10",
+      "code": "y10",
+      "name": "טכנאות שיניים",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y11",
+      "code": "y11",
+      "name": "ייצור דיגיטלי רב-תחומי",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y12",
+      "code": "y12",
+      "name": "מבנאות אלומניום",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y13",
+      "code": "y13",
+      "name": "מבנאות מטוסים",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y14",
+      "code": "y14",
+      "name": "מזכירות רפואית",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y15",
+      "code": "y15",
+      "name": "מחנכות שנות ינקות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y16",
+      "code": "y16",
+      "name": "מינהל",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y17",
+      "code": "y17",
+      "name": "מכטרוניקה",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y18",
+      "code": "y18",
+      "name": "מלאכות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y19",
+      "code": "y19",
+      "name": "מסגרות מבנים וריתוך",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y20",
+      "code": "y20",
+      "name": "מסגרות מבנים וריתוך - צלילה",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y21",
+      "code": "y21",
+      "name": "מערכות הנדסיות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y22",
+      "code": "y22",
+      "name": "מערכות הנדסיות - כלי טיס",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y23",
+      "code": "y23",
+      "name": "מערכות הנדסיות ימיות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y24",
+      "code": "y24",
+      "name": "מערכות תיכון וייצור באמצעות מחשב",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y25",
+      "code": "y25",
+      "name": "ניהול לוגיסטיקה וטכנולוגיה",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y26",
+      "code": "y26",
+      "name": "ניהול מלאי ורכש",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y27",
+      "code": "y27",
+      "name": "סאונד",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y28",
+      "code": "y28",
+      "name": "סושיאל פרו",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y29",
+      "code": "y29",
+      "name": "ספורט",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y30",
+      "code": "y30",
+      "name": "עוזר טבח",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y31",
+      "code": "y31",
+      "name": "עיצוב מדיה וקריאיטיב",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y32",
+      "code": "y32",
+      "name": "עיצוב סביבות אדם",
+      "domain": "",
       "active": true
     },
     {
       "id": "trk_hair",
       "code": "hair",
-      "name": "עיצוב שיער ואיפור",
-      "domain": "טיפוח חן",
+      "name": "עיצוב שיער",
+      "domain": "",
       "active": true
     },
     {
-      "id": "trk_comp",
-      "code": "comp",
-      "name": "מחשבים ורשתות",
-      "domain": "מחשבים ותקשוב",
-      "active": true
-    },
-    {
-      "id": "trk_hvac",
-      "code": "hvac",
-      "name": "קירור ומיזוג וחשמלאי שירות",
-      "domain": "חשמל ובקרת אקלים",
-      "active": true
-    },
-    {
-      "id": "trk_media",
-      "code": "media",
-      "name": "עיצוב מדיה וקריאייטיב",
-      "domain": "עיצוב ומדיה",
-      "active": true
-    },
-    {
-      "id": "trk_mrkt",
-      "code": "mrkt",
-      "name": "שיווק דיגיטלי ופרסום",
-      "domain": "ניהול ושיווק",
-      "active": true
-    },
-    {
-      "id": "trk_early",
-      "code": "early",
-      "name": "מחנכות שנות הינקות",
-      "domain": "חינוך וטיפול",
-      "active": true
-    },
-    {
-      "id": "trk_ict",
-      "code": "ict",
-      "name": "תפעול מערכות תקשוב",
-      "domain": "מחשבים ותקשוב",
-      "active": true
-    },
-    {
-      "id": "trk_cnc",
-      "code": "cnc",
-      "name": "עיבוד שבבי CNC",
-      "domain": "מסגרות וייצור",
-      "active": true
-    },
-    {
-      "id": "trk_culin",
-      "code": "culin",
-      "name": "בישול וקולינריה",
-      "domain": "קולינריה",
-      "active": true
-    },
-    {
-      "id": "trk_eco",
-      "code": "eco",
-      "name": "אקו-ים וסביבה",
-      "domain": "בניין וסביבה",
-      "active": true
-    },
-    {
-      "id": "trk_weld",
-      "code": "weld",
-      "name": "מסגרות מבנים וריתוך",
-      "domain": "מסגרות וייצור",
-      "active": true
-    },
-    {
-      "id": "trk_indus",
-      "code": "indus",
+      "id": "trk_y33",
+      "code": "y33",
       "name": "עיצוב תעשייתי",
-      "domain": "עיצוב ומדיה",
+      "domain": "",
       "active": true
     },
     {
-      "id": "trk_logi",
-      "code": "logi",
-      "name": "לוגיסטיקה ורכש",
-      "domain": "ניהול ושיווק",
+      "id": "trk_y34",
+      "code": "y34",
+      "name": "עץ ורהיטים",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y35",
+      "code": "y35",
+      "name": "צילום",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y36",
+      "code": "y36",
+      "name": "קולינריה וטבחות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y37",
+      "code": "y37",
+      "name": "קוסמטיקה",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y38",
+      "code": "y38",
+      "name": "קירור ומיזוג אוויר",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y39",
+      "code": "y39",
+      "name": "תיירות",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y40",
+      "code": "y40",
+      "name": "תפירה וסטאילינג",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y41",
+      "code": "y41",
+      "name": "תפעול מערכות מחשב וסלולר",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y42",
+      "code": "y42",
+      "name": "תפעול מערכות תקשוב מיגון ואבטחה",
+      "domain": "",
+      "active": true
+    },
+    {
+      "id": "trk_y43",
+      "code": "y43",
+      "name": "CNC עץ",
+      "domain": "",
       "active": true
     },
     {
@@ -116,181 +332,6 @@ window.RETZEF_TRACKS = {
       "code": "pastry",
       "name": "קונדיטאות ואפייה",
       "domain": "קולינריה",
-      "active": true
-    },
-    {
-      "id": "trk_photo",
-      "code": "photo",
-      "name": "צילום ועריכת וידאו",
-      "domain": "עיצוב ומדיה",
-      "active": true
-    },
-    {
-      "id": "trk_wood",
-      "code": "wood",
-      "name": "נגרות וטכנולוגיות עץ",
-      "domain": "בניין וסביבה",
-      "active": true
-    },
-    {
-      "id": "trk_build",
-      "code": "build",
-      "name": "מבנאות",
-      "domain": "בניין וסביבה",
-      "active": true
-    },
-    {
-      "id": "trk_design",
-      "code": "design",
-      "name": "תיכון וייצור",
-      "domain": "מסגרות וייצור",
-      "active": true
-    },
-    {
-      "id": "trk_env",
-      "code": "env",
-      "name": "תכנון סביבת האדם",
-      "domain": "בניין וסביבה",
-      "active": true
-    },
-    {
-      "id": "trk_web",
-      "code": "web",
-      "name": "בניית אתרים",
-      "domain": "מחשבים ותקשוב",
-      "active": true
-    },
-    {
-      "id": "trk_s00",
-      "code": "s00",
-      "name": "אופטיקה",
-      "domain": "בריאות",
-      "active": true
-    },
-    {
-      "id": "trk_s01",
-      "code": "s01",
-      "name": "אנרגיה",
-      "domain": "חשמל",
-      "active": true
-    },
-    {
-      "id": "trk_s02",
-      "code": "s02",
-      "name": "בדק כלי טיס",
-      "domain": "תעופה",
-      "active": true
-    },
-    {
-      "id": "trk_s03",
-      "code": "s03",
-      "name": "בית ספרי",
-      "domain": "[לאימות]",
-      "active": true
-    },
-    {
-      "id": "trk_s04",
-      "code": "s04",
-      "name": "גראפי",
-      "domain": "עיצוב ומדיה",
-      "active": true
-    },
-    {
-      "id": "trk_s05",
-      "code": "s05",
-      "name": "הייטק",
-      "domain": "מחשבים ותקשוב",
-      "active": true
-    },
-    {
-      "id": "trk_s06",
-      "code": "s06",
-      "name": "הנדסה",
-      "domain": "מסגרות וייצור",
-      "active": true
-    },
-    {
-      "id": "trk_s07",
-      "code": "s07",
-      "name": "טכנאות שיניים",
-      "domain": "בריאות",
-      "active": true
-    },
-    {
-      "id": "trk_s08",
-      "code": "s08",
-      "name": "יוצרות",
-      "domain": "עיצוב ומדיה",
-      "active": true
-    },
-    {
-      "id": "trk_s09",
-      "code": "s09",
-      "name": "ימיות",
-      "domain": "ימי",
-      "active": true
-    },
-    {
-      "id": "trk_s10",
-      "code": "s10",
-      "name": "מכטרוניקה",
-      "domain": "מסגרות וייצור",
-      "active": true
-    },
-    {
-      "id": "trk_s11",
-      "code": "s11",
-      "name": "סאונד",
-      "domain": "עיצוב ומדיה",
-      "active": true
-    },
-    {
-      "id": "trk_s12",
-      "code": "s12",
-      "name": "ספורט",
-      "domain": "ספורט",
-      "active": true
-    },
-    {
-      "id": "trk_s13",
-      "code": "s13",
-      "name": "עיצוב",
-      "domain": "עיצוב ומדיה",
-      "active": true
-    },
-    {
-      "id": "trk_s14",
-      "code": "s14",
-      "name": "עיצוב טקסטיל",
-      "domain": "עיצוב ומדיה",
-      "active": true
-    },
-    {
-      "id": "trk_s15",
-      "code": "s15",
-      "name": "עיצוב צליל",
-      "domain": "עיצוב ומדיה",
-      "active": true
-    },
-    {
-      "id": "trk_s16",
-      "code": "s16",
-      "name": "קוסמטיקה",
-      "domain": "טיפוח חן",
-      "active": true
-    },
-    {
-      "id": "trk_s17",
-      "code": "s17",
-      "name": "תוכנית שותפים",
-      "domain": "[לאימות]",
-      "active": true
-    },
-    {
-      "id": "trk_s18",
-      "code": "s18",
-      "name": "תפירת אופנה וסטיילינג",
-      "domain": "עיצוב ומדיה",
       "active": true
     }
   ],
@@ -1000,112 +1041,112 @@ window.RETZEF_TRACKS = {
     {
       "id": "st_002",
       "school_id": "sch_01",
-      "track_id": "trk_early",
+      "track_id": "trk_y15",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_003",
       "school_id": "sch_01",
-      "track_id": "trk_mrkt",
+      "track_id": "trk_y28",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_004",
-      "school_id": "sch_01",
-      "track_id": "trk_pastry",
+      "school_id": "sch_02",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_005",
       "school_id": "sch_02",
-      "track_id": "trk_elec",
+      "track_id": "trk_y42",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_006",
-      "school_id": "sch_02",
-      "track_id": "trk_ict",
+      "school_id": "sch_03",
+      "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_007",
       "school_id": "sch_03",
-      "track_id": "trk_auto",
+      "track_id": "trk_y28",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_008",
       "school_id": "sch_03",
-      "track_id": "trk_comp",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_009",
       "school_id": "sch_03",
-      "track_id": "trk_hair",
+      "track_id": "trk_y41",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_010",
       "school_id": "sch_04",
-      "track_id": "trk_elec",
+      "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_011",
       "school_id": "sch_04",
-      "track_id": "trk_s03",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_012",
-      "school_id": "sch_04",
-      "track_id": "trk_auto",
+      "school_id": "sch_05",
+      "track_id": "trk_y06",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_013",
       "school_id": "sch_05",
-      "track_id": "trk_build",
+      "track_id": "trk_y09",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_014",
       "school_id": "sch_05",
-      "track_id": "trk_s02",
+      "track_id": "trk_y13",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_015",
       "school_id": "sch_05",
-      "track_id": "trk_s10",
+      "track_id": "trk_y17",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_016",
-      "school_id": "sch_05",
-      "track_id": "trk_elec",
+      "school_id": "sch_06",
+      "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_017",
       "school_id": "sch_06",
-      "track_id": "trk_auto",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
@@ -1118,162 +1159,162 @@ window.RETZEF_TRACKS = {
     },
     {
       "id": "st_019",
-      "school_id": "sch_06",
-      "track_id": "trk_elec",
+      "school_id": "sch_07",
+      "track_id": "trk_y24",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_020",
       "school_id": "sch_07",
-      "track_id": "trk_logi",
+      "track_id": "trk_y26",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_021",
-      "school_id": "sch_07",
-      "track_id": "trk_design",
+      "school_id": "sch_08",
+      "track_id": "trk_y02",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_022",
       "school_id": "sch_08",
-      "track_id": "trk_hair",
+      "track_id": "trk_y15",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_023",
       "school_id": "sch_08",
-      "track_id": "trk_early",
+      "track_id": "trk_y31",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_024",
       "school_id": "sch_08",
-      "track_id": "trk_s00",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_025",
-      "school_id": "sch_08",
-      "track_id": "trk_media",
+      "school_id": "sch_09",
+      "track_id": "trk_y18",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_026",
-      "school_id": "sch_09",
-      "track_id": "trk_s14",
+      "school_id": "sch_10",
+      "track_id": "trk_y28",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_027",
       "school_id": "sch_10",
-      "track_id": "trk_env",
+      "track_id": "trk_y32",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_028",
-      "school_id": "sch_10",
-      "track_id": "trk_media",
+      "school_id": "sch_11",
+      "track_id": "trk_y04",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_029",
       "school_id": "sch_11",
-      "track_id": "trk_photo",
+      "track_id": "trk_y07",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_030",
       "school_id": "sch_11",
-      "track_id": "trk_web",
+      "track_id": "trk_y35",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_031",
-      "school_id": "sch_11",
-      "track_id": "trk_eco",
+      "school_id": "sch_12",
+      "track_id": "trk_y05",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_032",
       "school_id": "sch_12",
-      "track_id": "trk_eco",
+      "track_id": "trk_y11",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_033",
       "school_id": "sch_12",
-      "track_id": "trk_s08",
+      "track_id": "trk_y28",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_034",
-      "school_id": "sch_12",
-      "track_id": "trk_media",
+      "school_id": "sch_13",
+      "track_id": "trk_y01",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_035",
       "school_id": "sch_13",
-      "track_id": "trk_auto",
+      "track_id": "trk_y31",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_036",
       "school_id": "sch_14",
-      "track_id": "trk_culin",
+      "track_id": "trk_y27",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_037",
       "school_id": "sch_14",
-      "track_id": "trk_s16",
+      "track_id": "trk_y35",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_038",
       "school_id": "sch_14",
-      "track_id": "trk_s11",
+      "track_id": "trk_y36",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_039",
       "school_id": "sch_14",
-      "track_id": "trk_photo",
+      "track_id": "trk_y37",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_040",
       "school_id": "sch_15",
-      "track_id": "trk_comp",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_041",
       "school_id": "sch_15",
-      "track_id": "trk_elec",
+      "track_id": "trk_y41",
       "school_year": "תשפ\"ז",
       "active": true
     },
@@ -1287,14 +1328,14 @@ window.RETZEF_TRACKS = {
     {
       "id": "st_043",
       "school_id": "sch_16",
-      "track_id": "trk_hvac",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_044",
       "school_id": "sch_16",
-      "track_id": "trk_elec",
+      "track_id": "trk_y38",
       "school_year": "תשפ\"ז",
       "active": true
     },
@@ -1308,56 +1349,56 @@ window.RETZEF_TRACKS = {
     {
       "id": "st_046",
       "school_id": "sch_17",
-      "track_id": "trk_weld",
+      "track_id": "trk_y19",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_047",
       "school_id": "sch_17",
-      "track_id": "trk_comp",
+      "track_id": "trk_y41",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_048",
-      "school_id": "sch_17",
-      "track_id": "trk_eco",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_049",
-      "school_id": "sch_18",
-      "track_id": "trk_hair",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_050",
       "school_id": "sch_18",
       "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
+      "id": "st_049",
+      "school_id": "sch_18",
+      "track_id": "trk_y15",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_050",
+      "school_id": "sch_18",
+      "track_id": "trk_y16",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
       "id": "st_051",
       "school_id": "sch_18",
-      "track_id": "trk_mrkt",
+      "track_id": "trk_y28",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_052",
       "school_id": "sch_18",
-      "track_id": "trk_s06",
+      "track_id": "trk_y32",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_053",
       "school_id": "sch_18",
-      "track_id": "trk_early",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
@@ -1371,140 +1412,140 @@ window.RETZEF_TRACKS = {
     {
       "id": "st_055",
       "school_id": "sch_19",
-      "track_id": "trk_cnc",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_056",
       "school_id": "sch_19",
-      "track_id": "trk_ict",
+      "track_id": "trk_y19",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_057",
-      "school_id": "sch_20",
-      "track_id": "trk_elec",
+      "school_id": "sch_19",
+      "track_id": "trk_y24",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_058",
       "school_id": "sch_20",
-      "track_id": "trk_wood",
+      "track_id": "trk_y43",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_059",
       "school_id": "sch_20",
-      "track_id": "trk_eco",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_060",
-      "school_id": "sch_21",
-      "track_id": "trk_auto",
+      "school_id": "sch_20",
+      "track_id": "trk_y34",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_061",
       "school_id": "sch_21",
-      "track_id": "trk_hair",
+      "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_062",
       "school_id": "sch_21",
-      "track_id": "trk_ict",
+      "track_id": "trk_y16",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_063",
       "school_id": "sch_21",
-      "track_id": "trk_logi",
+      "track_id": "trk_y25",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_064",
-      "school_id": "sch_22",
-      "track_id": "trk_mrkt",
+      "school_id": "sch_21",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_065",
-      "school_id": "sch_23",
-      "track_id": "trk_auto",
+      "school_id": "sch_22",
+      "track_id": "trk_y16",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_066",
-      "school_id": "sch_23",
-      "track_id": "trk_hvac",
+      "school_id": "sch_22",
+      "track_id": "trk_y28",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_067",
       "school_id": "sch_23",
-      "track_id": "trk_mrkt",
+      "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_068",
+      "school_id": "sch_23",
+      "track_id": "trk_y28",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_069",
+      "school_id": "sch_23",
+      "track_id": "trk_y38",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_070",
+      "school_id": "sch_24",
+      "track_id": "trk_y03",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_071",
       "school_id": "sch_24",
       "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_069",
-      "school_id": "sch_24",
-      "track_id": "trk_s01",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_070",
-      "school_id": "sch_25",
-      "track_id": "trk_hair",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_071",
+      "id": "st_072",
       "school_id": "sch_25",
       "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_072",
-      "school_id": "sch_25",
-      "track_id": "trk_culin",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
       "id": "st_073",
-      "school_id": "sch_26",
-      "track_id": "trk_ict",
+      "school_id": "sch_25",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_074",
-      "school_id": "sch_26",
-      "track_id": "trk_hair",
+      "school_id": "sch_25",
+      "track_id": "trk_y36",
       "school_year": "תשפ\"ז",
       "active": true
     },
@@ -1525,91 +1566,91 @@ window.RETZEF_TRACKS = {
     {
       "id": "st_077",
       "school_id": "sch_26",
-      "track_id": "trk_hvac",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_078",
-      "school_id": "sch_27",
-      "track_id": "trk_elec",
+      "school_id": "sch_26",
+      "track_id": "trk_y38",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_079",
-      "school_id": "sch_27",
-      "track_id": "trk_auto",
+      "school_id": "sch_26",
+      "track_id": "trk_y41",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_080",
       "school_id": "sch_27",
-      "track_id": "trk_media",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_081",
-      "school_id": "sch_28",
-      "track_id": "trk_comp",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_082",
-      "school_id": "sch_28",
-      "track_id": "trk_s17",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_083",
-      "school_id": "sch_28",
+      "school_id": "sch_27",
       "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
+      "id": "st_082",
+      "school_id": "sch_27",
+      "track_id": "trk_y24",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_083",
+      "school_id": "sch_27",
+      "track_id": "trk_y28",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
       "id": "st_084",
-      "school_id": "sch_28",
-      "track_id": "trk_culin",
+      "school_id": "sch_27",
+      "track_id": "trk_y38",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_085",
       "school_id": "sch_28",
-      "track_id": "trk_hair",
+      "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_086",
-      "school_id": "sch_29",
-      "track_id": "trk_weld",
+      "school_id": "sch_28",
+      "track_id": "trk_y28",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_087",
-      "school_id": "sch_29",
-      "track_id": "trk_wood",
+      "school_id": "sch_28",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_088",
-      "school_id": "sch_29",
-      "track_id": "trk_elec",
+      "school_id": "sch_28",
+      "track_id": "trk_y36",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_089",
-      "school_id": "sch_29",
-      "track_id": "trk_hvac",
+      "school_id": "sch_28",
+      "track_id": "trk_y41",
       "school_year": "תשפ\"ז",
       "active": true
     },
@@ -1623,413 +1664,742 @@ window.RETZEF_TRACKS = {
     {
       "id": "st_091",
       "school_id": "sch_29",
-      "track_id": "trk_hair",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_092",
       "school_id": "sch_29",
-      "track_id": "trk_early",
+      "track_id": "trk_y14",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_093",
-      "school_id": "sch_30",
-      "track_id": "trk_auto",
+      "school_id": "sch_29",
+      "track_id": "trk_y15",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_094",
-      "school_id": "sch_30",
-      "track_id": "trk_hvac",
+      "school_id": "sch_29",
+      "track_id": "trk_y19",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_095",
-      "school_id": "sch_30",
-      "track_id": "trk_elec",
+      "school_id": "sch_29",
+      "track_id": "trk_y24",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_096",
-      "school_id": "sch_31",
-      "track_id": "trk_indus",
+      "school_id": "sch_29",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_097",
-      "school_id": "sch_31",
-      "track_id": "trk_logi",
+      "school_id": "sch_29",
+      "track_id": "trk_y34",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_098",
-      "school_id": "sch_31",
-      "track_id": "trk_media",
+      "school_id": "sch_29",
+      "track_id": "trk_y38",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_099",
-      "school_id": "sch_32",
+      "school_id": "sch_30",
       "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_100",
-      "school_id": "sch_33",
-      "track_id": "trk_web",
+      "school_id": "sch_30",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_101",
-      "school_id": "sch_33",
-      "track_id": "trk_indus",
+      "school_id": "sch_30",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_102",
+      "school_id": "sch_30",
+      "track_id": "trk_y38",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_103",
+      "school_id": "sch_31",
+      "track_id": "trk_y21",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_104",
+      "school_id": "sch_31",
+      "track_id": "trk_y25",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_105",
+      "school_id": "sch_31",
+      "track_id": "trk_y33",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_106",
+      "school_id": "sch_32",
+      "track_id": "trk_y01",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_107",
+      "school_id": "sch_33",
+      "track_id": "trk_y28",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_108",
+      "school_id": "sch_34",
+      "track_id": "trk_y15",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_109",
+      "school_id": "sch_34",
+      "track_id": "trk_y16",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_110",
       "school_id": "sch_34",
       "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_103",
-      "school_id": "sch_34",
-      "track_id": "trk_mrkt",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_104",
-      "school_id": "sch_34",
-      "track_id": "trk_early",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_105",
-      "school_id": "sch_34",
-      "track_id": "trk_s18",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_106",
-      "school_id": "sch_35",
-      "track_id": "trk_auto",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_107",
-      "school_id": "sch_35",
-      "track_id": "trk_ict",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_108",
-      "school_id": "sch_35",
-      "track_id": "trk_cnc",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_109",
-      "school_id": "sch_35",
-      "track_id": "trk_pastry",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_110",
-      "school_id": "sch_35",
-      "track_id": "trk_build",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
       "id": "st_111",
-      "school_id": "sch_35",
-      "track_id": "trk_media",
+      "school_id": "sch_34",
+      "track_id": "trk_y40",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_112",
-      "school_id": "sch_36",
+      "school_id": "sch_35",
       "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_113",
-      "school_id": "sch_36",
-      "track_id": "trk_elec",
+      "school_id": "sch_35",
+      "track_id": "trk_y12",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_114",
-      "school_id": "sch_36",
-      "track_id": "trk_comp",
+      "school_id": "sch_35",
+      "track_id": "trk_y19",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_115",
-      "school_id": "sch_37",
-      "track_id": "trk_hair",
+      "school_id": "sch_35",
+      "track_id": "trk_y24",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_116",
-      "school_id": "sch_37",
-      "track_id": "trk_s12",
+      "school_id": "sch_35",
+      "track_id": "trk_y31",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_117",
-      "school_id": "sch_37",
-      "track_id": "trk_s07",
+      "school_id": "sch_35",
+      "track_id": "trk_y36",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_118",
-      "school_id": "sch_37",
-      "track_id": "trk_pastry",
+      "school_id": "sch_35",
+      "track_id": "trk_y41",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_119",
-      "school_id": "sch_38",
-      "track_id": "trk_elec",
+      "school_id": "sch_36",
+      "track_id": "trk_y01",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_120",
-      "school_id": "sch_38",
-      "track_id": "trk_mrkt",
+      "school_id": "sch_36",
+      "track_id": "trk_y08",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_121",
-      "school_id": "sch_38",
-      "track_id": "trk_hair",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_122",
-      "school_id": "sch_39",
+      "school_id": "sch_36",
       "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
+      "id": "st_122",
+      "school_id": "sch_37",
+      "track_id": "trk_y10",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
       "id": "st_123",
-      "school_id": "sch_39",
-      "track_id": "trk_design",
+      "school_id": "sch_37",
+      "track_id": "trk_y24",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_124",
-      "school_id": "sch_39",
-      "track_id": "trk_s09",
+      "school_id": "sch_37",
+      "track_id": "trk_y29",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_125",
-      "school_id": "sch_40",
-      "track_id": "trk_auto",
+      "school_id": "sch_37",
+      "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_126",
-      "school_id": "sch_40",
-      "track_id": "trk_weld",
+      "school_id": "sch_37",
+      "track_id": "trk_y36",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_127",
-      "school_id": "sch_40",
-      "track_id": "trk_cnc",
+      "school_id": "sch_38",
+      "track_id": "trk_y07",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_128",
-      "school_id": "sch_40",
+      "school_id": "sch_38",
       "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_129",
-      "school_id": "sch_41",
-      "track_id": "trk_auto",
+      "school_id": "sch_39",
+      "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_130",
-      "school_id": "sch_41",
-      "track_id": "trk_elec",
+      "school_id": "sch_39",
+      "track_id": "trk_y23",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_131",
+      "school_id": "sch_39",
+      "track_id": "trk_y24",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_132",
+      "school_id": "sch_40",
+      "track_id": "trk_auto",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_133",
+      "school_id": "sch_40",
+      "track_id": "trk_y19",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_134",
+      "school_id": "sch_41",
+      "track_id": "trk_auto",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_135",
+      "school_id": "sch_41",
+      "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_136",
       "school_id": "sch_41",
       "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_132",
+      "id": "st_137",
       "school_id": "sch_42",
-      "track_id": "trk_cnc",
+      "track_id": "trk_y43",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_133",
+      "id": "st_138",
       "school_id": "sch_42",
-      "track_id": "trk_weld",
+      "track_id": "trk_y19",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_134",
+      "id": "st_139",
       "school_id": "sch_42",
-      "track_id": "trk_wood",
+      "track_id": "trk_y24",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_135",
+      "id": "st_140",
+      "school_id": "sch_42",
+      "track_id": "trk_y34",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_141",
       "school_id": "sch_43",
       "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_136",
+      "id": "st_142",
       "school_id": "sch_43",
       "track_id": "trk_elec",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_137",
+      "id": "st_143",
       "school_id": "sch_43",
-      "track_id": "trk_hvac",
+      "track_id": "trk_y38",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_138",
+      "id": "st_144",
       "school_id": "sch_44",
       "track_id": "trk_auto",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_139",
+      "id": "st_145",
+      "school_id": "sch_44",
+      "track_id": "trk_y32",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_146",
       "school_id": "sch_44",
       "track_id": "trk_hair",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
-      "id": "st_140",
-      "school_id": "sch_44",
-      "track_id": "trk_env",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_141",
-      "school_id": "sch_44",
-      "track_id": "trk_culin",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_142",
-      "school_id": "sch_44",
-      "track_id": "trk_comp",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_143",
-      "school_id": "sch_45",
-      "track_id": "trk_s13",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_144",
-      "school_id": "sch_45",
-      "track_id": "trk_s05",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_145",
-      "school_id": "sch_46",
-      "track_id": "trk_indus",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
-      "id": "st_146",
-      "school_id": "sch_46",
-      "track_id": "trk_s15",
-      "school_year": "תשפ\"ז",
-      "active": true
-    },
-    {
       "id": "st_147",
-      "school_id": "sch_46",
-      "track_id": "trk_photo",
+      "school_id": "sch_44",
+      "track_id": "trk_y36",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_148",
-      "school_id": "sch_47",
-      "track_id": "trk_s04",
+      "school_id": "sch_44",
+      "track_id": "trk_y41",
       "school_year": "תשפ\"ז",
       "active": true
     },
     {
       "id": "st_149",
+      "school_id": "sch_45",
+      "track_id": "trk_y08",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_150",
+      "school_id": "sch_45",
+      "track_id": "trk_y11",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_151",
+      "school_id": "sch_46",
+      "track_id": "trk_y11",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_152",
+      "school_id": "sch_46",
+      "track_id": "trk_y27",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_153",
       "school_id": "sch_47",
       "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_154",
+      "school_id": "sch_47",
+      "track_id": "trk_y31",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_155",
+      "school_id": "sch_48",
+      "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_156",
+      "school_id": "sch_48",
+      "track_id": "trk_y36",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_157",
+      "school_id": "sch_48",
+      "track_id": "trk_y38",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_158",
+      "school_id": "sch_48",
+      "track_id": "trk_y41",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_159",
+      "school_id": "sch_49",
+      "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_160",
+      "school_id": "sch_49",
+      "track_id": "trk_y19",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_161",
+      "school_id": "sch_49",
+      "track_id": "trk_y20",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_162",
+      "school_id": "sch_49",
+      "track_id": "trk_y24",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_163",
+      "school_id": "sch_49",
+      "track_id": "trk_y28",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_164",
+      "school_id": "sch_50",
+      "track_id": "trk_y30",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_165",
+      "school_id": "sch_50",
+      "track_id": "trk_y36",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_166",
+      "school_id": "sch_51",
+      "track_id": "trk_y07",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_167",
+      "school_id": "sch_51",
+      "track_id": "trk_y36",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_168",
+      "school_id": "sch_52",
+      "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_169",
+      "school_id": "sch_52",
+      "track_id": "trk_y22",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_170",
+      "school_id": "sch_53",
+      "track_id": "trk_auto",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_171",
+      "school_id": "sch_53",
+      "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_172",
+      "school_id": "sch_53",
+      "track_id": "trk_y36",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_173",
+      "school_id": "sch_54",
+      "track_id": "trk_auto",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_174",
+      "school_id": "sch_54",
+      "track_id": "trk_y41",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_175",
+      "school_id": "sch_55",
+      "track_id": "trk_y04",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_176",
+      "school_id": "sch_55",
+      "track_id": "trk_y35",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_177",
+      "school_id": "sch_56",
+      "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_178",
+      "school_id": "sch_56",
+      "track_id": "trk_y24",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_179",
+      "school_id": "sch_57",
+      "track_id": "trk_y39",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_180",
+      "school_id": "sch_58",
+      "track_id": "trk_auto",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_181",
+      "school_id": "sch_58",
+      "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_182",
+      "school_id": "sch_58",
+      "track_id": "trk_y38",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_183",
+      "school_id": "sch_59",
+      "track_id": "trk_y06",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_184",
+      "school_id": "sch_59",
+      "track_id": "trk_y09",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_185",
+      "school_id": "sch_59",
+      "track_id": "trk_y13",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_186",
+      "school_id": "sch_60",
+      "track_id": "trk_y36",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_187",
+      "school_id": "sch_61",
+      "track_id": "trk_auto",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_188",
+      "school_id": "sch_61",
+      "track_id": "trk_elec",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_189",
+      "school_id": "sch_61",
+      "track_id": "trk_y12",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_190",
+      "school_id": "sch_61",
+      "track_id": "trk_hair",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_191",
+      "school_id": "sch_61",
+      "track_id": "trk_y38",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_192",
+      "school_id": "sch_61",
+      "track_id": "trk_y41",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_193",
+      "school_id": "sch_62",
+      "track_id": "trk_y04",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_194",
+      "school_id": "sch_62",
+      "track_id": "trk_y27",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_195",
+      "school_id": "sch_62",
+      "track_id": "trk_y28",
+      "school_year": "תשפ\"ז",
+      "active": true
+    },
+    {
+      "id": "st_196",
+      "school_id": "sch_63",
+      "track_id": "trk_y27",
       "school_year": "תשפ\"ז",
       "active": true
     }
