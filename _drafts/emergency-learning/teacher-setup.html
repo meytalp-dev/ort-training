@@ -126,7 +126,8 @@
   .summary .stats{display:flex;justify-content:center;gap:26px;margin-top:14px;flex-wrap:wrap}
   .summary .stats b{display:block;font-size:30px;font-weight:800;line-height:1}
   .summary .stats small{font-size:12px;opacity:.85}
-  .summary .go{display:inline-block;margin-top:18px;background:#fff;color:var(--shell-deep, #8A1852);text-decoration:none;font-weight:800;padding:11px 26px;border-radius:12px;font-size:15px}
+  .summary .go{display:inline-block;margin-top:18px;background:#fff;color:var(--shell-deep, #8A1852);text-decoration:none;font-weight:800;padding:11px 26px;border-radius:12px;font-size:15px;border:none;cursor:pointer;font-family:inherit}
+  .summary .go:hover{transform:translateY(-1px)}
   .infonote{background:var(--shell-soft, #FDEDF4);border:1px solid var(--shell-line, #F3C6DA);border-radius:11px;padding:12px 14px;font-size:13px;color:var(--shell-deep, #8A1852);margin-top:14px}
 
   .nav{display:flex;justify-content:space-between;gap:12px;margin-top:22px}
@@ -169,6 +170,7 @@
 </div>
 
 <script src="seed-pilot.js"></script>
+<script src="teacher-store.js"></script>
 <script>
 const SEED = window.PILOT_SEED || {students:[]};
 const initials = n => (n||'?').trim().charAt(0);
@@ -403,9 +405,34 @@ function renderReadiness(){
         <div><b>${cls.length}</b><small>כיתות</small></div>
         <div><b>${state.role==='homeroom'?state.teachings.filter(t=>t.subject).length:validT.length}</b><small>מקצועות</small></div>
         <div><b>${state.students.length}</b><small>תלמידים</small></div>
-      </div><a class="go" href="index.html?role=${state.role==='homeroom'?'educator':'teacher'}">כניסה למערכת ←</a></div>`
+      </div><button class="go" onclick="finishSetup()">לדשבורד שלי ←</button></div>`
     :`<div class="mini" style="margin-top:16px">יש סעיפים בכתום שכדאי להשלים לפני כניסה — אבל אפשר גם להיכנס ולהשלים בהמשך.</div>
-      <div style="text-align:center;margin-top:12px"><a class="go" style="background:var(--shell);color:#fff" href="index.html?role=${state.role==='homeroom'?'educator':'teacher'}">כניסה בכל זאת ←</a></div>`;
+      <div style="text-align:center;margin-top:12px"><button class="go" style="background:var(--shell);color:#fff" onclick="finishSetup()">לדשבורד בכל זאת ←</button></div>`;
+}
+
+/* שמירת הנתונים למקור-האמת (teacher-store) ומעבר לדשבורד המורה */
+function finishSetup(){
+  syncTeachInputs();
+  const cls = classList();
+  const classes = cls.map(c=>{
+    if(c.homeroom){
+      const firstSub = (state.teachings.find(t=>t.subject)||{}).subject;
+      return {key:'hr', subject:'כיתת אם', grade:state.homeroom.grade,
+        cls:state.homeroom.cls||('כיתה '+state.homeroom.grade), homeroom:true,
+        topic:'', photo:'', note: firstSub?('מחנך/ת · מלמד/ת גם '+firstSub):'מחנך/ת',
+        students:studentsOf('hr').map(s=>s.name)};
+    }
+    const t = state.teachings.find(x=>x.id===c.key)||{};
+    return {key:c.key, subject:t.subject, grade:t.grade, cls:t.cls, homeroom:false,
+      topic:'', photo:'', students:studentsOf(c.key).map(s=>s.name)};
+  });
+  if(window.RetzefTeacher){
+    window.RetzefTeacher.save({
+      name:state.teacher.name||'מורה', school:state.teacher.school||'אורט בית הערבה',
+      role:state.role, activeKey: classes[0] && classes[0].key, classes
+    });
+  }
+  location.href='teacher-dashboard.html';
 }
 
 /* ---------- דוגמה מלאה ---------- */
