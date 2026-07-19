@@ -218,6 +218,17 @@
   .viewingas a{ font-size:13.5px; font-weight:700; color:var(--ink-soft); text-decoration:none; }
   .viewingas a:hover{ color:var(--shell, #A61E64); }
 
+  /* רמז-הרשמה — למורה/מחנך חדש/ה שהפרטים שלו עוד לא במערכת */
+  .reg-hint{ margin-top:13px; font-size:13.5px; font-weight:600; color:var(--ink-faint); }
+  .reg-hint a{ position:relative; font-weight:700; color:var(--shell, #A61E64); text-decoration:none; padding-bottom:3px; }
+  .reg-hint a::after{
+    content:""; position:absolute; inset-inline:0; bottom:0; height:5px; background-color:var(--shell, #A61E64);
+    -webkit-mask:var(--wave) center/200% 100% no-repeat; mask:var(--wave) center/200% 100% no-repeat;
+    opacity:.8; transition:opacity .18s;
+  }
+  .reg-hint a:hover::after{ animation:wave-flow 2.4s linear infinite; }
+  .reg-hint a:focus-visible{ outline:2.5px solid var(--shell, #A61E64); outline-offset:3px; border-radius:4px; }
+
   .entry-cta{ margin-top:20px; }
   .entry .viewingas + .modes{ margin-top:16px; }
   /* כפתור הכניסה יושב בפינה השמאלית-עליונה (בסרגל) */
@@ -471,6 +482,7 @@
       <div class="entry" id="entry">
         <span class="entry-lbl" id="entryLbl">נכנסים כ־</span>
         <div class="roleswitch" id="roleSwitch" role="group" aria-label="מי נכנס?"></div>
+        <p class="reg-hint" id="regHint" hidden></p>
         <div class="viewingas" id="viewingAs" hidden></div>
         <div class="modes" id="modes" role="group" aria-label="מצב המערכת" hidden>
           <button data-m="routine" aria-pressed="true"><span class="d"></span>שגרה</button>
@@ -732,13 +744,23 @@ ROLES.forEach(r => {
   roleSwitch.appendChild(b);
 });
 
-/* מצב פתיחה — בחירת תפקיד מניעה את הלוח ומעדכנת את כפתור הכניסה */
+/* מצב פתיחה — בחירת תפקיד מניעה את הלוח ומעדכנת את כפתור הכניסה.
+   הכפתור מוביל *ישירות* לדשבורד של התפקיד (r.href) — בלי מסך-ביניים. */
 function selectRole(id){
   picked = id;
   const r = roleById(id);
   zoom = r.zoom;
   $$('#roleSwitch button').forEach(x => x.setAttribute('aria-pressed', x.dataset.r === id));
-  $('#entryCta').innerHTML = '<a class="btn" href="index.html?role=' + id + '">כניסה כ' + r.nm + '</a>';
+  $('#entryCta').innerHTML = '<a class="btn" href="' + r.href + '">כניסה כ' + r.nm + ' ←</a>';
+  /* מורה/מחנך חדש/ה — נתיב הרשמה גלוי (teacher-setup) לצד הכניסה הישירה */
+  const reg = $('#regHint');
+  if (reg){
+    if (id === 'teacher' || id === 'educator'){
+      reg.hidden = false;
+      reg.innerHTML = 'חדש/ה כאן? <a href="teacher-setup.html">הרשמת ' +
+                      (id === 'educator' ? 'מחנך/ת' : 'מורה') + ' ←</a>';
+    } else { reg.hidden = true; reg.innerHTML = ''; }
+  }
   paint(true);
 }
 
