@@ -32,7 +32,7 @@ function title(txt){
 }
 function idea(txt){
   const m = txt.match(/^>\s*רעיון מרכזי[^:]*:\s*(.+)$/m);
-  return m ? m[1].trim() : '';
+  return m ? m[1].replace(/`?\[[^\]]*\]`?/g,'').replace(/`[^`]*`/g,'').replace(/\s{2,}/g,' ').trim() : '';
 }
 function levels(txt){
   const L=[];
