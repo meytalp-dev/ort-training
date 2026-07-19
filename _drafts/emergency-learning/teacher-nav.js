@@ -22,7 +22,9 @@
     calendar: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
     layers: '<path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',
     alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>',
-    filetext: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M9 13h6M9 17h4"/>'
+    filetext: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M9 13h6M9 17h4"/>',
+    users: '<circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 3-5.2 6.5-5.2s6.5 1.8 6.5 5.2"/><circle cx="18" cy="9" r="2.4"/><path d="M17 14.5c2.6.2 4.5 1.8 4.5 4.5"/>',
+    heart: '<path d="M12 20s-7-4.3-9.3-9.1C1 7.6 2.7 4.5 6 4.5c2 0 3.3 1.2 4 2.4.7-1.2 2-2.4 4-2.4 3.3 0 5 3.1 3.3 6.4C19 15.7 12 20 12 20Z"/>'
   };
 
   /* s = כותרת-קבוצה · אחרת פריט ניווט (t=תווית, h=קישור, i=אייקון, badge=תג) */
@@ -49,13 +51,40 @@
     { t: 'הדוח היומי', h: 'daily-report.html', i: 'filetext' }
   ];
 
+  /* תפריט המחנך/ת — ממוקד בכיתה ובקשר. בלי כלי-הוראה (יצירת שיעור/בוחן/
+     שליחת משימה/תרגול) — אלו של המורה המקצועי. הדשבורד הראשי = דופק הכיתה. */
+  var EDU_ITEMS = [
+    { t: 'דופק הכיתה', h: 'educator-pulse.html', i: 'heart' },
+    { t: 'יומן קשר', h: 'contact-log-teacher.html', i: 'message' },
+    { t: 'הודעות', h: 'messages-center.html', i: 'send' },
+    { s: 'כיתה' },
+    { t: 'הכיתה שלי', h: 'teacher-class-board.html', i: 'clipboard' },
+    { t: 'תלמידים', h: 'student-activity.html', i: 'users' },
+    { s: 'דוחות' },
+    { t: 'הדוח היומי', h: 'daily-report.html', i: 'filetext' }
+  ];
+
+  /* תפקיד הניווט: דף מסומן במפורש (<html data-role="educator"|"teacher">) קובע
+     *ומעדכן* את הזיכרון; דף משותף בלי סימון יורש את התפקיד האחרון. כך המחנך/ת
+     שנכנס/ת דרך דופק-הכיתה שומר/ת תפריט-כיתה גם במסכים המשותפים, ומורה שנכנס/ת
+     דרך לוח-הבקרה מקבל/ת את תפריט-המורה — בלי דליפה בין השניים. */
+  function navRole() {
+    var attr = document.documentElement.getAttribute('data-role');
+    if (attr === 'educator' || attr === 'teacher') {
+      try { localStorage.setItem('retzef-nav-role', attr); } catch (e) {}
+      return attr;
+    }
+    try { return localStorage.getItem('retzef-nav-role') || 'teacher'; } catch (e) { return 'teacher'; }
+  }
+
   function build() {
     var nav = document.querySelector('.sidebar__nav');
     if (!nav) return;
+    var items = navRole() === 'educator' ? EDU_ITEMS : ITEMS;
     var here = (location.pathname.split('/').pop() || 'teacher-dashboard.html').toLowerCase();
     var svgOpen = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
     var html = '';
-    ITEMS.forEach(function (it) {
+    items.forEach(function (it) {
       if (it.s) { html += '<div class="sidebar__section">' + it.s + '</div>'; return; }
       var file = it.h.split('/').pop().toLowerCase();
       var cur = file === here ? ' aria-current="page"' : '';
