@@ -37,7 +37,7 @@ function flag(scope, id, check, severity, category, detail){
    ============================================================ */
 for (const id of Object.keys(CONTENT)){
   const raw = CONTENT[id];
-  const { body, hasLevels } = P.splitLevels(raw);
+  const { body, hasLevels, levels, flatChunk } = P.splitLevels(raw);
   const meta = UMETA[id] || {};
 
   // A1 — מבנה
@@ -47,8 +47,10 @@ for (const id of Object.keys(CONTENT)){
   // A2 — רעיון מרכזי
   if (!/^>\s*\*{0,2}\s*רעיון מרכזי/m.test(body) && !(meta.idea)) flag('unit', id, 'no-central-idea', 'med', 'content', 'חסר "רעיון מרכזי"');
 
-  // שאלות — על כל היחידה. הפירוש זהה למנוע-התצוגה (unit-parser.parseQuestion).
-  const allQ = P.questionBlocks(body);
+  // שאלות — מחולצות לפי-רמה וממקטע-השאלות בלבד (questionText), בדיוק כמו מנוע-התצוגה.
+  // כך לא נלכדים פתיח/הסבר/דוגמה, ונתפסות שאלות עם גזע-ריק. הפירוש זהה (parseQuestion).
+  const levelChunks = Object.keys(levels).length ? Object.keys(levels).map(k => levels[k]) : [flatChunk || body];
+  const allQ = levelChunks.reduce((acc, ch) => acc.concat(P.questionBlocks(P.questionText(ch))), []);
   // A3 — מיעוט שאלות (מפרט: 2/3/3 ≈ 8; דגל אם < 4 בסה"כ)
   if (allQ.length < 4) flag('unit', id, 'few-questions', 'med', 'content',
     `${allQ.length} שאלות בלבד (מפרט unit-dna: 2/3/3 ≈ 8)`);
@@ -69,6 +71,9 @@ for (const id of Object.keys(CONTENT)){
     // A6 — שאלה לא-אמריקאית בלי מחוון/תשובה-צפויה (הפרת מפרט)
     if (q.type === 'open' && !hasRubric) flag('unit', id, 'open-without-rubric', 'high', 'content',
       `שאלה ${i+1}: פתוחה/מובנית בלי מחוון/תשובה-צפויה (unit-dna דורש)`);
+    // A10 — שאלה עם גזע ריק (מחרוזת-שאלה חסרה) — שבורה/לא-כתובה (שופט-הקושי תפס אלו)
+    if (q.stem.trim() === '' && !q.options.length) flag('unit', id, 'empty-question', 'high', 'content',
+      `שאלה ${i+1}: גזע-שאלה ריק — טקסט-השאלה חסר`);
     // A8 — "רמז-אורך": התשובה הנכונה ארוכה בהרבה מכל מסיח → נחשפת בלי חשיבה (שופט-LLM זיהה כדפוס)
     if (q.method === 'mcq' && q.correctIndex >= 0 && q.options.length >= 3) {
       const cl = q.options[q.correctIndex].text.length;

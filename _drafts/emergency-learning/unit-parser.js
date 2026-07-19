@@ -66,6 +66,31 @@
     return String(txt).split(/\n(?=\d+\.\s)/).filter(function (b) { return /\d+\.\s/.test(b); });
   }
 
+  /* מחלץ את גוף מקטע(י)-השאלות מתוך רמה — כמו parseSections במנוע-התצוגה:
+     סמן = "### כותרת" או "**כותרת:**"; מחזיר את גוף המקטעים שכותרתם כוללת "שאל".
+     כך ה-QA בודק את אותן שאלות שהתלמיד רואה, בלי לכלול פתיח/הסבר/דוגמה. */
+  function questionText(chunk) {
+    chunk = String(chunk);
+    var marks = [], m;
+    var re1 = /(?:^|\n)###\s+([^\n]+)/g;
+    while ((m = re1.exec(chunk))) marks.push({ title: m[1].trim(), start: m.index + m[0].indexOf('###'), cs: re1.lastIndex });
+    var re2 = /\*\*([^*\n]+?):\*\*/g;
+    while ((m = re2.exec(chunk))) marks.push({ title: m[1].trim().replace(/\s*\(\d+\)\s*[—-]?.*$/, ''), start: m.index, cs: re2.lastIndex });
+    // כותרות רלוונטיות-לשאלה: שאלות + מקטעי-מחוון/תשובה/משוב (הם חלק מההערכה,
+    // ולכן חייבים להישאר מחוברים לשאלה כדי ש-hasRubric יזהה אותם).
+    var Q = /שאל|מחוון|תשוב|^משוב|פתרון|רובריק/;
+    if (!marks.length) return /שאל/.test(chunk) ? chunk : '';   // בלי סמנים — אם יש "שאל" ניקח הכל
+    marks.sort(function (a, b) { return a.start - b.start; });
+    var out = [];
+    for (var i = 0; i < marks.length; i++) {
+      if (!Q.test(marks[i].title)) continue;
+      var end = i + 1 < marks.length ? marks[i + 1].start : chunk.length;
+      // כלול גם את שורת-הסמן עצמה (למשל "**מחוון:**") כדי ש-hasRubric יתפוס
+      out.push((/שאל/.test(marks[i].title) ? '' : marks[i].title + ': ') + chunk.slice(marks[i].cs, end));
+    }
+    return out.join('\n');
+  }
+
   /* ------------------------------------------------------------
      parseQuestion — הפירוש הקנוני של שאלה בודדת.
      מזהה שלושה מקורות-אפשרויות:
@@ -259,7 +284,7 @@
 
   return {
     esc: esc, stripMeta: stripMeta, inline: inline, hexSoft: hexSoft, phaseOf: phaseOf,
-    splitLevels: splitLevels, questionBlocks: questionBlocks, parseQuestion: parseQuestion,
+    splitLevels: splitLevels, questionBlocks: questionBlocks, questionText: questionText, parseQuestion: parseQuestion,
     seededShuffle: seededShuffle, checkOrder: checkOrder, checkAssign: checkAssign
   };
 });
