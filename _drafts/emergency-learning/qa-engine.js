@@ -82,6 +82,10 @@ for (const id of Object.keys(CONTENT)){
   if (allQ.length >= 4 && Object.keys(types).length === 1)
     flag('unit', id, 'single-method', 'low', 'content', `כל ${allQ.length} השאלות מסוג "${Object.keys(types)[0]}" (מפרט: לגוון)`);
 
+  // A9 — יחידת-שלד: שאלות/מסיחים לא-כתובים (RED שממתין למומחה). לא שמיש כמו-שהוא.
+  if (/\[מסיח\b|\[תשובה נכונה\]|\[שאל[הת][^\]]*אמריקאית|\[שאל[הת][^\]]*EPA/.test(body))
+    flag('unit', id, 'placeholder-question', 'high', 'content', 'שאלות/מסיחים בשלד ([מסיח]/[תשובה נכונה]/[שאלה…]) — טרם נכתבו (RED: ממתין למומחה)');
+
   // B1-B3 — דליפות מטא-מחבר שאמורות להיות מוסתרות ברינדור
   if (/error_type/.test(body)) flag('unit', id, 'leak-error-type', 'med', 'render', 'מכיל {error_type} — לוודא שהמנוע מסתיר');
   if (/\*\*מסיחים\s*:\*\*/.test(body)) flag('unit', id, 'leak-distractors-section', 'med', 'render', 'מקטע **מסיחים:** — חייב מוסתר');
