@@ -10,8 +10,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Heebo:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tokens.css?v=2">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M30 16h-4.5' stroke='%2391A5AE' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M7.5 16H2' stroke='%230B8F98' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='16' cy='16' r='6.5' fill='%23fff' stroke='%230B8F98' stroke-width='4'/%3E%3C/svg%3E">
-<script>/* מצב-תצוגה מוקדם (למניעת הבהוב): שער-פתיחה=gate · מסך-תפקיד=role */
-  document.documentElement.dataset.view = new URLSearchParams(location.search).get('role') ? 'role' : 'gate';</script>
+<script>/* מצב-תצוגה מוקדם (למניעת הבהוב): gate=שער · identify=הזדהות · role=בית אישי */
+  (function(){ var p = new URLSearchParams(location.search);
+    document.documentElement.dataset.view = p.get('role') ? (p.get('me') ? 'role' : 'identify') : 'gate'; })();</script>
 <style>
   /* ============================================================
      רֶצֶף — שער · המוטיב הוא הנקודה. הקו הוא הנתונים.
@@ -233,6 +234,30 @@
   html[data-view="gate"] .entry-lbl{ text-align:center; }
   html[data-view="gate"] .roleswitch{ justify-content:center; }
   html[data-view="gate"] .entry-cta{ margin-top:44px; }
+  html[data-view="gate"] .entry{ margin-top:clamp(46px, 8vh, 96px); }   /* בורר-התפקידים ומטה — נמוך יותר */
+
+  /* שורת "משרד העבודה" מתחת לטאגליין (רק בשער) */
+  .ministry{ font-family:var(--font-body); font-size:13px; font-weight:800; letter-spacing:.1em; color:var(--ink-faint); margin-top:14px; }
+  html[data-view="role"] .ministry{ display:none; }
+
+  /* ---------- מסך הזדהות ---------- */
+  #identify{ display:none; }
+  html[data-view="identify"] .hero,
+  html[data-view="identify"] .zoom,
+  html[data-view="identify"] .real,
+  html[data-view="identify"] footer,
+  html[data-view="identify"] .stamp{ display:none; }
+  html[data-view="identify"] main{ display:flex; align-items:center; justify-content:center; min-height:calc(100dvh - 74px); }
+  html[data-view="identify"] #identify{ display:block; width:100%; }
+  .idcard{ max-width:440px; margin:0 auto; background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); padding:30px 28px 24px; text-align:center; }
+  .idcard h2{ font-family:var(--font-head); font-size:22px; font-weight:800; color:var(--ink-strong); margin-top:14px; }
+  .idcard > p{ font-size:14px; color:var(--ink-soft); margin:4px 0 20px; }
+  .idlist{ text-align:start; }
+  .idlist .opt{ width:100%; font-family:inherit; cursor:pointer; background:var(--card); }
+  .idback{ display:inline-flex; align-items:center; gap:6px; margin-top:16px; font-size:13.5px; font-weight:700;
+    color:var(--ink-soft); text-decoration:none; }
+  .idback:hover{ color:var(--shell, #A61E64); }
 
   /* ---------- הלוח — הקו כנתונים ---------- */
   .board-wrap{ margin-top:22px; }
@@ -414,6 +439,7 @@
     <section class="hero">
       <h1>להמשיך מאותה נקודה<span class="h1-node" aria-hidden="true"></span></h1>
       <p class="sub">רציפות פדגוגית מותאמת — בשגרה, מרחוק ובחירום.</p>
+      <p class="ministry">משרד העבודה</p>
 
       <!-- שער-הפתיחה: בורר בעלי-תפקידים · במסך-התפקיד הוא מוחלף בבורר-מצב -->
       <div class="entry" id="entry">
@@ -435,6 +461,22 @@
           <span class="demo">נתוני הדגמה</span>
         </div>
         <div class="board" id="board" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="identify" aria-label="הזדהות">
+      <div class="idcard">
+        <svg viewBox="0 0 76 20" width="88" height="23" fill="none" aria-hidden="true">
+          <path d="M73 10h-6"   stroke="var(--ink-faint)" stroke-width="3.6" stroke-linecap="round"/>
+          <path d="M60 10h-4.5" stroke="var(--ink-faint)" stroke-width="3.1" stroke-linecap="round"/>
+          <path d="M49 10h-2.5" stroke="var(--ink-faint)" stroke-width="2.6" stroke-linecap="round"/>
+          <circle cx="35" cy="10" r="6" fill="var(--card)" stroke="var(--brand)" stroke-width="3.6"/>
+          <path d="M28 10H3" stroke="var(--brand)" stroke-width="3.6" stroke-linecap="round"/>
+        </svg>
+        <h2 id="idTitle">הזדהות</h2>
+        <p id="idSub">מי נכנס?</p>
+        <div class="idlist" id="idList"></div>
+        <a class="idback" href="index.html"><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg> חזרה לבחירת תפקיד</a>
       </div>
     </section>
 
@@ -682,6 +724,76 @@ function enterAsRole(r){
   paint(true);
 }
 
+/* ============================================================
+   הזדהות (דמו) → בית אישי. כל בעל-תפקיד מזדהה כפרסונה,
+   ואז הכותרת/הזהות/הסטטיסטיקות מותאמות אליו.
+   ============================================================ */
+const PEOPLE = {
+  teacher: [
+    { id:'meytal', first:'מיטל', name:'מיטל פלג', sub:'מורה ללשון · אורט בית הערבה',
+      line:'מיטל פלג · מורה ללשון · אורט בית הערבה · כיתה י׳',
+      stats:[[3,'כיתות'],[20,'שיעורים'],[40,'תלמידים']] },
+    { id:'yossi', first:'יוסי', name:'יוסי אבו־קף', sub:'מורה למתמטיקה · אורט בית הערבה',
+      line:'יוסי אבו־קף · מורה למתמטיקה · אורט בית הערבה · כיתה י״א',
+      stats:[[4,'כיתות'],[24,'שיעורים'],[52,'תלמידים']] },
+  ],
+  principal: [
+    { id:'ronit', first:'רונית', name:'רונית שר', sub:'מנהלת · אורט בית הערבה',
+      line:'רונית שר · מנהלת · אורט בית הערבה',
+      stats:[[24,'כיתות'],[512,'תלמידים'],[41,'מורים']] },
+  ],
+  subject: [
+    { id:'avi', first:'אבי', name:'אבי נחמיאס', sub:'פיקוח עיצוב מדיה · משרד העבודה',
+      line:'אבי נחמיאס · פיקוח מקצועי · עיצוב מדיה · 6 בתי ספר',
+      stats:[[6,'בתי ספר'],[38,'כיתות'],[720,'תלמידים']] },
+  ],
+  national: [
+    { id:'sigal', first:'סיגל', name:'סיגל בר־און', sub:'פיקוח ארצי · משרד העבודה',
+      line:'סיגל בר־און · פיקוח ארצי · משרד העבודה',
+      stats:[[6,'מחוזות'],[142,'בתי ספר'],[18400,'תלמידים']] },
+  ],
+};
+
+/* מסך הזדהות — בחירת פרסונה */
+function showIdentify(r){
+  $('#idTitle').textContent = 'הזדהות · ' + r.nm;
+  const people = PEOPLE[r.id] || [];
+  $('#idList').innerHTML = people.map(p =>
+    '<button type="button" class="opt" data-me="' + p.id + '">' +
+      '<span class="pt"></span>' +
+      '<div><b>' + p.name + '</b><small>' + p.sub + '</small></div>' +
+      '<span class="ar"><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></span>' +
+    '</button>'
+  ).join('');
+  $$('#idList .opt').forEach(b => b.addEventListener('click', () =>
+    location.href = 'index.html?role=' + r.id + '&me=' + b.dataset.me));
+}
+
+/* בית אישי — אחרי הזדהות */
+function enterAsPerson(r, p){
+  zoom = r.zoom;
+  $('#entryLbl').hidden = true;
+  $('#roleSwitch').hidden = true;
+  $('#modes').hidden = false;
+  document.querySelector('.hero h1').innerHTML = 'שלום ' + p.first + '<span class="h1-node" aria-hidden="true"></span>';
+  document.querySelector('.hero .sub').textContent = p.line;
+  const v = $('#viewingAs'); v.hidden = false;
+  v.innerHTML = '<span class="tag"><span class="pt"></span>' + p.name + '</span><a href="index.html">התנתקות</a>';
+  $('#entryCta').innerHTML = '';   /* בלי "כניסה למערכת המלאה" */
+  renderStats(p.stats);
+  setMode(mode);
+  paint(true);
+}
+
+/* סטטיסטיקות אישיות במקום הגנריות */
+function renderStats(stats){
+  const wrap = document.querySelector('.real .stats');
+  if (!wrap) return;
+  wrap.innerHTML = stats.map(([n, l]) =>
+    '<div class="stat"><b data-to="' + n + '">0</b><span>' + l + '</span></div>').join('');
+  wrap.querySelectorAll('.stat b').forEach(el => countUp(el));
+}
+
 /* ---------- מונים ---------- */
 function countUp(el){
   const to = +el.dataset.to, t0 = performance.now(), D = 1400;
@@ -703,11 +815,15 @@ addEventListener('scroll', () => $('#nav').classList.toggle('stuck', scrollY > 8
 /* ---------- אתחול ---------- */
 try { const s = localStorage.getItem('retzef-mode'); if (s && CAPTION[s]) mode = s; } catch(e){}
 
-const roleParam = new URLSearchParams(location.search).get('role');
+const params = new URLSearchParams(location.search);
+const roleParam = params.get('role');
+const meParam = params.get('me');
+document.documentElement.setAttribute('data-mode', mode);
 if (roleParam && roleById(roleParam)){
-  /* מסך של בעל-תפקיד */
-  document.documentElement.setAttribute('data-mode', mode);
-  enterAsRole(roleById(roleParam));
+  const r = roleById(roleParam);
+  const person = meParam && (PEOPLE[r.id] || []).find(x => x.id === meParam);
+  if (person) enterAsPerson(r, person);   /* בית אישי (מזוהה) */
+  else showIdentify(r);                    /* הזדהות */
 } else {
   /* שער-הפתיחה — בורר תפקידים + בורר מצב מתחתיו */
   $('#modes').hidden = false;
