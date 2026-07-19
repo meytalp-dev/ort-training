@@ -115,10 +115,67 @@
     };
   }
 
+  /* ---- שיטות-הערכה אינטראקטיביות (משפחת בחירה/סגור) · DSL אחיד ----
+     תגית בסוף-הגזע בוחרת רכיב:  {סידור} {התאמה} {מיון}  (או order/match/sort).
+     שורות-פריט:  "- A :: B"  (התאמה/מיון)  ·  "- A"  (סידור, בסדר-הנכון).
+     כל הלוגיקה (עירבוב-דטרמיניסטי + אימות) טהורה כאן → נבדקת ב-node,
+     שכבת-ה-DOM דקה ומחווטת לפונקציות האלה. */
+  var METHOD_TAGS = [
+    { re: /\{\s*(סידור|order)\s*\}/, m: 'order' },
+    { re: /\{\s*(התאמה|match)\s*\}/, m: 'match' },
+    { re: /\{\s*(מיון|sort)\s*\}/, m: 'sort' }
+  ];
+  function methodTag(s) {
+    for (var i = 0; i < METHOD_TAGS.length; i++) if (METHOD_TAGS[i].re.test(s)) return METHOD_TAGS[i];
+    return null;
+  }
+  // עירבוב דטרמיניסטי (Fisher–Yates עם מחולל-זרע) — בלי Math.random, לכן ניתן-לבדיקה.
+  function seededShuffle(arr, seed) {
+    var a = arr.slice(), s = (seed >>> 0) || 1;
+    for (var i = a.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      var j = s % (i + 1);
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  // אימות טהור — מחזיר {ok, correct:[bool...]} מול הפתרון-הנכון.
+  function checkOrder(userIdx, n) {          // userIdx = הסדר שהתלמיד בנה (אינדקסים למקור-הנכון)
+    var res = userIdx.map(function (v, i) { return v === i; });
+    return { ok: res.every(Boolean), correct: res };
+  }
+  function checkAssign(userCats, correctCats) { // מיון: לכל פריט הקטגוריה שנבחרה מול הנכונה
+    var res = correctCats.map(function (c, i) { return userCats[i] === c; });
+    return { ok: res.every(Boolean), correct: res };
+  }
+  function parseInteractive(firstRaw, lines, tag) {
+    var stem = firstRaw.replace(tag.re, '').replace(/\*/g, '').trim();
+    var feedback = '', hint = '', items = [], pairs = [];
+    lines.slice(1).forEach(function (l) {
+      var raw = l.trim(); if (!raw) return;
+      if (/^#/.test(raw)) return;
+      var lm = stripMeta(raw).trim();
+      if (/[✅✓]/.test(raw)) { feedback = lm.replace(/^[-*]\s*/, '').replace(/^משוב:\s*/, '').replace(/[✅✓]\s*/, '').trim(); return; }
+      if (/💡/.test(raw)) { hint = lm.replace(/^[-*]\s*/, '').replace(/💡\s*/, '').trim(); return; }
+      var im = lm.match(/^[-*]\s*(.+)$/); if (!im) return;
+      var parts = im[1].split(/\s*::\s*/);
+      if (parts.length >= 2) pairs.push({ l: parts[0].replace(/\*/g, '').trim(), r: parts[1].replace(/\*/g, '').trim() });
+      else items.push(im[1].replace(/\*/g, '').trim());
+    });
+    var out = { stem: stem, feedback: feedback, hint: hint, method: tag.m, type: 'interactive', options: [], correctIndex: -1, sourceForm: 'none' };
+    if (tag.m === 'order') out.items = items;                 // בסדר-הנכון
+    else { out.pairs = pairs; }                               // match/sort: זוגות
+    return out;
+  }
+
   function parseQuestion(block) {
     var lines = String(block).split('\n');
     var firstRaw = lines[0].replace(/^\s*\d+[.)]\s*/, '');
     var options = [], feedback = '', hint = '', fbLetter = null, sourceForm = 'none';
+
+    // (0) שיטה אינטראקטיבית מתויגת — מסלול-פרסור נפרד.
+    var tag = methodTag(firstRaw);
+    if (tag) return parseInteractive(firstRaw, lines, tag);
 
     // (1) אפשרויות-בשורה: "(א) … (ב) … (ג) …" בתוך שורת-השאלה
     var inlineRe = /\(([א-ת])\)/g, marks = [], mm;
@@ -202,6 +259,7 @@
 
   return {
     esc: esc, stripMeta: stripMeta, inline: inline, hexSoft: hexSoft, phaseOf: phaseOf,
-    splitLevels: splitLevels, questionBlocks: questionBlocks, parseQuestion: parseQuestion
+    splitLevels: splitLevels, questionBlocks: questionBlocks, parseQuestion: parseQuestion,
+    seededShuffle: seededShuffle, checkOrder: checkOrder, checkAssign: checkAssign
   };
 });
