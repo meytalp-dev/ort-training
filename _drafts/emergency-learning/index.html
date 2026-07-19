@@ -170,6 +170,36 @@
   .modes button[aria-pressed="true"] .d{ opacity:1; background:#fff; }
   .modes button:focus-visible{ outline:2.5px solid var(--brand); outline-offset:2px; }
 
+  /* ---------- שער-הפתיחה — בורר בעלי-תפקידים ---------- */
+  .entry{ margin-top:30px; }
+  .entry .modes{ margin:0; }
+  .entry-lbl{ display:block; font-size:13px; font-weight:700; color:var(--ink-faint); margin-bottom:11px; }
+  .roleswitch{ display:flex; flex-wrap:wrap; gap:9px; }
+  .roleswitch button{
+    font-family:var(--font-body); font-size:14.5px; font-weight:700; color:var(--ink-soft);
+    border:1px solid var(--line-strong); background:var(--card); padding:10px 18px; border-radius:var(--radius-pill);
+    cursor:pointer; display:inline-flex; align-items:center; gap:9px; transition:.18s;
+  }
+  .roleswitch button .pt{ width:9px; height:9px; border-radius:50%; background:var(--card); border:2.5px solid var(--brand); transition:.2s; }
+  .roleswitch button:hover{ border-color:var(--brand); color:var(--ink-strong); }
+  .roleswitch button:hover .pt{ transform:scale(1.2); }
+  .roleswitch button[aria-pressed="true"]{ color:var(--on-shell, #fff); background:var(--shell, #A61E64); border-color:var(--shell, #A61E64); }
+  .roleswitch button[aria-pressed="true"] .pt{ border-color:var(--on-shell, #fff); background:var(--shell, #A61E64); }
+  .roleswitch button:focus-visible{ outline:2.5px solid var(--shell, #A61E64); outline-offset:2px; }
+
+  /* זהות במסך-התפקיד */
+  .viewingas{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .viewingas .tag{
+    display:inline-flex; align-items:center; gap:8px; font-size:14px; font-weight:800; color:var(--ink-strong);
+    background:var(--shell-soft, #FDEDF4); border:1px solid var(--shell-line, #F3C6DA); border-radius:var(--radius-pill); padding:8px 16px;
+  }
+  .viewingas .tag .pt{ width:9px; height:9px; border-radius:50%; background:var(--card); border:2.5px solid var(--shell, #A61E64); }
+  .viewingas a{ font-size:13.5px; font-weight:700; color:var(--ink-soft); text-decoration:none; }
+  .viewingas a:hover{ color:var(--shell, #A61E64); }
+
+  .entry-cta{ margin-top:20px; }
+  .entry .viewingas + .modes{ margin-top:16px; }
+
   /* ---------- הלוח — הקו כנתונים ---------- */
   .board-wrap{ margin-top:22px; }
   .board-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
@@ -345,7 +375,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
       <span id="schoolPillTxt">בחרו בית ספר</span>
     </a>
-    <a class="btn" id="loginBtn" href="login.html">כניסה</a>
+    <a class="btn" id="loginBtn" href="#entry">כניסה</a>
   </div>
 </header>
 
@@ -356,10 +386,17 @@
       <h1>להמשיך מאותה נקודה<span class="h1-node" aria-hidden="true"></span></h1>
       <p class="sub">רציפות פדגוגית — בשגרה, מרחוק ובחירום.</p>
 
-      <div class="modes" role="group" aria-label="מצב המערכת">
-        <button data-m="routine" aria-pressed="true"><span class="d"></span>שגרה</button>
-        <button data-m="remote" aria-pressed="false"><span class="d"></span>מרחוק</button>
-        <button data-m="emergency" aria-pressed="false"><span class="d"></span>חירום</button>
+      <!-- שער-הפתיחה: בורר בעלי-תפקידים · במסך-התפקיד הוא מוחלף בבורר-מצב -->
+      <div class="entry" id="entry">
+        <span class="entry-lbl" id="entryLbl">נכנסים כ־</span>
+        <div class="roleswitch" id="roleSwitch" role="group" aria-label="מי נכנס?"></div>
+        <div class="viewingas" id="viewingAs" hidden></div>
+        <div class="modes" id="modes" role="group" aria-label="מצב המערכת" hidden>
+          <button data-m="routine" aria-pressed="true"><span class="d"></span>שגרה</button>
+          <button data-m="remote" aria-pressed="false"><span class="d"></span>מרחוק</button>
+          <button data-m="emergency" aria-pressed="false"><span class="d"></span>חירום</button>
+        </div>
+        <div class="entry-cta" id="entryCta"></div>
       </div>
 
       <div class="board-wrap">
@@ -550,6 +587,56 @@ function setMode(m){
 }
 $$('.modes button').forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
 
+/* ============================================================
+   בעלי תפקידים — הבורר של שער-הפתיחה.
+   כל תפקיד ממופה לרמת-זום קיימת (הלוח מונע ע"י התפקיד),
+   ו"כניסה" מובילה למסך-התפקיד (index.html?role=…) עם בורר-המצב.
+   ============================================================ */
+const ROLES = [
+  { id:'teacher',   nm:'מורה או מחנך',  zoom:'educator', scope:'הכיתה שלי', href:'teacher-dashboard.html' },
+  { id:'principal', nm:'הנהלת בית ספר', zoom:'school',   scope:'בית הספר',  href:'principal-pulse.html' },
+  { id:'subject',   nm:'פיקוח מקצועי',  zoom:'subject',  scope:'תחום דעת',  href:'subject-analytics.html' },
+  { id:'national',  nm:'פיקוח ארצי',    zoom:'national', scope:'כל הארץ',   href:'national-map.html' },
+];
+const roleById = id => ROLES.find(r => r.id === id);
+let picked = 'teacher';
+
+const roleSwitch = $('#roleSwitch');
+ROLES.forEach(r => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.dataset.r = r.id;
+  b.setAttribute('aria-pressed', r.id === picked);
+  b.innerHTML = '<span class="pt"></span>' + r.nm;
+  b.addEventListener('click', () => selectRole(r.id));
+  roleSwitch.appendChild(b);
+});
+
+/* מצב פתיחה — בחירת תפקיד מניעה את הלוח ומעדכנת את כפתור הכניסה */
+function selectRole(id){
+  picked = id;
+  const r = roleById(id);
+  zoom = r.zoom;
+  $$('#roleSwitch button').forEach(x => x.setAttribute('aria-pressed', x.dataset.r === id));
+  $('#entryCta').innerHTML = '<a class="btn" href="index.html?role=' + id + '">כניסה כ' + r.nm + '</a>';
+  paint(true);
+}
+
+/* מצב תפקיד — הלוח נעול להיקף התפקיד, מופיע בורר-המצב וזהות התפקיד */
+function enterAsRole(r){
+  zoom = r.zoom;
+  $('#entryLbl').hidden = true;
+  $('#roleSwitch').hidden = true;
+  $('#modes').hidden = false;
+  const v = $('#viewingAs');
+  v.hidden = false;
+  v.innerHTML = '<span class="tag"><span class="pt"></span>צופה כ: ' + r.nm + ' · ' + r.scope + '</span>' +
+                '<a href="index.html">החלפת תפקיד</a>';
+  $('#entryCta').innerHTML = '<a class="btn" href="' + r.href + '">כניסה למערכת המלאה ←</a>';
+  setMode(mode);
+  paint(true);
+}
+
 /* ---------- מונים ---------- */
 function countUp(el){
   const to = +el.dataset.to, t0 = performance.now(), D = 1400;
@@ -570,8 +657,18 @@ addEventListener('scroll', () => $('#nav').classList.toggle('stuck', scrollY > 8
 
 /* ---------- אתחול ---------- */
 try { const s = localStorage.getItem('retzef-mode'); if (s && CAPTION[s]) mode = s; } catch(e){}
-setMode(mode);
-paint(true);
+
+const roleParam = new URLSearchParams(location.search).get('role');
+if (roleParam && roleById(roleParam)){
+  /* מסך של בעל-תפקיד */
+  document.documentElement.setAttribute('data-mode', mode);
+  enterAsRole(roleById(roleParam));
+} else {
+  /* שער-הפתיחה — בורר תפקידים */
+  document.documentElement.setAttribute('data-mode', mode);
+  $('#caption').textContent = CAPTION[mode];
+  selectRole(picked);
+}
 </script>
 </body>
 </html>
