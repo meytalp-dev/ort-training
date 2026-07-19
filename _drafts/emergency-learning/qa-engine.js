@@ -69,6 +69,14 @@ for (const id of Object.keys(CONTENT)){
     // A6 — שאלה לא-אמריקאית בלי מחוון/תשובה-צפויה (הפרת מפרט)
     if (q.type === 'open' && !hasRubric) flag('unit', id, 'open-without-rubric', 'high', 'content',
       `שאלה ${i+1}: פתוחה/מובנית בלי מחוון/תשובה-צפויה (unit-dna דורש)`);
+    // A8 — "רמז-אורך": התשובה הנכונה ארוכה בהרבה מכל מסיח → נחשפת בלי חשיבה (שופט-LLM זיהה כדפוס)
+    if (q.method === 'mcq' && q.correctIndex >= 0 && q.options.length >= 3) {
+      const cl = q.options[q.correctIndex].text.length;
+      const others = q.options.filter((o, idx) => idx !== q.correctIndex).map(o => o.text.length);
+      const maxOther = Math.max.apply(null, others);
+      if (cl >= 20 && cl > maxOther * 1.6) flag('unit', id, 'answer-length-tell', 'med', 'content',
+        `שאלה ${i+1}: התשובה הנכונה ארוכה בהרבה מהמסיחים (${cl} מול ${maxOther} תווים) — רמז שקוף`);
+    }
   });
   // A7 — כל השאלות מאותה שיטה (מפרט אוסר "הכול MC")
   if (allQ.length >= 4 && Object.keys(types).length === 1)
