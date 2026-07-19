@@ -58,7 +58,7 @@ for (const id of Object.keys(CONTENT)){
   const types = {};
   allQ.forEach((b, i) => {
     const q = P.parseQuestion(b);
-    const hasRubric = /מחוון|תשובה צפויה|תשובה נכונה|תשובה אפשרית|משוב\s*:/.test(b);
+    const hasRubric = /מחוון|תשובה צפויה|תשובה נכונה|תשובה אפשרית|משוב\s*:|רשימת תיוג/.test(b);
     const inlineMarkers = (b.split('\n')[0].match(/\([א-ת]\)/g) || []).length >= 2;
     types[q.type] = (types[q.type]||0)+1;
     // A4 — כשל-רינדור: אפשרויות (א)(ב) בשורה שהמנוע *עדיין* מציג כפתוחה.
