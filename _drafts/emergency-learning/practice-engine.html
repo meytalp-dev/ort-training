@@ -356,11 +356,24 @@
   </footer>
 </div>
 
+<script src="seed-pilot.js"></script>
+<script src="progress-service.js"></script>
 <script>
 /* ============================================================
    רֶצֶף — מנוע תרגול ובוחן (W1-05)
    מונע-נתונים · משוב מיידי · בלי עונש · ציון אישי לתלמיד+מורה בלבד
+   שלב 2: בסיום בוחן נרשמת הגשה אמיתית ל-Resef.Progress (מאגר פר-תלמיד)
    ============================================================ */
+
+/* --- הקשר: מי התלמיד/ה ואיזו יחידה (?student= / ?unit=) --- */
+function qparam(k){ try{ return new URLSearchParams(location.search).get(k); }catch(e){ return null; } }
+const STUDENT = (function(){
+  const id = qparam('student') || 'std_01';   // ברירת-מחדל: דני (קיים בפיילוט)
+  let name = 'תלמיד/ה';
+  try{ if(window.PILOT_SEED){ const s=PILOT_SEED.students.find(x=>x.id===id); if(s) name=s.first_name; } }catch(e){}
+  return { id:id, name:name };
+})();
+const UNIT_ID = qparam('unit') || 'unt_mishpat_test';   // מופע-ההערכה של "משפט פשוט ומורכב"
 
 // --- מאגר שאלות (מוזרק מבחוץ בפרודקשן; כאן דוגמת לשון להמחשה) ---
 const QUIZ_NAME = 'משפט פשוט ומורכב';
@@ -631,19 +644,53 @@ function renderGrade(score, correctN, total){
     </div>`;
 }
 
+// גוזר סימני-רגע (data-model §3.7) ממהלך הבוחן. הציון הוא הכלי המודד;
+// המסלול (support_level/mastery) נגזר ממנו, כי בבוחן אין רמזים/מסלול-הצלה.
+function deriveSigns(score, graded){
+  const anyWrong = graded.some(g=>!g.ok);
+  return {
+    mastery:        score>=90 ? 'full' : score>=70 ? 'core' : null,
+    support_level:  score>=90 ? 'ahead' : score>=70 ? 'on_own' : 'with_you',
+    hint_used:      false,                    // בבוחן אין רמזים
+    recovered_after_error: anyWrong && score>=70   // טעה בדרך אך הגיע לשליטה
+  };
+}
+
 function saveGradeToTeacher(score){
-  // שמירה מינימלית: ציון אחד, משויך לתלמיד+מורה. בלי לוג טעויות, בלי היסטוריה רגשית.
+  const signs = deriveSigns(score, graded);
+  // --- רישום הגשה אמיתית למאגר הפר-תלמיד (Resef.Progress) ---
   try{
-    localStorage.setItem('resef.grade.demo', JSON.stringify({ name:'נועה כהן', quiz:QUIZ_NAME, score:score }));
+    if(window.Resef && Resef.Progress){
+      Resef.Progress.record({
+        studentId: STUDENT.id, unitId: UNIT_ID, unitType:'assessment', grade: score,
+        support_level: signs.support_level, mastery: signs.mastery,
+        hint_used: signs.hint_used, recovered_after_error: signs.recovered_after_error
+      });
+    }
   }catch(e){ /* אחסון לא חובה להדגמה */ }
+
+  // --- פאנל המורה: ציון + הצעת-מסלול מהמאגר ---
   document.getElementById('teacherEmpty').style.display = 'none';
   const row = document.getElementById('gradeRow');
   row.classList.add('show');
+  row.querySelector('.nm').textContent = STUDENT.name;
+  row.querySelector('.av').textContent = (STUDENT.name||'?').trim().slice(0,2);
   document.getElementById('gradeVal').textContent = score;
   document.getElementById('gradeMeta').textContent = `בוחן: ${QUIZ_NAME} · הושלם עכשיו`;
+
+  // שורת "המערכת מציעה" — הצעה בלבד, טעונה אישור מורה (שלב 3)
+  try{
+    if(window.Resef && Resef.Progress){
+      const sug = Resef.Progress.suggestTrack(STUDENT.id);
+      let s = document.getElementById('trackSuggest');
+      if(!s){ s=document.createElement('div'); s.id='trackSuggest'; s.className='mt'; s.style.marginTop='4px'; row.querySelector('.info').appendChild(s); }
+      s.innerHTML = `המערכת מציעה מסלול: <b>${Resef.Progress.trackLabel(sug.track)}</b> · <span style="opacity:.75">${sug.why} — טעון אישור</span>`;
+    }
+  }catch(e){}
 }
 
-// אתחול
+// אתחול — התאמת הפאנל הריק לשם התלמיד/ה
+try{ const te=document.getElementById('teacherEmpty'); if(te){ const p=te.querySelector('p'); if(p) p.textContent = `אין עדיין ציון. הציון יופיע כאן ברגע ש${STUDENT.name} תסיים בוחן.`; } }catch(e){}
 setMode('practice');
 </script>
 </body>
