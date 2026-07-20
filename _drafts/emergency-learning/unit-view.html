@@ -151,6 +151,21 @@
   .nav .primary:hover{filter:brightness(.94)}
   .nav .ghost{background:var(--card,#fff);border:1.5px solid var(--line,#E1E8EA);color:var(--ink-soft,#5A6B72)}
   .nav .ghost[hidden]{display:none}
+  /* ---- מבט מורה (view=teacher) — כל הרמות פרוסות, מפתח-תשובות גלוי ---- */
+  .tv-note{background:#FCFBF6;border:1px solid #EDE6CF;color:#7a5a12;border-radius:10px;padding:10px 14px;font-size:12.5px;margin:0 0 14px;display:flex;align-items:center;gap:8px;line-height:1.45}
+  .tv-note svg{width:16px;height:16px;flex-shrink:0}
+  .tv-toggle{display:inline-flex;gap:6px;background:var(--surface-muted,#EDF1F2);padding:4px;border-radius:11px;margin-bottom:16px}
+  .tv-toggle a{font-size:13px;font-weight:700;color:var(--ink-soft,#5A6B72);text-decoration:none;border-radius:8px;padding:7px 15px;display:inline-flex;align-items:center;gap:6px}
+  .tv-toggle a svg{width:15px;height:15px}
+  .tv-toggle a[aria-current="true"]{background:var(--card,#fff);color:var(--ink-strong,#12252E);box-shadow:0 2px 8px -3px rgba(0,0,0,.18)}
+  .tv-level{margin-top:8px}
+  .tv-lvhead{display:flex;align-items:center;gap:9px;font-family:var(--font-head,'Heebo',sans-serif);font-size:14px;font-weight:800;color:#fff;background:var(--_p,#0B8F98);border-radius:10px;padding:9px 14px;margin:22px 0 8px}
+  .tv-lvhead .lvdot{width:9px;height:9px;border-radius:50%;background:#fff;opacity:.85}
+  .tv-lvhead .tv-preview{margin-inline-start:auto;font-size:12px;font-weight:700;color:#fff;text-decoration:none;opacity:.92;border:1px solid rgba(255,255,255,.55);border-radius:8px;padding:3px 10px;white-space:nowrap}
+  .tv-lvhead .tv-preview:hover{background:rgba(255,255,255,.18);opacity:1}
+  .tv-level .idea{margin:0 0 10px}
+  /* מפתח: התשובה הנכונה מסומנת, המשוב פתוח */
+  .tv .details-reveal-open{display:block}
 </style>
 </head>
 <body>
@@ -175,6 +190,7 @@
   var SAMPLES = window.RETZEF_SAMPLES||{};
   var CONTENT = window.RETZEF_CONTENT||{};
   var id = qs('u');
+  var view = qs('view');  // 'teacher' → כל הרמות פרוסות + מפתח-תשובות
   /* יחידת-הדגמה מובנית לשיטות-ההערכה — נפתחת ב-?u=demo-methods, בלי לגעת בקורפוס */
   var DEMO_METHODS_RAW = [
     '# יסודות תמחור ורווח',
@@ -232,8 +248,75 @@
       '<div class="meta-only"><p><b>תצוגת-תלמיד מלאה תיפתח כשמנוע-הרינדור ייבנה (שלב ב\').</b></p>'+
         '<p>בבדיקה הזו רק 3 יחידות-דוגמה מרונדרות חיות. היחידה הזו קיימת כ-Markdown אמיתי:</p>'+
         '<p><a href="'+esc(meta.file)+'" target="_blank">'+esc(meta.file)+'</a></p></div>';
+  } else if(view==='teacher'){
+    renderTeacher(raw, meta);
   } else {
     renderUnit(raw, meta);
+  }
+
+  /* ---- כפתור-מעבר בין מבט-תלמיד למבט-מורה ---- */
+  function viewToggle(){
+    var base='unit-view.html?u='+encodeURIComponent(id);
+    var USER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+    var TEACH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-1a6 6 0 0 1 12 0v1"/><circle cx="10" cy="8" r="3.2"/><path d="M18 11l2 2 3-4"/></svg>';
+    var t=view==='teacher';
+    return '<div class="tv-toggle">'+
+      '<a href="'+base+'" aria-current="'+(!t)+'">'+USER+'מבט תלמיד</a>'+
+      '<a href="'+base+'&view=teacher" aria-current="'+t+'">'+TEACH+'מבט מורה</a></div>';
+  }
+
+  /* --- מבט מורה: אותו פרסר, אך כל הרמות פרוסות זו-אחר-זו והתשובות גלויות --- */
+  function renderTeacher(raw, meta){
+    var body = raw.replace(/^---[\s\S]*?---\s*/,'');
+    var h1 = (body.match(/^#\s+(.+)$/m)||[])[1]||meta.title;
+    h1 = h1.replace(/^יחידה\s+[\d.]+\s*[—-]\s*/,'');
+    var ideaM = body.match(/^>\s*רעיון מרכזי[^:]*:\s*(.+)$/m);
+    var idea = stripMeta(ideaM?ideaM[1]:(meta.idea||''));
+
+    var pal=/^#?[0-9a-fA-F]{6}$/.test(meta.palette||'')?meta.palette:'#0B8F98';
+    app.classList.add('tv');
+    app.style.setProperty('--_p',pal);
+    app.style.setProperty('--_ps',hexSoft(pal));
+
+    var _lv=P.splitLevels(raw);
+    var levels=_lv.levels, levelKeys=_lv.levelKeys, flatChunk=_lv.flatChunk;
+    var LVL={basic:'מתקשה',standard:'רגיל',advanced:'אתגר'};
+
+    var html=
+      '<div class="uhead"><div class="crumbs"><span class="chip subj" style="background:'+pal+'">'+esc(meta.subjectHe)+'</span><span class="chip mod">'+esc(meta.moduleHe)+'</span></div><h1>'+esc(h1)+'</h1></div>'+
+      viewToggle()+
+      '<div class="tv-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg><span><b>מבט מורה — פנימי.</b> כל המסלולים פרוסים יחד ומפתח-התשובות גלוי. התלמיד רואה מסלול אחד בלבד — בשקט, בלי תווית ובלי תשובות. את/ה מקצה לו את המסלול.</span></div>'+
+      (idea?'<div class="op-idea"><span class="lbl">'+BULB+'רעיון מרכזי</span><p>'+esc(idea)+'</p></div>':'');
+
+    if(levelKeys.length){
+      html+=['basic','standard','advanced'].filter(function(k){return levels[k];}).map(function(k){
+        var secs=parseSections(levels[k]);
+        return '<section class="tv-level"><div class="tv-lvhead"><span class="lvdot"></span>מסלול: '+esc(LVL[k]||k)+
+          '<a class="tv-preview" href="unit-view.html?u='+encodeURIComponent(id)+'&track='+k+'" target="_blank">כך רואה זאת התלמיד ›</a></div>'+
+          secs.map(function(s){return s.html;}).join('')+'</section>';
+      }).join('');
+    } else {
+      var secs=parseSections(flatChunk||body);
+      html+='<section class="tv-level">'+secs.map(function(s){return s.html;}).join('')+'</section>';
+    }
+
+    app.innerHTML=html;
+    initInteractive(app);
+    revealAnswers(app);
+  }
+
+  /* פותח את כל המשובים/המחוונים ומסמן את התשובה הנכונה — מפתח למורה */
+  function revealAnswers(scope){
+    scope.querySelectorAll('details.reveal-sec, details.reveal').forEach(function(d){ d.setAttribute('open',''); });
+    scope.querySelectorAll('.fb.good').forEach(function(f){ f.classList.add('show'); });
+    scope.querySelectorAll('.q[data-correct]').forEach(function(q){
+      var ci=parseInt(q.getAttribute('data-correct'),10);
+      if(isNaN(ci)||ci<0){ q.classList.add('answered'); return; }
+      q.querySelectorAll('.opt').forEach(function(o){o.classList.add('locked');});
+      var opt=q.querySelector('.opt[data-i="'+ci+'"]');
+      if(opt){ opt.classList.remove('locked'); opt.classList.add('correct'); }
+      q.classList.add('answered');
+    });
   }
 
   /* --- מנוע-תצוגה: יחידת md → אשף מודרך (4 שלבים · מסך-אחר-מסך) --- */
@@ -256,15 +339,18 @@
       '<ol class="seq" id="seq"></ol><div id="screens"></div>'+
       '<div class="nav"><button class="ghost" id="prev" hidden>הקודם</button><button class="primary" id="next">הבא ›</button></div>';
 
-    var state={level: levelKeys.length?(levels.basic?'basic':levelKeys[0]):null, idx:0, phases:[]};
-
-    function levelPicker(){
-      if(!levelKeys.length) return '';
-      var order=['advanced','standard','basic'].filter(function(k){return levels[k];});
-      return '<div class="levelpick"><div class="lp-q">איך בא לך ללמוד היום?</div><div class="lp-grid">'+
-        order.map(function(k){return '<button data-lv="'+k+'" aria-pressed="'+(state.level===k)+'"><b>'+LVMETA[k].b+'</b><small>'+LVMETA[k].s+'</small></button>';}).join('')+
-        '</div></div>';
+    // המסלול נקבע ע"י המורה/המערכת — לא ע"י התלמיד. ?track= → localStorage → ברירת-מחדל "רגיל".
+    // התלמיד רואה מסלול אחד בשקט, בלי בורר ובלי תווית מתייגת.
+    function resolveTrack(){
+      if(!levelKeys.length) return null;
+      var t=qs('track');
+      if(t && levels[t]) return t;
+      try{ var saved=localStorage.getItem('resef.track.'+id); if(saved && levels[saved]) return saved; }catch(e){}
+      if(levels.standard) return 'standard';           // ברירת-מחדל: רגיל
+      return levels.basic?'basic':levelKeys[0];
     }
+    var state={level: resolveTrack(), idx:0, phases:[]};
+
     function doneNote(){ return '<div class="done-note"><div class="big">'+CHECK+'</div><h3>כל הכבוד!</h3><p>סיימת את היחידה.</p></div>'; }
     function buildPhases(){
       var secs=parseSections(state.level?levels[state.level]:(flatChunk||''));
@@ -273,7 +359,7 @@
       var LB={2:'לומדים',3:'תרגול',4:'סיום'};
       var res=[{label:'פתיח', html:
         (idea?'<div class="op-idea"><span class="lbl">'+BULB+'רעיון מרכזי</span><p>'+esc(idea)+'</p></div>':'')+
-        byP[1].join('')+ levelPicker() }];
+        byP[1].join('') }];
       [2,3].forEach(function(p){ if(byP[p].length) res.push({label:LB[p], html:byP[p].join('')}); });
       res.push({label:'סיום', html: byP[4].join('') + doneNote()});
       return res;
@@ -293,10 +379,6 @@
       document.getElementById('next').innerHTML=state.idx===state.phases.length-1?'חזרה לקטלוג':'הבא ›';
       window.scrollTo({top:0,behavior:'smooth'});
     }
-    app.addEventListener('click',function(e){
-      var lv=e.target.closest('[data-lv]');
-      if(lv){ state.level=lv.getAttribute('data-lv'); state.idx=0; renderScreens(); }
-    });
     document.getElementById('prev').addEventListener('click',function(){showPhase(state.idx-1);});
     document.getElementById('next').addEventListener('click',function(){
       if(state.idx>=state.phases.length-1){ location.href='catalog-preview.html'; return; }
