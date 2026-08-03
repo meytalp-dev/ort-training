@@ -1,17 +1,120 @@
 // School Principal — Initial Setup Form
 // טופס ראשוני: מנהל ממלא את כל המורים בבית ספר
 
-const schoolId = TS.urlParam('school', '');
+let schoolId = TS.urlParam('school', '');
 const networkParam = TS.urlParam('network', '');
 let teachers = [];
 let school = null;
+let allSchools = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   populateSelects();
-  await loadInitial();
   document.getElementById('form-add').addEventListener('submit', addTeacher);
   document.getElementById('file-import').addEventListener('change', importCsv);
+
+  if (schoolId || !TS.getAppsScriptUrl()) {
+    // לינק ישיר עם ?school= (או מצב דמו) — זרימה רגילה
+    document.getElementById('main-content').hidden = false;
+    await loadInitial();
+  } else {
+    // לינק כללי — המנהל בוחר את בית הספר שלו
+    await showSchoolPicker();
+  }
 });
+
+// ============================================================
+// School picker — לינק אחד לכולם, כל מנהל בוחר את בית ספרו
+// ============================================================
+
+async function showSchoolPicker() {
+  document.getElementById('school-picker').hidden = false;
+
+  const nsNet = document.getElementById('ns-network');
+  TS.NETWORKS.forEach(n => nsNet.insertAdjacentHTML('beforeend', `<option value="${n.id}">${n.name}</option>`));
+
+  document.getElementById('school-search').addEventListener('input', e => renderSchoolList(e.target.value));
+  document.getElementById('btn-show-create').addEventListener('click', () => {
+    const f = document.getElementById('form-new-school');
+    f.hidden = !f.hidden;
+    if (!f.hidden) f.querySelector('[name="name"]').focus();
+  });
+  document.getElementById('form-new-school').addEventListener('submit', createNewSchool);
+
+  const res = await TS.api('schools.list', {}, { cache: 'no' });
+  allSchools = (res.data || []).filter(s => s.name).sort((a, b) => a.name.localeCompare(b.name, 'he'));
+  renderSchoolList('');
+  document.getElementById('school-search').focus();
+}
+
+function renderSchoolList(query) {
+  const listEl = document.getElementById('school-list');
+  const q = (query || '').trim();
+  const matches = q ? allSchools.filter(s => s.name.includes(q)) : allSchools;
+  if (!matches.length) {
+    listEl.innerHTML = `<div class="empty-msg">לא נמצא בית ספר כזה — אפשר להוסיף אותו בכפתור למטה</div>`;
+    return;
+  }
+  listEl.innerHTML = matches.map(s => `
+    <button type="button" class="school-item" data-id="${s.id}">
+      <span class="s-name">${s.name}</span>
+      ${TS.netChip((s.network || '').replace(/^net_/, ''))}
+    </button>
+  `).join('');
+  listEl.querySelectorAll('.school-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const chosen = allSchools.find(s => s.id === btn.dataset.id);
+      if (chosen) enterSchool(chosen);
+    });
+  });
+}
+
+async function createNewSchool(e) {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  if (!data.name || !data.network) { TS.toast('יש למלא שם ורשת'); return; }
+
+  // מניעת כפילות — אם כבר קיים בית ספר בשם הזה, נכנסים אליו במקום ליצור חדש
+  const existing = allSchools.find(s => s.name.trim() === data.name.trim());
+  if (existing) {
+    TS.toast('בית הספר כבר קיים ברשימה — נכנסנו אליו');
+    enterSchool(existing);
+    return;
+  }
+
+  data.network = 'net_' + data.network;
+  const res = await TS.apiPost('school.create', data);
+  if (res.ok && res.data) {
+    TS.toast('בית הספר נוסף');
+    enterSchool(res.data);
+  } else {
+    TS.toast('שגיאה — ' + (res.error || ''));
+  }
+}
+
+async function enterSchool(chosen) {
+  school = chosen;
+  schoolId = chosen.id;
+  // הלינק בסרגל הכתובות מתעדכן — רענון ישאיר את המנהל בבית הספר שבחר
+  const url = new URL(location.href);
+  url.searchParams.set('school', schoolId);
+  history.replaceState(null, '', url);
+
+  document.getElementById('school-picker').hidden = true;
+  document.getElementById('main-content').hidden = false;
+
+  // קישורי "לדשבורד" שומרים על בית הספר שנבחר
+  document.querySelectorAll('a[href="./"]').forEach(a => { a.href = './?school=' + schoolId; });
+
+  // הרשת של בית הספר נבחרת מראש בטופס המורה
+  const netSelect = document.getElementById('t-network');
+  const netId = (chosen.network || '').replace(/^net_/, '');
+  if (netId && netSelect.querySelector(`option[value="${netId}"]`)) netSelect.value = netId;
+
+  renderHeader();
+  const res = await TS.api('teachers.list', { school: schoolId }, { cache: 'no' });
+  teachers = res.data || [];
+  renderTable();
+}
 
 function populateSelects() {
   const networks = document.getElementById('t-network');
