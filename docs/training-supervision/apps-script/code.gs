@@ -162,7 +162,9 @@ const PUBLIC_ACTIONS = new Set([
 const ADMIN_ONLY_ACTIONS = new Set([
   'seed.import',
   'alerts.compute',
-  'certificate.generate'
+  'certificate.generate',
+  'admin.reset',
+  'school.delete'
 ]);
 
 function getActiveUserEmail_() {
@@ -358,6 +360,10 @@ function handleRequest(params) {
       case 'schools.list':        result = listSchools(params.network); break;
       case 'school.get':          result = getSchool(params.id); break;
       case 'school.create':       result = createSchool(params); break;
+      case 'school.update':       result = updateSchool(params); break;
+      case 'school.delete':       result = deleteSchool(params); break;
+
+      case 'admin.reset':         result = adminReset(params); break;
 
       case 'teachers.list':       result = listTeachers(params); break;
       case 'teacher.get':         result = getTeacher(params.id); break;
@@ -557,6 +563,50 @@ function createSchool(p) {
   };
   appendRow('schools', obj);
   return { ok: true, data: obj };
+}
+
+function updateSchool(p) {
+  if (!p.id) return { ok: false, error: 'missing_id' };
+  const updates = {};
+  ['name','network','principalName','principalEmail','principalPhone','attendanceTarget'].forEach(k => {
+    if (p[k] !== undefined) updates[k] = p[k];
+  });
+  const ok = updateRowById('schools', p.id, updates);
+  return ok ? getSchool(p.id) : { ok: false, error: 'not_found' };
+}
+
+// מחיקת בית ספר — מסרב אם יש מורים משויכים, אלא אם force=true
+function deleteSchool(p) {
+  if (!p.id) return { ok: false, error: 'missing_id' };
+  const attached = readAll('teachers').filter(t => t.school === p.id).length;
+  if (attached && !toBool(p.force)) return { ok: false, error: 'has_teachers: ' + attached };
+  const s = sheet('schools');
+  const range = s.getDataRange().getValues();
+  const idCol = range[0].indexOf('id');
+  for (let i = range.length - 1; i >= 1; i--) {
+    if (range[i][idCol] === p.id) { s.deleteRow(i + 1); return { ok: true }; }
+  }
+  return { ok: false, error: 'not_found' };
+}
+
+// איפוס שנתון — מוחק את כל שורות הנתונים בטאבים שנבחרו (שורת הכותרות נשארת).
+// שימוש: ?action=admin.reset&tabs=teachers,attendance&confirm=RESET
+function adminReset(p) {
+  const ALLOWED = ['teachers','attendance','trainings','pd','questions','knowledge','feedback','alerts','schools'];
+  if ((p.confirm || '') !== 'RESET') return { ok: false, error: 'missing_confirm_RESET' };
+  const tabs = Array.isArray(p.tabs) ? p.tabs : String(p.tabs || '').split(',').map(t => t.trim()).filter(Boolean);
+  if (!tabs.length) return { ok: false, error: 'missing_tabs' };
+  const summary = {};
+  tabs.forEach(name => {
+    if (ALLOWED.indexOf(name) < 0) { summary[name] = 'not_allowed'; return; }
+    const s = sheet(name);
+    if (!s) { summary[name] = 'sheet_missing'; return; }
+    const last = s.getLastRow();
+    if (last > 1) s.deleteRows(2, last - 1);
+    summary[name] = 'cleared_' + Math.max(0, last - 1) + '_rows';
+  });
+  auditLog_('', 'admin.reset', 'tabs', tabs.join(','), 'ok', '');
+  return { ok: true, data: summary };
 }
 
 // ============================================================
