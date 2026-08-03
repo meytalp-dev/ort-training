@@ -57,7 +57,7 @@ function renderSchoolList(query) {
   listEl.innerHTML = matches.map(s => `
     <button type="button" class="school-item" data-id="${s.id}">
       <span class="s-name">${s.name}</span>
-      ${TS.netChip((s.network || '').replace(/^net_/, ''))}
+      ${s.network ? TS.netChip(String(s.network).replace(/^net_/, '')) : '<span style="font-size:12px; color:var(--text-3, #98A8B5);">רשת טרם הוגדרה</span>'}
     </button>
   `).join('');
   listEl.querySelectorAll('.school-item').forEach(btn => {
@@ -146,9 +146,62 @@ async function loadInitial() {
 function renderHeader() {
   if (!school) return;
   document.getElementById('school-name').textContent = school.name || '—';
-  document.getElementById('principal-name').textContent = school.principalName || '—';
-  const net = TS.netById(school.network);
-  document.getElementById('network-chip').innerHTML = TS.netChip(net.id.replace(/^net_/, ''));
+  const prEl = document.getElementById('principal-name');
+  if (school.principalName) {
+    prEl.textContent = school.principalName;
+  } else {
+    renderPrincipalFix(prEl);
+  }
+  const chipEl = document.getElementById('network-chip');
+  const netId = (school.network || '').toString().replace(/^net_/, '');
+  if (netId) {
+    chipEl.innerHTML = TS.netChip(netId);
+  } else {
+    renderNetworkFix(chipEl);
+  }
+}
+
+// שם המנהל.ת חסר — נכתב כאן פעם אחת ונשמר לגיליון
+function renderPrincipalFix(el) {
+  el.innerHTML = `<input class="input" id="fix-principal" placeholder="מה שמך? (שם המנהל.ת)"
+      style="width:auto; display:inline-block; padding:4px 10px; font-size:13px;">
+    <button type="button" class="btn btn-secondary" id="fix-principal-save" style="padding:4px 12px; font-size:13px;">שמירה</button>`;
+  const save = async () => {
+    const v = el.querySelector('#fix-principal').value.trim();
+    if (!v) return;
+    if (TS.getAppsScriptUrl()) {
+      const res = await TS.apiPost('school.update', { id: school.id || schoolId, principalName: v });
+      if (!res.ok) { TS.toast('שגיאה בשמירת השם — ' + (res.error || '')); return; }
+    }
+    school.principalName = v;
+    TS.toast('נעים מאוד, ' + v + '!');
+    renderHeader();
+  };
+  el.querySelector('#fix-principal-save').addEventListener('click', save);
+  el.querySelector('#fix-principal').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+  });
+}
+
+// לבית ספר בלי רשת — המנהל משלים אותה כאן והיא נשמרת לגיליון
+function renderNetworkFix(el) {
+  el.innerHTML = `<select class="select" id="fix-network" style="width:auto; display:inline-block; padding:4px 10px; font-size:13px;">
+    <option value="">לאיזו רשת שייך בית הספר?</option>
+    ${TS.NETWORKS.map(n => `<option value="${n.id}">${n.name}</option>`).join('')}
+  </select>`;
+  el.querySelector('#fix-network').addEventListener('change', async e => {
+    const v = e.target.value;
+    if (!v) return;
+    if (TS.getAppsScriptUrl()) {
+      const res = await TS.apiPost('school.update', { id: school.id || schoolId, network: 'net_' + v });
+      if (!res.ok) { TS.toast('שגיאה בשמירת הרשת — ' + (res.error || '')); return; }
+    }
+    school.network = 'net_' + v;
+    TS.toast('הרשת נשמרה');
+    renderHeader();
+    const netSelect = document.getElementById('t-network');
+    if (netSelect.querySelector(`option[value="${v}"]`)) netSelect.value = v;
+  });
 }
 
 function renderTable() {
