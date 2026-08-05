@@ -14,6 +14,9 @@ let teachers = [];
 let deleteQueue = [];   // serverIds למחיקה
 let uidSeq = 0;
 
+// בנייד: בלי autofocus בטעינה — הוא גורר גלילה למטה ופתיחת מקלדת
+const IS_TOUCH = window.matchMedia('(hover: none)').matches;
+
 document.addEventListener('DOMContentLoaded', async () => {
   initEntryUI();
   if (schoolId) {
@@ -47,7 +50,8 @@ async function showSchoolPicker() {
   });
   document.getElementById('form-new-school').addEventListener('submit', createNewSchool);
 
-  document.getElementById('school-search').focus();
+  window.scrollTo(0, 0);
+  if (!IS_TOUCH) document.getElementById('school-search').focus();
 
   // טעינה מיידית מהקובץ הסטטי שבאתר — הרשימה מופיעה בלי לחכות לשרת
   let renderedStatic = false;
@@ -130,6 +134,7 @@ async function enterSchool(chosen) {
 
   document.getElementById('school-picker').hidden = true;
   document.getElementById('main-content').hidden = false;
+  window.scrollTo(0, 0);
 
   renderHeader();
   await loadTeachers();
@@ -269,7 +274,8 @@ function setType(t) {
   focusRapid();
 }
 
-function focusRapid() {
+function focusRapid(force) {
+  if (IS_TOUCH && !force) return;  // בנייד — מקלדת נפתחת רק ממגע של המשתמש
   const el = document.getElementById('rapid');
   if (el && document.getElementById('panel-type').style.display !== 'none') el.focus();
 }
