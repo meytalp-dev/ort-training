@@ -47,10 +47,34 @@ async function showSchoolPicker() {
   });
   document.getElementById('form-new-school').addEventListener('submit', createNewSchool);
 
-  const res = await TS.api('schools.list', {}, { cache: 'no' });
-  allSchools = (res.data || []).filter(s => s.name).sort((a, b) => a.name.localeCompare(b.name, 'he'));
-  renderSchoolList('');
   document.getElementById('school-search').focus();
+
+  // טעינה מיידית מהקובץ הסטטי שבאתר — הרשימה מופיעה בלי לחכות לשרת
+  let renderedStatic = false;
+  try {
+    const r = await fetch('../_data/schools-2027.json');
+    if (r.ok) {
+      const j = await r.json();
+      allSchools = (j.schools || [])
+        .map(s => ({ id: s.id, name: s.name, network: s.network || '' }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'he'));
+      if (allSchools.length) {
+        renderSchoolList(document.getElementById('school-search').value);
+        renderedStatic = true;
+      }
+    }
+  } catch (e) { /* file:// או קובץ חסר — ניפול לשרת */ }
+
+  // רענון שקט מהשרת ברקע — קולט בתי ספר שנוספו ורשתות שהושלמו מאז
+  TS.api('schools.list', {}, { cache: 'no' }).then(res => {
+    const live = (res.data || []).filter(s => s.name);
+    if (live.length) {
+      allSchools = live.sort((a, b) => a.name.localeCompare(b.name, 'he'));
+      renderSchoolList(document.getElementById('school-search').value);
+    } else if (!renderedStatic) {
+      renderSchoolList('');
+    }
+  });
 }
 
 function renderSchoolList(query) {
@@ -106,7 +130,6 @@ async function enterSchool(chosen) {
 
   document.getElementById('school-picker').hidden = true;
   document.getElementById('main-content').hidden = false;
-  document.querySelectorAll('a[href="./"]').forEach(a => { a.href = './?school=' + schoolId; });
 
   renderHeader();
   await loadTeachers();
@@ -118,7 +141,6 @@ async function loadDirect() {
     TS.api('school.get', { id: schoolId }, { cache: 'no' })
   ]);
   school = schoolRes.data || { id: schoolId, name: '—', network: '' };
-  document.querySelectorAll('a[href="./"]').forEach(a => { a.href = './?school=' + schoolId; });
   renderHeader();
   await loadTeachers();
   focusRapid();
