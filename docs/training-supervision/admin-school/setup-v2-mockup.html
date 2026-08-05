@@ -108,6 +108,12 @@
 .t-type.bagrut { background: #DBEAFE; color: #1D4ED8; }
 .t-type.gemer  { background: #FEF9C3; color: #A16207; }
 .t-more { font-size: 13px; color: var(--text-3, #7b8b98); flex: 1; }
+.t-phone {
+  width: 140px; padding: 6px 12px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border, #D8E1E5); border-radius: 8px; direction: ltr; text-align: right;
+}
+.t-phone:focus { outline: none; border-color: #256A8A; }
+.t-phone:placeholder-shown { background: #FAFCFC; }
 .t-actions { display: flex; gap: 6px; }
 .mini-btn {
   border: 1px solid var(--border, #D8E1E5); background: #fff; border-radius: 8px; padding: 4px 12px;
@@ -169,11 +175,12 @@
           <button data-type="gemer" onclick="setType('gemer')">גמר</button>
         </div>
       </div>
-      <div class="rapid-wrap">
-        <input class="rapid-input" id="rapid" placeholder="הקלידו שם מורה ולחצו Enter — שם אחרי שם…" autocomplete="off">
+      <div class="rapid-wrap" style="display:flex; gap:10px; flex-wrap:wrap;">
+        <input class="rapid-input" id="rapid" placeholder="שם המורה…" autocomplete="off" style="flex:2; min-width:200px;">
+        <input class="rapid-input" id="rapid-phone" placeholder="טלפון (לא חובה)" autocomplete="off" inputmode="tel" style="flex:1; min-width:140px;">
         <span class="flash-add" id="flash">נוסף ✓</span>
       </div>
-      <p class="rapid-hint">כל <kbd>Enter</kbd> מוסיף מורה למקצוע שנבחר · אפשר גם להדביק לכאן כמה שורות בבת אחת</p>
+      <p class="rapid-hint">כל <kbd>Enter</kbd> מוסיף מורה למקצוע שנבחר · <kbd>Tab</kbd> קופץ לטלפון · אפשר גם להדביק לכאן כמה שורות בבת אחת</p>
     </div>
 
     <!-- Panel: paste -->
@@ -254,11 +261,20 @@ function flash() {
   setTimeout(() => f.classList.remove('show'), 700);
 }
 
-document.getElementById('rapid').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    if (addTeacher(e.target.value)) { e.target.value = ''; flash(); renderAll(); }
+function rapidAdd() {
+  const nameEl = document.getElementById('rapid');
+  const phoneEl = document.getElementById('rapid-phone');
+  if (addTeacher(nameEl.value, { phone: phoneEl.value.trim() })) {
+    nameEl.value = ''; phoneEl.value = '';
+    flash(); renderAll();
+    nameEl.focus();
   }
+}
+document.getElementById('rapid').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); rapidAdd(); }
+});
+document.getElementById('rapid-phone').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); rapidAdd(); }
 });
 // paste of multiple lines straight into the rapid input
 document.getElementById('rapid').addEventListener('paste', e => {
@@ -347,13 +363,13 @@ function renderAll() {
         <div class="t-row">
           <span class="t-name">${t.name}</span>
           <button class="t-type ${t.type}" onclick="toggleType(${i})" title="לחיצה מחליפה">${t.type === 'gemer' ? 'גמר' : 'בגרות'}</button>
-          <span class="t-more">${[t.phone, t.email, t.seniority ? 'ותק ' + t.seniority : ''].filter(Boolean).join(' · ') || 'אין פרטים נוספים'}</span>
+          <input class="t-phone" placeholder="טלפון" value="${t.phone}" inputmode="tel" onchange="saveDetail(${i},'phone',this.value)">
+          <span class="t-more">${[t.email, t.seniority ? 'ותק ' + t.seniority : ''].filter(Boolean).join(' · ')}</span>
           <span class="t-actions">
             <button class="mini-btn" onclick="toggleDetails(${i})">פרטים</button>
             <button class="mini-btn" onclick="removeT(${i})">הסרה</button>
           </span>
           <div class="t-details" id="det-${i}">
-            <input placeholder="טלפון" value="${t.phone}" onchange="saveDetail(${i},'phone',this.value)">
             <input placeholder="מייל" value="${t.email}" onchange="saveDetail(${i},'email',this.value)">
             <input placeholder="שנות ותק" value="${t.seniority}" onchange="saveDetail(${i},'seniority',this.value)">
           </div>
