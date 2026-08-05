@@ -140,6 +140,10 @@
 .t-phone:focus { outline: none; border-color: #256A8A; }
 .t-phone:placeholder-shown { background: #FEF2F2; border-color: #D97757; }
 .missing-note { font-size: 12px; font-weight: 700; color: #B45309; }
+.also {
+  display: inline-block; margin-right: 8px; font-size: 11px; font-weight: 700;
+  background: #EDE9FE; color: #6D28D9; border-radius: 999px; padding: 2px 10px; vertical-align: middle;
+}
 .t-actions { display: flex; gap: 6px; }
 .mini-btn {
   border: 1px solid var(--border, #D8E1E5); background: #fff; border-radius: 8px; padding: 4px 12px;
@@ -369,19 +373,38 @@ function flash() {
 function rapidAdd() {
   const nameEl = document.getElementById('rapid');
   const phoneEl = document.getElementById('rapid-phone');
-  if (!nameEl.value.trim()) return;
-  if (!phoneEl.value.trim()) {
+  const name = nameEl.value.trim();
+  if (!name) return;
+
+  // מורה קיים במקצוע אחר? הטלפון מושלם לבד — לא צריך להקליד שוב
+  const existing = teachers.find(t => t.name === name);
+  if (existing && teachers.some(t => t.name === name && t.subject === curSubject)) {
+    TSflash('כבר ברשימה של ' + curSubject);
+    nameEl.value = ''; phoneEl.value = ''; nameEl.focus();
+    return;
+  }
+  let phone = phoneEl.value.trim();
+  if (!phone && existing && existing.phone) phone = existing.phone;
+  if (!phone) {
     phoneEl.style.borderColor = '#D97757';
     phoneEl.style.background = '#FEF2F2';
     phoneEl.focus();
     return;
   }
   phoneEl.style.borderColor = ''; phoneEl.style.background = '';
-  if (addTeacher(nameEl.value, { phone: phoneEl.value.trim() })) {
+  if (addTeacher(name, { phone, email: existing ? existing.email : '', seniority: existing ? existing.seniority : '' })) {
     nameEl.value = ''; phoneEl.value = '';
-    flash(); renderAll();
+    if (existing) TSflash('נוסף גם ל' + curSubject + ' ✓'); else flash();
+    renderAll();
     nameEl.focus();
   }
+}
+
+function TSflash(msg) {
+  const f = document.getElementById('flash');
+  f.textContent = msg;
+  f.classList.add('show');
+  setTimeout(() => { f.classList.remove('show'); f.textContent = 'נוסף ✓'; }, 1200);
 }
 document.getElementById('rapid').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); rapidAdd(); }
@@ -444,7 +467,12 @@ function parsePaste() {
 }
 
 function addPasted() {
-  parsed.forEach(p => addTeacher(p.name, p));
+  parsed.forEach(p => {
+    if (teachers.some(t => t.name === p.name && t.subject === (p.subject || curSubject))) return; // כפילות מדויקת — מדלגים
+    const ex = teachers.find(t => t.name === p.name);
+    if (ex && !p.phone) p.phone = ex.phone;   // מורה רב-מקצועי — הטלפון עובר לבד
+    addTeacher(p.name, p);
+  });
   document.getElementById('paste').value = '';
   document.getElementById('preview-box').style.display = 'none';
   renderAll();
@@ -458,7 +486,11 @@ function toggleType(i) {
 }
 function removeT(i) { teachers.splice(i, 1); renderAll(); }
 function toggleDetails(i) { document.getElementById('det-' + i).classList.toggle('open'); }
-function saveDetail(i, field, val) { teachers[i][field] = val; }
+function saveDetail(i, field, val) {
+  // פרטי-קשר של מורה רב-מקצועי מתעדכנים בכל המקצועות שלו יחד
+  const name = teachers[i].name;
+  teachers.forEach(t => { if (t.name === name) t[field] = val; });
+}
 
 function renderAll() {
   document.getElementById('count').textContent = teachers.length;
@@ -475,7 +507,7 @@ function renderAll() {
       <div class="subject-group-head"><span>${s}</span><span class="n">${groups[s].length} מורים${(m => m ? ` · <span class="missing-note">⚠️ ${m} בלי טלפון</span>` : '')(groups[s].filter(([t]) => !t.phone).length)}</span></div>
       ${groups[s].map(([t, i]) => `
         <div class="t-row">
-          <span class="t-name">${t.name}</span>
+          <span class="t-name">${t.name}${(o => o.length ? `<span class="also">מלמד/ת גם ${o.join(' · ')}</span>` : '')(teachers.filter(x => x.name === t.name && x.subject !== t.subject).map(x => x.subject))}</span>
           <button class="t-type ${t.type}" onclick="toggleType(${i})" title="לחיצה מחליפה">${t.type === 'gemer' ? 'גמר' : 'בגרות'}</button>
           <input class="t-phone" placeholder="טלפון חסר!" value="${t.phone}" inputmode="tel" onchange="saveDetail(${i},'phone',this.value); renderAll()">
           <span class="t-more">${[t.email, t.seniority ? 'ותק ' + t.seniority : ''].filter(Boolean).join(' · ')}</span>
