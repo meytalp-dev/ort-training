@@ -1,29 +1,36 @@
-// School Principal — Initial Setup Form
-// טופס ראשוני: מנהל ממלא את כל המורים בבית ספר
+// School Principal — Teacher Entry v2
+// לינק אחד לכל המנהלים: בוחרים בית ספר → מקלידים מורים לפי מקצוע / מדביקים מאקסל.
+// כל שינוי נשמר לגיליון ברקע דרך תור שמירה (teachers.create / update / delete).
 
 let schoolId = TS.urlParam('school', '');
-const networkParam = TS.urlParam('network', '');
-let teachers = [];
 let school = null;
 let allSchools = [];
+let curSubject = 'מתמטיקה';
+let curType = 'bagrut';
+
+// שורת מורה מקומית: { uid, serverId, name, subject, type, phone, email, seniority,
+//                     needsCreate, needsUpdate, deleteAfterCreate, error }
+let teachers = [];
+let deleteQueue = [];   // serverIds למחיקה
+let uidSeq = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  populateSelects();
-  document.getElementById('form-add').addEventListener('submit', addTeacher);
-  document.getElementById('file-import').addEventListener('change', importCsv);
-
-  if (schoolId || !TS.getAppsScriptUrl()) {
-    // לינק ישיר עם ?school= (או מצב דמו) — זרימה רגילה
+  initEntryUI();
+  if (schoolId) {
     document.getElementById('main-content').hidden = false;
-    await loadInitial();
+    await loadDirect();
   } else {
-    // לינק כללי — המנהל בוחר את בית הספר שלו
     await showSchoolPicker();
   }
+  startSaveLoop();
+});
+
+window.addEventListener('beforeunload', e => {
+  if (unsavedCount() > 0) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // ============================================================
-// School picker — לינק אחד לכולם, כל מנהל בוחר את בית ספרו
+// שלב 0 — בחירת בית ספר (לינק כללי בלי ?school=)
 // ============================================================
 
 async function showSchoolPicker() {
@@ -57,7 +64,7 @@ function renderSchoolList(query) {
   listEl.innerHTML = matches.map(s => `
     <button type="button" class="school-item" data-id="${s.id}">
       <span class="s-name">${s.name}</span>
-      ${s.network ? TS.netChip(String(s.network).replace(/^net_/, '')) : '<span style="font-size:12px; color:var(--text-3, #98A8B5);">רשת טרם הוגדרה</span>'}
+      ${s.network ? TS.netChip(String(s.network).replace(/^net_/, '')) : '<span class="s-net-none">רשת טרם הוגדרה</span>'}
     </button>
   `).join('');
   listEl.querySelectorAll('.school-item').forEach(btn => {
@@ -73,7 +80,6 @@ async function createNewSchool(e) {
   const data = Object.fromEntries(new FormData(e.target));
   if (!data.name || !data.network) { TS.toast('יש למלא שם ורשת'); return; }
 
-  // מניעת כפילות — אם כבר קיים בית ספר בשם הזה, נכנסים אליו במקום ליצור חדש
   const existing = allSchools.find(s => s.name.trim() === data.name.trim());
   if (existing) {
     TS.toast('בית הספר כבר קיים ברשימה — נכנסנו אליו');
@@ -94,58 +100,55 @@ async function createNewSchool(e) {
 async function enterSchool(chosen) {
   school = chosen;
   schoolId = chosen.id;
-  // הלינק בסרגל הכתובות מתעדכן — רענון ישאיר את המנהל בבית הספר שבחר
   const url = new URL(location.href);
   url.searchParams.set('school', schoolId);
   history.replaceState(null, '', url);
 
   document.getElementById('school-picker').hidden = true;
   document.getElementById('main-content').hidden = false;
-
-  // קישורי "לדשבורד" שומרים על בית הספר שנבחר
   document.querySelectorAll('a[href="./"]').forEach(a => { a.href = './?school=' + schoolId; });
 
-  // הרשת של בית הספר נבחרת מראש בטופס המורה
-  const netSelect = document.getElementById('t-network');
-  const netId = (chosen.network || '').replace(/^net_/, '');
-  if (netId && netSelect.querySelector(`option[value="${netId}"]`)) netSelect.value = netId;
-
   renderHeader();
-  const res = await TS.api('teachers.list', { school: schoolId }, { cache: 'no' });
-  teachers = res.data || [];
-  renderTable();
+  await loadTeachers();
+  focusRapid();
 }
 
-function populateSelects() {
-  const networks = document.getElementById('t-network');
-  TS.NETWORKS.forEach(n => networks.insertAdjacentHTML('beforeend', `<option value="${n.id}">${n.name}</option>`));
-  if (networkParam) networks.value = networkParam;
-
-  const subj = document.getElementById('t-subject');
-  TS.SUBJECTS.forEach(s => subj.insertAdjacentHTML('beforeend', `<option value="${s}">${s}</option>`));
-}
-
-async function loadInitial() {
-  if (!TS.getAppsScriptUrl()) {
-    school = { id: schoolId || 'demo', name: 'אורט בית הערבה (דמו)', network: 'ort', principalName: 'מיטל פלג' };
-    teachers = [];
-    renderHeader();
-    renderTable();
-    return;
-  }
-  const [schoolRes, teachersRes] = await Promise.all([
-    schoolId ? TS.api('school.get', { id: schoolId }) : Promise.resolve({ data: null }),
-    TS.api('teachers.list', { school: schoolId })
+async function loadDirect() {
+  const [schoolRes] = await Promise.all([
+    TS.api('school.get', { id: schoolId }, { cache: 'no' })
   ]);
-  school = schoolRes.data;
-  teachers = teachersRes.data || [];
+  school = schoolRes.data || { id: schoolId, name: '—', network: '' };
+  document.querySelectorAll('a[href="./"]').forEach(a => { a.href = './?school=' + schoolId; });
   renderHeader();
-  renderTable();
+  await loadTeachers();
+  focusRapid();
 }
+
+async function loadTeachers() {
+  const res = await TS.api('teachers.list', { school: schoolId }, { cache: 'no' });
+  teachers = (res.data || []).map(t => ({
+    uid: 'u' + (++uidSeq),
+    serverId: t.id,
+    name: t.name || '',
+    subject: t.subject || '',
+    type: t.type === 'gemer' ? 'gemer' : 'bagrut',
+    phone: (t.phone || '').toString(),
+    email: t.email || '',
+    seniority: t.seniority ? String(t.seniority) : '',
+    needsCreate: false, needsUpdate: false, deleteAfterCreate: false, error: false
+  }));
+  renderAll();
+}
+
+// ============================================================
+// כותרת — שם בי"ס + השלמת רשת + שם מנהל.ת
+// ============================================================
 
 function renderHeader() {
   if (!school) return;
   document.getElementById('school-name').textContent = school.name || '—';
+  document.getElementById('hero-title').textContent = 'המורים של ' + (school.name || '—');
+
   const prEl = document.getElementById('principal-name');
   if (school.principalName) {
     prEl.textContent = school.principalName;
@@ -161,7 +164,6 @@ function renderHeader() {
   }
 }
 
-// שם המנהל.ת חסר — נכתב כאן פעם אחת ונשמר לגיליון
 function renderPrincipalFix(el) {
   el.innerHTML = `<input class="input" id="fix-principal" placeholder="מה שמך? (שם המנהל.ת)"
       style="width:auto; display:inline-block; padding:4px 10px; font-size:13px;">
@@ -169,10 +171,8 @@ function renderPrincipalFix(el) {
   const save = async () => {
     const v = el.querySelector('#fix-principal').value.trim();
     if (!v) return;
-    if (TS.getAppsScriptUrl()) {
-      const res = await TS.apiPost('school.update', { id: school.id || schoolId, principalName: v });
-      if (!res.ok) { TS.toast('שגיאה בשמירת השם — ' + (res.error || '')); return; }
-    }
+    const res = await TS.apiPost('school.update', { id: school.id || schoolId, principalName: v });
+    if (!res.ok) { TS.toast('שגיאה בשמירת השם — ' + (res.error || '')); return; }
     school.principalName = v;
     TS.toast('נעים מאוד, ' + v + '!');
     renderHeader();
@@ -183,7 +183,6 @@ function renderPrincipalFix(el) {
   });
 }
 
-// לבית ספר בלי רשת — המנהל משלים אותה כאן והיא נשמרת לגיליון
 function renderNetworkFix(el) {
   el.innerHTML = `<select class="select" id="fix-network" style="width:auto; display:inline-block; padding:4px 10px; font-size:13px;">
     <option value="">לאיזו רשת שייך בית הספר?</option>
@@ -192,183 +191,395 @@ function renderNetworkFix(el) {
   el.querySelector('#fix-network').addEventListener('change', async e => {
     const v = e.target.value;
     if (!v) return;
-    if (TS.getAppsScriptUrl()) {
-      const res = await TS.apiPost('school.update', { id: school.id || schoolId, network: 'net_' + v });
-      if (!res.ok) { TS.toast('שגיאה בשמירת הרשת — ' + (res.error || '')); return; }
-    }
+    const res = await TS.apiPost('school.update', { id: school.id || schoolId, network: 'net_' + v });
+    if (!res.ok) { TS.toast('שגיאה בשמירת הרשת — ' + (res.error || '')); return; }
     school.network = 'net_' + v;
     TS.toast('הרשת נשמרה');
     renderHeader();
-    const netSelect = document.getElementById('t-network');
-    if (netSelect.querySelector(`option[value="${v}"]`)) netSelect.value = v;
   });
 }
 
-function renderTable() {
-  document.getElementById('count').textContent = teachers.length;
+// ============================================================
+// הזנת מורים — צ'יפים, הקלדה מהירה, הדבקה
+// ============================================================
 
-  const tbody = document.getElementById('list-body');
-  if (!teachers.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="empty">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-      <div>עדיין לא הוספת מורים</div>
-      <div style="font-size:13px; margin-top:4px;">מלא את הטופס למעלה ולחץ "הוסיפי לרשימה"</div>
-    </td></tr>`;
-    return;
-  }
-  tbody.innerHTML = teachers.map((t, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td><strong>${t.name}</strong></td>
-      <td>${t.subject}</td>
-      <td>${TS.typeChip(t.type)}</td>
-      <td>${TS.netChip(t.network)}</td>
-      <td>${TS.secChip(t.sector)}</td>
-      <td>${t.seniority || 0}</td>
-      <td>${t.students || '—'}</td>
-      <td>
-        <button class="btn btn-secondary" onclick="removeTeacher(${i})" style="padding:6px 10px;">הסירי</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-async function addTeacher(e) {
-  e.preventDefault();
-  const fd = new FormData(e.target);
-  const data = Object.fromEntries(fd);
-  data.school = schoolId || (school && school.id) || '';
-  data.moeApproval = false;
-  data.pdActive = false;
-
-  // Validate required
-  if (!data.name || !data.subject || !data.network || !data.sector) {
-    TS.toast('יש למלא שדות חובה');
-    return;
-  }
-
-  if (!TS.getAppsScriptUrl()) {
-    teachers.push({ id: 'demo_' + Date.now(), ...data });
-    TS.toast('נוסף לרשימה (דמו)');
-    e.target.reset();
-    document.getElementById('t-name').focus();
-    renderTable();
-    return;
-  }
-
-  const res = await TS.apiPost('teachers.create', data);
-  if (res.ok) {
-    teachers.push(res.data);
-    TS.toast('המורה נשמר/ה');
-    e.target.reset();
-    document.getElementById('t-name').focus();
-    renderTable();
-  } else {
-    TS.toast('שגיאה — ' + (res.error || ''));
-  }
-}
-
-function removeTeacher(i) {
-  if (!confirm('להסיר את ' + teachers[i].name + ' מהרשימה?')) return;
-  teachers.splice(i, 1);
-  renderTable();
-  // Note: full delete from sheet requires a delete endpoint, which we can add later.
-  // For now this only removes from the local view in demo mode.
-  TS.toast('הוסר מהתצוגה');
-}
-
-// CSV import — מקבל CSV עם כותרות: שם, מקצוע, סוג, רשת, מגזר, ותק, יח"ל, תלמידים, טלפון, מייל
-async function importCsv(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  const rows = parseCsv(text);
-  if (rows.length < 2) {
-    TS.toast('הקובץ ריק או לא תקין');
-    return;
-  }
-  const [headers, ...data] = rows;
-
-  const colMap = {
-    'שם': 'name', 'name': 'name',
-    'מקצוע': 'subject', 'subject': 'subject',
-    'סוג': 'type', 'type': 'type',
-    'רשת': 'network', 'network': 'network',
-    'מגזר': 'sector', 'sector': 'sector',
-    'ותק': 'seniority', 'seniority': 'seniority',
-    'יחל': 'units', 'יח"ל': 'units', 'units': 'units',
-    'תלמידים': 'students', 'students': 'students',
-    'טלפון': 'phone', 'phone': 'phone',
-    'מייל': 'email', 'email': 'email'
-  };
-
-  const typeMap = { 'בגרות':'bagrut', 'גמר':'gemer', 'bagrut':'bagrut', 'gemer':'gemer' };
-  const sectorMap = { 'חרדי':'haredi', 'ערבי':'arab', 'כללי':'kelali', 'haredi':'haredi', 'arab':'arab', 'kelali':'kelali' };
-  const netMap = { 'אורט':'ort','עמל':'amal','עתיד':'atid','סכנין':'sakhnin','דרור':'dror', 'ort':'ort','amal':'amal','atid':'atid','sakhnin':'sakhnin','dror':'dror' };
-
-  let added = 0;
-  for (const row of data) {
-    const obj = { school: schoolId };
-    headers.forEach((h, idx) => {
-      const key = colMap[h.trim().toLowerCase().replace(/"/g, '')];
-      if (key) obj[key] = row[idx] ? row[idx].trim() : '';
-    });
-    if (!obj.name) continue;
-    if (obj.type) obj.type = typeMap[obj.type] || 'bagrut';
-    if (obj.sector) obj.sector = sectorMap[obj.sector] || 'kelali';
-    if (obj.network) obj.network = netMap[obj.network] || obj.network;
-
-    if (!TS.getAppsScriptUrl()) {
-      teachers.push({ id: 'demo_' + Date.now() + '_' + added, ...obj });
-    } else {
-      const res = await TS.apiPost('teachers.create', obj);
-      if (res.ok) teachers.push(res.data);
+function initEntryUI() {
+  // לשוניות
+  document.getElementById('tab-type').addEventListener('click', () => switchTab('type'));
+  document.getElementById('tab-paste').addEventListener('click', () => switchTab('paste'));
+  // מתג בגרות/גמר
+  document.querySelectorAll('#type-seg button').forEach(b =>
+    b.addEventListener('click', () => setType(b.dataset.type)));
+  // הקלדה מהירה
+  document.getElementById('rapid').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); rapidAdd(); }
+  });
+  document.getElementById('rapid-phone').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); rapidAdd(); }
+  });
+  // הדבקת כמה שורות ישר לשדה השם
+  document.getElementById('rapid').addEventListener('paste', e => {
+    const txt = (e.clipboardData || window.clipboardData).getData('text');
+    if (txt && txt.includes('\n')) {
+      e.preventDefault();
+      let n = 0;
+      txt.split(/\r?\n/).forEach(line => { if (addTeacherLocal(line.trim(), {})) n++; });
+      if (n) { flash(n + ' נוספו ✓'); renderAll(); }
     }
-    added++;
-  }
-  TS.toast(`יובאו ${added} מורים`);
-  renderTable();
-  e.target.value = '';
+  });
+  document.getElementById('paste').addEventListener('input', parsePaste);
+  document.getElementById('btn-add-pasted').addEventListener('click', addPasted);
+  document.getElementById('btn-export').addEventListener('click', exportCsv);
+  renderChips();
 }
 
-function parseCsv(text) {
-  return text.trim().split(/\r?\n/).map(line => {
-    // simple CSV split — supports basic comma/tab
-    const sep = line.includes('\t') ? '\t' : ',';
-    return line.split(sep).map(c => c.replace(/^"|"$/g, ''));
-  });
+function switchTab(t) {
+  document.getElementById('tab-type').classList.toggle('active', t === 'type');
+  document.getElementById('tab-paste').classList.toggle('active', t === 'paste');
+  document.getElementById('panel-type').style.display = t === 'type' ? '' : 'none';
+  document.getElementById('panel-paste').style.display = t === 'paste' ? '' : 'none';
+  if (t === 'type') focusRapid(); else document.getElementById('paste').focus();
 }
+
+function setType(t) {
+  curType = t;
+  document.querySelectorAll('#type-seg button').forEach(b => b.classList.toggle('active', b.dataset.type === t));
+  focusRapid();
+}
+
+function focusRapid() {
+  const el = document.getElementById('rapid');
+  if (el && document.getElementById('panel-type').style.display !== 'none') el.focus();
+}
+
+function renderChips() {
+  const counts = {};
+  teachers.forEach(t => counts[t.subject] = (counts[t.subject] || 0) + 1);
+  document.getElementById('subject-chips').innerHTML = TS.SUBJECTS.map(s => `
+    <button type="button" class="subject-chip ${s === curSubject ? 'active' : ''}" data-subject="${s}">
+      ${s}${counts[s] ? `<span class="cnt">${counts[s]}</span>` : ''}
+    </button>`).join('');
+  document.querySelectorAll('.subject-chip').forEach(b =>
+    b.addEventListener('click', () => { curSubject = b.dataset.subject; renderChips(); focusRapid(); }));
+}
+
+function flash(msg) {
+  const f = document.getElementById('flash');
+  f.textContent = msg || 'נוסף ✓';
+  f.classList.add('show');
+  setTimeout(() => f.classList.remove('show'), 1100);
+}
+
+// הוספת מורה מקומית + תיזמון שמירה. מחזירה false אם שם ריק / כפילות מדויקת.
+function addTeacherLocal(name, extra) {
+  name = (name || '').trim();
+  if (!name) return false;
+  const subject = extra.subject || curSubject;
+  if (teachers.some(t => t.name === name && t.subject === subject)) return false;
+  const existing = teachers.find(t => t.name === name);
+  teachers.push({
+    uid: 'u' + (++uidSeq),
+    serverId: null,
+    name,
+    subject,
+    type: extra.type || curType,
+    phone: (extra.phone || (existing ? existing.phone : '') || '').trim(),
+    email: extra.email || (existing ? existing.email : '') || '',
+    seniority: extra.seniority || (existing ? existing.seniority : '') || '',
+    needsCreate: true, needsUpdate: false, deleteAfterCreate: false, error: false
+  });
+  return true;
+}
+
+function rapidAdd() {
+  const nameEl = document.getElementById('rapid');
+  const phoneEl = document.getElementById('rapid-phone');
+  const name = nameEl.value.trim();
+  if (!name) return;
+
+  const existing = teachers.find(t => t.name === name);
+  if (teachers.some(t => t.name === name && t.subject === curSubject)) {
+    flash('כבר ברשימה של ' + curSubject);
+    nameEl.value = ''; phoneEl.value = ''; nameEl.focus();
+    return;
+  }
+  let phone = phoneEl.value.trim();
+  if (!phone && existing && existing.phone) phone = existing.phone;
+  if (!phone) {
+    phoneEl.classList.add('field-missing');
+    phoneEl.focus();
+    return;
+  }
+  phoneEl.classList.remove('field-missing');
+  if (addTeacherLocal(name, { phone })) {
+    nameEl.value = ''; phoneEl.value = '';
+    flash(existing ? 'נוסף גם ל' + curSubject + ' ✓' : 'נוסף ✓');
+    renderAll();
+    nameEl.focus();
+  }
+}
+
+// ---------- הדבקה מאקסל ----------
+let parsed = [];
+
+function parsePaste() {
+  const txt = document.getElementById('paste').value.trim();
+  parsed = [];
+  const box = document.getElementById('preview-box');
+  if (!txt) { box.style.display = 'none'; return; }
+  const typeMap = { 'בגרות': 'bagrut', 'גמר': 'gemer' };
+  txt.split(/\r?\n/).forEach(line => {
+    if (!line.trim()) return;
+    const cells = line.split(/\t|,|;/).map(c => c.trim()).filter(c => c !== '');
+    if (!cells.length) return;
+    const t = { name: '', subject: '', type: '', phone: '', email: '', seniority: '' };
+    cells.forEach(c => {
+      const clean = c.replace(/["']/g, '');
+      if (clean.includes('@')) t.email = clean;
+      else if (/^0?\d[\d\s-]{7,}$/.test(clean)) t.phone = clean;
+      else if (typeMap[clean]) t.type = typeMap[clean];
+      else if (TS.SUBJECTS.includes(clean)) t.subject = clean;
+      else if (/^\d{1,2}$/.test(clean)) t.seniority = clean;
+      else if (!t.name && /[א-ת]/.test(clean)) t.name = clean;
+    });
+    if (t.name) parsed.push(t);
+  });
+  if (!parsed.length) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  const withSub = parsed.filter(p => p.subject).length;
+  const noPhone = parsed.filter(p => !p.phone).length;
+  document.getElementById('detected').innerHTML =
+    `זוהו <b>${parsed.length} מורים</b> · ${withSub} עם מקצוע (לשאר יוצמד ${curSubject})` +
+    (noPhone ? ` · <span class="missing-note">⚠️ ${noPhone} בלי טלפון — יסומנו ברשימה להשלמה</span>` : '');
+  document.getElementById('preview-table').innerHTML = `
+    <thead><tr><th>שם</th><th>מקצוע</th><th>סוג</th><th>טלפון</th><th>מייל</th></tr></thead>
+    <tbody>${parsed.map(p => `<tr>
+      <td><strong>${p.name}</strong></td>
+      <td>${p.subject || `<span style="color:var(--text-3)">${curSubject} (ברירת מחדל)</span>`}</td>
+      <td>${p.type === 'gemer' ? 'גמר' : 'בגרות'}</td>
+      <td>${p.phone || '<span class="missing-note">חסר ⚠️</span>'}</td><td>${p.email || '—'}</td>
+    </tr>`).join('')}</tbody>`;
+}
+
+function addPasted() {
+  let n = 0;
+  parsed.forEach(p => { if (addTeacherLocal(p.name, p)) n++; });
+  document.getElementById('paste').value = '';
+  document.getElementById('preview-box').style.display = 'none';
+  if (n) TS.toast(n + ' מורים נוספו לרשימה');
+  renderAll();
+  switchTab('type');
+}
+
+// ============================================================
+// רשימה מקובצת לפי מקצוע
+// ============================================================
+
+function findByUid(uid) { return teachers.find(t => t.uid === uid); }
+
+function toggleType(uid) {
+  const t = findByUid(uid);
+  if (!t) return;
+  t.type = t.type === 'bagrut' ? 'gemer' : 'bagrut';
+  markDirty(t);
+  renderAll();
+}
+
+// פרטי-קשר של מורה רב-מקצועי מתעדכנים בכל המקצועות שלו יחד
+function saveDetail(uid, field, val) {
+  const row = findByUid(uid);
+  if (!row) return;
+  teachers.forEach(t => {
+    if (t.name === row.name) { t[field] = val; markDirty(t); }
+  });
+  renderAll();
+}
+
+function markDirty(t) {
+  if (!t.serverId && t.needsCreate) return; // הערכים העדכניים ייכנסו ליצירה ממילא
+  t.needsUpdate = true;
+}
+
+function removeTeacher(uid) {
+  const idx = teachers.findIndex(t => t.uid === uid);
+  if (idx < 0) return;
+  const t = teachers[idx];
+  if (!confirm('להסיר את ' + t.name + ' (' + t.subject + ')?')) return;
+  teachers.splice(idx, 1);
+  if (t.serverId) deleteQueue.push(t.serverId);
+  else if (!t.needsCreate) { /* בתהליך יצירה */ t.deleteAfterCreate = true; ghostRows.push(t); }
+  renderAll();
+}
+
+function toggleDetails(uid) {
+  const el = document.getElementById('det-' + uid);
+  if (el) el.classList.toggle('open');
+}
+
+function renderAll() {
+  document.getElementById('count').textContent = teachers.length;
+  renderChips();
+  updateSaveStatus();
+  const roster = document.getElementById('roster');
+  if (!teachers.length) {
+    roster.innerHTML = `<div class="empty-roster">עדיין אין מורים — הקלידו שם וטלפון למעלה ולחצו Enter</div>`;
+    return;
+  }
+  const groups = {};
+  teachers.forEach(t => { (groups[t.subject] = groups[t.subject] || []).push(t); });
+  const subjectOrder = [...TS.SUBJECTS, ...Object.keys(groups).filter(s => !TS.SUBJECTS.includes(s))];
+  roster.innerHTML = subjectOrder.filter(s => groups[s]).map(s => {
+    const missing = groups[s].filter(t => !t.phone).length;
+    return `
+    <div class="subject-group">
+      <div class="subject-group-head"><span>${s}</span><span class="n">${groups[s].length} מורים${missing ? ` · <span class="missing-note">⚠️ ${missing} בלי טלפון</span>` : ''}</span></div>
+      ${groups[s].map(t => {
+        const others = teachers.filter(x => x.name === t.name && x.subject !== t.subject).map(x => x.subject);
+        return `
+        <div class="t-row ${t.error ? 't-error' : ''}">
+          <span class="t-name">${t.name}${others.length ? `<span class="also">מלמד/ת גם ${others.join(' · ')}</span>` : ''}</span>
+          <button type="button" class="t-type ${t.type}" data-uid="${t.uid}" data-act="type" title="לחיצה מחליפה">${t.type === 'gemer' ? 'גמר' : 'בגרות'}</button>
+          <input class="t-phone" placeholder="טלפון חסר!" value="${t.phone}" inputmode="tel" data-uid="${t.uid}" data-field="phone">
+          <span class="t-more">${[t.email, t.seniority ? 'ותק ' + t.seniority : ''].filter(Boolean).join(' · ')}${t.error ? ' <span class="missing-note">⚠️ לא נשמר — ננסה שוב</span>' : ''}</span>
+          <span class="t-actions">
+            <button type="button" class="mini-btn" data-uid="${t.uid}" data-act="details">פרטים</button>
+            <button type="button" class="mini-btn" data-uid="${t.uid}" data-act="remove">הסרה</button>
+          </span>
+          <div class="t-details" id="det-${t.uid}">
+            <input placeholder="מייל" value="${t.email}" data-uid="${t.uid}" data-field="email">
+            <input placeholder="שנות ותק" value="${t.seniority}" data-uid="${t.uid}" data-field="seniority">
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+
+  roster.querySelectorAll('[data-act="type"]').forEach(b => b.addEventListener('click', () => toggleType(b.dataset.uid)));
+  roster.querySelectorAll('[data-act="details"]').forEach(b => b.addEventListener('click', () => toggleDetails(b.dataset.uid)));
+  roster.querySelectorAll('[data-act="remove"]').forEach(b => b.addEventListener('click', () => removeTeacher(b.dataset.uid)));
+  roster.querySelectorAll('input[data-field]').forEach(inp =>
+    inp.addEventListener('change', () => saveDetail(inp.dataset.uid, inp.dataset.field, inp.value.trim())));
+}
+
+// ============================================================
+// תור שמירה — פעולה אחת בכל רגע, רץ ברקע כל הזמן
+// ============================================================
+
+let saving = false;
+let ghostRows = [];   // שורות שנמחקו בזמן שהיצירה שלהן באוויר
+
+function unsavedCount() {
+  return teachers.filter(t => t.needsCreate || t.needsUpdate).length + deleteQueue.length + ghostRows.length;
+}
+
+function updateSaveStatus() {
+  const el = document.getElementById('save-status');
+  if (!el) return;
+  const n = unsavedCount();
+  if (n === 0) { el.textContent = '✓ הכל נשמר'; el.className = 'save-status ok'; }
+  else { el.textContent = 'שומר… (' + n + ')'; el.className = 'save-status busy'; }
+}
+
+function startSaveLoop() {
+  setInterval(processQueue, 1200);
+}
+
+async function processQueue() {
+  if (saving || !schoolId) return;
+  saving = true;
+  try {
+    // 1. מחיקות
+    while (deleteQueue.length) {
+      const id = deleteQueue[0];
+      const res = await TS.apiPost('teachers.delete', { id });
+      if (res.ok || res.error === 'not_found') deleteQueue.shift();
+      else { break; }
+      updateSaveStatus();
+    }
+    // 2. יצירות
+    const toCreate = teachers.find(t => t.needsCreate);
+    if (toCreate) {
+      // אחרי כשל תגובה — ייתכן שהיצירה כן בוצעה בשרת. בודקים לפני ניסיון חוזר,
+      // אחרת המורה ייווצר פעמיים.
+      if (toCreate.error) {
+        const chk = await TS.api('teachers.list', { school: schoolId }, { cache: 'no' });
+        const hit = (chk.data || []).find(x => x.name === toCreate.name && x.subject === toCreate.subject);
+        if (hit) {
+          toCreate.serverId = hit.id;
+          toCreate.needsCreate = false;
+          toCreate.needsUpdate = true;  // מסנכרנים את הערכים הנוכחיים
+          toCreate.error = false;
+          renderAll();
+          return;
+        }
+      }
+      toCreate.needsCreate = false; // עריכות בזמן השמירה יסמנו needsUpdate
+      const res = await TS.apiPost('teachers.create', {
+        school: schoolId,
+        schoolName: school ? (school.name || '') : '',
+        network: school ? (school.network || '') : '',
+        name: toCreate.name,
+        subject: toCreate.subject,
+        type: toCreate.type,
+        phone: toCreate.phone,
+        email: toCreate.email,
+        seniority: toCreate.seniority
+      });
+      if (res.ok && res.data) {
+        toCreate.serverId = res.data.id;
+        toCreate.error = false;
+        if (toCreate.deleteAfterCreate) {
+          deleteQueue.push(toCreate.serverId);
+          ghostRows = ghostRows.filter(g => g !== toCreate);
+        }
+      } else {
+        toCreate.needsCreate = true;
+        toCreate.error = true;
+        renderAll();
+      }
+      updateSaveStatus();
+    }
+    // 3. עדכונים
+    const toUpdate = teachers.find(t => t.needsUpdate && t.serverId);
+    if (toUpdate) {
+      toUpdate.needsUpdate = false;
+      const res = await TS.apiPost('teachers.update', {
+        id: toUpdate.serverId,
+        name: toUpdate.name,
+        subject: toUpdate.subject,
+        type: toUpdate.type,
+        phone: toUpdate.phone,
+        email: toUpdate.email,
+        seniority: toUpdate.seniority
+      });
+      if (!res.ok) { toUpdate.needsUpdate = true; toUpdate.error = true; renderAll(); }
+      else if (toUpdate.error) { toUpdate.error = false; renderAll(); }
+      updateSaveStatus();
+    }
+  } catch (e) {
+    // רשת נפלה — ננסה בסבב הבא
+  } finally {
+    saving = false;
+    updateSaveStatus();
+  }
+}
+
+// ============================================================
+// ייצוא CSV
+// ============================================================
 
 function exportCsv() {
-  const headers = ['שם','מקצוע','סוג','רשת','מגזר','ותק','יח"ל','תלמידים','טלפון','מייל'];
+  const headers = ['שם','מקצוע','סוג','טלפון','מייל','ותק'];
   const lines = [headers.join(',')];
   teachers.forEach(t => {
-    const row = [
-      t.name, t.subject,
-      t.type === 'bagrut' ? 'בגרות' : 'גמר',
-      TS.netById(t.network).name,
-      TS.secById(t.sector).name,
-      t.seniority || '', t.units || '', t.students || '',
-      t.phone || '', t.email || ''
-    ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`);
+    const row = [t.name, t.subject, t.type === 'gemer' ? 'גמר' : 'בגרות', t.phone, t.email, t.seniority]
+      .map(v => `"${(v || '').toString().replace(/"/g, '""')}"`);
     lines.push(row.join(','));
   });
   const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'morim-' + (school?.name || 'export') + '.csv';
-  a.click();
-}
-
-function downloadTemplate() {
-  const csv = 'שם,מקצוע,סוג,רשת,מגזר,ותק,יח"ל,תלמידים,טלפון,מייל\n' +
-              'שרה כהן,מתמטיקה,בגרות,אורט,כללי,8,5 יח"ל,28,050-1234567,sara@example.com\n' +
-              'אחמד עלי,אנגלית,בגרות,אורט,ערבי,12,4 יח"ל,24,050-7654321,';
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'template-morim.csv';
+  a.download = 'morim-' + ((school && school.name) || 'export') + '.csv';
   a.click();
 }
