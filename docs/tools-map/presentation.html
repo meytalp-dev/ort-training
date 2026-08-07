@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>איזה כלי מתאים לאיזו משימה? · וובינר Learni</title>
+<meta name="description" content="מצגת הוובינר של Learni — הטבלה המחזורית של כלי ה-AI: איזה כלי מתאים לאיזו משימה.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playpen+Sans+Hebrew:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --dream:#A99BE8;--lead:#4BC4B7;--create:#F0BE72;--spark:#F0A0AC;--build:#82A4F2;--interact:#A3D083;--agent:#F08D6C;
+  --ink:#14110F;--ink2:#1E1A17;--paper:#F5EFE4;--dim:#A79B8C;--line:rgba(245,239,228,.14);
+}
+html,body{height:100%;overflow:hidden;background:var(--ink);color:var(--paper);font-family:'Heebo',sans-serif}
+h1,h2,h3,.sym{font-family:'Playpen Sans Hebrew','Heebo',sans-serif}
+
+/* stage */
+.deck{position:fixed;inset:0}
+.slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:6vh 7vw;opacity:0;pointer-events:none;transform:translateX(-40px);
+  transition:opacity .5s,transform .5s cubic-bezier(.22,1,.36,1)}
+.slide.active{opacity:1;pointer-events:auto;transform:none}
+.slide.prev{transform:translateX(40px)}
+
+/* atmosphere */
+.deck::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 900px 600px at 15% 10%,rgba(169,155,232,.10) 0%,transparent 60%),
+    radial-gradient(ellipse 800px 550px at 85% 85%,rgba(240,190,114,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 700px 500px at 80% 15%,rgba(75,196,183,.07) 0%,transparent 60%)}
+.deck::after{content:'';position:fixed;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(ellipse at center,black 0%,transparent 78%)}
+
+/* type scale */
+.kicker{display:inline-flex;align-items:center;gap:9px;font-size:clamp(.8rem,1.4vw,1rem);font-weight:700;letter-spacing:.14em;
+  color:var(--lead);text-transform:uppercase;margin-bottom:2.4vh}
+.kicker::before,.kicker::after{content:'';width:34px;height:2px;background:linear-gradient(90deg,transparent,var(--lead));border-radius:2px}
+.kicker::after{background:linear-gradient(90deg,var(--lead),transparent)}
+h1{font-size:clamp(2.4rem,6.4vw,5.2rem);font-weight:800;line-height:1.18;letter-spacing:-.01em}
+h2{font-size:clamp(1.9rem,4.6vw,3.6rem);font-weight:800;line-height:1.22}
+.lede{font-size:clamp(1.05rem,2vw,1.5rem);color:var(--dim);max-width:56ch;margin-top:2.6vh;line-height:1.7}
+.accent{color:var(--create)}
+.hl{position:relative;white-space:nowrap}
+.hl::after{content:'';position:absolute;inset-inline:0;bottom:.06em;height:.34em;z-index:-1;border-radius:4px;
+  background:linear-gradient(90deg,rgba(240,190,114,.4),rgba(240,160,172,.35))}
+
+/* fragments */
+.frag{opacity:0;transform:translateY(16px);transition:opacity .45s,transform .45s cubic-bezier(.22,1,.36,1)}
+.frag.shown{opacity:1;transform:none}
+
+/* chaos cloud */
+.cloud{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cloud span{position:absolute;font-weight:700;color:var(--paper);opacity:.16;white-space:nowrap;
+  animation:drift var(--d,14s) ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0) rotate(var(--r,0deg))}to{transform:translate(var(--dx,30px),var(--dy,-40px)) rotate(calc(var(--r,0deg) * -1))}}
+.slide .fg{position:relative;z-index:2}
+
+/* big number */
+.big-num{font-family:'Playpen Sans Hebrew','Heebo',sans-serif;font-size:clamp(4rem,13vw,10rem);font-weight:800;line-height:1;
+  background:linear-gradient(120deg,var(--dream),var(--spark),var(--create));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* family strip (slide 7 families) */
+.fam-strip{display:flex;gap:1.1vw;justify-content:center;flex-wrap:wrap;margin-top:4vh}
+.fam-box{width:clamp(96px,11vw,150px);aspect-ratio:3/4;border-radius:16px;border:2px solid color-mix(in srgb,var(--fc) 55%,transparent);
+  background:color-mix(in srgb,var(--fc) 12%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1vh;padding:10px}
+.fam-box .fe{font-size:clamp(1.6rem,3vw,2.6rem)}
+.fam-box .fn{font-size:clamp(.72rem,1.1vw,.95rem);font-weight:800;color:color-mix(in srgb,var(--fc) 85%,var(--paper));line-height:1.3}
+
+/* family slide */
+.fam-slide h2 .fe{margin-inline-end:12px}
+.el-row{display:flex;gap:1.4vw;justify-content:center;flex-wrap:wrap;margin-top:4vh}
+.el-card{width:clamp(140px,15vw,205px);border-radius:18px;padding:2.2vh 1vw 1.8vh;
+  border:2px solid color-mix(in srgb,var(--fc) 55%,transparent);background:color-mix(in srgb,var(--fc) 10%,transparent)}
+.el-card .sym{font-size:clamp(1.9rem,3.4vw,3rem);font-weight:800;color:color-mix(in srgb,var(--fc) 90%,var(--paper));line-height:1.1}
+.el-card .nm{font-weight:800;font-size:clamp(.9rem,1.4vw,1.15rem);margin-top:.5vh}
+.el-card .tg{font-size:clamp(.72rem,1.05vw,.9rem);color:var(--dim);margin-top:.3vh;line-height:1.45}
+.fam-when{margin-top:3.6vh;font-size:clamp(1rem,1.7vw,1.35rem);color:var(--paper)}
+.fam-when b{color:color-mix(in srgb,var(--fc) 85%,var(--paper))}
+.persona-line{display:flex;gap:1.6vw;justify-content:center;flex-wrap:wrap;margin-top:2.6vh}
+.persona-line span{font-size:clamp(.78rem,1.15vw,.98rem);color:var(--dim);background:var(--ink2);
+  border:1.5px solid var(--line);border-radius:99px;padding:7px 16px}
+
+/* battle */
+.battle-tag{display:inline-block;font-weight:900;font-size:clamp(1rem,1.8vw,1.4rem);letter-spacing:.2em;color:var(--agent);
+  border:2.5px solid var(--agent);border-radius:12px;padding:6px 22px;margin-bottom:2.6vh;transform:rotate(-2deg)}
+.vs-row{display:flex;align-items:stretch;gap:2vw;justify-content:center;margin-top:4vh;flex-wrap:wrap}
+.vs-card{width:clamp(170px,19vw,250px);border-radius:20px;padding:3vh 1.4vw;background:var(--ink2);border:2px solid var(--line);transition:.25s}
+.vs-card .sym{font-size:clamp(2.2rem,4vw,3.4rem);font-weight:800;line-height:1.05}
+.vs-card .nm{font-weight:800;font-size:clamp(1rem,1.6vw,1.3rem);margin-top:1vh}
+.vs-card .why{font-size:clamp(.78rem,1.1vw,.95rem);color:var(--dim);margin-top:1vh;line-height:1.55}
+.vs-sep{align-self:center;font-family:'Playpen Sans Hebrew';font-weight:800;font-size:clamp(1.4rem,2.6vw,2.2rem);color:var(--agent)}
+.vs-card.winner{border-color:var(--create);box-shadow:0 0 44px rgba(240,190,114,.25);transform:translateY(-6px)}
+.vs-card.winner::before{content:'🏆';display:block;font-size:1.6rem;margin-bottom:.6vh}
+.vote-hint{margin-top:3.4vh;font-size:clamp(.95rem,1.6vw,1.25rem);color:var(--create);font-weight:700}
+.vote-hint .pulse{display:inline-block;animation:votepulse 1.6s infinite}
+@keyframes votepulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.principle{margin-top:4vh;font-size:clamp(1.15rem,2.2vw,1.7rem);font-weight:700;background:var(--ink2);
+  border:2px solid rgba(240,190,114,.4);border-radius:18px;padding:2.4vh 2.4vw;max-width:70ch}
+.principle .pnum{color:var(--create);font-weight:900}
+
+/* three questions */
+.q-list{display:flex;flex-direction:column;gap:2.2vh;margin-top:4vh;text-align:right}
+.q-item{display:flex;align-items:center;gap:1.4vw;background:var(--ink2);border:2px solid var(--line);border-radius:18px;padding:2vh 2vw}
+.q-item .qn{font-family:'Playpen Sans Hebrew';font-weight:800;font-size:clamp(1.6rem,3vw,2.4rem);
+  width:clamp(46px,5vw,64px);flex-shrink:0;text-align:center;color:var(--lead)}
+.q-item .qt{font-size:clamp(1.05rem,1.9vw,1.5rem);font-weight:700}
+.q-item .qs{font-size:clamp(.82rem,1.3vw,1.05rem);color:var(--dim);font-weight:400;display:block;margin-top:.3vh}
+
+/* reveal iframe */
+.frame-wrap{width:min(88vw,1200px);height:64vh;border-radius:20px;overflow:hidden;border:3px solid rgba(245,239,228,.2);
+  box-shadow:0 30px 80px rgba(0,0,0,.5);margin-top:3vh;background:#fff}
+.frame-wrap iframe{width:100%;height:100%;border:0}
+
+/* QR slide */
+.qr-row{display:flex;align-items:center;gap:4vw;justify-content:center;margin-top:4vh;flex-wrap:wrap}
+.qr-box{background:#fff;border-radius:22px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.qr-box img{display:block;width:clamp(180px,22vh,260px);height:auto}
+.url-pill{font-family:'Heebo';direction:ltr;font-size:clamp(.9rem,1.7vw,1.3rem);font-weight:700;color:var(--ink);
+  background:var(--paper);border-radius:99px;padding:12px 26px}
+
+/* chrome */
+.progress{position:fixed;top:0;right:0;height:4px;background:linear-gradient(90deg,var(--dream),var(--spark),var(--create));
+  width:0;z-index:60;transition:width .4s;border-radius:0 0 0 4px}
+.counter{position:fixed;bottom:18px;left:22px;z-index:60;font-size:.8rem;color:var(--dim);direction:ltr;font-weight:600}
+.nav-hint{position:fixed;bottom:18px;right:22px;z-index:60;font-size:.75rem;color:var(--dim);opacity:.75}
+.brand-float{position:fixed;top:16px;right:22px;z-index:60;display:flex;align-items:center;gap:8px;font-weight:800;font-size:.9rem;color:var(--paper)}
+.brand-float .bm{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:.85rem;
+  background:conic-gradient(from 210deg,var(--dream),var(--spark),var(--create),var(--lead),var(--dream))}
+.tap-zone{position:fixed;top:0;bottom:0;width:18vw;z-index:50;cursor:pointer}
+.tap-next{left:0}.tap-prev{right:0}
+
+@media(max-width:700px){
+  .slide{padding:4vh 5vw}
+  .q-item{padding:1.6vh 4vw}
+  .frame-wrap{height:52vh}
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="brand-float"><div class="bm">L</div>Learni</div>
+<div class="counter" id="counter"></div>
+<div class="nav-hint">← / רווח להתקדם · F מסך מלא</div>
+<div class="tap-zone tap-next" onclick="next()"></div>
+<div class="tap-zone tap-prev" onclick="prev()"></div>
+
+<div class="deck" id="deck">
+
+<!-- 0 · cover -->
+<section class="slide">
+  <div class="fg">
+    <div class="kicker">וובינר Learni</div>
+    <h1>איזה כלי מתאים<br>ל<span class="hl">איזו משימה</span>?</h1>
+    <p class="lede">שעה אחת. שיטה אחת. ובסוף — טבלה שנשארת אצלכם.</p>
+    <p class="lede" style="margin-top:4vh;font-size:clamp(.9rem,1.5vw,1.15rem)">מיטל פלג · Learni — AI שנשאר אצלכם</p>
+  </div>
+</section>
+
+<!-- 1 · chaos -->
+<section class="slide" data-chaos>
+  <div class="cloud" aria-hidden="true"></div>
+  <div class="fg">
+    <h2>מכירים את ההרגשה?</h2>
+    <p class="lede frag">כל שבוע כלי חדש. כל פוסט מבטיח ש"זה ישנה לכם את החיים".<br>וברגע האמת — פותחים שוב את אותו כלי אחד שמכירים.</p>
+  </div>
+</section>
+
+<!-- 2 · the problem -->
+<section class="slide">
+  <div class="fg">
+    <div class="big-num">1,000+</div>
+    <h2 style="margin-top:2vh">כלי AI חדשים בכל חודש</h2>
+    <p class="lede frag">הבעיה שלנו היא לא מחסור בכלים.<br><b style="color:var(--paper)">הבעיה היא שאין לנו שיטה לבחור.</b></p>
+  </div>
+</section>
+
+<!-- 3 · the key -->
+<section class="slide">
+  <div class="fg">
+    <div class="kicker">המפתח</div>
+    <h2>תפסיקו לשאול "מה הכלי הכי טוב?"</h2>
+    <h2 class="frag" style="margin-top:2.5vh">תתחילו לשאול:<br><span class="accent">"מה המשימה שלי?"</span></h2>
+    <p class="lede frag">כימאים לא זוכרים 118 יסודות בעל-פה.<br>הם מכירים את <b style="color:var(--paper)">המשפחות</b> — והטבלה עושה את השאר.</p>
+  </div>
+</section>
+
+<!-- 4 · seven families -->
+<section class="slide">
+  <div class="fg">
+    <div class="kicker">השיטה</div>
+    <h2>7 משפחות. זה הכול.</h2>
+    <div class="fam-strip">
+      <div class="fam-box frag" style="--fc:var(--dream)"><div class="fe">🧠</div><div class="fn">שיחה<br>וחשיבה</div></div>
+      <div class="fam-box frag" style="--fc:var(--lead)"><div class="fe">🔍</div><div class="fn">מחקר<br>וידע</div></div>
+      <div class="fam-box frag" style="--fc:var(--interact)"><div class="fe">📊</div><div class="fn">מצגות<br>ואינטראקציה</div></div>
+      <div class="fam-box frag" style="--fc:var(--create)"><div class="fe">🎨</div><div class="fn">ויזואל<br>ועיצוב</div></div>
+      <div class="fam-box frag" style="--fc:var(--spark)"><div class="fe">🎬</div><div class="fn">וידאו<br>וקול</div></div>
+      <div class="fam-box frag" style="--fc:var(--build)"><div class="fe">🛠️</div><div class="fn">בנייה<br>ופיתוח</div></div>
+      <div class="fam-box frag" style="--fc:var(--agent)"><div class="fe">🦾</div><div class="fn">סוכנים<br>ואוטומציה</div></div>
+    </div>
+    <p class="lede frag">כל משימה שתפגשו שייכת לאחת מהן. בואו נכיר אותן — משפחה-משפחה.</p>
+  </div>
+</section>
+
+<!-- 5 · family: chat -->
+<section class="slide fam-slide" style="--fc:var(--dream)">
+  <div class="fg">
+    <div class="kicker">משפחה 1 מתוך 7</div>
+    <h2><span class="fe">🧠</span>שיחה וחשיבה</h2>
+    <div class="el-row">
+      <div class="el-card frag"><div class="sym">Cl</div><div class="nm">Claude</div><div class="tg">כתיבה איכותית בעברית, ניתוח מסמכים, חשיבה משותפת</div></div>
+      <div class="el-card frag"><div class="sym">Gp</div><div class="nm">ChatGPT</div><div class="tg">הסכין השוויצרי — נקודת פתיחה לכל דבר</div></div>
+      <div class="el-card frag"><div class="sym">Ge</div><div class="nm">Gemini</div><div class="tg">חי בתוך Gmail ו-Docs — רואה את הקבצים שלכם</div></div>
+    </div>
+    <p class="fam-when frag"><b>מתי פונים למשפחה הזו?</b> כשצריך שותף — לכתוב, לנתח, להתייעץ.</p>
+    <div class="persona-line frag">
+      <span>🍎 מערך שיעור מדורג</span><span>📋 טיוטת נוהל לצוות</span><span>📣 סדרת פוסטים</span><span>🚀 ניתוח הצעת חוזה</span>
+    </div>
+  </div>
+</section>
+
+<!-- 6 · family: research -->
+<section class="slide fam-slide" style="--fc:var(--lead)">
+  <div class="fg">
+    <div class="kicker">משפחה 2 מתוך 7</div>
+    <h2><span class="fe">🔍</span>מחקר וידע</h2>
+    <div class="el-row">
+      <div class="el-card frag"><div class="sym">Nb</div><div class="nm">NotebookLM</div><div class="tg">מומחה לחומר שלכם — עונה רק מתוך המסמכים שהזנתם</div></div>
+      <div class="el-card frag"><div class="sym">Px</div><div class="nm">Perplexity</div><div class="tg">מנוע תשובות — תשובה מלאה עם מקורות במקום 10 קישורים</div></div>
+      <div class="el-card frag"><div class="sym">Gk</div><div class="nm">Genspark</div><div class="tg">סוכן מחקר — יוצא לרשת ומגיש דוח מסודר</div></div>
+    </div>
+    <p class="fam-when frag"><b>ההבדל הקריטי:</b> החומר <b>שלכם</b> (NotebookLM) או הרשת <b>הפתוחה</b> (Perplexity, Genspark)?</p>
+    <div class="persona-line frag">
+      <span>🍎 פודקאסט מחומר הלימוד</span><span>📋 מאגר נהלים שעונה לצוות</span><span>📣 מחקר מתחרים</span><span>🚀 סקירת שוק לפני פיצ'ר</span>
+    </div>
+  </div>
+</section>
+
+<!-- 7 · battle 1 vote -->
+<section class="slide">
+  <div class="fg">
+    <div class="battle-tag">קרב הכלים · סיבוב 1</div>
+    <h2>יש לכם מסמך של 30 עמודים.<br>צריך ממנו <span class="hl">מצגת</span> — למחר.</h2>
+    <div class="vs-row">
+      <div class="vs-card" id="b1-ga"><div class="sym" style="color:var(--interact)">Ga</div><div class="nm">Gamma</div><div class="why">מדביקים מסמך → מקבלים מצגת מעוצבת</div></div>
+      <div class="vs-sep">VS</div>
+      <div class="vs-card" id="b1-cl"><div class="sym" style="color:var(--dream)">Cl</div><div class="nm">Claude</div><div class="why">מנתח לעומק ובונה מצגת לפי המבנה שלכם</div></div>
+      <div class="vs-sep">VS</div>
+      <div class="vs-card" id="b1-nb"><div class="sym" style="color:var(--lead)">Nb</div><div class="nm">NotebookLM</div><div class="why">נאמן למקור — לא ימציא אף שקף</div></div>
+    </div>
+    <p class="vote-hint frag"><span class="pulse">🗳️</span> כתבו בצ'אט: Gamma / Claude / NotebookLM — מי לוקח את זה?</p>
+  </div>
+</section>
+
+<!-- 8 · battle 1 verdict -->
+<section class="slide">
+  <div class="fg">
+    <div class="battle-tag">הכרעה · סיבוב 1</div>
+    <div class="vs-row">
+      <div class="vs-card winner"><div class="sym" style="color:var(--interact)">Ga</div><div class="nm">Gamma</div><div class="why">כשחשוב <b>מהר ויפה</b> — אין תחרות</div></div>
+      <div class="vs-card"><div class="sym" style="color:var(--dream)">Cl</div><div class="nm">Claude</div><div class="why">מנצח כשחשוב <b>המבנה הפדגוגי/העסקי שלכם</b></div></div>
+      <div class="vs-card"><div class="sym" style="color:var(--lead)">Nb</div><div class="nm">NotebookLM</div><div class="why">מנצח כשאסור <b>לסטות מהמקור</b> — רגולציה, מחקר</div></div>
+    </div>
+    <div class="principle frag"><span class="pnum">עיקרון #1 —</span> אין "כלי הכי טוב". יש שאלה: <b>מה חשוב לי בתוצר?</b> מהירות, שליטה או נאמנות.</div>
+  </div>
+</section>
+
+<!-- 9 · family: presentations -->
+<section class="slide fam-slide" style="--fc:var(--interact)">
+  <div class="fg">
+    <div class="kicker">משפחה 3 מתוך 7</div>
+    <h2><span class="fe">📊</span>מצגות ואינטראקציה</h2>
+    <div class="el-row">
+      <div class="el-card frag"><div class="sym">Ga</div><div class="nm">Gamma</div><div class="tg">מנושא למצגת מעוצבת ב-10 דקות</div></div>
+      <div class="el-card frag"><div class="sym">Gy</div><div class="nm">Genially</div><div class="tg">חדרי בריחה, משחקים, תוכן שמגיב</div></div>
+      <div class="el-card frag"><div class="sym">Pd</div><div class="nm">Padlet</div><div class="tg">לוח שיתופי — כולם מדביקים יחד</div></div>
+      <div class="el-card frag"><div class="sym">Fo</div><div class="nm">Google Forms</div><div class="tg">שאלונים וטפסים ישר לגיליון</div></div>
+    </div>
+    <p class="fam-when frag"><b>המפתח כאן:</b> אני מציגה? מְשַׁחֶקֶת? אוספת?</p>
+    <div class="persona-line frag">
+      <span>🍎 חדר בריחה לחזרה למבחן</span><span>📋 משוב צוות אנונימי</span><span>📣 שאלון לידים</span><span>🚀 פיץ' למשקיעים</span>
+    </div>
+  </div>
+</section>
+
+<!-- 10 · family: visual -->
+<section class="slide fam-slide" style="--fc:var(--create)">
+  <div class="fg">
+    <div class="kicker">משפחה 4 מתוך 7</div>
+    <h2><span class="fe">🎨</span>ויזואל ועיצוב</h2>
+    <div class="el-row">
+      <div class="el-card frag"><div class="sym">Cn</div><div class="nm">Canva</div><div class="tg">הסטודיו של כולם — תבניות + AI</div></div>
+      <div class="el-card frag"><div class="sym">Cd</div><div class="nm">Claude Design</div><div class="tg">עיצוב חי בקוד — תוצר שלא נראה תבניתי</div></div>
+      <div class="el-card frag"><div class="sym">Po</div><div class="nm">Pomelli</div><div class="tg">סורק את המותג ומייצר קמפיין שלם</div></div>
+    </div>
+    <p class="fam-when frag"><b>המפתח כאן:</b> כמה ייחודי זה צריך להיות? תבנית מהירה ↔ עיצוב משלכם.</p>
+    <div class="persona-line frag">
+      <span>🍎 תעודות סוף שנה</span><span>📋 דוח מעוצב להנהלה</span><span>📣 קמפיין שלם ב-Pomelli</span><span>🚀 לנדינג שנראה אחרת</span>
+    </div>
+  </div>
+</section>
+
+<!-- 11 · family: media -->
+<section class="slide fam-slide" style="--fc:var(--spark)">
+  <div class="fg">
+    <div class="kicker">משפחה 5 מתוך 7</div>
+    <h2><span class="fe">🎬</span>וידאו וקול</h2>
+    <div class="el-row">
+      <div class="el-card frag"><div class="sym">Ve</div><div class="nm">Veo</div><div class="tg">וידאו מטקסט — יש מאין</div></div>
+      <div class="el-card frag"><div class="sym">Fw</div><div class="nm">Google Flow</div><div class="tg">סצנות עם דמות קבועה</div></div>
+      <div class="el-card frag"><div class="sym">Cp</div><div class="nm">CapCut</div><div class="tg">עריכה + כתוביות אוטומטיות</div></div>
+      <div class="el-card frag"><div class="sym">El</div><div class="nm">ElevenLabs</div><div class="tg">קריינות טבעית — גם בעברית</div></div>
+    </div>
+    <p class="fam-when frag"><b>המפתח כאן:</b> יש לכם חומר מצולם — או שצריך לברוא אותו?</p>
+    <div class="persona-line frag">
+      <span>🍎 סרטון פתיחת נושא</span><span>📋 סרטון גיוס לבי"ס</span><span>📣 ריל עם קריינות</span><span>🚀 סרטון מוצר בלי צלם</span>
+    </div>
+  </div>
+</section>
+
+<!-- 12 · battle 2 vote -->
+<section class="slide">
+  <div class="fg">
+    <div class="battle-tag">קרב הכלים · סיבוב 2</div>
+    <h2>צריך <span class="hl">סרטון לרשתות</span> על האירוע השנתי —<br>ויש לכם רק תיקייה של תמונות וקטעים מהטלפון.</h2>
+    <div class="vs-row">
+      <div class="vs-card"><div class="sym" style="color:var(--spark)">Ve</div><div class="nm">Veo</div><div class="why">מייצר סצנות קולנועיות מתיאור</div></div>
+      <div class="vs-sep">VS</div>
+      <div class="vs-card"><div class="sym" style="color:var(--spark)">Fw</div><div class="nm">Flow</div><div class="why">בונה סיפור עם דמות לאורך סצנות</div></div>
+      <div class="vs-sep">VS</div>
+      <div class="vs-card"><div class="sym" style="color:var(--spark)">Cp</div><div class="nm">CapCut</div><div class="why">עורך את מה שכבר צילמתם</div></div>
+    </div>
+    <p class="vote-hint frag"><span class="pulse">🗳️</span> כתבו בצ'אט: Veo / Flow / CapCut?</p>
+  </div>
+</section>
+
+<!-- 13 · battle 2 verdict -->
+<section class="slide">
+  <div class="fg">
+    <div class="battle-tag">הכרעה · סיבוב 2</div>
+    <div class="vs-row">
+      <div class="vs-card winner"><div class="sym" style="color:var(--spark)">Cp</div><div class="nm">CapCut</div><div class="why">יש חומר אמיתי? <b>עורכים אותו.</b> אותנטי מנצח מסונתז.</div></div>
+      <div class="vs-card"><div class="sym" style="color:var(--spark)">Ve</div><div class="nm">Veo</div><div class="why">מנצח כשאין שום חומר — או שצריך את הבלתי-אפשרי</div></div>
+      <div class="vs-card"><div class="sym" style="color:var(--spark)">Fw</div><div class="nm">Flow</div><div class="why">מנצח בסדרות — דמות אחת, הרבה פרקים</div></div>
+    </div>
+    <div class="principle frag"><span class="pnum">עיקרון #2 —</span> תשאלו <b>ממה אני מתחילה?</b> יש חומר קיים → כלי עריכה. אין → כלי יצירה.</div>
+  </div>
+</section>
+
+<!-- 14 · family: build -->
+<section class="slide fam-slide" style="--fc:var(--build)">
+  <div class="fg">
+    <div class="kicker">משפחה 6 מתוך 7</div>
+    <h2><span class="fe">🛠️</span>בנייה ופיתוח</h2>
+    <div class="el-row">
+      <div class="el-card frag"><div class="sym">Cc</div><div class="nm">Claude Code</div><div class="tg">מערכות שלמות בשיחה — הכלי שמאחורי כל Learni</div></div>
+      <div class="el-card frag"><div class="sym">Lv</div><div class="nm">Lovable</div><div class="tg">אפליקציה חיה בלי לגעת בקוד</div></div>
+      <div class="el-card frag"><div class="sym">St</div><div class="nm">Stitch</div><div class="tg">עיצובי מסכים להשראה ולפיץ'</div></div>
+    </div>
+    <p class="fam-when frag"><b>הסוד הכי שמור:</b> לא צריך להיות מתכנתים. צריך לדעת <b>להסביר מה רוצים.</b></p>
+    <div class="persona-line frag">
+      <span>🍎 מחולל תרגילים לכיתה</span><span>📋 דשבורד נתוני בי"ס</span><span>📣 כלי לידים באתר</span><span>🚀 MVP בשבוע</span>
+    </div>
+  </div>
+</section>
+
+<!-- 15 · family: agents -->
+<section class="slide fam-slide" style="--fc:var(--agent)">
+  <div class="fg">
+    <div class="kicker">משפחה 7 מתוך 7</div>
+    <h2><span class="fe">🦾</span>סוכנים ואוטומציה</h2>
+    <div class="el-row">
+      <div class="el-card frag"><div class="sym">Mn</div><div class="nm">Manus</div><div class="tg">מקבל משימה שלמה — חוקר, בונה ומגיש תוצר מוכן, לבד</div></div>
+    </div>
+    <p class="fam-when frag"><b>העתיד שכבר כאן:</b> לא כלי שעוזר לכם לעבוד — כלי ש<b>עובד בשבילכם</b> בזמן שאתם בכיתה, בישיבה, בפגישה.</p>
+    <div class="persona-line frag">
+      <span>🍎 "הכן השוואת ספרי לימוד"</span><span>📋 "רכז את דוחות החודש"</span><span>📣 "מפה את השוק"</span><span>🚀 "בנה אתר השוואת מחירים"</span>
+    </div>
+  </div>
+</section>
+
+<!-- 16 · three questions -->
+<section class="slide">
+  <div class="fg">
+    <div class="kicker">אז איך בוחרים?</div>
+    <h2>3 שאלות. לפני כל משימה.</h2>
+    <div class="q-list">
+      <div class="q-item frag"><div class="qn">1</div><div><div class="qt">מה התוצר?<span class="qs">טקסט · מצגת · ויזואל · וידאו · מערכת → זו המשפחה</span></div></div></div>
+      <div class="q-item frag"><div class="qn">2</div><div><div class="qt">ממה אני מתחילה?<span class="qs">יש חומר קיים → כלי שמעבד. אין כלום → כלי שיוצר</span></div></div></div>
+      <div class="q-item frag"><div class="qn">3</div><div><div class="qt">מה חשוב לי יותר?<span class="qs">מהירות → הכלי האוטומטי. שליטה ודיוק → הכלי שמשאיר אתכם בהגה</span></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 17 · the reveal -->
+<section class="slide">
+  <div class="fg" style="width:100%">
+    <div class="kicker">והכי חשוב —</div>
+    <h2>כל זה לא נגמר כשנסגור את הזום.</h2>
+    <div class="frame-wrap frag"><iframe data-src="./index.html" title="הטבלה המחזורית של כלי ה-AI" loading="lazy"></iframe></div>
+  </div>
+</section>
+
+<!-- 18 · QR -->
+<section class="slide">
+  <div class="fg">
+    <h2>הטבלה המחזורית — שלכם.</h2>
+    <p class="lede">כל כלי: מתי כן, מתי לא, חינם או בתשלום — ולינק להדרכה מלאה.</p>
+    <div class="qr-row">
+      <div class="qr-box frag"><img src="https://api.qrserver.com/v1/create-qr-code/?size=340x340&margin=8&data=https%3A%2F%2Fmeytalp-dev.github.io%2Fort-training%2Ftools-map%2F" alt="QR לטבלה המחזורית"></div>
+      <div class="url-pill frag">meytalp-dev.github.io/ort-training/tools-map</div>
+    </div>
+  </div>
+</section>
+
+<!-- 19 · close -->
+<section class="slide">
+  <div class="fg">
+    <div class="kicker">תודה!</div>
+    <h1>הכלים מתחלפים.<br><span class="accent">השיטה נשארת.</span></h1>
+    <p class="lede">רוצים להעמיק בכלי מסוים? כל ההדרכות מחכות באתר Learni.<br>מיטל פלג · Learni — AI שנשאר אצלכם</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+const progress = document.getElementById('progress');
+const counter = document.getElementById('counter');
+
+function frags(s){ return [...s.querySelectorAll('.frag')]; }
+
+function show(i){
+  slides.forEach((s,j)=>{
+    s.classList.toggle('active', j===i);
+    s.classList.toggle('prev', j>i);
+  });
+  progress.style.width = ((i+1)/slides.length*100)+'%';
+  counter.textContent = (i+1)+' / '+slides.length;
+  const s = slides[i];
+  if(s.hasAttribute('data-chaos')) buildChaos(s);
+  const fr = s.querySelector('iframe[data-src]');
+  if(fr && !fr.src) fr.src = fr.dataset.src;
+}
+
+function next(){
+  const f = frags(slides[cur]).find(x=>!x.classList.contains('shown'));
+  if(f){ f.classList.add('shown'); return; }
+  if(cur < slides.length-1){ cur++; show(cur); }
+}
+function prev(){
+  const shown = frags(slides[cur]).filter(x=>x.classList.contains('shown'));
+  if(shown.length){ shown[shown.length-1].classList.remove('shown'); return; }
+  if(cur > 0){ cur--; show(cur); }
+}
+
+document.addEventListener('keydown', e=>{
+  if(['ArrowLeft',' ','Enter','PageDown','ArrowDown'].includes(e.key)){ e.preventDefault(); next(); }
+  else if(['ArrowRight','PageUp','ArrowUp','Backspace'].includes(e.key)){ e.preventDefault(); prev(); }
+  else if(e.key==='f'||e.key==='F'){ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen(); }
+  else if(e.key==='Home'){ cur=0; show(0); }
+  else if(e.key==='End'){ cur=slides.length-1; show(cur); }
+});
+
+/* chaos cloud */
+const NAMES = ['Claude','ChatGPT','Gemini','Midjourney','Veo','Sora','Copilot','NotebookLM','Perplexity','Gamma','Canva','CapCut','Runway','Suno','Lovable','Cursor','Manus','Genspark','ElevenLabs','HeyGen','Padlet','Genially','Stitch','Flow','Pomelli','DALL·E','Firefly','Luma','Pika','Groq','Mistral','LLaMA','DeepSeek','Grok','Zapier','Make','Framer','Figma AI'];
+function buildChaos(slide){
+  const cloud = slide.querySelector('.cloud');
+  if(cloud.childElementCount) return;
+  NAMES.forEach(n=>{
+    const sp = document.createElement('span');
+    sp.textContent = n;
+    sp.style.top = (Math.random()*92)+'%';
+    sp.style.left = (Math.random()*86)+'%';
+    sp.style.fontSize = (0.8+Math.random()*1.8)+'rem';
+    sp.style.setProperty('--d',(9+Math.random()*12)+'s');
+    sp.style.setProperty('--dx',(Math.random()*80-40)+'px');
+    sp.style.setProperty('--dy',(Math.random()*80-40)+'px');
+    sp.style.setProperty('--r',(Math.random()*14-7)+'deg');
+    sp.style.opacity = .07+Math.random()*.16;
+    cloud.appendChild(sp);
+  });
+}
+show(0);
+</script>
+</body>
+</html>
