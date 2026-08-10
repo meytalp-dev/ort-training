@@ -34,9 +34,15 @@ function doGet(e) {
   return ContentService.createTextOutput(json).setMimeType(ContentService.MimeType.JSON);
 }
 
-// הרשמה לתפוצה — שומר על ההתנהגות הקיימת (שורה בטאב הראשון) ומחזיר "registered"
+// הרשמה לתפוצה — שומר על ההתנהגות הקיימת (שורה בטאב הראשון, זיהוי כפילויות) ומחזיר "registered"
 function handleNewsletter(p) {
   var sheet = getSpreadsheet().getSheets()[0];
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (p.email && data[i][2] === p.email) {
+      return { result: 'success', message: 'already_registered' };
+    }
+  }
   sheet.appendRow([new Date(), p.name || '', p.email || '', p.org || '', p.role || '']);
   // אם כבר מגיעה התראת מייל על הרשמות (כלל התראות של Sheets) והמייל הזה כפול — אפשר למחוק את השורות הבאות
   MailApp.sendEmail({
