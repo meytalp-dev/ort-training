@@ -1136,8 +1136,8 @@ LinkedIn
 <div class="card">
 <div style="font-size:2.2rem;margin-bottom:.75rem">🎬</div>
 <div class="card-meta"><span class="badge badge-intermediate">בינוני</span><span class="badge badge-hebrew">ליחידים ולצוותים</span></div>
-<h3>וידאו ותוכן לרשתות — Veo + CapCut</h3>
-<p>מפיקים סרטונים מקצועיים מטקסט עם Veo ועורכים ב-CapCut: סרטוני תדמית, תוכן לרשתות חברתיות וסרטוני הסבר — בלי צלם ובלי אולפן.</p>
+<h3>וידאו ותוכן לרשתות — Veo</h3>
+<p>מפיקים סרטונים מקצועיים מטקסט עם Veo: סרטוני תדמית, תוכן לרשתות חברתיות וסרטוני הסבר — בלי צלם ובלי אולפן.</p>
 <button class="btn btn-primary" style="margin-top:1.25rem" onclick="showPage('contact')">לתיאום הדרכה &#8594;</button>
 </div>
 
@@ -1622,15 +1622,48 @@ initObserver();
 }
 
 /* ===== CONTACT ===== */
-function sendContact(){
-var name=document.getElementById('contactName').value;
-var email=document.getElementById('contactEmail').value;
-var subject=document.getElementById('contactSubject').value;
-var msg=document.getElementById('contactMsg').value;
-if(!name||!email||!msg){showToast('נא למלא את כל השדות');return;}
+var CONTACT_SHEETS_URL='https://script.google.com/macros/s/AKfycbwvVdvxrkYcXQatqlYFQas4pit1VBvhiyoCYUZFXH2BBLE-7U5VZCgr2gEbKTDsLiMS8w/exec';
+function contactMailtoFallback(name,email,subject,msg){
 var mailto='mailto:meytalp@bethaarava.ort.org.il?subject='+encodeURIComponent(subject+' - '+name)+'&body='+encodeURIComponent('שם: '+name+'\nאימייל: '+email+'\n\n'+msg);
 window.location.href=mailto;
 showToast('פותח את תוכנת האימייל...');
+}
+function sendContact(){
+var name=document.getElementById('contactName').value.trim();
+var email=document.getElementById('contactEmail').value.trim();
+var subject=document.getElementById('contactSubject').value;
+var msg=document.getElementById('contactMsg').value.trim();
+if(!name||!email||!msg){showToast('נא למלא את כל השדות');return;}
+showToast('שולח...');
+var callbackName='contactCallback_'+Date.now();
+var timeout=setTimeout(function(){
+delete window[callbackName];
+contactMailtoFallback(name,email,subject,msg);
+},10000);
+window[callbackName]=function(response){
+clearTimeout(timeout);
+delete window[callbackName];
+// הסקריפט המעודכן מחזיר contact_sent; גרסה ישנה שלא מכירה פניות — נופלים ל-mailto
+if(response&&response.result==='success'&&response.message==='contact_sent'){
+document.getElementById('contactName').value='';
+document.getElementById('contactEmail').value='';
+document.getElementById('contactMsg').value='';
+showToast('ההודעה נשלחה! אחזור אליכם בהקדם 💌');
+}else{
+contactMailtoFallback(name,email,subject,msg);
+}
+};
+var params=new URLSearchParams();
+params.append('action','contact');
+params.append('name',name);
+params.append('email',email);
+params.append('subject',subject);
+params.append('msg',msg);
+params.append('callback',callbackName);
+var script=document.createElement('script');
+script.src=CONTACT_SHEETS_URL+'?'+params.toString();
+script.onerror=function(){clearTimeout(timeout);delete window[callbackName];contactMailtoFallback(name,email,subject,msg);};
+document.body.appendChild(script);
 }
 
 /* ===== SCROLL TOP ===== */
