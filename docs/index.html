@@ -616,6 +616,18 @@ background-size:60px 60px;z-index:1}
 <h2>ספריית כלי <span class="accent">AI</span> מומלצים</h2>
 <p>מסודרים לפי קטגוריות — יתרונות, מגבלות, תמיכה בעברית וקישורים להדרכות באתר</p>
 </div>
+
+<div class="prompt-builder-panel fade-in-up" id="toolFinder" style="margin-bottom:2.5rem">
+<h3 style="margin-bottom:.3rem">🎯 מיפוי מהיר — איזה כלי מתאים לי?</h3>
+<p style="color:var(--text-light);font-size:.95rem;margin-bottom:1.2rem">בוחרים תפקיד, משימה, סגנון עבודה ותקציב — ומקבלים המלצה מותאמת מתוך הספרייה.</p>
+<div style="margin-bottom:.9rem"><div style="font-weight:600;font-size:.9rem;margin-bottom:.4rem">מי אני?</div><div class="prompt-chips" id="fRole" style="margin-bottom:0"></div></div>
+<div style="margin-bottom:.9rem"><div style="font-weight:600;font-size:.9rem;margin-bottom:.4rem">מה אני רוצה ליצור?</div><div class="prompt-chips" id="fTask" style="margin-bottom:0"></div></div>
+<div style="margin-bottom:.9rem"><div style="font-weight:600;font-size:.9rem;margin-bottom:.4rem">איך אני אוהב לעבוד?</div><div class="prompt-chips" id="fDepth" style="margin-bottom:0"></div></div>
+<div style="margin-bottom:1.2rem"><div style="font-weight:600;font-size:.9rem;margin-bottom:.4rem">תקציב</div><div class="prompt-chips" id="fBudget" style="margin-bottom:0"></div></div>
+<button class="copy-btn" onclick="runFinder(true)">מצאו לי כלי</button>
+<div id="finderOut" style="margin-top:1.2rem"></div>
+</div>
+
 <div id="toolChips" class="prompt-chips fade-in-up"></div>
 <div id="toolGrid"></div>
 
@@ -1430,6 +1442,119 @@ renderTutorials(filtered);
 
 function flipTutCard(el,e){if(e.target.closest('a'))return;el.classList.toggle('flipped');}
 
+/* ===== TOOL FINDER ===== */
+var toolMeta={
+"ChatGPT":{tasks:["כתיבה","מחקר","שאלונים"],depth:["מהיר","איכותי"]},
+"Claude":{tasks:["כתיבה","מחקר","שאלונים","אפליקציה"],depth:["איכותי"]},
+"Gemini":{tasks:["כתיבה","מחקר","תמונות"],depth:["מהיר"]},
+"Microsoft Copilot":{tasks:["כתיבה","מחקר","תמונות"],depth:["מהיר"]},
+"Perplexity":{tasks:["מחקר"],depth:["מהיר","איכותי"]},
+"NotebookLM":{tasks:["מחקר","תמלול"],depth:["איכותי"]},
+"Gamma":{tasks:["מצגת"],depth:["מהיר"]},
+"Canva AI":{tasks:["מצגת","תמונות","שיווק"],depth:["מהיר","איכותי"]},
+"Napkin AI":{tasks:["תמונות","מצגת"],depth:["מהיר"]},
+"Ideogram":{tasks:["תמונות","שיווק"],depth:["מהיר"]},
+"Google Flow (Veo)":{tasks:["סרטון"],depth:["איכותי"]},
+"HeyGen":{tasks:["סרטון"],depth:["איכותי"]},
+"D-ID":{tasks:["סרטון"],depth:["מהיר"]},
+"CapCut":{tasks:["סרטון","שיווק"],depth:["מהיר","איכותי"]},
+"LTX Studio":{tasks:["סרטון"],depth:["איכותי"]},
+"Suno":{tasks:["מוזיקה","שיווק"],depth:["מהיר"]},
+"ElevenLabs":{tasks:["מוזיקה","סרטון"],depth:["איכותי"]},
+"TurboScribe":{tasks:["תמלול"],depth:["מהיר"]},
+"MagicSchool AI":{tasks:["שאלונים","כתיבה"],depth:["מהיר"]},
+"Wizer.me":{tasks:["שאלונים"],depth:["איכותי"]},
+"Diffit":{tasks:["שאלונים"],depth:["מהיר"]},
+"Claude Code":{tasks:["אפליקציה","מצגת","סרטון"],depth:["איכותי"]},
+"Base44":{tasks:["אפליקציה"],depth:["מהיר","איכותי"]},
+"Lovable":{tasks:["אפליקציה"],depth:["מהיר"]},
+"Google AI Studio":{tasks:["אפליקציה","מחקר"],depth:["איכותי"]},
+"Genspark":{tasks:["מצגת","מחקר","תמונות"],depth:["מהיר"]},
+"Manus":{tasks:["מחקר","מצגת","אפליקציה"],depth:["איכותי"]},
+"Pomelli":{tasks:["שיווק","תמונות"],depth:["מהיר"]},
+"Munch":{tasks:["שיווק","סרטון"],depth:["מהיר"]}
+};
+var roleBoost={
+"מורה":["MagicSchool AI","Wizer.me","Diffit","ChatGPT","NotebookLM","Gamma","Suno"],
+"מנהל":["NotebookLM","Claude","Gamma","Perplexity","TurboScribe","Microsoft Copilot","Napkin AI"],
+"אחר":["Pomelli","Munch","Base44","Lovable","Ideogram","Suno","Perplexity","Claude"]
+};
+var toolCombos={
+"כתיבה":{steps:["Perplexity","Claude"],why:"אוספים מידע ומקורות ב-Perplexity ← כותבים ומנסחים ברמה גבוהה ב-Claude."},
+"מצגת":{steps:["NotebookLM","Gamma","Canva AI"],why:"מסכמים את החומר ב-NotebookLM ← מפיקים מצגת ב-Gamma ← מלטשים את העיצוב ב-Canva."},
+"סרטון":{steps:["Claude","ElevenLabs","Google Flow (Veo)","CapCut"],why:"כותבים תסריט ב-Claude ← מקליטים קריינות בעברית ב-ElevenLabs ← מפיקים וידאו ב-Flow ← עורכים ומוסיפים כתוביות ב-CapCut."},
+"מחקר":{steps:["Perplexity","NotebookLM"],why:"מחפשים עם מקורות ב-Perplexity ← מרכזים הכל ב-NotebookLM ומקבלים סיכום, פודקאסט ושאלות חזרה."},
+"אפליקציה":{steps:["Claude","Base44"],why:"מאפיינים את הרעיון בשיחה עם Claude ← בונים את האפליקציה ב-Base44. למי שרוצה שליטה מלאה — Claude Code (יש קורס באתר!)."},
+"תמונות":{steps:["Ideogram","Canva AI"],why:"יוצרים תמונה עם טקסט ב-Ideogram ← משלבים בעיצוב מקצועי ב-Canva."},
+"שאלונים":{steps:["Claude","Wizer.me"],why:"מנסחים שאלות מתוך החומר ב-Claude ← הופכים לדף עבודה אינטראקטיבי עם בדיקה אוטומטית ב-Wizer."},
+"מוזיקה":{steps:["Claude","Suno"],why:"כותבים מילים ב-Claude ← מלחינים ומבצעים ב-Suno. לקריינות מקצועית — ElevenLabs."},
+"תמלול":{steps:["TurboScribe","Claude"],why:"מתמללים את ההקלטה ב-TurboScribe ← מסכמים לנקודות והחלטות ב-Claude."},
+"שיווק":{steps:["Pomelli","Munch","Suno"],why:"קריאייטיבים ממותגים ב-Pomelli ← קליפים לרשתות ב-Munch ← ג'ינגל משלכם ב-Suno."}
+};
+var finderSel={role:"מורה",task:"",depth:"מהיר",budget:"הכול"};
+var finderOpts={
+role:{el:"fRole",opts:[["מורה","מורה"],["מנהל","מנהל·ת"],["אחר","אחר (יזמות, עסק, כללי)"]]},
+task:{el:"fTask",opts:[["כתיבה","כתיבה וניסוח"],["מצגת","מצגת"],["סרטון","סרטון"],["מחקר","מחקר וסיכום"],["אפליקציה","אפליקציה או אתר"],["תמונות","תמונות ועיצוב"],["שאלונים","שאלונים ודפי עבודה"],["מוזיקה","מוזיקה וקריינות"],["תמלול","תמלול וישיבות"],["שיווק","שיווק ורשתות"]]},
+depth:{el:"fDepth",opts:[["מהיר","⚡ מהיר — תוצאה בדקות"],["איכותי","💎 איכותי — שליטה ועומק"],["משולב","🔗 משולב — כמה כלים בזרימה"]]},
+budget:{el:"fBudget",opts:[["הכול","גם בתשלום"],["חינם","חינם בלבד"]]}
+};
+function renderFinder(){
+Object.keys(finderOpts).forEach(function(g){
+var box=document.getElementById(finderOpts[g].el);
+if(!box)return;
+box.innerHTML=finderOpts[g].opts.map(function(o){
+return '<button type="button" class="prompt-chip'+(finderSel[g]===o[0]?' active':'')+'" onclick="setFinder(\''+g+'\',\''+o[0]+'\')">'+o[1]+'</button>';
+}).join('');
+});
+}
+function setFinder(g,v){finderSel[g]=v;renderFinder();if(finderSel.task)runFinder(false);}
+function finderToolCard(t,note){
+var links='';
+if(t.link)links+='<a class="copy-btn" style="text-decoration:none;font-size:.8rem;padding:5px 14px" href="'+t.link+'" target="_blank" rel="noopener">לאתר הכלי</a>';
+if(t.training)links+='<a class="use-btn" style="text-decoration:none;font-size:.8rem;padding:5px 14px" href="'+t.training+'" target="_blank">🎓 הדרכה באתר</a>';
+return '<div class="card" style="padding:1.1rem">'+(note?'<div style="font-size:.75rem;font-weight:700;color:var(--accent);margin-bottom:.3rem">'+note+'</div>':'')+'<h3 style="margin-bottom:.3rem">'+t.name+(t.israeli?' <span class="badge" style="background:#e8f0fe;color:#1a56db;font-size:.7rem">🇮🇱</span>':'')+'</h3><p style="font-size:.88rem">'+t.desc+'</p><div class="tool-extras" style="margin:.5rem 0"><span class="badge badge-hebrew">עברית: '+t.hebrew+'</span><span class="badge badge-free">'+t.pricing+'</span></div><div style="display:flex;gap:6px;flex-wrap:wrap">'+links+'</div></div>';
+}
+function toolByName(n){for(var i=0;i<tools.length;i++)if(tools[i].name===n)return tools[i];return null;}
+function runFinder(scroll){
+var out=document.getElementById('finderOut');
+if(!finderSel.task){out.innerHTML='<p style="color:var(--text-light)">בחרו קודם מה אתם רוצים ליצור 👆</p>';return;}
+var freeOnly=finderSel.budget==='חינם';
+var taskLabel='';finderOpts.task.opts.forEach(function(o){if(o[0]===finderSel.task)taskLabel=o[1];});
+var html='';
+if(finderSel.depth==='משולב'&&toolCombos[finderSel.task]){
+var combo=toolCombos[finderSel.task];
+html+='<h4 style="margin-bottom:.5rem">🔗 המסלול המומלץ ל'+taskLabel+':</h4>';
+html+='<p style="color:var(--text-light);font-size:.92rem;margin-bottom:1rem">'+combo.why+'</p>';
+html+='<div class="card-grid" style="gap:12px">';
+combo.steps.forEach(function(n,idx){var t=toolByName(n);if(t)html+=finderToolCard(t,'שלב '+(idx+1));});
+html+='</div>';
+}else{
+var scored=[];
+for(var i=0;i<tools.length;i++){
+var t=tools[i],m=toolMeta[t.name];
+if(!m||m.tasks.indexOf(finderSel.task)===-1)continue;
+if(freeOnly&&t.pricing.indexOf('חינמי')===-1)continue;
+var s=1;
+if(m.depth.indexOf(finderSel.depth)!==-1)s+=3;
+if(roleBoost[finderSel.role]&&roleBoost[finderSel.role].indexOf(t.name)!==-1)s+=2;
+if(t.training)s+=1;
+if(t.hebrew==='כן')s+=1;
+if(m.tasks.length===1)s+=1;
+scored.push({t:t,s:s});
+}
+scored.sort(function(a,b){return b.s-a.s;});
+if(!scored.length){
+html+='<p style="color:var(--text-light)">לא נמצא כלי חינמי מתאים — נסו לשנות ל"גם בתשלום".</p>';
+}else{
+html+='<h4 style="margin-bottom:.8rem">ההמלצות שלנו ל'+taskLabel+':</h4><div class="card-grid" style="gap:12px">';
+scored.slice(0,3).forEach(function(x,idx){html+=finderToolCard(x.t,idx===0?'⭐ הבחירה שלנו':'');});
+html+='</div>';
+}
+}
+out.innerHTML=html;
+if(scroll)out.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
 /* ===== TOOLS ===== */
 var toolCatFilter='all';
 function filterToolCat(c){toolCatFilter=c;renderTools();}
@@ -1654,6 +1779,7 @@ closeMobile();
 populateTutorialFilters();
 renderTutorials(tutorials);
 renderTools();
+renderFinder();
 initPromptLibrary();
 renderDownloads();
 renderBlog();
