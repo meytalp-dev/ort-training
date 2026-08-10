@@ -89,6 +89,7 @@ var toolCombos={
 };
 
 function toolByName(n){for(var i=0;i<tools.length;i++)if(tools[i].name===n)return tools[i];return null;}
+function toolSlug(n){return 'tool-'+n.replace(/[^A-Za-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
 function scoreTools(task,depth,role,freeOnly){
 var scored=[];
 for(var i=0;i<tools.length;i++){
