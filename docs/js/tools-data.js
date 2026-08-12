@@ -11,6 +11,7 @@ var tools=[
 /* ===== מצגות, עיצוב ותמונות ===== */
 {category:"מצגות, עיצוב ותמונות",name:"Gamma",link:"https://gamma.app",training:"training/gamma/presentation.html",desc:"כלי ליצירת מצגות אוטומטיות בעזרת AI - פשוט להזין נושא ולקבל מצגת מעוצבת.",advantages:["יוצר מצגות מהר מאוד","עיצוב מודרני ומרשים","ממשק פשוט"],limitations:["דורש עריכה לאחר יצירה","מוגבל בהתאמה אישית בחינם"],hebrew:"חלקי",pricing:"חינמי + בתשלום"},
 {category:"מצגות, עיצוב ותמונות",name:"Canva AI",link:"https://www.canva.com",training:"training/canva/presentation.html",desc:"פלטפורמה ליצירת מצגות, תמונות וחומרים חזותיים עם כלי AI מובנים.",advantages:["ספריית תבניות ענקית","כלי עריכה אינטואיטיביים","יצירת תמונות עם AI"],limitations:["חלק מהתכונות בתשלום","דורש זמן ללמוד את האפשרויות"],hebrew:"כן",pricing:"חינמי + Pro בתשלום"},
+{category:"מצגות, עיצוב ותמונות",name:"Claude Design",link:"https://claude.ai/design",training:"training/claude-design/presentation.html",desc:"סטודיו העיצוב של Claude — מתארים בשיחה מה צריכים ומקבלים מצגת, דשבורד או דף נחיתה מעוצבים, עם עריכה ישירה על הקנבס.",advantages:["עיצוב מקצועי בלי להיות מעצבים","עריכה ישירה — הערות, סליידרים וצבעים","ייצוא ל-PDF, PPTX, HTML ו-Canva"],limitations:["דורש מנוי Claude Pro ומעלה","אין תוכנית חינמית"],hebrew:"כן",pricing:"בתשלום (מנוי Claude)"},
 {category:"מצגות, עיצוב ותמונות",name:"Napkin AI",link:"https://www.napkin.ai",desc:"הופך טקסט לאינפוגרפיקה ותרשימים בקליק — למצגות שיעור, דוחות הנהלה ופוסטים ברשתות.",advantages:["מהיר מאוד — מדביקים טקסט ומקבלים ויזואל","תוצאות מקצועיות","נדיב בחינם"],limitations:["תמיכה חלקית בעברית","פחות שליטה עיצובית מלאה"],hebrew:"חלקי",pricing:"חינמי + בתשלום"},
 {category:"מצגות, עיצוב ותמונות",name:"Ideogram",link:"https://ideogram.ai",desc:"יצירת תמונות עם טקסט קריא בתוך התמונה — כרזות לכיתה, שלטים, לוגואים וגרפיקה שיווקית.",advantages:["טקסט בתמונה יוצא קריא","מהיר וקל","חינמי מוגבל"],limitations:["טקסט בעברית עדיין לא מושלם","ממשק באנגלית"],hebrew:"חלקי",pricing:"חינמי מוגבל + בתשלום"},
 {category:"מצגות, עיצוב ותמונות",name:"Google Stitch",link:"https://stitch.withgoogle.com",training:"training/stitch/presentation.html",desc:"כלי של Google Labs שמעצב מסכי אפליקציות ואתרים מתיאור בטקסט — מהרעיון לעיצוב מסכים מלא בדקות.",advantages:["חינמי","מסכים מעוצבים מתיאור פשוט","ייצוא לקוד ול-Figma"],limitations:["ממשק באנגלית","עדיין בשלב ניסיוני"],hebrew:"חלקי",pricing:"חינמי"},
@@ -65,6 +66,7 @@ var toolMeta={
 "Diffit":{tasks:["שאלונים"],depth:["מהיר"]},
 "Claude Code":{tasks:["אפליקציה","מצגת","סרטון"],depth:["איכותי"]},
 "Claude Cowork":{tasks:["כתיבה","מצגת","תמלול"],depth:["איכותי"]},
+"Claude Design":{tasks:["מצגת","תמונות"],depth:["מהיר","איכותי"]},
 "Google Stitch":{tasks:["אפליקציה","תמונות"],depth:["מהיר"]},
 "Base44":{tasks:["אפליקציה"],depth:["מהיר","איכותי"]},
 "Lovable":{tasks:["אפליקציה"],depth:["מהיר"]},
