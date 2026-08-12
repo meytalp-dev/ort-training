@@ -9,12 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;800;900&family=Assistant:wght@400;600;700&family=Karantina:wght@300;400;700&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Heebo:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/navi.css">
 <script>
-/* סקין "אלנט": ?theme=lnet מדליק, ?theme=navi מחזיר. נשמר ב-localStorage. */
+/* סקין "אלנט": נדלק רק עם ?theme=lnet בכתובת — בכוונה לא נשמר,
+   כדי שברירת-המחדל תמיד תהיה העיצוב העיתונאי של המצגת הזו. */
 (function () {
-  var t = new URLSearchParams(location.search).get('theme');
-  if (t === 'lnet') localStorage.setItem('navi-theme', 'lnet');
-  else if (t) localStorage.removeItem('navi-theme');
-  if (localStorage.getItem('navi-theme') === 'lnet') {
+  if (new URLSearchParams(location.search).get('theme') === 'lnet') {
     document.documentElement.setAttribute('data-theme', 'lnet');
     document.write('<link rel="stylesheet" href="css/theme-lnet.css">');
   }
@@ -61,17 +59,33 @@ html:not([data-theme="lnet"]) {
 .kicker.center { justify-content: center; }
 .kicker.center::after { content: ""; width: 34px; height: 4px; background: var(--c, var(--teal)); border-radius: 2px; }
 
-/* כניסה מדורגת — מלאכת יד */
+/* תנועה: GSAP מוביל את הכניסות; ה-CSS כאן הוא גיבוי כשאין רשת */
 .slide.active .slide-inner { animation: none; }
-.slide.active .slide-inner > * { animation: rise .6s var(--ease-out) both; }
-.slide.active .slide-inner > *:nth-child(1) { animation-delay: .02s; }
-.slide.active .slide-inner > *:nth-child(2) { animation-delay: .09s; }
-.slide.active .slide-inner > *:nth-child(3) { animation-delay: .16s; }
-.slide.active .slide-inner > *:nth-child(4) { animation-delay: .23s; }
-.slide.active .slide-inner > *:nth-child(5) { animation-delay: .30s; }
-.slide.active .slide-inner > *:nth-child(6) { animation-delay: .37s; }
+html:not(.gsap) .slide.active .slide-inner > * { animation: rise .6s var(--ease-out) both; }
+html:not(.gsap) .slide.active .slide-inner > *:nth-child(2) { animation-delay: .08s; }
+html:not(.gsap) .slide.active .slide-inner > *:nth-child(3) { animation-delay: .16s; }
+html:not(.gsap) .slide.active .slide-inner > *:nth-child(4) { animation-delay: .24s; }
+html:not(.gsap) .slide.active .slide-inner > *:nth-child(5) { animation-delay: .32s; }
 @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .slide.active .slide-inner > * { animation: none; } }
+
+/* המוטיב חי: נקודות צועדות לאורך המסלול, תחנת-מוצא פועמת */
+.cover-route path[stroke-dasharray], .nav-steps path[stroke-dasharray] { animation: march 4.5s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -110; } }
+.ring { transform-box: fill-box; transform-origin: center; animation: ringPulse 2.6s ease-out infinite; }
+@keyframes ringPulse {
+  0% { transform: scale(.55); opacity: .7; }
+  75%, 100% { transform: scale(1.65); opacity: 0; }
+}
+/* קו-ההדגשה בשקופית ההיפוך — נמתח כשנחשף */
+.flip-new .u svg path { stroke-dasharray: 100; stroke-dashoffset: 100; }
+html:not(.gsap) .flip-new.revealed .u svg path { animation: drawU .7s .25s var(--ease-out) both; }
+html.gsap .flip-new.revealed .u svg path.drawn { stroke-dashoffset: 0; }
+@keyframes drawU { to { stroke-dashoffset: 0; } }
+/* כש-GSAP פעיל — הוא שולט לבד באלמנטים האלה */
+html.gsap .tip-bar[data-reveal], html.gsap .gold-rule[data-reveal] { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .slide.active .slide-inner > *, .cover-route path[stroke-dasharray], .nav-steps path[stroke-dasharray], .ring { animation: none !important; }
+}
 
 /* ---------- שער ---------- */
 .cover-wrap { max-width: 1040px; margin-inline: auto; }
@@ -294,7 +308,7 @@ html:not([data-theme="lnet"]) {
       <svg class="cover-route" viewBox="0 0 520 46" aria-hidden="true" style="color:var(--c)">
         <path d="M506 12 C 400 44, 140 44, 22 22" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="1 10"/>
         <circle cx="506" cy="12" r="7" fill="currentColor"/>
-        <circle cx="506" cy="12" r="12" fill="none" stroke="currentColor" stroke-width="2" opacity=".35"/>
+        <circle class="ring" cx="506" cy="12" r="12" fill="none" stroke="currentColor" stroke-width="2" opacity=".35"/>
         <path d="M34 12.5 L 16 21 L 32 31" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <h1 class="cover-line2">לכלי.</h1>
@@ -330,7 +344,7 @@ html:not([data-theme="lnet"]) {
     <div class="slide-inner" style="text-align:center">
       <p class="kicker center">הרעיון של הערב</p>
       <p class="flip-old" style="margin-top:26px">"איזה כלי חדש יצא?"</p>
-      <p class="flip-new" data-reveal="1">"איזה כלי הכי מתאים<br>למה ש<span class="u">אני רוצה לעשות<svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true"><path d="M6 16 C 80 22, 220 6, 294 13" fill="none" stroke="var(--c)" stroke-width="7" stroke-linecap="round" opacity=".55"/></svg></span>?"</p>
+      <p class="flip-new" data-reveal="1">"איזה כלי הכי מתאים<br>למה ש<span class="u">אני רוצה לעשות<svg viewBox="0 0 300 24" preserveAspectRatio="none" aria-hidden="true"><path pathLength="100" d="M6 16 C 80 22, 220 6, 294 13" fill="none" stroke="var(--c)" stroke-width="7" stroke-linecap="round" opacity=".55"/></svg></span>?"</p>
       <p class="lead" data-reveal="2" style="margin-top:36px;font-weight:600">מתחילים מהמשימה. תמיד.</p>
     </div>
   </section>
@@ -735,5 +749,150 @@ html:not([data-theme="lnet"]) {
 
 <script src="data/mission-slides.js"></script>
 <script src="js/presentation.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+<script>
+/* ============================================================
+   שכבת התנועה — GSAP
+   כניסה מיוחדת לכל סוג שקופית + אפקטים של מוטיב המסלול.
+   נכשל בשקט (CSS גיבוי) אם אין רשת; מכבד prefers-reduced-motion.
+   ============================================================ */
+(function () {
+  if (!window.gsap) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.documentElement.classList.add("gsap");
+  var EASE = "power3.out";
+
+  function q(scope, sel) { return scope.querySelectorAll(sel); }
+
+  /* שעון ביטחון: אם אנימציה לא הסתיימה בזמן (טאב מוקפא וכד') — קופצים לסוף */
+  function guard(anim) {
+    if (!anim) return anim;
+    setTimeout(function () {
+      if (anim.progress && anim.progress() < 1 && anim.repeat() !== -1) anim.progress(1);
+    }, (anim.totalDuration() + 1.5) * 1000);
+    return anim;
+  }
+
+  /* --- כניסות לפי סוג שקופית --- */
+  function enter(slide) {
+    var id = slide.getAttribute("data-slide");
+    var tl = gsap.timeline({ defaults: { ease: EASE, duration: .65 } });
+
+    if (id === "cover") {
+      tl.from(q(slide, ".cover-kicker"), { y: -20, opacity: 0, duration: .55 })
+        .from(q(slide, ".cover-line1"), { x: 110, opacity: 0, skewX: 5, duration: .85 }, "-=.2")
+        .fromTo(q(slide, ".cover-route"),
+          { clipPath: "inset(-40% 0% -40% 100%)" },
+          { clipPath: "inset(-40% 0% -40% 0%)", duration: .95, ease: "power2.inOut" }, "-=.35")
+        .from(q(slide, ".cover-line2"), { x: -110, opacity: 0, skewX: -5, duration: .85 }, "-=.5")
+        .from(q(slide, ".cover-sub"), { y: 26, opacity: 0 }, "-=.4")
+        .from(q(slide, ".cover-mast"), { opacity: 0, duration: .6 }, "-=.3");
+
+    } else if (id === "flood") {
+      tl.from(q(slide, "h2"), { y: 28, opacity: 0, duration: .55 })
+        .from(q(slide, ".flood-chip"), {
+          scale: .25, opacity: 0,
+          rotation: function () { return gsap.utils.random(-16, 16); },
+          duration: .5, ease: "back.out(2.2)",
+          stagger: { each: .026, from: "random" }
+        }, "-=.2");
+
+    } else if (id === "flip") {
+      tl.from(q(slide, ".kicker"), { y: -16, opacity: 0, duration: .45 })
+        .from(q(slide, ".flip-old"), { y: 22, opacity: 0, duration: .55 }, "-=.1");
+
+    } else if (id === "tonight") {
+      tl.from(q(slide, ".kicker"), { y: -16, opacity: 0, duration: .45 });
+
+    } else if (slide.classList.contains("mission")) {
+      var ghost = q(slide, ".ghost-num");
+      tl.from(ghost, { y: 140, opacity: 0, duration: 1.05, ease: "power2.out" }, 0)
+        .from(q(slide, ".kicker"), { x: 46, opacity: 0, duration: .5 }, .12)
+        .from(q(slide, ".mission-title"), { y: 38, opacity: 0, duration: .75 }, .24)
+        .from(q(slide, ".mission-ctx div"), { x: 30, opacity: 0, stagger: .09, duration: .5 }, .42);
+      gsap.to(ghost, { y: "+=12", duration: 5.5, yoyo: true, repeat: -1, ease: "sine.inOut", delay: 1.4 });
+
+    } else if (id === "map") {
+      tl.from(q(slide, ".kicker"), { y: -16, opacity: 0, duration: .4 })
+        .from(q(slide, "h2"), { y: 24, opacity: 0, duration: .5 }, "-=.15")
+        .from(q(slide, ".ed-table thead th"), { y: -16, opacity: 0, stagger: .07, duration: .4 }, "-=.1")
+        .from(q(slide, ".ed-table tbody tr"), { x: 38, opacity: 0, stagger: .07, duration: .45 }, "-=.15")
+        .fromTo(q(slide, ".stamp"),
+          { scale: 2.3, opacity: 0, rotation: 7 },
+          { scale: 1, opacity: 1, rotation: -3, duration: .55, ease: "back.out(1.7)" }, "-=.25");
+
+    } else if (id === "navigator") {
+      tl.from(q(slide, ".kicker"), { y: -16, opacity: 0, duration: .4 })
+        .from(q(slide, "h2"), { y: 24, opacity: 0, duration: .5 }, "-=.1")
+        .fromTo(q(slide, ".nav-steps"),
+          { clipPath: "inset(-40% 0% -70% 100%)" },
+          { clipPath: "inset(-40% 0% -70% 0%)", duration: 1.15, ease: "power2.inOut" }, "-=.1")
+        .from(q(slide, ".nav-steps circle"), {
+          scale: 0, transformOrigin: "center", stagger: .13,
+          duration: .42, ease: "back.out(2.6)"
+        }, "-=.95")
+        .from(q(slide, ".lead"), { y: 22, opacity: 0, duration: .5 }, "-=.35")
+        .from(q(slide, ".link-pill"), { y: 18, opacity: 0, scale: .92, duration: .5, ease: "back.out(1.8)" }, "-=.25");
+
+    } else if (id === "golden") {
+      tl.from(q(slide, ".kicker"), { opacity: 0, y: -14, duration: .7 });
+
+    } else if (id === "finale") {
+      tl.from(q(slide, ".kicker"), { y: -16, opacity: 0, duration: .4 })
+        .from(q(slide, ".finale-motto"), { y: 34, opacity: 0, duration: .75 }, "-=.1")
+        .from(q(slide, ".big-quote"), { y: 22, opacity: 0, duration: .6 }, "-=.3")
+        .from(q(slide, ".btn"), { y: 18, opacity: 0, scale: .88, stagger: .1, duration: .5, ease: "back.out(1.9)" }, "-=.25")
+        .from(q(slide, ".cover-mast"), { opacity: 0, duration: .5 }, "-=.2");
+    }
+    guard(tl);
+  }
+
+  /* --- אפקטים בעת חשיפה (מקש A) --- */
+  function revealFx(el) {
+    if (el.classList.contains("tip-bar")) {
+      gsap.fromTo(el, { x: 52, opacity: 0 }, { x: 0, opacity: 1, duration: .55, ease: EASE });
+
+    } else if (el.classList.contains("tool-hero")) {
+      var tl = gsap.timeline({ defaults: { ease: EASE } });
+      tl.from(q(el, ".pick-label"), { x: 34, opacity: 0, duration: .45 })
+        .from(q(el, ".tool-name"), { y: 28, opacity: 0, scale: .93, duration: .6, ease: "back.out(1.5)" }, "-=.2")
+        .from(q(el, ".tool-what, .tool-why"), { y: 18, opacity: 0, stagger: .09, duration: .45 }, "-=.3")
+        .from(q(el, ".hero-badges span"), { y: 12, opacity: 0, scale: .75, stagger: .06, duration: .35, ease: "back.out(2.2)" }, "-=.2");
+
+    } else if (el.classList.contains("flip-new")) {
+      var p = el.querySelector(".u path");
+      if (p) gsap.to(p, { strokeDashoffset: 0, duration: .7, delay: .35, ease: "power2.inOut",
+        onStart: function () { p.classList.add("drawn"); } });
+
+    } else if (el.classList.contains("tonight-item")) {
+      var n = el.querySelector(".n");
+      if (n) gsap.from(n, { scale: .3, opacity: 0, duration: .55, ease: "back.out(2.4)" });
+
+    } else if (el.classList.contains("gold-rule")) {
+      gsap.fromTo(el, { scaleX: 0, opacity: 1 }, { scaleX: 1, opacity: 1, duration: .6, ease: "power2.inOut" });
+
+    } else if (el.classList.contains("golden-line")) {
+      gsap.from(q(el, ".gold"), { letterSpacing: ".14em", duration: 1, ease: "power2.out" });
+    }
+  }
+
+  /* --- חיבור למנוע המצגת: מעקב אחרי active ו-revealed --- */
+  document.querySelectorAll(".slide").forEach(function (s) {
+    new MutationObserver(function () {
+      var on = s.classList.contains("active");
+      if (on && !s.__wasActive) { s.__wasActive = true; enter(s); }
+      else if (!on) s.__wasActive = false;
+    }).observe(s, { attributes: true, attributeFilter: ["class"] });
+    if (s.classList.contains("active")) { s.__wasActive = true; enter(s); }
+  });
+
+  document.querySelectorAll("[data-reveal]").forEach(function (el) {
+    if (el.classList.contains("revealed")) { el.__rv = true; return; }
+    new MutationObserver(function () {
+      if (el.classList.contains("revealed") && !el.__rv) { el.__rv = true; revealFx(el); }
+    }).observe(el, { attributes: true, attributeFilter: ["class"] });
+  });
+})();
+</script>
 </body>
 </html>
