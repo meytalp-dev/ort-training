@@ -352,14 +352,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0
       </select>
     </div>
 
-    <div class="pin-field" id="pinField">
-      <label>קוד גישה:</label>
-      <input type="password" id="pinInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="****" onkeyup="checkReady();if(event.key==='Enter')doLogin()">
-      <div class="pin-error" id="pinError">קוד שגוי</div>
-    </div>
-
     <button class="login-btn" id="loginBtn" onclick="doLogin()">כניסה</button>
-    <div class="pin-lock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> גישה מאובטחת</div>
   </div>
 </div>
 
@@ -475,14 +468,7 @@ function selectRole(role) {
   var fields = document.getElementById('loginFields');
   var sel = document.getElementById('loginSelect');
   var label = document.getElementById('loginLabel');
-  var pinField = document.getElementById('pinField');
-  var pinInput = document.getElementById('pinInput');
   sel.innerHTML = '<option value="">בחרי...</option>';
-  pinInput.value = '';
-  document.getElementById('pinError').style.display = 'none';
-
-  // PIN required for all roles
-  pinField.classList.add('visible');
 
   if (role === 'principal') {
     fields.classList.add('visible');
@@ -529,34 +515,12 @@ function selectRole(role) {
 function checkReady() {
   var sel = document.getElementById('loginSelect');
   var btn = document.getElementById('loginBtn');
-  var pin = document.getElementById('pinInput').value;
-  btn.classList.toggle('ready', !!sel.value && pin.length >= 4);
+  btn.classList.toggle('ready', !!sel.value);
 }
 
 async function doLogin() {
   var sel = document.getElementById('loginSelect');
   if (!sel.value) return;
-
-  var pin = document.getElementById('pinInput').value;
-  if (pin.length < 4) { document.getElementById('pinError').style.display = 'block'; return; }
-
-  // Decrypt counselor reports
-  var btn = document.getElementById('loginBtn');
-  btn.textContent = 'מפענח...';
-  btn.style.opacity = '.5';
-  btn.style.pointerEvents = 'none';
-
-  var ok = await decryptCounselorReports(pin);
-  if (!ok) {
-    document.getElementById('pinError').style.display = 'block';
-    btn.textContent = 'כניסה';
-    btn.classList.add('ready');
-    btn.style.opacity = '';
-    btn.style.pointerEvents = '';
-    return;
-  }
-  document.getElementById('pinError').style.display = 'none';
-  btn.textContent = 'כניסה';
 
   state.userName = sel.options[sel.selectedIndex].textContent;
 
@@ -887,6 +851,18 @@ function renderTreatment(s) {
   var html = '';
   var hasContent = false;
 
+  // דוחות היועצת מאוחסנים מוצפנים — פענוח דורש את הקוד, רק כשרוצים לצפות בהם
+  if (typeof COUNSELOR_REPORTS !== 'undefined' && COUNSELOR_REPORTS === null) {
+    hasContent = true;
+    html += '<div class="report-section" style="border-right:3px solid var(--dusty-rose);padding:12px;margin-bottom:16px;background:rgba(183,134,168,.06);border-radius:8px">';
+    html += '<div style="font-size:.85rem;margin-bottom:8px;display:flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" fill="none" stroke="var(--dusty-rose)" stroke-width="2" style="width:16px;height:16px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> דוחות היועצת מוצפנים — להצגתם הזיני את הקוד</div>';
+    html += '<div style="display:flex;gap:8px;align-items:center">';
+    html += '<input type="password" id="crPinInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="****" style="width:90px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-family:Heebo;text-align:center;letter-spacing:4px" onkeyup="if(event.key===\'Enter\')unlockCounselorReports()">';
+    html += '<button onclick="unlockCounselorReports()" style="padding:6px 16px;border:none;border-radius:8px;background:var(--dusty-rose);color:#fff;font-family:Heebo;font-size:.82rem;cursor:pointer">פתיחה</button>';
+    html += '<span id="crPinErr" style="display:none;color:#C0392B;font-size:.78rem">קוד שגוי</span>';
+    html += '</div></div>';
+  }
+
   // ── Counselor Report from Word files (counselor-reports-data.js) ──
   var crReport = (typeof findCounselorReport === 'function') ? findCounselorReport(s.first, s.last) : null;
   if (crReport) {
@@ -984,6 +960,21 @@ function renderTreatment(s) {
   }
 
   return html;
+}
+
+async function unlockCounselorReports() {
+  var input = document.getElementById('crPinInput');
+  var v = input ? input.value.trim() : '';
+  if (!v) return;
+  var ok = await decryptCounselorReports(v);
+  if (ok) {
+    var s = STUDENTS.find(function(st) { return st.id === state.selectedStudentId; });
+    if (s) renderTabContent(s);
+  } else {
+    var err = document.getElementById('crPinErr');
+    if (err) err.style.display = 'inline';
+    if (input) input.select();
+  }
 }
 
 // ===== DEVELOPMENT TAB — HOLISTIC MAP =====
