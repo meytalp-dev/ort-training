@@ -61,7 +61,8 @@ const SEED_SUBJECTS = [
   ['subj_lit',     'ספרות',    'LIT',  4, 'TRUE'],
   ['subj_history', 'היסטוריה', 'HIST', 5, 'TRUE'],
   ['subj_civics',  'אזרחות',   'CIV',  6, 'TRUE'],
-  ['subj_bible',   'תנ"ך',     'BIBL', 7, 'TRUE']
+  ['subj_bible',   'תנ"ך',     'BIBL', 7, 'TRUE'],
+  ['subj_arabic',  'ערבית',    'ARAB', 8, 'TRUE']
 ];
 
 const SEED_NETWORKS = [
@@ -1211,7 +1212,7 @@ function heatmapReport(p) {
 }
 
 function TS_subjects() {
-  return ['מתמטיקה','אנגלית','עברית','ספרות','היסטוריה','אזרחות','תנ"ך'];
+  return ['מתמטיקה','אנגלית','עברית','ספרות','היסטוריה','אזרחות','תנ"ך','ערבית'];
 }
 
 // ============================================================
