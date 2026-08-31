@@ -17,6 +17,13 @@ let uidSeq = 0;
 // בנייד: בלי autofocus בטעינה — הוא גורר גלילה למטה ופתיחת מקלדת
 const IS_TOUCH = window.matchMedia('(hover: none)').matches;
 
+// מגזר לפי בית ספר (פריסת הפיקוח תשפ"ז) — נטען ברקע; מורה חדש נשמר עם המגזר הנכון
+let sectorBySchool = {};
+fetch('../_data/sector-map-2027.json')
+  .then(r => r.json())
+  .then(map => { (map.schools || []).forEach(s => { sectorBySchool[s.id] = s.sector; }); })
+  .catch(() => {});
+
 document.addEventListener('DOMContentLoaded', async () => {
   initEntryUI();
   if (schoolId) {
@@ -546,6 +553,7 @@ async function processQueue() {
         school: schoolId,
         schoolName: school ? (school.name || '') : '',
         network: school ? (school.network || '') : '',
+        sector: sectorBySchool[schoolId] || '',
         name: toCreate.name,
         subject: toCreate.subject,
         type: toCreate.type,

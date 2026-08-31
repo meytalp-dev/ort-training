@@ -7,8 +7,15 @@ let state = {
 };
 let currentSubject = '';
 
+// פילוח מגזרים — נבנה בצד הלקוח מרשימת המורים + מפת המגזרים של פריסת הפיקוח
+let allTeachers = [];
+let sectorBySchool = {};   // sch_id -> kelali | haredi | arab
+const SECTOR_ORDER = ['kelali', 'haredi', 'arab'];
+const SECTOR_COLORS = { kelali: '#1d4ed8', haredi: '#5b21b6', arab: '#047857' };
+
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('month-label').textContent = TS.monthLabel();
+  loadSectorData();   // רץ במקביל ל-load — לא חוסם את שאר הדשבורד
   await load();
 });
 
@@ -27,11 +34,121 @@ async function load() {
   render();
 }
 
+async function loadSectorData() {
+  try {
+    const mapRes = await fetch('../_data/sector-map-2027.json');
+    const map = await mapRes.json();
+    (map.schools || []).forEach(s => { sectorBySchool[s.id] = s.sector; });
+  } catch (e) { /* המפה לא זמינה — ניפול לשדה sector של המורה */ }
+
+  const res = await TS.api('teachers.list', {});
+  if (res.ok && res.data) allTeachers = res.data;
+  renderSectorView();
+  renderWeakSchools();   // רענון — כדי להוסיף צ'יפ מגזר לטבלה
+}
+
+function teacherSector(t) {
+  return sectorBySchool[t.school] || t.sector || 'kelali';
+}
+
 function render() {
   renderSubjectPills();
   renderCommandStrip();
   renderNetworkLenses();
   renderWeakSchools();
+  renderSectorView();
+}
+
+function renderSectorView() {
+  const lensesEl = document.getElementById('sector-lenses');
+  const matrixEl = document.getElementById('sector-matrix-body');
+  if (!lensesEl || !matrixEl) return;
+  if (!allTeachers.length) {
+    lensesEl.innerHTML = emptyMsg('טוען את רשימת המורים...');
+    return;
+  }
+
+  const teachers = currentSubject
+    ? allTeachers.filter(t => t.subject === currentSubject)
+    : allTeachers;
+
+  // כרטיס לכל מגזר: מורים · בתי ספר · המקצוע הגדול ביותר
+  const bySector = {};
+  SECTOR_ORDER.forEach(s => bySector[s] = { teachers: 0, schools: {}, subjects: {} });
+  teachers.forEach(t => {
+    const sec = teacherSector(t);
+    const b = bySector[sec] || bySector.kelali;
+    b.teachers++;
+    if (t.school) b.schools[t.school] = true;
+    const subj = t.subject || '—';
+    b.subjects[subj] = (b.subjects[subj] || 0) + 1;
+  });
+
+  const total = teachers.length || 1;
+  lensesEl.innerHTML = SECTOR_ORDER.map(sec => {
+    const b = bySector[sec];
+    const pct = Math.round((b.teachers / total) * 100);
+    const topSubjects = Object.entries(b.subjects)
+      .sort((a, z) => z[1] - a[1]).slice(0, 3)
+      .map(([name, n]) => `${escapeHtml(name)} · ${n}`).join('<br>');
+    return `
+      <div class="net-lens" style="--lens-net: ${SECTOR_COLORS[sec]};">
+        <div class="net-lens-row-1">
+          <div class="net-lens-name-block">
+            ${TS.secChip(sec)}
+            <span class="net-lens-status-tag ok">${pct}% מהמורים</span>
+          </div>
+        </div>
+        <div class="net-lens-stats">
+          <div class="net-lens-stat">
+            <div class="net-lens-stat-num">${b.teachers}</div>
+            <div class="net-lens-stat-label">מורים</div>
+          </div>
+          <div class="net-lens-stat">
+            <div class="net-lens-stat-num">${Object.keys(b.schools).length}</div>
+            <div class="net-lens-stat-label">בתי ספר</div>
+          </div>
+          <div class="net-lens-stat">
+            <div class="net-lens-stat-num">${Object.keys(b.subjects).length}</div>
+            <div class="net-lens-stat-label">מקצועות</div>
+          </div>
+        </div>
+        ${topSubjects ? `<div style="font-size:13px; color:var(--text-muted); line-height:1.7; padding-top:10px; border-top:1px solid var(--border);">${topSubjects}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  // מטריצה — מקצוע × מגזר (תמיד על כל המורים, בלי סינון המקצוע)
+  const matrix = {};
+  allTeachers.forEach(t => {
+    const subj = t.subject || '—';
+    const sec = teacherSector(t);
+    matrix[subj] = matrix[subj] || { kelali: 0, haredi: 0, arab: 0 };
+    matrix[subj][sec] = (matrix[subj][sec] || 0) + 1;
+  });
+  const subjectOrder = [...TS.SUBJECTS.filter(s => matrix[s]),
+                        ...Object.keys(matrix).filter(s => !TS.SUBJECTS.includes(s)).sort()];
+  const totals = { kelali: 0, haredi: 0, arab: 0 };
+  matrixEl.innerHTML = subjectOrder.map(subj => {
+    const row = matrix[subj];
+    SECTOR_ORDER.forEach(s => totals[s] += row[s] || 0);
+    const rowTotal = SECTOR_ORDER.reduce((n, s) => n + (row[s] || 0), 0);
+    const active = currentSubject === subj;
+    return `
+      <tr${active ? ' style="background:var(--surface-soft);"' : ''}>
+        <td class="school-cell">${escapeHtml(subj)}</td>
+        <td>${row.kelali || '—'}</td>
+        <td>${row.haredi || '—'}</td>
+        <td>${row.arab || '—'}</td>
+        <td><strong>${rowTotal}</strong></td>
+      </tr>`;
+  }).join('') + `
+    <tr style="border-top:2px solid var(--border);">
+      <td class="school-cell"><strong>סה"כ</strong></td>
+      <td><strong>${totals.kelali}</strong></td>
+      <td><strong>${totals.haredi}</strong></td>
+      <td><strong>${totals.arab}</strong></td>
+      <td><strong>${totals.kelali + totals.haredi + totals.arab}</strong></td>
+    </tr>`;
 }
 
 function renderSubjectPills() {
@@ -163,7 +280,7 @@ function renderWeakSchools() {
   const tbody = document.getElementById('weak-schools-body');
   const schools = (state.schoolBreakdown || []).slice(0, 10);
   if (!schools.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:var(--text-muted);">אין נתוני בתי ספר</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:24px; text-align:center; color:var(--text-muted);">אין נתוני בתי ספר</td></tr>';
     return;
   }
   tbody.innerHTML = schools.map(s => {
@@ -173,10 +290,13 @@ function renderWeakSchools() {
     const netColor = s.networkColor || (school.network || '').replace(/^net_/, '');
     const netName = s.networkName || netColor || '—';
     const netChip = netColor ? `<span class="net-chip ${netColor}">${escapeHtml(netName)}</span>` : '—';
+    const sector = sectorBySchool[school.id];
+    const secChip = sector ? TS.secChip(sector) : '—';
     return `
       <tr>
         <td class="school-cell">${escapeHtml(school.name || '')}</td>
         <td>${netChip}</td>
+        <td>${secChip}</td>
         <td>${s.teachers}</td>
         <td>
           <div class="att-progress">
