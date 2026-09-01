@@ -41,8 +41,7 @@ function bindTabs() {
 
 async function loadData() {
   if (!TS.getAppsScriptUrl() || (!guideEmail && !GUIDE_CFG.subject)) {
-    loadDemoData();
-    renderAll();
+    renderNoGuide();
     return;
   }
 
@@ -58,8 +57,7 @@ async function loadData() {
 
   if (!rosterRes || !rosterRes.ok) {
     // אין קונפיג מקצוע (קישור ישן עם ?guide= בלבד) — נופלים להתנהגות השרת
-    if (dash) { state = dash; } else { loadDemoData(); }
-    renderAll();
+    if (dash) { state = dash; renderAll(); } else { renderNoGuide(); }
     return;
   }
 
@@ -106,23 +104,20 @@ async function loadData() {
   renderAll();
 }
 
-function loadDemoData() {
-  state.guide = guideEmail || (GUIDE_CFG.email || 'demo@example.com');
-  state.guideName = GUIDE_CFG.name || 'דמו — מדריכה';
-  state.subject = GUIDE_CFG.subject || 'מתמטיקה';
-  state.trainings = [
-    { id:'tr_01_26', date:'2026-01-15', subject:'מתמטיקה', guideName:'דמו', location:'זום', notes:'ינואר' },
-    { id:'tr_02_26', date:'2026-02-15', subject:'מתמטיקה', guideName:'דמו', location:'זום', notes:'פברואר' },
-    { id:'tr_03_26', date:'2026-03-15', subject:'מתמטיקה', guideName:'דמו', location:'זום', notes:'מרץ (לא חובה)' },
-    { id:'tr_04_26', date:'2026-04-15', subject:'מתמטיקה', guideName:'דמו', location:'זום', notes:'אפריל' },
-    { id:'tr_05_26', date:'2026-05-15', subject:'מתמטיקה', guideName:'דמו', location:'זום', notes:'מאי' },
-    { id:'tr_06_26', date:'2026-06-15', subject:'מתמטיקה', guideName:'דמו', location:'זום', qrToken:'demo-token', notes:'יוני' }
-  ];
-  state.teachers = [
-    { id:'t1', name:'שרה כהן',   schoolName:'אורט בית הערבה', network:'ort',  networkName:'אורט', attendance:{tr_01_26:{status:'present'}, tr_02_26:{status:'present'}}, stats:{present:2, partial:0, total:5, rate:40} },
-    { id:'t2', name:'יעל לוי',   schoolName:'אורט בית הערבה', network:'ort',  networkName:'אורט', attendance:{tr_01_26:{status:'present'}, tr_04_26:{status:'partial'}}, stats:{present:1, partial:1, total:5, rate:30} },
-    { id:'t3', name:'אחמד עלי',  schoolName:'עמל יעד',           network:'amal', networkName:'עמל',  attendance:{}, stats:{present:0, partial:0, total:5, rate:0} }
-  ];
+// לא זוהתה מדריכה — במקום נתוני דמו מבלבלים, הסבר ברור איך נכנסים
+function renderNoGuide() {
+  document.getElementById('page-title').textContent = 'לא זוהתה מדריכה';
+  document.getElementById('page-subtitle').textContent = 'הדשבורד נפתח רק דרך הקישור האישי של כל מדריכ/ה';
+  document.getElementById('teachers-container').innerHTML = `
+    <div class="empty" style="padding:40px; text-align:center;">
+      <div style="font-size:17px; font-weight:700; margin-bottom:8px;">הקישור חסר את זיהוי המדריכ/ה</div>
+      <div style="color:var(--text-muted); line-height:1.8;">
+        יש להיכנס דרך הקישור האישי שקיבלת (בצורה <code>guide/?g=...</code>).<br>
+        לא קיבלת קישור? פני למיטל פלג.
+      </div>
+    </div>`;
+  ['stat-teachers','stat-schools','stat-trainings'].forEach(id => document.getElementById(id).textContent = '0');
+  document.getElementById('stat-rate').textContent = '—';
 }
 
 function renderAll() {
@@ -418,10 +413,8 @@ function editNoteById(id) {
 async function deleteTeacherById(id, name) {
   if (!confirm('להסיר את ' + (name || 'המורה') + ' מהרשימה?\nהפעולה אינה הפיכה.')) return;
 
-  if (!TS.getAppsScriptUrl() || !guideEmail) {
-    state.teachers = state.teachers.filter(x => String(x.id) !== String(id));
-    TS.toast('דמו — הוסר מקומית בלבד');
-    renderAll();
+  if (!TS.getAppsScriptUrl()) {
+    TS.toast('אין חיבור לשרת — לא ניתן להסיר');
     return;
   }
   const res = await TS.apiPost('teachers.delete', { id });
@@ -462,20 +455,7 @@ async function submitTeacher(e) {
   const editing = !!data.id;
 
   if (!TS.getAppsScriptUrl()) {
-    if (editing) {
-      const t = state.teachers.find(x => String(x.id) === String(data.id));
-      if (t) Object.assign(t, { name: data.name, schoolName: data.schoolName, network: data.network, networkName: data.network, phone: data.phone, email: data.email, notes: data.notes });
-    } else {
-      state.teachers.push({
-        id: 'local_' + Object.keys(state.teachers).length + '_' + state.teachers.length,
-        name: data.name, schoolName: data.schoolName || '— ללא שיוך —',
-        network: data.network, networkName: data.network, phone: data.phone, email: data.email, notes: data.notes,
-        attendance: {}, stats: { present: 0, partial: 0, total: state.trainings.length, rate: 0 }
-      });
-    }
-    TS.toast('דמו — נשמר מקומית בלבד (ללא Apps Script)');
-    closeTeacherModal();
-    renderAll();
+    TS.toast('אין חיבור לשרת — לא ניתן לשמור');
     return;
   }
 

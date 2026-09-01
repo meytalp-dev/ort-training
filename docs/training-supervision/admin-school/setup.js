@@ -257,7 +257,14 @@ function initEntryUI() {
     if (txt && txt.includes('\n')) {
       e.preventDefault();
       let n = 0;
-      txt.split(/\r?\n/).forEach(line => { if (addTeacherLocal(line.trim(), {})) n++; });
+      txt.split(/\r?\n/).forEach(line => {
+        const trimmed = line.trim();
+        // שורת כותרת של מקצוע — מחליפה את המקצוע הפעיל במקום להפוך לשם מורה
+        const subj = subjectOfCell(trimmed);
+        if (subj) { curSubject = subj; return; }
+        if (addTeacherLocal(trimmed, {})) n++;
+      });
+      renderChips();
       if (n) { flash(n + ' נוספו ✓'); renderAll(); }
     }
   });
@@ -357,26 +364,51 @@ function rapidAdd() {
 // ---------- הדבקה מאקסל ----------
 let parsed = [];
 
+// זיהוי מקצוע גם עם שגיאות כתיב נפוצות ובלי גרשיים ("הסטוריה", "תנך").
+// בלי זה, שורת כותרת כזו נבלעת כשם מורה ומקבלת את מקצוע ברירת המחדל.
+const SUBJECT_ALIASES = {
+  'הסטוריה': 'היסטוריה', 'היסטורה': 'היסטוריה',
+  'מתימטיקה': 'מתמטיקה', 'מתמטיקת': 'מתמטיקה',
+  'לשון': 'עברית', 'לשון והבעה': 'עברית', 'עברית לשון': 'עברית',
+  'ספרויות': 'ספרות'
+};
+function subjectOfCell(c) {
+  const clean = (c || '').replace(/["'׳״]/g, '').trim();
+  if (!clean) return null;
+  const hit = TS.SUBJECTS.find(s => s.replace(/["'׳״]/g, '') === clean);
+  if (hit) return hit;
+  if (SUBJECT_ALIASES[clean]) return SUBJECT_ALIASES[clean];
+  return null;
+}
+
 function parsePaste() {
   const txt = document.getElementById('paste').value.trim();
   parsed = [];
   const box = document.getElementById('preview-box');
   if (!txt) { box.style.display = 'none'; return; }
   const typeMap = { 'בגרות': 'bagrut', 'גמר': 'gemer' };
+  let runningSubject = '';   // שורת כותרת של מקצוע חלה על השורות שאחריה
   txt.split(/\r?\n/).forEach(line => {
     if (!line.trim()) return;
     const cells = line.split(/\t|,|;/).map(c => c.trim()).filter(c => c !== '');
     if (!cells.length) return;
+    // שורה שכולה שם מקצוע = כותרת, לא מורה
+    if (cells.length === 1 && subjectOfCell(cells[0])) {
+      runningSubject = subjectOfCell(cells[0]);
+      return;
+    }
     const t = { name: '', subject: '', type: '', phone: '', email: '', seniority: '' };
     cells.forEach(c => {
       const clean = c.replace(/["']/g, '');
+      const subj = subjectOfCell(c);
       if (clean.includes('@')) t.email = clean;
       else if (/^0?\d[\d\s-]{7,}$/.test(clean)) t.phone = clean;
       else if (typeMap[clean]) t.type = typeMap[clean];
-      else if (TS.SUBJECTS.includes(clean)) t.subject = clean;
+      else if (subj) t.subject = subj;
       else if (/^\d{1,2}$/.test(clean)) t.seniority = clean;
       else if (!t.name && /[א-ת]/.test(clean)) t.name = clean;
     });
+    if (!t.subject && runningSubject) t.subject = runningSubject;
     if (t.name) parsed.push(t);
   });
   if (!parsed.length) { box.style.display = 'none'; return; }
