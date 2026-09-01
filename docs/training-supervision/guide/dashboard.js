@@ -12,6 +12,9 @@ let state = {
   teachers: []
 };
 
+// סינון מסלול: '' = הכל · 'bagrut' · 'gemer'
+let currentTrack = '';
+
 document.addEventListener('DOMContentLoaded', async () => {
   bindTabs();
   document.getElementById('btn-new-training').addEventListener('click', openNewTraining);
@@ -37,17 +40,69 @@ function bindTabs() {
 }
 
 async function loadData() {
-  if (!TS.getAppsScriptUrl() || !guideEmail) {
+  if (!TS.getAppsScriptUrl() || (!guideEmail && !GUIDE_CFG.subject)) {
     loadDemoData();
     renderAll();
     return;
   }
-  const res = await TS.api('guide.dashboard', { guide: guideEmail });
-  if (res.ok && res.data) {
-    state = res.data;
-  } else {
-    loadDemoData();
+
+  // שתי קריאות במקביל:
+  // 1. רשימת המורים של המקצוע — מקור האמת לרשימה (כולל מסלול בגרות/גמר ומגזר)
+  // 2. guide.dashboard — היסטוריית נוכחות והדרכות (קיים רק למדריכה עם הדרכות בגיליון)
+  const [rosterRes, dashRes] = await Promise.all([
+    GUIDE_CFG.subject ? TS.api('teachers.list', { subject: GUIDE_CFG.subject }) : Promise.resolve(null),
+    guideEmail ? TS.api('guide.dashboard', { guide: guideEmail }) : Promise.resolve(null)
+  ]);
+
+  const dash = (dashRes && dashRes.ok && dashRes.data) ? dashRes.data : null;
+
+  if (!rosterRes || !rosterRes.ok) {
+    // אין קונפיג מקצוע (קישור ישן עם ?guide= בלבד) — נופלים להתנהגות השרת
+    if (dash) { state = dash; } else { loadDemoData(); }
+    renderAll();
+    return;
   }
+
+  // סינון לפי המגזרים שבאחריות המדריכה (kelali+haredi = חברה יהודית · arab = חברה ערבית)
+  const sectors = GUIDE_CFG.sectors || null;
+  const roster = (rosterRes.data || []).filter(t =>
+    !sectors || sectors.indexOf(t.sector || 'kelali') >= 0
+  );
+
+  // הצמדת נוכחות מ-guide.dashboard לפי id
+  const dashById = {};
+  if (dash) (dash.teachers || []).forEach(t => { dashById[t.id] = t; });
+  const trainings = dash ? (dash.trainings || []) : [];
+
+  state = {
+    guide: guideEmail || GUIDE_CFG.email || '',
+    guideName: GUIDE_CFG.name || (dash && dash.guideName) || '',
+    subject: GUIDE_CFG.subject || (dash && dash.subject) || '',
+    trainings,
+    teachers: roster.map(t => {
+      const d = dashById[t.id];
+      const netKey = (t.network || '').toString().replace(/^net_/, '');
+      return {
+        id: t.id,
+        name: t.name,
+        phone: t.phone,
+        email: t.email,
+        notes: t.notes || '',
+        school: t.school,
+        schoolName: t.schoolName || (d && d.schoolName) || '— ללא שיוך —',
+        network: netKey,
+        networkName: TS.netById(netKey).name || netKey,
+        type: t.type === 'gemer' ? 'gemer' : 'bagrut',
+        sector: t.sector || 'kelali',
+        attendance: d ? d.attendance : {},
+        stats: d ? d.stats : { present: 0, partial: 0, total: trainings.length, rate: 0 }
+      };
+    })
+  };
+  state.teachers.sort((a, b) => {
+    if (a.schoolName !== b.schoolName) return a.schoolName.localeCompare(b.schoolName, 'he');
+    return (a.name || '').localeCompare(b.name || '', 'he');
+  });
   renderAll();
 }
 
@@ -73,10 +128,17 @@ function loadDemoData() {
 function renderAll() {
   const gName = GUIDE_CFG.name || state.guideName || state.guide || 'מדריכה';
   const gSubject = GUIDE_CFG.subject || state.subject || '';
+  const bagrutN = state.teachers.filter(t => t.type !== 'gemer').length;
+  const gemerN = state.teachers.length - bagrutN;
+  const societyLabel = GUIDE_CFG.sectors
+    ? (GUIDE_CFG.sectors.indexOf('arab') >= 0 ? 'החברה הערבית' : 'החברה היהודית')
+    : '';
   document.getElementById('user-name').textContent = gName;
   document.getElementById('page-title').textContent = gName + (gSubject ? ' · ' + gSubject : '');
   document.getElementById('page-subtitle').textContent =
-    state.teachers.length + ' מורים · ' + new Set(state.teachers.map(t => t.schoolName)).size + ' בתי ספר';
+    state.teachers.length + ' מורים (' + bagrutN + ' בגרות · ' + gemerN + ' גמר) · ' +
+    new Set(state.teachers.map(t => t.schoolName)).size + ' בתי ספר' +
+    (societyLabel ? ' · ' + societyLabel : '');
 
   const totalRate = state.teachers.length
     ? Math.round(state.teachers.reduce((sum, t) => sum + (t.stats.rate || 0), 0) / state.teachers.length)
@@ -91,11 +153,28 @@ function renderAll() {
   renderStats();
 }
 
+function renderTrackPills() {
+  const bar = document.getElementById('track-filter');
+  if (!bar) return;
+  const bagrutN = state.teachers.filter(t => t.type !== 'gemer').length;
+  const gemerN = state.teachers.length - bagrutN;
+  const pill = (val, label, n) => `
+    <button type="button" class="subject-pill ${currentTrack === val ? 'active' : ''}" data-track="${val}">
+      ${label}${n !== null ? ` (${n})` : ''}
+    </button>`;
+  bar.innerHTML = '<span class="filter-label">מסלול</span>' +
+    pill('', 'הכל', null) + pill('bagrut', 'בגרות', bagrutN) + pill('gemer', 'גמר', gemerN);
+  bar.querySelectorAll('[data-track]').forEach(b =>
+    b.addEventListener('click', () => { currentTrack = b.dataset.track; renderTeachers(); }));
+}
+
 function renderTeachers() {
+  renderTrackPills();
   const search = (document.getElementById('teacher-search').value || '').trim().toLowerCase();
   const filtered = state.teachers.filter(t =>
-    !search || (t.name || '').toLowerCase().includes(search) ||
-               (t.schoolName || '').toLowerCase().includes(search)
+    (!currentTrack || (t.type === 'gemer' ? 'gemer' : 'bagrut') === currentTrack) &&
+    (!search || (t.name || '').toLowerCase().includes(search) ||
+                (t.schoolName || '').toLowerCase().includes(search))
   );
 
   // קיבוץ לפי בית ספר
@@ -119,6 +198,7 @@ function renderTeachers() {
         <td class="name-cell">
           <div class="te-row-head">
             <span class="te-name-text">${escapeHtml(t.name)}</span>
+            <span class="track-chip ${t.type === 'gemer' ? 'gemer' : 'bagrut'}">${t.type === 'gemer' ? 'גמר' : 'בגרות'}</span>
             <span class="te-actions">
               <button class="te-icon" title="עריכת מורה" onclick='editTeacherById(${JSON.stringify(String(t.id))})'>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
@@ -365,6 +445,8 @@ function openTeacherModal(teacher) {
     document.getElementById('te-email').value = teacher.email || '';
     document.getElementById('te-notes').value = teacher.notes || '';
   }
+  const typeSel = document.getElementById('te-type');
+  if (typeSel) typeSel.value = teacher && teacher.type === 'gemer' ? 'gemer' : 'bagrut';
   document.getElementById('modal-teacher').classList.add('open');
 }
 function closeTeacherModal() {
@@ -375,6 +457,8 @@ async function submitTeacher(e) {
   const data = Object.fromEntries(new FormData(e.target));
   data.subject = GUIDE_CFG.subject || state.subject || '';
   data.guide = guideEmail || (GUIDE_CFG.email || '');
+  // מדריכה של החברה הערבית — מורה חדש נרשם אוטומטית במגזר הערבי
+  if (GUIDE_CFG.sectors && GUIDE_CFG.sectors.length === 1) data.sector = GUIDE_CFG.sectors[0];
   const editing = !!data.id;
 
   if (!TS.getAppsScriptUrl()) {
