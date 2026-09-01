@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>אימות רשימות מול בתי הספר — אדמין</title>
+<link rel="stylesheet" href="assets/fonts-local.css">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .school-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px; margin-bottom: 14px;
+  }
+  .sc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .sc-head .nm { font-weight: 700; font-size: 16px; }
+  .sc-head .meta { font-size: 13px; color: var(--text-2); }
+  .sc-roster {
+    font-size: 13px; color: var(--text-2); line-height: 1.8;
+    margin: 10px 0 12px; padding: 10px 14px;
+    background: var(--surface-2); border-radius: 10px;
+  }
+  .sc-roster b { color: var(--text); }
+  .sc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .copy-mini {
+    background: var(--brand-accent); color: white;
+    border: none; border-radius: 8px; padding: 7px 14px;
+    font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center;
+  }
+  .copy-mini.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+  .copy-mini.copied { background: var(--ok); color: white; }
+  .warn-note { font-size: 12.5px; color: #92400e; background: var(--warn-soft); border-radius: 8px; padding: 6px 10px; margin-top: 8px; display: inline-block; }
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .toolbar input { flex: 1; min-width: 220px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <a href="./" style="display:flex;align-items:center;color:var(--text-3);text-decoration:none;" title="חזרה">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </a>
+      <div class="brand-stack">
+        <span class="ministry">משרד העבודה — אדמין</span>
+        <span class="system-name">אימות רשימות המורים מול בתי הספר</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <h1 style="margin: 24px 0 8px;">כל בית ספר מאמת את הרשימה שלו</h1>
+    <p style="color: var(--text-2); margin-bottom: 20px; max-width: 720px;">
+      שגיאת שיוך למקצוע (כמו רווית בבית הערבה) נראית תקינה בנתונים — רק מי שמכיר את המורים יכול לתפוס אותה.
+      לכל בית ספר מוכנה כאן הודעת וואטסאפ עם הרשימה המלאה שלו לפי מקצוע + קישור לתיקון עצמי.
+      מעתיקים, שולחים למנהל/ת — והם מאשרים או מתקנים בעצמם.
+    </p>
+
+    <div class="toolbar">
+      <input type="search" class="input" id="q" placeholder="חיפוש בית ספר…">
+      <span class="status-pill" id="count" style="background:var(--surface-2); color:var(--text-2); padding:4px 12px; border-radius:999px; font-size:12px; font-weight:600;">טוען…</span>
+    </div>
+
+    <div id="list"><div class="empty" style="padding:32px;">טוען את הגיליון…</div></div>
+
+  </main>
+
+  <footer style="text-align:center; padding: 32px 16px; color: var(--text-3); font-size: 13px;">
+    דף אדמין · אימות רשימות · משרד העבודה
+  </footer>
+</div>
+
+<script src="assets/app.js?v=20260901"></script>
+<script>
+const SETUP_BASE = location.origin + location.pathname.replace(/\/admin-verify\.html$/, '') + '/admin-school/setup.html';
+const SUBJECT_ORDER = ['מתמטיקה','אנגלית','עברית','ספרות','היסטוריה','אזרחות','תנ"ך','ערבית'];
+let schools = [];   // {id, name, principalName, principalPhone, teachers:[...], roster, missing}
+
+async function init() {
+  const [tRes, sRes] = await Promise.all([
+    TS.api('teachers.list', {}, { cache: 'no' }),
+    TS.api('schools.list', {}, { cache: 'no' })
+  ]);
+  if (!tRes.ok || !sRes.ok) {
+    document.getElementById('list').innerHTML =
+      '<div class="alert err"><div class="alert-body">שגיאה בקריאת הגיליון</div></div>';
+    return;
+  }
+  const teachers = tRes.data || [];
+  const byId = {};
+  (sRes.data || []).forEach(s => byId[s.id] = s);
+
+  const grouped = {};
+  teachers.forEach(t => {
+    const key = t.school || ('name:' + t.schoolName);
+    (grouped[key] = grouped[key] || []).push(t);
+  });
+
+  schools = Object.keys(grouped).map(key => {
+    const rows = grouped[key];
+    const info = byId[key] || {};
+    const bySubj = {};
+    rows.forEach(t => (bySubj[t.subject] = bySubj[t.subject] || []).push(t));
+    const subjOrder = [...SUBJECT_ORDER.filter(s => bySubj[s]),
+                       ...Object.keys(bySubj).filter(s => !SUBJECT_ORDER.includes(s)).sort()];
+    const roster = subjOrder.map(s =>
+      s + ' (' + bySubj[s].length + '): ' + bySubj[s].map(t =>
+        t.name + (t.type === 'gemer' ? ' [גמר]' : '')).join(', ')
+    );
+    const missing = ['מתמטיקה','אנגלית','עברית'].filter(s => !bySubj[s]);
+    return {
+      id: key.startsWith('name:') ? '' : key,
+      name: info.name || rows[0].schoolName || key,
+      principalName: info.principalName || '',
+      principalPhone: (info.principalPhone || '').toString(),
+      count: rows.length,
+      subjects: subjOrder.length,
+      roster,
+      missing: rows.length >= 5 ? missing : []
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'he'));
+
+  render();
+}
+
+function msgFor(s) {
+  const link = s.id ? SETUP_BASE + '?school=' + encodeURIComponent(s.id) : SETUP_BASE;
+  return [
+    'שלום' + (s.principalName ? ' ' + s.principalName : '') + ',',
+    '',
+    'לקראת פתיחת שנת ההדרכות — אלו המורים שהוזנו למצפן ההדרכות עבור ' + s.name + ':',
+    '',
+    ...s.roster,
+    '',
+    'נא לעבור על הרשימה ולוודא שכל מורה משויך/ת למקצוע הנכון ולמסלול הנכון (בגרות/גמר).',
+    'תיקונים והוספות עושים ישירות כאן:',
+    link,
+    '',
+    'אם הכל תקין — מספיק להשיב "מאושר". תודה רבה!',
+    'מיטל פלג · יחידת הפיקוח על הדרכות מורים'
+  ].join('\n');
+}
+
+function render() {
+  const q = (document.getElementById('q').value || '').trim();
+  const shown = schools.filter(s => !q || s.name.includes(q));
+  document.getElementById('count').textContent = shown.length + ' בתי ספר · ' +
+    shown.reduce((n, s) => n + s.count, 0) + ' מורים';
+  document.getElementById('list').innerHTML = shown.map((s, i) => `
+    <div class="school-card">
+      <div class="sc-head">
+        <span class="nm">${s.name}</span>
+        <span class="meta">${s.count} מורים · ${s.subjects} מקצועות${s.principalName ? ' · מנהל/ת: ' + s.principalName : ''}</span>
+      </div>
+      <div class="sc-roster">${s.roster.map(r => '<div><b>' + r.split(':')[0] + ':</b>' + r.slice(r.indexOf(':') + 1) + '</div>').join('')}</div>
+      ${s.missing.length ? '<span class="warn-note">⚠ אין אף מורה ב: ' + s.missing.join(', ') + ' — ייתכן שההזנה חלקית או שמורים שויכו למקצוע אחר</span><br>' : ''}
+      <div class="sc-actions" style="margin-top:10px;">
+        <button type="button" class="copy-mini" onclick="copyMsg(this, ${i})">העתקת הודעת אימות לוואטסאפ</button>
+        ${s.principalPhone ? `<a class="copy-mini secondary" target="_blank" rel="noopener" href="${TS.whatsappLink(s.principalPhone.replace(/^0/, '972'), msgFor(s))}">שליחה ישירה למנהל/ת</a>` : ''}
+        ${s.id ? `<a class="copy-mini secondary" target="_blank" rel="noopener" href="${SETUP_BASE}?school=${encodeURIComponent(s.id)}">פתיחת רשימת ההזנה</a>` : ''}
+      </div>
+    </div>`).join('') || '<div class="empty" style="padding:32px;">לא נמצא בית ספר כזה</div>';
+}
+
+function copyMsg(btn, i) {
+  const q = (document.getElementById('q').value || '').trim();
+  const shown = schools.filter(s => !q || s.name.includes(q));
+  navigator.clipboard.writeText(msgFor(shown[i])).then(() => {
+    const orig = btn.textContent;
+    btn.classList.add('copied');
+    btn.textContent = '✓ הועתק — הדביקי בוואטסאפ';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 2200);
+  });
+}
+
+document.getElementById('q').addEventListener('input', render);
+init();
+</script>
+</body>
+</html>
