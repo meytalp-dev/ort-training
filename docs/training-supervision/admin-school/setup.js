@@ -297,8 +297,9 @@ function focusRapid(force) {
 function renderChips() {
   const counts = {};
   teachers.forEach(t => counts[t.subject] = (counts[t.subject] || 0) + 1);
+  // חשוב: הגרשיים בתנ"ך שוברות את ה-attribute — חייבים escape, אחרת המקצוע נשמר "תנ"
   document.getElementById('subject-chips').innerHTML = TS.SUBJECTS.map(s => `
-    <button type="button" class="subject-chip ${s === curSubject ? 'active' : ''}" data-subject="${s}">
+    <button type="button" class="subject-chip ${s === curSubject ? 'active' : ''}" data-subject="${s.replace(/"/g, '&quot;')}">
       ${s}${counts[s] ? `<span class="cnt">${counts[s]}</span>` : ''}
     </button>`).join('');
   document.querySelectorAll('.subject-chip').forEach(b =>

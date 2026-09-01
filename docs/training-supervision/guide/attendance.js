@@ -98,7 +98,11 @@ async function refreshAttendance() {
 
 function setupFilters() {
   populateNetworkFilter();
-  TS.SUBJECTS.forEach(s => document.getElementById('filter-subject').insertAdjacentHTML('beforeend', `<option value="${s}">${s}</option>`));
+  TS.SUBJECTS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;   // דרך ה-DOM — הגרשיים של תנ"ך לא שוברות attribute
+    document.getElementById('filter-subject').appendChild(opt);
+  });
   ['filter-net','filter-sector','filter-subject','filter-search'].forEach(id => {
     document.getElementById(id).addEventListener('input', e => {
       if (id==='filter-net') filterNet = e.target.value;

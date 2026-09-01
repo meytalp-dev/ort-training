@@ -7,13 +7,24 @@
 <link rel="stylesheet" href="assets/fonts-local.css">
 <link rel="stylesheet" href="assets/styles.css">
 <style>
+  .sum-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .sum-strip .cell { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; text-align: center; }
+  .sum-strip .cell b { display: block; font-size: 26px; }
+  .sum-strip .cell small { color: var(--text-2); }
   .school-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 14px; padding: 18px 20px; margin-bottom: 14px;
   }
+  .school-card.ok-border { border-inline-start: 4px solid var(--mint, #6FB7A6); }
   .sc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .sc-head .nm { font-weight: 700; font-size: 16px; }
   .sc-head .meta { font-size: 13px; color: var(--text-2); }
+  .v-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .v-chip.approved { background: var(--ok-soft, #e7f6ef); color: #14532d; }
+  .v-chip.fixed    { background: #E6F0F4; color: #17324D; }
+  .v-chip.pending  { background: var(--surface-2); color: var(--text-3); }
+  .v-detail { font-size: 12.5px; color: var(--text-2); margin-top: 6px; }
+  .v-detail .note { color: #92400e; }
   .sc-roster {
     font-size: 13px; color: var(--text-2); line-height: 1.8;
     margin: 10px 0 12px; padding: 10px 14px;
@@ -31,7 +42,8 @@
   .copy-mini.copied { background: var(--ok); color: white; }
   .warn-note { font-size: 12.5px; color: #92400e; background: var(--warn-soft); border-radius: 8px; padding: 6px 10px; margin-top: 8px; display: inline-block; }
   .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
-  .toolbar input { flex: 1; min-width: 220px; }
+  .toolbar input { flex: 1; min-width: 200px; }
+  .toolbar select { min-width: 150px; }
 </style>
 </head>
 <body>
@@ -44,23 +56,29 @@
       </a>
       <div class="brand-stack">
         <span class="ministry">משרד העבודה — אדמין</span>
-        <span class="system-name">אימות רשימות המורים מול בתי הספר</span>
+        <span class="system-name">אימות רשימות המורים · לוח מעקב</span>
       </div>
     </div>
   </header>
 
   <main class="container">
 
-    <h1 style="margin: 24px 0 8px;">כל בית ספר מאמת את הרשימה שלו</h1>
+    <h1 style="margin: 24px 0 8px;">אימות הרשימות — כל האישורים במקום אחד</h1>
     <p style="color: var(--text-2); margin-bottom: 20px; max-width: 720px;">
-      שגיאת שיוך למקצוע (כמו רווית בבית הערבה) נראית תקינה בנתונים — רק מי שמכיר את המורים יכול לתפוס אותה.
-      לכל בית ספר מוכנה כאן הודעת וואטסאפ עם הרשימה המלאה שלו לפי מקצוע + קישור לתיקון עצמי.
-      מעתיקים, שולחים למנהל/ת — והם מאשרים או מתקנים בעצמם.
+      כל בית ספר מקבל קישור אישי לטופס האימות: רואה את הרשימה שלו לפי מקצוע,
+      מתקן אם צריך, ומאשר בחתימת שם. האישורים נאספים לכאן אוטומטית.
     </p>
+
+    <div class="sum-strip" id="summary"></div>
 
     <div class="toolbar">
       <input type="search" class="input" id="q" placeholder="חיפוש בית ספר…">
-      <span class="status-pill" id="count" style="background:var(--surface-2); color:var(--text-2); padding:4px 12px; border-radius:999px; font-size:12px; font-weight:600;">טוען…</span>
+      <select class="select" id="fStatus">
+        <option value="">כל הסטטוסים</option>
+        <option value="pending">⚪ טרם אישרו</option>
+        <option value="approved">🟢 אושר כפי שהוא</option>
+        <option value="fixed">🔵 אושר אחרי תיקונים</option>
+      </select>
     </div>
 
     <div id="list"><div class="empty" style="padding:32px;">טוען את הגיליון…</div></div>
@@ -72,16 +90,18 @@
   </footer>
 </div>
 
-<script src="assets/app.js?v=20260901"></script>
+<script src="assets/app.js?v=20260901b"></script>
 <script>
-const SETUP_BASE = location.origin + location.pathname.replace(/\/admin-verify\.html$/, '') + '/admin-school/setup.html';
+const BASE = location.origin + location.pathname.replace(/\/admin-verify\.html$/, '');
 const SUBJECT_ORDER = ['מתמטיקה','אנגלית','עברית','ספרות','היסטוריה','אזרחות','תנ"ך','ערבית'];
-let schools = [];   // {id, name, principalName, principalPhone, teachers:[...], roster, missing}
+const SUBJECT_DISPLAY = { 'תנ': 'תנ"ך' };
+let schools = [];
 
 async function init() {
-  const [tRes, sRes] = await Promise.all([
+  const [tRes, sRes, qRes] = await Promise.all([
     TS.api('teachers.list', {}, { cache: 'no' }),
-    TS.api('schools.list', {}, { cache: 'no' })
+    TS.api('schools.list', {}, { cache: 'no' }),
+    TS.api('questions.list', {}, { cache: 'no' })
   ]);
   if (!tRes.ok || !sRes.ok) {
     document.getElementById('list').innerHTML =
@@ -91,6 +111,18 @@ async function init() {
   const teachers = tRes.data || [];
   const byId = {};
   (sRes.data || []).forEach(s => byId[s.id] = s);
+
+  // אישורים: הרשומה האחרונה לכל בית ספר
+  const verifyBySchool = {};
+  ((qRes.ok && qRes.data) || []).forEach(q => {
+    if (!(q.teacherId || '').startsWith('verify:')) return;
+    let p = null;
+    try { p = JSON.parse(q.question); } catch (e) { return; }
+    if (!p || p.kind !== 'school-verify') return;
+    const sid = (q.teacherId || '').slice(7);
+    const prev = verifyBySchool[sid];
+    if (!prev || (p.at || q.createdAt) > (prev.at || '')) verifyBySchool[sid] = Object.assign({ createdAt: q.createdAt }, p);
+  });
 
   const grouped = {};
   teachers.forEach(t => {
@@ -102,23 +134,24 @@ async function init() {
     const rows = grouped[key];
     const info = byId[key] || {};
     const bySubj = {};
-    rows.forEach(t => (bySubj[t.subject] = bySubj[t.subject] || []).push(t));
+    rows.forEach(t => {
+      const disp = SUBJECT_DISPLAY[t.subject] || t.subject;
+      (bySubj[disp] = bySubj[disp] || []).push(t);
+    });
     const subjOrder = [...SUBJECT_ORDER.filter(s => bySubj[s]),
                        ...Object.keys(bySubj).filter(s => !SUBJECT_ORDER.includes(s)).sort()];
-    const roster = subjOrder.map(s =>
-      s + ' (' + bySubj[s].length + '): ' + bySubj[s].map(t =>
-        t.name + (t.type === 'gemer' ? ' [גמר]' : '')).join(', ')
-    );
     const missing = ['מתמטיקה','אנגלית','עברית'].filter(s => !bySubj[s]);
+    const v = verifyBySchool[key.startsWith('name:') ? '' : key] || null;
     return {
       id: key.startsWith('name:') ? '' : key,
       name: info.name || rows[0].schoolName || key,
       principalName: info.principalName || '',
       principalPhone: (info.principalPhone || '').toString(),
       count: rows.length,
-      subjects: subjOrder.length,
-      roster,
-      missing: rows.length >= 5 ? missing : []
+      subjSummary: subjOrder.map(s => s + ' ' + bySubj[s].length).join(' · '),
+      roster: subjOrder.map(s => ({ subject: s, names: bySubj[s].map(t => t.name + (t.type === 'gemer' ? ' [גמר]' : '')) })),
+      missing: rows.length >= 5 ? missing : [],
+      verify: v
     };
   }).sort((a, b) => a.name.localeCompare(b.name, 'he'));
 
@@ -126,48 +159,78 @@ async function init() {
 }
 
 function msgFor(s) {
-  const link = s.id ? SETUP_BASE + '?school=' + encodeURIComponent(s.id) : SETUP_BASE;
+  const link = BASE + '/verify.html?school=' + encodeURIComponent(s.id);
   return [
     'שלום' + (s.principalName ? ' ' + s.principalName : '') + ',',
     '',
-    'לקראת פתיחת שנת ההדרכות — אלו המורים שהוזנו למצפן ההדרכות עבור ' + s.name + ':',
+    'לקראת פתיחת שנת ההדרכות — הוזנו למצפן ההדרכות ' + s.count + ' מורים עבור ' + s.name + ':',
+    s.subjSummary + '.',
     '',
-    ...s.roster,
-    '',
-    'נא לעבור על הרשימה ולוודא שכל מורה משויך/ת למקצוע הנכון ולמסלול הנכון (בגרות/גמר).',
-    'תיקונים והוספות עושים ישירות כאן:',
+    'נא להיכנס לטופס האימות, לוודא שכל מורה משויך/ת למקצוע ולמסלול הנכונים (בגרות/גמר), לתקן אם צריך — ולאשר:',
     link,
     '',
-    'אם הכל תקין — מספיק להשיב "מאושר". תודה רבה!',
+    'לוקח 2 דקות. תודה רבה!',
     'מיטל פלג · יחידת הפיקוח על הדרכות מורים'
   ].join('\n');
 }
 
-function render() {
-  const q = (document.getElementById('q').value || '').trim();
-  const shown = schools.filter(s => !q || s.name.includes(q));
-  document.getElementById('count').textContent = shown.length + ' בתי ספר · ' +
-    shown.reduce((n, s) => n + s.count, 0) + ' מורים';
-  document.getElementById('list').innerHTML = shown.map((s, i) => `
-    <div class="school-card">
-      <div class="sc-head">
-        <span class="nm">${s.name}</span>
-        <span class="meta">${s.count} מורים · ${s.subjects} מקצועות${s.principalName ? ' · מנהל/ת: ' + s.principalName : ''}</span>
-      </div>
-      <div class="sc-roster">${s.roster.map(r => '<div><b>' + r.split(':')[0] + ':</b>' + r.slice(r.indexOf(':') + 1) + '</div>').join('')}</div>
-      ${s.missing.length ? '<span class="warn-note">⚠ אין אף מורה ב: ' + s.missing.join(', ') + ' — ייתכן שההזנה חלקית או שמורים שויכו למקצוע אחר</span><br>' : ''}
-      <div class="sc-actions" style="margin-top:10px;">
-        <button type="button" class="copy-mini" onclick="copyMsg(this, ${i})">העתקת הודעת אימות לוואטסאפ</button>
-        ${s.principalPhone ? `<a class="copy-mini secondary" target="_blank" rel="noopener" href="${TS.whatsappLink(s.principalPhone.replace(/^0/, '972'), msgFor(s))}">שליחה ישירה למנהל/ת</a>` : ''}
-        ${s.id ? `<a class="copy-mini secondary" target="_blank" rel="noopener" href="${SETUP_BASE}?school=${encodeURIComponent(s.id)}">פתיחת רשימת ההזנה</a>` : ''}
-      </div>
-    </div>`).join('') || '<div class="empty" style="padding:32px;">לא נמצא בית ספר כזה</div>';
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
 }
 
-function copyMsg(btn, i) {
+function render() {
   const q = (document.getElementById('q').value || '').trim();
-  const shown = schools.filter(s => !q || s.name.includes(q));
-  navigator.clipboard.writeText(msgFor(shown[i])).then(() => {
+  const fs = document.getElementById('fStatus').value;
+
+  const nApproved = schools.filter(s => s.verify && s.verify.status === 'approved').length;
+  const nFixed = schools.filter(s => s.verify && s.verify.status === 'fixed').length;
+  const nPending = schools.length - nApproved - nFixed;
+  document.getElementById('summary').innerHTML = `
+    <div class="cell"><b>${schools.length}</b><small>בתי ספר עם מורים</small></div>
+    <div class="cell"><b style="color:var(--ok, #1F7A4D);">${nApproved + nFixed}</b><small>אישרו את הרשימה</small></div>
+    <div class="cell"><b>${nFixed}</b><small>מהם אחרי תיקונים</small></div>
+    <div class="cell"><b style="color:${nPending ? '#92400e' : 'inherit'};">${nPending}</b><small>טרם אישרו</small></div>`;
+
+  const shown = schools.filter(s => {
+    if (q && !s.name.includes(q)) return false;
+    const st = s.verify ? s.verify.status : 'pending';
+    if (fs && st !== fs) return false;
+    return true;
+  });
+
+  document.getElementById('list').innerHTML = shown.map((s, i) => {
+    const v = s.verify;
+    const chip = !v
+      ? '<span class="v-chip pending">⚪ טרם אושר</span>'
+      : v.status === 'fixed'
+        ? '<span class="v-chip fixed">🔵 אושר אחרי תיקונים</span>'
+        : '<span class="v-chip approved">🟢 אושר</span>';
+    return `
+    <div class="school-card ${v ? 'ok-border' : ''}">
+      <div class="sc-head">
+        <span class="nm">${s.name}</span>
+        <span>${chip}</span>
+      </div>
+      <div class="sc-head" style="margin-top:2px;">
+        <span class="meta">${s.count} מורים · ${s.subjSummary}${s.principalName ? ' · מנהל/ת: ' + s.principalName : ''}</span>
+      </div>
+      ${v ? `<div class="v-detail">אושר ע"י <b>${escapeHtml(v.by || '—')}</b> · ${fmtDate(v.at || v.createdAt)}${v.notes ? ' · <span class="note">הערה: ' + escapeHtml(v.notes) + '</span>' : ''}</div>` : ''}
+      ${s.missing.length ? '<span class="warn-note">⚠ אין אף מורה ב: ' + s.missing.join(', ') + '</span><br>' : ''}
+      <div class="sc-actions" style="margin-top:10px;">
+        <button type="button" class="copy-mini" onclick="copyMsg(this, '${s.id}')">העתקת הודעה עם קישור הטופס</button>
+        ${s.principalPhone ? `<a class="copy-mini secondary" target="_blank" rel="noopener" href="${TS.whatsappLink(s.principalPhone.replace(/^0/, '972'), msgFor(s))}">שליחה ישירה</a>` : ''}
+        ${s.id ? `<a class="copy-mini secondary" target="_blank" rel="noopener" href="${BASE}/verify.html?school=${encodeURIComponent(s.id)}">צפייה בטופס</a>` : ''}
+        ${s.id ? `<a class="copy-mini secondary" target="_blank" rel="noopener" href="${BASE}/admin-school/setup.html?school=${encodeURIComponent(s.id)}">פתיחת רשימת ההזנה</a>` : ''}
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty" style="padding:32px;">אין בתי ספר בסינון הזה</div>';
+}
+
+function copyMsg(btn, sid) {
+  const s = schools.find(x => x.id === sid);
+  if (!s) return;
+  navigator.clipboard.writeText(msgFor(s)).then(() => {
     const orig = btn.textContent;
     btn.classList.add('copied');
     btn.textContent = '✓ הועתק — הדביקי בוואטסאפ';
@@ -175,7 +238,12 @@ function copyMsg(btn, i) {
   });
 }
 
+function escapeHtml(s) {
+  return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 document.getElementById('q').addEventListener('input', render);
+document.getElementById('fStatus').addEventListener('change', render);
 init();
 </script>
 </body>

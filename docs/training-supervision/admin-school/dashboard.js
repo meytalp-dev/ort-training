@@ -108,7 +108,9 @@ function populateSubjectFilter() {
   const sel = document.getElementById('filter-subject');
   if (sel.options.length > 1) return;
   Object.keys(state.subjects).forEach(s => {
-    sel.insertAdjacentHTML('beforeend', `<option value="${s}">${s}</option>`);
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;   // דרך ה-DOM — הגרשיים של תנ"ך לא שוברות attribute
+    sel.appendChild(opt);
   });
   if (subjectParam) {
     sel.value = subjectParam;

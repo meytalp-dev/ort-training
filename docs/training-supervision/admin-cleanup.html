@@ -57,6 +57,17 @@
       כפילויות מדויקות, וזוגות שמות הפוכים. מסמנים ✓ ולוחצים מחיקה. כל מחיקה סופית.
     </p>
 
+    <div class="clean-sec" id="subjfix-sec" hidden>
+      <h3>מקצועות משובשים <span id="subjfix-n"></span></h3>
+      <p class="d">רשומות שהמקצוע בהן נקטע (למשל «תנ» במקום «תנ"ך» — באג הגרשיים שתוקן).
+         הכפתור מתקן את כולן לערך הנכון — לא מוחק כלום.</p>
+      <div id="subjfix-list" style="font-size:14px; color:var(--text-2); margin-bottom:12px;"></div>
+      <div class="actions-row" style="margin-top:0;">
+        <button class="btn btn-primary" id="btn-subjfix" onclick="fixSubjects()">תיקון המקצועות</button>
+        <span class="status-pill idle" id="subjfix-status"></span>
+      </div>
+    </div>
+
     <div id="content"><div class="empty" style="padding:32px;">סורק את הגיליון…</div></div>
 
     <div class="actions-row">
@@ -78,6 +89,13 @@ const SUBJECT_WORDS = ['מתמטיקה','אנגלית','עברית','ספרות'
                        'לשון','לשון והבעה','מקצוע','שם המורה','שם','בגרות','גמר','מורה','מורים','טלפון','מייל'];
 const norm = s => (s || '').replace(/["'׳״:.\-]/g, '').replace(/\s+/g, ' ').trim();
 let findings = [];   // {id, label, sub, kind, checked}
+let subjFixes = [];  // {id, subject} — רשומות עם מקצוע קטוע והערך הנכון
+
+// מקצוע שלא קיים ברשימה אבל הוא קידומת-עד-גרשיים של מקצוע אמיתי → הערך הנכון
+function truncatedSubjectFix(val) {
+  if (!val || TS.SUBJECTS.includes(val)) return null;
+  return TS.SUBJECTS.find(s => s.includes('"') && s.split('"')[0] === val) || null;
+}
 
 async function scan() {
   const res = await TS.api('teachers.list', {}, { cache: 'no' });
@@ -88,6 +106,27 @@ async function scan() {
   }
   const live = res.data || [];
   findings = [];
+
+  // מקצועות קטועים (באג הגרשיים)
+  subjFixes = [];
+  const fixSummary = {};
+  live.forEach(t => {
+    const fix = truncatedSubjectFix(t.subject);
+    if (fix) {
+      subjFixes.push({ id: t.id, subject: fix });
+      const k = '«' + t.subject + '» ← «' + fix + '»';
+      fixSummary[k] = (fixSummary[k] || 0) + 1;
+    }
+  });
+  const sec = document.getElementById('subjfix-sec');
+  if (subjFixes.length) {
+    sec.hidden = false;
+    document.getElementById('subjfix-n').textContent = '(' + subjFixes.length + ' רשומות)';
+    document.getElementById('subjfix-list').innerHTML =
+      Object.entries(fixSummary).map(([k, n]) => '<div><b>' + k + '</b> — ' + n + ' מורים</div>').join('');
+  } else {
+    sec.hidden = true;
+  }
 
   // 1. שמות שהם מקצועות / כותרות
   live.forEach(t => {
@@ -168,6 +207,32 @@ function updateBtn() {
   const st = document.getElementById('del-status');
   st.className = 'status-pill idle';
   st.textContent = n ? n + ' שורות מסומנות למחיקה' : 'לא מסומן דבר';
+}
+
+async function fixSubjects() {
+  if (!subjFixes.length) return;
+  const btn = document.getElementById('btn-subjfix');
+  const st = document.getElementById('subjfix-status');
+  btn.disabled = true;
+  const CHUNK = 70;
+  let done = 0;
+  try {
+    for (let i = 0; i < subjFixes.length; i += CHUNK) {
+      st.className = 'status-pill warn';
+      st.textContent = 'מתקן… ' + done + '/' + subjFixes.length;
+      const res = await TS.apiPost('seed.import', { tabs: { teachers: subjFixes.slice(i, i + CHUNK) } });
+      if (!res.ok) throw new Error(res.error || 'שגיאה');
+      done += (res.data.teachers && res.data.teachers.updated) || 0;
+    }
+    st.className = 'status-pill ok';
+    st.textContent = '✓ ' + done + ' רשומות תוקנו';
+    subjFixes = [];
+    setTimeout(scan, 800);
+  } catch (e) {
+    st.className = 'status-pill err';
+    st.textContent = 'שגיאה — אפשר ללחוץ שוב, התיקון ממשיך מאיפה שעצר';
+    btn.disabled = false;
+  }
 }
 
 async function deleteChecked() {

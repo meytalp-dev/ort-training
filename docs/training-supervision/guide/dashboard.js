@@ -481,7 +481,11 @@ function closeNewTraining() {
 function populateSubjects(id) {
   const sel = document.getElementById(id);
   if (sel.options.length > 1) return;
-  TS.SUBJECTS.forEach(s => sel.insertAdjacentHTML('beforeend', `<option value="${s}">${s}</option>`));
+  TS.SUBJECTS.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;   // דרך ה-DOM — הגרשיים של תנ"ך לא שוברות attribute
+    sel.appendChild(opt);
+  });
 }
 
 async function submitTraining(e) {
