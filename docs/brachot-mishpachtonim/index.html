@@ -290,11 +290,15 @@ textarea{resize:vertical;min-height:118px;line-height:1.6}
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         העתקת הטקסט
       </button>
-      <button class="btn" id="btnWhatsapp">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 01-12.6 7.4L3 21l2.2-5.3A8.5 8.5 0 1121 11.5z"/></svg>
-        שליחה בוואטסאפ
+      <button class="btn" id="btnShare">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
+        <span id="shareLabel">שליחת הכרטיס</span>
       </button>
     </div>
+    <p class="tiny-note" id="shareNote" style="margin-top:10px">
+      בטלפון "שליחת הכרטיס" פותחת את תפריט השיתוף ושולחת את התמונה עצמה לוואטסאפ, עם הברכה ככיתוב.
+      במחשב אין דרך לצרף תמונה לוואטסאפ מתוך אתר — שם מורידים את הכרטיס וגוררים אותו לצ׳אט.
+    </p>
   </section>
 
   <section class="controls" id="controls">
@@ -1247,26 +1251,70 @@ async function buildCanvas(){
   return canvas;
 }
 
-async function download(){
-  const btn = $('btnDownload');
+function cardFileName(){
+  return 'ברכה-' + occ().name.replace(/[\/\s]/g,'-') + '-' + formats[state.format].name + '.png';
+}
+
+/* Blob ולא data URL: ב-A4 מחרוזת ה-base64 מגיעה לעשרות מגה־בייט,
+   ובטלפון ההורדה פשוט נופלת בשקט. */
+async function cardFile(){
+  if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  const canvas = await buildCanvas();
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  if (!blob) throw new Error('canvas.toBlob נכשל');
+  return new File([blob], cardFileName(), { type:'image/png' });
+}
+
+function saveFile(file){
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.download = file.name;
+  link.href = url;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+async function withBusy(btn, label, fn){
   const original = btn.innerHTML;
-  btn.innerHTML = 'מכינה את הכרטיס...';
+  btn.innerHTML = label;
   btn.disabled = true;
+  try { await fn(); }
+  catch (e){ console.error(e); toast('משהו השתבש — נסי שוב'); }
+  finally { btn.innerHTML = original; btn.disabled = false; }
+}
+
+async function download(){
+  await withBusy($('btnDownload'), 'מכינה את הכרטיס...', async () => {
+    saveFile(await cardFile());
+    toast('הכרטיס ירד למכשיר');
+  });
+}
+
+/* שליחת התמונה עצמה. קישור wa.me יודע להעביר טקסט בלבד — לכן
+   השיתוף עובר דרך Web Share API, שמצרף את קובץ ה-PNG. */
+function canShareFiles(){
   try {
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const canvas = await buildCanvas();
-    const link = document.createElement('a');
-    link.download = 'ברכה-' + occ().name.replace(/[\/\s]/g,'-') + '-' + formats[state.format].name + '.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    toast('הכרטיס ירד למחשב');
-  } catch (e){
-    console.error(e);
-    toast('משהו השתבש בהורדה — נסי שוב');
-  } finally {
-    btn.innerHTML = original;
-    btn.disabled = false;
-  }
+    return !!(navigator.canShare &&
+      navigator.canShare({ files:[new File([''], 'x.png', { type:'image/png' })] }));
+  } catch { return false; }
+}
+
+async function shareCard(){
+  await withBusy($('btnShare'), 'מכינה את הכרטיס...', async () => {
+    const file = await cardFile();
+    const payload = { files:[file], text: plainText() };
+    if (navigator.canShare && navigator.canShare({ files:[file] })){
+      try {
+        await navigator.share(payload);
+        return;
+      } catch (e){
+        if (e && e.name === 'AbortError') return;   /* הרכזת ביטלה */
+        console.error(e);
+      }
+    }
+    saveFile(file);
+    toast('המכשיר לא תומך בשליחת קובץ — הכרטיס ירד, צרפי אותו לצ׳אט');
+  });
 }
 
 /* ============================================================
@@ -1341,9 +1389,10 @@ function init(){
     catch { toast('לא הצלחתי להעתיק — סמני והעתיקי ידנית'); }
   });
 
-  $('btnWhatsapp').addEventListener('click', () => {
-    window.open('https://wa.me/?text=' + encodeURIComponent(plainText()), '_blank', 'noopener');
-  });
+  $('btnShare').addEventListener('click', shareCard);
+
+  /* במחשב אין שיתוף קבצים — מסבירים מראש במקום להבטיח ולאכזב */
+  if (!canShareFiles()) $('shareLabel').textContent = 'הורדה לשליחה';
 
   /* המסגרת מודדת את עצמה אחרי שהפריסה התייצבה — מאזין resize רגיל
      היה מחשב את קנה המידה לפי הרוחב הישן ומשאיר כרטיס רחב מדי. */
