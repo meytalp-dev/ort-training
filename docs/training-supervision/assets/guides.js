@@ -21,7 +21,7 @@ window.TS_GUIDES = {
     zoom: ''
   },
   sivan: {
-    name: 'סיוון נחליאלי',
+    name: 'סיון נחליאל',
     subject: 'אנגלית',
     sectors: ['kelali', 'haredi'],
     email: '',
