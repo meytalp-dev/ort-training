@@ -531,10 +531,10 @@ footer a { color: var(--muted); }
       setWho(r.name + (r.className ? ' · ' + r.className : ''), true);
       S = { me: me, stations: r.stations || {}, cur: Number(st('heker_cur')) || firstOpen(r.stations || {}), step: stJson('heker_steps_' + me.sid) || {}, timer: null, dirty: false };
       // טיוטה שלא הגיעה לשרת (למשל נותק האינטרנט)
-      var local = stJson('heker_draft_' + me.sid);
-      if (local && local.st) { station(local.st).data = local.data; S.cur = local.st; S.dirty = true; }
+      var local = drafts();
+      Object.keys(local).forEach(function (n) { station(n).data = local[n]; enqueue(n); });
       renderStudent();
-      if (S.dirty) saveNow();
+      pump();
     });
   }
   function firstOpen(stations) {
@@ -676,6 +676,7 @@ footer a { color: var(--muted); }
       b.onclick = function () { flush(); S.cur = Number(b.getAttribute('data-go')); st('heker_cur', String(S.cur)); renderStudent(); window.scrollTo(0, 0); };
     });
     if ($('dl')) $('dl').onclick = function () { flush(); downloadWork(this); };
+    showSaved();
   }
 
   function bindStep(x, def, s, all, i) {
@@ -693,12 +694,15 @@ footer a { color: var(--muted); }
       $('submit').onclick = function () {
         flush();
         if (!hasContent(s.data)) { $('saved').textContent = 'עוד אין מה לשלוח. קודם כותבים משהו בתחנה.'; return; }
-        var b = this, me = S.me; b.disabled = true;
-        call('student.save', { code: me.code, sid: me.sid, pin: me.pin, st: S.cur, data: s.data, submit: true }).then(function (r) {
-          b.disabled = false;
-          if (!r.ok) { $('saved').textContent = errText(r.error); return; }
-          s.status = 'sent'; renderStudent(); $('saved').textContent = 'נשלח למורה. אפשר להמשיך בלי לחכות.';
+        var b = this, n = S.cur; b.disabled = true;
+        $('saved').textContent = 'שולחים…';
+        enqueue(n, true, function (r) {
+          if ($('submit')) $('submit').disabled = false;
+          if (!r.ok) return;
+          s.status = 'sent';
+          if (S.cur === n) { renderStudent(); $('saved').textContent = 'נשלח למורה. אפשר להמשיך בלי לחכות.'; }
         });
+        pump();
       };
       return;
     }
@@ -751,26 +755,63 @@ footer a { color: var(--muted); }
     S.dirty = true;
     var sv = $('saved'); if (sv) sv.textContent = 'שומרים…';
     var tag = app.querySelector('section.card .tag'); if (tag) tag.textContent = statusLabel(station(S.cur));
-    try { st('heker_draft_' + S.me.sid, JSON.stringify({ st: S.cur, data: station(S.cur).data })); } catch (e) {}
+    keepDraft(S.cur);
     clearTimeout(S.timer);
     S.timer = setTimeout(saveNow, 1500);
   }
-  // שמירה ברקע, בלי לקטוע את ההקלדה
-  var pending = Promise.resolve();
-  function saveNow(n) {
-    clearTimeout(S.timer);
-    if (!S.dirty) return pending;
-    S.dirty = false;
-    var which = n || S.cur, me = S.me, snapshot = JSON.parse(JSON.stringify(station(which).data));
-    pending = pending.then(function () { return call('student.save', { code: me.code, sid: me.sid, pin: me.pin, st: which, data: snapshot }); }).then(function (r) {
-      var sv = $('saved');
-      if (r.ok) { if (!S.dirty) { st('heker_draft_' + me.sid, null); if (sv) sv.textContent = 'נשמר'; } }
-      else { S.dirty = true; if (sv) sv.textContent = errText(r.error) + ' מה שכתבתם לא נמחק.'; }
-      return r;
-    });
-    return pending;
+  // שמירה ברקע, בלי לקטוע את ההקלדה. השרת איטי, ולכן בקשה אחת בכל פעם, ולכל תחנה נשלח רק המצב האחרון.
+  // הטיוטה במכשיר נמחקת רק אחרי שהשרת אישר, כדי שסגירת הדף באמצע לא תאבד טקסט.
+  var queue = {}, sending = false, retry = null, waiters = [];
+  function drafts() { return stJson('heker_draft_' + S.me.sid) || {}; }
+  function keepDraft(n) { var d = drafts(); d[n] = station(n).data; st('heker_draft_' + S.me.sid, JSON.stringify(d)); }
+  function dropDraft(n) { var d = drafts(); delete d[n]; st('heker_draft_' + S.me.sid, Object.keys(d).length ? JSON.stringify(d) : null); }
+  function isIdle() { return !sending && !S.dirty && !Object.keys(queue).length; }
+  function showSaved() {
+    var sv = $('saved'); if (!sv || !S) return;
+    if (!isIdle()) sv.textContent = 'שומרים…'; else if (sv.textContent === 'שומרים…') sv.textContent = 'נשמר';
   }
-  function flush() { return saveNow(); }
+  function enqueue(n, submit, done) {
+    var old = queue[n] || {};
+    queue[n] = { data: JSON.parse(JSON.stringify(station(n).data)), submit: submit || old.submit, done: done || old.done };
+  }
+  function pump() {
+    if (sending || !S) return;
+    var keys = Object.keys(queue);
+    if (!keys.length) { var w = waiters; waiters = []; w.forEach(function (f) { f(); }); showSaved(); return; }
+    var n = Number(keys[0]), job = queue[n], me = S.me;
+    delete queue[n]; sending = true;
+    var was = $('saved'); if (was && was.textContent.indexOf('לא נמחק') >= 0) was.textContent = 'שומרים…';
+    call('student.save', { code: me.code, sid: me.sid, pin: me.pin, st: n, data: job.data, submit: !!job.submit }).then(function (r) {
+      sending = false;
+      if (!S) return;
+      if (job.done) job.done(r);
+      if (r.ok) {
+        if (!queue[n] && !(S.dirty && S.cur === n)) dropDraft(n);
+        pump();
+        return;
+      }
+      if (!queue[n]) queue[n] = job;
+      else if (job.submit) queue[n].submit = true;
+      var sv = $('saved'); if (sv) sv.textContent = errText(r.error) + ' מה שכתבתם לא נמחק.';
+      // בעיית רשת או שרת עמוס: מנסים שוב לבד
+      if (r.error === 'net' || r.error === 'server') { clearTimeout(retry); retry = setTimeout(pump, 8000); }
+      else { var w = waiters; waiters = []; w.forEach(function (f) { f(); }); }
+    });
+  }
+  function saveNow() {
+    clearTimeout(S.timer);
+    if (S.dirty) { S.dirty = false; enqueue(S.cur); }
+    pump();
+    showSaved();
+  }
+  function flush() { saveNow(); }
+  function whenSaved() {
+    return new Promise(function (ok) {
+      if (!S || isIdle()) { ok(); return; }
+      waiters.push(ok);
+      setTimeout(ok, 15000);
+    });
+  }
 
   /* ===== הורדה ל-Word ===== */
 
@@ -969,10 +1010,16 @@ footer a { color: var(--muted); }
       S = null; T = null; entry('');
       window.scrollTo(0, 0);
     };
-    if (S) pending.then(leave, leave); else leave();
+    if (S) whenSaved().then(leave); else leave();
   };
+  // סגירת הדף: שולחים מה שאפשר. הטיוטה נשארת במכשיר עד שהשרת מאשר, ונשלחת שוב בכניסה הבאה.
   window.addEventListener('pagehide', function () {
-    if (S && S.dirty) { try { saveNow(); } catch (e) {} }
+    if (!S || !navigator.sendBeacon) return;
+    if (S.dirty) { S.dirty = false; enqueue(S.cur); }
+    Object.keys(queue).forEach(function (n) {
+      var me = S.me, job = queue[n];
+      try { navigator.sendBeacon(API, JSON.stringify({ action: 'student.save', code: me.code, sid: me.sid, pin: me.pin, st: Number(n), data: job.data, submit: !!job.submit })); } catch (e) {}
+    });
   });
   var helpBody = 'שלום,\n\nנתקלתי בבעיה במלווה עבודת החקר.\nתיאור הבעיה:\n\n';
   $('help').href = 'mailto:' + HELP_TO + '?subject=' + encodeURIComponent('מלווה עבודת חקר: נתקלתי בבעיה') + '&body=' + encodeURIComponent(helpBody);
